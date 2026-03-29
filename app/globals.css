@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  MoneyOS design tokens — use these via Tailwind (primary, success, …)
+  or directly as var(--color-primary), etc.
+*/
+
+:root {
+  --color-primary: #534ab7;
+  --color-primary-foreground: #ffffff;
+  --color-success: #1d9e75;
+  --color-success-foreground: #ffffff;
+  --color-warning: #ba7517;
+  --color-warning-foreground: #ffffff;
+  --color-danger: #e24b4a;
+  --color-danger-foreground: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f4f3f8;
+  --color-muted: #6b6680;
+  --color-border: #e2dff0;
+  --color-text: #1a1824;
+  --ring-primary: rgba(83, 74, 183, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #13111a;
+    --color-surface-alt: #1c1926;
+    --color-muted: #9d96b0;
+    --color-border: #2f2a40;
+    --color-text: #f2f0f7;
+    --ring-primary: rgba(139, 131, 220, 0.45);
+  }
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply min-h-dvh bg-surface text-[color:var(--color-text)] transition-colors;
+  }
+}
