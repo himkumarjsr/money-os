@@ -47,14 +47,22 @@ export const PRIMARY_GOAL_LABELS: Record<PrimaryGoal, string> = {
   kids_education: "Kids education fund",
 };
 
-function numFromInput(val: unknown): number | undefined {
+export function parseMoneyInput(val: unknown): number | undefined {
   if (val === "" || val === null || val === undefined) return undefined;
-  const n = typeof val === "number" ? val : Number(val);
+  if (typeof val === "number") {
+    return Number.isFinite(val) ? val : undefined;
+  }
+  if (typeof val !== "string") return undefined;
+
+  const normalized = val.replace(/[,\s₹]/g, "").trim();
+  if (!normalized) return undefined;
+
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : undefined;
 }
 
 const optionalMoney = z.preprocess(
-  numFromInput,
+  parseMoneyInput,
   z
     .number()
     .min(0, "Cannot be negative")
@@ -69,7 +77,7 @@ export const step1Schema = z.object({
 
 export const step2Schema = z.object({
   monthlySalary: z.preprocess(
-    numFromInput,
+    parseMoneyInput,
     z
       .number({
         required_error: "Enter your monthly take-home salary",
@@ -99,7 +107,7 @@ export const step3Schema = z.object({
 
 export const step4Schema = z.object({
   monthlySavingsOrSip: z.preprocess(
-    numFromInput,
+    parseMoneyInput,
     z
       .number({
         required_error: "Enter amount",
@@ -108,7 +116,7 @@ export const step4Schema = z.object({
       .min(0, "Cannot be negative"),
   ),
   emergencyFundSaved: z.preprocess(
-    numFromInput,
+    parseMoneyInput,
     z
       .number({
         required_error: "Enter amount",
@@ -117,7 +125,7 @@ export const step4Schema = z.object({
       .min(0, "Cannot be negative"),
   ),
   totalDebtOutstanding: z.preprocess(
-    numFromInput,
+    parseMoneyInput,
     z
       .number({
         required_error: "Enter amount",

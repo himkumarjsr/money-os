@@ -10,6 +10,7 @@ import {
   type LifeStage,
   analyseDefaultValues,
   fullAnalyseSchema,
+  parseMoneyInput,
   step1Schema,
   step2Schema,
   step3Schema,
@@ -19,7 +20,7 @@ import {
 import { useFinancialStore } from "@/store/use-financial-store";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useState } from "react";
 import { useForm, type FieldPath } from "react-hook-form";
 
 const STEPS = [
@@ -31,18 +32,19 @@ const STEPS = [
 
 const STEP_SCHEMAS = [step1Schema, step2Schema, step3Schema, step4Schema] as const;
 
-function MoneyInput({
-  id,
-  label,
-  error,
-  required,
-  ...inputProps
-}: React.InputHTMLAttributes<HTMLInputElement> & {
-  id: string;
-  label: string;
-  error?: string;
-  required?: boolean;
-}) {
+const moneyFieldOptions = {
+  setValueAs: parseMoneyInput,
+} as const;
+
+const MoneyInput = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    id: string;
+    label: string;
+    error?: string;
+    required?: boolean;
+  }
+>(function MoneyInput({ id, label, error, required, ...inputProps }, ref) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium text-slate-700">
@@ -54,6 +56,7 @@ function MoneyInput({
           ₹
         </span>
         <input
+          ref={ref}
           id={id}
           inputMode="decimal"
           autoComplete="off"
@@ -64,7 +67,9 @@ function MoneyInput({
       {error ? <p className="text-sm text-[#E24B4A]">{error}</p> : null}
     </div>
   );
-}
+});
+
+MoneyInput.displayName = "MoneyInput";
 
 function applyZodFieldErrors(
   flat: { fieldErrors: Record<string, string[] | undefined> },
@@ -126,13 +131,13 @@ export function AnalyseOnboardingForm() {
 
   const goNext = useCallback(() => {
     const values = getValues();
+    clearErrors();
     const parsed = STEP_SCHEMAS[step].safeParse(values);
     if (!parsed.success) {
       applyZodFieldErrors(parsed.error.flatten(), setError);
       return;
     }
     setAnalysis(parsed.data as Partial<AnalyseFormValues>);
-    clearErrors();
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }, [clearErrors, getValues, setAnalysis, setError, step]);
 
@@ -142,6 +147,7 @@ export function AnalyseOnboardingForm() {
   }, [clearErrors]);
 
   const onFinalSubmit = handleSubmit((data) => {
+    clearErrors();
     const full = fullAnalyseSchema.safeParse(data);
     if (!full.success) {
       applyZodFieldErrors(full.error.flatten(), setError);
@@ -257,19 +263,19 @@ export function AnalyseOnboardingForm() {
               label="Monthly take-home salary"
               required
               error={errors.monthlySalary?.message}
-              {...register("monthlySalary", { valueAsNumber: true })}
+              {...register("monthlySalary", moneyFieldOptions)}
             />
             <MoneyInput
               id="spouseIncome"
               label="Spouse income (optional)"
               error={errors.spouseIncome?.message}
-              {...register("spouseIncome", { valueAsNumber: true })}
+              {...register("spouseIncome", moneyFieldOptions)}
             />
             <MoneyInput
               id="otherIncome"
               label="Other income — rent, freelance (optional)"
               error={errors.otherIncome?.message}
-              {...register("otherIncome", { valueAsNumber: true })}
+              {...register("otherIncome", moneyFieldOptions)}
             />
             <div className="flex flex-col gap-1.5">
               <label
@@ -305,61 +311,57 @@ export function AnalyseOnboardingForm() {
               id="rentOrHomeLoanEmi"
               label="Rent or home loan EMI"
               error={errors.rentOrHomeLoanEmi?.message}
-              {...register("rentOrHomeLoanEmi", { valueAsNumber: true })}
+              {...register("rentOrHomeLoanEmi", moneyFieldOptions)}
             />
             <MoneyInput
               id="otherLoanEmis"
               label="Other loan EMIs (car, personal)"
               error={errors.otherLoanEmis?.message}
-              {...register("otherLoanEmis", { valueAsNumber: true })}
+              {...register("otherLoanEmis", moneyFieldOptions)}
             />
             <MoneyInput
               id="foodGroceries"
               label="Food and groceries"
               error={errors.foodGroceries?.message}
-              {...register("foodGroceries", { valueAsNumber: true })}
+              {...register("foodGroceries", moneyFieldOptions)}
             />
             <MoneyInput
               id="transport"
               label="Transport (fuel, Ola, metro)"
               error={errors.transport?.message}
-              {...register("transport", { valueAsNumber: true })}
+              {...register("transport", moneyFieldOptions)}
             />
             <MoneyInput
               id="utilities"
               label="Utilities (electricity, internet, gas)"
               error={errors.utilities?.message}
-              {...register("utilities", { valueAsNumber: true })}
+              {...register("utilities", moneyFieldOptions)}
             />
             <MoneyInput
               id="entertainmentDiningShopping"
               label="Entertainment, dining, shopping"
               error={errors.entertainmentDiningShopping?.message}
-              {...register("entertainmentDiningShopping", {
-                valueAsNumber: true,
-              })}
+              {...register("entertainmentDiningShopping", moneyFieldOptions)}
             />
             <MoneyInput
               id="insurancePremiumsMonthly"
               label="Insurance premiums (monthly share)"
               error={errors.insurancePremiumsMonthly?.message}
-              {...register("insurancePremiumsMonthly", {
-                valueAsNumber: true,
-              })}
+              {...register("insurancePremiumsMonthly", moneyFieldOptions)}
             />
             {showKids ? (
               <MoneyInput
                 id="kidsExpenses"
                 label="Kids expenses (school, activities)"
                 error={errors.kidsExpenses?.message}
-                {...register("kidsExpenses", { valueAsNumber: true })}
+                {...register("kidsExpenses", moneyFieldOptions)}
               />
             ) : null}
             <MoneyInput
               id="parentsFamilySupport"
               label="Parents or family support (optional)"
               error={errors.parentsFamilySupport?.message}
-              {...register("parentsFamilySupport", { valueAsNumber: true })}
+              {...register("parentsFamilySupport", moneyFieldOptions)}
             />
           </div>
         )}
@@ -371,21 +373,21 @@ export function AnalyseOnboardingForm() {
               label="Current monthly savings or SIP amount"
               required
               error={errors.monthlySavingsOrSip?.message}
-              {...register("monthlySavingsOrSip", { valueAsNumber: true })}
+              {...register("monthlySavingsOrSip", moneyFieldOptions)}
             />
             <MoneyInput
               id="emergencyFundSaved"
               label="Emergency fund saved so far (total)"
               required
               error={errors.emergencyFundSaved?.message}
-              {...register("emergencyFundSaved", { valueAsNumber: true })}
+              {...register("emergencyFundSaved", moneyFieldOptions)}
             />
             <MoneyInput
               id="totalDebtOutstanding"
               label="Total debt outstanding (all loans combined)"
               required
               error={errors.totalDebtOutstanding?.message}
-              {...register("totalDebtOutstanding", { valueAsNumber: true })}
+              {...register("totalDebtOutstanding", moneyFieldOptions)}
             />
             <div className="flex flex-col gap-1.5">
               <label
