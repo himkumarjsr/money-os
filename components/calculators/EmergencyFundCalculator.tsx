@@ -6,17 +6,17 @@ import { useCallback, useState } from "react";
 import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 const MONTHS: Record<LifeStage, number> = {
-  single_bachelor: 3,
-  married_no_kids: 6,
-  married_with_kids: 9,
-  pre_retirement_50_plus: 12,
+  bachelor: 3,
+  married: 6,
+  kids: 9,
+  senior: 12,
 };
 
 const LABELS: Record<LifeStage, string> = {
-  single_bachelor: "Single / bachelor",
-  married_no_kids: "Married, no kids",
-  married_with_kids: "Married with kids",
-  pre_retirement_50_plus: "Pre-retirement (50+)",
+  bachelor: "Single / bachelor",
+  married: "Married, no kids",
+  kids: "Married with kids",
+  senior: "Pre-retirement (50+)",
 };
 
 function useClamped(initial: number, min: number, max: number) {
@@ -32,7 +32,7 @@ function useClamped(initial: number, min: number, max: number) {
 
 export function EmergencyFundCalculator() {
   const [expenses, setExpenses] = useClamped(60_000, 15_000, 3_00_000);
-  const [stage, setStage] = useState<LifeStage>("married_no_kids");
+  const [stage, setStage] = useState<LifeStage>("married");
   const [current, setCurrent] = useClamped(2_00_000, 0, 50_00_000);
   const [saveMonthly, setSaveMonthly] = useClamped(15_000, 1_000, 2_00_000);
 

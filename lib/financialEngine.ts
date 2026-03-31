@@ -1,58 +1,19 @@
-import type { AnalyseFormValues, CityOption, LifeStage } from "@/lib/analyse-form-schema";
+import type { CityTier, FinancialProfile } from "@/lib/analyse-form-schema";
+import {
+  BASE_UNIVERSAL_CAPS,
+  getInsuranceCriticalFloor,
+  getInsuranceGuideline,
+  getUniversalCaps,
+  getUnallocatedIncome,
+  getUniversalBucketActuals,
+  getUniversalBucketRows,
+} from "@/lib/universal-buckets";
 
-/** Full onboarding payload — same shape as the analyse form. */
-export type FinancialProfile = AnalyseFormValues;
-
-const METROS: readonly CityOption[] = [
-  "Mumbai",
-  "Delhi",
-  "Bengaluru",
-  "Chennai",
-  "Hyderabad",
-  "Pune",
-] as const;
-
-type StageBucket = "bachelor" | "married" | "kids" | "senior";
-
-const LIFE_STAGE_TO_BUCKET: Record<LifeStage, StageBucket> = {
-  single_bachelor: "bachelor",
-  married_no_kids: "married",
-  married_with_kids: "kids",
-  pre_retirement_50_plus: "senior",
-};
-
-function lifeStageToBucket(stage: LifeStage): StageBucket {
-  return LIFE_STAGE_TO_BUCKET[stage];
-}
-
-const SAVINGS_TARGET_PCT: Record<StageBucket, number> = {
-  bachelor: 30,
-  married: 25,
-  kids: 20,
-  senior: 40,
-};
-
-const DEBT_SAFE_LIMIT_PCT: Record<StageBucket, number> = {
-  bachelor: 35,
-  married: 40,
-  kids: 40,
-  senior: 30,
-};
-
-const EMERGENCY_TARGET_MONTHS: Record<StageBucket, number> = {
-  bachelor: 3,
-  married: 6,
-  kids: 9,
-  senior: 12,
-};
-
-/** Metro cost-of-living multiplier vs tier-2 benchmark for emergency corpus. */
-const METRO_EXPENSE_BENCHMARK_MULTIPLIER = 1.3;
+export type { FinancialProfile } from "@/lib/analyse-form-schema";
 
 export type IssueSeverity = "critical" | "warning" | "info" | "good";
 
 export type AnalysisIssue = {
-  /** Higher sorts first (more urgent). */
   severityScore: number;
   severity: IssueSeverity;
   code: string;
@@ -63,6 +24,13 @@ export type AnalysisFlag = {
   type: "critical" | "warning" | "good";
   message: string;
 };
+
+export interface SecurityItem {
+  label: string;
+  status: "ok" | "warning" | "critical" | "na";
+  detail: string;
+  actionNeeded?: string;
+}
 
 export type AnalysisResult = {
   scores: {
@@ -75,294 +43,540 @@ export type AnalysisResult = {
   issues: AnalysisIssue[];
   teaser: string;
   planSteps: string[];
+  securityChecklist: SecurityItem[];
 };
-
-export function isMetroCity(city: CityOption): boolean {
-  return (METROS as readonly string[]).includes(city);
-}
-
-/** Target savings % of income for the user’s life stage (for UI thresholds). */
-export function getSavingsTargetPercent(p: FinancialProfile): number {
-  return SAVINGS_TARGET_PCT[lifeStageToBucket(p.lifeStage)];
-}
-
-/** Safe max housing + EMI % of income for the life stage. */
-export function getDebtSafeLimitPercent(p: FinancialProfile): number {
-  return DEBT_SAFE_LIMIT_PCT[lifeStageToBucket(p.lifeStage)];
-}
 
 function n(v: number | undefined): number {
   return v ?? 0;
+}
+
+function fmt(amount: number): string {
+  return `₹${Math.round(amount).toLocaleString("en-IN")}`;
+}
+
+export function isMetroCity(cityTier: CityTier): boolean {
+  return cityTier === "metro";
+}
+
+export function getSavingsTargetPercent(p: FinancialProfile): number {
+  return getUniversalCaps(p).investment * 100;
+}
+
+export function getDebtSafeLimitPercent(): number {
+  return BASE_UNIVERSAL_CAPS.loans * 100;
 }
 
 export function monthlyTotalIncome(p: FinancialProfile): number {
   return n(p.monthlySalary) + n(p.spouseIncome) + n(p.otherIncome);
 }
 
-export function monthlyTotalExpenses(p: FinancialProfile): number {
+export function monthlySavingsContributions(p: FinancialProfile): number {
+  return getUniversalBucketActuals(p).investment;
+}
+
+export function monthlyInsuranceTotal(p: FinancialProfile): number {
   return (
-    n(p.rentOrHomeLoanEmi) +
-    n(p.otherLoanEmis) +
-    n(p.foodGroceries) +
-    n(p.transport) +
-    n(p.utilities) +
-    n(p.entertainmentDiningShopping) +
-    n(p.insurancePremiumsMonthly) +
-    n(p.kidsExpenses) +
-    n(p.parentsFamilySupport)
+    n(p.healthInsurancePremiumMonthly) +
+    n(p.termInsurancePremiumMonthly) +
+    n(p.carInsurancePremiumMonthly) +
+    n(p.bikeInsurancePremiumMonthly) +
+    n(p.otherInsurancePremiumMonthly)
   );
 }
 
-export function housingAndEmiTotal(p: FinancialProfile): number {
-  return n(p.rentOrHomeLoanEmi) + n(p.otherLoanEmis);
+export function monthlyLivingExpenses(p: FinancialProfile): number {
+  const buckets = getUniversalBucketActuals(p);
+  return buckets.needs + buckets.wants + buckets.security;
 }
 
-function buildIssues(params: {
-  bucket: StageBucket;
-  savingsRate: number;
-  savingsTarget: number;
-  debtRatio: number;
-  debtLimit: number;
-  totalIncome: number;
-  untrackedCash: number;
-  emergencyFundGap: number;
-  insuranceGap: boolean;
-}): AnalysisIssue[] {
-  const issues: AnalysisIssue[] = [];
+export function housingAndEmiTotal(p: FinancialProfile): number {
+  return (
+    n(p.rentAmount) +
+    n(p.homeLoanEMI) +
+    n(p.secondPropertyEMI) +
+    getUniversalBucketActuals(p).loans
+  );
+}
 
-  const {
-    bucket,
-    savingsRate,
-    savingsTarget,
-    debtRatio,
-    debtLimit,
-    totalIncome,
-    untrackedCash,
-    emergencyFundGap,
-    insuranceGap,
-  } = params;
+export function monthlyTotalExpenses(p: FinancialProfile): number {
+  const buckets = getUniversalBucketActuals(p);
+  return buckets.needs + buckets.wants + buckets.security + buckets.loans;
+}
 
-  if (totalIncome <= 0) {
-    issues.push({
-      severityScore: 100,
-      severity: "critical",
-      code: "income_zero",
-      message: "Add income details — savings and debt ratios need a positive total income.",
-    });
-    return issues;
-  }
+export function calculateTermNeeded(data: FinancialProfile): number {
+  const totalIncome = monthlyTotalIncome(data);
+  const annualIncome = totalIncome * 12;
+  const base = annualIncome * 10;
+  const liabilities = n(data.homeLoanOutstanding) + n(data.carLoanOutstanding);
+  const existingAssets =
+    n(data.mfValue) +
+    n(data.indianStocksValue) +
+    n(data.ppfBalance) +
+    n(data.epfBalance) +
+    n(data.fdValue);
+  const ageMultiplier =
+    data.selfAge < 30 ? 1.2 : data.selfAge < 40 ? 1 : data.selfAge < 50 ? 0.8 : 0.6;
+  const dependentCount =
+    (data.lifeStage !== "bachelor" ? 1 : 0) +
+    n(data.numberOfKids) +
+    (n(data.parentsSupport) > 0 ? 1 : 0);
+  const dependentBuffer = dependentCount * 20_00_000;
+  const termNeeded = Math.max(
+    50_00_000,
+    (base + liabilities + dependentBuffer - existingAssets) * ageMultiplier,
+  );
 
-  if (savingsRate + 1e-6 < savingsTarget) {
-    const shortBy = savingsTarget - savingsRate;
-    issues.push({
-      severityScore: 85,
-      severity: "critical",
-      code: "savings_below_target",
-      message: `Savings rate is ${savingsRate.toFixed(1)}%, below your ${bucket} target of ${savingsTarget}% (short by ~${shortBy.toFixed(1)} pts).`,
-    });
-  } else {
-    issues.push({
-      severityScore: 15,
-      severity: "good",
-      code: "savings_on_track",
-      message: `Savings rate ${savingsRate.toFixed(1)}% meets or beats the ${savingsTarget}% target for your life stage.`,
-    });
-  }
-
-  if (debtRatio > debtLimit + 1e-6) {
-    issues.push({
-      severityScore: 80,
-      severity: "critical",
-      code: "debt_ratio_high",
-      message: `Rent + EMIs are ${debtRatio.toFixed(1)}% of income — above the safe ${debtLimit}% limit for your profile.`,
-    });
-  } else if (debtRatio > debtLimit * 0.85) {
-    issues.push({
-      severityScore: 45,
-      severity: "warning",
-      code: "debt_ratio_elevated",
-      message: `Housing + loan payments are ${debtRatio.toFixed(1)}% of income — comfortable but close to your ${debtLimit}% guardrail.`,
-    });
-  } else {
-    issues.push({
-      severityScore: 20,
-      severity: "good",
-      code: "debt_ratio_ok",
-      message: `Rent/EMI load is ${debtRatio.toFixed(1)}% of income — within the ${debtLimit}% safe range.`,
-    });
-  }
-
-  const untrackedThreshold = 0.1 * totalIncome;
-  if (untrackedCash > untrackedThreshold + 1e-6) {
-    issues.push({
-      severityScore: 70,
-      severity: "warning",
-      code: "untracked_cash_high",
-      message: `About ₹${Math.round(untrackedCash).toLocaleString("en-IN")}/mo isn’t explained by expenses + savings — more than 10% of income. You may be under-tracking spends.`,
-    });
-  } else if (untrackedCash < -untrackedThreshold) {
-    issues.push({
-      severityScore: 50,
-      severity: "warning",
-      code: "budget_overstated",
-      message: `Expenses + savings exceed income by ₹${Math.round(-untrackedCash).toLocaleString("en-IN")}/mo — double-check amounts or one-off costs.`,
-    });
-  }
-
-  if (emergencyFundGap > 0) {
-    issues.push({
-      severityScore: 75,
-      severity: "critical",
-      code: "emergency_fund_short",
-      message: `Emergency fund is short by ~₹${Math.round(emergencyFundGap).toLocaleString("en-IN")} for your city-adjusted ${EMERGENCY_TARGET_MONTHS[bucket]}-month targets.`,
-    });
-  } else {
-    issues.push({
-      severityScore: 25,
-      severity: "good",
-      code: "emergency_fund_ok",
-      message: "Emergency fund meets or exceeds the recommended corpus for your life stage and city.",
-    });
-  }
-
-  if (insuranceGap) {
-    issues.push({
-      severityScore: 55,
-      severity: "warning",
-      code: "insurance_missing",
-      message: "No monthly insurance premium recorded — confirm health/life/vehicle cover so a single event doesn’t wipe savings.",
-    });
-  }
-
-  issues.sort((a, b) => b.severityScore - a.severityScore);
-  return issues;
+  return Math.ceil(termNeeded / 10_00_000) * 10_00_000;
 }
 
 function issuesToFlags(issues: AnalysisIssue[]): AnalysisFlag[] {
   const flags: AnalysisFlag[] = [];
-  const critical = issues.find((i) => i.severity === "critical");
-  const warning = issues.find((i) => i.severity === "warning");
-  const good = issues.find((i) => i.severity === "good");
+  const critical = issues.find((issue) => issue.severity === "critical");
+  const warning = issues.find((issue) => issue.severity === "warning");
+  const good = issues.find((issue) => issue.severity === "good");
   if (critical) flags.push({ type: "critical", message: critical.message });
   if (warning) flags.push({ type: "warning", message: warning.message });
   if (good) flags.push({ type: "good", message: good.message });
   return flags;
 }
 
-function buildPlanSteps(issues: AnalysisIssue[], p: FinancialProfile): string[] {
-  const codes = new Set(issues.map((i) => i.code));
+function goalLabel(goal: FinancialProfile["primaryGoal"]): string {
+  return goal.replaceAll("_", " ");
+}
+
+function buildIssues(params: {
+  totalIncome: number;
+  savingsRate: number;
+  debtRatio: number;
+  untrackedCash: number;
+  emergencyFundGap: number;
+  bucketRows: ReturnType<typeof getUniversalBucketRows>;
+  insuranceActual: number;
+}): AnalysisIssue[] {
+  const {
+    totalIncome,
+    savingsRate,
+    debtRatio,
+    untrackedCash,
+    emergencyFundGap,
+    bucketRows,
+    insuranceActual,
+  } = params;
+  const issues: AnalysisIssue[] = [];
+
+  if (totalIncome <= 0) {
+    return [
+      {
+        severityScore: 100,
+        severity: "critical",
+        code: "income_zero",
+        message: "Add your income details so the meter and bucket caps can start working.",
+      },
+    ];
+  }
+
+  for (const row of bucketRows) {
+    if (row.status === "critical") {
+      issues.push({
+        severityScore: row.key === "loans" ? 90 : 75,
+        severity: "critical",
+        code: `${row.key}_over_cap`,
+        message: `${row.label} is at ${fmt(row.actual)}/mo against a cap of ${fmt(row.capAmount)}.`,
+      });
+    } else if (row.status === "warning") {
+      issues.push({
+        severityScore: row.key === "loans" ? 60 : 45,
+        severity: "warning",
+        code: `${row.key}_near_cap`,
+        message: `${row.label} is slightly above cap at ${fmt(row.actual)}/mo vs ${fmt(row.capAmount)}.`,
+      });
+    } else {
+      issues.push({
+        severityScore: 15,
+        severity: "good",
+        code: `${row.key}_on_track`,
+        message: `${row.label} is within the universal cap at ${fmt(row.actual)}/mo.`,
+      });
+    }
+  }
+
+  const insuranceFloor = getInsuranceCriticalFloor(totalIncome);
+  if (insuranceActual < insuranceFloor) {
+    issues.push({
+      severityScore: 85,
+      severity: "critical",
+      code: "insurance_below_floor",
+      message: `Insurance contributions are only ${fmt(insuranceActual)}/mo. Keep protection spend above ${fmt(insuranceFloor)}/mo.`,
+    });
+  }
+
+  if (emergencyFundGap > 0) {
+    issues.push({
+      severityScore: 80,
+      severity: "critical",
+      code: "emergency_fund_short",
+      message: `Emergency fund is short by about ${fmt(emergencyFundGap)} against your target buffer.`,
+    });
+  } else {
+    issues.push({
+      severityScore: 20,
+      severity: "good",
+      code: "emergency_fund_ok",
+      message: "Emergency fund is fully funded for your current life stage.",
+    });
+  }
+
+  const untrackedThreshold = totalIncome * 0.1;
+  if (untrackedCash > untrackedThreshold + 1e-6) {
+    issues.push({
+      severityScore: 55,
+      severity: "warning",
+      code: "untracked_cash_high",
+      message: `About ${fmt(untrackedCash)}/mo is still unallocated. Decide whether it should stay free cash or move into a goal.`,
+    });
+  } else if (untrackedCash < -untrackedThreshold) {
+    issues.push({
+      severityScore: 70,
+      severity: "warning",
+      code: "budget_overstated",
+      message: `Your buckets exceed income by about ${fmt(-untrackedCash)}/mo.`,
+    });
+  }
+
+  if (savingsRate <= BASE_UNIVERSAL_CAPS.investment * 100 + 1e-6) {
+    issues.push({
+      severityScore: 18,
+      severity: "good",
+      code: "investment_on_track",
+      message: `Investment bucket is ${savingsRate.toFixed(1)}% of income and is being checked against your current investment cap.`,
+    });
+  }
+
+  if (debtRatio <= getDebtSafeLimitPercent() + 1e-6) {
+    issues.push({
+      severityScore: 18,
+      severity: "good",
+      code: "loans_on_track",
+      message: `Loan bucket is ${debtRatio.toFixed(1)}% of income, within the 40% ceiling.`,
+    });
+  }
+
+  return issues.sort((a, b) => b.severityScore - a.severityScore);
+}
+
+function buildPlanSteps(
+  profile: FinancialProfile,
+  bucketRows: ReturnType<typeof getUniversalBucketRows>,
+  untrackedCash: number,
+  emergencyFundTarget: number,
+  emergencyFundGap: number,
+  securityChecklist: SecurityItem[],
+): string[] {
   const steps: string[] = [];
+  const push = (text: string) => {
+    if (!steps.includes(text)) {
+      steps.push(text);
+    }
+  };
 
-  if (codes.has("untracked_cash_high") || codes.has("budget_overstated")) {
-    steps.push(
-      "For one month, log every rupee in UPI, cards, and cash so income = expenses + savings + known gaps.",
+  const overCapBuckets = bucketRows.filter((row) => row.status !== "good");
+  if (overCapBuckets.length > 0) {
+    const first = overCapBuckets[0];
+    push(
+      `Start with ${first.label.toLowerCase()}: reduce it from ${fmt(first.actual)}/mo toward the ${fmt(first.capAmount)} cap.`,
     );
+  } else {
+    push("All five core buckets are within cap right now. Keep future income growth from spilling into wants by default.");
   }
 
-  if (codes.has("savings_below_target")) {
-    steps.push(
-      "Automate a SIP or transfer on salary day — raise it by 10% until you hit your life-stage savings target.",
+  if (emergencyFundGap > 0) {
+    push(
+      `Build your emergency fund to ${fmt(emergencyFundTarget)}. A steady ${fmt(Math.ceil(emergencyFundGap / 12))}/mo for 12 months will close the gap.`,
     );
+  } else {
+    push(`Keep at least ${fmt(emergencyFundTarget)} ring-fenced as your emergency reserve.`);
   }
 
-  if (codes.has("emergency_fund_short")) {
-    steps.push(
-      "Park 1–2 months of expenses in a sweep FD or liquid fund before chasing higher returns.",
-    );
-  }
-
-  if (codes.has("debt_ratio_high") || codes.has("debt_ratio_elevated")) {
-    steps.push(
-      "List all loans by interest rate; prepay the costliest slice or refinance if your CIBIL supports a lower rate.",
-    );
-  }
-
-  if (codes.has("insurance_missing")) {
-    steps.push(
-      "Buy or top up health (₹10–25L floater for family) and pure-term life cover ~10–15× annual income if dependents rely on you.",
-    );
-  }
-
-  steps.push(
-    "Align spending to your primary goal (home / debt-free / retirement) — cut one recurring category for 90 days.",
+  const actionableSecurityItems = securityChecklist.filter(
+    (item) => item.status !== "ok" && item.status !== "na" && item.actionNeeded,
   );
+  for (const item of actionableSecurityItems.slice(0, 2)) {
+    push(item.actionNeeded!);
+  }
 
-  steps.push(
-    "Set calendar nudges for rent/EMI, insurance, and tax-saving ELSS/PPF so premiums don’t become surprises.",
-  );
+  if (untrackedCash > 0) {
+    push(
+      `You still have ${fmt(untrackedCash)}/mo unallocated. Assign it deliberately instead of letting it disappear through ad-hoc spending.`,
+    );
+  } else if (untrackedCash < 0) {
+    push(
+      `Your plan is overshooting income by ${fmt(-untrackedCash)}/mo. Pause or trim lower-priority buckets until cash flow turns positive.`,
+    );
+  }
 
-  steps.push(
-    "Book a MoneyOS Advisor session to stress-test this plan against real tax slabs, employer benefits, and goals.",
+  switch (profile.primaryGoal) {
+    case "clear_debt":
+      push("Make debt payoff your default surplus use until the loan bucket falls well below the 40% cap.");
+      break;
+    case "build_emergency_fund":
+      push("Route new surplus into liquid reserves first, then restart longer-term investing once the safety buffer is complete.");
+      break;
+    case "kids_education":
+      push("Create a dedicated child education corpus so that school expenses and long-term goals do not compete with each other.");
+      break;
+    default:
+      push(`Keep redirecting surplus toward your primary goal: ${goalLabel(profile.primaryGoal)}.`);
+      break;
+  }
+
+  const insuranceGuideline = getInsuranceGuideline(monthlyTotalIncome(profile));
+  push(
+    `Aim to keep roughly ${fmt(insuranceGuideline)}/mo available for insurance and protection, but do not count it as monthly investment flow.`,
   );
 
   while (steps.length < 7) {
-    steps.push(
-      "Revisit this checklist after every salary increment — bump savings rate before lifestyle creep.",
-    );
+    push("Review the meter after every salary hike or major family change so the bucket mix stays intentional.");
   }
 
   return steps.slice(0, 7);
 }
 
 export function analyseFinances(data: FinancialProfile): AnalysisResult {
-  const bucket = lifeStageToBucket(data.lifeStage);
-  const savingsTarget = SAVINGS_TARGET_PCT[bucket];
-  const debtLimit = DEBT_SAFE_LIMIT_PCT[bucket];
-  const emergencyMonths = EMERGENCY_TARGET_MONTHS[bucket];
-
   const totalIncome = monthlyTotalIncome(data);
-  const totalExpenses = monthlyTotalExpenses(data);
-  const savings = n(data.monthlySavingsOrSip);
-  const housingEmi = housingAndEmiTotal(data);
+  const bucketRows = getUniversalBucketRows(data);
+  const bucketActuals = getUniversalBucketActuals(data);
+  const monthlyInvesting = bucketActuals.investment;
+  const monthlyLoans = bucketActuals.loans;
+  const monthlyExpenses = bucketActuals.needs;
+  const savingsRate = totalIncome > 0 ? (monthlyInvesting / totalIncome) * 100 : 0;
+  const debtRatio = totalIncome > 0 ? (monthlyLoans / totalIncome) * 100 : 0;
+  const untrackedCash = getUnallocatedIncome(data);
 
-  const savingsRate =
-    totalIncome > 0 ? (savings / totalIncome) * 100 : 0;
+  const emergencyFundMonthsMin =
+    data.lifeStage === "bachelor" ? 3 : data.lifeStage === "married" ? 6 : data.lifeStage === "kids" ? 9 : 6;
+  const emergencyFundMonthsMax =
+    data.lifeStage === "bachelor" ? 6 : data.lifeStage === "married" ? 12 : 12;
+  const emergencyFundTargetMin = monthlyExpenses * emergencyFundMonthsMin;
+  const emergencyFundTargetMax = monthlyExpenses * emergencyFundMonthsMax;
+  const emergencyFundCurrent = n(data.emergencyFundCurrent) + n(data.fdValue);
+  const emergencyFundGap = Math.max(0, emergencyFundTargetMax - emergencyFundCurrent);
 
-  const debtRatio =
-    totalIncome > 0 ? (housingEmi / totalIncome) * 100 : 0;
+  const termNeeded = calculateTermNeeded(data);
+  const termInsuranceGap = Math.max(0, termNeeded - n(data.termInsuranceSumAssured));
+  const minimumReasonableTermCover = 50_00_000;
+  const termAdequacyFloor = Math.max(minimumReasonableTermCover, termNeeded * 0.5);
+  const healthTarget = data.lifeStage === "bachelor" ? 5_00_000 : 10_00_000;
+  const healthInsuranceGap = Math.max(0, healthTarget - n(data.healthInsuranceSumInsured));
 
-  const untrackedCash = totalIncome - totalExpenses - savings;
+  const securityChecklist: SecurityItem[] = [];
 
-  const cityMult = isMetroCity(data.city)
-    ? METRO_EXPENSE_BENCHMARK_MULTIPLIER
-    : 1;
-  const emergencyTarget =
-    totalExpenses * emergencyMonths * cityMult;
-  const emergencyFundGap = emergencyTarget - n(data.emergencyFundSaved);
-
-  const insuranceGap = n(data.insurancePremiumsMonthly) === 0;
-
-  const issues = buildIssues({
-    bucket,
-    savingsRate,
-    savingsTarget,
-    debtRatio,
-    debtLimit,
-    totalIncome,
-    untrackedCash,
-    emergencyFundGap,
-    insuranceGap,
+  securityChecklist.push({
+    label: "Term insurance",
+    status: !data.hasTermInsurance
+      ? "critical"
+      : n(data.termInsuranceSumAssured) >= termAdequacyFloor
+        ? "ok"
+        : "warning",
+    detail: data.hasTermInsurance
+      ? `₹${(n(data.termInsuranceSumAssured) / 10000000).toFixed(2)}Cr cover · ${fmt(n(data.termInsurancePremiumMonthly))}/mo · Existing cover in place. Reference cover: ₹${(termNeeded / 10000000).toFixed(2)}Cr`
+      : `Not purchased · Recommended: ₹${(termNeeded / 10000000).toFixed(2)}Cr (10× income + liabilities + dependent buffer - existing assets)`,
+    actionNeeded: !data.hasTermInsurance
+      ? `Buy ₹${(termNeeded / 10000000).toFixed(2)}Cr term plan — costs ~₹${fmt(Math.round(termNeeded * 0.000008))}/mo`
+      : n(data.termInsuranceSumAssured) < termAdequacyFloor
+        ? `Review only if your existing cover is below ₹${(termAdequacyFloor / 10000000).toFixed(2)}Cr`
+        : undefined,
   });
 
-  const planSteps = buildPlanSteps(issues, data);
+  securityChecklist.push({
+    label: "Health / medical insurance",
+    status: !data.hasHealthInsurance ? "critical" : healthInsuranceGap > 0 ? "warning" : "ok",
+    detail: data.hasHealthInsurance
+      ? `₹${(n(data.healthInsuranceSumInsured) / 100000).toFixed(0)}L cover`
+      : "Not purchased",
+    actionNeeded: !data.hasHealthInsurance
+      ? "Buy minimum ₹5L family floater health plan"
+      : healthInsuranceGap > 0
+        ? `Increase cover by ₹${(healthInsuranceGap / 100000).toFixed(0)}L`
+        : undefined,
+  });
+
+  securityChecklist.push({
+    label: `Emergency fund (${emergencyFundMonthsMin}-${emergencyFundMonthsMax} months target)`,
+    status:
+      emergencyFundCurrent >= emergencyFundTargetMax
+        ? "ok"
+        : emergencyFundCurrent >= emergencyFundTargetMin
+          ? "warning"
+          : emergencyFundCurrent >= emergencyFundTargetMin * 0.5
+            ? "warning"
+            : "critical",
+    detail:
+      emergencyFundCurrent >= emergencyFundTargetMax
+        ? `${fmt(emergencyFundCurrent)} funded (including FD) · ${emergencyFundMonthsMax} months covered · Excellent`
+        : emergencyFundCurrent >= emergencyFundTargetMin
+          ? `${fmt(emergencyFundCurrent)} funded (including FD) · ${emergencyFundMonthsMin} months covered · Build to ${fmt(emergencyFundTargetMax)} for ${emergencyFundMonthsMax}-month target`
+          : `${fmt(emergencyFundCurrent)} of ${fmt(emergencyFundTargetMin)} minimum target (including FD · ${emergencyFundMonthsMin} months = ${fmt(emergencyFundTargetMin)})`,
+    actionNeeded:
+      emergencyFundCurrent < emergencyFundTargetMin
+        ? `Save ${fmt(Math.ceil((emergencyFundTargetMin - emergencyFundCurrent) / 12))}/mo to reach ${emergencyFundMonthsMin}-month minimum in 12 months`
+        : emergencyFundCurrent < emergencyFundTargetMax
+          ? `Save ${fmt(Math.ceil((emergencyFundTargetMax - emergencyFundCurrent) / 12))}/mo to reach ideal ${emergencyFundMonthsMax}-month target in 12 months`
+          : undefined,
+  });
+
+  const liquidAssets = n(data.savingsAccountBalance) + n(data.liquidMFValue);
+  const medicalBufferTarget = monthlyExpenses * 3;
+  securityChecklist.push({
+    label: "Medical buffer fund (liquid)",
+    status:
+      liquidAssets >= medicalBufferTarget
+        ? "ok"
+        : liquidAssets >= medicalBufferTarget * 0.5
+          ? "warning"
+          : "critical",
+    detail: `${fmt(liquidAssets)} liquid available · Target: ${fmt(medicalBufferTarget)} (3 months of needs)`,
+    actionNeeded:
+      liquidAssets < medicalBufferTarget
+        ? `Park ${fmt(medicalBufferTarget - liquidAssets)} in liquid MF (redeemable in 1 day)`
+        : undefined,
+  });
+
+  const hasGirlChild =
+    data.kidsGenders?.includes("girl") &&
+    data.kidsAges?.some((age, index) => data.kidsGenders?.[index] === "girl" && age < 10);
+  if (hasGirlChild) {
+    securityChecklist.push({
+      label: "Sukanya Samriddhi Yojana (SSY)",
+      status: n(data.ssy) > 0 ? "ok" : "warning",
+      detail:
+        n(data.ssy) > 0
+          ? `${fmt(n(data.ssy))}/mo · future goal fund for girl child education / marriage`
+          : "Not started — girl child under 10, eligible now",
+      actionNeeded:
+        n(data.ssy) === 0
+          ? "Open SSY at post office. Min ₹250/month. 8.2% guaranteed."
+          : undefined,
+    });
+  }
+
+  securityChecklist.push({
+    label: "NSC — National Savings Certificate",
+    status: n(data.nscMonthly) > 0 ? "ok" : "na",
+    detail:
+      n(data.nscMonthly) > 0
+        ? `${fmt(n(data.nscMonthly))}/mo equivalent · 7.7% p.a.`
+        : "Not investing — optional but tax-efficient",
+  });
+
+  if (n(data.numberOfKids) > 0) {
+    securityChecklist.push({
+      label: "Child education fund",
+      status: n(data.kidsEducationFundTarget) > 0 ? "ok" : "warning",
+      detail:
+        n(data.kidsEducationFundTarget) > 0
+          ? `Target: ${fmt(n(data.kidsEducationFundTarget))}`
+          : "Not planned — set a target",
+      actionNeeded:
+        n(data.kidsEducationFundTarget) === 0
+          ? "Set an education corpus target in Step 7"
+          : undefined,
+    });
+    securityChecklist.push({
+      label: "Child marriage fund",
+      status: n(data.kidsMarriageFundTarget) > 0 ? "ok" : "warning",
+      detail:
+        n(data.kidsMarriageFundTarget) > 0
+          ? `Target: ${fmt(n(data.kidsMarriageFundTarget))}`
+          : "Not planned",
+      actionNeeded:
+        n(data.kidsMarriageFundTarget) === 0
+          ? "Set a marriage fund target in Step 7"
+          : undefined,
+    });
+  }
+
+  if (n(data.parentsSupport) > 0) {
+    const parentsInsuranceNeeded =
+      data.cityTier === "metro" ? 10_00_000 : data.cityTier === "tier2" ? 7_00_000 : 5_00_000;
+    const hasParentsMedical = n(data.parentsHealthInsuranceSumInsured) > 0;
+    const parentsInsuranceCovered = hasParentsMedical ? n(data.parentsHealthInsuranceSumInsured) : 0;
+    const parentsLiquidForMedical = n(data.parentsEmergencyCash);
+    const parentsMedicalCovered = parentsInsuranceCovered + parentsLiquidForMedical;
+
+    securityChecklist.push({
+      label: "Parents medical coverage",
+      status:
+        parentsMedicalCovered >= parentsInsuranceNeeded
+          ? "ok"
+          : parentsMedicalCovered >= parentsInsuranceNeeded * 0.5
+            ? "warning"
+            : "critical",
+      detail: hasParentsMedical
+        ? `₹${(parentsInsuranceCovered / 100000).toFixed(0)}L insurance + ₹${(parentsLiquidForMedical / 100000).toFixed(0)}L cash · Minimum needed: ₹${(parentsInsuranceNeeded / 100000).toFixed(0)}L for ${data.cityTier}`
+        : `No parents insurance found. Need ₹${(parentsInsuranceNeeded / 100000).toFixed(0)}L for ${data.cityTier}.`,
+      actionNeeded:
+        parentsMedicalCovered < parentsInsuranceNeeded
+          ? `Buy senior citizen health plan for parents (min ₹${(parentsInsuranceNeeded / 100000).toFixed(0)}L). Cost: ₹8,000–₹25,000/year depending on age.`
+          : undefined,
+    });
+
+    const bereavementFund = n(data.bereavementFund);
+    const bereavementNeeded = 2_00_000;
+    securityChecklist.push({
+      label: "Bereavement / last rites fund",
+      status: bereavementFund >= bereavementNeeded ? "ok" : "critical",
+      detail:
+        bereavementFund >= bereavementNeeded
+          ? `₹${(bereavementFund / 100000).toFixed(0)}L set aside · Covers last rites and immediate family needs`
+          : "₹0 set aside · Need minimum ₹2L for last rites, travel, and immediate expenses when a family member passes",
+      actionNeeded:
+        bereavementFund < bereavementNeeded
+          ? 'Keep ₹2,00,000 in a separate savings account labelled "bereavement fund". Do not invest this — needs to be accessible same day.'
+          : undefined,
+    });
+
+    if (data.parentsCity && data.parentsCity !== data.cityTier) {
+      securityChecklist.push({
+        label: "Parents in different city",
+        status: "warning",
+        detail: `Parents in ${data.parentsCity} · You are in ${data.cityTier}. Medical emergencies require immediate travel funds.`,
+        actionNeeded: "Keep ₹50,000 specifically for emergency travel to parents location. Add this to bereavement fund.",
+      });
+    }
+  }
+
+  const issues = buildIssues({
+    totalIncome,
+    savingsRate,
+    debtRatio,
+    untrackedCash,
+    emergencyFundGap,
+    bucketRows,
+    insuranceActual: monthlyInsuranceTotal(data),
+  });
+
   const teaser =
-    planSteps[0] ??
-    "Start by tracking every rupee for 30 days so income, spends, and savings reconcile.";
+    issues[0]?.message ??
+    "Your financial picture is ready. The universal income meter is now showing where your cash flow is going.";
 
   return {
     scores: {
-      savingsRate: round2(savingsRate),
-      debtRatio: round2(debtRatio),
-      untrackedCash: round2(untrackedCash),
-      emergencyFundGap: round2(emergencyFundGap),
+      savingsRate,
+      debtRatio,
+      untrackedCash,
+      emergencyFundGap,
     },
     flags: issuesToFlags(issues),
     issues,
     teaser,
-    planSteps,
+    planSteps: buildPlanSteps(
+      data,
+      bucketRows,
+      untrackedCash,
+      emergencyFundTargetMax,
+      emergencyFundGap,
+      securityChecklist,
+    ),
+    securityChecklist,
   };
-}
-
-function round2(x: number): number {
-  return Math.round(x * 100) / 100;
 }

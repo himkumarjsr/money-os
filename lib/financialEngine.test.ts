@@ -1,6 +1,8 @@
 import {
   analyseFinances,
   housingAndEmiTotal,
+  monthlyInsuranceTotal,
+  monthlySavingsContributions,
   monthlyTotalExpenses,
   monthlyTotalIncome,
   type FinancialProfile,
@@ -9,169 +11,120 @@ import { describe, expect, it } from "vitest";
 
 function baseProfile(overrides: Partial<FinancialProfile>): FinancialProfile {
   return {
-    lifeStage: "single_bachelor",
+    lifeStage: "bachelor",
+    selfAge: 29,
+    cityTier: "tier2",
     monthlySalary: 100_000,
-    spouseIncome: undefined,
-    otherIncome: undefined,
-    city: "Tier 2 city",
-    rentOrHomeLoanEmi: 15_000,
-    otherLoanEmis: 10_000,
-    foodGroceries: 12_000,
-    transport: 5_000,
-    utilities: 4_000,
-    entertainmentDiningShopping: 8_000,
-    insurancePremiumsMonthly: 2_000,
-    kidsExpenses: undefined,
-    parentsFamilySupport: 3_000,
-    monthlySavingsOrSip: 30_000,
-    emergencyFundSaved: 80_000,
-    totalDebtOutstanding: 400_000,
+    rentAmount: 15_000,
+    homeLoanEMI: 0,
+    secondPropertyEMI: 0,
+    carLoanEMI: 6_000,
+    bikeEMI: 4_000,
+    personalLoanEMI: 0,
+    additionalObligations: [],
+    vegetables: 3_000,
+    grocery: 8_000,
+    medicine: 1_000,
+    fuel: 4_000,
+    cabMetro: 2_000,
+    electricity: 2_500,
+    internet: 1_200,
+    gas: 900,
+    entertainment: 5_000,
+    shopping: 3_000,
+    parentsSupport: 3_000,
+    hasHealthInsurance: true,
+    healthInsurancePremiumMonthly: 1_000,
+    hasTermInsurance: false,
+    savingsAccountBalance: 1_00_000,
+    emergencyFundCurrent: 80_000,
+    ownsHome: false,
+    ownsCar: false,
+    monthlySIP: 20_000,
+    monthlyEPFContribution: 10_000,
     primaryGoal: "grow_wealth",
     ...overrides,
   };
 }
 
-describe("analyseFinances", () => {
-  it("bachelor (tier-2): savings rate vs 30% target, 3-month emergency baseline, no metro uplift", () => {
-    const p = baseProfile({
-      lifeStage: "single_bachelor",
-      city: "Tier 2 city",
-      monthlySalary: 100_000,
-      monthlySavingsOrSip: 20_000,
-      rentOrHomeLoanEmi: 20_000,
-      otherLoanEmis: 15_000,
-      foodGroceries: 15_000,
-      transport: 5_000,
-      utilities: 3_000,
-      entertainmentDiningShopping: 7_000,
-      insurancePremiumsMonthly: 0,
-      parentsFamilySupport: 0,
-      emergencyFundSaved: 50_000,
-    });
+describe("financialEngine", () => {
+  it("computes income, expenses, and contributions with new field groups", () => {
+    const profile = baseProfile({});
 
-    const income = monthlyTotalIncome(p);
-    const expenses = monthlyTotalExpenses(p);
-    expect(income).toBe(100_000);
-    expect(expenses).toBe(20_000 + 15_000 + 15_000 + 5_000 + 3_000 + 7_000 + 0 + 0);
-
-    const r = analyseFinances(p);
-
-    expect(r.scores.savingsRate).toBeCloseTo(20, 1);
-    expect(r.scores.debtRatio).toBeCloseTo(35, 1);
-    expect(r.scores.untrackedCash).toBeCloseTo(income - expenses - 20_000, 1);
-
-    const emergencyTarget = expenses * 3;
-    expect(emergencyTarget - 50_000).toBeCloseTo(r.scores.emergencyFundGap, 1);
-
-    expect(r.issues.some((i) => i.code === "savings_below_target")).toBe(true);
-    expect(r.issues.some((i) => i.code === "insurance_missing")).toBe(true);
-    expect(r.planSteps).toHaveLength(7);
-    expect(typeof r.teaser).toBe("string");
-    expect(r.teaser.length).toBeGreaterThan(0);
+    expect(monthlyTotalIncome(profile)).toBe(100_000);
+    expect(monthlySavingsContributions(profile)).toBe(31_000);
+    expect(monthlyInsuranceTotal(profile)).toBe(1_000);
+    expect(housingAndEmiTotal(profile)).toBe(25_000);
+    expect(monthlyTotalExpenses(profile)).toBeGreaterThan(25_000);
   });
 
-  it("married (metro): emergency fund target uses 30% uplift vs tier-2 benchmark on expenses", () => {
-    const p = baseProfile({
-      lifeStage: "married_no_kids",
-      city: "Mumbai",
-      monthlySalary: 200_000,
-      spouseIncome: 50_000,
-      otherIncome: 0,
-      monthlySavingsOrSip: 60_000,
-      insurancePremiumsMonthly: 3_000,
-      emergencyFundSaved: 0,
-      parentsFamilySupport: 0,
-      kidsExpenses: undefined,
-    });
+  it("uses universal bucket caps and flags emergency fund shortfalls", () => {
+    const result = analyseFinances(
+      baseProfile({
+        lifeStage: "kids",
+        selfAge: 37,
+        cityTier: "tier3",
+        monthlySalary: 180_000,
+        kidsSchoolFees: 18_000,
+        kidsActivities: 5_000,
+        monthlySIP: 15_000,
+        monthlyEPFContribution: 8_000,
+        emergencyFundCurrent: 2_00_000,
+      }),
+    );
 
-    expect(monthlyTotalIncome(p)).toBe(250_000);
-    const expenses = monthlyTotalExpenses(p);
-
-    const r = analyseFinances(p);
-    const expectedTarget = expenses * 6 * 1.3;
-    expect(r.scores.emergencyFundGap).toBeCloseTo(expectedTarget, 0);
-
-    const savingsRate = (60_000 / 250_000) * 100;
-    expect(r.scores.savingsRate).toBeCloseTo(savingsRate, 1);
-
-    const debtRatio =
-      (housingAndEmiTotal(p) / 250_000) * 100;
-    expect(r.scores.debtRatio).toBeCloseTo(debtRatio, 1);
-
-    expect(r.issues.some((i) => i.code === "emergency_fund_short")).toBe(true);
+    expect(result.scores.savingsRate).toBeLessThan(20);
+    expect(result.issues.some((issue) => issue.code === "investment_on_track")).toBe(true);
+    expect(result.issues.some((issue) => issue.code === "emergency_fund_short")).toBe(true);
+    expect(result.securityChecklist.some((item) => item.label === "Emergency fund (9 months target)")).toBe(true);
   });
 
-  it("married with kids (tier-3): 9 emergency months and 20% savings target (kids stage)", () => {
-    const p = baseProfile({
-      lifeStage: "married_with_kids",
-      city: "Tier 3 city",
-      monthlySalary: 180_000,
-      monthlySavingsOrSip: 25_000,
-      kidsExpenses: 20_000,
-      insurancePremiumsMonthly: 4_000,
-      emergencyFundSaved: 500_000,
-    });
+  it("can produce good signals under the universal framework", () => {
+    const result = analyseFinances(
+      baseProfile({
+        lifeStage: "married",
+        selfAge: 33,
+        cityTier: "metro",
+        monthlySalary: 250_000,
+        spouseIncome: 75_000,
+        rentAmount: 35_000,
+        carLoanEMI: 0,
+        bikeEMI: 0,
+        parentsSupport: 0,
+        monthlySIP: 60_000,
+        monthlyEPFContribution: 25_000,
+        emergencyFundCurrent: 20_00_000,
+        hasTermInsurance: true,
+        termInsurancePremiumMonthly: 2_000,
+      }),
+    );
 
-    const income = monthlyTotalIncome(p);
-    const expenses = monthlyTotalExpenses(p);
-    const r = analyseFinances(p);
-
-    expect(r.scores.savingsRate).toBeCloseTo((25_000 / income) * 100, 1);
-    const target = expenses * 9;
-    expect(r.scores.emergencyFundGap).toBeCloseTo(target - 500_000, 0);
-
-    expect(r.issues.some((i) => i.code === "savings_below_target")).toBe(true);
-
-    const untracked = income - expenses - 25_000;
-    expect(r.scores.untrackedCash).toBeCloseTo(untracked, 1);
-    if (untracked > 0.1 * income) {
-      expect(r.issues.some((i) => i.code === "untracked_cash_high")).toBe(true);
-    }
+    expect(result.scores.savingsRate).toBeGreaterThan(25);
+    expect(result.issues.some((issue) => issue.code === "investment_over_cap")).toBe(true);
+    expect(result.issues.some((issue) => issue.code === "emergency_fund_ok")).toBe(true);
+    expect(result.planSteps).toHaveLength(7);
   });
 
-  it("pre-retirement senior: 40% savings target and 30% debt guardrail", () => {
-    const p = baseProfile({
-      lifeStage: "pre_retirement_50_plus",
-      city: "Pune",
-      monthlySalary: 150_000,
-      monthlySavingsOrSip: 35_000,
-      rentOrHomeLoanEmi: 25_000,
-      otherLoanEmis: 25_000,
-      insurancePremiumsMonthly: 5_000,
-      emergencyFundSaved: 2_000_000,
-    });
+  it("builds plan steps with scenario-specific amounts and guidance", () => {
+    const result = analyseFinances(
+      baseProfile({
+        lifeStage: "kids",
+        cityTier: "metro",
+        monthlySalary: 180_000,
+        numberOfKids: 1,
+        kidsAges: [7],
+        kidsGenders: ["girl"],
+        monthlySIP: 15_000,
+        monthlyEPFContribution: 8_000,
+        emergencyFundCurrent: 2_00_000,
+        primaryGoal: "clear_debt",
+        healthInsurancePremiumMonthly: 0,
+      }),
+    );
 
-    const income = monthlyTotalIncome(p);
-    const r = analyseFinances(p);
-
-    expect(r.scores.savingsRate).toBeCloseTo((35_000 / income) * 100, 1);
-    expect(r.scores.debtRatio).toBeCloseTo((50_000 / income) * 100, 1);
-
-    expect(r.issues.some((i) => i.code === "savings_below_target")).toBe(true);
-    expect(r.issues.some((i) => i.code === "debt_ratio_high")).toBe(true);
-
-    const expenses = monthlyTotalExpenses(p);
-    const metroMonths = expenses * 12 * 1.3;
-    expect(r.scores.emergencyFundGap).toBeCloseTo(metroMonths - 2_000_000, 0);
-    expect(r.issues.some((i) => i.code === "emergency_fund_ok")).toBe(true);
-
-    expect(
-      r.issues.slice(0, r.issues.length - 1).every(
-        (issue, idx) => issue.severityScore >= r.issues[idx + 1].severityScore,
-      ),
-    ).toBe(true);
-  });
-
-  it("flags include critical, warning, and good lanes when present", () => {
-    const p = baseProfile({
-      lifeStage: "single_bachelor",
-      insurancePremiumsMonthly: 0,
-      monthlySavingsOrSip: 10_000,
-    });
-    const r = analyseFinances(p);
-    const types = r.flags.map((f) => f.type);
-    expect(types).toContain("critical");
-    expect(types).toContain("warning");
-    expect(types).toContain("good");
+    expect(result.planSteps).toHaveLength(7);
+    expect(result.planSteps.some((step) => step.includes("₹"))).toBe(true);
+    expect(result.planSteps.some((step) => step.includes("Make debt payoff your default surplus use"))).toBe(true);
+    expect(result.securityChecklist.some((item) => item.label === "Child education fund")).toBe(true);
   });
 });
