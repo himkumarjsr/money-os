@@ -1,7 +1,7 @@
 "use client";
 
-import { IncomeMeter } from "@/components/IncomeMeter";
 import { Button } from "@/components/ui/button";
+import MoneyInput from "@/components/ui/MoneyInput";
 import {
   ADDITIONAL_OBLIGATION_TYPE_VALUES,
   CITY_TIER_LABELS,
@@ -26,7 +26,9 @@ import {
   type PremiumFrequency,
 } from "@/lib/analyse-form-schema";
 import { formatCurrency } from "@/lib/finance";
+import { formatIndian, formatInWords } from "@/lib/formatters";
 import { useFinancialStore } from "@/store/financialStore";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -60,70 +62,12 @@ const wholeNumberFieldOptions = {
   setValueAs: (value: unknown) => parseMoneyInput(value),
 } as const;
 
-const ageBenchmarks = [
-  { min: 25, max: 30, low: 2_00_000, high: 5_00_000 },
-  { min: 30, max: 35, low: 8_00_000, high: 15_00_000 },
-  { min: 35, max: 40, low: 20_00_000, high: 40_00_000 },
-  { min: 40, max: 50, low: 40_00_000, high: 80_00_000 },
-] as const;
-
-const netWorthCardTone = (value: number) =>
-  value >= 0
-    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-    : "border-red-200 bg-red-50 text-red-900";
-
-const metricTone = {
-  green: "border-emerald-200 bg-emerald-50 text-emerald-900",
-  red: "border-red-200 bg-red-50 text-red-900",
-} as const;
-
 const FIELD_HELPER = "text-xs text-slate-500";
 const INVESTMENT_CACHE_HELPER = "Investment cache";
 
 function mergeHelpers(...helpers: Array<string | undefined>) {
   return helpers.filter(Boolean).join(" · ");
 }
-
-const MoneyInput = forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement> & {
-    id: string;
-    label: string;
-    error?: string;
-    helper?: string;
-    required?: boolean;
-  }
->(function MoneyInput(
-  { id, label, error, helper, required, placeholder = "0", ...inputProps },
-  ref,
-) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-slate-700">
-        {label}
-        {required ? <span className="text-[#E24B4A]"> *</span> : null}
-      </label>
-      <div className="flex min-h-11 items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-[#534AB7]/25">
-        <span className="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600">
-          ₹
-        </span>
-        <input
-          ref={ref}
-          id={id}
-          inputMode="decimal"
-          autoComplete="off"
-          className="min-w-0 flex-1 border-0 bg-transparent px-3 text-slate-900 outline-none placeholder:text-slate-400"
-          placeholder={placeholder}
-          {...inputProps}
-        />
-      </div>
-      {helper ? <p className={FIELD_HELPER}>{helper}</p> : null}
-      {error ? <p className="text-sm text-[#E24B4A]">{error}</p> : null}
-    </div>
-  );
-});
-
-MoneyInput.displayName = "MoneyInput";
 
 const NumberInput = forwardRef<
   HTMLInputElement,
@@ -234,65 +178,6 @@ function sum(values: Array<number | undefined>) {
   return values.reduce<number>((total, value) => total + (value ?? 0), 0);
 }
 
-function buildNetWorth(values: Partial<AnalyseFormValues>) {
-  const obligations = values.additionalObligations ?? [];
-  const assets = sum([
-    values.savingsAccountBalance,
-    values.fdValue,
-    values.liquidMFValue,
-    values.mfValue,
-    values.indianStocksValue,
-    values.usStocksValueINR,
-    values.usMFValueINR,
-    values.rsuValueINR,
-    values.ppfBalance,
-    values.npsBalance,
-    values.epfBalance,
-    values.homeMarketValue,
-    values.carMarketValue,
-    values.goldValue,
-    values.otherAssets,
-  ]);
-
-  const emiBacklog = sum([
-    values.personalLoanEMI ? values.personalLoanEMI * 36 : undefined,
-    values.secondPropertyEMI ? values.secondPropertyEMI * 36 : undefined,
-    values.bikeEMI ? values.bikeEMI * 36 : undefined,
-    values.homeLoanOutstanding === undefined && values.homeLoanEMI
-      ? values.homeLoanEMI * 36
-      : undefined,
-    values.carLoanOutstanding === undefined && values.carLoanEMI
-      ? values.carLoanEMI * 36
-      : undefined,
-    ...obligations.map((item) => (item.monthlyAmount ?? 0) * 36),
-  ]);
-
-  const liabilities = sum([
-    values.homeLoanOutstanding,
-    values.carLoanOutstanding,
-    emiBacklog,
-  ]);
-
-  return {
-    assets,
-    liabilities,
-    netWorth: assets - liabilities,
-  };
-}
-
-function getNetWorthStanding(age: number | undefined, netWorth: number) {
-  if (!age) return null;
-  const band = ageBenchmarks.find((item) => age >= item.min && age < item.max);
-  if (!band) return null;
-  const median = (band.low + band.high) / 2;
-
-  if (netWorth >= band.high * 2) return "Your net worth puts you in the top 10% of Indians your age.";
-  if (netWorth >= band.high) return "Your net worth puts you in the top 25% of Indians your age.";
-  if (netWorth >= median) return "Your net worth puts you in the top 40% of Indians your age.";
-  if (netWorth >= band.low) return "Your net worth puts you around the middle 50% of Indians your age.";
-  return "Your net worth puts you in the bottom 50% of Indians your age.";
-}
-
 function ToggleButtons({
   options,
   value,
@@ -400,8 +285,10 @@ export function AnalyseOnboardingForm() {
   const setAnalysis = useFinancialStore((state) => state.setAnalysis);
   const setFullAnalysis = useFinancialStore((state) => state.setFullAnalysis);
   const hydratedResetDoneRef = useRef(false);
+  const prevLifeStageRef = useRef<AnalyseFormValues["lifeStage"] | null>(null);
 
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
 
   const {
     register,
@@ -419,6 +306,58 @@ export function AnalyseOnboardingForm() {
     mode: "onSubmit",
     shouldUnregister: false,
   });
+
+  const bindMoneyField = useCallback(
+    (name: FieldPath<AnalyseFormValues>) => {
+      const reg = register(name, moneyFieldOptions);
+      return {
+        ...reg,
+        onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+          (reg as { onFocus?: (ev: React.FocusEvent<HTMLInputElement>) => void }).onFocus?.(e);
+          const v = getValues(name);
+          const num = typeof v === "number" ? v : Number(v);
+          if (num === 0 || v === "" || v === undefined || v === null) {
+            setValue(name, undefined as never, { shouldValidate: false, shouldDirty: true });
+            e.target.value = "";
+          }
+        },
+        onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+          const raw = e.currentTarget.value.replace(/[,\s₹]/g, "").trim();
+          if (raw === "") {
+            setValue(name, 0, { shouldValidate: true, shouldDirty: true });
+          }
+          (reg as { onBlur?: (ev: React.FocusEvent<HTMLInputElement>) => void }).onBlur?.(e);
+        },
+      };
+    },
+    [register, setValue, getValues],
+  );
+
+  const bindWholeNumberField = useCallback(
+    (name: FieldPath<AnalyseFormValues>) => {
+      const reg = register(name, wholeNumberFieldOptions);
+      return {
+        ...reg,
+        onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+          (reg as { onFocus?: (ev: React.FocusEvent<HTMLInputElement>) => void }).onFocus?.(e);
+          const v = getValues(name);
+          const num = typeof v === "number" ? v : Number(v);
+          if (num === 0 || v === "" || v === undefined || v === null) {
+            setValue(name, undefined as never, { shouldValidate: false, shouldDirty: true });
+            e.target.value = "";
+          }
+        },
+        onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+          const raw = e.currentTarget.value.trim();
+          if (raw === "") {
+            setValue(name, 0, { shouldValidate: true, shouldDirty: true });
+          }
+          (reg as { onBlur?: (ev: React.FocusEvent<HTMLInputElement>) => void }).onBlur?.(e);
+        },
+      };
+    },
+    [register, setValue, getValues],
+  );
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -453,11 +392,13 @@ export function AnalyseOnboardingForm() {
   ]);
   const fixedObligations: number = sum([
     watchedValues.rentAmount,
+    watchedValues.rentMaintenanceMonthly,
     watchedValues.homeLoanEMI,
     watchedValues.secondPropertyEMI,
     watchedValues.carLoanEMI,
     watchedValues.bikeEMI,
     watchedValues.personalLoanEMI,
+    watchedValues.creditCardBillMonthly,
     ...(watchedValues.additionalObligations ?? []).map((row) => row.monthlyAmount),
   ]);
   const monthlyLivingExpenses: number = sum([
@@ -470,6 +411,8 @@ export function AnalyseOnboardingForm() {
     watchedValues.internet,
     watchedValues.gas,
     watchedValues.water,
+    watchedValues.houseHelpMonthly,
+    watchedValues.cookHelpMonthly,
     watchedValues.entertainment,
     watchedValues.shopping,
     watchedValues.personalCare,
@@ -482,7 +425,6 @@ export function AnalyseOnboardingForm() {
     ? (monthlyLivingExpenses + fixedObligations) * 6
     : undefined;
   const retirementYears = selfAge && retirementAge ? Math.max(0, retirementAge - selfAge) : undefined;
-  const netWorth = useMemo(() => buildNetWorth(watchedValues), [watchedValues]);
   const hasEligibleGirlChild = useMemo(
     () =>
       (watchedValues.kidsGenders ?? []).some(
@@ -503,6 +445,30 @@ export function AnalyseOnboardingForm() {
     watchedValues.npsBalance,
     watchedValues.epfBalance,
   ]);
+  const estimatedAssets = sum([
+    watchedValues.savingsAccountBalance,
+    watchedValues.fdValue,
+    watchedValues.liquidMFValue,
+    watchedValues.emergencyFundCurrent,
+    watchedValues.bereavementFund,
+    watchedValues.mfValue,
+    watchedValues.indianStocksValue,
+    watchedValues.usStocksValueINR,
+    watchedValues.usMFValueINR,
+    watchedValues.rsuValueINR,
+    watchedValues.ppfBalance,
+    watchedValues.npsBalance,
+    watchedValues.epfBalance,
+    watchedValues.homeMarketValue,
+    watchedValues.carMarketValue,
+    watchedValues.goldValue,
+    watchedValues.otherAssets,
+  ]);
+  const estimatedLiabilities = sum([
+    watchedValues.homeLoanOutstanding,
+    watchedValues.carLoanOutstanding,
+  ]);
+  const estimatedNetWorth = estimatedAssets - estimatedLiabilities;
 
   useEffect(() => {
     if (!hasHydrated || !cachedAnalysis) return;
@@ -523,19 +489,16 @@ export function AnalyseOnboardingForm() {
   }, [hasHydrated, setAnalysis, watch]);
 
   useEffect(() => {
-    if (lifeStage !== "kids") {
-      setValue("numberOfKids", 0);
+    const prev = prevLifeStageRef.current;
+    if (prev !== null && lifeStage !== "kids" && prev === "kids") {
+      setValue("numberOfKids", undefined);
       setValue("kidsAges", []);
       setValue("kidsGenders", []);
       setValue("kidsSchoolFees", 0);
       setValue("kidsActivities", 0);
       setValue("ssy", 0);
     }
-
-    if (lifeStage === "bachelor") {
-      setValue("spouseAge", 0);
-      setValue("spouseIncome", 0);
-    }
+    prevLifeStageRef.current = lifeStage;
   }, [lifeStage, setValue]);
 
   useEffect(() => {
@@ -590,6 +553,14 @@ export function AnalyseOnboardingForm() {
     }
   }, [hasEligibleGirlChild, setValue]);
 
+  const investsInNsc = watch("investsInNsc");
+
+  useEffect(() => {
+    if (!investsInNsc) {
+      setValue("nscMonthly", 0);
+    }
+  }, [investsInNsc, setValue]);
+
   useEffect(() => {
     if (parentsSupport <= 0) {
       setValue("parentsCity", undefined);
@@ -599,21 +570,40 @@ export function AnalyseOnboardingForm() {
   }, [parentsSupport, setValue]);
 
   const goNext = useCallback(() => {
+    setDirection("forward");
     setStep((current) => Math.min(current + 1, STEPS.length - 1));
   }, []);
 
   const forceNext = useCallback(() => {
+    clearErrors();
+    const values = getValues();
+    const currentSchema = STEP_SCHEMAS[step];
+    const parsed = currentSchema.safeParse(values);
+    if (!parsed.success) {
+      applyZodFieldErrors(parsed.error.flatten(), setError);
+      return;
+    }
+    setDirection("forward");
     setStep((current) => Math.min(current + 1, STEPS.length - 1));
-  }, []);
+  }, [clearErrors, getValues, setError, step]);
 
   const goBack = useCallback(() => {
     clearErrors();
+    setDirection("back");
     setStep((current) => Math.max(current - 1, 0));
   }, [clearErrors]);
 
   const onFinalSubmit = useCallback(() => {
     clearErrors();
     const values = getValues();
+    const finalParsed = step7Schema.safeParse({
+      ...values,
+      primaryGoal: values.primaryGoal?.trim() ? values.primaryGoal : "grow_wealth",
+    });
+    if (!finalParsed.success) {
+      applyZodFieldErrors(finalParsed.error.flatten(), setError);
+      return;
+    }
     const normalized = normalizeAnalyseFormValues({
       ...values,
       primaryGoal: values.primaryGoal || "grow_wealth",
@@ -621,14 +611,13 @@ export function AnalyseOnboardingForm() {
     });
     setFullAnalysis(normalized);
     router.push("/analyse/result");
-  }, [clearErrors, getValues, router, setFullAnalysis]);
+  }, [clearErrors, getValues, router, setError, setFullAnalysis]);
 
   const debtWarning =
     totalIncome > 0 && fixedObligations > totalIncome * 0.5
       ? "Your fixed obligations are above 50% of household income. That can make cash flow fragile."
       : null;
 
-  const standingLine = getNetWorthStanding(selfAge, netWorth.netWorth);
   const housingTotal = sum([
     watchedValues.rentAmount,
     watchedValues.homeLoanEMI,
@@ -672,9 +661,19 @@ export function AnalyseOnboardingForm() {
   return (
     <div className="mx-auto max-w-xl px-4 py-8 sm:px-6 sm:py-10 lg:max-w-2xl">
       <div className="mb-8 flex items-center justify-between gap-4">
-        <Link href="/" className="text-sm font-medium text-[#534AB7] hover:underline">
+        <button
+          type="button"
+          onClick={() => {
+            if (step > 0) {
+              goBack();
+              return;
+            }
+            router.push("/");
+          }}
+          className="text-sm font-medium text-[#534AB7] hover:underline"
+        >
           ← Back
-        </Link>
+        </button>
         <p className="text-xs font-medium text-slate-500 sm:text-sm">
           Step {step + 1} of {STEPS.length}
         </p>
@@ -714,13 +713,6 @@ export function AnalyseOnboardingForm() {
         {step === 6 && "Choose the goal that matters most right now and fill only the targets that apply."}
       </p>
 
-      <div className="mt-6">
-        <IncomeMeter
-          totalIncome={totalIncome}
-          profile={watchedValues as Partial<FinancialProfile>}
-        />
-      </div>
-
       <form
         className="mt-8 space-y-6"
         onSubmit={(event) => {
@@ -732,6 +724,17 @@ export function AnalyseOnboardingForm() {
           }
         }}
       >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: direction === "forward" ? 40 : -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction === "forward" ? -40 : 40 }}
+            transition={{
+              duration: 0.3,
+              ease: [0.25, 0.46, 0.45, 0.94],
+            }}
+          >
         {step === 0 ? (
           <div className="space-y-6">
             <fieldset className="space-y-3">
@@ -769,14 +772,14 @@ export function AnalyseOnboardingForm() {
                 label="Your age"
                 required
                 error={errors.selfAge?.message}
-                {...register("selfAge", wholeNumberFieldOptions)}
+                {...bindWholeNumberField("selfAge")}
               />
               {lifeStage && lifeStage !== "bachelor" ? (
                 <NumberInput
                   id="spouseAge"
                   label="Spouse age"
                   error={errors.spouseAge?.message}
-                  {...register("spouseAge", wholeNumberFieldOptions)}
+                  {...bindWholeNumberField("spouseAge")}
                 />
               ) : null}
             </div>
@@ -788,7 +791,7 @@ export function AnalyseOnboardingForm() {
                     id="numberOfKids"
                     label="Number of kids"
                     error={errors.numberOfKids?.message}
-                    {...register("numberOfKids", wholeNumberFieldOptions)}
+                    {...bindWholeNumberField("numberOfKids")}
                   />
                 </div>
                 <div className="grid gap-5 sm:grid-cols-3">
@@ -798,7 +801,7 @@ export function AnalyseOnboardingForm() {
                         id={`kidsAges.${index}`}
                         label={`Kid ${index + 1} age`}
                         error={errors.kidsAges?.[index]?.message}
-                        {...register(`kidsAges.${index}` as const, wholeNumberFieldOptions)}
+                        {...bindWholeNumberField(`kidsAges.${index}` as const)}
                       />
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-slate-700">
@@ -856,22 +859,31 @@ export function AnalyseOnboardingForm() {
               label="Monthly take-home salary"
               required
               error={errors.monthlySalary?.message}
-              {...register("monthlySalary", moneyFieldOptions)}
+              {...bindMoneyField("monthlySalary")}
             />
             {lifeStage !== "bachelor" ? (
               <MoneyInput
                 id="spouseIncome"
                 label="Spouse monthly income"
                 error={errors.spouseIncome?.message}
-                {...register("spouseIncome", moneyFieldOptions)}
+                {...bindMoneyField("spouseIncome")}
               />
             ) : null}
             <MoneyInput
               id="otherIncome"
               label="Other income — freelance, rental, business"
               error={errors.otherIncome?.message}
-              {...register("otherIncome", moneyFieldOptions)}
+              {...bindMoneyField("otherIncome")}
             />
+            <div className="mt-4 flex items-center justify-between rounded-[10px] bg-[#EEEDFE] px-4 py-3">
+              <span className="text-sm font-medium text-[#3C3489]">Total monthly income</span>
+              <div className="text-right">
+                <div className="text-lg font-bold text-[#534AB7]">
+                  ₹{formatIndian(totalIncome)}
+                </div>
+                <div className="text-[11px] text-[#7F77DD]">{formatInWords(totalIncome)}</div>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -885,21 +897,30 @@ export function AnalyseOnboardingForm() {
                   label="Rent you pay monthly"
                   helper="Enter 0 if you own and live in your own home"
                   error={errors.rentAmount?.message}
-                  {...register("rentAmount", moneyFieldOptions)}
+                  {...bindMoneyField("rentAmount")}
                 />
+                {(watchedValues.rentAmount ?? 0) > 0 ? (
+                  <MoneyInput
+                    id="rentMaintenanceMonthly"
+                    label="Rent flat maintenance (society / maintenance)"
+                    helper="Monthly society charges, maintenance, or similar on top of rent"
+                    error={errors.rentMaintenanceMonthly?.message}
+                    {...bindMoneyField("rentMaintenanceMonthly")}
+                  />
+                ) : null}
                 <MoneyInput
                   id="homeLoanEMI"
                   label="Home loan EMI (if any)"
                   helper="Enter 0 if you have no home loan"
                   error={errors.homeLoanEMI?.message}
-                  {...register("homeLoanEMI", moneyFieldOptions)}
+                  {...bindMoneyField("homeLoanEMI")}
                 />
                 <MoneyInput
                   id="secondPropertyEMI"
                   label="Second property loan EMI (if any)"
                   helper="e.g. flat booked under construction while renting"
                   error={errors.secondPropertyEMI?.message}
-                  {...register("secondPropertyEMI", moneyFieldOptions)}
+                  {...bindMoneyField("secondPropertyEMI")}
                 />
               </div>
               {housingNote ? <Note tone={housingNote.tone}>{housingNote.text}</Note> : null}
@@ -912,13 +933,13 @@ export function AnalyseOnboardingForm() {
                   id="carLoanEMI"
                   label="Car loan EMI"
                   error={errors.carLoanEMI?.message}
-                  {...register("carLoanEMI", moneyFieldOptions)}
+                  {...bindMoneyField("carLoanEMI")}
                 />
                 <MoneyInput
                   id="bikeEMI"
                   label="Two-wheeler loan EMI"
                   error={errors.bikeEMI?.message}
-                  {...register("bikeEMI", moneyFieldOptions)}
+                  {...bindMoneyField("bikeEMI")}
                 />
               </div>
             </div>
@@ -930,7 +951,14 @@ export function AnalyseOnboardingForm() {
                 label="Personal loan EMI"
                 helper="Add your monthly EMI. If you track the loan amount or rate separately, we’ll still use the EMI for analysis."
                 error={errors.personalLoanEMI?.message}
-                {...register("personalLoanEMI", moneyFieldOptions)}
+                {...bindMoneyField("personalLoanEMI")}
+              />
+              <MoneyInput
+                id="creditCardBillMonthly"
+                label="Credit card — typical monthly payment"
+                helper="What you usually pay each month across cards (full pay-off or part of balance). Counts toward loan/debt pressure in your meter."
+                error={errors.creditCardBillMonthly?.message}
+                {...bindMoneyField("creditCardBillMonthly")}
               />
             </div>
 
@@ -1005,10 +1033,7 @@ export function AnalyseOnboardingForm() {
                         label="Monthly payment amount"
                         required
                         error={errors.additionalObligations?.[index]?.monthlyAmount?.message}
-                        {...register(
-                          `additionalObligations.${index}.monthlyAmount` as const,
-                          moneyFieldOptions,
-                        )}
+                        {...bindMoneyField(`additionalObligations.${index}.monthlyAmount` as const)}
                       />
                     </div>
                   </div>
@@ -1017,6 +1042,23 @@ export function AnalyseOnboardingForm() {
             </div>
 
             {debtWarning ? <Note tone="red">{debtWarning}</Note> : null}
+            <div
+              className={`mt-2 flex items-center justify-between rounded-[10px] px-4 py-3 ${
+                totalIncome > 0 && fixedObligations > totalIncome * 0.5
+                  ? "bg-red-50"
+                  : totalIncome > 0 && fixedObligations > totalIncome * 0.35
+                    ? "bg-amber-50"
+                    : "bg-emerald-50"
+              }`}
+            >
+              <span className="text-sm font-medium text-slate-700">Total monthly obligations</span>
+              <div className="text-right">
+                <div className="text-lg font-bold text-slate-900">
+                  ₹{formatIndian(fixedObligations)}
+                </div>
+                <div className="text-[11px] text-slate-500">{formatInWords(fixedObligations)}</div>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -1025,33 +1067,50 @@ export function AnalyseOnboardingForm() {
             <div className="space-y-4">
               <SectionTitle>Food</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="vegetables" label="Vegetables and fruits" error={errors.vegetables?.message} {...register("vegetables", moneyFieldOptions)} />
-                <MoneyInput id="grocery" label="Grocery and household items" error={errors.grocery?.message} {...register("grocery", moneyFieldOptions)} />
-                <MoneyInput id="medicine" label="Medicine and pharmacy" error={errors.medicine?.message} {...register("medicine", moneyFieldOptions)} />
+                <MoneyInput id="vegetables" label="Vegetables and fruits" error={errors.vegetables?.message} {...bindMoneyField("vegetables")} />
+                <MoneyInput id="grocery" label="Grocery and household items" error={errors.grocery?.message} {...bindMoneyField("grocery")} />
+                <MoneyInput id="medicine" label="Medicine and pharmacy" error={errors.medicine?.message} {...bindMoneyField("medicine")} />
               </div>
             </div>
             <div className="space-y-4">
               <SectionTitle>Transport</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="fuel" label="Fuel" error={errors.fuel?.message} {...register("fuel", moneyFieldOptions)} />
-                <MoneyInput id="cabMetro" label="Cab / auto / metro / bus" error={errors.cabMetro?.message} {...register("cabMetro", moneyFieldOptions)} />
+                <MoneyInput id="fuel" label="Fuel" error={errors.fuel?.message} {...bindMoneyField("fuel")} />
+                <MoneyInput id="cabMetro" label="Cab / auto / metro / bus" error={errors.cabMetro?.message} {...bindMoneyField("cabMetro")} />
               </div>
             </div>
             <div className="space-y-4">
               <SectionTitle>Utilities</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="electricity" label="Electricity" error={errors.electricity?.message} {...register("electricity", moneyFieldOptions)} />
-                <MoneyInput id="internet" label="Internet and mobile recharge" error={errors.internet?.message} {...register("internet", moneyFieldOptions)} />
-                <MoneyInput id="gas" label="Gas / LPG" error={errors.gas?.message} {...register("gas", moneyFieldOptions)} />
-                <MoneyInput id="water" label="Water charges" error={errors.water?.message} {...register("water", moneyFieldOptions)} />
+                <MoneyInput id="electricity" label="Electricity" error={errors.electricity?.message} {...bindMoneyField("electricity")} />
+                <MoneyInput id="internet" label="Internet and mobile recharge" error={errors.internet?.message} {...bindMoneyField("internet")} />
+                <MoneyInput id="gas" label="Gas / LPG" error={errors.gas?.message} {...bindMoneyField("gas")} />
+                <MoneyInput id="water" label="Water charges" error={errors.water?.message} {...bindMoneyField("water")} />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <SectionTitle>Domestic help</SectionTitle>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <MoneyInput
+                  id="houseHelpMonthly"
+                  label="House help / maid (monthly)"
+                  error={errors.houseHelpMonthly?.message}
+                  {...bindMoneyField("houseHelpMonthly")}
+                />
+                <MoneyInput
+                  id="cookHelpMonthly"
+                  label="Cook / cook salary (monthly)"
+                  error={errors.cookHelpMonthly?.message}
+                  {...bindMoneyField("cookHelpMonthly")}
+                />
               </div>
             </div>
             <div className="space-y-4">
               <SectionTitle>Lifestyle</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="entertainment" label="Entertainment — OTT, dining out, movies" error={errors.entertainment?.message} {...register("entertainment", moneyFieldOptions)} />
-                <MoneyInput id="shopping" label="Shopping — clothes, gadgets, misc" error={errors.shopping?.message} {...register("shopping", moneyFieldOptions)} />
-                <MoneyInput id="personalCare" label="Personal care — salon, gym" error={errors.personalCare?.message} {...register("personalCare", moneyFieldOptions)} />
+                <MoneyInput id="entertainment" label="Entertainment — OTT, dining out, movies" error={errors.entertainment?.message} {...bindMoneyField("entertainment")} />
+                <MoneyInput id="shopping" label="Shopping — clothes, gadgets, misc" error={errors.shopping?.message} {...bindMoneyField("shopping")} />
+                <MoneyInput id="personalCare" label="Personal care — salon, gym" error={errors.personalCare?.message} {...bindMoneyField("personalCare")} />
               </div>
             </div>
             <div className="space-y-4">
@@ -1059,11 +1118,11 @@ export function AnalyseOnboardingForm() {
               <div className="grid gap-5 sm:grid-cols-2">
                 {lifeStage === "kids" ? (
                   <>
-                    <MoneyInput id="kidsSchoolFees" label="Kids school fees and tuition" error={errors.kidsSchoolFees?.message} {...register("kidsSchoolFees", moneyFieldOptions)} />
-                    <MoneyInput id="kidsActivities" label="Kids activities — sports, hobby classes" error={errors.kidsActivities?.message} {...register("kidsActivities", moneyFieldOptions)} />
+                    <MoneyInput id="kidsSchoolFees" label="Kids school fees and tuition" error={errors.kidsSchoolFees?.message} {...bindMoneyField("kidsSchoolFees")} />
+                    <MoneyInput id="kidsActivities" label="Kids activities — sports, hobby classes" error={errors.kidsActivities?.message} {...bindMoneyField("kidsActivities")} />
                   </>
                 ) : null}
-                <MoneyInput id="parentsSupport" label="Parents / in-laws support" error={errors.parentsSupport?.message} {...register("parentsSupport", moneyFieldOptions)} />
+                <MoneyInput id="parentsSupport" label="Parents / in-laws support" error={errors.parentsSupport?.message} {...bindMoneyField("parentsSupport")} />
               </div>
             </div>
             {parentsSupport > 0 ? (
@@ -1115,7 +1174,7 @@ export function AnalyseOnboardingForm() {
                         id="parentsHealthInsuranceSumInsured"
                         label="Sum insured (₹)"
                         error={errors.parentsHealthInsuranceSumInsured?.message}
-                        {...register("parentsHealthInsuranceSumInsured", moneyFieldOptions)}
+                        {...bindMoneyField("parentsHealthInsuranceSumInsured")}
                       />
                     ) : null}
                   </div>
@@ -1124,12 +1183,21 @@ export function AnalyseOnboardingForm() {
                     label="Liquid cash set aside specifically for parents medical needs (₹)"
                     helper="Separate from your emergency fund. Senior medical costs can be sudden and large."
                     error={errors.parentsEmergencyCash?.message}
-                    {...register("parentsEmergencyCash", moneyFieldOptions)}
+                    {...bindMoneyField("parentsEmergencyCash")}
                   />
                 </div>
               </div>
             ) : null}
             {debtWarning ? <Note tone="red">{debtWarning}</Note> : null}
+            <div className="mt-2 flex items-center justify-between rounded-[10px] bg-[#EEEDFE] px-4 py-3">
+              <span className="text-sm font-medium text-[#3C3489]">Total monthly expenses</span>
+              <div className="text-right">
+                <div className="text-lg font-bold text-[#534AB7]">
+                  ₹{formatIndian(monthlyLivingExpenses)}
+                </div>
+                <div className="text-[11px] text-[#7F77DD]">{formatInWords(monthlyLivingExpenses)}</div>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -1155,7 +1223,7 @@ export function AnalyseOnboardingForm() {
                     id="healthInsuranceSumInsured"
                     label="Sum insured"
                     error={errors.healthInsuranceSumInsured?.message}
-                    {...register("healthInsuranceSumInsured", moneyFieldOptions)}
+                    {...bindMoneyField("healthInsuranceSumInsured")}
                   />
                   <PremiumField
                     inputId="healthInsurancePremiumInput"
@@ -1167,7 +1235,7 @@ export function AnalyseOnboardingForm() {
                     <MoneyInput
                       id="healthInsurancePremiumInput"
                       label="Premium amount"
-                      {...register("healthInsurancePremiumInput", moneyFieldOptions)}
+                      {...bindMoneyField("healthInsurancePremiumInput")}
                     />
                   </PremiumField>
                 </div>
@@ -1194,7 +1262,7 @@ export function AnalyseOnboardingForm() {
                     id="termInsuranceSumAssured"
                     label="Sum assured"
                     error={errors.termInsuranceSumAssured?.message}
-                    {...register("termInsuranceSumAssured", moneyFieldOptions)}
+                    {...bindMoneyField("termInsuranceSumAssured")}
                   />
                   <PremiumField
                     inputId="termInsurancePremiumInput"
@@ -1206,7 +1274,7 @@ export function AnalyseOnboardingForm() {
                     <MoneyInput
                       id="termInsurancePremiumInput"
                       label="Premium amount"
-                      {...register("termInsurancePremiumInput", moneyFieldOptions)}
+                      {...bindMoneyField("termInsurancePremiumInput")}
                     />
                   </PremiumField>
                 </div>
@@ -1226,7 +1294,7 @@ export function AnalyseOnboardingForm() {
                   <MoneyInput
                     id="carInsurancePremiumInput"
                     label="Car insurance premium"
-                    {...register("carInsurancePremiumInput", moneyFieldOptions)}
+                    {...bindMoneyField("carInsurancePremiumInput")}
                   />
                 </PremiumField>
                 <PremiumField
@@ -1239,7 +1307,7 @@ export function AnalyseOnboardingForm() {
                   <MoneyInput
                     id="bikeInsurancePremiumInput"
                     label="Two-wheeler insurance premium"
-                    {...register("bikeInsurancePremiumInput", moneyFieldOptions)}
+                    {...bindMoneyField("bikeInsurancePremiumInput")}
                   />
                 </PremiumField>
               </div>
@@ -1329,9 +1397,8 @@ export function AnalyseOnboardingForm() {
                             <MoneyInput
                               id={`otherInsurancePolicies.${index}.premiumInput`}
                               label="Premium amount"
-                              {...register(
+                              {...bindMoneyField(
                                 `otherInsurancePolicies.${index}.premiumInput` as const,
-                                moneyFieldOptions,
                               )}
                             />
                           </PremiumField>
@@ -1352,24 +1419,38 @@ export function AnalyseOnboardingForm() {
             <div className="space-y-4">
               <SectionTitle>Cash and liquid assets</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="savingsAccountBalance" label="Savings account balance" error={errors.savingsAccountBalance?.message} {...register("savingsAccountBalance", moneyFieldOptions)} />
-                <MoneyInput id="fdValue" label="Fixed Deposit total value" error={errors.fdValue?.message} {...register("fdValue", moneyFieldOptions)} />
-                <MoneyInput id="liquidMFValue" label="Liquid mutual fund value" error={errors.liquidMFValue?.message} {...register("liquidMFValue", moneyFieldOptions)} />
-                <MoneyInput id="emergencyFundCurrent" label="Emergency fund set aside" error={errors.emergencyFundCurrent?.message} {...register("emergencyFundCurrent", moneyFieldOptions)} />
+                <MoneyInput id="savingsAccountBalance" label="Savings account balance" error={errors.savingsAccountBalance?.message} {...bindMoneyField("savingsAccountBalance")} />
+                <MoneyInput id="fdValue" label="Fixed Deposit total value" error={errors.fdValue?.message} {...bindMoneyField("fdValue")} />
+                <MoneyInput id="liquidMFValue" label="Liquid mutual fund value" error={errors.liquidMFValue?.message} {...bindMoneyField("liquidMFValue")} />
+                <MoneyInput id="emergencyFundCurrent" label="Emergency fund set aside" error={errors.emergencyFundCurrent?.message} {...bindMoneyField("emergencyFundCurrent")} />
               </div>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
+              <SectionTitle>Bereavement / demise fund</SectionTitle>
+              <p className="text-sm text-slate-600">
+                Liquid money for last rites, travel, and immediate expenses — not invested. Many families keep at
+                least ₹2L aside; adjust to what feels right for your family.
+              </p>
+              <MoneyInput
+                id="bereavementFund"
+                label="Amount set aside (savings / FD you can break quickly)"
+                error={errors.bereavementFund?.message}
+                {...bindMoneyField("bereavementFund")}
+              />
             </div>
 
             <div className="space-y-4">
               <SectionTitle>Investments</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="mfValue" label="Mutual funds total current value" helper="Mutual funds — Existing investment cache" error={errors.mfValue?.message} {...register("mfValue", moneyFieldOptions)} />
-                <MoneyInput id="indianStocksValue" label="Indian stocks total current value" helper="Indian stocks — Existing investment cache" error={errors.indianStocksValue?.message} {...register("indianStocksValue", moneyFieldOptions)} />
-                <MoneyInput id="usStocksValueINR" label="US stocks total current value" helper="US stocks — Existing investment cache" error={errors.usStocksValueINR?.message} {...register("usStocksValueINR", moneyFieldOptions)} />
-                <MoneyInput id="usMFValueINR" label="US mutual funds total current value" error={errors.usMFValueINR?.message} {...register("usMFValueINR", moneyFieldOptions)} />
-                <MoneyInput id="rsuValueINR" label="RSU / ESOPs total current value in ₹" helper="RSU / ESOP — Existing investment cache" error={errors.rsuValueINR?.message} {...register("rsuValueINR", moneyFieldOptions)} />
-                <MoneyInput id="ppfBalance" label="PPF current balance" helper="PPF balance — Existing investment cache" error={errors.ppfBalance?.message} {...register("ppfBalance", moneyFieldOptions)} />
-                <MoneyInput id="npsBalance" label="NPS current balance" helper="NPS balance — Existing investment cache" error={errors.npsBalance?.message} {...register("npsBalance", moneyFieldOptions)} />
-                <MoneyInput id="epfBalance" label="EPF / PF current balance" helper="EPF / PF balance — Existing investment cache" error={errors.epfBalance?.message} {...register("epfBalance", moneyFieldOptions)} />
+                <MoneyInput id="mfValue" label="Mutual funds total current value" helper="Mutual funds — Existing investment cache" error={errors.mfValue?.message} {...bindMoneyField("mfValue")} />
+                <MoneyInput id="indianStocksValue" label="Indian stocks total current value" helper="Indian stocks — Existing investment cache" error={errors.indianStocksValue?.message} {...bindMoneyField("indianStocksValue")} />
+                <MoneyInput id="usStocksValueINR" label="US stocks total current value" helper="US stocks — Existing investment cache" error={errors.usStocksValueINR?.message} {...bindMoneyField("usStocksValueINR")} />
+                <MoneyInput id="usMFValueINR" label="US mutual funds total current value" error={errors.usMFValueINR?.message} {...bindMoneyField("usMFValueINR")} />
+                <MoneyInput id="rsuValueINR" label="RSU / ESOPs total current value in ₹" helper="RSU / ESOP — Existing investment cache" error={errors.rsuValueINR?.message} {...bindMoneyField("rsuValueINR")} />
+                <MoneyInput id="ppfBalance" label="PPF current balance" helper="PPF balance — Existing investment cache" error={errors.ppfBalance?.message} {...bindMoneyField("ppfBalance")} />
+                <MoneyInput id="npsBalance" label="NPS current balance" helper="NPS balance — Existing investment cache" error={errors.npsBalance?.message} {...bindMoneyField("npsBalance")} />
+                <MoneyInput id="epfBalance" label="EPF / PF current balance" helper="EPF / PF balance — Existing investment cache" error={errors.epfBalance?.message} {...bindMoneyField("epfBalance")} />
               </div>
             </div>
 
@@ -1391,8 +1472,8 @@ export function AnalyseOnboardingForm() {
                 </div>
                 {ownsHome ? (
                   <div className="grid gap-5 sm:grid-cols-2">
-                    <MoneyInput id="homeMarketValue" label="Current market value" error={errors.homeMarketValue?.message} {...register("homeMarketValue", moneyFieldOptions)} />
-                    <MoneyInput id="homeLoanOutstanding" label="Outstanding home loan" error={errors.homeLoanOutstanding?.message} {...register("homeLoanOutstanding", moneyFieldOptions)} />
+                    <MoneyInput id="homeMarketValue" label="Current market value" error={errors.homeMarketValue?.message} {...bindMoneyField("homeMarketValue")} />
+                    <MoneyInput id="homeLoanOutstanding" label="Outstanding home loan" error={errors.homeLoanOutstanding?.message} {...bindMoneyField("homeLoanOutstanding")} />
                   </div>
                 ) : null}
               </div>
@@ -1413,15 +1494,15 @@ export function AnalyseOnboardingForm() {
                 </div>
                 {ownsCar ? (
                   <div className="grid gap-5 sm:grid-cols-2">
-                    <MoneyInput id="carMarketValue" label="Current market value" error={errors.carMarketValue?.message} {...register("carMarketValue", moneyFieldOptions)} />
-                    <MoneyInput id="carLoanOutstanding" label="Outstanding car loan" error={errors.carLoanOutstanding?.message} {...register("carLoanOutstanding", moneyFieldOptions)} />
+                    <MoneyInput id="carMarketValue" label="Current market value" error={errors.carMarketValue?.message} {...bindMoneyField("carMarketValue")} />
+                    <MoneyInput id="carLoanOutstanding" label="Outstanding car loan" error={errors.carLoanOutstanding?.message} {...bindMoneyField("carLoanOutstanding")} />
                   </div>
                 ) : null}
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="goldValue" label="Gold and jewellery estimated value" error={errors.goldValue?.message} {...register("goldValue", moneyFieldOptions)} />
-                <MoneyInput id="otherAssets" label="Any other property or asset" error={errors.otherAssets?.message} {...register("otherAssets", moneyFieldOptions)} />
+                <MoneyInput id="goldValue" label="Gold and jewellery estimated value" error={errors.goldValue?.message} {...bindMoneyField("goldValue")} />
+                <MoneyInput id="otherAssets" label="Any other property or asset" error={errors.otherAssets?.message} {...bindMoneyField("otherAssets")} />
                 <TextInput id="otherAssetLabel" label="What is the other asset?" error={errors.otherAssetLabel?.message} {...register("otherAssetLabel")} />
               </div>
             </div>
@@ -1429,45 +1510,73 @@ export function AnalyseOnboardingForm() {
             <div className="space-y-4">
               <SectionTitle>Ongoing savings / investments</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="monthlySIP" label="Monthly SIP amount currently running" helper="SIP — Investment cache · Long term" error={errors.monthlySIP?.message} {...register("monthlySIP", moneyFieldOptions)} />
-                <MoneyInput id="monthlyRD" label="Monthly RD amount currently running" helper="RD — Investment cache · Emergency / short term" error={errors.monthlyRD?.message} {...register("monthlyRD", moneyFieldOptions)} />
-                <MoneyInput id="monthlyPPFContribution" label="Monthly PPF contribution" helper="PPF — Tax-free long term savings" error={errors.monthlyPPFContribution?.message} {...register("monthlyPPFContribution", moneyFieldOptions)} />
-                <MoneyInput id="monthlyNPSContribution" label="Monthly NPS contribution" helper="NPS — Investment cache · Retirement" error={errors.monthlyNPSContribution?.message} {...register("monthlyNPSContribution", moneyFieldOptions)} />
-                <MoneyInput id="monthlyEPFContribution" label="Monthly EPF contribution — employee side only" helper="EPF — Retirement deduction already reflected in take-home salary" error={errors.monthlyEPFContribution?.message} {...register("monthlyEPFContribution", moneyFieldOptions)} />
+                <MoneyInput id="monthlySIP" label="Monthly SIP amount currently running" helper="SIP — Investment cache · Long term" error={errors.monthlySIP?.message} {...bindMoneyField("monthlySIP")} />
+                <MoneyInput id="monthlyRD" label="Monthly RD amount currently running" helper="RD — Investment cache · Emergency / short term" error={errors.monthlyRD?.message} {...bindMoneyField("monthlyRD")} />
+                <MoneyInput id="monthlyPPFContribution" label="Monthly PPF contribution" helper="PPF — Tax-free long term savings" error={errors.monthlyPPFContribution?.message} {...bindMoneyField("monthlyPPFContribution")} />
+                <MoneyInput id="monthlyNPSContribution" label="Monthly NPS contribution" helper="NPS — Investment cache · Retirement" error={errors.monthlyNPSContribution?.message} {...bindMoneyField("monthlyNPSContribution")} />
+                <MoneyInput id="monthlyEPFContribution" label="Monthly EPF contribution — employee side only" helper="EPF — Retirement deduction already reflected in take-home salary" error={errors.monthlyEPFContribution?.message} {...bindMoneyField("monthlyEPFContribution")} />
                 {hasEligibleGirlChild ? (
                   <MoneyInput
                     id="ssy"
-                    label="Monthly SSY deposit"
+                    label="Monthly SSY deposit (girl child under 10)"
                     helper={mergeHelpers(
+                      "Sukanya Samriddhi — open before she turns 10",
                       "Max ₹1,50,000/year",
                       "Matures when girl turns 21",
                       "Interest rate 8.2% p.a.",
-                      "one of the best guaranteed returns",
                       "SSY — Investment cache · Girl child · 8.2% guaranteed",
                     )}
                     error={errors.ssy?.message}
-                    {...register("ssy", moneyFieldOptions)}
+                    {...bindMoneyField("ssy")}
                   />
                 ) : null}
-                <MoneyInput
-                  id="nscMonthly"
-                  label="Monthly NSC investment equivalent"
-                  helper={mergeHelpers(
-                    "5-year lock-in",
-                    "7.7% p.a.",
-                    "80C eligible",
-                    "Enter monthly equivalent of what you invest",
-                    "NSC — Investment cache · 5yr · 7.7% · 80C eligible",
-                  )}
-                  error={errors.nscMonthly?.message}
-                  {...register("nscMonthly", moneyFieldOptions)}
-                />
+                <div className="sm:col-span-2 space-y-3 rounded-2xl border border-slate-200 p-4">
+                  <label className="flex cursor-pointer items-start gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 rounded border-slate-300"
+                      {...register("investsInNsc")}
+                    />
+                    <span>
+                      <span className="font-medium text-slate-900">I invest in NSC</span>
+                      <span className="mt-0.5 block text-slate-600">
+                        Optional add-on — tick only if you use National Savings Certificate. Not required for a good plan.
+                      </span>
+                    </span>
+                  </label>
+                  {investsInNsc ? (
+                    <MoneyInput
+                      id="nscMonthly"
+                      label="Monthly NSC investment equivalent"
+                      helper={mergeHelpers(
+                        "5-year lock-in",
+                        "7.7% p.a.",
+                        "80C eligible",
+                        "Enter monthly equivalent of what you invest",
+                        "NSC — Investment cache · 5yr · 7.7% · 80C eligible",
+                      )}
+                      error={errors.nscMonthly?.message}
+                      {...bindMoneyField("nscMonthly")}
+                    />
+                  ) : null}
+                </div>
               </div>
             </div>
 
             {investmentsEmpty ? (
               <Note>Adding your existing investments gives you a more accurate net worth and analysis.</Note>
             ) : null}
+            <div className="mt-2 flex items-center justify-between rounded-[10px] bg-[#EEEDFE] px-4 py-3">
+              <span className="text-sm font-medium text-[#3C3489]">Estimated net worth</span>
+              <div className="text-right">
+                <div className="text-lg font-bold text-[#534AB7]">
+                  ₹{formatIndian(estimatedNetWorth)}
+                </div>
+                <div className="text-[11px] text-[#7F77DD]">
+                  {formatInWords(Math.abs(estimatedNetWorth))}
+                </div>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -1508,13 +1617,13 @@ export function AnalyseOnboardingForm() {
                   label="Retirement target corpus"
                   helper={retirementYears !== undefined ? `${retirementYears} years to retirement based on your current age.` : undefined}
                   error={errors.retirementTargetCorpus?.message}
-                  {...register("retirementTargetCorpus", moneyFieldOptions)}
+                  {...bindMoneyField("retirementTargetCorpus")}
                 />
                 <NumberInput
                   id="retirementAge"
                   label="Target retirement age"
                   error={errors.retirementAge?.message}
-                  {...register("retirementAge", wholeNumberFieldOptions)}
+                  {...bindWholeNumberField("retirementAge")}
                 />
 
                 {lifeStage === "kids" ? (
@@ -1524,14 +1633,14 @@ export function AnalyseOnboardingForm() {
                       label="Kids education fund target (₹ per child)"
                       helper="e.g. ₹25 lakh per child for engineering"
                       error={errors.kidsEducationFundTarget?.message}
-                      {...register("kidsEducationFundTarget", moneyFieldOptions)}
+                      {...bindMoneyField("kidsEducationFundTarget")}
                     />
                     <MoneyInput
                       id="kidsMarriageFundTarget"
                       label="Kids marriage fund target (₹ per child)"
                       helper="e.g. ₹15–25 lakh per child"
                       error={errors.kidsMarriageFundTarget?.message}
-                      {...register("kidsMarriageFundTarget", moneyFieldOptions)}
+                      {...bindMoneyField("kidsMarriageFundTarget")}
                     />
                   </>
                 ) : null}
@@ -1545,25 +1654,15 @@ export function AnalyseOnboardingForm() {
                       : undefined
                   }
                   error={errors.emergencyFundTarget?.message}
-                  {...register("emergencyFundTarget", moneyFieldOptions)}
+                  {...bindMoneyField("emergencyFundTarget")}
                 />
                 <MoneyInput
                   id="medicalEmergencyFund"
                   label="Medical emergency fund"
                   helper="Separate from health insurance — for gaps, co-pay, elder care"
                   error={errors.medicalEmergencyFund?.message}
-                  {...register("medicalEmergencyFund", moneyFieldOptions)}
+                  {...bindMoneyField("medicalEmergencyFund")}
                 />
-
-                {parentsSupport > 0 ? (
-                  <MoneyInput
-                    id="bereavementFund"
-                    label="Amount set aside for family bereavement expenses (₹)"
-                    helper="₹2L minimum recommended if you have elderly parents or dependents. Keep in savings account — accessible same day."
-                    error={errors.bereavementFund?.message}
-                    {...register("bereavementFund", moneyFieldOptions)}
-                  />
-                ) : null}
 
                 {(watchedValues.rentAmount ?? 0) > 0 ? (
                   <>
@@ -1571,13 +1670,13 @@ export function AnalyseOnboardingForm() {
                       id="homePurchaseTarget"
                       label="Home purchase target"
                       error={errors.homePurchaseTarget?.message}
-                      {...register("homePurchaseTarget", moneyFieldOptions)}
+                      {...bindMoneyField("homePurchaseTarget")}
                     />
                     <NumberInput
                       id="homePurchaseYear"
                       label="Target year"
                       error={errors.homePurchaseYear?.message}
-                      {...register("homePurchaseYear", wholeNumberFieldOptions)}
+                      {...bindWholeNumberField("homePurchaseYear")}
                     />
                   </>
                 ) : null}
@@ -1588,45 +1687,23 @@ export function AnalyseOnboardingForm() {
                       id="carPurchaseTarget"
                       label="Car purchase target"
                       error={errors.carPurchaseTarget?.message}
-                      {...register("carPurchaseTarget", moneyFieldOptions)}
+                      {...bindMoneyField("carPurchaseTarget")}
                     />
                     <NumberInput
                       id="carPurchaseYear"
                       label="Target year"
                       error={errors.carPurchaseYear?.message}
-                      {...register("carPurchaseYear", wholeNumberFieldOptions)}
+                      {...bindWholeNumberField("carPurchaseYear")}
                     />
                   </>
                 ) : null}
               </div>
             </div>
 
-            <div className={`rounded-3xl border p-5 shadow-sm ${netWorthCardTone(netWorth.netWorth)}`}>
-              <p className="text-sm font-semibold uppercase tracking-wide">Live net worth summary</p>
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <div className={`rounded-2xl border p-4 ${metricTone.green}`}>
-                  <p className="text-xs font-semibold uppercase tracking-wide">Total assets</p>
-                  <p className="mt-2 break-all text-[clamp(1.6rem,4vw,3rem)] font-semibold leading-tight">
-                    {formatCurrency(netWorth.assets, "en-IN", "INR")}
-                  </p>
-                </div>
-                <div className={`rounded-2xl border p-4 ${metricTone.red}`}>
-                  <p className="text-xs font-semibold uppercase tracking-wide">Total liabilities</p>
-                  <p className="mt-2 break-all text-[clamp(1.6rem,4vw,3rem)] font-semibold leading-tight">
-                    {formatCurrency(netWorth.liabilities, "en-IN", "INR")}
-                  </p>
-                </div>
-                <div className={`rounded-2xl border p-4 ${netWorth.netWorth >= 0 ? metricTone.green : metricTone.red}`}>
-                  <p className="text-xs font-semibold uppercase tracking-wide">Net worth</p>
-                  <p className="mt-2 break-all text-[clamp(1.6rem,4vw,3rem)] font-semibold leading-tight">
-                    {formatCurrency(netWorth.netWorth, "en-IN", "INR")}
-                  </p>
-                </div>
-              </div>
-              {standingLine ? <p className="mt-4 text-sm">{standingLine}</p> : null}
-            </div>
           </div>
         ) : null}
+          </motion.div>
+        </AnimatePresence>
 
         <div className="relative z-10 flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-between">
           <Button
@@ -1641,9 +1718,6 @@ export function AnalyseOnboardingForm() {
           <button
             type="button"
             className="relative z-20 inline-flex min-h-10 w-full touch-manipulation select-none items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-[color:var(--color-primary-foreground)] outline-none transition hover:opacity-95 active:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--ring-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:w-auto"
-            onMouseDown={(event) => {
-              event.preventDefault();
-            }}
             onClick={() => {
               if (step === STEPS.length - 1) {
                 void onFinalSubmit();

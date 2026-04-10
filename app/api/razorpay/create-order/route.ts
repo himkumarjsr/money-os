@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 
 const PLANS = {
-  advisor: { amountPaise: 49_00, label: "MoneyOS Advisor" },
-  moneyos: { amountPaise: 99_00, label: "MoneyOS Pro" },
+  pro: { amountPaise: 49_00, label: "Finkoin Pro" },
+  promax: { amountPaise: 99_00, label: "Finkoin Pro Max" },
 } as const;
+
+type PlanKey = keyof typeof PLANS;
 
 export async function POST(req: Request) {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -26,7 +28,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const planKey = body.plan === "moneyos" ? "moneyos" : "advisor";
+  const raw = body.plan;
+  const planKey: PlanKey =
+    raw === "promax" ? "promax" : raw === "pro" ? "pro" : "pro";
   const plan = PLANS[planKey];
 
   const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
@@ -39,7 +43,7 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       amount: plan.amountPaise,
       currency: "INR",
-      receipt: `mos_${planKey}_${Date.now()}`,
+      receipt: `finkoin_${planKey}_${Date.now()}`,
       notes: { plan: planKey },
     }),
   });

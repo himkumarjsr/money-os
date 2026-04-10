@@ -50,6 +50,15 @@ function n(v: number | undefined): number {
   return v ?? 0;
 }
 
+/** Suggested medical emergency corpus (beyond health insurance) by city, age, and dependants. */
+function medicalEmergencyTargetLiquid(data: FinancialProfile): number {
+  let target =
+    data.cityTier === "metro" ? 3_00_000 : data.cityTier === "tier2" ? 2_50_000 : 2_00_000;
+  if (data.selfAge >= 45) target += 50_000;
+  if (data.lifeStage === "kids") target += 50_000;
+  return target;
+}
+
 function fmt(amount: number): string {
   return `₹${Math.round(amount).toLocaleString("en-IN")}`;
 }
@@ -324,6 +333,11 @@ function buildPlanSteps(
     case "kids_education":
       push("Create a dedicated child education corpus so that school expenses and long-term goals do not compete with each other.");
       break;
+    case "build_insurance_premium_fund":
+      push(
+        "Prioritise a liquid insurance premium reserve (about 12 months of premiums in savings or liquid MF) so renewals never force you to dip into your emergency fund.",
+      );
+      break;
     default:
       push(`Keep redirecting surplus toward your primary goal: ${goalLabel(profile.primaryGoal)}.`);
       break;
@@ -362,7 +376,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const emergencyFundGap = Math.max(0, emergencyFundTargetMax - emergencyFundCurrent);
 
   const termNeeded = calculateTermNeeded(data);
-  const termInsuranceGap = Math.max(0, termNeeded - n(data.termInsuranceSumAssured));
   const minimumReasonableTermCover = 50_00_000;
   const termAdequacyFloor = Math.max(minimumReasonableTermCover, termNeeded * 0.5);
   const healthTarget = data.lifeStage === "bachelor" ? 5_00_000 : 10_00_000;
@@ -370,38 +383,22 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
 
   const securityChecklist: SecurityItem[] = [];
 
-  securityChecklist.push({
-    label: "Term insurance",
-    status: !data.hasTermInsurance
-      ? "critical"
-      : n(data.termInsuranceSumAssured) >= termAdequacyFloor
-        ? "ok"
-        : "warning",
-    detail: data.hasTermInsurance
-      ? `₹${(n(data.termInsuranceSumAssured) / 10000000).toFixed(2)}Cr cover · ${fmt(n(data.termInsurancePremiumMonthly))}/mo · Existing cover in place. Reference cover: ₹${(termNeeded / 10000000).toFixed(2)}Cr`
-      : `Not purchased · Recommended: ₹${(termNeeded / 10000000).toFixed(2)}Cr (10× income + liabilities + dependent buffer - existing assets)`,
-    actionNeeded: !data.hasTermInsurance
-      ? `Buy ₹${(termNeeded / 10000000).toFixed(2)}Cr term plan — costs ~₹${fmt(Math.round(termNeeded * 0.000008))}/mo`
-      : n(data.termInsuranceSumAssured) < termAdequacyFloor
-        ? `Review only if your existing cover is below ₹${(termAdequacyFloor / 10000000).toFixed(2)}Cr`
-        : undefined,
-  });
+  const liquidForPremiums = n(data.savingsAccountBalance) + n(data.liquidMFValue);
+  const monthlyPremiumsAll = monthlyInsuranceTotal(data);
+  const hasAnyInsuranceProduct =
+    data.hasHealthInsurance ||
+    data.hasTermInsurance ||
+    n(data.carInsurancePremiumMonthly) > 0 ||
+    n(data.bikeInsurancePremiumMonthly) > 0 ||
+    n(data.otherInsurancePremiumMonthly) > 0;
+  const premiumReserveTarget = monthlyPremiumsAll > 0 ? monthlyPremiumsAll * 12 : 0;
 
-  securityChecklist.push({
-    label: "Health / medical insurance",
-    status: !data.hasHealthInsurance ? "critical" : healthInsuranceGap > 0 ? "warning" : "ok",
-    detail: data.hasHealthInsurance
-      ? `₹${(n(data.healthInsuranceSumInsured) / 100000).toFixed(0)}L cover`
-      : "Not purchased",
-    actionNeeded: !data.hasHealthInsurance
-      ? "Buy minimum ₹5L family floater health plan"
-      : healthInsuranceGap > 0
-        ? `Increase cover by ₹${(healthInsuranceGap / 100000).toFixed(0)}L`
-        : undefined,
-  });
+  const medEmergencyTarget = medicalEmergencyTargetLiquid(data);
+  const medEmergencyCurrent = n(data.medicalEmergencyFund);
 
+  // 1. Emergency fund
   securityChecklist.push({
-    label: `Emergency fund (${emergencyFundMonthsMin}-${emergencyFundMonthsMax} months target)`,
+    label: "Emergency fund",
     status:
       emergencyFundCurrent >= emergencyFundTargetMax
         ? "ok"
@@ -412,62 +409,130 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
             : "critical",
     detail:
       emergencyFundCurrent >= emergencyFundTargetMax
-        ? `${fmt(emergencyFundCurrent)} funded (including FD) · ${emergencyFundMonthsMax} months covered · Excellent`
+        ? `${fmt(emergencyFundCurrent)} (incl. FD) · ${emergencyFundMonthsMax}-month target met`
         : emergencyFundCurrent >= emergencyFundTargetMin
-          ? `${fmt(emergencyFundCurrent)} funded (including FD) · ${emergencyFundMonthsMin} months covered · Build to ${fmt(emergencyFundTargetMax)} for ${emergencyFundMonthsMax}-month target`
-          : `${fmt(emergencyFundCurrent)} of ${fmt(emergencyFundTargetMin)} minimum target (including FD · ${emergencyFundMonthsMin} months = ${fmt(emergencyFundTargetMin)})`,
+          ? `${fmt(emergencyFundCurrent)} (incl. FD) · ${emergencyFundMonthsMin}–${emergencyFundMonthsMax} month band · Ideal: ${fmt(emergencyFundTargetMax)}`
+          : `${fmt(emergencyFundCurrent)} vs minimum ${fmt(emergencyFundTargetMin)} (${emergencyFundMonthsMin} mo of needs)`,
     actionNeeded:
       emergencyFundCurrent < emergencyFundTargetMin
-        ? `Save ${fmt(Math.ceil((emergencyFundTargetMin - emergencyFundCurrent) / 12))}/mo to reach ${emergencyFundMonthsMin}-month minimum in 12 months`
+        ? `Save ${fmt(Math.ceil((emergencyFundTargetMin - emergencyFundCurrent) / 12))}/mo to reach ${emergencyFundMonthsMin}-month minimum in ~12 months`
         : emergencyFundCurrent < emergencyFundTargetMax
-          ? `Save ${fmt(Math.ceil((emergencyFundTargetMax - emergencyFundCurrent) / 12))}/mo to reach ideal ${emergencyFundMonthsMax}-month target in 12 months`
+          ? `Save ${fmt(Math.ceil((emergencyFundTargetMax - emergencyFundCurrent) / 12))}/mo toward ${emergencyFundMonthsMax}-month target`
           : undefined,
   });
 
-  const liquidAssets = n(data.savingsAccountBalance) + n(data.liquidMFValue);
-  const medicalBufferTarget = monthlyExpenses * 3;
+  // 2. Medical insurance
   securityChecklist.push({
-    label: "Medical buffer fund (liquid)",
-    status:
-      liquidAssets >= medicalBufferTarget
-        ? "ok"
-        : liquidAssets >= medicalBufferTarget * 0.5
-          ? "warning"
-          : "critical",
-    detail: `${fmt(liquidAssets)} liquid available · Target: ${fmt(medicalBufferTarget)} (3 months of needs)`,
-    actionNeeded:
-      liquidAssets < medicalBufferTarget
-        ? `Park ${fmt(medicalBufferTarget - liquidAssets)} in liquid MF (redeemable in 1 day)`
+    label: "Medical insurance",
+    status: !data.hasHealthInsurance ? "critical" : healthInsuranceGap > 0 ? "warning" : "ok",
+    detail: data.hasHealthInsurance
+      ? `₹${(n(data.healthInsuranceSumInsured) / 100000).toFixed(0)}L sum insured`
+      : "No family floater recorded",
+    actionNeeded: !data.hasHealthInsurance
+      ? "Buy at least a ₹5L family floater (increase for metro / kids)."
+      : healthInsuranceGap > 0
+        ? `Increase cover by about ₹${(healthInsuranceGap / 100000).toFixed(0)}L`
         : undefined,
   });
 
+  // 3. Medical emergency fund (out-of-pocket / co-pay / gaps)
+  securityChecklist.push({
+    label: "Medical emergency fund",
+    status:
+      medEmergencyCurrent >= medEmergencyTarget
+        ? "ok"
+        : medEmergencyCurrent >= medEmergencyTarget * 0.5
+          ? "warning"
+          : "critical",
+    detail: `You entered ${fmt(medEmergencyCurrent)} · Suggested minimum: ${fmt(medEmergencyTarget)} (beyond insurance, for co-pay & gaps)`,
+    actionNeeded:
+      medEmergencyCurrent < medEmergencyTarget
+        ? `Add ~${fmt(Math.ceil((medEmergencyTarget - medEmergencyCurrent) / 12))}/mo for ~12 months into a separate liquid medical bucket`
+        : undefined,
+  });
+
+  // 4. Term insurance
+  securityChecklist.push({
+    label: "Term insurance",
+    status: !data.hasTermInsurance
+      ? "critical"
+      : n(data.termInsuranceSumAssured) >= termAdequacyFloor
+        ? "ok"
+        : "warning",
+    detail: data.hasTermInsurance
+      ? `₹${(n(data.termInsuranceSumAssured) / 10000000).toFixed(2)}Cr cover · ~${fmt(n(data.termInsurancePremiumMonthly))}/mo · Reference need: ₹${(termNeeded / 10000000).toFixed(2)}Cr`
+      : `Recommended cover about ₹${(termNeeded / 10000000).toFixed(2)}Cr (income ×10 + loans − assets, adjusted for age)`,
+    actionNeeded: !data.hasTermInsurance
+      ? `Buy ~₹${(termNeeded / 10000000).toFixed(2)}Cr pure term — often ~${fmt(Math.round(termNeeded * 0.000008))}/mo at your age band`
+      : n(data.termInsuranceSumAssured) < termAdequacyFloor
+        ? `Top up if cover is below ~₹${(termAdequacyFloor / 10000000).toFixed(2)}Cr`
+        : undefined,
+  });
+
+  // 5. Insurance premium reserve (~12 months in liquid cash — financial freedom habit)
+  if (!hasAnyInsuranceProduct) {
+    securityChecklist.push({
+      label: "Insurance premium reserve (~12 months)",
+      status: "na",
+      detail: "Once you add health or term (and motor) policies, we’ll size a liquid reserve so renewals don’t stress monthly cash flow.",
+    });
+  } else if (monthlyPremiumsAll <= 0) {
+    securityChecklist.push({
+      label: "Insurance premium reserve (~12 months)",
+      status: "warning",
+      detail: "Policies are on but premium amounts look incomplete — enter premiums to target a 12-month cushion in savings / liquid MF.",
+      actionNeeded: "Update premium fields in the analyse flow so we can calculate your reserve target.",
+    });
+  } else {
+    securityChecklist.push({
+      label: "Insurance premium reserve (~12 months)",
+      status:
+        liquidForPremiums >= premiumReserveTarget
+          ? "ok"
+          : liquidForPremiums >= premiumReserveTarget * 0.5
+            ? "warning"
+            : "critical",
+      detail: `${fmt(liquidForPremiums)} in savings + liquid MF vs target ${fmt(premiumReserveTarget)} (${fmt(monthlyPremiumsAll)}/mo × 12). Ring-fence this for renewals.`,
+      actionNeeded:
+        liquidForPremiums < premiumReserveTarget
+          ? `Build ${fmt(premiumReserveTarget - liquidForPremiums)} in liquid cash over the next 12–18 months (or set this as your primary goal: insurance premium reserve).`
+          : undefined,
+    });
+  }
+
+  // 6. SSY — girl child under 10
   const hasGirlChild =
     data.kidsGenders?.includes("girl") &&
     data.kidsAges?.some((age, index) => data.kidsGenders?.[index] === "girl" && age < 10);
   if (hasGirlChild) {
     securityChecklist.push({
-      label: "Sukanya Samriddhi Yojana (SSY)",
+      label: "SSY — girl child under 10",
       status: n(data.ssy) > 0 ? "ok" : "warning",
       detail:
         n(data.ssy) > 0
-          ? `${fmt(n(data.ssy))}/mo · future goal fund for girl child education / marriage`
-          : "Not started — girl child under 10, eligible now",
+          ? `${fmt(n(data.ssy))}/mo toward Sukanya Samriddhi (education / marriage)`
+          : "Eligible now — SSY is a strong guaranteed option before she turns 10",
       actionNeeded:
         n(data.ssy) === 0
-          ? "Open SSY at post office. Min ₹250/month. 8.2% guaranteed."
+          ? "Open SSY (min ₹250/mo; max ₹1.5L/year) at an authorised bank or post office."
           : undefined,
     });
   }
 
-  securityChecklist.push({
-    label: "NSC — National Savings Certificate",
-    status: n(data.nscMonthly) > 0 ? "ok" : "na",
-    detail:
-      n(data.nscMonthly) > 0
-        ? `${fmt(n(data.nscMonthly))}/mo equivalent · 7.7% p.a.`
-        : "Not investing — optional but tax-efficient",
-  });
+  // 7. NSC — only if user opted in
+  if (data.investsInNsc) {
+    securityChecklist.push({
+      label: "NSC (National Savings Certificate)",
+      status: n(data.nscMonthly) > 0 ? "ok" : "warning",
+      detail:
+        n(data.nscMonthly) > 0
+          ? `${fmt(n(data.nscMonthly))}/mo equivalent · optional 80C / guaranteed slice`
+          : "You marked NSC — add your monthly equivalent so we can track it.",
+      actionNeeded: n(data.nscMonthly) === 0 ? "Enter monthly NSC equivalent in Assets step." : undefined,
+    });
+  }
 
+  // 8–9. Child goals
   if (n(data.numberOfKids) > 0) {
     securityChecklist.push({
       label: "Child education fund",
@@ -475,14 +540,14 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       detail:
         n(data.kidsEducationFundTarget) > 0
           ? `Target: ${fmt(n(data.kidsEducationFundTarget))}`
-          : "Not planned — set a target",
+          : "Not planned — set a corpus target in Goals",
       actionNeeded:
         n(data.kidsEducationFundTarget) === 0
-          ? "Set an education corpus target in Step 7"
+          ? "Set kids education fund target in the Goals step."
           : undefined,
     });
     securityChecklist.push({
-      label: "Child marriage fund",
+      label: "Kids marriage fund",
       status: n(data.kidsMarriageFundTarget) > 0 ? "ok" : "warning",
       detail:
         n(data.kidsMarriageFundTarget) > 0
@@ -490,7 +555,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
           : "Not planned",
       actionNeeded:
         n(data.kidsMarriageFundTarget) === 0
-          ? "Set a marriage fund target in Step 7"
+          ? "Set marriage fund target in the Goals step."
           : undefined,
     });
   }
@@ -520,21 +585,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
           : undefined,
     });
 
-    const bereavementFund = n(data.bereavementFund);
-    const bereavementNeeded = 2_00_000;
-    securityChecklist.push({
-      label: "Bereavement / last rites fund",
-      status: bereavementFund >= bereavementNeeded ? "ok" : "critical",
-      detail:
-        bereavementFund >= bereavementNeeded
-          ? `₹${(bereavementFund / 100000).toFixed(0)}L set aside · Covers last rites and immediate family needs`
-          : "₹0 set aside · Need minimum ₹2L for last rites, travel, and immediate expenses when a family member passes",
-      actionNeeded:
-        bereavementFund < bereavementNeeded
-          ? 'Keep ₹2,00,000 in a separate savings account labelled "bereavement fund". Do not invest this — needs to be accessible same day.'
-          : undefined,
-    });
-
     if (data.parentsCity && data.parentsCity !== data.cityTier) {
       securityChecklist.push({
         label: "Parents in different city",
@@ -544,6 +594,21 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       });
     }
   }
+
+  const bereavementFund = n(data.bereavementFund);
+  const bereavementNeeded = 2_00_000;
+  securityChecklist.push({
+    label: "Bereavement / demise fund (last rites)",
+    status: bereavementFund >= bereavementNeeded ? "ok" : "critical",
+    detail:
+      bereavementFund >= bereavementNeeded
+        ? `₹${(bereavementFund / 100000).toFixed(0)}L set aside · For last rites, travel, and immediate family needs`
+        : "Not enough set aside · Many families aim for at least ₹2L liquid for last rites and urgent expenses",
+    actionNeeded:
+      bereavementFund < bereavementNeeded
+        ? 'Keep ₹2,00,000 in a separate savings account labelled "bereavement / demise fund". Keep it in cash or savings — same-day access.'
+        : undefined,
+  });
 
   const issues = buildIssues({
     totalIncome,

@@ -27,6 +27,7 @@ export function NSCCalculator() {
     <div className="space-y-6">
       <SliderField
         label="One-time investment"
+        unitType="money"
         value={principal}
         min={1_000}
         max={10_00_000}
@@ -36,6 +37,7 @@ export function NSCCalculator() {
       />
       <SliderField
         label="Assumed annual rate"
+        unitType="percent"
         value={rate}
         min={6}
         max={9}

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useState } from "react";
 
-type PlanId = "advisor" | "moneyos";
+type PlanId = "pro" | "promax";
 
 type RazorpayOpen = {
   key: string;
@@ -107,7 +107,7 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
         const orderId = payload.orderId;
         const amount = payload.amount;
         const currency = payload.currency ?? "INR";
-        const label = payload.label ?? "MoneyOS";
+        const label = payload.label ?? "Finkoin";
 
         if (!orderId || amount == null) {
           throw new Error("Invalid order response");
@@ -117,7 +117,7 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
           key: publicKey,
           amount,
           currency,
-          name: "MoneyOS",
+          name: "Finkoin",
           description: label,
           order_id: orderId,
           theme: { color: "#534AB7" },
@@ -159,7 +159,10 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
               Choose your plan
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Test mode: use Razorpay test keys. No real charge in test mode.
+              Unlock every fix-plan step, sharpen your health score with AI guidance, or talk to a Finkoin expert.
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Test mode: Razorpay test keys — no real charge until you go live.
             </p>
           </div>
           <button
@@ -190,7 +193,7 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
             </p>
             <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
               <li>Health check &amp; calculators</li>
-              <li>Top insight from your fix plan</li>
+              <li>First 2 fix-plan steps on results</li>
             </ul>
             <p className="mt-6 text-xs font-medium text-emerald-700">
               You&apos;re on Free
@@ -198,34 +201,35 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
           </div>
 
           <div className="flex flex-col rounded-2xl border-2 border-[#534AB7] p-5 ring-1 ring-[#534AB7]/20">
-            <p className="text-sm font-medium text-[#534AB7]">Advisor</p>
+            <p className="text-sm font-medium text-[#534AB7]">Pro</p>
             <p className="mt-2 text-3xl font-semibold text-slate-900">
               ₹49
               <span className="text-base font-normal text-slate-500"> / mo</span>
             </p>
             <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
-              <li>Full 7-step AI fix plan</li>
-              <li>WhatsApp / chat nudges (where enabled)</li>
+              <li>Full 7-step fix plan (all ₹ actions)</li>
+              <li>AI health-score improvements &amp; priorities</li>
+              <li>Finkoin expert access (where enabled)</li>
             </ul>
             <Button
               type="button"
               variant="primary"
               className="mt-6 w-full"
               disabled={busy !== null}
-              onClick={() => void pay("advisor")}
+              onClick={() => void pay("pro")}
             >
-              {busy === "advisor" ? "Opening…" : "Pay with Razorpay (test)"}
+              {busy === "pro" ? "Opening…" : "Pay with Razorpay (test)"}
             </Button>
           </div>
 
           <div className="flex flex-col rounded-2xl border border-slate-200 p-5">
-            <p className="text-sm font-medium text-slate-500">MoneyOS</p>
+            <p className="text-sm font-medium text-slate-500">Pro Max</p>
             <p className="mt-2 text-3xl font-semibold text-slate-900">
               ₹99
               <span className="text-base font-normal text-slate-500"> / mo</span>
             </p>
             <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
-              <li>Everything in Advisor</li>
+              <li>Everything in Pro</li>
               <li>Workspace, exports &amp; priority support</li>
             </ul>
             <Button
@@ -233,9 +237,9 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
               variant="secondary"
               className="mt-6 w-full border-slate-200"
               disabled={busy !== null}
-              onClick={() => void pay("moneyos")}
+              onClick={() => void pay("promax")}
             >
-              {busy === "moneyos" ? "Opening…" : "Pay with Razorpay (test)"}
+              {busy === "promax" ? "Opening…" : "Pay with Razorpay (test)"}
             </Button>
           </div>
         </div>

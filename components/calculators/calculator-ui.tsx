@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import type { ReactNode } from "react";
+import { formatIndian, formatInWords, formatSliderLabel, parseIndianInput } from "@/lib/formatters";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type InsightTone = "good" | "warn" | "bad";
 
@@ -40,6 +41,7 @@ type SliderFieldProps = {
   suffix?: string;
   prefix?: string;
   format?: (v: number) => string;
+  unitType?: "money" | "percent" | "years" | "months" | "number";
 };
 
 export function SliderField({
@@ -50,20 +52,92 @@ export function SliderField({
   step = 1,
   onChange,
   suffix,
-  prefix,
-  format,
+  unitType,
 }: SliderFieldProps) {
-  const display = format
-    ? format(value)
-    : `${prefix ?? ""}${value.toLocaleString("en-IN")}${suffix ?? ""}`;
+  const detectedType: "money" | "percent" | "years" | "months" | "number" =
+    unitType ??
+    (/interest|rate|return|%/i.test(label)
+      ? "percent"
+      : /tenure|period|year|age/i.test(label)
+        ? "years"
+        : /month|months/i.test(label)
+          ? "months"
+          : "money");
+
+  const leftUnit = detectedType === "money" ? "₹" : "";
+  const rightUnit =
+    detectedType === "percent"
+      ? "%"
+      : detectedType === "years"
+        ? "yrs"
+        : detectedType === "months"
+          ? "mo"
+            : detectedType === "number"
+              ? ""
+          : suffix ?? "";
+
+  const [displayValue, setDisplayValue] = useState(() =>
+    Number.isFinite(value) ? formatIndian(value) : "0",
+  );
+
+  useEffect(() => {
+    setDisplayValue(formatIndian(value));
+  }, [value]);
+
+  const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDisplayValue(e.target.value);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const parsed = parseIndianInput(e.target.value);
+    if (parsed === null) {
+      setDisplayValue(formatIndian(value));
+      return;
+    }
+    const clamped = Math.min(max, Math.max(min, parsed));
+    onChange(clamped);
+    setDisplayValue(formatIndian(clamped));
+  };
+
+  const words = useMemo(
+    () => formatSliderLabel(Math.max(0, value), detectedType),
+    [detectedType, value],
+  );
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-end justify-between gap-2">
-        <label className="text-sm font-medium text-slate-700">{label}</label>
-        <span className="text-sm font-semibold tabular-nums text-[#534AB7]">
-          {display}
-        </span>
+    <div className="mb-6">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <label className="text-sm font-medium text-[#5F5E5A]">{label}</label>
+        <div className="flex min-w-[120px] items-center gap-1 rounded-lg border border-[#E8E6F8] bg-[#F4F2FC] px-2.5 py-1">
+          {leftUnit ? (
+            <span className="shrink-0 text-[13px] font-semibold text-[#534AB7]">
+              {leftUnit}
+            </span>
+          ) : null}
+          <input
+            type="text"
+            inputMode="numeric"
+            value={displayValue}
+            onChange={handleManualInput}
+            onBlur={handleBlur}
+            className={cn(
+              "border-none bg-transparent text-right text-sm font-semibold text-[#111110] outline-none",
+              detectedType === "money" ? "w-[80px]" : "w-[40px]",
+            )}
+          />
+          {rightUnit ? (
+            <span
+              className={cn(
+                "text-[13px]",
+                detectedType === "percent"
+                  ? "font-semibold text-[#534AB7]"
+                  : "font-medium text-[#888780]",
+              )}
+            >
+              {rightUnit}
+            </span>
+          ) : null}
+        </div>
       </div>
       <input
         type="range"
@@ -74,6 +148,7 @@ export function SliderField({
         onChange={(e) => onChange(Number(e.target.value))}
         className="h-2 w-full cursor-pointer accent-[#534AB7]"
       />
+      <div className="mt-1.5 text-right text-xs text-[#9B9A94]">{words}</div>
     </div>
   );
 }
@@ -85,14 +160,30 @@ export function ResultStat({
   label: string;
   value: string;
 }) {
+  let display = value;
+  let words = "";
+  if (value.startsWith("₹")) {
+    const numeric = Number(value.replace(/[^\d.-]/g, ""));
+    if (!Number.isNaN(numeric)) {
+      const isMonthly = /monthly|\/month|emi/i.test(label);
+      const rounded = isMonthly ? numeric : Math.round(numeric);
+      const formatted = isMonthly
+        ? rounded.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : formatIndian(rounded);
+      display = `₹${formatted}`;
+      words = formatInWords(Math.floor(rounded));
+    }
+  }
+
   return (
     <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
         {label}
       </p>
       <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
-        {value}
+        {display}
       </p>
+      {words ? <p className="mt-1 text-xs text-[#9B9A94]">{words}</p> : null}
     </div>
   );
 }

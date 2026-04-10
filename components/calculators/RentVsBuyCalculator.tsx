@@ -47,6 +47,7 @@ export function RentVsBuyCalculator() {
     <div className="space-y-6">
       <SliderField
         label="Property price"
+        unitType="money"
         value={value}
         min={30_00_000}
         max={5_00_00_000}
@@ -56,6 +57,7 @@ export function RentVsBuyCalculator() {
       />
       <SliderField
         label="Comparable monthly rent"
+        unitType="money"
         value={rent}
         min={8_000}
         max={2_00_000}
@@ -65,6 +67,7 @@ export function RentVsBuyCalculator() {
       />
       <SliderField
         label="Home loan rate"
+        unitType="percent"
         value={rate}
         min={7}
         max={12}
@@ -74,6 +77,7 @@ export function RentVsBuyCalculator() {
       />
       <SliderField
         label="Years you plan to stay"
+        unitType="years"
         value={years}
         min={2}
         max={25}

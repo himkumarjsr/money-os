@@ -34,6 +34,7 @@ export function WhenToBuyCarCalculator() {
     <div className="space-y-6">
       <SliderField
         label="Monthly take-home"
+        unitType="money"
         value={income}
         min={30_000}
         max={5_00_000}
@@ -43,6 +44,7 @@ export function WhenToBuyCarCalculator() {
       />
       <SliderField
         label="Target car price"
+        unitType="money"
         value={car}
         min={4_00_000}
         max={45_00_000}
@@ -52,6 +54,7 @@ export function WhenToBuyCarCalculator() {
       />
       <SliderField
         label="Monthly savings toward down payment"
+        unitType="money"
         value={save}
         min={5_000}
         max={1_50_000}

@@ -124,6 +124,7 @@ describe("premium normalization", () => {
       monthlySIP: 0,
       monthlyEPFContribution: 0,
       ssy: 5_000,
+      investsInNsc: true,
       nscMonthly: 2_000,
       primaryGoal: "kids_education",
     });

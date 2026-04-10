@@ -1,4 +1,5 @@
 import { ArticleShare } from "@/components/learn/article-share";
+import { ArticleTracker } from "@/components/learn/article-tracker";
 import {
   learnArticleById,
   learnArticles,
@@ -32,12 +33,12 @@ export async function generateMetadata({
   const article = learnArticleById[params.id];
   if (!article) {
     return {
-      title: "Article not found | MoneyOS Learn",
+      title: "Article not found | Finkoin Learn",
       robots: { index: false, follow: false },
     };
   }
 
-  const title = `${article.title} | MoneyOS Learn`;
+  const title = `${article.title} | Finkoin Learn`;
   const description = article.subtitle;
 
   return {
@@ -60,7 +61,7 @@ export async function generateMetadata({
       article.category,
       "India",
       "personal finance",
-      "MoneyOS",
+      "Finkoin",
       article.title,
     ],
   };
@@ -76,6 +77,7 @@ export default function LearnArticlePage({ params }: PageProps) {
 
   return (
     <div className="min-h-dvh bg-white text-slate-900">
+      <ArticleTracker articleId={article.id} />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6 sm:px-6">
           <Link

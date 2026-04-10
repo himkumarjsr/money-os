@@ -1,3 +1,5 @@
+"use client";
+
 import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-form";
 
 export default function AnalysePage() {

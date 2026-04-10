@@ -1,4 +1,108 @@
-import type { FinancialProfile } from "@/lib/analyse-form-schema";
+import type { FinancialProfile, PremiumFrequency } from "@/lib/analyse-form-schema";
+import { toMonthlyEquivalent } from "@/lib/analyse-form-schema";
+
+/** Form fields used before `normalizeAnalyseFormValues` runs */
+export type FormPremiumOverlay = {
+  healthInsurancePremiumInput?: number;
+  healthInsurancePremiumFrequency?: PremiumFrequency;
+  termInsurancePremiumInput?: number;
+  termInsurancePremiumFrequency?: PremiumFrequency;
+  carInsurancePremiumInput?: number;
+  carInsurancePremiumFrequency?: PremiumFrequency;
+  bikeInsurancePremiumInput?: number;
+  bikeInsurancePremiumFrequency?: PremiumFrequency;
+  hasOtherInsurance?: boolean;
+  otherInsurancePolicies?: Array<{
+    policyName?: string;
+    premiumInput?: number;
+    frequency?: PremiumFrequency;
+  }>;
+};
+
+export type BucketProfileInput = Partial<FinancialProfile> & FormPremiumOverlay;
+
+function n(v: number | undefined): number {
+  return v ?? 0;
+}
+
+function healthPremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.healthInsurancePremiumMonthly === "number") {
+    return n(data.healthInsurancePremiumMonthly);
+  }
+  if (data.hasHealthInsurance) {
+    return n(
+      toMonthlyEquivalent(
+        data.healthInsurancePremiumInput,
+        data.healthInsurancePremiumFrequency,
+      ),
+    );
+  }
+  return 0;
+}
+
+function termPremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.termInsurancePremiumMonthly === "number") {
+    return n(data.termInsurancePremiumMonthly);
+  }
+  if (data.hasTermInsurance) {
+    return n(
+      toMonthlyEquivalent(
+        data.termInsurancePremiumInput,
+        data.termInsurancePremiumFrequency,
+      ),
+    );
+  }
+  return 0;
+}
+
+function carPremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.carInsurancePremiumMonthly === "number") {
+    return n(data.carInsurancePremiumMonthly);
+  }
+  return n(
+    toMonthlyEquivalent(
+      data.carInsurancePremiumInput,
+      data.carInsurancePremiumFrequency,
+    ),
+  );
+}
+
+function bikePremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.bikeInsurancePremiumMonthly === "number") {
+    return n(data.bikeInsurancePremiumMonthly);
+  }
+  return n(
+    toMonthlyEquivalent(
+      data.bikeInsurancePremiumInput,
+      data.bikeInsurancePremiumFrequency,
+    ),
+  );
+}
+
+function otherInsurancePremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.otherInsurancePremiumMonthly === "number") {
+    return n(data.otherInsurancePremiumMonthly);
+  }
+  if (data.hasOtherInsurance && (data.otherInsurancePolicies?.length ?? 0) > 0) {
+    return (data.otherInsurancePolicies ?? []).reduce(
+      (total, row) =>
+        total + n(toMonthlyEquivalent(row.premiumInput, row.frequency)),
+      0,
+    );
+  }
+  return 0;
+}
+
+/** Monthly insurance premiums only (health, term, motor, other) — for speedometer “investment” split. */
+export function getInsurancePremiumsMonthly(data: BucketProfileInput): number {
+  return (
+    healthPremiumMonthly(data) +
+    termPremiumMonthly(data) +
+    carPremiumMonthly(data) +
+    bikePremiumMonthly(data) +
+    otherInsurancePremiumMonthly(data)
+  );
+}
 
 export const BASE_UNIVERSAL_CAPS = {
   wants: 0.05,
@@ -20,10 +124,6 @@ export type UniversalBucketRow = {
   actual: number;
   status: UniversalBucketStatus;
 };
-
-function n(v: number | undefined): number {
-  return v ?? 0;
-}
 
 function totalIncome(data: Partial<FinancialProfile>) {
   return n(data.monthlySalary) + n(data.spouseIncome) + n(data.otherIncome);
@@ -53,9 +153,10 @@ export function getUniversalBucketStatus(
   return "critical";
 }
 
-export function getUniversalBucketActuals(data: Partial<FinancialProfile>) {
+export function getUniversalBucketActuals(data: BucketProfileInput) {
   let needsActual =
     n(data.rentAmount) +
+    n(data.rentMaintenanceMonthly) +
     n(data.homeLoanEMI) +
     n(data.secondPropertyEMI) +
     n(data.vegetables) +
@@ -74,23 +175,28 @@ export function getUniversalBucketActuals(data: Partial<FinancialProfile>) {
     needsActual += n(data.parentsSupport);
   }
 
-  needsActual += n(data.personalCare) + n(data.kidsActivities);
+  needsActual +=
+    n(data.personalCare) +
+    n(data.kidsActivities) +
+    n(data.houseHelpMonthly) +
+    n(data.cookHelpMonthly);
 
   const wantsActual =
     n(data.shopping);
 
   const securityActual =
-    n(data.healthInsurancePremiumMonthly) +
-    n(data.termInsurancePremiumMonthly) +
-    n(data.carInsurancePremiumMonthly) +
-    n(data.bikeInsurancePremiumMonthly) +
-    n(data.otherInsurancePremiumMonthly) +
+    healthPremiumMonthly(data) +
+    termPremiumMonthly(data) +
+    carPremiumMonthly(data) +
+    bikePremiumMonthly(data) +
+    otherInsurancePremiumMonthly(data) +
     n(data.ssy);
 
   const loansActual =
     n(data.carLoanEMI) +
     n(data.bikeEMI) +
-    n(data.personalLoanEMI);
+    n(data.personalLoanEMI) +
+    n(data.creditCardBillMonthly);
 
   // MONTHLY CONTRIBUTIONS ONLY
   // Asset values (mfValue, epfBalance etc.)
@@ -112,7 +218,7 @@ export function getUniversalBucketActuals(data: Partial<FinancialProfile>) {
   };
 }
 
-export function getUniversalBucketRows(data: Partial<FinancialProfile>): UniversalBucketRow[] {
+export function getUniversalBucketRows(data: BucketProfileInput): UniversalBucketRow[] {
   const totalMonthlyIncome = totalIncome(data);
   const actuals = getUniversalBucketActuals(data);
   const caps = getUniversalCaps(data);
@@ -159,7 +265,7 @@ export function getUniversalBucketRows(data: Partial<FinancialProfile>): Univers
   });
 }
 
-export function getUnallocatedIncome(data: Partial<FinancialProfile>): number {
+export function getUnallocatedIncome(data: BucketProfileInput): number {
   const totalMonthlyIncome = totalIncome(data);
   const actuals = getUniversalBucketActuals(data);
   return (

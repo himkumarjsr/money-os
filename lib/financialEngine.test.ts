@@ -43,6 +43,7 @@ function baseProfile(overrides: Partial<FinancialProfile>): FinancialProfile {
     monthlySIP: 20_000,
     monthlyEPFContribution: 10_000,
     primaryGoal: "grow_wealth",
+    investsInNsc: false,
     ...overrides,
   };
 }
@@ -52,7 +53,7 @@ describe("financialEngine", () => {
     const profile = baseProfile({});
 
     expect(monthlyTotalIncome(profile)).toBe(100_000);
-    expect(monthlySavingsContributions(profile)).toBe(31_000);
+    expect(monthlySavingsContributions(profile)).toBe(20_000);
     expect(monthlyInsuranceTotal(profile)).toBe(1_000);
     expect(housingAndEmiTotal(profile)).toBe(25_000);
     expect(monthlyTotalExpenses(profile)).toBeGreaterThan(25_000);
@@ -76,7 +77,7 @@ describe("financialEngine", () => {
     expect(result.scores.savingsRate).toBeLessThan(20);
     expect(result.issues.some((issue) => issue.code === "investment_on_track")).toBe(true);
     expect(result.issues.some((issue) => issue.code === "emergency_fund_short")).toBe(true);
-    expect(result.securityChecklist.some((item) => item.label === "Emergency fund (9 months target)")).toBe(true);
+    expect(result.securityChecklist.some((item) => item.label === "Emergency fund")).toBe(true);
   });
 
   it("can produce good signals under the universal framework", () => {
@@ -99,8 +100,8 @@ describe("financialEngine", () => {
       }),
     );
 
-    expect(result.scores.savingsRate).toBeGreaterThan(25);
-    expect(result.issues.some((issue) => issue.code === "investment_over_cap")).toBe(true);
+    expect(result.scores.savingsRate).toBeCloseTo(18.46, 1);
+    expect(result.issues.some((issue) => issue.code === "investment_on_track")).toBe(true);
     expect(result.issues.some((issue) => issue.code === "emergency_fund_ok")).toBe(true);
     expect(result.planSteps).toHaveLength(7);
   });

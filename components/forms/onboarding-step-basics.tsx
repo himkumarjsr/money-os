@@ -34,7 +34,7 @@ export function OnboardingStepBasics() {
           Tell us about you
         </h2>
         <p className="mt-1 text-sm text-muted sm:text-base">
-          A few basics to personalize your MoneyOS experience.
+          A few basics to personalize your Finkoin experience.
         </p>
       </div>
       <div className="flex flex-col gap-4">

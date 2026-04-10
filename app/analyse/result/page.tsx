@@ -1,7 +1,8 @@
 "use client";
 
 import { PaywallModal } from "@/components/analyse/paywall-modal";
-import { IncomeMeter } from "@/components/IncomeMeter";
+import SpeedoMeter from "@/components/ui/SpeedoMeter";
+import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { Button } from "@/components/ui/button";
 import {
   CITY_TIER_LABELS,
@@ -18,11 +19,24 @@ import {
   getSavingsTargetPercent,
   monthlyTotalIncome,
 } from "@/lib/financialEngine";
+import {
+  buildNetWorth,
+  getNetWorthStanding,
+  netWorthMetricTones,
+  netWorthSectionTone,
+} from "@/lib/netWorth";
 import { getUnallocatedIncome, getUniversalBucketRows } from "@/lib/universal-buckets";
+import { fadeUp, scaleIn, slideInLeft, staggerContainer } from "@/lib/animations";
 import { useFinancialStore } from "@/store/use-financial-store";
+import { useAuthStore } from "@/store/authStore";
+import { useGamificationStore } from "@/store/gamificationStore";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
+/** Free users see this many fix-plan steps before the ₹49 unlock. */
+const FREE_FIX_PLAN_STEPS = 2;
 
 function toneBarClass(t: "red" | "amber" | "green") {
   if (t === "green") return "border-emerald-500/80 bg-emerald-50";
@@ -63,25 +77,84 @@ function statusIcon(status: "ok" | "warning" | "critical" | "na") {
 export default function AnalyseResultPage() {
   const router = useRouter();
   const data = useFinancialStore((s) => s.lastSubmission);
+  const storedResult = useFinancialStore((s) => s.result);
+  const hasHydrated = useFinancialStore((s) => s.hasHydrated);
+  const tier = useAuthStore((s) => s.subscriptionTier);
+  const earnTokens = useGamificationStore((s) => s.earnTokens);
+  const awardBadge = useGamificationStore((s) => s.awardBadge);
+  const hasEarnedAction = useGamificationStore((s) => s.hasEarnedAction);
+  const markEarnedAction = useGamificationStore((s) => s.markEarnedAction);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!data) {
       router.replace("/analyse");
     }
-  }, [data, router]);
+  }, [data, hasHydrated, router]);
 
-  const analysis = useMemo(() => (data ? analyseFinances(data) : null), [data]);
+  const analysis = useMemo(
+    () => storedResult ?? (data ? analyseFinances(data) : null),
+    [data, storedResult],
+  );
   const income = data ? monthlyTotalIncome(data) : 0;
   const savingsTarget = data ? getSavingsTargetPercent(data) : 0;
   const debtLimit = getDebtSafeLimitPercent();
   const bucketRows = data ? getUniversalBucketRows(data) : [];
   const unallocated = data ? getUnallocatedIncome(data) : 0;
+  const netWorth = useMemo(() => (data ? buildNetWorth(data) : null), [data]);
+  const netWorthStanding =
+    data && netWorth ? getNetWorthStanding(data.selfAge, netWorth.netWorth) : null;
+
+  useEffect(() => {
+    if (!analysis) return;
+    if (hasEarnedAction("analysis-complete")) return;
+    earnTokens(50, "Financial analysis complete");
+    awardBadge("money-starter");
+    markEarnedAction("analysis-complete");
+  }, [analysis, awardBadge, earnTokens, hasEarnedAction, markEarnedAction]);
+
+  const healthScore = analysis
+    ? Math.max(
+        0,
+        100 -
+          analysis.issues.filter((i) => i.severity === "critical").length * 15 -
+          analysis.issues.filter((i) => i.severity === "warning").length * 7,
+      )
+    : 0;
+
+  useEffect(() => {
+    let rafId = 0;
+    let startTime = 0;
+    const duration = 1200;
+    const tick = (time: number) => {
+      if (!startTime) startTime = time;
+      const progress = Math.min((time - startTime) / duration, 1);
+      setAnimatedScore(Math.round(healthScore * progress));
+      if (progress < 1) {
+        rafId = window.requestAnimationFrame(tick);
+      }
+    };
+    rafId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [healthScore]);
+
+  if (!hasHydrated) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
+        Loading your report…
+      </div>
+    );
+  }
 
   if (!data || !analysis) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
-        Loading...
+        No analysis found.{" "}
+        <Link href="/analyse" className="ml-1 text-[#534AB7]">
+          Go to analyse
+        </Link>
       </div>
     );
   }
@@ -93,7 +166,6 @@ export default function AnalyseResultPage() {
   const checklistTotal = analysis.securityChecklist.filter((item) => item.status !== "na").length;
   const checklistPct =
     checklistTotal > 0 ? Math.round((checklistOkCount / checklistTotal) * 100) : 0;
-
   return (
     <div className="min-h-dvh bg-white text-slate-900">
       <header className="border-b border-slate-200 bg-white">
@@ -122,9 +194,58 @@ export default function AnalyseResultPage() {
           </p>
         </div>
 
+        {netWorth ? (
+          <section
+            aria-label="Net worth summary"
+            className={cn("rounded-3xl border p-6 shadow-sm", netWorthSectionTone(netWorth.netWorth))}
+          >
+            <h2 className="text-sm font-semibold uppercase tracking-wide">Live net worth summary</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div className={cn("min-w-0 rounded-2xl border p-4", netWorthMetricTones.assets)}>
+                <p className="text-xs font-semibold uppercase tracking-wide">Total assets</p>
+                <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                  <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
+                    {formatCurrency(netWorth.assets, "en-IN", "INR")}
+                  </p>
+                </div>
+              </div>
+              <div className={cn("min-w-0 rounded-2xl border p-4", netWorthMetricTones.liabilities)}>
+                <p className="text-xs font-semibold uppercase tracking-wide">Total liabilities</p>
+                <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                  <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
+                    {formatCurrency(netWorth.liabilities, "en-IN", "INR")}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={cn(
+                  "min-w-0 rounded-2xl border p-4",
+                  netWorth.netWorth >= 0
+                    ? netWorthMetricTones.netPositive
+                    : netWorthMetricTones.netNegative,
+                )}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide">Net worth</p>
+                <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                  <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
+                    {formatCurrency(netWorth.netWorth, "en-IN", "INR")}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {netWorthStanding ? (
+              <p className="mt-4 text-sm opacity-90">{netWorthStanding}</p>
+            ) : null}
+          </section>
+        ) : null}
+
         <section aria-label="Key metrics">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <article className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(sTone))}>
+          <motion.article variants={scaleIn} initial="hidden" animate="visible" className="mb-4 rounded-2xl bg-[#534AB7] p-6 text-white">
+            <p className="text-sm uppercase tracking-wide text-white/80">Health score</p>
+            <p className="mt-2 text-4xl font-bold">{animatedScore}/100</p>
+          </motion.article>
+          <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-3" variants={staggerContainer} initial="hidden" animate="visible">
+            <motion.article variants={scaleIn} className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(sTone))}>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Monthly investment rate
               </p>
@@ -134,9 +255,9 @@ export default function AnalyseResultPage() {
               <p className="mt-2 text-xs text-slate-600">
                 of monthly take-home income
               </p>
-            </article>
+            </motion.article>
 
-            <article className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(dTone))}>
+            <motion.article variants={scaleIn} className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(dTone))}>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Loan ratio
               </p>
@@ -146,9 +267,9 @@ export default function AnalyseResultPage() {
               <p className="mt-2 text-xs text-slate-600">
                 Universal cap {debtLimit}% of income
               </p>
-            </article>
+            </motion.article>
 
-            <article className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(uTone))}>
+            <motion.article variants={scaleIn} className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(uTone))}>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {analysis.scores.untrackedCash < 0 ? "Overspending" : "Unallocated"}
               </p>
@@ -160,11 +281,11 @@ export default function AnalyseResultPage() {
                   ? `Spending exceeds income by ${formatCurrency(Math.abs(analysis.scores.untrackedCash), "en-IN", "INR")}/month`
                   : "Assign to a savings bucket"}
               </p>
-            </article>
-          </div>
+            </motion.article>
+          </motion.div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <motion.section variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">Need / Want / Security / Loan / Investment summary</h2>
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -177,9 +298,9 @@ export default function AnalyseResultPage() {
                   <th className="pb-3 font-medium">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <motion.tbody variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
                 {bucketRows.map((row) => (
-                  <tr key={row.key} className="border-b border-slate-100 last:border-b-0">
+                  <motion.tr variants={fadeUp} key={row.key} className="border-b border-slate-100 last:border-b-0">
                     <td className="py-3 font-medium text-slate-900">{row.label}</td>
                     <td className="py-3">
                       <span>{row.capLabel ?? `${Math.round(row.capPercent * 100)}%`}</span>
@@ -204,9 +325,9 @@ export default function AnalyseResultPage() {
                     >
                       {row.status}
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
-                <tr>
+                <motion.tr variants={fadeUp}>
                   <td className="py-3 font-medium text-slate-600">Unallocated</td>
                   <td className="py-3 text-slate-400">—</td>
                   <td className="py-3 text-slate-400">—</td>
@@ -225,29 +346,30 @@ export default function AnalyseResultPage() {
                       {unallocated >= 0 ? "Free" : "Over limit"}
                     </span>
                   </td>
-                </tr>
-              </tbody>
+                </motion.tr>
+              </motion.tbody>
             </table>
           </div>
-        </section>
+        </motion.section>
 
-        <IncomeMeter totalIncome={income} profile={data} />
+        <SpeedoMeter {...buildSpeedoMeterProps(data)} title="Your financial health gauges" />
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <motion.section variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">Your financial safety net</h2>
               <p className="mt-1 text-sm text-slate-600">
-                These checks focus on protection, liquidity, and family preparedness.
+                Emergency fund, medical cover, term cover, premium reserve, child goals, and add-ons (SSY, NSC if you use it), plus family-specific items below.
               </p>
             </div>
           </div>
 
-          <div className="mt-5 space-y-3">
+          <motion.div className="mt-5 space-y-3" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
             {analysis.securityChecklist.map((item) => {
               const icon = statusIcon(item.status);
               return (
-                <div
+                <motion.div
+                  variants={slideInLeft}
                   key={item.label}
                   className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
@@ -273,10 +395,10 @@ export default function AnalyseResultPage() {
                       {item.actionNeeded}
                     </button>
                   ) : null}
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
 
           <div className="mt-6 rounded-2xl bg-slate-50 p-4">
             <p className="text-sm font-medium text-slate-900">
@@ -289,23 +411,60 @@ export default function AnalyseResultPage() {
               />
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        {/* COMMENTED — AI fix plan — enable in Phase 2 */}
-        {/* COMMENTED — Bucket bars detail — enable in Phase 2 */}
-
-        <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Unlock your full plan</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Payment opens the full fix plan and premium guidance layers.
-              </p>
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">Your financial fix plan</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            {tier === "free"
+              ? "First steps are free. Unlock the rest for ₹49/month — deepen your health score with AI-guided fixes or a Finkoin expert."
+              : "Full prioritised roadmap from your answers and the income meter."}
+          </p>
+          {tier === "free" ? (
+            <div className="mt-4 space-y-6">
+              <ul className="list-disc space-y-2 pl-5 text-sm text-slate-800">
+                {analysis.planSteps.slice(0, FREE_FIX_PLAN_STEPS).map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ul>
+              {analysis.planSteps.length > FREE_FIX_PLAN_STEPS ? (
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                  <ul
+                    className="pointer-events-none select-none space-y-2 p-5 pl-9 text-sm text-slate-600 blur-[3px] opacity-45"
+                    aria-hidden
+                  >
+                    {analysis.planSteps.slice(FREE_FIX_PLAN_STEPS).map((step) => (
+                      <li key={step} className="list-disc">
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-white/25 via-white/85 to-white p-6 text-center">
+                    <p className="text-sm font-semibold text-slate-900">
+                      +{analysis.planSteps.length - FREE_FIX_PLAN_STEPS} more steps — unlock full plan
+                    </p>
+                    <p className="max-w-md text-xs text-slate-600">
+                      Pay ₹49/month for the complete fix plan. Improve your financial health score with AI recommendations or book time with a Finkoin expert.
+                    </p>
+                    <div className="flex flex-col items-center gap-2 sm:flex-row">
+                      <Button type="button" variant="primary" onClick={() => setPaywallOpen(true)}>
+                        Unlock — ₹49
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => router.push("/plans")}>
+                        View plans
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
-            <Button type="button" variant="primary" onClick={() => setPaywallOpen(true)}>
-              View plans
-            </Button>
-          </div>
+          ) : (
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-slate-700">
+              {analysis.planSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section aria-label="Issues" className="space-y-4">

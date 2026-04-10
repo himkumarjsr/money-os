@@ -1,7 +1,19 @@
 "use client";
 
 import { formatCurrency } from "@/lib/finance";
-import { useCallback, useState } from "react";
+import { formatIndian, formatIndianCompact } from "@/lib/formatters";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { useCallback, useMemo, useState } from "react";
 import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function sipMaturity(monthly: number, annualPct: number, years: number) {
@@ -34,10 +46,44 @@ export function SIPCalculator() {
   const insightTone: InsightTone =
     mult >= 2.5 ? "good" : mult >= 1.8 ? "warn" : "bad";
 
+  const chartCard = "rounded-xl border border-[#F0EFF8] bg-white p-5";
+  const tooltipStyle = {
+    backgroundColor: "#111110",
+    border: "none",
+    borderRadius: 8,
+    padding: "8px 12px",
+    fontSize: 12,
+    color: "white",
+  } as const;
+
+  const yearlyData = useMemo(() => {
+    const out: Array<{
+      year: number;
+      invested: number;
+      portfolio: number;
+      gain: number;
+      gainPct: number;
+    }> = [];
+    for (let y = 1; y <= years; y += 1) {
+      const inv = monthly * 12 * y;
+      const port = sipMaturity(monthly, rate, y);
+      const g = port - inv;
+      out.push({
+        year: y,
+        invested: inv,
+        portfolio: port,
+        gain: g,
+        gainPct: inv > 0 ? (g / inv) * 100 : 0,
+      });
+    }
+    return out;
+  }, [monthly, rate, years]);
+
   return (
     <div className="space-y-6">
       <SliderField
         label="Monthly SIP"
+        unitType="money"
         value={monthly}
         min={500}
         max={100_000}
@@ -47,6 +93,7 @@ export function SIPCalculator() {
       />
       <SliderField
         label="Expected annual return"
+        unitType="percent"
         value={rate}
         min={6}
         max={20}
@@ -56,6 +103,7 @@ export function SIPCalculator() {
       />
       <SliderField
         label="Investment period"
+        unitType="years"
         value={years}
         min={1}
         max={30}
@@ -77,6 +125,86 @@ export function SIPCalculator() {
           label="Total gain"
           value={formatCurrency(Math.round(gain), "en-IN", "INR")}
         />
+      </div>
+
+      <div className={chartCard}>
+        <p className="text-sm font-semibold text-slate-900">Growth over time</p>
+        <div className="mt-4 h-[200px] md:h-[260px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={yearlyData}>
+                  <CartesianGrid stroke="#F4F2FC" />
+                  <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#9B9A94" }} />
+                  <YAxis tick={{ fontSize: 12, fill: "#9B9A94" }} tickFormatter={(v) => formatIndianCompact(Number(v))} />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || payload.length === 0) return null;
+                      const inv = Number(payload.find((x) => x.dataKey === "invested")?.value ?? 0);
+                      const port = Number(payload.find((x) => x.dataKey === "portfolio")?.value ?? 0);
+                      const g = port - inv;
+                      const pct = inv > 0 ? (g / inv) * 100 : 0;
+                      return (
+                        <div style={tooltipStyle}>
+                          <div style={{ fontWeight: 700, marginBottom: 6 }}>{`Year ${label}`}</div>
+                          <div>Invested: ₹{formatIndian(inv)}</div>
+                          <div>Portfolio value: ₹{formatIndian(port)}</div>
+                          <div>
+                            Gain: ₹{formatIndian(g)} ({pct.toFixed(0)}%)
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  {/* Stacked areas: invested + gain (visual wealth created) */}
+                  <Area
+                    type="monotone"
+                    dataKey="invested"
+                    stackId="a"
+                    stroke="transparent"
+                    fill="#EEEDFE"
+                    fillOpacity={1}
+                    isAnimationActive
+                    animationDuration={400}
+                    animationEasing="ease-out"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="gain"
+                    stackId="a"
+                    stroke="transparent"
+                    fill="#EEEDFE"
+                    fillOpacity={0.4}
+                    isAnimationActive
+                    animationDuration={400}
+                    animationEasing="ease-out"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="invested"
+                    stroke="#AFA9EC"
+                    strokeDasharray="6 6"
+                    dot={false}
+                    isAnimationActive
+                    animationDuration={400}
+                    animationEasing="ease-out"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="portfolio"
+                    stroke="#534AB7"
+                    strokeWidth={2.5}
+                    dot={false}
+                    isAnimationActive
+                    animationDuration={400}
+                    animationEasing="ease-out"
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    formatter={(value) => (value === "invested" ? "Invested" : "Portfolio value")}
+                  />
+                </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <Insight tone={insightTone}>

@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { GlobalNavbar } from "@/components/global-navbar";
+import { Toast } from "@/components/ui/Toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,8 +11,19 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MoneyOS",
+  title: "Finkoin",
   description: "Personal finance tools and calculators",
+  icons: {
+    icon: [
+      {
+        url: "/assets/brand/finkoin-icon-1024.svg",
+        type: "image/svg+xml",
+        sizes: "any",
+      },
+    ],
+    shortcut: "/assets/brand/finkoin-icon-1024.svg",
+    apple: "/assets/brand/finkoin-icon-1024.svg",
+  },
 };
 
 export const viewport: Viewport = {
@@ -29,7 +42,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <GlobalNavbar />
+        {children}
+        <Toast />
+      </body>
     </html>
   );
 }

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /*
-  MoneyOS design tokens — use these via Tailwind (primary, success, …)
+  Finkoin design tokens — use these via Tailwind (primary, success, …)
   or directly as var(--color-primary), etc.
 */
 
@@ -44,4 +44,25 @@
   body {
     @apply min-h-dvh bg-surface text-[color:var(--color-text)] transition-colors;
   }
+}
+
+.nav-underline {
+  position: relative;
+}
+
+.nav-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 1.5px;
+  background: #534ab7;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+
+.nav-underline:hover::after {
+  transform: scaleX(1);
 }

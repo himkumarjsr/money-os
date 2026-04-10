@@ -1,7 +1,17 @@
 "use client";
 
 import { formatCurrency } from "@/lib/finance";
-import { useCallback, useState } from "react";
+import { formatIndian, formatIndianCompact } from "@/lib/formatters";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { useCallback, useMemo, useState } from "react";
 import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
@@ -51,10 +61,44 @@ export function SWPCalculator() {
   if (lasts < 120 || withdraw > sustain * 1.1) tone = "bad";
   else if (lasts < 180 || withdraw > sustain) tone = "warn";
 
+  const chartCard = "rounded-xl border border-[#F0EFF8] bg-white p-5";
+  const tooltipStyle = {
+    backgroundColor: "#111110",
+    border: "none",
+    borderRadius: 8,
+    padding: "8px 12px",
+    fontSize: 12,
+    color: "white",
+  } as const;
+
+  const isSustainable = withdraw <= sustain;
+  const lineColor = isSustainable ? "#1D9E75" : "#E24B4A";
+
+  const series = useMemo(() => {
+    const r = rate / 100 / 12;
+    const maxMonths = Math.min(600, Math.max(1, lasts));
+    let bal = corpus;
+    let withdrawnSoFar = 0;
+    const out: Array<{ month: number; label: string; balance: number; withdrawn: number }> = [];
+    for (let m = 1; m <= maxMonths; m += 1) {
+      bal = bal * (1 + r) - withdraw;
+      withdrawnSoFar += withdraw;
+      out.push({
+        month: m,
+        label: m % 12 === 0 ? `Year ${m / 12}` : `M${m}`,
+        balance: Math.max(0, bal),
+        withdrawn: withdrawnSoFar,
+      });
+      if (bal <= 0) break;
+    }
+    return out;
+  }, [corpus, lasts, rate, withdraw]);
+
   return (
     <div className="space-y-6">
       <SliderField
         label="Corpus"
+        unitType="money"
         value={corpus}
         min={5_00_000}
         max={5_00_00_000}
@@ -64,6 +108,7 @@ export function SWPCalculator() {
       />
       <SliderField
         label="Monthly withdrawal"
+        unitType="money"
         value={withdraw}
         min={5_000}
         max={5_00_000}
@@ -73,6 +118,7 @@ export function SWPCalculator() {
       />
       <SliderField
         label="Expected return (pre-tax)"
+        unitType="percent"
         value={rate}
         min={3}
         max={15}
@@ -94,6 +140,51 @@ export function SWPCalculator() {
           label="Sustainable monthly (interest-only)"
           value={formatCurrency(Math.round(sustain), "en-IN", "INR")}
         />
+      </div>
+
+      <div className={chartCard}>
+        <p className="text-sm font-semibold text-slate-900">Corpus over time</p>
+        <div className="mt-4 h-[200px] md:h-[260px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={series}>
+              <CartesianGrid stroke="#F4F2FC" />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 12, fill: "#9B9A94" }}
+                tickFormatter={(m) => {
+                  const mm = Number(m);
+                  return mm % 12 === 0 ? `Y${mm / 12}` : "";
+                }}
+              />
+              <YAxis tick={{ fontSize: 12, fill: "#9B9A94" }} tickFormatter={(v) => formatIndianCompact(Number(v))} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload || payload.length === 0) return null;
+                  const point = payload[0]?.payload as { month: number; balance: number; withdrawn: number };
+                  const period = point.month % 12 === 0 ? `Year ${point.month / 12}` : `Month ${point.month}`;
+                  return (
+                    <div style={tooltipStyle}>
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>{period}</div>
+                      <div>Corpus remaining: ₹{formatIndian(point.balance)}</div>
+                      <div>Total withdrawn: ₹{formatIndian(point.withdrawn)}</div>
+                    </div>
+                  );
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="balance"
+                stroke={lineColor}
+                strokeWidth={2.5}
+                dot={false}
+                isAnimationActive
+                animationDuration={400}
+                animationEasing="ease-out"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <Insight tone={tone}>

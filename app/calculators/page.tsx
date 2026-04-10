@@ -13,6 +13,9 @@ import { SIPCalculator } from "@/components/calculators/SIPCalculator";
 import { SWPCalculator } from "@/components/calculators/SWPCalculator";
 import { WhenToBuyCarCalculator } from "@/components/calculators/WhenToBuyCarCalculator";
 import { cn } from "@/lib/cn";
+import { fadeUp, scaleIn, staggerContainer } from "@/lib/animations";
+import BottomSheet from "@/components/ui/BottomSheet";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import type { ComponentType } from "react";
 import { useMemo, useState } from "react";
@@ -132,6 +135,7 @@ export default function CalculatorsPage() {
     [category],
   );
   const [calcId, setCalcId] = useState(() => activeCat.items[0].id);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const activeItem = useMemo(() => {
     const item = activeCat.items.find((i) => i.id === calcId);
@@ -147,9 +151,9 @@ export default function CalculatorsPage() {
           <div>
             <Link
               href="/"
-              className="text-sm font-medium text-[#534AB7] hover:underline"
+              className="text-sm font-semibold text-[#534AB7] hover:underline"
             >
-              ← MoneyOS
+              Back
             </Link>
             <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
               Calculators
@@ -184,7 +188,7 @@ export default function CalculatorsPage() {
         </nav>
       </header>
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[280px,1fr] lg:gap-10 lg:px-6 lg:py-10">
+      <div className="mx-auto hidden max-w-6xl gap-8 px-4 py-8 md:grid lg:grid-cols-[280px,1fr] lg:gap-10 lg:px-6 lg:py-10">
         <aside>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {activeCat.label}
@@ -227,6 +231,59 @@ export default function CalculatorsPage() {
           </div>
         </section>
       </div>
+
+      <div className="mx-auto px-4 py-6 md:hidden">
+        <motion.p
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+          className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+        >
+          {activeCat.label}
+        </motion.p>
+        <motion.ul
+          className="mt-3 space-y-2"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          {activeCat.items.map((item, index) => (
+            <motion.li key={item.id} variants={fadeUp} transition={{ delay: index * 0.05 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCalcId(item.id);
+                  setSheetOpen(true);
+                }}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left"
+              >
+                <span className="block text-sm font-semibold text-slate-900">{item.title}</span>
+                <span className="mt-0.5 block text-xs text-slate-500">{item.blurb}</span>
+              </button>
+            </motion.li>
+          ))}
+        </motion.ul>
+      </div>
+
+      <BottomSheet
+        isOpen={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={activeItem.title}
+      >
+        <motion.section
+          key={calcId}
+          variants={scaleIn}
+          initial="hidden"
+          animate="visible"
+          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          aria-live="polite"
+        >
+          <p className="text-sm text-slate-600">{activeItem.blurb}</p>
+          <div className="mt-5">
+            <ActiveCalc />
+          </div>
+        </motion.section>
+      </BottomSheet>
     </div>
   );
 }

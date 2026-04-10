@@ -101,6 +101,7 @@ export function PostOfficeCalculator() {
     <div className="space-y-6">
       <SliderField
         label="Your age"
+        unitType="years"
         value={age}
         min={18}
         max={85}
@@ -110,6 +111,7 @@ export function PostOfficeCalculator() {
       />
       <SliderField
         label="Lump sum to deploy"
+        unitType="money"
         value={amount}
         min={10_000}
         max={50_00_000}

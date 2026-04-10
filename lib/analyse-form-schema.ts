@@ -32,6 +32,7 @@ export const PRIMARY_GOAL_VALUES = [
   "grow_wealth",
   "kids_education",
   "build_emergency_fund",
+  "build_insurance_premium_fund",
   "buy_car",
 ] as const;
 
@@ -44,6 +45,7 @@ export const PRIMARY_GOAL_LABELS: Record<PrimaryGoal, string> = {
   grow_wealth: "Grow wealth",
   kids_education: "Kids education fund",
   build_emergency_fund: "Build emergency fund",
+  build_insurance_premium_fund: "Insurance premium reserve (financial freedom)",
   buy_car: "Buy a car",
 };
 
@@ -73,11 +75,15 @@ export interface FinancialProfile {
   otherIncome?: number;
 
   rentAmount?: number;
+  /** Society / flat maintenance when renting (monthly). */
+  rentMaintenanceMonthly?: number;
   homeLoanEMI?: number;
   secondPropertyEMI?: number;
   carLoanEMI?: number;
   bikeEMI?: number;
   personalLoanEMI?: number;
+  /** Typical monthly payment toward credit cards (full pay-off or rolling balance). */
+  creditCardBillMonthly?: number;
   additionalObligations: Array<{
     type: string;
     lender?: string;
@@ -93,6 +99,8 @@ export interface FinancialProfile {
   internet: number;
   gas: number;
   water?: number;
+  houseHelpMonthly?: number;
+  cookHelpMonthly?: number;
   entertainment: number;
   shopping: number;
   personalCare?: number;
@@ -140,6 +148,8 @@ export interface FinancialProfile {
   monthlyEPFContribution: number;
   ssy?: number;
   nscMonthly?: number;
+  /** When false, NSC is hidden in the form and not scored in the safety net. */
+  investsInNsc?: boolean;
 
   primaryGoal: string;
   retirementTargetCorpus?: number;
@@ -272,11 +282,13 @@ const formShape = {
     otherIncome: optionalMoney,
 
     rentAmount: optionalMoney,
+    rentMaintenanceMonthly: optionalMoney,
     homeLoanEMI: optionalMoney,
     secondPropertyEMI: optionalMoney,
     carLoanEMI: optionalMoney,
     bikeEMI: optionalMoney,
     personalLoanEMI: optionalMoney,
+    creditCardBillMonthly: optionalMoney,
     additionalObligations: z.array(additionalObligationSchema).max(6),
 
     vegetables: optionalMoney,
@@ -288,6 +300,8 @@ const formShape = {
     internet: optionalMoney,
     gas: optionalMoney,
     water: optionalMoney,
+    houseHelpMonthly: optionalMoney,
+    cookHelpMonthly: optionalMoney,
     entertainment: optionalMoney,
     shopping: optionalMoney,
     personalCare: optionalMoney,
@@ -343,6 +357,7 @@ const formShape = {
     monthlyEPFContribution: optionalMoney,
     ssy: optionalMoney,
     nscMonthly: optionalMoney,
+    investsInNsc: z.boolean().optional().default(false),
 
     primaryGoal: z.string().min(1, "Choose a primary goal"),
     retirementTargetCorpus: optionalMoney,
@@ -559,11 +574,13 @@ export const step2Schema = baseFormSchema.pick({
 
 export const step3Schema = baseFormSchema.pick({
   rentAmount: true,
+  rentMaintenanceMonthly: true,
   homeLoanEMI: true,
   secondPropertyEMI: true,
   carLoanEMI: true,
   bikeEMI: true,
   personalLoanEMI: true,
+  creditCardBillMonthly: true,
   additionalObligations: true,
 });
 
@@ -577,6 +594,8 @@ export const step4Schema = baseFormSchema.pick({
   internet: true,
   gas: true,
   water: true,
+  houseHelpMonthly: true,
+  cookHelpMonthly: true,
   entertainment: true,
   shopping: true,
   personalCare: true,
@@ -691,6 +710,8 @@ export const step6Schema = baseFormSchema.pick({
   monthlyEPFContribution: true,
   ssy: true,
   nscMonthly: true,
+  investsInNsc: true,
+  bereavementFund: true,
 }).superRefine((data, ctx) => {
   if (data.ownsHome) {
     if (!data.homeMarketValue && data.homeMarketValue !== 0) {
@@ -735,7 +756,6 @@ export const step7Schema = baseFormSchema.pick({
   kidsMarriageFundTarget: true,
   emergencyFundTarget: true,
   medicalEmergencyFund: true,
-  bereavementFund: true,
   homePurchaseTarget: true,
   homePurchaseYear: true,
   carPurchaseTarget: true,
@@ -783,11 +803,13 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     otherIncome: data.otherIncome,
 
     rentAmount: data.rentAmount ?? 0,
+    rentMaintenanceMonthly: data.rentMaintenanceMonthly,
     homeLoanEMI: data.homeLoanEMI ?? 0,
     secondPropertyEMI: data.secondPropertyEMI ?? 0,
     carLoanEMI: data.carLoanEMI,
     bikeEMI: data.bikeEMI,
     personalLoanEMI: data.personalLoanEMI,
+    creditCardBillMonthly: data.creditCardBillMonthly,
     additionalObligations: data.additionalObligations ?? [],
 
     vegetables: data.vegetables ?? 0,
@@ -799,6 +821,8 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     internet: data.internet ?? 0,
     gas: data.gas ?? 0,
     water: data.water,
+    houseHelpMonthly: data.houseHelpMonthly,
+    cookHelpMonthly: data.cookHelpMonthly,
     entertainment: data.entertainment ?? 0,
     shopping: data.shopping ?? 0,
     personalCare: data.personalCare,
@@ -871,7 +895,8 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     monthlyNPSContribution: data.monthlyNPSContribution,
     monthlyEPFContribution: data.monthlyEPFContribution ?? 0,
     ssy: data.ssy,
-    nscMonthly: data.nscMonthly,
+    nscMonthly: data.investsInNsc ? data.nscMonthly : 0,
+    investsInNsc: data.investsInNsc ?? false,
 
     primaryGoal: data.primaryGoal ?? "",
     retirementTargetCorpus: data.retirementTargetCorpus,
@@ -882,8 +907,7 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
       data.lifeStage === "kids" ? data.kidsMarriageFundTarget : undefined,
     emergencyFundTarget: data.emergencyFundTarget,
     medicalEmergencyFund: data.medicalEmergencyFund,
-    bereavementFund:
-      (data.parentsSupport ?? 0) > 0 ? data.bereavementFund : undefined,
+    bereavementFund: data.bereavementFund,
     homePurchaseTarget:
       (data.rentAmount ?? 0) > 0 ? data.homePurchaseTarget : undefined,
     homePurchaseYear:
@@ -894,9 +918,11 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
 }
 
 export const analyseDefaultValues: Partial<AnalyseFormValues> = {
+  lifeStage: "bachelor",
+  primaryGoal: "grow_wealth",
   selfAge: 0,
   spouseAge: 0,
-  numberOfKids: 0,
+  numberOfKids: undefined,
   kidsAges: [],
   kidsGenders: [],
   cityTier: "metro",
@@ -905,11 +931,13 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   otherIncome: 0,
   additionalObligations: [],
   rentAmount: 0,
+  rentMaintenanceMonthly: 0,
   homeLoanEMI: 0,
   secondPropertyEMI: 0,
   carLoanEMI: 0,
   bikeEMI: 0,
   personalLoanEMI: 0,
+  creditCardBillMonthly: 0,
   hasHealthInsurance: false,
   healthInsuranceSumInsured: 0,
   healthInsurancePremiumInput: 0,
@@ -942,6 +970,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   monthlyEPFContribution: 0,
   ssy: 0,
   nscMonthly: 0,
+  investsInNsc: false,
   savingsAccountBalance: 0,
   fdValue: 0,
   liquidMFValue: 0,
@@ -963,6 +992,8 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   internet: 0,
   gas: 0,
   water: 0,
+  houseHelpMonthly: 0,
+  cookHelpMonthly: 0,
   entertainment: 0,
   shopping: 0,
   personalCare: 0,

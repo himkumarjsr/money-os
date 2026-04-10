@@ -49,6 +49,7 @@ export function EmergencyFundCalculator() {
     <div className="space-y-6">
       <SliderField
         label="Monthly expenses (must-cover)"
+        unitType="money"
         value={expenses}
         min={15_000}
         max={3_00_000}
@@ -74,6 +75,7 @@ export function EmergencyFundCalculator() {
 
       <SliderField
         label="Current emergency fund"
+        unitType="money"
         value={current}
         min={0}
         max={50_00_000}
@@ -83,6 +85,7 @@ export function EmergencyFundCalculator() {
       />
       <SliderField
         label="Monthly amount you can add"
+        unitType="money"
         value={saveMonthly}
         min={1_000}
         max={2_00_000}

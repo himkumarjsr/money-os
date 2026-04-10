@@ -41,6 +41,7 @@ export function RentVsOwnCarCalculator() {
     <div className="space-y-6">
       <SliderField
         label="Monthly km driven"
+        unitType="number"
         value={km}
         min={200}
         max={5000}
@@ -50,6 +51,7 @@ export function RentVsOwnCarCalculator() {
       />
       <SliderField
         label="Cab / ride-hail cost per km"
+        unitType="money"
         value={cabPerKm}
         min={6}
         max={25}
@@ -59,6 +61,7 @@ export function RentVsOwnCarCalculator() {
       />
       <SliderField
         label="Car purchase price"
+        unitType="money"
         value={price}
         min={3_00_000}
         max={40_00_000}
