@@ -66,3 +66,9 @@
 .nav-underline:hover::after {
   transform: scaleX(1);
 }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

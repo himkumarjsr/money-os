@@ -3,21 +3,29 @@
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
+import { canBypassProPaywall } from "@/lib/subscriptionBypass";
 import { Button } from "@/components/ui/button";
+import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
 import {
   CITY_TIER_LABELS,
   LIFE_STAGE_LABELS,
   PRIMARY_GOAL_LABELS,
+  type FinancialProfile,
   type LifeStage,
   type PrimaryGoal,
 } from "@/lib/analyse-form-schema";
+import { getBucketBreakdown } from "@/lib/bucket-breakdown";
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/finance";
+import { formatInWords, formatIndian } from "@/lib/formatters";
+import { FinkoinAiPlanView } from "@/components/finkoin/finkoin-ai-plan-view";
+import { getAIFixPlan, type FinkoinAIPlan } from "@/lib/aiService";
 import {
   analyseFinances,
   getDebtSafeLimitPercent,
   getSavingsTargetPercent,
   monthlyTotalIncome,
+  type AnalysisResult,
 } from "@/lib/financialEngine";
 import {
   buildNetWorth,
@@ -25,15 +33,20 @@ import {
   netWorthMetricTones,
   netWorthSectionTone,
 } from "@/lib/netWorth";
+import { formatPolicyCover } from "@/lib/userPolicies";
+import { buildOptimizerAnalysisFromProfile, optimizeFinances } from "@/lib/financialOptimizer";
 import { getUnallocatedIncome, getUniversalBucketRows } from "@/lib/universal-buckets";
 import { fadeUp, scaleIn, slideInLeft, staggerContainer } from "@/lib/animations";
+import { supabase } from "@/lib/supabaseClient";
+import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { useFinancialStore } from "@/store/use-financial-store";
 import { useAuthStore } from "@/store/authStore";
 import { useGamificationStore } from "@/store/gamificationStore";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 
 /** Free users see this many fix-plan steps before the ₹49 unlock. */
 const FREE_FIX_PLAN_STEPS = 2;
@@ -74,55 +87,118 @@ function statusIcon(status: "ok" | "warning" | "critical" | "na") {
   return { label: "—", className: "bg-slate-300 text-slate-700" };
 }
 
-export default function AnalyseResultPage() {
+function ResultPageShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-dvh bg-[#F7F7F4] text-slate-900">
+      <header className="border-b border-[#F0EFF8] bg-white">
+        <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <Link href="/analyse" className="text-sm text-[#9B9A94] hover:text-slate-700">
+              ← Back to form
+            </Link>
+            <h1 className="mt-2 text-xl font-bold tracking-tight text-[#111110] sm:text-2xl">
+              Your financial health report
+            </h1>
+          </div>
+          <Link href="/" className="text-sm font-medium text-[#534AB7] hover:underline sm:self-start">
+            Home
+          </Link>
+        </div>
+      </header>
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</div>
+    </div>
+  );
+}
+
+function NoSubmissionEmpty() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-5 rounded-2xl bg-white px-6 py-14 text-center shadow-sm">
+      <div
+        className="flex h-20 w-20 items-center justify-center rounded-full bg-[#EEEDFE] text-3xl"
+        aria-hidden
+      >
+        📊
+      </div>
+      <h2 className="text-xl font-bold text-[#111110]">No analysis found</h2>
+      <p className="max-w-sm text-[15px] text-[#9B9A94]">
+        Complete the financial health form to see your personalised report.
+      </p>
+      <Link
+        href="/analyse"
+        className="rounded-xl bg-[#534AB7] px-8 py-3 text-[15px] font-semibold text-white no-underline"
+      >
+        Start my analysis →
+      </Link>
+    </div>
+  );
+}
+
+function AnalysisComputeFailed() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-12 text-center">
+      <h2 className="text-lg font-semibold text-slate-900">Couldn&apos;t build your report</h2>
+      <p className="max-w-md text-sm text-slate-600">
+        We saved your answers but the analysis step failed. Go back, check required fields, and try submitting again.
+      </p>
+      <Link href="/analyse" className="font-semibold text-[#534AB7] underline">
+        Return to the form
+      </Link>
+    </div>
+  );
+}
+
+function AnalyseResultMain({
+  data,
+  analysis,
+}: {
+  data: FinancialProfile;
+  analysis: AnalysisResult;
+}) {
   const router = useRouter();
-  const data = useFinancialStore((s) => s.lastSubmission);
-  const storedResult = useFinancialStore((s) => s.result);
-  const hasHydrated = useFinancialStore((s) => s.hasHydrated);
   const tier = useAuthStore((s) => s.subscriptionTier);
+  const user = useAuthStore((s) => s.user);
+  const setSubscription = useAuthStore((s) => s.setSubscription);
+  const bypassPaywall = canBypassProPaywall(user?.email, user?.isAdmin);
+  const cachedAiPlan = useFinancialStore((s) => s.aiPlan);
   const earnTokens = useGamificationStore((s) => s.earnTokens);
   const awardBadge = useGamificationStore((s) => s.awardBadge);
   const hasEarnedAction = useGamificationStore((s) => s.hasEarnedAction);
   const markEarnedAction = useGamificationStore((s) => s.markEarnedAction);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [animatedScore, setAnimatedScore] = useState(0);
+  const [aiPlan, setAiPlan] = useState<FinkoinAIPlan | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (!data) {
-      router.replace("/analyse");
-    }
-  }, [data, hasHydrated, router]);
+  const toggleRow = (category: string) => {
+    setExpandedRows((prev) =>
+      prev.includes(category) ? prev.filter((r) => r !== category) : [...prev, category],
+    );
+  };
 
-  const analysis = useMemo(
-    () => storedResult ?? (data ? analyseFinances(data) : null),
-    [data, storedResult],
-  );
-  const income = data ? monthlyTotalIncome(data) : 0;
-  const savingsTarget = data ? getSavingsTargetPercent(data) : 0;
+  const income = monthlyTotalIncome(data);
+  const savingsTarget = getSavingsTargetPercent(data);
   const debtLimit = getDebtSafeLimitPercent();
-  const bucketRows = data ? getUniversalBucketRows(data) : [];
-  const unallocated = data ? getUnallocatedIncome(data) : 0;
-  const netWorth = useMemo(() => (data ? buildNetWorth(data) : null), [data]);
+  const bucketRows = getUniversalBucketRows(data);
+  const unallocated = getUnallocatedIncome(data);
+  const netWorth = useMemo(() => buildNetWorth(data), [data]);
   const netWorthStanding =
     data && netWorth ? getNetWorthStanding(data.selfAge, netWorth.netWorth) : null;
 
   useEffect(() => {
-    if (!analysis) return;
     if (hasEarnedAction("analysis-complete")) return;
     earnTokens(50, "Financial analysis complete");
     awardBadge("money-starter");
     markEarnedAction("analysis-complete");
   }, [analysis, awardBadge, earnTokens, hasEarnedAction, markEarnedAction]);
 
-  const healthScore = analysis
-    ? Math.max(
-        0,
-        100 -
-          analysis.issues.filter((i) => i.severity === "critical").length * 15 -
-          analysis.issues.filter((i) => i.severity === "warning").length * 7,
-      )
-    : 0;
+  const healthScore = Math.max(
+    0,
+    100 -
+      analysis.issues.filter((i) => i.severity === "critical").length * 15 -
+      analysis.issues.filter((i) => i.severity === "warning").length * 7,
+  );
 
   useEffect(() => {
     let rafId = 0;
@@ -140,24 +216,30 @@ export default function AnalyseResultPage() {
     return () => window.cancelAnimationFrame(rafId);
   }, [healthScore]);
 
-  if (!hasHydrated) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
-        Loading your report…
-      </div>
-    );
-  }
-
-  if (!data || !analysis) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
-        No analysis found.{" "}
-        <Link href="/analyse" className="ml-1 text-[#534AB7]">
-          Go to analyse
-        </Link>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (tier === "free") return;
+    if (cachedAiPlan) {
+      setAiPlan(cachedAiPlan);
+      setAiNotice(null);
+      setAiLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAiLoading(true);
+    void getAIFixPlan(data, analysis)
+      .then(({ plan, notice }) => {
+        if (!cancelled) {
+          setAiPlan(plan);
+          setAiNotice(notice);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAiLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [analysis, cachedAiPlan, data, tier]);
 
   const sTone = lowerIsBetterTone(analysis.scores.savingsRate, savingsTarget);
   const dTone = lowerIsBetterTone(analysis.scores.debtRatio, debtLimit);
@@ -166,23 +248,13 @@ export default function AnalyseResultPage() {
   const checklistTotal = analysis.securityChecklist.filter((item) => item.status !== "na").length;
   const checklistPct =
     checklistTotal > 0 ? Math.round((checklistOkCount / checklistTotal) * 100) : 0;
+  const optimizerPlan = useMemo(
+    () => optimizeFinances(data, buildOptimizerAnalysisFromProfile(data)),
+    [data],
+  );
   return (
-    <div className="min-h-dvh bg-white text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link
-            href="/analyse"
-            className="text-sm font-medium text-[#534AB7] hover:underline"
-          >
-            ← Edit answers
-          </Link>
-          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">
-            Home
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:space-y-12 sm:px-6 sm:py-10">
+    <>
+      <main className="space-y-10 sm:space-y-12">
         <div>
           <p className="text-sm font-medium text-[#534AB7]">Health report</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -205,16 +277,18 @@ export default function AnalyseResultPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide">Total assets</p>
                 <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
                   <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
-                    {formatCurrency(netWorth.assets, "en-IN", "INR")}
+                    {formatCurrency(netWorth.assets, "en-IN", "INR", 0)}
                   </p>
+                  <p className="mt-1 text-[12px] leading-snug text-[#9B9A94]">{formatInWords(netWorth.assets)}</p>
                 </div>
               </div>
               <div className={cn("min-w-0 rounded-2xl border p-4", netWorthMetricTones.liabilities)}>
                 <p className="text-xs font-semibold uppercase tracking-wide">Total liabilities</p>
                 <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
                   <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
-                    {formatCurrency(netWorth.liabilities, "en-IN", "INR")}
+                    {formatCurrency(netWorth.liabilities, "en-IN", "INR", 0)}
                   </p>
+                  <p className="mt-1 text-[12px] leading-snug text-[#9B9A94]">{formatInWords(netWorth.liabilities)}</p>
                 </div>
               </div>
               <div
@@ -228,7 +302,12 @@ export default function AnalyseResultPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide">Net worth</p>
                 <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
                   <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
-                    {formatCurrency(netWorth.netWorth, "en-IN", "INR")}
+                    {formatCurrency(netWorth.netWorth, "en-IN", "INR", 0)}
+                  </p>
+                  <p className="mt-1 text-[12px] leading-snug text-[#9B9A94]">
+                    {netWorth.netWorth < 0
+                      ? `Negative ${formatInWords(netWorth.netWorth)}`
+                      : formatInWords(netWorth.netWorth)}
                   </p>
                 </div>
               </div>
@@ -274,11 +353,11 @@ export default function AnalyseResultPage() {
                 {analysis.scores.untrackedCash < 0 ? "Overspending" : "Unallocated"}
               </p>
               <p className={cn("mt-2 text-2xl font-semibold tabular-nums sm:text-3xl", toneTextClass(uTone))}>
-                {formatCurrency(analysis.scores.untrackedCash, "en-IN", "INR")}
+                {formatCurrency(analysis.scores.untrackedCash, "en-IN", "INR", 0)}
               </p>
               <p className="mt-2 text-xs text-slate-600">
                 {analysis.scores.untrackedCash < 0
-                  ? `Spending exceeds income by ${formatCurrency(Math.abs(analysis.scores.untrackedCash), "en-IN", "INR")}/month`
+                  ? `Spending exceeds income by ${formatCurrency(Math.abs(analysis.scores.untrackedCash), "en-IN", "INR", 0)}/month`
                   : "Assign to a savings bucket"}
               </p>
             </motion.article>
@@ -286,7 +365,8 @@ export default function AnalyseResultPage() {
         </section>
 
         <motion.section variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Need / Want / Security / Loan / Investment summary</h2>
+          <h2 className="text-lg font-semibold">Monthly allocation breakdown</h2>
+          <p className="mt-1 text-[13px] italic text-[#9B9A94]">Click any row to see what is included</p>
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="text-slate-500">
@@ -299,40 +379,81 @@ export default function AnalyseResultPage() {
                 </tr>
               </thead>
               <motion.tbody variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                {bucketRows.map((row) => (
-                  <motion.tr variants={fadeUp} key={row.key} className="border-b border-slate-100 last:border-b-0">
-                    <td className="py-3 font-medium text-slate-900">{row.label}</td>
-                    <td className="py-3">
-                      <span>{row.capLabel ?? `${Math.round(row.capPercent * 100)}%`}</span>
-                      {row.capHelper ? (
-                        <p className="mt-1 text-xs text-slate-500">{row.capHelper}</p>
+                {bucketRows.map((row) => {
+                  const breakdown = getBucketBreakdown(row.key, data);
+                  const expandable = breakdown.length > 0;
+                  const isOpen = expandedRows.includes(row.key);
+                  return (
+                    <Fragment key={row.key}>
+                      <motion.tr
+                        variants={fadeUp}
+                        onClick={expandable ? () => toggleRow(row.key) : undefined}
+                        aria-expanded={expandable ? isOpen : undefined}
+                        className={cn(
+                          "border-b border-slate-100 last:border-b-0",
+                          expandable ? "cursor-pointer select-none hover:bg-slate-50/80" : "",
+                        )}
+                      >
+                        <td className="py-3 font-medium text-slate-900">
+                          <span className="inline-flex items-center gap-2">
+                            {expandable ? (
+                              <span className="w-3 shrink-0 text-center text-xs text-slate-400" aria-hidden>
+                                {isOpen ? "▼" : "▶"}
+                              </span>
+                            ) : (
+                              <span className="w-3 shrink-0" aria-hidden />
+                            )}
+                            {row.label}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span>{row.capLabel ?? `${Math.round(row.capPercent * 100)}%`}</span>
+                          {row.capHelper ? (
+                            <p className="mt-1 text-xs text-slate-500">{row.capHelper}</p>
+                          ) : null}
+                        </td>
+                        <td className="py-3">{formatCurrency(row.capAmount, "en-IN", "INR", 0)}</td>
+                        <td
+                          className={cn(
+                            "py-3 font-medium",
+                            row.status === "good" ? "text-emerald-700" : "text-red-600",
+                          )}
+                        >
+                          {formatCurrency(row.actual, "en-IN", "INR", 0)}
+                        </td>
+                        <td
+                          className={cn(
+                            "py-3 font-medium capitalize",
+                            row.status === "good" ? "text-emerald-700" : "text-red-600",
+                          )}
+                        >
+                          {row.status}
+                        </td>
+                      </motion.tr>
+                      {isOpen && expandable ? (
+                        <tr className="border-b border-slate-100 bg-[#FAFAFE]">
+                          <td colSpan={5} className="p-0">
+                            {breakdown.map((item, idx) => (
+                              <div
+                                key={`${row.key}-${idx}-${item.label}`}
+                                className="flex justify-between py-1 pl-8 pr-4 text-[13px] text-[#5F5E5A]"
+                              >
+                                <span>{item.label}</span>
+                                <span className="tabular-nums">₹{formatIndian(item.value)}</span>
+                              </div>
+                            ))}
+                          </td>
+                        </tr>
                       ) : null}
-                    </td>
-                    <td className="py-3">{formatCurrency(row.capAmount, "en-IN", "INR")}</td>
-                    <td
-                      className={cn(
-                        "py-3 font-medium",
-                        row.status === "good" ? "text-emerald-700" : "text-red-600",
-                      )}
-                    >
-                      {formatCurrency(row.actual, "en-IN", "INR")}
-                    </td>
-                    <td
-                      className={cn(
-                        "py-3 font-medium capitalize",
-                        row.status === "good" ? "text-emerald-700" : "text-red-600",
-                      )}
-                    >
-                      {row.status}
-                    </td>
-                  </motion.tr>
-                ))}
+                    </Fragment>
+                  );
+                })}
                 <motion.tr variants={fadeUp}>
                   <td className="py-3 font-medium text-slate-600">Unallocated</td>
                   <td className="py-3 text-slate-400">—</td>
                   <td className="py-3 text-slate-400">—</td>
                   <td className={cn("py-3 font-medium", unallocated >= 0 ? "text-slate-500" : "text-red-600")}>
-                    {formatCurrency(unallocated, "en-IN", "INR")}
+                    {formatCurrency(unallocated, "en-IN", "INR", 0)}
                   </td>
                   <td className="py-3">
                     <span
@@ -359,10 +480,37 @@ export default function AnalyseResultPage() {
             <div>
               <h2 className="text-lg font-semibold">Your financial safety net</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Emergency fund, medical cover, term cover, premium reserve, child goals, and add-ons (SSY, NSC if you use it), plus family-specific items below.
+                Emergency fund, medical cover, term cover, premium reserve, child goals, SSY (if eligible), NSC holding (one-time certificate, if you use it), plus family-specific items below.
               </p>
             </div>
           </div>
+
+          {data.hasTermInsurance && (data.termInsuranceSumAssured ?? 0) > 0 ? (
+            <div className="mt-4 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
+              <p className="text-sm font-medium text-slate-900">
+                You have {formatPolicyCover(data.termInsuranceSumAssured ?? 0)} term cover
+              </p>
+              <Link
+                href={`/policies?add=term&cover=${encodeURIComponent(String(data.termInsuranceSumAssured ?? 0))}&premium=${encodeURIComponent(String(data.termInsurancePremiumInput ?? 0))}&freq=${encodeURIComponent(data.termInsurancePremiumFrequency ?? "monthly")}`}
+                className="mt-2 inline-block text-sm font-semibold text-[#534AB7] hover:underline"
+              >
+                Add to policy vault →
+              </Link>
+            </div>
+          ) : null}
+          {data.hasHealthInsurance && (data.healthInsuranceSumInsured ?? 0) > 0 ? (
+            <div className="mt-3 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
+              <p className="text-sm font-medium text-slate-900">
+                You have {formatPolicyCover(data.healthInsuranceSumInsured ?? 0)} health cover
+              </p>
+              <Link
+                href={`/policies?add=health&cover=${encodeURIComponent(String(data.healthInsuranceSumInsured ?? 0))}&premium=${encodeURIComponent(String(data.healthInsurancePremiumInput ?? 0))}&freq=${encodeURIComponent(data.healthInsurancePremiumFrequency ?? "monthly")}`}
+                className="mt-2 inline-block text-sm font-semibold text-[#534AB7] hover:underline"
+              >
+                Track renewal →
+              </Link>
+            </div>
+          ) : null}
 
           <motion.div className="mt-5 space-y-3" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
             {analysis.securityChecklist.map((item) => {
@@ -376,15 +524,28 @@ export default function AnalyseResultPage() {
                   <div className="flex items-start gap-3">
                     <span
                       className={cn(
-                        "mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
+                        "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
                         icon.className,
                       )}
                     >
                       {icon.label}
                     </span>
-                    <div>
-                      <p className="font-medium text-slate-900">{item.label}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-900">
+                        {item.checklistIcon ? (
+                          <span className="mr-1.5" aria-hidden>
+                            {item.checklistIcon}
+                          </span>
+                        ) : null}
+                        {item.label}
+                      </p>
+                      {item.checklistValue ? (
+                        <p className="mt-1 text-base font-semibold text-slate-800">{item.checklistValue}</p>
+                      ) : null}
                       <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
+                      {item.breakdownHint ? (
+                        <p className="mt-1 text-xs text-slate-500">{item.breakdownHint}</p>
+                      ) : null}
                     </div>
                   </div>
                   {item.actionNeeded ? (
@@ -447,7 +608,17 @@ export default function AnalyseResultPage() {
                       Pay ₹49/month for the complete fix plan. Improve your financial health score with AI recommendations or book time with a Finkoin expert.
                     </p>
                     <div className="flex flex-col items-center gap-2 sm:flex-row">
-                      <Button type="button" variant="primary" onClick={() => setPaywallOpen(true)}>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => {
+                          if (bypassPaywall) {
+                            setSubscription("pro");
+                            return;
+                          }
+                          setPaywallOpen(true);
+                        }}
+                      >
                         Unlock — ₹49
                       </Button>
                       <Button type="button" variant="secondary" onClick={() => router.push("/plans")}>
@@ -458,6 +629,27 @@ export default function AnalyseResultPage() {
                 </div>
               ) : null}
             </div>
+          ) : aiLoading ? (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              Groq AI is building your personalised plan…
+            </div>
+          ) : aiPlan ? (
+            <div className="mt-4 space-y-3">
+              {aiNotice ? (
+                <div
+                  role="status"
+                  className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+                >
+                  {aiNotice}
+                </div>
+              ) : null}
+              <FinkoinAiPlanView
+                plan={aiPlan}
+                variant="summary"
+                profile={data}
+                surplusMonthly={Math.max(0, unallocated)}
+              />
+            </div>
           ) : (
             <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-slate-700">
               {analysis.planSteps.map((step) => (
@@ -465,7 +657,44 @@ export default function AnalyseResultPage() {
               ))}
             </ul>
           )}
+
+          <div className="mt-8 border-t border-slate-200 pt-6">
+            <h3 className="text-base font-semibold text-slate-900">Money optimizer</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Where to park every rupee next — emergency layers, premiums, FD splits, and SIPs — generated from the same
+              profile as this report.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              <li>
+                <span className="font-medium text-slate-900">Monthly surplus (model):</span>{" "}
+                {formatCurrency(optimizerPlan.totalMonthlySurplus, "en-IN", "INR")}
+              </li>
+              {optimizerPlan.mandatoryFunds
+                .filter((f) => !f.isComplete)
+                .slice(0, 4)
+                .map((f) => (
+                  <li key={f.fundName}>
+                    <span className="font-semibold text-[#534AB7]">{f.fundName}</span> — gap{" "}
+                    {formatCurrency(f.gap, "en-IN", "INR")} ·{" "}
+                    <span className="capitalize">{f.urgency}</span> · {f.whereToKeep}
+                  </li>
+                ))}
+            </ul>
+          </div>
         </section>
+
+        <div className="rounded-3xl border border-[#534AB7]/25 bg-gradient-to-br from-[#EEEDFE] via-white to-[#F4F2FC] p-6 text-center shadow-sm sm:p-8">
+          <p className="text-base font-semibold text-[#3C3489]">See your complete money allocation plan</p>
+          <p className="mt-2 text-sm text-slate-600">
+            FD ladder, KVP / RD insurance strategy, monthly flows, and timeline — step by step.
+          </p>
+          <Link
+            href="/optimizer"
+            className="mt-4 inline-flex rounded-xl bg-[#534AB7] px-6 py-3 text-sm font-semibold text-white no-underline hover:bg-[#4339a0]"
+          >
+            Open optimizer →
+          </Link>
+        </div>
 
         <section aria-label="Issues" className="space-y-4">
           <h2 className="text-lg font-semibold">What we noticed</h2>
@@ -497,6 +726,129 @@ export default function AnalyseResultPage() {
       </main>
 
       <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
-    </div>
+    </>
+  );
+}
+
+export default function AnalyseResultPage() {
+  const data = useFinancialStore((s) => s.lastSubmission);
+  const storedResult = useFinancialStore((s) => s.result);
+  const hasHydrated = useFinancialStore((s) => s.hasHydrated);
+  const tier = useAuthStore((s) => s.subscriptionTier);
+  const user = useAuthStore((s) => s.user);
+  const [loadingFromCloud, setLoadingFromCloud] = useState(false);
+
+  useEffect(() => {
+    if (!data || !hasHydrated) return;
+    if (isValidStoredAnalysis(storedResult)) return;
+    try {
+      useFinancialStore.getState().setFullAnalysis(data);
+    } catch (e) {
+      console.error("Could not heal stored analysis:", e);
+    }
+  }, [data, hasHydrated, storedResult]);
+
+  const analysis = useMemo((): AnalysisResult | null => {
+    if (!data) return null;
+    if (isValidStoredAnalysis(storedResult)) return storedResult;
+    try {
+      return analyseFinances(data);
+    } catch (e) {
+      console.error("analyseFinances failed:", e);
+      return null;
+    }
+  }, [data, storedResult]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    console.log("[AnalyseResultPage]", {
+      hasHydrated,
+      hasData: !!data,
+      hasAnalysis: !!analysis,
+      subscriptionTier: tier,
+    });
+  }, [hasHydrated, data, analysis, tier]);
+
+  useLayoutEffect(() => {
+    if (!hasHydrated) return;
+    const hasLocal = !!(data && storedResult && isValidStoredAnalysis(storedResult));
+    if (hasLocal || !user?.id || !supabase) return;
+    setLoadingFromCloud(true);
+  }, [hasHydrated, user?.id, data, storedResult]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    const hasLocal = !!(data && storedResult && isValidStoredAnalysis(storedResult));
+    if (hasLocal) {
+      setLoadingFromCloud(false);
+      return;
+    }
+    if (!user?.id || !supabase) {
+      setLoadingFromCloud(false);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const remote = await fetchUserAnalyseSnapshot(user.id);
+        if (cancelled) return;
+        if (
+          remote?.lastSubmission &&
+          remote.result &&
+          isValidStoredAnalysis(remote.result)
+        ) {
+          useFinancialStore.getState().hydrateFromSnapshot(remote.lastSubmission, remote.result, {
+            aiPlan: remote.aiPlan ?? undefined,
+            analysisPatch: remote.analysis ?? undefined,
+          });
+        }
+      } finally {
+        if (!cancelled) setLoadingFromCloud(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, user?.id, data, storedResult]);
+
+  if (!hasHydrated) {
+    return (
+      <ResultPageShell>
+        <p className="text-center text-slate-600">Loading your report…</p>
+      </ResultPageShell>
+    );
+  }
+
+  if (loadingFromCloud) {
+    return (
+      <ResultPageShell>
+        <p className="text-center text-slate-600">Loading your report…</p>
+      </ResultPageShell>
+    );
+  }
+
+  if (!data) {
+    return (
+      <ResultPageShell>
+        <NoSubmissionEmpty />
+      </ResultPageShell>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <ResultPageShell>
+        <AnalysisComputeFailed />
+      </ResultPageShell>
+    );
+  }
+
+  return (
+    <ResultPageShell>
+      <AnalyseResultErrorBoundary>
+        <AnalyseResultMain data={data} analysis={analysis} />
+      </AnalyseResultErrorBoundary>
+    </ResultPageShell>
   );
 }

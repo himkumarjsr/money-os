@@ -18,6 +18,7 @@ export function buildNetWorth(values: Partial<AnalyseFormValues>) {
     values.savingsAccountBalance,
     values.fdValue,
     values.liquidMFValue,
+    values.otherLiquidSavings,
     values.mfValue,
     values.indianStocksValue,
     values.usStocksValueINR,
@@ -30,10 +31,15 @@ export function buildNetWorth(values: Partial<AnalyseFormValues>) {
     values.carMarketValue,
     values.goldValue,
     values.otherAssets,
+    values.nscDepositAmount,
   ]);
 
+  const personalLoanLiability =
+    values.personalLoanOutstanding != null && Number(values.personalLoanOutstanding) > 0
+      ? Number(values.personalLoanOutstanding)
+      : 0;
+
   const emiBacklog = sum([
-    values.personalLoanEMI ? values.personalLoanEMI * 36 : undefined,
     values.secondPropertyEMI ? values.secondPropertyEMI * 36 : undefined,
     values.bikeEMI ? values.bikeEMI * 36 : undefined,
     values.homeLoanOutstanding === undefined && values.homeLoanEMI
@@ -48,6 +54,7 @@ export function buildNetWorth(values: Partial<AnalyseFormValues>) {
   const liabilities = sum([
     values.homeLoanOutstanding,
     values.carLoanOutstanding,
+    personalLoanLiability,
     emiBacklog,
   ]);
 

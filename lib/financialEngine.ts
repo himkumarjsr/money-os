@@ -30,6 +30,61 @@ export interface SecurityItem {
   status: "ok" | "warning" | "critical" | "na";
   detail: string;
   actionNeeded?: string;
+  /** Optional emoji / icon for checklist (e.g. emergency fund 🛡️). */
+  checklistIcon?: string;
+  /** Short headline value (e.g. "6.0 months (₹6,00,000 available)"). */
+  checklistValue?: string;
+  /** Extra small line under detail (e.g. savings / liquid / FD breakdown). */
+  breakdownHint?: string;
+}
+
+/** Weighted “accessible in ~48h” emergency corpus for targets and checklist. */
+export type RealEmergencyFundBreakdown = {
+  realTotal: number;
+  savingsRaw: number;
+  savingsCounted: number;
+  liquidRaw: number;
+  liquidCounted: number;
+  fdRaw: number;
+  fdCounted: number;
+  otherRaw: number;
+  otherCounted: number;
+  /** Legacy “emergency fund set aside” field from older forms — counted at 100%. */
+  legacyCounted: number;
+  monthlyExpenses: number;
+  /** Months of `needs` covered; 0 if no expenses line. */
+  monthsCovered: number;
+};
+
+export function computeRealEmergencyFund(data: FinancialProfile): RealEmergencyFundBreakdown {
+  const bucketActuals = getUniversalBucketActuals(data);
+  const monthlyExpenses = bucketActuals.needs;
+  const sav = n(data.savingsAccountBalance);
+  const liq = n(data.liquidMFValue);
+  const fd = n(data.fdValue);
+  const oth = n(data.otherLiquidSavings);
+  const legacy = n(data.emergencyFundCurrent);
+  const savingsCounted = sav * 1.0;
+  const liquidCounted = liq * 0.95;
+  const fdCounted = fd * 0.7;
+  const otherCounted = oth * 0.5;
+  const legacyCounted = legacy * 1.0;
+  const realTotal = savingsCounted + liquidCounted + fdCounted + otherCounted + legacyCounted;
+  const monthsCovered = monthlyExpenses > 0 ? realTotal / monthlyExpenses : 0;
+  return {
+    realTotal,
+    savingsRaw: sav,
+    savingsCounted,
+    liquidRaw: liq,
+    liquidCounted,
+    fdRaw: fd,
+    fdCounted,
+    otherRaw: oth,
+    otherCounted,
+    legacyCounted,
+    monthlyExpenses,
+    monthsCovered,
+  };
 }
 
 export type AnalysisResult = {
@@ -76,7 +131,8 @@ export function getDebtSafeLimitPercent(): number {
 }
 
 export function monthlyTotalIncome(p: FinancialProfile): number {
-  return n(p.monthlySalary) + n(p.spouseIncome) + n(p.otherIncome);
+  const spouse = p.lifeStage === "bachelor" ? 0 : n(p.spouseIncome);
+  return n(p.monthlySalary) + spouse + n(p.otherIncome);
 }
 
 export function monthlySavingsContributions(p: FinancialProfile): number {
@@ -159,6 +215,9 @@ function buildIssues(params: {
   debtRatio: number;
   untrackedCash: number;
   emergencyFundGap: number;
+  accessibleEmergencyTotal: number;
+  monthsCoveredEmergency: number;
+  emergencyFundTargetMax: number;
   bucketRows: ReturnType<typeof getUniversalBucketRows>;
   insuranceActual: number;
 }): AnalysisIssue[] {
@@ -168,6 +227,9 @@ function buildIssues(params: {
     debtRatio,
     untrackedCash,
     emergencyFundGap,
+    accessibleEmergencyTotal,
+    monthsCoveredEmergency,
+    emergencyFundTargetMax,
     bucketRows,
     insuranceActual,
   } = params;
@@ -224,14 +286,14 @@ function buildIssues(params: {
       severityScore: 80,
       severity: "critical",
       code: "emergency_fund_short",
-      message: `Emergency fund is short by about ${fmt(emergencyFundGap)} against your target buffer.`,
+      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} (~${monthsCoveredEmergency.toFixed(1)} mo of needs). Target buffer ${fmt(emergencyFundTargetMax)} — short by about ${fmt(emergencyFundGap)}.`,
     });
   } else {
     issues.push({
       severityScore: 20,
       severity: "good",
       code: "emergency_fund_ok",
-      message: "Emergency fund is fully funded for your current life stage.",
+      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} covers about ${monthsCoveredEmergency.toFixed(1)} months of needs — on track for your target buffer.`,
     });
   }
 
@@ -300,10 +362,10 @@ function buildPlanSteps(
 
   if (emergencyFundGap > 0) {
     push(
-      `Build your emergency fund to ${fmt(emergencyFundTarget)}. A steady ${fmt(Math.ceil(emergencyFundGap / 12))}/mo for 12 months will close the gap.`,
+      `Best place for emergency fund: savings account for the first ₹50,000, then liquid mutual fund for the rest. Avoid FD for emergency fund — penalty if you need money urgently. Then build toward ${fmt(emergencyFundTarget)} (~${fmt(Math.ceil(emergencyFundGap / 12))}/mo for ~12 months closes the gap).`,
     );
   } else {
-    push(`Keep at least ${fmt(emergencyFundTarget)} ring-fenced as your emergency reserve.`);
+    push(`Keep at least ${fmt(emergencyFundTarget)} accessible (savings + liquid MF weighted for speed) as your emergency reserve.`);
   }
 
   const actionableSecurityItems = securityChecklist.filter(
@@ -356,6 +418,15 @@ function buildPlanSteps(
 }
 
 export function analyseFinances(data: FinancialProfile): AnalysisResult {
+  if (process.env.NODE_ENV === "development") {
+    console.log("[analyseFinances] called", {
+      lifeStage: data.lifeStage,
+      cityTier: data.cityTier,
+      monthlySalary: data.monthlySalary,
+      fieldCount: Object.keys(data).length,
+    });
+  }
+
   const totalIncome = monthlyTotalIncome(data);
   const bucketRows = getUniversalBucketRows(data);
   const bucketActuals = getUniversalBucketActuals(data);
@@ -372,7 +443,8 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     data.lifeStage === "bachelor" ? 6 : data.lifeStage === "married" ? 12 : 12;
   const emergencyFundTargetMin = monthlyExpenses * emergencyFundMonthsMin;
   const emergencyFundTargetMax = monthlyExpenses * emergencyFundMonthsMax;
-  const emergencyFundCurrent = n(data.emergencyFundCurrent) + n(data.fdValue);
+  const er = computeRealEmergencyFund(data);
+  const emergencyFundCurrent = er.realTotal;
   const emergencyFundGap = Math.max(0, emergencyFundTargetMax - emergencyFundCurrent);
 
   const termNeeded = calculateTermNeeded(data);
@@ -396,29 +468,48 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const medEmergencyTarget = medicalEmergencyTargetLiquid(data);
   const medEmergencyCurrent = n(data.medicalEmergencyFund);
 
-  // 1. Emergency fund
+  // 1. Emergency fund (weighted: savings 100%, liquid MF 95%, FD 70%, other liquid 50%, legacy field 100%)
+  const monthsCov = er.monthsCovered;
+  const target6 = er.monthlyExpenses * 6;
+  const gapTo6 = Math.max(0, target6 - er.realTotal);
+  let efStatus: SecurityItem["status"];
+  let efDetail: string;
+  let efAction: string | undefined;
+  const efChecklistValue = `${monthsCov.toFixed(1)} months (${fmt(er.realTotal)} available)`;
+  if (er.realTotal <= 0) {
+    efStatus = "critical";
+    efDetail = "No emergency fund";
+    efAction = "Start with a liquid mutual fund. Even ₹10,000 is a start.";
+  } else if (monthsCov < 3) {
+    efStatus = "critical";
+    efDetail = `Only ${monthsCov.toFixed(1)} months covered`;
+    efAction = `Target 6 months of expenses = ${fmt(target6)}`;
+  } else if (monthsCov < 6) {
+    efStatus = "warning";
+    efDetail = `${monthsCov.toFixed(1)} months covered — good start`;
+    efAction =
+      gapTo6 > 0
+        ? `Build to 6 months — need ${fmt(gapTo6)} more`
+        : undefined;
+  } else {
+    efStatus = "ok";
+    efDetail = `${monthsCov.toFixed(1)} months covered — excellent. Well done — this is fully funded`;
+    efAction = undefined;
+  }
+  const efBreakdownParts = [
+    `Savings: ${fmt(er.savingsRaw)}`,
+    `Liquid MF: ${fmt(er.liquidRaw)}`,
+    `FD: ${fmt(er.fdRaw)}`,
+  ];
+  if (er.otherRaw > 0) efBreakdownParts.push(`Other: ${fmt(er.otherRaw)}`);
   securityChecklist.push({
     label: "Emergency fund",
-    status:
-      emergencyFundCurrent >= emergencyFundTargetMax
-        ? "ok"
-        : emergencyFundCurrent >= emergencyFundTargetMin
-          ? "warning"
-          : emergencyFundCurrent >= emergencyFundTargetMin * 0.5
-            ? "warning"
-            : "critical",
-    detail:
-      emergencyFundCurrent >= emergencyFundTargetMax
-        ? `${fmt(emergencyFundCurrent)} (incl. FD) · ${emergencyFundMonthsMax}-month target met`
-        : emergencyFundCurrent >= emergencyFundTargetMin
-          ? `${fmt(emergencyFundCurrent)} (incl. FD) · ${emergencyFundMonthsMin}–${emergencyFundMonthsMax} month band · Ideal: ${fmt(emergencyFundTargetMax)}`
-          : `${fmt(emergencyFundCurrent)} vs minimum ${fmt(emergencyFundTargetMin)} (${emergencyFundMonthsMin} mo of needs)`,
-    actionNeeded:
-      emergencyFundCurrent < emergencyFundTargetMin
-        ? `Save ${fmt(Math.ceil((emergencyFundTargetMin - emergencyFundCurrent) / 12))}/mo to reach ${emergencyFundMonthsMin}-month minimum in ~12 months`
-        : emergencyFundCurrent < emergencyFundTargetMax
-          ? `Save ${fmt(Math.ceil((emergencyFundTargetMax - emergencyFundCurrent) / 12))}/mo toward ${emergencyFundMonthsMax}-month target`
-          : undefined,
+    checklistIcon: "🛡️",
+    checklistValue: efChecklistValue,
+    status: efStatus,
+    detail: efDetail,
+    actionNeeded: efAction,
+    breakdownHint: efStatus !== "ok" ? efBreakdownParts.join(" | ") : undefined,
   });
 
   // 2. Medical insurance
@@ -451,22 +542,28 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         : undefined,
   });
 
-  // 4. Term insurance
+  // 4. Term insurance — ₹1Cr+ is treated as a strong baseline (rebuying after income/age jumps is often costly)
+  const termCover = n(data.termInsuranceSumAssured);
+  const termCoverOneCrOrMore = termCover >= 10_000_000;
   securityChecklist.push({
     label: "Term insurance",
     status: !data.hasTermInsurance
       ? "critical"
-      : n(data.termInsuranceSumAssured) >= termAdequacyFloor
+      : termCoverOneCrOrMore || termCover >= termAdequacyFloor
         ? "ok"
         : "warning",
     detail: data.hasTermInsurance
-      ? `₹${(n(data.termInsuranceSumAssured) / 10000000).toFixed(2)}Cr cover · ~${fmt(n(data.termInsurancePremiumMonthly))}/mo · Reference need: ₹${(termNeeded / 10000000).toFixed(2)}Cr`
+      ? termCoverOneCrOrMore
+        ? `₹${(termCover / 10000000).toFixed(2)}Cr cover — strong baseline. Reference at today’s income: ~₹${(termNeeded / 10000000).toFixed(2)}Cr. Premiums rise sharply with age; keeping an early policy after a salary jump is often wiser than cancel-and-rebuy.`
+        : `₹${(termCover / 10000000).toFixed(2)}Cr cover · ~${fmt(n(data.termInsurancePremiumMonthly))}/mo · Reference need: ₹${(termNeeded / 10000000).toFixed(2)}Cr`
       : `Recommended cover about ₹${(termNeeded / 10000000).toFixed(2)}Cr (income ×10 + loans − assets, adjusted for age)`,
     actionNeeded: !data.hasTermInsurance
       ? `Buy ~₹${(termNeeded / 10000000).toFixed(2)}Cr pure term — often ~${fmt(Math.round(termNeeded * 0.000008))}/mo at your age band`
-      : n(data.termInsuranceSumAssured) < termAdequacyFloor
-        ? `Top up if cover is below ~₹${(termAdequacyFloor / 10000000).toFixed(2)}Cr`
-        : undefined,
+      : termCoverOneCrOrMore
+        ? undefined
+        : termCover < termAdequacyFloor
+          ? `Top up if cover is below ~₹${(termAdequacyFloor / 10000000).toFixed(2)}Cr`
+          : undefined,
   });
 
   // 5. Insurance premium reserve (~12 months in liquid cash — financial freedom habit)
@@ -519,16 +616,22 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     });
   }
 
-  // 7. NSC — only if user opted in
+  // 7. NSC — one-time certificate / holding (not monthly SIP)
   if (data.investsInNsc) {
+    const nscPrincipal =
+      n(data.nscDepositAmount) +
+      n((data as FinancialProfile & { nscMonthly?: number }).nscMonthly);
     securityChecklist.push({
       label: "NSC (National Savings Certificate)",
-      status: n(data.nscMonthly) > 0 ? "ok" : "warning",
+      status: nscPrincipal > 0 ? "ok" : "warning",
       detail:
-        n(data.nscMonthly) > 0
-          ? `${fmt(n(data.nscMonthly))}/mo equivalent · optional 80C / guaranteed slice`
-          : "You marked NSC — add your monthly equivalent so we can track it.",
-      actionNeeded: n(data.nscMonthly) === 0 ? "Enter monthly NSC equivalent in Assets step." : undefined,
+        nscPrincipal > 0
+          ? `${fmt(nscPrincipal)} held in NSC · one-time / certificate principal (80C eligible, guaranteed post-office slice)`
+          : "You marked NSC — add the amount you hold or your one-time deposit.",
+      actionNeeded:
+        nscPrincipal === 0
+          ? "Enter your NSC amount in the Assets step (one-time deposit, not monthly)."
+          : undefined,
     });
   }
 
@@ -610,15 +713,29 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         : undefined,
   });
 
-  const issues = buildIssues({
+  let issues = buildIssues({
     totalIncome,
     savingsRate,
     debtRatio,
     untrackedCash,
     emergencyFundGap,
+    accessibleEmergencyTotal: er.realTotal,
+    monthsCoveredEmergency: er.monthsCovered,
+    emergencyFundTargetMax,
     bucketRows,
     insuranceActual: monthlyInsuranceTotal(data),
   });
+
+  if (data.hasTermInsurance && n(data.termInsuranceSumAssured) >= 10_000_000) {
+    issues.push({
+      severityScore: 32,
+      severity: "good",
+      code: "term_cover_one_crore_baseline",
+      message:
+        "You have ₹1 crore or more pure term cover — strong protection. If income has grown since you bought it, new cover at today’s age is often much costlier, so your existing policy is still a big win.",
+    });
+    issues.sort((a, b) => b.severityScore - a.severityScore);
+  }
 
   const teaser =
     issues[0]?.message ??

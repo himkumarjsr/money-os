@@ -49,6 +49,10 @@ function baseProfile(overrides: Partial<FinancialProfile>): FinancialProfile {
 }
 
 describe("financialEngine", () => {
+  it("does not count spouse income when life stage is bachelor (stale field from a prior profile)", () => {
+    expect(monthlyTotalIncome(baseProfile({ spouseIncome: 50_000 }))).toBe(100_000);
+  });
+
   it("computes income, expenses, and contributions with new field groups", () => {
     const profile = baseProfile({});
 

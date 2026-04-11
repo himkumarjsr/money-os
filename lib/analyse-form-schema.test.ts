@@ -1,8 +1,11 @@
 import {
+  financialProfileToFormValues,
+  mergeAnalyseDraftWithProfile,
   normalizeAnalyseFormValues,
   parseMoneyInput,
   step2Schema,
   toMonthlyEquivalent,
+  type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
 import { describe, expect, it } from "vitest";
 
@@ -44,6 +47,52 @@ describe("step2Schema", () => {
         "Enter your monthly take-home salary",
       );
     }
+  });
+});
+
+describe("mergeAnalyseDraftWithProfile", () => {
+  it("keeps lender and policy names when zipping draft with profile", () => {
+    const profile: Partial<AnalyseFormValues> = {
+      additionalObligations: [
+        { type: "PF Loan", monthlyAmount: 42_055 },
+        { type: "Overdraft (OD)", monthlyAmount: 12_850 },
+      ],
+      otherInsurancePremiums: [
+        { premiumAmount: 2_985, frequency: "monthly" },
+        { premiumAmount: 67_890, frequency: "monthly" },
+      ],
+    };
+
+    const draft: Partial<AnalyseFormValues> = {
+      additionalObligations: [
+        { type: "PF Loan", monthlyAmount: 42_055, lenderName: "EPFO" },
+        { type: "Overdraft (OD)", monthlyAmount: 12_850, lenderName: "SBI" },
+      ],
+      otherInsurancePremiums: [
+        { policyName: "LIC Jeevan", premiumAmount: 2_985, frequency: "monthly" },
+        { policyName: "ULIP A", premiumAmount: 67_890, frequency: "yearly" },
+      ],
+    };
+
+    const merged = mergeAnalyseDraftWithProfile(profile, draft);
+    expect(merged.additionalObligations?.[0]?.lenderName).toBe("EPFO");
+    expect(merged.additionalObligations?.[1]?.lenderName).toBe("SBI");
+    expect(merged.otherInsurancePremiums?.[0]?.policyName).toBe("LIC Jeevan");
+    expect(merged.otherInsurancePremiums?.[1]?.policyName).toBe("ULIP A");
+    expect(merged.otherInsurancePremiums?.[1]?.frequency).toBe("yearly");
+  });
+
+  it("fills lenderName from profile when draft row omits it (legacy lender key)", () => {
+    const profile: Partial<AnalyseFormValues> = {
+      additionalObligations: [{ type: "PF Loan", lender: "HDFC PF", monthlyAmount: 5_000 }],
+    };
+
+    const draft: Partial<AnalyseFormValues> = {
+      additionalObligations: [{ type: "PF Loan", monthlyAmount: 5_000 }],
+    };
+
+    const merged = mergeAnalyseDraftWithProfile(profile, draft);
+    expect(merged.additionalObligations?.[0]?.lenderName).toBe("HDFC PF");
   });
 });
 
@@ -92,6 +141,12 @@ describe("premium normalization", () => {
     });
 
     expect(normalized.healthInsurancePremiumMonthly).toBe(2_000);
+    expect(normalized.healthInsurancePremiumInput).toBe(24_000);
+    expect(normalized.healthInsurancePremiumFrequency).toBe("yearly");
+
+    const back = financialProfileToFormValues(normalized);
+    expect(back.healthInsurancePremiumInput).toBe(24_000);
+    expect(back.healthInsurancePremiumFrequency).toBe("yearly");
   });
 
   it("keeps girl-child investment fields and kid genders in the final profile", () => {
@@ -125,12 +180,44 @@ describe("premium normalization", () => {
       monthlyEPFContribution: 0,
       ssy: 5_000,
       investsInNsc: true,
-      nscMonthly: 2_000,
+      nscDepositAmount: 50_000,
       primaryGoal: "kids_education",
     });
 
     expect(normalized.kidsGenders).toEqual(["girl", "boy"]);
     expect(normalized.ssy).toBe(5_000);
-    expect(normalized.nscMonthly).toBe(2_000);
+    expect(normalized.nscDepositAmount).toBe(50_000);
+  });
+
+  it("maps legacy nscMonthly into nscDepositAmount when migrating", () => {
+    const normalized = normalizeAnalyseFormValues({
+      lifeStage: "bachelor",
+      selfAge: 30,
+      cityTier: "metro",
+      monthlySalary: 80_000,
+      vegetables: 0,
+      grocery: 0,
+      medicine: 0,
+      fuel: 0,
+      cabMetro: 0,
+      electricity: 0,
+      internet: 0,
+      gas: 0,
+      entertainment: 0,
+      shopping: 0,
+      hasHealthInsurance: false,
+      hasTermInsurance: false,
+      savingsAccountBalance: 0,
+      emergencyFundCurrent: 0,
+      ownsHome: false,
+      ownsCar: false,
+      monthlySIP: 0,
+      monthlyEPFContribution: 0,
+      investsInNsc: true,
+      nscMonthly: 25_000,
+      primaryGoal: "grow_wealth",
+    } as Partial<AnalyseFormValues> & { nscMonthly?: number });
+
+    expect(normalized.nscDepositAmount).toBe(25_000);
   });
 });

@@ -239,7 +239,7 @@ export function EMICalculator() {
       <div className="flex items-center justify-end">
         <button
           type="button"
-          onClick={() => downloadAmortisationExcel(amortRows, loan, rate, tenure, e, "emi")}
+          onClick={() => void downloadAmortisationExcel(amortRows, loan, rate, tenure, e, "emi")}
           className="inline-flex items-center gap-2 text-xs font-semibold text-[#534AB7] hover:underline"
         >
           ⬇︎ Download Excel
@@ -249,7 +249,7 @@ export function EMICalculator() {
       <div className="md:hidden">
         <button
           type="button"
-          onClick={() => downloadAmortisationExcel(amortRows, loan, rate, tenure, e, "emi")}
+          onClick={() => void downloadAmortisationExcel(amortRows, loan, rate, tenure, e, "emi")}
           className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#F0EFF8] bg-white px-5 py-4 text-left"
         >
           <div className="flex items-center gap-4">

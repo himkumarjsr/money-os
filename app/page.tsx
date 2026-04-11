@@ -91,19 +91,19 @@ export default function HomePage() {
       <main>
         <section className="border-b border-slate-100 bg-white px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <AnimateOnScroll variant="fadeUp" delay={0}>
+            <AnimateOnScroll variant="fadeUp" delay={0} aboveFold>
               <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl sm:leading-tight md:text-5xl md:leading-[1.1]">
                 Know exactly where your money is going — and what to do about it
               </h1>
             </AnimateOnScroll>
-            <AnimateOnScroll variant="fadeUp" delay={0.1}>
+            <AnimateOnScroll variant="fadeUp" delay={0.1} aboveFold>
               <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
                 India&apos;s only financial app that tells you what&apos;s wrong
                 AND gives you the exact fix
               </p>
             </AnimateOnScroll>
             <div className="mt-8 flex flex-col items-center gap-4 sm:mt-10">
-              <AnimateOnScroll variant="fadeUp" delay={0.2}>
+              <AnimateOnScroll variant="fadeUp" delay={0.2} aboveFold>
                 <ButtonLink
                   href="/analyse"
                   variant="primary"
@@ -113,7 +113,7 @@ export default function HomePage() {
                   Check my financial health — free
                 </ButtonLink>
               </AnimateOnScroll>
-              <AnimateOnScroll variant="fadeUp" delay={0.3}>
+              <AnimateOnScroll variant="fadeUp" delay={0.3} aboveFold>
                 <div
                   className="flex flex-col items-center gap-3 text-sm text-slate-500 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-6 sm:gap-y-2"
                   role="list"
@@ -144,12 +144,12 @@ export default function HomePage() {
         <ScrollSection>
           <section className="border-b border-slate-100 bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
           <div className="mx-auto max-w-6xl">
-            <AnimateOnScroll variant="fadeUp">
+            <AnimateOnScroll variant="fadeUp" aboveFold>
               <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
                 What you get
               </h2>
             </AnimateOnScroll>
-            <AnimateOnScroll variant="fadeUp">
+            <AnimateOnScroll variant="fadeUp" aboveFold>
               <p className="mx-auto mt-2 max-w-2xl text-center text-xl font-semibold text-slate-900 sm:text-2xl">
                 Everything to see the problem, then fix it
               </p>
@@ -160,6 +160,7 @@ export default function HomePage() {
                   key={f.title}
                   variant="scaleIn"
                   delay={index * 0.08}
+                  aboveFold
                   className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7"
                 >
                   <h3 className="text-lg font-semibold leading-snug text-slate-900">
@@ -178,7 +179,7 @@ export default function HomePage() {
         <ScrollSection>
           <section className="border-b border-slate-100 bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
           <div className="mx-auto max-w-6xl">
-            <AnimateOnScroll variant="fadeUp">
+            <AnimateOnScroll variant="fadeUp" aboveFold>
               <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
                 Loved by Indians building better money habits
               </h2>
@@ -189,6 +190,7 @@ export default function HomePage() {
                   key={t.name}
                   variant="fadeUp"
                   delay={index * 0.08}
+                  aboveFold
                   className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 sm:p-7"
                 >
                   <p className="flex-1 text-sm leading-relaxed text-slate-700 sm:text-[0.9375rem]">
@@ -210,12 +212,12 @@ export default function HomePage() {
         <ScrollSection>
           <section className="border-b border-slate-100 bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
           <div className="mx-auto max-w-6xl">
-            <AnimateOnScroll variant="fadeUp">
+            <AnimateOnScroll variant="fadeUp" aboveFold>
               <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
                 Pricing
               </h2>
             </AnimateOnScroll>
-            <AnimateOnScroll variant="fadeUp">
+            <AnimateOnScroll variant="fadeUp" aboveFold>
               <p className="mx-auto mt-2 max-w-xl text-center text-xl font-semibold text-slate-900 sm:text-2xl">
                 Start free. Upgrade when you want a human in the loop.
               </p>
@@ -226,6 +228,7 @@ export default function HomePage() {
                   key={tier.name}
                   variant={index === 0 ? "slideInLeft" : index === 1 ? "fadeUp" : "slideInRight"}
                   delay={index * 0.1}
+                  aboveFold
                   className={`flex flex-col rounded-2xl border bg-white p-6 sm:p-7 ${
                     tier.cta.highlight
                       ? "border-[#534AB7] ring-1 ring-[#534AB7]"

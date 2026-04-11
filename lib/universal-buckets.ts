@@ -12,8 +12,9 @@ export type FormPremiumOverlay = {
   bikeInsurancePremiumInput?: number;
   bikeInsurancePremiumFrequency?: PremiumFrequency;
   hasOtherInsurance?: boolean;
-  otherInsurancePolicies?: Array<{
+  otherInsurancePremiums?: Array<{
     policyName?: string;
+    premiumAmount?: number;
     premiumInput?: number;
     frequency?: PremiumFrequency;
   }>;
@@ -83,10 +84,17 @@ function otherInsurancePremiumMonthly(data: BucketProfileInput): number {
   if (typeof data.otherInsurancePremiumMonthly === "number") {
     return n(data.otherInsurancePremiumMonthly);
   }
-  if (data.hasOtherInsurance && (data.otherInsurancePolicies?.length ?? 0) > 0) {
-    return (data.otherInsurancePolicies ?? []).reduce(
+  if (data.hasOtherInsurance && (data.otherInsurancePremiums?.length ?? 0) > 0) {
+    return (data.otherInsurancePremiums ?? []).reduce(
       (total, row) =>
-        total + n(toMonthlyEquivalent(row.premiumInput, row.frequency)),
+        total +
+        n(
+          toMonthlyEquivalent(
+            row.premiumAmount ??
+              (row as { premiumInput?: number }).premiumInput,
+            row.frequency,
+          ),
+        ),
       0,
     );
   }
@@ -126,7 +134,8 @@ export type UniversalBucketRow = {
 };
 
 function totalIncome(data: Partial<FinancialProfile>) {
-  return n(data.monthlySalary) + n(data.spouseIncome) + n(data.otherIncome);
+  const spouse = data.lifeStage === "bachelor" ? 0 : n(data.spouseIncome);
+  return n(data.monthlySalary) + spouse + n(data.otherIncome);
 }
 
 export function hasHomeLoan(data: Partial<FinancialProfile>) {
@@ -154,9 +163,10 @@ export function getUniversalBucketStatus(
 }
 
 export function getUniversalBucketActuals(data: BucketProfileInput) {
+  const kids = data.lifeStage === "kids";
   let needsActual =
     n(data.rentAmount) +
-    n(data.rentMaintenanceMonthly) +
+    (n(data.rentAmount) > 0 ? n(data.rentMaintenanceMonthly) : 0) +
     n(data.homeLoanEMI) +
     n(data.secondPropertyEMI) +
     n(data.vegetables) +
@@ -169,7 +179,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.fuel) +
     n(data.cabMetro) +
     n(data.entertainment) +
-    n(data.kidsSchoolFees);
+    (kids ? n(data.kidsSchoolFees) : 0);
 
   if (n(data.parentsSupport) > 0) {
     needsActual += n(data.parentsSupport);
@@ -177,7 +187,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
 
   needsActual +=
     n(data.personalCare) +
-    n(data.kidsActivities) +
+    (kids ? n(data.kidsActivities) : 0) +
     n(data.houseHelpMonthly) +
     n(data.cookHelpMonthly);
 
@@ -192,11 +202,16 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     otherInsurancePremiumMonthly(data) +
     n(data.ssy);
 
+  const additionalEmiTotal = (data.additionalObligations ?? []).reduce(
+    (sum, row) => sum + n(row.monthlyAmount),
+    0,
+  );
   const loansActual =
     n(data.carLoanEMI) +
     n(data.bikeEMI) +
     n(data.personalLoanEMI) +
-    n(data.creditCardBillMonthly);
+    n(data.creditCardBillMonthly) +
+    additionalEmiTotal;
 
   // MONTHLY CONTRIBUTIONS ONLY
   // Asset values (mfValue, epfBalance etc.)
@@ -204,10 +219,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
   // Insurance and SSY are treated as security / goal buckets,
   // not monthly investment flow in the take-home income meter.
   const investmentActual =
-    n(data.monthlySIP) +
-    n(data.monthlyRD) +
-    n(data.monthlyNPSContribution) +
-    n(data.nscMonthly);
+    n(data.monthlySIP) + n(data.monthlyRD) + n(data.monthlyNPSContribution);
 
   return {
     needs: needsActual,

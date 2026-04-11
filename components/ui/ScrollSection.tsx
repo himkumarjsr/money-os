@@ -10,12 +10,13 @@ export default function ScrollSection({ children }: { children: React.ReactNode 
     offset: ["start end", "end start"],
   });
 
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
-  const y = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [60, 0, 0, -60]);
-  const scale = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.95, 1, 1, 0.95]);
+  // Opacity was 0 while scrollYProgress stayed near 0 (sections below the fold),
+  // so most of the homepage stayed invisible until the user scrolled — looked
+  // like a broken first paint. Keep sections readable; light motion only.
+  const y = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [28, 0, 0, -28]);
 
   return (
-    <motion.div ref={ref} style={{ opacity, y, scale }}>
+    <motion.div ref={ref} style={{ y }}>
       {children}
     </motion.div>
   );

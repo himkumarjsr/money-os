@@ -1,23 +1,11 @@
 "use client";
 
-import { CarLoanCalculator } from "@/components/calculators/CarLoanCalculator";
-import { EMICalculator } from "@/components/calculators/EMICalculator";
-import { EmergencyFundCalculator } from "@/components/calculators/EmergencyFundCalculator";
-import { HomeLoanCalculator } from "@/components/calculators/HomeLoanCalculator";
-import { NSCCalculator } from "@/components/calculators/NSCCalculator";
-import { PPFCalculator } from "@/components/calculators/PPFCalculator";
-import { PostOfficeCalculator } from "@/components/calculators/PostOfficeCalculator";
-import { RentVsBuyCalculator } from "@/components/calculators/RentVsBuyCalculator";
-import { RentVsOwnCarCalculator } from "@/components/calculators/RentVsOwnCarCalculator";
-import { SIPCalculator } from "@/components/calculators/SIPCalculator";
-import { SWPCalculator } from "@/components/calculators/SWPCalculator";
-import { WhenToBuyCarCalculator } from "@/components/calculators/WhenToBuyCarCalculator";
+import { lazyCalculatorsById } from "@/components/calculators/lazy-calculators";
 import { cn } from "@/lib/cn";
 import { fadeUp, scaleIn, staggerContainer } from "@/lib/animations";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import type { ComponentType } from "react";
 import { useMemo, useState } from "react";
 
 type Cat = "investment" | "loans" | "life" | "postoffice";
@@ -26,7 +14,6 @@ type Item = {
   id: string;
   title: string;
   blurb: string;
-  Component: ComponentType;
 };
 
 const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
@@ -38,31 +25,26 @@ const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
         id: "sip",
         title: "SIP",
         blurb: "Monthly mutual fund SIP projections",
-        Component: SIPCalculator,
       },
       {
         id: "swp",
         title: "SWP",
         blurb: "Withdrawals from a fixed corpus",
-        Component: SWPCalculator,
       },
       {
         id: "ppf",
         title: "PPF",
         blurb: "15-year Public Provident Fund",
-        Component: PPFCalculator,
       },
       {
         id: "nsc",
         title: "NSC",
         blurb: "5-year National Savings Certificate",
-        Component: NSCCalculator,
       },
       {
         id: "emergency",
         title: "Emergency fund",
         blurb: "Target vs gap by life stage",
-        Component: EmergencyFundCalculator,
       },
     ],
   },
@@ -74,19 +56,16 @@ const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
         id: "emi",
         title: "EMI",
         blurb: "Any reducing-balance loan",
-        Component: EMICalculator,
       },
       {
         id: "home",
         title: "Home loan",
         blurb: "Property + income stress test",
-        Component: HomeLoanCalculator,
       },
       {
         id: "car",
         title: "Car loan",
         blurb: "EMI + 6× salary rule",
-        Component: CarLoanCalculator,
       },
     ],
   },
@@ -98,19 +77,16 @@ const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
         id: "rentbuy",
         title: "Rent vs buy",
         blurb: "Home: cash-outflow comparison",
-        Component: RentVsBuyCalculator,
       },
       {
         id: "rentcar",
         title: "Rent vs own car",
         blurb: "Cab cost vs ownership estimate",
-        Component: RentVsOwnCarCalculator,
       },
       {
         id: "whencar",
         title: "When to buy car",
         blurb: "Down payment timeline & afford rule",
-        Component: WhenToBuyCarCalculator,
       },
     ],
   },
@@ -122,7 +98,6 @@ const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
         id: "po",
         title: "Post Office suite",
         blurb: "Seven popular schemes",
-        Component: PostOfficeCalculator,
       },
     ],
   },
@@ -142,7 +117,8 @@ export default function CalculatorsPage() {
     return item ?? activeCat.items[0];
   }, [activeCat.items, calcId]);
 
-  const ActiveCalc = activeItem.Component;
+  const ActiveCalc =
+    lazyCalculatorsById[activeItem.id] ?? lazyCalculatorsById[activeCat.items[0].id];
 
   return (
     <div className="min-h-dvh bg-white text-slate-900">

@@ -2,9 +2,18 @@ import type { AnalyseFormValues, FinancialProfile } from "@/lib/analyse-form-sch
 import { monthlyTotalIncome } from "@/lib/financialEngine";
 import {
   type BucketProfileInput,
-  getInsurancePremiumsMonthly,
+  getUniversalBucketActuals,
+  getUniversalCaps,
   hasHomeLoan,
 } from "@/lib/universal-buckets";
+
+/** Caps as fractions of monthly income — same as monthly allocation table (`getUniversalCaps`). */
+export type SpeedoMeterCaps = {
+  needs: number;
+  wants: number;
+  loans: number;
+  investment: number;
+};
 
 export interface SpeedoMeterProps {
   income: number;
@@ -12,65 +21,35 @@ export interface SpeedoMeterProps {
   wants: number;
   loans: number;
   investment: number;
+  hasHomeLoan?: boolean;
+  /** When set, gauge caps and labels match the allocation table. */
+  caps?: SpeedoMeterCaps;
 }
 
 /**
- * Bucket split for speedometers (per product spec):
- * needs = housing EMIs + food + transport + utilities + school fees;
- * wants = discretionary; loans = vehicle/personal/card/additional EMIs (not home loan);
- * investment = SIP/RD/PPF/EPF/NPS + all insurance premiums + parents support + SSY/NSC.
+ * Health gauges use the same bucket actuals and caps as the monthly allocation table
+ * (`getUniversalBucketActuals` / `getUniversalCaps`).
  */
 export function buildSpeedoMeterProps(
   data: Partial<AnalyseFormValues> | FinancialProfile,
-): SpeedoMeterProps & { hasHomeLoan: boolean } {
-  const n = (v?: number) => v ?? 0;
+): SpeedoMeterProps {
   const row = data as BucketProfileInput;
-
-  const needs =
-    n(data.rentAmount) +
-    n(data.rentMaintenanceMonthly) +
-    n(data.homeLoanEMI) +
-    n(data.secondPropertyEMI) +
-    n(data.vegetables) +
-    n(data.grocery) +
-    n(data.medicine) +
-    n(data.fuel) +
-    n(data.cabMetro) +
-    n(data.electricity) +
-    n(data.internet) +
-    n(data.gas) +
-    n(data.water) +
-    n(data.kidsSchoolFees);
-
-  const wants = n(data.entertainment) + n(data.shopping) + n(data.personalCare);
-
-  const addOb = (data.additionalObligations ?? []).reduce((s, o) => s + n(o.monthlyAmount), 0);
-  const loans =
-    n(data.carLoanEMI) +
-    n(data.bikeEMI) +
-    n(data.personalLoanEMI) +
-    n(data.creditCardBillMonthly) +
-    addOb;
-
-  const investment =
-    n(data.monthlySIP) +
-    n(data.monthlyRD) +
-    n(data.monthlyPPFContribution) +
-    n(data.monthlyEPFContribution) +
-    n(data.monthlyNPSContribution) +
-    getInsurancePremiumsMonthly(row) +
-    n(data.parentsSupport) +
-    n(data.ssy) +
-    n(data.nscMonthly);
-
-  const income = monthlyTotalIncome(data as FinancialProfile);
+  const actuals = getUniversalBucketActuals(row);
+  const capRow = getUniversalCaps(data as FinancialProfile);
+  const hl = hasHomeLoan(row);
 
   return {
-    income,
-    needs,
-    wants,
-    loans,
-    investment,
-    hasHomeLoan: hasHomeLoan(row),
+    income: monthlyTotalIncome(data as FinancialProfile),
+    needs: actuals.needs,
+    wants: actuals.wants,
+    loans: actuals.loans,
+    investment: actuals.investment,
+    hasHomeLoan: hl,
+    caps: {
+      needs: capRow.needs,
+      wants: capRow.wants,
+      loans: capRow.loans,
+      investment: capRow.investment,
+    },
   };
 }

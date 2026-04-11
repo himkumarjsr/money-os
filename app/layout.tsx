@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
+import { AuthSessionSync } from "@/components/AuthSessionSync";
+import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import { GlobalNavbar } from "@/components/global-navbar";
+
+const RenewalReminderBanner = dynamic(
+  () =>
+    import("@/components/RenewalReminderBanner").then((m) => ({ default: m.RenewalReminderBanner })),
+  { ssr: false },
+);
 import { Toast } from "@/components/ui/Toast";
 import "./globals.css";
 
@@ -43,7 +52,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="font-sans">
+        <AuthSessionSync />
+        <FinancialStoreAuthSync />
         <GlobalNavbar />
+        <RenewalReminderBanner />
         {children}
         <Toast />
       </body>

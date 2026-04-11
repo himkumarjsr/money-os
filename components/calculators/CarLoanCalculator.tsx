@@ -257,7 +257,7 @@ export function CarLoanCalculator() {
         <button
           type="button"
           onClick={() =>
-            downloadAmortisationExcel(amortRows, loan, rate, months, e, "car-loan")
+            void downloadAmortisationExcel(amortRows, loan, rate, months, e, "car-loan")
           }
           className="inline-flex items-center gap-2 text-xs font-semibold text-[#534AB7] hover:underline"
         >
@@ -269,7 +269,7 @@ export function CarLoanCalculator() {
         <button
           type="button"
           onClick={() =>
-            downloadAmortisationExcel(amortRows, loan, rate, months, e, "car-loan")
+            void downloadAmortisationExcel(amortRows, loan, rate, months, e, "car-loan")
           }
           className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#F0EFF8] bg-white px-5 py-4 text-left"
         >

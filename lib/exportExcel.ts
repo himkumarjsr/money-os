@@ -1,15 +1,17 @@
-import * as XLSX from "xlsx";
 import { formatINR } from "@/lib/formatINR";
 import type { AmortisationRow } from "@/lib/amortisation";
+import type { CellObject } from "xlsx";
 
-export function downloadAmortisationExcel(
+/** Loads xlsx only when the user exports — keeps it out of the main calculator bundle. */
+export async function downloadAmortisationExcel(
   rows: AmortisationRow[],
   loanAmount: number,
   rate: number,
   tenure: number,
   emi: number,
   calculatorName: string,
-) {
+): Promise<void> {
+  const XLSX = await import("xlsx");
   const workbook = XLSX.utils.book_new();
   const safeName = calculatorName
     .toLowerCase()
@@ -45,21 +47,19 @@ export function downloadAmortisationExcel(
 
   worksheet["!cols"] = [{ wch: 5 }, { wch: 12 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }];
 
-  // Styling is best-effort; xlsx supports limited styles depending on writer/runtime.
   const headerRowIndex1Based = summaryData.length + 1;
   for (let c = 0; c < 7; c += 1) {
     const addr = XLSX.utils.encode_cell({ r: headerRowIndex1Based - 1, c });
     const cell = worksheet[addr];
     if (cell) {
-      (cell as XLSX.CellObject & { s?: unknown }).s = {
+      (cell as CellObject & { s?: unknown }).s = {
         font: { bold: true, color: { rgb: "FFFFFF" } },
         fill: { patternType: "solid", fgColor: { rgb: "534AB7" } },
       };
     }
   }
 
-  // Alternate row shading for table rows.
-  const firstDataRow0Based = headerRowIndex1Based; // row after header, 0-based index in utils
+  const firstDataRow0Based = headerRowIndex1Based;
   for (let i = 0; i < tableData.length; i += 1) {
     const row0Based = firstDataRow0Based + i;
     const shaded = i % 2 === 1;
@@ -74,11 +74,10 @@ export function downloadAmortisationExcel(
       if (c >= 2) {
         style.numFmt = "₹ #,##,##0";
       }
-      (cell as XLSX.CellObject & { s?: unknown }).s = style;
+      (cell as CellObject & { s?: unknown }).s = style;
     }
   }
 
   XLSX.utils.book_append_sheet(workbook, worksheet, `${calculatorName} Schedule`);
   XLSX.writeFile(workbook, `finkoin-${safeName}.xlsx`);
 }
-

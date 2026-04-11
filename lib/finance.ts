@@ -18,10 +18,13 @@ export function formatCurrency(
   value: number,
   locale = "en-US",
   currency = "USD",
+  maximumFractionDigits: number | undefined = undefined,
 ): string {
+  const max = maximumFractionDigits !== undefined ? maximumFractionDigits : 2;
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: max,
+    ...(max === 0 ? { minimumFractionDigits: 0 } : {}),
   }).format(value);
 }

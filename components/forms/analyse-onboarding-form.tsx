@@ -12,6 +12,10 @@ import {
   PRIMARY_GOAL_LABELS,
   PRIMARY_GOAL_VALUES,
   analyseDefaultValues,
+  coalesceInsuranceToggles,
+  financialProfileToFormValues,
+  mergeAnalyseDraftWithProfile,
+  newAnalyseRowId,
   normalizeAnalyseFormValues,
   parseMoneyInput,
   step1Schema,
@@ -25,14 +29,29 @@ import {
   type FinancialProfile,
   type PremiumFrequency,
 } from "@/lib/analyse-form-schema";
+import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { formatCurrency } from "@/lib/finance";
 import { formatIndian, formatInWords } from "@/lib/formatters";
+import { cn } from "@/lib/cn";
+import { getAIFixPlan } from "@/lib/aiService";
+import { fetchUserAnalyseSnapshot, upsertUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuthStore } from "@/store/authStore";
+
 import { useFinancialStore } from "@/store/financialStore";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFieldArray, useForm, type FieldPath } from "react-hook-form";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Controller, useFieldArray, useForm, type FieldPath } from "react-hook-form";
 
 const STEPS = [
   { title: "Personal profile", short: "Profile" },
@@ -43,6 +62,48 @@ const STEPS = [
   { title: "Assets and savings", short: "Assets" },
   { title: "Goals", short: "Goals" },
 ] as const;
+
+function detectLastStep(profile: Partial<AnalyseFormValues> | null): number {
+  const p = profile ?? {};
+  if (
+    (p.retirementTargetCorpus ?? 0) > 0 ||
+    (p.emergencyFundTarget ?? 0) > 0 ||
+    (p.kidsEducationFundTarget ?? 0) > 0 ||
+    (p.kidsMarriageFundTarget ?? 0) > 0 ||
+    (p.homePurchaseTarget ?? 0) > 0 ||
+    (p.medicalEmergencyFund ?? 0) > 0
+  ) {
+    return 6;
+  }
+  if (
+    (p.mfValue ?? 0) > 0 ||
+    (p.epfBalance ?? 0) > 0 ||
+    (p.fdValue ?? 0) > 0 ||
+    (p.savingsAccountBalance ?? 0) > 0 ||
+    (p.ppfBalance ?? 0) > 0
+  ) {
+    return 5;
+  }
+  if (
+    p.hasHealthInsurance ||
+    p.hasTermInsurance ||
+    (p.healthInsurancePremiumInput ?? 0) > 0 ||
+    (p.termInsurancePremiumInput ?? 0) > 0
+  ) {
+    return 4;
+  }
+  const food = (p.vegetables ?? 0) + (p.grocery ?? 0);
+  if (food > 0 || (p.electricity ?? 0) > 0 || (p.fuel ?? 0) > 0) {
+    return 3;
+  }
+  if ((p.rentAmount ?? 0) > 0 || (p.homeLoanEMI ?? 0) > 0) {
+    return 2;
+  }
+  if ((p.monthlySalary ?? 0) > 0) {
+    return 1;
+  }
+  return 0;
+}
 
 const STEP_SCHEMAS = [
   step1Schema,
@@ -280,15 +341,32 @@ function PremiumField({
 
 export function AnalyseOnboardingForm() {
   const router = useRouter();
-  const cachedAnalysis = useFinancialStore((state) => state.analysis);
+  const lastSubmission = useFinancialStore((state) => state.lastSubmission);
   const hasHydrated = useFinancialStore((state) => state.hasHydrated);
+  const authUserId = useAuthStore((s) => s.user?.id ?? null);
+  const step = useFinancialStore((state) => state.currentStep);
+  const setStep = useFinancialStore((state) => state.setCurrentStep);
   const setAnalysis = useFinancialStore((state) => state.setAnalysis);
   const setFullAnalysis = useFinancialStore((state) => state.setFullAnalysis);
-  const hydratedResetDoneRef = useRef(false);
   const prevLifeStageRef = useRef<AnalyseFormValues["lifeStage"] | null>(null);
+  const prevHasHealthRef = useRef<boolean | undefined>(undefined);
+  const prevHasTermRef = useRef<boolean | undefined>(undefined);
+  const prevHasOtherInsuranceRef = useRef<boolean | undefined>(undefined);
+  const prevOwnsHomeRef = useRef<boolean | undefined>(undefined);
+  const prevOwnsCarRef = useRef<boolean | undefined>(undefined);
+  const prevInvestsNscRef = useRef<boolean | undefined>(undefined);
+  const prevParentsSupportRef = useRef<number | undefined>(undefined);
 
-  const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
+  const [liquidMfInfoOpen, setLiquidMfInfoOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showResumeBanner, setShowResumeBanner] = useState(false);
+  const [showResumeOption, setShowResumeOption] = useState(false);
+  /** Per-user: avoid re-fetching cloud snapshot every mount; cleared when auth user changes. */
+  const cloudHydrateKey = useRef<string | null>(null);
+  /** After "Start fresh", do not immediately pull server snapshot for this account. */
+  const skipCloudHydrateRef = useRef(false);
 
   const {
     register,
@@ -369,7 +447,7 @@ export function AnalyseOnboardingForm() {
     remove: removeOtherInsurance,
   } = useFieldArray({
     control,
-    name: "otherInsurancePolicies",
+    name: "otherInsurancePremiums",
   });
 
   const lifeStage = watch("lifeStage");
@@ -385,14 +463,15 @@ export function AnalyseOnboardingForm() {
   const retirementAge = watch("retirementAge") ?? 60;
 
   const watchedValues = watch();
+  /** Hidden fields keep react-hook-form values from a prior run — only sum what the current step UI collects. */
   const totalIncome: number = sum([
     watchedValues.monthlySalary,
-    watchedValues.spouseIncome,
+    lifeStage !== "bachelor" ? watchedValues.spouseIncome : 0,
     watchedValues.otherIncome,
   ]);
   const fixedObligations: number = sum([
     watchedValues.rentAmount,
-    watchedValues.rentMaintenanceMonthly,
+    (watchedValues.rentAmount ?? 0) > 0 ? watchedValues.rentMaintenanceMonthly : 0,
     watchedValues.homeLoanEMI,
     watchedValues.secondPropertyEMI,
     watchedValues.carLoanEMI,
@@ -416,8 +495,8 @@ export function AnalyseOnboardingForm() {
     watchedValues.entertainment,
     watchedValues.shopping,
     watchedValues.personalCare,
-    watchedValues.kidsSchoolFees,
-    watchedValues.kidsActivities,
+    lifeStage === "kids" ? watchedValues.kidsSchoolFees : 0,
+    lifeStage === "kids" ? watchedValues.kidsActivities : 0,
     watchedValues.parentsSupport,
   ]);
   const emergencyFundSuggestion =
@@ -445,11 +524,34 @@ export function AnalyseOnboardingForm() {
     watchedValues.npsBalance,
     watchedValues.epfBalance,
   ]);
+  const monthlyNeedsForEmergency = monthlyLivingExpenses + fixedObligations;
+  const erLiveSavings = watchedValues.savingsAccountBalance ?? 0;
+  const erLiveLiq = watchedValues.liquidMFValue ?? 0;
+  const erLiveFd = watchedValues.fdValue ?? 0;
+  const erLiveOther = watchedValues.otherLiquidSavings ?? 0;
+  const erLiveSavingsCounted = erLiveSavings * 1;
+  const erLiveLiqCounted = erLiveLiq * 0.95;
+  const erLiveFdCounted = erLiveFd * 0.7;
+  const erLiveOtherCounted = erLiveOther * 0.5;
+  const erLiveTotal =
+    erLiveSavingsCounted + erLiveLiqCounted + erLiveFdCounted + erLiveOtherCounted;
+  const erLiveMonths =
+    monthlyNeedsForEmergency > 0 ? erLiveTotal / monthlyNeedsForEmergency : 0;
+  const erMonthsToneClass =
+    monthlyNeedsForEmergency <= 0
+      ? "text-slate-500"
+      : erLiveMonths >= 6
+        ? "text-emerald-600"
+        : erLiveMonths >= 3
+          ? "text-amber-600"
+          : "text-red-600";
+
   const estimatedAssets = sum([
     watchedValues.savingsAccountBalance,
     watchedValues.fdValue,
     watchedValues.liquidMFValue,
     watchedValues.emergencyFundCurrent,
+    watchedValues.otherLiquidSavings,
     watchedValues.bereavementFund,
     watchedValues.mfValue,
     watchedValues.indianStocksValue,
@@ -459,26 +561,98 @@ export function AnalyseOnboardingForm() {
     watchedValues.ppfBalance,
     watchedValues.npsBalance,
     watchedValues.epfBalance,
-    watchedValues.homeMarketValue,
-    watchedValues.carMarketValue,
+    ownsHome ? watchedValues.homeMarketValue : 0,
+    ownsCar ? watchedValues.carMarketValue : 0,
     watchedValues.goldValue,
     watchedValues.otherAssets,
+    watchedValues.investsInNsc ? watchedValues.nscDepositAmount : 0,
   ]);
   const estimatedLiabilities = sum([
-    watchedValues.homeLoanOutstanding,
-    watchedValues.carLoanOutstanding,
+    ownsHome ? watchedValues.homeLoanOutstanding : 0,
+    ownsCar ? watchedValues.carLoanOutstanding : 0,
   ]);
   const estimatedNetWorth = estimatedAssets - estimatedLiabilities;
 
-  useEffect(() => {
-    if (!hasHydrated || !cachedAnalysis) return;
-    if (hydratedResetDoneRef.current) return;
-    hydratedResetDoneRef.current = true;
-    reset({
+  useLayoutEffect(() => {
+    if (!hasHydrated) return;
+    const { analysis: draft } = useFinancialStore.getState();
+    const cached = { ...(draft ?? {}) } as Record<string, unknown>;
+    if (cached.nscMonthly != null && cached.nscDepositAmount == null) {
+      cached.nscDepositAmount = cached.nscMonthly;
+    }
+    delete cached.nscMonthly;
+    const cachedTyped = cached as Partial<AnalyseFormValues>;
+    const merged = {
       ...analyseDefaultValues,
-      ...cachedAnalysis,
-    });
-  }, [cachedAnalysis, hasHydrated, reset]);
+      ...mergeAnalyseDraftWithProfile(
+        lastSubmission ? financialProfileToFormValues(lastSubmission) : {},
+        cachedTyped,
+      ),
+    };
+    reset(coalesceInsuranceToggles(merged as AnalyseFormValues));
+  }, [hasHydrated, lastSubmission, reset]);
+
+  useEffect(() => {
+    skipCloudHydrateRef.current = false;
+    cloudHydrateKey.current = null;
+  }, [authUserId]);
+
+  useEffect(() => {
+    if (!hasHydrated || !supabase || !authUserId) return;
+    const doneKey = authUserId;
+    if (cloudHydrateKey.current === doneKey) return;
+    if (skipCloudHydrateRef.current) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+
+    const st = useFinancialStore.getState();
+    if (st.lastSubmission) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+    if (st.currentStep !== 0) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+    if ((st.profile?.monthlySalary ?? 0) > 0) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const remote = await fetchUserAnalyseSnapshot(authUserId);
+        if (cancelled) return;
+        if (
+          remote?.lastSubmission &&
+          remote.result &&
+          isValidStoredAnalysis(remote.result)
+        ) {
+          useFinancialStore.getState().hydrateFromSnapshot(remote.lastSubmission, remote.result, {
+            aiPlan: remote.aiPlan ?? undefined,
+            analysisPatch: remote.analysis ?? undefined,
+          });
+        }
+      } finally {
+        if (!cancelled) cloudHydrateKey.current = doneKey;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, authUserId, lastSubmission, step]);
+
+  useEffect(() => {
+    const store = useFinancialStore.getState();
+    if (store.result) {
+      setShowResumeOption(true);
+    } else if ((store.profile?.monthlySalary ?? 0) > 0 || store.currentStep > 0) {
+      setShowResumeBanner(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -490,6 +664,10 @@ export function AnalyseOnboardingForm() {
 
   useEffect(() => {
     const prev = prevLifeStageRef.current;
+    if (lifeStage === "bachelor") {
+      setValue("spouseIncome", 0, { shouldDirty: false, shouldValidate: false });
+      setValue("spouseAge", 0, { shouldDirty: false, shouldValidate: false });
+    }
     if (prev !== null && lifeStage !== "kids" && prev === "kids") {
       setValue("numberOfKids", undefined);
       setValue("kidsAges", []);
@@ -502,49 +680,59 @@ export function AnalyseOnboardingForm() {
   }, [lifeStage, setValue]);
 
   useEffect(() => {
-    if (!hasHealthInsurance) {
+    const prev = prevHasHealthRef.current;
+    if (prev === true && hasHealthInsurance === false) {
       setValue("healthInsuranceSumInsured", 0);
       setValue("healthInsurancePremiumInput", 0);
+      setValue("healthInsurancePremiumFrequency", "monthly");
     }
+    prevHasHealthRef.current = hasHealthInsurance;
   }, [hasHealthInsurance, setValue]);
 
   useEffect(() => {
-    if (!hasTermInsurance) {
+    const prev = prevHasTermRef.current;
+    if (prev === true && hasTermInsurance === false) {
       setValue("termInsuranceSumAssured", 0);
       setValue("termInsurancePremiumInput", 0);
+      setValue("termInsurancePremiumFrequency", "monthly");
     }
+    prevHasTermRef.current = hasTermInsurance;
   }, [hasTermInsurance, setValue]);
 
   useEffect(() => {
-    if (hasOtherInsurance && otherInsuranceFields.length === 0) {
+    const prev = prevHasOtherInsuranceRef.current;
+    if (hasOtherInsurance && prev === false && otherInsuranceFields.length === 0) {
       appendOtherInsurance({
+        id: newAnalyseRowId(),
         policyName: "",
-        premiumInput: 0,
+        premiumAmount: 0,
         frequency: "monthly",
       });
     }
-  }, [appendOtherInsurance, hasOtherInsurance, otherInsuranceFields.length]);
-
-  useEffect(() => {
-    if (!hasOtherInsurance) {
-      setValue("otherInsurancePolicies", []);
+    if (prev === true && hasOtherInsurance === false) {
+      setValue("otherInsurancePremiums", []);
     }
-  }, [hasOtherInsurance, setValue]);
+    prevHasOtherInsuranceRef.current = hasOtherInsurance;
+  }, [appendOtherInsurance, hasOtherInsurance, otherInsuranceFields.length, setValue]);
 
   useEffect(() => {
-    if (!ownsHome) {
+    const prev = prevOwnsHomeRef.current;
+    if (prev === true && ownsHome === false) {
       setValue("homeMarketValue", 0);
       setValue("homeLoanOutstanding", 0);
     }
+    prevOwnsHomeRef.current = ownsHome;
   }, [ownsHome, setValue]);
 
   useEffect(() => {
-    if (!ownsCar) {
+    const prev = prevOwnsCarRef.current;
+    if (prev === true && ownsCar === false) {
       setValue("carMarketValue", 0);
       setValue("carLoanOutstanding", 0);
       setValue("carPurchaseTarget", 0);
       setValue("carPurchaseYear", 0);
     }
+    prevOwnsCarRef.current = ownsCar;
   }, [ownsCar, setValue]);
 
   useEffect(() => {
@@ -556,22 +744,27 @@ export function AnalyseOnboardingForm() {
   const investsInNsc = watch("investsInNsc");
 
   useEffect(() => {
-    if (!investsInNsc) {
-      setValue("nscMonthly", 0);
+    const prev = prevInvestsNscRef.current;
+    if (prev === true && investsInNsc === false) {
+      setValue("nscDepositAmount", 0);
     }
+    prevInvestsNscRef.current = investsInNsc;
   }, [investsInNsc, setValue]);
 
   useEffect(() => {
-    if (parentsSupport <= 0) {
+    const prev = prevParentsSupportRef.current;
+    if (prev !== undefined && prev > 0 && parentsSupport <= 0) {
       setValue("parentsCity", undefined);
       setValue("parentsHealthInsuranceSumInsured", 0);
       setValue("parentsEmergencyCash", 0);
     }
+    prevParentsSupportRef.current = parentsSupport;
   }, [parentsSupport, setValue]);
 
-  const goNext = useCallback(() => {
-    setDirection("forward");
-    setStep((current) => Math.min(current + 1, STEPS.length - 1));
+  const scrollStepIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    });
   }, []);
 
   const forceNext = useCallback(() => {
@@ -585,15 +778,27 @@ export function AnalyseOnboardingForm() {
     }
     setDirection("forward");
     setStep((current) => Math.min(current + 1, STEPS.length - 1));
-  }, [clearErrors, getValues, setError, step]);
+    scrollStepIntoView();
+  }, [clearErrors, getValues, scrollStepIntoView, setError, setStep, step]);
 
   const goBack = useCallback(() => {
     clearErrors();
     setDirection("back");
     setStep((current) => Math.max(current - 1, 0));
-  }, [clearErrors]);
+    scrollStepIntoView();
+  }, [clearErrors, scrollStepIntoView, setStep]);
 
-  const onFinalSubmit = useCallback(() => {
+  const jumpToStep = useCallback(
+    (index: number) => {
+      clearErrors();
+      setDirection(index > step ? "forward" : "back");
+      setStep(Math.max(0, Math.min(index, STEPS.length - 1)));
+      scrollStepIntoView();
+    },
+    [clearErrors, scrollStepIntoView, setStep, step],
+  );
+
+  const handleFinalSubmit = useCallback(async () => {
     clearErrors();
     const values = getValues();
     const finalParsed = step7Schema.safeParse({
@@ -604,14 +809,57 @@ export function AnalyseOnboardingForm() {
       applyZodFieldErrors(finalParsed.error.flatten(), setError);
       return;
     }
-    const normalized = normalizeAnalyseFormValues({
-      ...values,
-      primaryGoal: values.primaryGoal || "grow_wealth",
-      monthlySalary: values.monthlySalary ?? 0,
-    });
-    setFullAnalysis(normalized);
-    router.push("/analyse/result");
-  }, [clearErrors, getValues, router, setError, setFullAnalysis]);
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const mergedValues = coalesceInsuranceToggles({
+        ...values,
+        primaryGoal: values.primaryGoal || "grow_wealth",
+        monthlySalary: values.monthlySalary ?? 0,
+      });
+      setAnalysis(mergedValues);
+      const normalized = normalizeAnalyseFormValues(mergedValues);
+      try {
+        setFullAnalysis(normalized);
+      } catch (e) {
+        console.error("Submit / setFullAnalysis error:", e);
+        setSubmitError("Analysis failed. Please try again.");
+        return;
+      }
+
+      const { result: nextResult, lastSubmission: savedProfile } = useFinancialStore.getState();
+      if (!nextResult || !savedProfile) {
+        setSubmitError("Analysis failed. Please try again.");
+        return;
+      }
+
+      const { plan: aiPlan } = await getAIFixPlan(savedProfile, nextResult);
+      useFinancialStore.getState().setAiPlan(aiPlan);
+
+      const uid = useAuthStore.getState().user?.id;
+      if (uid && supabase) {
+        void upsertUserAnalyseSnapshot(uid, {
+          profile: savedProfile,
+          result: nextResult,
+          submittedAt: new Date().toISOString(),
+          version: "1.0",
+          aiPlan,
+          analysis: mergedValues,
+        }).then(({ error }) => {
+          if (error) console.warn("Snapshot save failed:", error.message);
+        });
+      }
+
+      router.push("/analyse/result");
+    } catch (e) {
+      console.error("Submit error:", e);
+      setSubmitError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [clearErrors, getValues, router, setAnalysis, setError, setFullAnalysis]);
 
   const debtWarning =
     totalIncome > 0 && fixedObligations > totalIncome * 0.5
@@ -680,25 +928,108 @@ export function AnalyseOnboardingForm() {
       </div>
 
       <div className="mb-8">
-        <div className="flex h-2 gap-1 overflow-hidden rounded-full bg-slate-100 sm:h-2.5 sm:gap-1.5">
+        <div
+          className="flex h-2 gap-1 overflow-hidden rounded-full bg-slate-100 sm:h-2.5 sm:gap-1.5"
+          role="tablist"
+          aria-label="Form steps"
+        >
           {STEPS.map((item, index) => (
-            <div
+            <button
               key={item.short}
-              className={`min-w-0 flex-1 rounded-full transition-colors ${
+              type="button"
+              title={`Go to ${item.title}`}
+              onClick={() => jumpToStep(index)}
+              className={`min-w-0 flex-1 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#534AB7]/40 ${
                 index <= step ? "bg-[#534AB7]" : "bg-slate-200"
               }`}
-              aria-hidden
+              aria-current={index === step ? "step" : undefined}
+              aria-label={`Step ${index + 1}: ${item.title}`}
             />
           ))}
         </div>
-        <div className="mt-3 flex justify-between text-[0.65rem] font-medium text-slate-500 sm:text-xs">
+        <div className="mt-3 flex justify-between gap-0.5 text-[0.65rem] font-medium text-slate-500 sm:gap-1 sm:text-xs">
           {STEPS.map((item, index) => (
-            <span key={item.short} className={index === step ? "text-[#534AB7]" : ""}>
+            <button
+              key={`${item.short}-label`}
+              type="button"
+              title={`Go to ${item.title}`}
+              onClick={() => jumpToStep(index)}
+              className={`shrink-0 rounded px-0.5 sm:px-1 ${
+                index === step ? "text-[#534AB7]" : "hover:text-slate-700"
+              }`}
+            >
               {item.short}
-            </span>
+            </button>
           ))}
         </div>
       </div>
+
+      {showResumeOption ? (
+        <div
+          className="mb-5 flex flex-col gap-3 rounded-xl border border-[#AFA9EC] bg-[#EEEDFE] px-[18px] py-3.5 sm:flex-row sm:items-center sm:justify-between"
+          role="status"
+        >
+          <div>
+            <div className="text-sm font-semibold text-[#3C3489]">You already have a completed analysis</div>
+            <div className="mt-0.5 text-xs text-[#534AB7]">Open your report or start a fresh analysis.</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/analyse/result"
+              className="inline-flex items-center justify-center rounded-lg bg-[#534AB7] px-3.5 py-2 text-[13px] font-semibold text-white no-underline"
+            >
+              View report
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                skipCloudHydrateRef.current = true;
+                useFinancialStore.getState().resetAll();
+                reset(coalesceInsuranceToggles(analyseDefaultValues as AnalyseFormValues));
+                setShowResumeOption(false);
+                setShowResumeBanner(false);
+              }}
+              className="rounded-lg border border-[#E8E6F0] bg-transparent px-3.5 py-2 text-[13px] text-[#9B9A94]"
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showResumeBanner ? (
+        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-[#AFA9EC] bg-[#EEEDFE] px-[18px] py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[#3C3489]">Continue where you left off</div>
+            <div className="mt-0.5 text-xs text-[#534AB7]">Your form data is saved locally</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowResumeBanner(false);
+                const last = detectLastStep(useFinancialStore.getState().profile);
+                jumpToStep(last);
+              }}
+              className="rounded-lg bg-[#534AB7] px-3.5 py-2 text-[13px] font-semibold text-white"
+            >
+              Resume
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                skipCloudHydrateRef.current = true;
+                useFinancialStore.getState().resetAll();
+                reset(coalesceInsuranceToggles(analyseDefaultValues as AnalyseFormValues));
+                setShowResumeBanner(false);
+              }}
+              className="rounded-lg border border-[#E8E6F0] bg-transparent px-3.5 py-2 text-[13px] text-[#9B9A94]"
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <h1 className="mt-8 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
         {STEPS[step].title}
@@ -718,9 +1049,9 @@ export function AnalyseOnboardingForm() {
         onSubmit={(event) => {
           event.preventDefault();
           if (step === STEPS.length - 1) {
-            void onFinalSubmit();
+            void handleFinalSubmit();
           } else {
-            goNext();
+            forceNext();
           }
         }}
       >
@@ -946,13 +1277,22 @@ export function AnalyseOnboardingForm() {
 
             <div className="space-y-4">
               <SectionTitle>Other loans</SectionTitle>
-              <MoneyInput
-                id="personalLoanEMI"
-                label="Personal loan EMI"
-                helper="Add your monthly EMI. If you track the loan amount or rate separately, we’ll still use the EMI for analysis."
-                error={errors.personalLoanEMI?.message}
-                {...bindMoneyField("personalLoanEMI")}
-              />
+              <div className="grid gap-5 sm:grid-cols-2">
+                <MoneyInput
+                  id="personalLoanEMI"
+                  label="Personal loan EMI"
+                  helper="Monthly EMI you pay."
+                  error={errors.personalLoanEMI?.message}
+                  {...bindMoneyField("personalLoanEMI")}
+                />
+                <MoneyInput
+                  id="personalLoanOutstanding"
+                  label="Personal loan outstanding (optional)"
+                  helper="Approximate principal left, if you know it. Leave blank if you only track EMI — we won’t guess the balance."
+                  error={errors.personalLoanOutstanding?.message}
+                  {...bindMoneyField("personalLoanOutstanding")}
+                />
+              </div>
               <MoneyInput
                 id="creditCardBillMonthly"
                 label="Credit card — typical monthly payment"
@@ -972,8 +1312,9 @@ export function AnalyseOnboardingForm() {
                   disabled={fields.length >= 6}
                   onClick={() =>
                     append({
+                      id: newAnalyseRowId(),
                       type: "",
-                      lender: "",
+                      lenderName: "",
                       monthlyAmount: 0,
                     })
                   }
@@ -1022,11 +1363,19 @@ export function AnalyseOnboardingForm() {
                           </p>
                         ) : null}
                       </div>
-                      <TextInput
-                        id={`additionalObligations.${index}.lender`}
-                        label="Lender name"
-                        error={errors.additionalObligations?.[index]?.lender?.message}
-                        {...register(`additionalObligations.${index}.lender` as const)}
+                      <Controller
+                        control={control}
+                        name={`additionalObligations.${index}.lenderName`}
+                        render={({ field }) => (
+                          <TextInput
+                            id={`additionalObligations.${index}.lenderName`}
+                            label="Lender name"
+                            error={errors.additionalObligations?.[index]?.lenderName?.message}
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                          />
+                        )}
                       />
                       <MoneyInput
                         id={`additionalObligations.${index}.monthlyAmount`}
@@ -1340,8 +1689,9 @@ export function AnalyseOnboardingForm() {
                       disabled={otherInsuranceFields.length >= 6}
                       onClick={() =>
                         appendOtherInsurance({
+                          id: newAnalyseRowId(),
                           policyName: "",
-                          premiumInput: 0,
+                          premiumAmount: 0,
                           frequency: "monthly",
                         })
                       }
@@ -1349,9 +1699,9 @@ export function AnalyseOnboardingForm() {
                       Add
                     </Button>
                   </div>
-                  {errors.otherInsurancePolicies?.message ? (
+                  {errors.otherInsurancePremiums?.message ? (
                     <p className="text-sm text-[#E24B4A]">
-                      {errors.otherInsurancePolicies.message}
+                      {errors.otherInsurancePremiums.message}
                     </p>
                   ) : null}
                   <div className="space-y-4">
@@ -1370,35 +1720,45 @@ export function AnalyseOnboardingForm() {
                           </button>
                         </div>
                         <div className="space-y-4">
-                          <TextInput
-                            id={`otherInsurancePolicies.${index}.policyName`}
-                            label="Policy name"
-                            error={errors.otherInsurancePolicies?.[index]?.policyName?.message}
-                            placeholder="LIC / endowment / ULIP / other"
-                            {...register(`otherInsurancePolicies.${index}.policyName` as const)}
+                          <Controller
+                            control={control}
+                            name={`otherInsurancePremiums.${index}.policyName`}
+                            render={({ field }) => (
+                              <TextInput
+                                id={`otherInsurancePremiums.${index}.policyName`}
+                                label="Policy name"
+                                error={
+                                  errors.otherInsurancePremiums?.[index]?.policyName?.message
+                                }
+                                placeholder="LIC / endowment / ULIP / other"
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                              />
+                            )}
                           />
                           <PremiumField
-                            inputId={`otherInsurancePolicies.${index}.premiumInput`}
+                            inputId={`otherInsurancePremiums.${index}.premiumAmount`}
                             label="Premium amount"
                             amountError={
-                              errors.otherInsurancePolicies?.[index]?.premiumInput?.message
+                              errors.otherInsurancePremiums?.[index]?.premiumAmount?.message
                             }
                             frequency={
-                              watch(`otherInsurancePolicies.${index}.frequency` as const) ??
+                              watch(`otherInsurancePremiums.${index}.frequency` as const) ??
                               "monthly"
                             }
                             onFrequencyChange={(value) =>
                               setValue(
-                                `otherInsurancePolicies.${index}.frequency` as const,
+                                `otherInsurancePremiums.${index}.frequency` as const,
                                 value,
                               )
                             }
                           >
                             <MoneyInput
-                              id={`otherInsurancePolicies.${index}.premiumInput`}
+                              id={`otherInsurancePremiums.${index}.premiumAmount`}
                               label="Premium amount"
                               {...bindMoneyField(
-                                `otherInsurancePolicies.${index}.premiumInput` as const,
+                                `otherInsurancePremiums.${index}.premiumAmount` as const,
                               )}
                             />
                           </PremiumField>
@@ -1419,10 +1779,164 @@ export function AnalyseOnboardingForm() {
             <div className="space-y-4">
               <SectionTitle>Cash and liquid assets</SectionTitle>
               <div className="grid gap-5 sm:grid-cols-2">
-                <MoneyInput id="savingsAccountBalance" label="Savings account balance" error={errors.savingsAccountBalance?.message} {...bindMoneyField("savingsAccountBalance")} />
-                <MoneyInput id="fdValue" label="Fixed Deposit total value" error={errors.fdValue?.message} {...bindMoneyField("fdValue")} />
-                <MoneyInput id="liquidMFValue" label="Liquid mutual fund value" error={errors.liquidMFValue?.message} {...bindMoneyField("liquidMFValue")} />
-                <MoneyInput id="emergencyFundCurrent" label="Emergency fund set aside" error={errors.emergencyFundCurrent?.message} {...bindMoneyField("emergencyFundCurrent")} />
+                <div className="sm:col-span-2 space-y-2">
+                  <MoneyInput
+                    id="fdValue"
+                    label="Fixed Deposit total value"
+                    error={errors.fdValue?.message}
+                    {...bindMoneyField("fdValue")}
+                  />
+                  <p className="text-xs text-slate-500">
+                    FD counts as 70% of emergency fund value due to premature break penalty
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">
+                  Emergency fund
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Money you can access within 48 hours without penalty
+                </p>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <MoneyInput
+                  id="savingsAccountBalance"
+                  label="Savings account (instantly available)"
+                  error={errors.savingsAccountBalance?.message}
+                  {...bindMoneyField("savingsAccountBalance")}
+                />
+
+                <div className="space-y-2">
+                  <MoneyInput
+                    id="liquidMFValue"
+                    label="Liquid mutual funds"
+                    error={errors.liquidMFValue?.message}
+                    {...bindMoneyField("liquidMFValue")}
+                  />
+                  <p className="text-xs text-teal-600">
+                    Liquid MFs give 6.5-7% returns. Withdraw in 24 hours. Better than FD.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setLiquidMfInfoOpen((o) => !o)}
+                    className="text-left text-sm font-medium text-[#534AB7] hover:underline"
+                  >
+                    What is a liquid mutual fund? {liquidMfInfoOpen ? "▲" : "▼"}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {liquidMfInfoOpen ? (
+                      <motion.div
+                        key="liquid-mf-info"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-2 space-y-2 rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">
+                          <p>
+                            A liquid mutual fund invests in government securities and bonds.
+                          </p>
+                          <p>
+                            <span className="font-medium text-slate-800">Returns:</span> 6.5-7% per year
+                            <br />
+                            vs Savings account: 3-4%
+                            <br />
+                            vs FD: 6.5% but with penalty if broken
+                          </p>
+                          <p className="font-medium text-slate-800">Why better than FD for emergency:</p>
+                          <ul className="list-disc space-y-1 pl-5">
+                            <li>No penalty to withdraw</li>
+                            <li>Money in account within 24 hours</li>
+                            <li>Same or slightly lower returns</li>
+                            <li>Can invest ₹500 minimum</li>
+                          </ul>
+                          <p className="font-medium text-slate-800">Good options to consider:</p>
+                          <ul className="list-disc space-y-1 pl-5">
+                            <li>SBI Liquid Fund</li>
+                            <li>HDFC Liquid Fund</li>
+                            <li>Parag Parikh Liquid Fund</li>
+                          </ul>
+                          <p className="text-xs text-slate-500">
+                            This is not investment advice. Please research before investing.
+                          </p>
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </div>
+
+                <div className="sm:col-span-2 space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-900">Fixed deposits (breakable)</p>
+                  <p className="text-sm text-slate-600">
+                    Same as &quot;Fixed Deposit total value&quot; above — enter it once. We weight FD at 70%
+                    as emergency money (penalty + time to break).
+                  </p>
+                  <p className="text-sm text-slate-800">
+                    Your FD of {formatCurrency(erLiveFd, "en-IN", "INR")} counts as{" "}
+                    {formatCurrency(erLiveFdCounted, "en-IN", "INR")} (70% after premature break penalty).
+                  </p>
+                </div>
+
+                <MoneyInput
+                  id="otherLiquidSavings"
+                  label="Other liquid savings"
+                  helper="Gold ETF, short term bonds, money market funds"
+                  error={errors.otherLiquidSavings?.message}
+                  {...bindMoneyField("otherLiquidSavings")}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
+                <p className="text-sm font-medium text-slate-800">Your accessible emergency fund</p>
+                <ul className="mt-3 space-y-1.5 text-sm text-slate-700">
+                  <li className="flex flex-wrap justify-between gap-2">
+                    <span>Savings</span>
+                    <span>
+                      {formatCurrency(erLiveSavings, "en-IN", "INR")} × 100% ={" "}
+                      {formatCurrency(erLiveSavingsCounted, "en-IN", "INR")}
+                    </span>
+                  </li>
+                  <li className="flex flex-wrap justify-between gap-2">
+                    <span>Liquid MF</span>
+                    <span>
+                      {formatCurrency(erLiveLiq, "en-IN", "INR")} × 95% ={" "}
+                      {formatCurrency(erLiveLiqCounted, "en-IN", "INR")}
+                    </span>
+                  </li>
+                  <li className="flex flex-wrap justify-between gap-2">
+                    <span>FD</span>
+                    <span>
+                      {formatCurrency(erLiveFd, "en-IN", "INR")} × 70% ={" "}
+                      {formatCurrency(erLiveFdCounted, "en-IN", "INR")}
+                    </span>
+                  </li>
+                  <li className="flex flex-wrap justify-between gap-2">
+                    <span>Other</span>
+                    <span>
+                      {formatCurrency(erLiveOther, "en-IN", "INR")} × 50% ={" "}
+                      {formatCurrency(erLiveOtherCounted, "en-IN", "INR")}
+                    </span>
+                  </li>
+                </ul>
+                <div className="my-3 border-t border-[#E8E6F0]" />
+                <p className="text-2xl font-bold text-[#534AB7]">
+                  Real emergency fund: {formatCurrency(erLiveTotal, "en-IN", "INR")}
+                </p>
+                <p className={cn("mt-2 text-sm font-medium", erMonthsToneClass)}>
+                  {monthlyNeedsForEmergency > 0 ? (
+                    <>
+                      This covers {erLiveMonths.toFixed(1)} months of expenses
+                    </>
+                  ) : (
+                    <>Add living and fixed expenses to see months covered</>
+                  )}
+                </p>
               </div>
             </div>
 
@@ -1538,25 +2052,24 @@ export function AnalyseOnboardingForm() {
                       {...register("investsInNsc")}
                     />
                     <span>
-                      <span className="font-medium text-slate-900">I invest in NSC</span>
+                      <span className="font-medium text-slate-900">I hold NSC (National Savings Certificate)</span>
                       <span className="mt-0.5 block text-slate-600">
-                        Optional add-on — tick only if you use National Savings Certificate. Not required for a good plan.
+                        NSC is a one-time purchase (5-year certificate), not a monthly SIP. Tick if you have certificates;
+                        we add the amount to your net worth.
                       </span>
                     </span>
                   </label>
                   {investsInNsc ? (
                     <MoneyInput
-                      id="nscMonthly"
-                      label="Monthly NSC investment equivalent"
+                      id="nscDepositAmount"
+                      label="NSC amount (one-time / current holding)"
                       helper={mergeHelpers(
-                        "5-year lock-in",
-                        "7.7% p.a.",
-                        "80C eligible",
-                        "Enter monthly equivalent of what you invest",
-                        "NSC — Investment cache · 5yr · 7.7% · 80C eligible",
+                        "Total principal you hold in NSC today, or your last one-time deposit",
+                        "5-year lock-in · ~7.7% p.a. · 80C eligible",
+                        "NSC — post office · guaranteed slice",
                       )}
-                      error={errors.nscMonthly?.message}
-                      {...bindMoneyField("nscMonthly")}
+                      error={errors.nscDepositAmount?.message}
+                      {...bindMoneyField("nscDepositAmount")}
                     />
                   ) : null}
                 </div>
@@ -1715,21 +2228,53 @@ export function AnalyseOnboardingForm() {
           >
             Back
           </Button>
-          <button
-            type="button"
-            className="relative z-20 inline-flex min-h-10 w-full touch-manipulation select-none items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-[color:var(--color-primary-foreground)] outline-none transition hover:opacity-95 active:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--ring-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:w-auto"
-            onClick={() => {
-              if (step === STEPS.length - 1) {
-                void onFinalSubmit();
-                return;
-              }
-              forceNext();
-            }}
-          >
-            {step === STEPS.length - 1
-              ? "Analyse my complete financial picture →"
-              : "Next"}
-          </button>
+          {step === STEPS.length - 1 ? (
+            <div className="w-full sm:w-auto sm:min-w-[280px]">
+              <button
+                type="button"
+                onClick={() => void handleFinalSubmit()}
+                disabled={isSubmitting}
+                className="relative z-20 flex w-full touch-manipulation select-none items-center justify-center gap-2 rounded-xl border-0 px-4 text-base font-bold text-white outline-none transition-[background] duration-200 focus-visible:ring-2 focus-visible:ring-[var(--ring-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] disabled:cursor-not-allowed"
+                style={{
+                  height: 52,
+                  background: isSubmitting ? "#AFA9EC" : "#534AB7",
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span
+                      className="inline-block rounded-full border-2 border-white border-t-transparent"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        animation: "spin 1s linear infinite",
+                      }}
+                      aria-hidden
+                    />
+                    Analysing your finances...
+                  </>
+                ) : (
+                  "Analyse my finances →"
+                )}
+              </button>
+              {submitError ? (
+                <div
+                  className="mt-3 rounded-lg px-3.5 py-2.5 text-center text-[13px] text-[#791F1F]"
+                  style={{ background: "#FCEBEB" }}
+                >
+                  {submitError}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="relative z-20 inline-flex min-h-10 w-full touch-manipulation select-none items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-[color:var(--color-primary-foreground)] outline-none transition hover:opacity-95 active:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--ring-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:w-auto"
+              onClick={() => forceNext()}
+            >
+              Next
+            </button>
+          )}
         </div>
       </form>
     </div>

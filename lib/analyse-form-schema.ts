@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+/** Stable id for obligation / other-insurance field-array rows (persisted in profile + drafts). */
+export function newAnalyseRowId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `id_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
 export const LIFE_STAGE_VALUES = [
   "bachelor",
   "married",
@@ -82,11 +90,14 @@ export interface FinancialProfile {
   carLoanEMI?: number;
   bikeEMI?: number;
   personalLoanEMI?: number;
+  /** Optional: current principal / outstanding on the personal loan. EMI-only users can leave this unset. */
+  personalLoanOutstanding?: number;
   /** Typical monthly payment toward credit cards (full pay-off or rolling balance). */
   creditCardBillMonthly?: number;
   additionalObligations: Array<{
+    id?: string;
     type: string;
-    lender?: string;
+    lenderName?: string;
     monthlyAmount: number;
   }>;
 
@@ -113,18 +124,44 @@ export interface FinancialProfile {
 
   hasHealthInsurance: boolean;
   healthInsuranceSumInsured?: number;
+  /** Monthly equivalent for engine / allocations (derived from input + frequency). */
   healthInsurancePremiumMonthly?: number;
+  /** Raw premium as entered (e.g. yearly amount stays yearly in the wizard). */
+  healthInsurancePremiumInput?: number;
+  healthInsurancePremiumFrequency?: PremiumFrequency;
   hasTermInsurance: boolean;
   termInsuranceSumAssured?: number;
   termInsurancePremiumMonthly?: number;
+  termInsurancePremiumInput?: number;
+  termInsurancePremiumFrequency?: PremiumFrequency;
   carInsurancePremiumMonthly?: number;
+  carInsurancePremiumInput?: number;
+  carInsurancePremiumFrequency?: PremiumFrequency;
   bikeInsurancePremiumMonthly?: number;
+  bikeInsurancePremiumInput?: number;
+  bikeInsurancePremiumFrequency?: PremiumFrequency;
   otherInsurancePremiumMonthly?: number;
+  otherInsurancePremiumInput?: number;
+  otherInsurancePremiumFrequency?: PremiumFrequency;
+  /** Persisted for form rehydration (policies + names). */
+  hasOtherInsurance?: boolean;
+  otherInsurancePremiums?: Array<{
+    id?: string;
+    policyName?: string;
+    /** As entered (monthly or yearly per `frequency`). */
+    premiumAmount?: number;
+    frequency?: PremiumFrequency;
+    /** Monthly rupees (filled when persisting profile). */
+    monthlyAmount?: number;
+  }>;
 
   savingsAccountBalance: number;
   fdValue?: number;
   liquidMFValue?: number;
+  /** @deprecated Legacy ring-fenced amount from older wizard; merged into weighted emergency total at 100%. Prefer savings + liquid MF + FD + other liquid. */
   emergencyFundCurrent: number;
+  /** Gold ETF, short-term bonds, money market, etc. — counts 50% toward accessible emergency fund. */
+  otherLiquidSavings?: number;
   mfValue?: number;
   indianStocksValue?: number;
   usStocksValueINR?: number;
@@ -141,13 +178,16 @@ export interface FinancialProfile {
   carLoanOutstanding?: number;
   goldValue?: number;
   otherAssets?: number;
+  /** Label for "other" physical / tangible asset (e.g. art, collectibles). */
+  otherAssetLabel?: string;
   monthlySIP: number;
   monthlyRD?: number;
   monthlyPPFContribution?: number;
   monthlyNPSContribution?: number;
   monthlyEPFContribution: number;
   ssy?: number;
-  nscMonthly?: number;
+  /** Principal / current holding in NSC (one-time certificate purchase, not a monthly SIP). */
+  nscDepositAmount?: number;
   /** When false, NSC is hidden in the form and not scored in the safety net. */
   investsInNsc?: boolean;
 
@@ -169,23 +209,6 @@ export type AdditionalObligation = FinancialProfile["additionalObligations"][num
 
 export type AnalyseFormValues = Omit<FinancialProfile, "kidsAges"> & {
   kidsAges?: Array<number | undefined>;
-  healthInsurancePremiumInput?: number;
-  healthInsurancePremiumFrequency?: PremiumFrequency;
-  termInsurancePremiumInput?: number;
-  termInsurancePremiumFrequency?: PremiumFrequency;
-  carInsurancePremiumInput?: number;
-  carInsurancePremiumFrequency?: PremiumFrequency;
-  bikeInsurancePremiumInput?: number;
-  bikeInsurancePremiumFrequency?: PremiumFrequency;
-  hasOtherInsurance?: boolean;
-  otherInsurancePremiumInput?: number;
-  otherInsurancePremiumFrequency?: PremiumFrequency;
-  otherInsurancePolicies?: Array<{
-    policyName?: string;
-    premiumInput?: number;
-    frequency?: PremiumFrequency;
-  }>;
-  otherAssetLabel?: string;
 };
 
 export function parseMoneyInput(val: unknown): number | undefined {
@@ -235,14 +258,16 @@ const optionalWholeNumber = z.preprocess(
 const premiumFrequencySchema = z.enum(PREMIUM_FREQUENCY_VALUES);
 
 const additionalObligationSchema = z.object({
+  id: z.string().optional(),
   type: z.string().min(1, "Select an obligation type"),
-  lender: z.string().optional(),
+  lenderName: z.string().optional(),
   monthlyAmount: requiredPositiveMoney("Enter the monthly payment amount"),
 });
 
-const otherInsurancePolicySchema = z.object({
+const otherInsurancePremiumSchema = z.object({
+  id: z.string().optional(),
   policyName: z.string().optional(),
-  premiumInput: optionalMoney,
+  premiumAmount: optionalMoney,
   frequency: premiumFrequencySchema.default("monthly"),
 });
 
@@ -288,6 +313,7 @@ const formShape = {
     carLoanEMI: optionalMoney,
     bikeEMI: optionalMoney,
     personalLoanEMI: optionalMoney,
+    personalLoanOutstanding: optionalMoney,
     creditCardBillMonthly: optionalMoney,
     additionalObligations: z.array(additionalObligationSchema).max(6),
 
@@ -327,12 +353,13 @@ const formShape = {
     hasOtherInsurance: z.boolean().default(false),
     otherInsurancePremiumInput: optionalMoney,
     otherInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
-    otherInsurancePolicies: z.array(otherInsurancePolicySchema).max(6).default([]),
+    otherInsurancePremiums: z.array(otherInsurancePremiumSchema).max(6).default([]),
 
     savingsAccountBalance: optionalMoney,
     fdValue: optionalMoney,
     liquidMFValue: optionalMoney,
     emergencyFundCurrent: optionalMoney,
+    otherLiquidSavings: optionalMoney,
     mfValue: optionalMoney,
     indianStocksValue: optionalMoney,
     usStocksValueINR: optionalMoney,
@@ -356,7 +383,7 @@ const formShape = {
     monthlyNPSContribution: optionalMoney,
     monthlyEPFContribution: optionalMoney,
     ssy: optionalMoney,
-    nscMonthly: optionalMoney,
+    nscDepositAmount: optionalMoney,
     investsInNsc: z.boolean().optional().default(false),
 
     primaryGoal: z.string().min(1, "Choose a primary goal"),
@@ -455,19 +482,19 @@ const formSchema = baseFormSchema
 
     if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
       const validRows =
-        data.otherInsurancePolicies?.filter((row) => row.premiumInput !== undefined) ?? [];
+        data.otherInsurancePremiums?.filter((row) => row.premiumAmount !== undefined) ?? [];
       if (validRows.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["otherInsurancePolicies"],
+          path: ["otherInsurancePremiums"],
           message: "Add at least one other insurance premium",
         });
       }
-      data.otherInsurancePolicies?.forEach((row, index) => {
-        if (row.premiumInput === undefined) {
+      data.otherInsurancePremiums?.forEach((row, index) => {
+        if (row.premiumAmount === undefined) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ["otherInsurancePolicies", index, "premiumInput"],
+            path: ["otherInsurancePremiums", index, "premiumAmount"],
             message: "Enter premium amount",
           });
         }
@@ -580,6 +607,7 @@ export const step3Schema = baseFormSchema.pick({
   carLoanEMI: true,
   bikeEMI: true,
   personalLoanEMI: true,
+  personalLoanOutstanding: true,
   creditCardBillMonthly: true,
   additionalObligations: true,
 });
@@ -623,7 +651,7 @@ export const step5Schema = baseFormSchema.pick({
   hasOtherInsurance: true,
   otherInsurancePremiumInput: true,
   otherInsurancePremiumFrequency: true,
-  otherInsurancePolicies: true,
+  otherInsurancePremiums: true,
 }).superRefine((data, ctx) => {
   if (data.hasHealthInsurance) {
     if (!data.healthInsuranceSumInsured) {
@@ -661,19 +689,19 @@ export const step5Schema = baseFormSchema.pick({
 
   if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
     const validRows =
-      data.otherInsurancePolicies?.filter((row) => row.premiumInput !== undefined) ?? [];
+      data.otherInsurancePremiums?.filter((row) => row.premiumAmount !== undefined) ?? [];
     if (validRows.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["otherInsurancePolicies"],
+        path: ["otherInsurancePremiums"],
         message: "Add at least one other insurance premium",
       });
     }
-    data.otherInsurancePolicies?.forEach((row, index) => {
-      if (row.premiumInput === undefined) {
+    data.otherInsurancePremiums?.forEach((row, index) => {
+      if (row.premiumAmount === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["otherInsurancePolicies", index, "premiumInput"],
+          path: ["otherInsurancePremiums", index, "premiumAmount"],
           message: "Enter premium amount",
         });
       }
@@ -685,7 +713,7 @@ export const step6Schema = baseFormSchema.pick({
   savingsAccountBalance: true,
   fdValue: true,
   liquidMFValue: true,
-  emergencyFundCurrent: true,
+  otherLiquidSavings: true,
   mfValue: true,
   indianStocksValue: true,
   usStocksValueINR: true,
@@ -709,7 +737,7 @@ export const step6Schema = baseFormSchema.pick({
   monthlyNPSContribution: true,
   monthlyEPFContribution: true,
   ssy: true,
-  nscMonthly: true,
+  nscDepositAmount: true,
   investsInNsc: true,
   bereavementFund: true,
 }).superRefine((data, ctx) => {
@@ -782,138 +810,614 @@ export function toMonthlyEquivalent(
   return amount;
 }
 
-export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): FinancialProfile {
+/**
+ * Restores form fields from a saved {@link FinancialProfile} (e.g. after analyse) so insurance
+ * sum assured / premiums repopulate when the draft `analysis` blob was incomplete.
+ */
+export function lastSubmissionToFormPartial(
+  profile: FinancialProfile | null | undefined,
+): Partial<AnalyseFormValues> {
+  if (!profile) return {};
+  const partial: Partial<AnalyseFormValues> = {};
+  if (profile.hasHealthInsurance) {
+    partial.hasHealthInsurance = true;
+    if (profile.healthInsuranceSumInsured != null) {
+      partial.healthInsuranceSumInsured = profile.healthInsuranceSumInsured;
+    }
+    if (
+      profile.healthInsurancePremiumInput != null &&
+      profile.healthInsurancePremiumInput > 0
+    ) {
+      partial.healthInsurancePremiumInput = profile.healthInsurancePremiumInput;
+      partial.healthInsurancePremiumFrequency =
+        profile.healthInsurancePremiumFrequency ?? "monthly";
+    } else {
+      const pm = profile.healthInsurancePremiumMonthly;
+      if (typeof pm === "number" && pm > 0) {
+        partial.healthInsurancePremiumInput = pm;
+        partial.healthInsurancePremiumFrequency = "monthly";
+      }
+    }
+  }
+  if (profile.hasTermInsurance) {
+    partial.hasTermInsurance = true;
+    if (profile.termInsuranceSumAssured != null) {
+      partial.termInsuranceSumAssured = profile.termInsuranceSumAssured;
+    }
+    if (profile.termInsurancePremiumInput != null && profile.termInsurancePremiumInput > 0) {
+      partial.termInsurancePremiumInput = profile.termInsurancePremiumInput;
+      partial.termInsurancePremiumFrequency = profile.termInsurancePremiumFrequency ?? "monthly";
+    } else {
+      const pm = profile.termInsurancePremiumMonthly;
+      if (typeof pm === "number" && pm > 0) {
+        partial.termInsurancePremiumInput = pm;
+        partial.termInsurancePremiumFrequency = "monthly";
+      }
+    }
+  }
+  if (profile.investsInNsc) {
+    partial.investsInNsc = true;
+    const nscAmt =
+      profile.nscDepositAmount ??
+      (profile as FinancialProfile & { nscMonthly?: number }).nscMonthly;
+    if (typeof nscAmt === "number" && nscAmt > 0) {
+      partial.nscDepositAmount = nscAmt;
+    }
+  }
+
+  return partial;
+}
+
+/**
+ * When persisted `analysis` draft lost rows (e.g. empty arrays), copy obligations / other policies
+ * from the last submitted profile without clobbering in-progress draft edits.
+ */
+export function fillDraftGapsFromProfile(
+  draft: Partial<AnalyseFormValues>,
+  profile: FinancialProfile | null,
+): Partial<AnalyseFormValues> {
+  if (!profile) return draft;
+  const next = { ...draft };
+  const draftObl = next.additionalObligations ?? [];
+  if (draftObl.length === 0 && (profile.additionalObligations?.length ?? 0) > 0) {
+    next.additionalObligations = profile.additionalObligations.map((o) => ({
+      id: o.id ?? newAnalyseRowId(),
+      type: o.type,
+      lenderName:
+        o.lenderName ?? (o as { lender?: string }).lender ?? "",
+      monthlyAmount: o.monthlyAmount,
+    }));
+  }
+  const draftPol = next.otherInsurancePremiums ?? [];
+  const profilePremiums =
+    profile.otherInsurancePremiums ??
+    (
+      profile as FinancialProfile & {
+        otherInsurancePolicies?: NonNullable<FinancialProfile["otherInsurancePremiums"]>;
+      }
+    ).otherInsurancePolicies ??
+    [];
+  if (profile.hasOtherInsurance && draftPol.length === 0 && profilePremiums.length > 0) {
+    next.hasOtherInsurance = true;
+    next.otherInsurancePremiums = profilePremiums.map((p) => ({
+      id: p.id ?? newAnalyseRowId(),
+      policyName: p.policyName,
+      premiumAmount:
+        p.premiumAmount ?? (p as { premiumInput?: number }).premiumInput,
+      frequency: p.frequency ?? "monthly",
+    }));
+  }
+  return next;
+}
+
+function preferNonEmptyString(a?: string | null, b?: string | null): string | undefined {
+  const t = typeof a === "string" ? a.trim() : "";
+  if (t) return t;
+  const t2 = typeof b === "string" ? b.trim() : "";
+  return t2 ? t2 : undefined;
+}
+
+/**
+ * Merges Zustand-persisted draft (`watch` output) with fields rebuilt from {@link lastSubmission}.
+ * Draft wins for most scalars; obligation / other-policy rows are zipped so optional text
+ * (`lenderName`, `policyName`) is kept when either side has it (fixes profile overwriting cached draft).
+ */
+function migrateLegacyAnalysePartial(
+  input: Partial<AnalyseFormValues>,
+): Partial<AnalyseFormValues> {
+  const out = { ...input } as Record<string, unknown>;
+
+  const obl = out.additionalObligations;
+  if (Array.isArray(obl)) {
+    out.additionalObligations = (obl as Record<string, unknown>[]).map((row) => ({
+      id: row.id,
+      type: row.type ?? "",
+      lenderName: (row.lenderName ?? row.lender ?? "") as string,
+      monthlyAmount: row.monthlyAmount ?? 0,
+    }));
+  }
+
+  const legacyPrem = out.otherInsurancePolicies as Record<string, unknown>[] | undefined;
+  const newPrem = out.otherInsurancePremiums as Record<string, unknown>[] | undefined;
+  const src = newPrem ?? legacyPrem;
+  if (Array.isArray(src)) {
+    out.otherInsurancePremiums = src.map((row) => ({
+      id: row.id,
+      policyName: row.policyName,
+      premiumAmount: row.premiumAmount ?? row.premiumInput,
+      frequency: row.frequency ?? "monthly",
+    }));
+    delete out.otherInsurancePolicies;
+  }
+
+  return out as Partial<AnalyseFormValues>;
+}
+
+export function mergeAnalyseDraftWithProfile(
+  profileForm: Partial<AnalyseFormValues>,
+  draft: Partial<AnalyseFormValues>,
+): Partial<AnalyseFormValues> {
+  const profileFormN = migrateLegacyAnalysePartial(profileForm);
+  const draftN = migrateLegacyAnalysePartial(draft);
+  const merged: Partial<AnalyseFormValues> = {
+    ...profileFormN,
+    ...draftN,
+  };
+
+  const pObl = profileFormN.additionalObligations;
+  const dObl = draftN.additionalObligations;
+  if ((pObl?.length ?? 0) > 0 || (dObl?.length ?? 0) > 0) {
+    const len = Math.max(pObl?.length ?? 0, dObl?.length ?? 0);
+    merged.additionalObligations = Array.from({ length: len }, (_, i) => {
+      const p = pObl?.[i];
+      const d = dObl?.[i];
+      const typeFromDraft = d?.type?.trim();
+      return {
+        id: d?.id ?? p?.id ?? newAnalyseRowId(),
+        type: typeFromDraft || p?.type || "Other",
+        monthlyAmount: d?.monthlyAmount ?? p?.monthlyAmount ?? 0,
+        lenderName: preferNonEmptyString(d?.lenderName, p?.lenderName),
+      };
+    });
+  }
+
+  const pPol = profileFormN.otherInsurancePremiums;
+  const dPol = draftN.otherInsurancePremiums;
+  if ((pPol?.length ?? 0) > 0 || (dPol?.length ?? 0) > 0) {
+    const len = Math.max(pPol?.length ?? 0, dPol?.length ?? 0);
+    merged.otherInsurancePremiums = Array.from({ length: len }, (_, i) => {
+      const p = pPol?.[i];
+      const d = dPol?.[i];
+      return {
+        id: d?.id ?? p?.id ?? newAnalyseRowId(),
+        policyName: preferNonEmptyString(d?.policyName, p?.policyName),
+        premiumAmount: d?.premiumAmount ?? p?.premiumAmount,
+        frequency: (d?.frequency ?? p?.frequency ?? "monthly") as PremiumFrequency,
+      };
+    });
+  }
+
+  if (profileForm.hasHealthInsurance) {
+    const pSum = profileForm.healthInsuranceSumInsured ?? 0;
+    const pPrem = profileForm.healthInsurancePremiumInput ?? 0;
+    const mSum = merged.healthInsuranceSumInsured ?? 0;
+    const mPrem = merged.healthInsurancePremiumInput ?? 0;
+    if ((pSum > 0 || pPrem > 0) && mSum === 0 && mPrem === 0) {
+      merged.hasHealthInsurance = profileForm.hasHealthInsurance;
+      merged.healthInsuranceSumInsured = profileForm.healthInsuranceSumInsured;
+      merged.healthInsurancePremiumInput = profileForm.healthInsurancePremiumInput;
+      merged.healthInsurancePremiumFrequency =
+        profileForm.healthInsurancePremiumFrequency ?? merged.healthInsurancePremiumFrequency;
+    }
+  }
+
+  if (profileForm.hasTermInsurance) {
+    const pSum = profileForm.termInsuranceSumAssured ?? 0;
+    const pPrem = profileForm.termInsurancePremiumInput ?? 0;
+    const mSum = merged.termInsuranceSumAssured ?? 0;
+    const mPrem = merged.termInsurancePremiumInput ?? 0;
+    if ((pSum > 0 || pPrem > 0) && mSum === 0 && mPrem === 0) {
+      merged.hasTermInsurance = profileForm.hasTermInsurance;
+      merged.termInsuranceSumAssured = profileForm.termInsuranceSumAssured;
+      merged.termInsurancePremiumInput = profileForm.termInsurancePremiumInput;
+      merged.termInsurancePremiumFrequency =
+        profileForm.termInsurancePremiumFrequency ?? merged.termInsurancePremiumFrequency;
+    }
+  }
+
+  if ((pPol?.length ?? 0) > 0) {
+    merged.hasOtherInsurance = true;
+  }
+
+  return merged;
+}
+
+/**
+ * Rebuild analyse form values from a stored {@link FinancialProfile} (inverse of normalize).
+ * Uses persisted premium input + frequency when present; otherwise falls back to `*PremiumMonthly` as monthly.
+ */
+export function financialProfileToFormValues(profile: FinancialProfile): Partial<AnalyseFormValues> {
+  const p = profile;
+  const additionalObligations = (p.additionalObligations ?? []).map((o) => {
+    const row = o as {
+      id?: string;
+      type: string;
+      lenderName?: string;
+      lender?: string;
+      monthlyAmount: number;
+    };
+    return {
+      id: row.id ?? newAnalyseRowId(),
+      type: row.type,
+      lenderName: row.lenderName ?? row.lender ?? "",
+      monthlyAmount: row.monthlyAmount,
+    };
+  });
+  const legacyPolicies = (
+    p as FinancialProfile & {
+      otherInsurancePolicies?: NonNullable<FinancialProfile["otherInsurancePremiums"]>;
+    }
+  ).otherInsurancePolicies;
+  const otherPolicies = p.otherInsurancePremiums ?? legacyPolicies ?? [];
+  const hasOther =
+    Boolean(p.hasOtherInsurance) ||
+    otherPolicies.length > 0 ||
+    (p.otherInsurancePremiumMonthly ?? 0) > 0;
+
   return {
-    lifeStage: data.lifeStage ?? "bachelor",
-    selfAge: data.selfAge ?? 18,
-    spouseAge: data.lifeStage === "bachelor" ? undefined : data.spouseAge,
-    numberOfKids: data.lifeStage === "kids" ? data.numberOfKids : undefined,
+    lifeStage: p.lifeStage,
+    selfAge: p.selfAge,
+    spouseAge: p.spouseAge,
+    numberOfKids: p.numberOfKids,
+    kidsAges: p.kidsAges?.map((a) => a) as AnalyseFormValues["kidsAges"],
+    kidsGenders: p.kidsGenders,
+    cityTier: p.cityTier,
+    monthlySalary: p.monthlySalary,
+    spouseIncome: p.spouseIncome ?? 0,
+    otherIncome: p.otherIncome ?? 0,
+    rentAmount: p.rentAmount ?? 0,
+    rentMaintenanceMonthly: p.rentMaintenanceMonthly ?? 0,
+    homeLoanEMI: p.homeLoanEMI ?? 0,
+    secondPropertyEMI: p.secondPropertyEMI ?? 0,
+    carLoanEMI: p.carLoanEMI ?? 0,
+    bikeEMI: p.bikeEMI ?? 0,
+    personalLoanEMI: p.personalLoanEMI ?? 0,
+    personalLoanOutstanding: p.personalLoanOutstanding ?? 0,
+    creditCardBillMonthly: p.creditCardBillMonthly ?? 0,
+    additionalObligations,
+    vegetables: p.vegetables,
+    grocery: p.grocery,
+    medicine: p.medicine,
+    fuel: p.fuel,
+    cabMetro: p.cabMetro,
+    electricity: p.electricity,
+    internet: p.internet,
+    gas: p.gas,
+    water: p.water,
+    houseHelpMonthly: p.houseHelpMonthly ?? 0,
+    cookHelpMonthly: p.cookHelpMonthly ?? 0,
+    entertainment: p.entertainment,
+    shopping: p.shopping,
+    personalCare: p.personalCare ?? 0,
+    kidsSchoolFees: p.kidsSchoolFees ?? 0,
+    kidsActivities: p.kidsActivities ?? 0,
+    parentsSupport: p.parentsSupport ?? 0,
+    parentsHealthInsuranceSumInsured: p.parentsHealthInsuranceSumInsured ?? 0,
+    parentsEmergencyCash: p.parentsEmergencyCash ?? 0,
+    parentsCity: p.parentsCity,
+    hasHealthInsurance: p.hasHealthInsurance,
+    healthInsuranceSumInsured: p.healthInsuranceSumInsured ?? 0,
+    healthInsurancePremiumInput:
+      p.healthInsurancePremiumInput ?? p.healthInsurancePremiumMonthly ?? 0,
+    healthInsurancePremiumFrequency: p.healthInsurancePremiumFrequency ?? "monthly",
+    hasTermInsurance: p.hasTermInsurance,
+    termInsuranceSumAssured: p.termInsuranceSumAssured ?? 0,
+    termInsurancePremiumInput:
+      p.termInsurancePremiumInput ?? p.termInsurancePremiumMonthly ?? 0,
+    termInsurancePremiumFrequency: p.termInsurancePremiumFrequency ?? "monthly",
+    carInsurancePremiumInput: p.carInsurancePremiumInput ?? p.carInsurancePremiumMonthly ?? 0,
+    carInsurancePremiumFrequency: p.carInsurancePremiumFrequency ?? "monthly",
+    bikeInsurancePremiumInput: p.bikeInsurancePremiumInput ?? p.bikeInsurancePremiumMonthly ?? 0,
+    bikeInsurancePremiumFrequency: p.bikeInsurancePremiumFrequency ?? "monthly",
+    hasOtherInsurance: hasOther,
+    otherInsurancePremiums: otherPolicies.map((row) => {
+      const r = row as {
+        id?: string;
+        policyName?: string;
+        premiumAmount?: number;
+        premiumInput?: number;
+        frequency?: PremiumFrequency;
+        monthlyAmount?: number;
+      };
+      return {
+        id: r.id ?? newAnalyseRowId(),
+        policyName: r.policyName,
+        premiumAmount: r.premiumAmount ?? r.premiumInput ?? 0,
+        frequency: r.frequency ?? "monthly",
+      };
+    }),
+    otherInsurancePremiumInput:
+      p.otherInsurancePremiumInput ??
+      (otherPolicies.length === 0 ? (p.otherInsurancePremiumMonthly ?? 0) : 0),
+    otherInsurancePremiumFrequency: p.otherInsurancePremiumFrequency ?? "monthly",
+    savingsAccountBalance: p.savingsAccountBalance ?? 0,
+    fdValue: p.fdValue ?? 0,
+    liquidMFValue: p.liquidMFValue ?? 0,
+    emergencyFundCurrent: p.emergencyFundCurrent ?? 0,
+    otherLiquidSavings: p.otherLiquidSavings ?? 0,
+    mfValue: p.mfValue ?? 0,
+    indianStocksValue: p.indianStocksValue ?? 0,
+    usStocksValueINR: p.usStocksValueINR ?? 0,
+    usMFValueINR: p.usMFValueINR ?? 0,
+    rsuValueINR: p.rsuValueINR ?? 0,
+    ppfBalance: p.ppfBalance ?? 0,
+    npsBalance: p.npsBalance ?? 0,
+    epfBalance: p.epfBalance ?? 0,
+    ownsHome: p.ownsHome,
+    homeMarketValue: p.homeMarketValue ?? 0,
+    homeLoanOutstanding: p.homeLoanOutstanding ?? 0,
+    ownsCar: p.ownsCar,
+    carMarketValue: p.carMarketValue ?? 0,
+    carLoanOutstanding: p.carLoanOutstanding ?? 0,
+    goldValue: p.goldValue ?? 0,
+    otherAssets: p.otherAssets ?? 0,
+    otherAssetLabel: p.otherAssetLabel,
+    monthlySIP: p.monthlySIP ?? 0,
+    monthlyRD: p.monthlyRD ?? 0,
+    monthlyPPFContribution: p.monthlyPPFContribution ?? 0,
+    monthlyNPSContribution: p.monthlyNPSContribution ?? 0,
+    monthlyEPFContribution: p.monthlyEPFContribution ?? 0,
+    ssy: p.ssy ?? 0,
+    investsInNsc: p.investsInNsc ?? false,
+    nscDepositAmount:
+      p.nscDepositAmount ??
+      (p as FinancialProfile & { nscMonthly?: number }).nscMonthly ??
+      0,
+    primaryGoal: p.primaryGoal?.trim() ? p.primaryGoal : "grow_wealth",
+    retirementTargetCorpus: p.retirementTargetCorpus,
+    retirementAge: p.retirementAge ?? 0,
+    kidsEducationFundTarget: p.kidsEducationFundTarget,
+    kidsMarriageFundTarget: p.kidsMarriageFundTarget,
+    emergencyFundTarget: p.emergencyFundTarget,
+    medicalEmergencyFund: p.medicalEmergencyFund,
+    bereavementFund: p.bereavementFund,
+    homePurchaseTarget: p.homePurchaseTarget,
+    homePurchaseYear: p.homePurchaseYear,
+    carPurchaseTarget: p.carPurchaseTarget,
+    carPurchaseYear: p.carPurchaseYear,
+  };
+}
+
+/**
+ * If user entered cover/premium amounts but toggles were missing/false in persisted state,
+ * turn toggles on so values are not cleared by effects or stripped in normalize.
+ */
+export function coalesceInsuranceToggles<T extends Partial<AnalyseFormValues>>(data: T): T {
+  const out = { ...data } as T;
+  const hasHealthNumbers =
+    (out.healthInsuranceSumInsured ?? 0) > 0 || (out.healthInsurancePremiumInput ?? 0) > 0;
+  if (hasHealthNumbers && out.hasHealthInsurance !== true) {
+    (out as { hasHealthInsurance?: boolean }).hasHealthInsurance = true;
+  }
+  const hasTermNumbers =
+    (out.termInsuranceSumAssured ?? 0) > 0 || (out.termInsurancePremiumInput ?? 0) > 0;
+  if (hasTermNumbers && out.hasTermInsurance !== true) {
+    (out as { hasTermInsurance?: boolean }).hasTermInsurance = true;
+  }
+  return out;
+}
+
+export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): FinancialProfile {
+  const form = migrateLegacyAnalysePartial(data);
+  return {
+    lifeStage: form.lifeStage ?? "bachelor",
+    selfAge: form.selfAge ?? 18,
+    spouseAge: form.lifeStage === "bachelor" ? undefined : form.spouseAge,
+    numberOfKids: form.lifeStage === "kids" ? form.numberOfKids : undefined,
     kidsAges:
-      data.lifeStage === "kids"
-        ? (data.kidsAges ?? []).slice(0, data.numberOfKids ?? 0).filter((v): v is number => v !== undefined)
+      form.lifeStage === "kids"
+        ? (form.kidsAges ?? []).slice(0, form.numberOfKids ?? 0).filter((v): v is number => v !== undefined)
         : undefined,
     kidsGenders:
-      data.lifeStage === "kids"
-        ? (data.kidsGenders ?? []).slice(0, data.numberOfKids ?? 0)
+      form.lifeStage === "kids"
+        ? (form.kidsGenders ?? []).slice(0, form.numberOfKids ?? 0)
         : undefined,
-    cityTier: data.cityTier ?? "metro",
+    cityTier: form.cityTier ?? "metro",
 
-    monthlySalary: data.monthlySalary ?? 0,
-    spouseIncome: data.spouseIncome,
-    otherIncome: data.otherIncome,
+    monthlySalary: form.monthlySalary ?? 0,
+    spouseIncome: form.lifeStage === "bachelor" ? undefined : form.spouseIncome,
+    otherIncome: form.otherIncome,
 
-    rentAmount: data.rentAmount ?? 0,
-    rentMaintenanceMonthly: data.rentMaintenanceMonthly,
-    homeLoanEMI: data.homeLoanEMI ?? 0,
-    secondPropertyEMI: data.secondPropertyEMI ?? 0,
-    carLoanEMI: data.carLoanEMI,
-    bikeEMI: data.bikeEMI,
-    personalLoanEMI: data.personalLoanEMI,
-    creditCardBillMonthly: data.creditCardBillMonthly,
-    additionalObligations: data.additionalObligations ?? [],
+    rentAmount: form.rentAmount ?? 0,
+    rentMaintenanceMonthly: form.rentMaintenanceMonthly,
+    homeLoanEMI: form.homeLoanEMI ?? 0,
+    secondPropertyEMI: form.secondPropertyEMI ?? 0,
+    carLoanEMI: form.carLoanEMI,
+    bikeEMI: form.bikeEMI,
+    personalLoanEMI: form.personalLoanEMI,
+    personalLoanOutstanding: form.personalLoanOutstanding,
+    creditCardBillMonthly: form.creditCardBillMonthly,
+    additionalObligations: (form.additionalObligations ?? []).map((row) => {
+      const r = row as {
+        id?: string;
+        type: string;
+        lenderName?: string;
+        lender?: string;
+        monthlyAmount: number;
+      };
+      return {
+        id: r.id,
+        type: r.type,
+        lenderName: r.lenderName ?? r.lender,
+        monthlyAmount: r.monthlyAmount,
+      };
+    }),
 
-    vegetables: data.vegetables ?? 0,
-    grocery: data.grocery ?? 0,
-    medicine: data.medicine ?? 0,
-    fuel: data.fuel ?? 0,
-    cabMetro: data.cabMetro ?? 0,
-    electricity: data.electricity ?? 0,
-    internet: data.internet ?? 0,
-    gas: data.gas ?? 0,
-    water: data.water,
-    houseHelpMonthly: data.houseHelpMonthly,
-    cookHelpMonthly: data.cookHelpMonthly,
-    entertainment: data.entertainment ?? 0,
-    shopping: data.shopping ?? 0,
-    personalCare: data.personalCare,
-    kidsSchoolFees: data.lifeStage === "kids" ? data.kidsSchoolFees : undefined,
-    kidsActivities: data.lifeStage === "kids" ? data.kidsActivities : undefined,
-    parentsSupport: data.parentsSupport,
+    vegetables: form.vegetables ?? 0,
+    grocery: form.grocery ?? 0,
+    medicine: form.medicine ?? 0,
+    fuel: form.fuel ?? 0,
+    cabMetro: form.cabMetro ?? 0,
+    electricity: form.electricity ?? 0,
+    internet: form.internet ?? 0,
+    gas: form.gas ?? 0,
+    water: form.water,
+    houseHelpMonthly: form.houseHelpMonthly,
+    cookHelpMonthly: form.cookHelpMonthly,
+    entertainment: form.entertainment ?? 0,
+    shopping: form.shopping ?? 0,
+    personalCare: form.personalCare,
+    kidsSchoolFees: form.lifeStage === "kids" ? form.kidsSchoolFees : undefined,
+    kidsActivities: form.lifeStage === "kids" ? form.kidsActivities : undefined,
+    parentsSupport: form.parentsSupport,
     parentsHealthInsuranceSumInsured:
-      (data.parentsSupport ?? 0) > 0 ? data.parentsHealthInsuranceSumInsured : undefined,
+      (form.parentsSupport ?? 0) > 0 ? form.parentsHealthInsuranceSumInsured : undefined,
     parentsEmergencyCash:
-      (data.parentsSupport ?? 0) > 0 ? data.parentsEmergencyCash : undefined,
-    parentsCity: (data.parentsSupport ?? 0) > 0 ? data.parentsCity : undefined,
+      (form.parentsSupport ?? 0) > 0 ? form.parentsEmergencyCash : undefined,
+    parentsCity: (form.parentsSupport ?? 0) > 0 ? form.parentsCity : undefined,
 
-    hasHealthInsurance: data.hasHealthInsurance ?? false,
-    healthInsuranceSumInsured: data.hasHealthInsurance
-      ? data.healthInsuranceSumInsured
+    hasHealthInsurance: form.hasHealthInsurance ?? false,
+    healthInsuranceSumInsured: form.hasHealthInsurance
+      ? form.healthInsuranceSumInsured
       : undefined,
-    healthInsurancePremiumMonthly: data.hasHealthInsurance
+    healthInsurancePremiumMonthly: form.hasHealthInsurance
       ? toMonthlyEquivalent(
-          data.healthInsurancePremiumInput,
-          data.healthInsurancePremiumFrequency,
+          form.healthInsurancePremiumInput,
+          form.healthInsurancePremiumFrequency,
         )
       : undefined,
-    hasTermInsurance: data.hasTermInsurance ?? false,
-    termInsuranceSumAssured: data.hasTermInsurance
-      ? data.termInsuranceSumAssured
+    healthInsurancePremiumInput: form.hasHealthInsurance
+      ? form.healthInsurancePremiumInput
       : undefined,
-    termInsurancePremiumMonthly: data.hasTermInsurance
+    healthInsurancePremiumFrequency: form.hasHealthInsurance
+      ? form.healthInsurancePremiumFrequency ?? "monthly"
+      : undefined,
+    hasTermInsurance: form.hasTermInsurance ?? false,
+    termInsuranceSumAssured: form.hasTermInsurance
+      ? form.termInsuranceSumAssured
+      : undefined,
+    termInsurancePremiumMonthly: form.hasTermInsurance
       ? toMonthlyEquivalent(
-          data.termInsurancePremiumInput,
-          data.termInsurancePremiumFrequency,
+          form.termInsurancePremiumInput,
+          form.termInsurancePremiumFrequency,
         )
+      : undefined,
+    termInsurancePremiumInput: form.hasTermInsurance ? form.termInsurancePremiumInput : undefined,
+    termInsurancePremiumFrequency: form.hasTermInsurance
+      ? form.termInsurancePremiumFrequency ?? "monthly"
       : undefined,
     carInsurancePremiumMonthly: toMonthlyEquivalent(
-      data.carInsurancePremiumInput,
-      data.carInsurancePremiumFrequency,
+      form.carInsurancePremiumInput,
+      form.carInsurancePremiumFrequency,
     ),
+    carInsurancePremiumInput: form.carInsurancePremiumInput,
+    carInsurancePremiumFrequency: form.carInsurancePremiumFrequency ?? "monthly",
     bikeInsurancePremiumMonthly: toMonthlyEquivalent(
-      data.bikeInsurancePremiumInput,
-      data.bikeInsurancePremiumFrequency,
+      form.bikeInsurancePremiumInput,
+      form.bikeInsurancePremiumFrequency,
     ),
-    otherInsurancePremiumMonthly: data.hasOtherInsurance
-      ? (data.otherInsurancePolicies ?? []).reduce((total, row) => {
-          return total + (toMonthlyEquivalent(row.premiumInput, row.frequency) ?? 0);
-        }, 0)
+    bikeInsurancePremiumInput: form.bikeInsurancePremiumInput,
+    bikeInsurancePremiumFrequency: form.bikeInsurancePremiumFrequency ?? "monthly",
+    hasOtherInsurance: form.hasOtherInsurance ?? false,
+    otherInsurancePremiums: form.hasOtherInsurance
+      ? (form.otherInsurancePremiums ?? []).map((row) => {
+          const r = row as {
+            id?: string;
+            policyName?: string;
+            premiumAmount?: number;
+            premiumInput?: number;
+            frequency?: PremiumFrequency;
+          };
+          const amount = r.premiumAmount ?? r.premiumInput;
+          const freq = r.frequency ?? "monthly";
+          return {
+            id: r.id,
+            policyName: r.policyName,
+            premiumAmount: amount,
+            frequency: freq,
+            monthlyAmount: toMonthlyEquivalent(amount, freq) ?? 0,
+          };
+        })
+      : [],
+    otherInsurancePremiumMonthly: form.hasOtherInsurance
+      ? (() => {
+          const rows = form.otherInsurancePremiums ?? [];
+          const fromPolicies = rows.reduce(
+            (total, row) => {
+              const r = row as { premiumAmount?: number; premiumInput?: number; frequency?: PremiumFrequency };
+              const amount = r.premiumAmount ?? r.premiumInput;
+              return total + (toMonthlyEquivalent(amount, r.frequency) ?? 0);
+            },
+            0,
+          );
+          if (fromPolicies > 0) return fromPolicies;
+          return (
+            toMonthlyEquivalent(
+              form.otherInsurancePremiumInput,
+              form.otherInsurancePremiumFrequency,
+            ) ?? 0
+          );
+        })()
+      : undefined,
+    otherInsurancePremiumInput: form.hasOtherInsurance ? form.otherInsurancePremiumInput : undefined,
+    otherInsurancePremiumFrequency: form.hasOtherInsurance
+      ? form.otherInsurancePremiumFrequency ?? "monthly"
       : undefined,
 
-    savingsAccountBalance: data.savingsAccountBalance ?? 0,
-    fdValue: data.fdValue,
-    liquidMFValue: data.liquidMFValue,
-    emergencyFundCurrent: data.emergencyFundCurrent ?? 0,
-    mfValue: data.mfValue,
-    indianStocksValue: data.indianStocksValue,
-    usStocksValueINR: data.usStocksValueINR,
-    usMFValueINR: data.usMFValueINR,
-    rsuValueINR: data.rsuValueINR,
-    ppfBalance: data.ppfBalance,
-    npsBalance: data.npsBalance,
-    epfBalance: data.epfBalance,
-    ownsHome: data.ownsHome ?? false,
-    homeMarketValue: data.ownsHome ? data.homeMarketValue : undefined,
-    homeLoanOutstanding: data.ownsHome ? data.homeLoanOutstanding : undefined,
-    ownsCar: data.ownsCar ?? false,
-    carMarketValue: data.ownsCar ? data.carMarketValue : undefined,
-    carLoanOutstanding: data.ownsCar ? data.carLoanOutstanding : undefined,
-    goldValue: data.goldValue,
-    otherAssets: data.otherAssets,
-    monthlySIP: data.monthlySIP ?? 0,
-    monthlyRD: data.monthlyRD,
-    monthlyPPFContribution: data.monthlyPPFContribution,
-    monthlyNPSContribution: data.monthlyNPSContribution,
-    monthlyEPFContribution: data.monthlyEPFContribution ?? 0,
-    ssy: data.ssy,
-    nscMonthly: data.investsInNsc ? data.nscMonthly : 0,
-    investsInNsc: data.investsInNsc ?? false,
+    savingsAccountBalance: form.savingsAccountBalance ?? 0,
+    fdValue: form.fdValue,
+    liquidMFValue: form.liquidMFValue,
+    emergencyFundCurrent: form.emergencyFundCurrent ?? 0,
+    otherLiquidSavings: form.otherLiquidSavings,
+    mfValue: form.mfValue,
+    indianStocksValue: form.indianStocksValue,
+    usStocksValueINR: form.usStocksValueINR,
+    usMFValueINR: form.usMFValueINR,
+    rsuValueINR: form.rsuValueINR,
+    ppfBalance: form.ppfBalance,
+    npsBalance: form.npsBalance,
+    epfBalance: form.epfBalance,
+    ownsHome: form.ownsHome ?? false,
+    homeMarketValue: form.ownsHome ? form.homeMarketValue : undefined,
+    homeLoanOutstanding: form.ownsHome ? form.homeLoanOutstanding : undefined,
+    ownsCar: form.ownsCar ?? false,
+    carMarketValue: form.ownsCar ? form.carMarketValue : undefined,
+    carLoanOutstanding: form.ownsCar ? form.carLoanOutstanding : undefined,
+    goldValue: form.goldValue,
+    otherAssets: form.otherAssets,
+    otherAssetLabel:
+      (form.otherAssets ?? 0) > 0 && form.otherAssetLabel?.trim()
+        ? form.otherAssetLabel.trim()
+        : undefined,
+    monthlySIP: form.monthlySIP ?? 0,
+    monthlyRD: form.monthlyRD,
+    monthlyPPFContribution: form.monthlyPPFContribution,
+    monthlyNPSContribution: form.monthlyNPSContribution,
+    monthlyEPFContribution: form.monthlyEPFContribution ?? 0,
+    ssy: form.ssy,
+    nscDepositAmount: form.investsInNsc
+      ? (form.nscDepositAmount ??
+          (form as Partial<AnalyseFormValues> & { nscMonthly?: number }).nscMonthly ??
+          0)
+      : 0,
+    investsInNsc: form.investsInNsc ?? false,
 
-    primaryGoal: data.primaryGoal ?? "",
-    retirementTargetCorpus: data.retirementTargetCorpus,
-    retirementAge: data.retirementAge,
+    primaryGoal: form.primaryGoal ?? "",
+    retirementTargetCorpus: form.retirementTargetCorpus,
+    retirementAge: form.retirementAge,
     kidsEducationFundTarget:
-      data.lifeStage === "kids" ? data.kidsEducationFundTarget : undefined,
+      form.lifeStage === "kids" ? form.kidsEducationFundTarget : undefined,
     kidsMarriageFundTarget:
-      data.lifeStage === "kids" ? data.kidsMarriageFundTarget : undefined,
-    emergencyFundTarget: data.emergencyFundTarget,
-    medicalEmergencyFund: data.medicalEmergencyFund,
-    bereavementFund: data.bereavementFund,
+      form.lifeStage === "kids" ? form.kidsMarriageFundTarget : undefined,
+    emergencyFundTarget: form.emergencyFundTarget,
+    medicalEmergencyFund: form.medicalEmergencyFund,
+    bereavementFund: form.bereavementFund,
     homePurchaseTarget:
-      (data.rentAmount ?? 0) > 0 ? data.homePurchaseTarget : undefined,
+      (form.rentAmount ?? 0) > 0 ? form.homePurchaseTarget : undefined,
     homePurchaseYear:
-      (data.rentAmount ?? 0) > 0 ? data.homePurchaseYear : undefined,
-    carPurchaseTarget: data.ownsCar ? undefined : data.carPurchaseTarget,
-    carPurchaseYear: data.ownsCar ? undefined : data.carPurchaseYear,
+      (form.rentAmount ?? 0) > 0 ? form.homePurchaseYear : undefined,
+    carPurchaseTarget: form.ownsCar ? undefined : form.carPurchaseTarget,
+    carPurchaseYear: form.ownsCar ? undefined : form.carPurchaseYear,
   };
 }
 
@@ -937,6 +1441,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   carLoanEMI: 0,
   bikeEMI: 0,
   personalLoanEMI: 0,
+  personalLoanOutstanding: 0,
   creditCardBillMonthly: 0,
   hasHealthInsurance: false,
   healthInsuranceSumInsured: 0,
@@ -953,7 +1458,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   hasOtherInsurance: false,
   otherInsurancePremiumInput: 0,
   otherInsurancePremiumFrequency: "monthly",
-  otherInsurancePolicies: [],
+  otherInsurancePremiums: [],
   ownsHome: false,
   homeMarketValue: 0,
   homeLoanOutstanding: 0,
@@ -962,6 +1467,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   carLoanOutstanding: 0,
   goldValue: 0,
   otherAssets: 0,
+  otherAssetLabel: "",
   retirementAge: 0,
   monthlySIP: 0,
   monthlyRD: 0,
@@ -969,12 +1475,13 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   monthlyNPSContribution: 0,
   monthlyEPFContribution: 0,
   ssy: 0,
-  nscMonthly: 0,
+  nscDepositAmount: 0,
   investsInNsc: false,
   savingsAccountBalance: 0,
   fdValue: 0,
   liquidMFValue: 0,
   emergencyFundCurrent: 0,
+  otherLiquidSavings: 0,
   mfValue: 0,
   indianStocksValue: 0,
   usStocksValueINR: 0,

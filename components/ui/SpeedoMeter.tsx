@@ -2,15 +2,21 @@
 
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/finance";
+import type { SpeedoMeterCaps, SpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-export interface SpeedoMeterProps {
-  income: number;
-  needs: number;
-  wants: number;
-  loans: number;
-  investment: number;
-  hasHomeLoan?: boolean;
+export type { SpeedoMeterProps } from "@/lib/speedo-meter-buckets";
+
+const INVEST_FLOOR_PCT = 20;
+const INVEST_WARN_PCT = 17;
+
+function resolveCaps(hasHomeLoan: boolean, caps?: SpeedoMeterCaps): SpeedoMeterCaps {
+  return {
+    needs: caps?.needs ?? (hasHomeLoan ? 0.3 : 0.2),
+    wants: caps?.wants ?? 0.05,
+    loans: caps?.loans ?? 0.4,
+    investment: caps?.investment ?? (hasHomeLoan ? 0.2 : 0.3),
+  };
 }
 
 const CX = 70;
@@ -31,10 +37,6 @@ const COLORS = {
   zoneAmber: "#FAEEDA",
   zoneRed: "#FCEBEB",
 } as const;
-
-const WANTS_CAP = 0.1;
-const LOANS_CAP = 0.3;
-const INVEST_CAP = 0.2;
 
 const SPEND_RANGE_MULT = 1.5;
 const INVEST_RANGE_MULT = 2;
@@ -118,8 +120,8 @@ function spendStatus(actualPct: number, capPct: number): Status {
 }
 
 function investStatus(actualPct: number): Status {
-  if (actualPct >= 20 - 1e-6) return "good";
-  if (actualPct >= 17 - 1e-6) return "warning";
+  if (actualPct >= INVEST_FLOOR_PCT - 1e-6) return "good";
+  if (actualPct >= INVEST_WARN_PCT - 1e-6) return "warning";
   return "critical";
 }
 
@@ -329,7 +331,7 @@ function GaugeColumn({
       {children}
       {!compact ? (
         <p className="text-center text-xs font-semibold tabular-nums text-slate-800">
-          {formatCurrency(amount, "en-IN", "INR")}
+          {formatCurrency(amount, "en-IN", "INR", 0)}
         </p>
       ) : null}
       <span className={cn("rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold", chipClass)}>{chipText}</span>
@@ -346,8 +348,11 @@ function GaugesBlock({
   compact: boolean;
   anim: AnimFracs;
 }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false } = props;
-  const needsCap = hasHomeLoan ? 0.25 : 0.2;
+  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
+  const { needs: needsCap, wants: wantsCap, loans: loansCap, investment: investCap } = resolveCaps(
+    hasHomeLoan,
+    caps,
+  );
 
   const pct = {
     needs: income > 0 ? (needs / income) * 100 : 0,
@@ -357,9 +362,11 @@ function GaugesBlock({
   };
 
   const stN = spendStatus(pct.needs, needsCap * 100);
-  const stW = spendStatus(pct.wants, WANTS_CAP * 100);
-  const stL = spendStatus(pct.loans, LOANS_CAP * 100);
+  const stW = spendStatus(pct.wants, wantsCap * 100);
+  const stL = spendStatus(pct.loans, loansCap * 100);
   const stI = investStatus(pct.investment);
+
+  const investCapLabel = `min ${INVEST_FLOOR_PCT}% · cap ${Math.round(investCap * 100)}%`;
 
   return (
     <div className="grid grid-cols-4 gap-1 sm:gap-3">
@@ -394,9 +401,9 @@ function GaugesBlock({
           kind="spend"
           amount={wants}
           income={income}
-          capFraction={WANTS_CAP}
+          capFraction={wantsCap}
           rangeMultiplier={SPEND_RANGE_MULT}
-          capLabel="cap 10%"
+          capLabel={`cap ${Math.round(wantsCap * 100)}%`}
           needleFrac={anim.wants}
           compact={compact}
         />
@@ -413,9 +420,9 @@ function GaugesBlock({
           kind="spend"
           amount={loans}
           income={income}
-          capFraction={LOANS_CAP}
+          capFraction={loansCap}
           rangeMultiplier={SPEND_RANGE_MULT}
-          capLabel="cap 30%"
+          capLabel={`cap ${Math.round(loansCap * 100)}%`}
           needleFrac={anim.loans}
           compact={compact}
         />
@@ -432,9 +439,9 @@ function GaugesBlock({
           kind="invest"
           amount={investment}
           income={income}
-          capFraction={INVEST_CAP}
+          capFraction={investCap}
           rangeMultiplier={INVEST_RANGE_MULT}
-          capLabel="min 20%"
+          capLabel={investCapLabel}
           needleFrac={anim.investment}
           compact={compact}
         />
@@ -444,17 +451,17 @@ function GaugesBlock({
 }
 
 function ChipsRow({ props }: { props: SpeedoMeterProps }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false } = props;
-  const needsCap = hasHomeLoan ? 25 : 20;
+  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
+  const { needs: needsCap, wants: wantsCap, loans: loansCap } = resolveCaps(hasHomeLoan, caps);
   const pct = {
     n: income > 0 ? (needs / income) * 100 : 0,
     w: income > 0 ? (wants / income) * 100 : 0,
     l: income > 0 ? (loans / income) * 100 : 0,
     i: income > 0 ? (investment / income) * 100 : 0,
   };
-  const stN = spendStatus(pct.n, needsCap);
-  const stW = spendStatus(pct.w, WANTS_CAP * 100);
-  const stL = spendStatus(pct.l, LOANS_CAP * 100);
+  const stN = spendStatus(pct.n, needsCap * 100);
+  const stW = spendStatus(pct.w, wantsCap * 100);
+  const stL = spendStatus(pct.l, loansCap * 100);
   const stI = investStatus(pct.i);
 
   return (
@@ -476,8 +483,11 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
 }
 
 function InsightBlock({ props }: { props: SpeedoMeterProps }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false } = props;
-  const needsCap = hasHomeLoan ? 25 : 20;
+  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
+  const { needs: needsCap, wants: wantsCap, loans: loansCap } = resolveCaps(hasHomeLoan, caps);
+  const needsCapPct = Math.round(needsCap * 100);
+  const wantsCapPct = Math.round(wantsCap * 100);
+  const loansCapPct = Math.round(loansCap * 100);
   const pct = {
     n: income > 0 ? (needs / income) * 100 : 0,
     w: income > 0 ? (wants / income) * 100 : 0,
@@ -485,24 +495,24 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
     i: income > 0 ? (investment / income) * 100 : 0,
   };
   const issues: string[] = [];
-  if (spendStatus(pct.n, needsCap) !== "good") {
+  if (spendStatus(pct.n, needsCapPct) !== "good") {
     issues.push(
-      spendStatus(pct.n, needsCap) === "critical"
-        ? `Needs are critically above the ${needsCap}% guide.`
-        : `Needs are above the ${needsCap}% guide — review core spending.`,
+      spendStatus(pct.n, needsCapPct) === "critical"
+        ? `Needs are critically above the ${needsCapPct}% guide.`
+        : `Needs are above the ${needsCapPct}% guide — review core spending.`,
     );
   }
-  if (spendStatus(pct.w, WANTS_CAP * 100) !== "good") {
-    issues.push("Wants are over the 10% cap — ease discretionary spend.");
+  if (spendStatus(pct.w, wantsCapPct) !== "good") {
+    issues.push(`Wants are over the ${wantsCapPct}% cap — ease discretionary spend.`);
   }
-  if (spendStatus(pct.l, LOANS_CAP * 100) !== "good") {
-    issues.push("Loan outflows exceed the 30% safety guide.");
+  if (spendStatus(pct.l, loansCapPct) !== "good") {
+    issues.push(`Loan outflows exceed the ${loansCapPct}% safety guide.`);
   }
   if (investStatus(pct.i) !== "good") {
     issues.push(
       investStatus(pct.i) === "critical"
-        ? "Investment flow is below 17% — increase long-term contributions when possible."
-        : "Investment flow is under 20% — try to step up toward 20% of income.",
+        ? `Investment flow is below ${INVEST_FLOOR_PCT}% of income — increase long-term contributions when possible.`
+        : `Investment flow is under ${INVEST_FLOOR_PCT}% — try to step up toward ${INVEST_FLOOR_PCT}% of income.`,
     );
   }
   const t = needs + wants + loans + investment;
@@ -530,16 +540,16 @@ export default function SpeedoMeter({
   className,
   ...props
 }: SpeedoMeterProps & { title?: string; className?: string }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false } = props;
+  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
   const targets = useMemo(() => {
-    const needsCap = hasHomeLoan ? 0.25 : 0.2;
+    const c = resolveCaps(hasHomeLoan, caps);
     return {
-      needs: needleTargetFrac(needs, income, needsCap, SPEND_RANGE_MULT),
-      wants: needleTargetFrac(wants, income, WANTS_CAP, SPEND_RANGE_MULT),
-      loans: needleTargetFrac(loans, income, LOANS_CAP, SPEND_RANGE_MULT),
-      investment: needleTargetFrac(investment, income, INVEST_CAP, INVEST_RANGE_MULT),
+      needs: needleTargetFrac(needs, income, c.needs, SPEND_RANGE_MULT),
+      wants: needleTargetFrac(wants, income, c.wants, SPEND_RANGE_MULT),
+      loans: needleTargetFrac(loans, income, c.loans, SPEND_RANGE_MULT),
+      investment: needleTargetFrac(investment, income, c.investment, INVEST_RANGE_MULT),
     };
-  }, [income, needs, wants, loans, investment, hasHomeLoan]);
+  }, [income, needs, wants, loans, investment, hasHomeLoan, caps]);
   const anim = useAnimatedFracs(targets);
 
   return (
@@ -556,16 +566,16 @@ export default function SpeedoMeter({
 }
 
 export function SpeedoMeterCompact({ className, ...props }: SpeedoMeterProps & { className?: string }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false } = props;
+  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
   const targets = useMemo(() => {
-    const needsCap = hasHomeLoan ? 0.25 : 0.2;
+    const c = resolveCaps(hasHomeLoan, caps);
     return {
-      needs: needleTargetFrac(needs, income, needsCap, SPEND_RANGE_MULT),
-      wants: needleTargetFrac(wants, income, WANTS_CAP, SPEND_RANGE_MULT),
-      loans: needleTargetFrac(loans, income, LOANS_CAP, SPEND_RANGE_MULT),
-      investment: needleTargetFrac(investment, income, INVEST_CAP, INVEST_RANGE_MULT),
+      needs: needleTargetFrac(needs, income, c.needs, SPEND_RANGE_MULT),
+      wants: needleTargetFrac(wants, income, c.wants, SPEND_RANGE_MULT),
+      loans: needleTargetFrac(loans, income, c.loans, SPEND_RANGE_MULT),
+      investment: needleTargetFrac(investment, income, c.investment, INVEST_RANGE_MULT),
     };
-  }, [income, needs, wants, loans, investment, hasHomeLoan]);
+  }, [income, needs, wants, loans, investment, hasHomeLoan, caps]);
   const anim = useAnimatedFracs(targets);
 
   return (

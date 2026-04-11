@@ -13,6 +13,7 @@ const centerNavItems = [
   { href: "/analyse", label: "Analyse" },
   { href: "/calculators", label: "Calculators" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/optimizer", label: "Optimizer" },
   { href: "/learn", label: "Learn" },
 ] as const;
 
@@ -36,9 +37,9 @@ export function GlobalNavbar() {
     <>
       <motion.header
         variants={fadeIn}
-        initial={{ opacity: 0, y: -10 }}
+        initial={false}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.35 }}
         className="sticky top-0 z-50 h-[60px] border-b border-[#F0EFF8] bg-white/95 backdrop-blur-[12px]"
       >
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -180,6 +181,7 @@ export function GlobalNavbar() {
             <nav className="space-y-1 text-sm">
               {[
                 ["👤", "My profile", "/profile"],
+                ["🛡️", "My policies", "/policies"],
                 ["📊", "My analysis", "/analyse/result"],
                 ["🎯", "My goals", "/goals"],
                 ["💰", "Investments", "/investments"],
