@@ -6,7 +6,7 @@ import LoginSheet from "@/components/ui/LoginSheet";
 import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGamificationStore } from "@/store/gamificationStore";
 
 const centerNavItems = [
@@ -27,6 +27,29 @@ export function GlobalNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const profileButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const clickedInsideMenu = profileMenuRef.current?.contains(target);
+      const clickedProfileButton = profileButtonRef.current?.contains(target);
+      if (!clickedInsideMenu && !clickedProfileButton) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [profileOpen]);
 
   const avatarLetter = useMemo(
     () => (user?.name?.trim()?.charAt(0) || "U").toUpperCase(),
@@ -40,10 +63,14 @@ export function GlobalNavbar() {
         initial={false}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="sticky top-0 z-50 h-[60px] border-b border-[#F0EFF8] bg-white/95 backdrop-blur-[12px]"
+        className={`sticky top-0 z-50 w-full border-b border-transparent transition-all duration-300 ${
+          scrolled
+            ? "border-indigo-100/70 bg-white/70 py-2 backdrop-blur-xl shadow-[0_8px_30px_rgba(76,60,180,0.14)]"
+            : "bg-transparent py-3"
+        }`}
       >
-        <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link href="/" scroll className="flex items-center gap-2.5">
             <svg width="34" height="34" viewBox="0 0 64 64">
               <rect width="64" height="64" rx="14" fill="#534AB7" />
               <circle
@@ -81,7 +108,12 @@ export function GlobalNavbar() {
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-slate-600 md:flex">
             {centerNavItems.map((item) => (
-              <Link key={item.href} href={item.href} className="nav-underline hover:text-slate-900">
+              <Link
+                key={item.href}
+                href={item.href}
+                scroll
+                className="nav-underline transition-colors duration-300 hover:text-slate-900"
+              >
                 {item.label}
               </Link>
             ))}
@@ -94,11 +126,16 @@ export function GlobalNavbar() {
               </span>
             ) : null}
 
-            <Link href="/plans" className="nav-underline hidden text-sm font-medium text-slate-600 hover:text-slate-900 md:inline-flex">
-              Plans
+            <Link
+              href="/plans"
+              scroll
+              className="hidden rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 px-3.5 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/35 md:inline-flex"
+            >
+              View Plans
             </Link>
 
             <button
+              ref={profileButtonRef}
               type="button"
               onClick={() => {
                 if (!isLoggedIn) {
@@ -107,7 +144,7 @@ export function GlobalNavbar() {
                 }
                 setProfileOpen((v) => !v);
               }}
-              className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-[#E8E6F0] bg-[#F4F2FC]"
+              className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-[#E8E6F0] bg-[#F4F2FC] transition-transform duration-300 hover:scale-105"
               aria-label="Profile"
             >
               {!isLoggedIn ? (
@@ -140,6 +177,7 @@ export function GlobalNavbar() {
       <AnimatePresence>
         {profileOpen && isLoggedIn ? (
           <motion.div
+            ref={profileMenuRef}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -191,7 +229,7 @@ export function GlobalNavbar() {
                 ["📋", "KYC status", "/kyc"],
                 ["⚙️", "Settings", "/settings"],
               ].map(([icon, label, href]) => (
-                <Link key={href} href={href} onClick={() => setProfileOpen(false)} className="flex items-center justify-between rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
+                <Link key={href} href={href} scroll onClick={() => setProfileOpen(false)} className="flex items-center justify-between rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
                   <span>{icon} {label}</span>
                   <span>›</span>
                 </Link>
@@ -243,6 +281,7 @@ export function GlobalNavbar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  scroll
                   className="text-2xl font-semibold text-slate-900"
                   onClick={() => setMobileOpen(false)}
                 >

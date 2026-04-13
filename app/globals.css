@@ -39,10 +39,17 @@
   html {
     @apply antialiased;
     -webkit-tap-highlight-color: transparent;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
   body {
     @apply min-h-dvh bg-surface text-[color:var(--color-text)] transition-colors;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
   }
 }
 

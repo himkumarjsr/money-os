@@ -410,7 +410,7 @@ const baseFormSchema = z.object(formShape);
 
 const formSchema = baseFormSchema
   .superRefine((data, ctx) => {
-    if (data.lifeStage !== "bachelor" && !data.spouseAge) {
+    if ((data.lifeStage === "married" || data.lifeStage === "kids") && !data.spouseAge) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["spouseAge"],
@@ -556,7 +556,7 @@ export const step1Schema = baseFormSchema.pick({
   kidsGenders: true,
   cityTier: true,
 }).superRefine((data, ctx) => {
-  if (data.lifeStage !== "bachelor" && !data.spouseAge) {
+  if ((data.lifeStage === "married" || data.lifeStage === "kids") && !data.spouseAge) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["spouseAge"],

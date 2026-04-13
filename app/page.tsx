@@ -1,20 +1,37 @@
+"use client";
+
+import FeatureCardsCarousel from "@/components/landing/FeatureCardsCarousel";
+import Footer from "@/components/landing/Footer";
 import { ButtonLink } from "@/components/ui/button";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
-import ScrollSection from "@/components/ui/ScrollSection";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import Link from "next/link";
+import { useRef } from "react";
 
 const features = [
   {
-    title: "Free financial health check — takes 3 minutes",
-    body: "Answer a short questionnaire and see a clear snapshot of spending, savings, and risk areas — no paperwork.",
+    title: "Financial Health Check",
+    body: "See exactly where your money goes and what to improve in minutes.",
   },
   {
-    title: "15+ financial calculators — SIP, EMI, PPF and more",
-    body: "Plan investments, loans, tax-saving instruments, and retirement with calculators tuned for Indian rules and rates.",
+    title: "Smart Calculators",
+    body: "Plan SIP, EMI, tax, and retirement with fast, India-ready tools.",
   },
   {
-    title: "AI fix plan — exact steps to fix your finances (Advisor ₹49/mo)",
-    body: "Go beyond generic tips: get a sequenced action list you can follow week by week. Upgrade when you want human review.",
+    title: "AI Action Plan",
+    body: "Get exact next steps to fix leaks and grow your wealth faster.",
+  },
+  {
+    title: "Mutual Fund Analysis",
+    body: "Break down returns, risk, and allocation before you invest.",
+  },
+  {
+    title: "Monthly Finance Tracker",
+    body: "Stay in control with one monthly view of income, spends, and goals.",
+  },
+  {
+    title: "Pay Insurance with Finkoins",
+    body: "Use earned Finkoins to reduce your insurance payment burden.",
   },
 ] as const;
 
@@ -49,6 +66,7 @@ const pricing = [
     period: "/mo",
     description: "AI fix plan plus optional chat with a qualified advisor for clarifications.",
     cta: { label: "Get Pro — ₹49/mo", href: "/plans", highlight: true },
+    popular: true,
   },
   {
     name: "Pro Max",
@@ -59,139 +77,169 @@ const pricing = [
   },
 ] as const;
 
-const footerNavColumns = [
-  {
-    heading: "Explore",
-    links: [
-      { label: "Calculators", href: "/calculators" },
-      { label: "Learn Finance", href: "/learn" },
-      { label: "Portfolio", href: "/portfolio" },
-    ],
-  },
-  {
-    heading: "Plans",
-    links: [
-      { label: "Plans & pricing", href: "/plans" },
-      { label: "Leaderboard", href: "/leaderboard" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Privacy Policy", href: "/legal/privacy" },
-      { label: "Terms", href: "/legal/terms" },
-      { label: "Disclaimer", href: "/legal/disclaimer" },
-    ],
-  },
-] as const;
-
 export default function HomePage() {
+  const { scrollY, scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.2 });
+  const heroScale = useTransform(scrollY, [0, 420], [1, 0.9]);
+  const heroOpacity = useTransform(scrollY, [0, 320], [1, 0.72]);
+  const heroY = useTransform(scrollY, [0, 420], [0, -70]);
+  const orbLeftY = useTransform(scrollY, [0, 1000], [0, -140]);
+  const orbRightY = useTransform(scrollY, [0, 1200], [0, -180]);
+
   return (
-    <div className="min-h-dvh bg-white text-slate-900 antialiased">
-      <main>
-        <section className="border-b border-slate-100 bg-white px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
+    <div className="min-h-dvh bg-gradient-to-b from-indigo-50 via-white to-violet-50/70 text-slate-900 antialiased">
+      <motion.div
+        aria-hidden
+        className="pointer-events-none fixed left-0 right-0 top-0 z-[70] h-1 origin-left bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500"
+        style={{ scaleX: progress }}
+      />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none fixed -left-24 top-24 z-0 h-64 w-64 rounded-full bg-violet-400/25 blur-3xl"
+        style={{ y: orbLeftY }}
+      />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none fixed -right-28 top-40 z-0 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl"
+        style={{ y: orbRightY }}
+      />
+      <main className="snap-y snap-mandatory">
+        <section className="relative z-10 overflow-hidden border-b border-indigo-100/80 px-4 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 lg:px-8">
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-indigo-100/70 via-violet-100/60 to-blue-100/60"
+            animate={{ opacity: [0.75, 1, 0.8] }}
+            transition={{ duration: 8, repeat: Infinity, repeatType: "mirror", ease: "easeOut" }}
+          />
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute left-[7%] top-10 -z-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl"
+            animate={{ y: [0, -14, 0], x: [0, 6, 0] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute right-[8%] top-14 -z-10 h-48 w-48 rounded-full bg-indigo-500/20 blur-3xl"
+            animate={{ y: [0, 12, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div style={{ scale: heroScale, opacity: heroOpacity, y: heroY }} className="relative mx-auto max-w-4xl text-center">
             <AnimateOnScroll variant="fadeUp" delay={0} aboveFold>
-              <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl sm:leading-tight md:text-5xl md:leading-[1.1]">
-                Know exactly where your money is going — and what to do about it
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600/90 sm:text-sm">
+                Finkoin · Money OS for India
+              </p>
+            </AnimateOnScroll>
+            <AnimateOnScroll variant="fadeUp" delay={0.02} aboveFold>
+              <h1 className="mt-4 text-balance text-4xl font-bold leading-[1.04] tracking-tight text-slate-900 sm:mt-5 sm:text-5xl md:text-6xl">
+              Fix your money in 2 minutes with AI
               </h1>
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" delay={0.1} aboveFold>
-              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
-                India&apos;s only financial app that tells you what&apos;s wrong
-                AND gives you the exact fix
+              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:mt-6 sm:text-xl sm:leading-relaxed">
+              Track, analyze, and act on your finances with a guided plan tailored for India. Start free and get clarity instantly.
               </p>
             </AnimateOnScroll>
-            <div className="mt-8 flex flex-col items-center gap-4 sm:mt-10">
+            <div className="mt-10 flex flex-col items-center gap-4 sm:mt-12">
               <AnimateOnScroll variant="fadeUp" delay={0.2} aboveFold>
-                <ButtonLink
-                  href="/analyse"
-                  variant="primary"
-                  size="lg"
-                  className="w-full max-w-md shadow-none sm:w-auto"
-                >
-                  Check my financial health — free
-                </ButtonLink>
+                <div className="relative flex w-full max-w-md flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center">
+                  <div
+                    className="pointer-events-none absolute inset-0 -z-10 scale-[1.35] rounded-3xl bg-gradient-to-r from-indigo-500/45 via-violet-500/40 to-purple-500/35 opacity-90 blur-2xl"
+                    aria-hidden
+                  />
+                  <ButtonLink
+                    href="/analyse"
+                    variant="primary"
+                    size="lg"
+                    className="relative z-10 w-full bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-xl hover:shadow-indigo-500/35 active:scale-[0.99] sm:w-auto"
+                  >
+                    Get My Financial Plan (Free)
+                  </ButtonLink>
+                  <ButtonLink
+                    href="/plans"
+                    variant="ghost"
+                    size="lg"
+                    className="w-full border border-indigo-200/80 bg-white/70 text-indigo-700 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-white sm:w-auto"
+                  >
+                    See Pro Features
+                  </ButtonLink>
+                </div>
+                <p className="mt-3 text-center text-xs font-medium text-slate-500 sm:text-sm">
+                Free to start • Takes 2 minutes • No credit card
+                </p>
+               
               </AnimateOnScroll>
               <AnimateOnScroll variant="fadeUp" delay={0.3} aboveFold>
                 <div
-                  className="flex flex-col items-center gap-3 text-sm text-slate-500 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-6 sm:gap-y-2"
+                  className="flex flex-col items-center gap-3 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-4 sm:gap-y-2"
                   role="list"
                 >
-                <span role="listitem" className="whitespace-nowrap">
-                  10,000+ users
-                </span>
-                <span
-                  className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline"
-                  aria-hidden
-                />
-                <span role="listitem" className="whitespace-nowrap">
-                  No credit card needed
-                </span>
-                <span
-                  className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline"
-                  aria-hidden
-                />
-                <span role="listitem" className="whitespace-nowrap">
-                  Made in India
-                </span>
+                  <span
+                    role="listitem"
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/60 px-3 py-1 text-xs font-medium text-violet-800 shadow-sm shadow-indigo-500/5 ring-1 ring-violet-200/60 backdrop-blur-sm sm:text-sm"
+                  >
+                    <span aria-hidden>✦</span> Earn Finkoins
+                  </span>
+                  <span role="listitem" className="whitespace-nowrap rounded-full bg-white/60 px-3 py-1 ring-1 ring-slate-200/70 backdrop-blur-sm">
+                    ⭐ 10,000+ Users
+                  </span>
+                  <span
+                    className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline"
+                    aria-hidden
+                  />
+                  <span role="listitem" className="whitespace-nowrap rounded-full bg-white/60 px-3 py-1 ring-1 ring-slate-200/70 backdrop-blur-sm">
+                    🇮🇳 Made in India
+                  </span>
+                  <span
+                    className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline"
+                    aria-hidden
+                  />
+                  <span role="listitem" className="whitespace-nowrap rounded-full bg-white/60 px-3 py-1 ring-1 ring-slate-200/70 backdrop-blur-sm">
+                    🔒 Bank-level security
+                  </span>
                 </div>
+                <p className="mt-3 text-center text-xs font-medium text-slate-500 sm:text-sm">
+                🎮 Earn Finkoins for every smart money decision
+                </p>
               </AnimateOnScroll>
             </div>
-          </div>
+          </motion.div>
         </section>
 
-        <ScrollSection>
-          <section className="border-b border-slate-100 bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
-          <div className="mx-auto max-w-6xl">
+        <StorySection className="z-20 border-b border-indigo-100/60 bg-gradient-to-b from-white/80 via-indigo-50/30 to-violet-50/40">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-px max-w-3xl bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"
+            aria-hidden
+          />
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <AnimateOnScroll variant="fadeUp" aboveFold>
-              <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
+              <h2 className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85 sm:text-sm">
                 What you get
               </h2>
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" aboveFold>
-              <p className="mx-auto mt-2 max-w-2xl text-center text-xl font-semibold text-slate-900 sm:text-2xl">
-                Everything to see the problem, then fix it
+              <p className="mx-auto mt-3 max-w-2xl text-center text-xl font-semibold leading-snug tracking-tight text-slate-900 sm:mt-4 sm:text-2xl sm:leading-snug">
+              Understand your money. Take control. Grow it faster.
               </p>
             </AnimateOnScroll>
-            <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-              {features.map((f, index) => (
-                <AnimateOnScroll
-                  key={f.title}
-                  variant="scaleIn"
-                  delay={index * 0.08}
-                  aboveFold
-                  className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7"
-                >
-                  <h3 className="text-lg font-semibold leading-snug text-slate-900">
-                    {f.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-[0.9375rem]">
-                    {f.body}
-                  </p>
-                </AnimateOnScroll>
-              ))}
-            </div>
+            <FeatureCardsCarousel features={features} />
           </div>
-          </section>
-        </ScrollSection>
+        </StorySection>
 
-        <ScrollSection>
-          <section className="border-b border-slate-100 bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
-          <div className="mx-auto max-w-6xl">
+        <StorySection className="z-30 border-b border-indigo-100/50 bg-white/55 backdrop-blur-[2px]">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <AnimateOnScroll variant="fadeUp" aboveFold>
-              <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
+              <h2 className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85 sm:text-sm">
                 Loved by Indians building better money habits
               </h2>
             </AnimateOnScroll>
-            <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+            <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
               {testimonials.map((t, index) => (
                 <AnimateOnScroll
                   key={t.name}
                   variant="fadeUp"
                   delay={index * 0.08}
                   aboveFold
-                  className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 sm:p-7"
+                  className="flex flex-col rounded-2xl border border-white/60 bg-white/70 p-6 shadow-lg shadow-indigo-500/[0.06] backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/12 sm:p-7"
                 >
                   <p className="flex-1 text-sm leading-relaxed text-slate-700 sm:text-[0.9375rem]">
                     &ldquo;{t.quote}&rdquo;
@@ -206,38 +254,39 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-          </section>
-        </ScrollSection>
+        </StorySection>
 
-        <ScrollSection>
-          <section className="border-b border-slate-100 bg-white px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
-          <div className="mx-auto max-w-6xl">
+        <StorySection className="z-40 border-b border-indigo-100/60 bg-gradient-to-b from-violet-50/50 via-white to-indigo-50/40">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <AnimateOnScroll variant="fadeUp" aboveFold>
-              <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
+              <h2 className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85 sm:text-sm">
                 Pricing
               </h2>
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" aboveFold>
-              <p className="mx-auto mt-2 max-w-xl text-center text-xl font-semibold text-slate-900 sm:text-2xl">
+              <p className="mx-auto mt-3 max-w-xl text-center text-xl font-semibold leading-snug tracking-tight text-slate-900 sm:mt-4 sm:text-2xl sm:leading-snug">
                 Start free. Upgrade when you want a human in the loop.
               </p>
             </AnimateOnScroll>
-            <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+            <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
               {pricing.map((tier, index) => (
                 <AnimateOnScroll
                   key={tier.name}
                   variant={index === 0 ? "slideInLeft" : index === 1 ? "fadeUp" : "slideInRight"}
                   delay={index * 0.1}
                   aboveFold
-                  className={`flex flex-col rounded-2xl border bg-white p-6 sm:p-7 ${
+                  className={`relative flex flex-col overflow-hidden rounded-2xl border p-6 shadow-lg shadow-indigo-500/[0.06] backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/15 sm:p-7 ${
                     tier.cta.highlight
-                      ? "border-[#534AB7] ring-1 ring-[#534AB7]"
-                      : "border-slate-200"
+                      ? "border-indigo-400/70 bg-white/80 ring-2 ring-indigo-500/30"
+                      : "border-white/70 bg-white/65"
                   }`}
                 >
-                  <p className="text-sm font-medium text-slate-500">
-                    {tier.name}
-                  </p>
+                  {"popular" in tier && tier.popular ? (
+                    <span className="absolute right-4 top-4 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md shadow-indigo-500/30">
+                      Most Popular
+                    </span>
+                  ) : null}
+                  <p className="text-sm font-semibold text-slate-600">{tier.name}</p>
                   <p className="mt-2 flex items-baseline gap-1">
                     <span className="text-3xl font-semibold tracking-tight text-slate-900">
                       {tier.price}
@@ -249,10 +298,10 @@ export default function HomePage() {
                   </p>
                   <Link
                     href={tier.cta.href}
-                    className={`mt-6 inline-flex min-h-11 items-center justify-center rounded-xl text-center text-sm font-semibold no-underline transition ${
+                    className={`relative mt-6 inline-flex min-h-11 items-center justify-center rounded-xl text-center text-sm font-semibold no-underline transition duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.99] ${
                       tier.cta.highlight
-                        ? "bg-[#534AB7] text-white hover:bg-[#44399a]"
-                        : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                        ? "bg-[#534AB7] text-white shadow-md shadow-indigo-500/25 hover:bg-[#44399a] hover:shadow-indigo-500/35"
+                        : "border border-slate-200/90 bg-white/90 text-slate-900 hover:border-indigo-200 hover:bg-white"
                     } `}
                   >
                     {tier.cta.label}
@@ -261,80 +310,39 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-          </section>
-        </ScrollSection>
+        </StorySection>
       </main>
 
-      <footer className="bg-[#3C3489] px-4 py-12 text-white sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-12 lg:gap-8">
-          <div className="lg:col-span-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2.5 no-underline"
-              aria-label="Finkoin home"
-            >
-              <svg width="40" height="40" viewBox="0 0 64 64" aria-hidden>
-                <rect width="64" height="64" rx="14" fill="#534AB7" />
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="18"
-                  fill="none"
-                  stroke="#EEEDFE"
-                  strokeWidth="2"
-                  opacity="0.4"
-                />
-                <text
-                  x="32"
-                  y="39"
-                  textAnchor="middle"
-                  fontFamily="system-ui, sans-serif"
-                  fontWeight="800"
-                  fontSize="20"
-                  fill="#FFFFFF"
-                >
-                  FK
-                </text>
-              </svg>
-              <span className="text-xl font-bold tracking-tight text-white">
-                Finkoin
-              </span>
-            </Link>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">
-              Built for India · RBI-aware education, not advice
-            </p>
-          </div>
-          <nav
-            className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-8"
-            aria-label="Footer"
-          >
-            {footerNavColumns.map((col) => (
-              <div key={col.heading} className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                  {col.heading}
-                </p>
-                <ul className="mt-4 space-y-3 text-sm font-medium">
-                  {col.links.map((item) => (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className="text-white transition hover:text-white/90 hover:underline"
-                      >
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
-        </div>
-        <div className="mx-auto mt-10 max-w-6xl border-t border-white/20 pt-8">
-          <p className="text-center text-xs text-white/70 sm:text-left">
-            © {new Date().getFullYear()} Finkoin. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
+  );
+}
+
+function StorySection({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const scale = useTransform(scrollYProgress, [0, 0.45, 1], [0.965, 1, 0.975]);
+  const rotate = useTransform(scrollYProgress, [0, 0.5, 1], [-0.45, 0, 0.45]);
+  const y = useTransform(scrollYProgress, [0, 1], [30, -24]);
+  const opacity = useTransform(scrollYProgress, [0, 0.12, 0.88, 1], [0.55, 1, 1, 0.75]);
+
+  return (
+    <section ref={ref} className="relative min-h-[102vh] snap-start scroll-mt-24">
+      <motion.div
+        style={{ scale, rotate, y, opacity }}
+        className={`sticky top-20 mx-auto overflow-hidden rounded-[2rem] shadow-[0_24px_80px_rgba(61,44,140,0.12)] ${className ?? ""}`}
+      >
+        {children}
+      </motion.div>
+    </section>
   );
 }
