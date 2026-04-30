@@ -71,6 +71,18 @@ export function computeRealEmergencyFund(data: FinancialProfile): RealEmergencyF
   const legacyCounted = legacy * 1.0;
   const realTotal = savingsCounted + liquidCounted + fdCounted + otherCounted + legacyCounted;
   const monthsCovered = monthlyExpenses > 0 ? realTotal / monthlyExpenses : 0;
+  console.log("=== EMERGENCY FUND CALC ===", {
+    savings: data.savingsAccountBalance,
+    fd: data.fdValue,
+    liquidMF: data.liquidMFValue,
+    otherLiquid: data.otherLiquidSavings,
+    fdWeighted: (data.fdValue || 0) * 0.7,
+    total:
+      (data.savingsAccountBalance || 0) +
+      (data.liquidMFValue || 0) * 0.95 +
+      (data.fdValue || 0) * 0.7 +
+      (data.otherLiquidSavings || 0) * 0.5,
+  });
   return {
     realTotal,
     savingsRaw: sav,
@@ -88,6 +100,9 @@ export function computeRealEmergencyFund(data: FinancialProfile): RealEmergencyF
 }
 
 export type AnalysisResult = {
+  overallScore: number;
+  criticalIssueCount: number;
+  warningIssueCount: number;
   scores: {
     savingsRate: number;
     debtRatio: number;
@@ -99,6 +114,17 @@ export type AnalysisResult = {
   teaser: string;
   planSteps: string[];
   securityChecklist: SecurityItem[];
+  realEmergencyFund: RealEmergencyFundBreakdown & {
+    total: number;
+    savings: number;
+    fd: number;
+    fdWeighted: number;
+    liquidMF: number;
+  };
+  termInsuranceNeeded: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
 };
 
 function n(v: number | undefined): number {
@@ -173,12 +199,24 @@ export function calculateTermNeeded(data: FinancialProfile): number {
   const annualIncome = totalIncome * 12;
   const base = annualIncome * 10;
   const liabilities = n(data.homeLoanOutstanding) + n(data.carLoanOutstanding);
+  const equityTotal =
+    n(data.totalEquityValue) > 0
+      ? n(data.totalEquityValue)
+      : n(data.mfValue) +
+        n(data.indianStocksValue) +
+        n(data.usStocksValueINR) +
+        n(data.usMFValueINR) +
+        n(data.rsuValueINR);
+  const customInvestmentTotal = (data.customInvestments ?? []).reduce(
+    (sum, inv) => sum + n(inv.currentValue),
+    0,
+  );
   const existingAssets =
-    n(data.mfValue) +
-    n(data.indianStocksValue) +
+    equityTotal +
     n(data.ppfBalance) +
     n(data.epfBalance) +
-    n(data.fdValue);
+    n(data.fdValue) +
+    customInvestmentTotal;
   const ageMultiplier =
     data.selfAge < 30 ? 1.2 : data.selfAge < 40 ? 1 : data.selfAge < 50 ? 0.8 : 0.6;
   const dependentCount =
@@ -220,6 +258,12 @@ function buildIssues(params: {
   emergencyFundTargetMax: number;
   bucketRows: ReturnType<typeof getUniversalBucketRows>;
   insuranceActual: number;
+  termCover: number;
+  termNeeded: number;
+  hasTermInsurance: boolean;
+  medEmergencyCurrent: number;
+  medEmergencyTarget: number;
+  monthlyInvesting: number;
 }): AnalysisIssue[] {
   const {
     totalIncome,
@@ -232,6 +276,12 @@ function buildIssues(params: {
     emergencyFundTargetMax,
     bucketRows,
     insuranceActual,
+    termCover,
+    termNeeded,
+    hasTermInsurance,
+    medEmergencyCurrent,
+    medEmergencyTarget,
+    monthlyInvesting,
   } = params;
   const issues: AnalysisIssue[] = [];
 
@@ -282,9 +332,10 @@ function buildIssues(params: {
   }
 
   if (emergencyFundGap > 0) {
+    const emergencySeverity: IssueSeverity = monthsCoveredEmergency >= 3 ? "warning" : "critical";
     issues.push({
-      severityScore: 80,
-      severity: "critical",
+      severityScore: emergencySeverity === "critical" ? 80 : 55,
+      severity: emergencySeverity,
       code: "emergency_fund_short",
       message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} (~${monthsCoveredEmergency.toFixed(1)} mo of needs). Target buffer ${fmt(emergencyFundTargetMax)} — short by about ${fmt(emergencyFundGap)}.`,
     });
@@ -314,12 +365,51 @@ function buildIssues(params: {
     });
   }
 
-  if (savingsRate <= BASE_UNIVERSAL_CAPS.investment * 100 + 1e-6) {
+  if (monthlyInvesting <= 0) {
+    issues.push({
+      severityScore: 85,
+      severity: "critical",
+      code: "investment_missing",
+      message: "No monthly investing detected. Start a SIP to avoid long-term wealth stagnation.",
+    });
+  } else if (savingsRate < 10) {
+    issues.push({
+      severityScore: 50,
+      severity: "warning",
+      code: "investment_rate_low",
+      message: `Investment rate is ${savingsRate.toFixed(1)}% of income. Push this toward at least 15%.`,
+    });
+  } else {
     issues.push({
       severityScore: 18,
       severity: "good",
       code: "investment_on_track",
       message: `Investment bucket is ${savingsRate.toFixed(1)}% of income and is being checked against your current investment cap.`,
+    });
+  }
+
+  if (!hasTermInsurance || termCover === 0) {
+    issues.push({
+      severityScore: 92,
+      severity: "critical",
+      code: "term_missing",
+      message: "You have no term insurance. Your family has zero protection if income stops.",
+    });
+  } else if (termCover < termNeeded) {
+    issues.push({
+      severityScore: 58,
+      severity: "warning",
+      code: "term_underinsured",
+      message: `You have ₹${(termCover / 10000000).toFixed(1)}Cr. Recommended: ₹${(termNeeded / 10000000).toFixed(1)}Cr.`,
+    });
+  }
+
+  if (medEmergencyCurrent < medEmergencyTarget) {
+    issues.push({
+      severityScore: 90,
+      severity: "critical",
+      code: "medical_fund_short",
+      message: `Medical emergency fund is ${fmt(medEmergencyCurrent)} versus target ${fmt(medEmergencyTarget)}.`,
     });
   }
 
@@ -418,6 +508,68 @@ function buildPlanSteps(
 }
 
 export function analyseFinances(data: FinancialProfile): AnalysisResult {
+  console.log("=== ALL LOANS IN ENGINE ===", {
+    personalLoanEMI: data.personalLoanEMI,
+    carLoanEMI: data.carLoanEMI,
+    bikeEMI: data.bikeEMI,
+    additionalObligations: data.additionalObligations,
+    totalEMI:
+      (data.personalLoanEMI || 0) +
+      (data.carLoanEMI || 0) +
+      (data.bikeEMI || 0) +
+      (data.additionalObligations || []).reduce(
+        (s: number, o: any) => s + (o.monthlyAmount || 0),
+        0,
+      ),
+  });
+  console.log("=== FINKOIN ENGINE DEBUG START ===");
+  console.log(
+    "RAW PROFILE INPUT:",
+    JSON.stringify(
+      {
+        lifeStage: data.lifeStage,
+        monthlySalary: data.monthlySalary,
+        spouseIncome: data.spouseIncome,
+        otherIncome: data.otherIncome,
+        savingsAccountBalance: data.savingsAccountBalance,
+        fdValue: data.fdValue,
+        liquidMFValue: data.liquidMFValue,
+        otherLiquidSavings: data.otherLiquidSavings,
+        epfBalance: data.epfBalance,
+        mfValue: data.mfValue,
+        totalEquityValue: data.totalEquityValue,
+        homeMarketValue: data.homeMarketValue,
+        homeLoanOutstanding: data.homeLoanOutstanding,
+        carMarketValue: data.carMarketValue,
+        goldValue: data.goldValue,
+        termInsuranceSumAssured: data.termInsuranceSumAssured,
+        hasTermInsurance: data.hasTermInsurance,
+        healthInsuranceSumInsured: data.healthInsuranceSumInsured,
+        foodTotal: data.foodTotal,
+        transportTotal: data.transportTotal,
+        utilityTotal: data.utilityTotal,
+        rentAmount: data.rentAmount,
+        homeLoanEMI: data.homeLoanEMI,
+        personalLoanEMI: data.personalLoanEMI,
+      },
+      null,
+      2,
+    ),
+  );
+  console.log("=== FINKOIN DEBUG ===");
+  console.log("INPUTS:", {
+    savingsAccountBalance: data.savingsAccountBalance,
+    fdValue: data.fdValue,
+    liquidMFValue: data.liquidMFValue,
+    homeLoanOutstanding: data.homeLoanOutstanding,
+    homeMarketValue: data.homeMarketValue,
+    epfBalance: data.epfBalance,
+    termInsuranceSumAssured: data.termInsuranceSumAssured,
+    monthlySalary: data.monthlySalary,
+    spouseIncome: data.spouseIncome,
+    otherIncome: data.otherIncome,
+    lifeStage: data.lifeStage,
+  });
   if (process.env.NODE_ENV === "development") {
     console.log("[analyseFinances] called", {
       lifeStage: data.lifeStage,
@@ -440,14 +592,37 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const emergencyFundMonthsMin =
     data.lifeStage === "bachelor" ? 3 : data.lifeStage === "married" ? 6 : data.lifeStage === "kids" ? 9 : 6;
   const emergencyFundMonthsMax =
-    data.lifeStage === "bachelor" ? 6 : data.lifeStage === "married" ? 12 : 12;
+    data.lifeStage === "bachelor" ? 6 : data.lifeStage === "married" ? 9 : 12;
   const emergencyFundTargetMin = monthlyExpenses * emergencyFundMonthsMin;
   const emergencyFundTargetMax = monthlyExpenses * emergencyFundMonthsMax;
   const er = computeRealEmergencyFund(data);
+  if (process.env.NODE_ENV === "development") {
+    console.log("EMERGENCY FUND DEBUG:", {
+      savingsAccountBalance: data.savingsAccountBalance,
+      fdValue: data.fdValue,
+      liquidMFValue: data.liquidMFValue,
+      otherLiquidSavings: data.otherLiquidSavings,
+    });
+  }
   const emergencyFundCurrent = er.realTotal;
   const emergencyFundGap = Math.max(0, emergencyFundTargetMax - emergencyFundCurrent);
 
   const termNeeded = calculateTermNeeded(data);
+  console.log("=== TERM INSURANCE CALC ===", {
+    termSumAssured: data.termInsuranceSumAssured,
+    hasTermInsurance: data.hasTermInsurance,
+    termInsuranceNeeded: termNeeded,
+  });
+  console.log("=== NET WORTH CALC ===", {
+    savings: data.savingsAccountBalance,
+    fd: data.fdValue,
+    epf: data.epfBalance,
+    equity: data.totalEquityValue || (data.mfValue || 0) + (data.indianStocksValue || 0),
+    home: data.homeMarketValue,
+    car: data.carMarketValue,
+    gold: data.goldValue,
+    nsc: data.nscDepositAmount,
+  });
   const minimumReasonableTermCover = 50_00_000;
   const termAdequacyFloor = Math.max(minimumReasonableTermCover, termNeeded * 0.5);
   const healthTarget = data.lifeStage === "bachelor" ? 5_00_000 : 10_00_000;
@@ -724,6 +899,12 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     emergencyFundTargetMax,
     bucketRows,
     insuranceActual: monthlyInsuranceTotal(data),
+    termCover,
+    termNeeded,
+    hasTermInsurance: data.hasTermInsurance,
+    medEmergencyCurrent,
+    medEmergencyTarget,
+    monthlyInvesting,
   });
 
   if (data.hasTermInsurance && n(data.termInsuranceSumAssured) >= 10_000_000) {
@@ -737,11 +918,81 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     issues.sort((a, b) => b.severityScore - a.severityScore);
   }
 
+  // Defensive de-dup in case future branches push same issue code twice.
+  const seenIssueCodes = new Set<string>();
+  issues = issues.filter((issue) => {
+    if (seenIssueCodes.has(issue.code)) return false;
+    seenIssueCodes.add(issue.code);
+    return true;
+  });
+
   const teaser =
     issues[0]?.message ??
     "Your financial picture is ready. The universal income meter is now showing where your cash flow is going.";
 
+  const criticalCount = issues.filter((i) => i.severity === "critical").length;
+  const warningCount = issues.filter((i) => i.severity === "warning").length;
+  const infoCount = issues.filter((i) => i.severity === "info").length;
+  const overallScore = Math.max(
+    0,
+    Math.min(100, 100 - criticalCount * 15 - warningCount * 7 - infoCount * 2),
+  );
+
+  const termInsuranceNeeded = calculateTermNeeded(data);
+  const savingsVal = data.savingsAccountBalance || 0;
+  const fdVal = data.fdValue || 0;
+  const liquidMFVal = data.liquidMFValue || 0;
+  const otherLiquidVal = data.otherLiquidSavings || 0;
+  const emergencyCorpusTotal =
+    savingsVal * 1.0 + liquidMFVal * 0.95 + fdVal * 0.7 + otherLiquidVal * 0.5;
+  const needsMonthly = bucketActuals?.needs || 0;
+  const monthsCovered = needsMonthly > 0 ? emergencyCorpusTotal / needsMonthly : 0;
+  const totalAssets =
+    savingsVal +
+    fdVal +
+    (data.liquidMFValue || 0) +
+    (n(data.totalEquityValue) > 0
+      ? n(data.totalEquityValue)
+      : (data.mfValue || 0) +
+        (data.indianStocksValue || 0) +
+        (data.usStocksValueINR || 0) +
+        (data.usMFValueINR || 0) +
+        (data.rsuValueINR || 0)) +
+    (data.ppfBalance || 0) +
+    (data.npsBalance || 0) +
+    (data.epfBalance || 0) +
+    (data.homeMarketValue || 0) +
+    (data.carMarketValue || 0) +
+    (data.goldValue || 0) +
+    (data.nscDepositAmount || 0) +
+    (data.otherAssets || 0) +
+    (data.customInvestments || []).reduce(
+      (sum: number, inv: any) => sum + (inv.currentValue || 0),
+      0,
+    );
+  const totalLiabilities =
+    (data.homeLoanOutstanding || 0) +
+    (data.carLoanOutstanding || 0) +
+    (data.personalLoanOutstanding || (data.personalLoanEMI || 0) * 24) +
+    (data.bikeEMI || 0) * 24 +
+    (data.creditCardBillMonthly || 0) * 3 +
+    (data.unifiedLoans || []).reduce((sum: number, loan: any) => {
+      const alreadyCounted =
+        loan.loanType === "personal_loan" ||
+        loan.loanType === "car_loan" ||
+        loan.loanType === "bike_loan";
+      if (alreadyCounted) return sum;
+      return sum + (loan.outstandingAmount || (loan.monthlyEMI || 0) * (loan.remainingMonths || 18));
+    }, 0);
+  const netWorth = totalAssets - totalLiabilities;
+  if (process.env.NODE_ENV === "development") {
+    console.log("ISSUES:", issues.map((i) => `${i.code}: ${i.severity}`));
+  }
+
   return {
+    overallScore,
+    criticalIssueCount: criticalCount,
+    warningIssueCount: warningCount,
     scores: {
       savingsRate,
       debtRatio,
@@ -760,5 +1011,18 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       securityChecklist,
     ),
     securityChecklist,
+    termInsuranceNeeded,
+    realEmergencyFund: {
+      ...er,
+      total: emergencyCorpusTotal,
+      monthsCovered,
+      savings: savingsVal,
+      fd: fdVal,
+      fdWeighted: fdVal * 0.7,
+      liquidMF: liquidMFVal,
+    },
+    totalAssets,
+    totalLiabilities,
+    netWorth,
   };
 }

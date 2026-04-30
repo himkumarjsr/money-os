@@ -5,6 +5,7 @@ import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
+import { SEO_CONFIG } from "@/lib/seo";
 
 const RenewalReminderBanner = dynamic(
   () =>
@@ -25,19 +26,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://finkoin.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Finkoin - AI Personal Finance Advisor for India",
+    default: SEO_CONFIG.defaultTitle,
     template: "%s | Finkoin",
   },
-  description:
-    "Finkoin helps Indians manage money with AI-led financial analysis, calculators, and actionable planning.",
-  keywords: [
-    "Finkoin",
-    "Finkoin finance app",
-    "personal finance India",
-    "SIP calculator India",
-    "EMI calculator",
-    "income tax calculator India",
-  ],
+  description: SEO_CONFIG.defaultDescription,
+  keywords: SEO_CONFIG.defaultKeywords,
   alternates: {
     canonical: "/",
   },
@@ -132,6 +125,33 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "Finkoin",
+              url: "https://finkoin.com",
+              description: "Personal financial health check and wealth planning for India",
+              applicationCategory: "FinanceApplication",
+              operatingSystem: "Web",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "INR",
+                description: "Free financial health check",
+              },
+              provider: {
+                "@type": "Organization",
+                name: "Finkoin",
+                url: "https://finkoin.com",
+              },
+            }),
+          }}
+        />
+      </head>
       <body className="font-sans">
         <script
           type="application/ld+json"
@@ -142,7 +162,7 @@ export default function RootLayout({
         <FinancialStoreAuthSync />
         <GlobalNavbar />
         <RenewalReminderBanner />
-        {children}
+        <main className="relative">{children}</main>
         <Toast />
       </body>
     </html>

@@ -88,6 +88,49 @@ export default function HomePage() {
 
   return (
     <div className="min-h-dvh bg-gradient-to-b from-indigo-50 via-white to-violet-50/70 text-slate-900 antialiased">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              {
+                "@type": "Question",
+                name: "How much emergency fund do I need in India?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "For single individuals in India, 6 months of expenses. For married couples, 9 months. For families with kids, 12 months. Keep in liquid mutual funds or savings account.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "How much term insurance do I need?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Annual income multiplied by 10, adjusted for age, loans, and dependents. Minimum ₹50 lakh. Always buy pure term, not ULIP or endowment.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "How much should I invest per month in India?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Minimum 20% of take-home salary. Start with Nifty 50 index fund SIP. Increase by 10% every year as income grows.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "What is a good financial health score?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Above 70 is good. 50-70 is on track. Below 50 needs attention. The score considers emergency fund, insurance coverage, debt ratio, and investment rate.",
+                },
+              },
+            ],
+          }),
+        }}
+      />
       <motion.div
         aria-hidden
         className="pointer-events-none fixed left-0 right-0 top-0 z-[70] h-1 origin-left bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500"
@@ -131,7 +174,7 @@ export default function HomePage() {
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" delay={0.02} aboveFold>
               <h1 className="mt-4 text-balance text-4xl font-bold leading-[1.04] tracking-tight text-slate-900 sm:mt-5 sm:text-5xl md:text-6xl">
-              Fix your money in 2 minutes with AI
+              Fix your finances with AI
               </h1>
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" delay={0.1} aboveFold>

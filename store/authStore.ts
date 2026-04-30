@@ -1,6 +1,6 @@
 "use client";
 
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -11,7 +11,7 @@ function randomReferralCode(seed: string) {
 
 function mapSubscriptionTier(raw: unknown): "free" | "pro" | "promax" {
   if (raw === "free" || raw === "pro" || raw === "promax") return raw;
-  return "promax";
+  return "free";
 }
 
 type UsersRow = {
@@ -50,6 +50,7 @@ interface AuthState {
   setSubscription: (tier: "free" | "pro" | "promax") => void;
   logout: () => void;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  initAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -149,6 +150,79 @@ export const useAuthStore = create<AuthState>()(
         });
 
         return { error: null };
+      },
+      initAuth: async () => {
+        set({ isLoading: true });
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+
+        if (!authUser) {
+          set({
+            user: null,
+            userId: null,
+            isLoggedIn: false,
+            subscriptionTier: "free",
+            isLoading: false,
+          });
+          return;
+        }
+
+        const { data: userData } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", authUser.id)
+          .maybeSingle();
+
+        const { data: gamDataRaw } = await supabase
+          .from("gamification")
+          .select("fk_balance, total_earned, streak_days, badges")
+          .eq("user_id", authUser.id)
+          .maybeSingle();
+
+        let gamData = gamDataRaw as
+          | { fk_balance?: number | null; total_earned?: number | null; streak_days?: number | null; badges?: unknown[] | null }
+          | null;
+        if (!gamData) {
+          await supabase.from("gamification").insert({
+            user_id: authUser.id,
+            fk_balance: 50,
+            total_earned: 50,
+            badges: [],
+            streak_days: 0,
+          });
+          gamData = { fk_balance: 50, total_earned: 50, badges: [], streak_days: 0 };
+        }
+
+        const row = userData as UsersRow | null;
+        const tier = mapSubscriptionTier(row?.subscription_tier ?? "free");
+        const displayName = row?.name ?? authUser.user_metadata?.name ?? authUser.email?.split("@")[0] ?? "User";
+
+        const nextUser: User = {
+          id: authUser.id,
+          name: displayName,
+          phone: authUser.phone ?? null,
+          email: authUser.email ?? null,
+          photoURL: authUser.user_metadata?.avatar_url ?? null,
+          panVerified: false,
+          panLast4: null,
+          aadhaarVerified: false,
+          subscriptionTier: tier,
+          subscriptionExpiry: null,
+          createdAt: new Date().toISOString(),
+          referralCode: randomReferralCode(authUser.id),
+          referredBy: null,
+          isAdmin: Boolean(row?.is_admin),
+          fkBalance: Number(gamData?.fk_balance ?? (userData as { fk_balance?: number } | null)?.fk_balance ?? 50),
+        };
+
+        set({
+          user: nextUser,
+          userId: nextUser.id,
+          isLoggedIn: true,
+          subscriptionTier: tier,
+          isLoading: false,
+        });
       },
     }),
     {

@@ -63,11 +63,33 @@ export const KID_GENDER_VALUES = ["boy", "girl"] as const;
 export type KidGender = (typeof KID_GENDER_VALUES)[number];
 
 export const ADDITIONAL_OBLIGATION_TYPE_VALUES = [
-  "PF Loan",
+  "Personal Loan",
+  "Marriage Loan",
+  "Home Loan",
+  "Car Loan",
+  "Bike Loan",
+  "Education Loan",
+  "Medical Loan",
+  "Other Loan",
   "Overdraft (OD)",
   "Credit Card minimum due",
   "Other",
 ] as const;
+
+export const UNIFIED_LOAN_TYPE_VALUES = [
+  "personal_loan",
+  "car_loan",
+  "bike_loan",
+  "education_loan",
+  "pf_loan",
+  "overdraft",
+  "gold_loan",
+  "business_loan",
+  "credit_card",
+  "other",
+] as const;
+
+export type UnifiedLoanType = (typeof UNIFIED_LOAN_TYPE_VALUES)[number];
 
 export interface FinancialProfile {
   lifeStage: "bachelor" | "married" | "kids" | "senior";
@@ -92,6 +114,19 @@ export interface FinancialProfile {
   personalLoanEMI?: number;
   /** Optional: current principal / outstanding on the personal loan. EMI-only users can leave this unset. */
   personalLoanOutstanding?: number;
+  personalLoanLenderName?: string;
+  personalLoanRate?: number;
+  personalLoanRemainingMonths?: number;
+  homeLoanLenderName?: string;
+  homeLoanRate?: number;
+  homeLoanRemainingMonths?: number;
+  carLoanLenderName?: string;
+  carLoanRate?: number;
+  carLoanRemainingMonths?: number;
+  bikeLoanLenderName?: string;
+  bikeLoanRate?: number;
+  bikeLoanRemainingMonths?: number;
+  bikeOutstanding?: number;
   /** Typical monthly payment toward credit cards (full pay-off or rolling balance). */
   creditCardBillMonthly?: number;
   additionalObligations: Array<{
@@ -99,22 +134,56 @@ export interface FinancialProfile {
     type: string;
     lenderName?: string;
     monthlyAmount: number;
+    outstandingAmount?: number;
+    tenureMonths?: number;
+    loanTakenYear?: number;
+  }>;
+  unifiedLoans?: Array<{
+    id?: string;
+    loanType: UnifiedLoanType;
+    lenderName?: string;
+    monthlyEMI: number;
+    outstandingAmount?: number;
+    interestRate?: number;
+    remainingMonths?: number;
+    odLimit?: number;
+    odUsed?: number;
+    odInterestOnlyYears?: number;
   }>;
 
+  /** @deprecated Use `foodTotal`; kept for backward compatibility. */
   vegetables: number;
+  /** @deprecated Use `foodTotal`; kept for backward compatibility. */
   grocery: number;
+  /** @deprecated Use `foodTotal`; kept for backward compatibility. */
   medicine: number;
+  /** @deprecated Use `transportTotal`; kept for backward compatibility. */
   fuel: number;
+  /** @deprecated Use `transportTotal`; kept for backward compatibility. */
   cabMetro: number;
+  /** @deprecated Use `utilityTotal`; kept for backward compatibility. */
   electricity: number;
+  /** @deprecated Use `utilityTotal`; kept for backward compatibility. */
   internet: number;
+  /** @deprecated Use `utilityTotal`; kept for backward compatibility. */
   gas: number;
+  /** @deprecated Use `utilityTotal`; kept for backward compatibility. */
   water?: number;
+  /** @deprecated Use `domesticHelpTotal`; kept for backward compatibility. */
   houseHelpMonthly?: number;
+  /** @deprecated Use `domesticHelpTotal`; kept for backward compatibility. */
   cookHelpMonthly?: number;
+  /** @deprecated Use `lifestyleTotal`; kept for backward compatibility. */
   entertainment: number;
+  /** @deprecated Use `lifestyleTotal`; kept for backward compatibility. */
   shopping: number;
+  /** @deprecated Use `lifestyleTotal`; kept for backward compatibility. */
   personalCare?: number;
+  foodTotal?: number;
+  transportTotal?: number;
+  utilityTotal?: number;
+  domesticHelpTotal?: number;
+  lifestyleTotal?: number;
   kidsSchoolFees?: number;
   kidsActivities?: number;
   parentsSupport?: number;
@@ -134,6 +203,7 @@ export interface FinancialProfile {
   termInsurancePremiumMonthly?: number;
   termInsurancePremiumInput?: number;
   termInsurancePremiumFrequency?: PremiumFrequency;
+  termInsurancePremiumTillYear?: number;
   carInsurancePremiumMonthly?: number;
   carInsurancePremiumInput?: number;
   carInsurancePremiumFrequency?: PremiumFrequency;
@@ -143,6 +213,8 @@ export interface FinancialProfile {
   otherInsurancePremiumMonthly?: number;
   otherInsurancePremiumInput?: number;
   otherInsurancePremiumFrequency?: PremiumFrequency;
+  lifeInsuranceMaturityAmount?: number;
+  lifeInsuranceMaturityYear?: number;
   /** Persisted for form rehydration (policies + names). */
   hasOtherInsurance?: boolean;
   otherInsurancePremiums?: Array<{
@@ -157,6 +229,9 @@ export interface FinancialProfile {
 
   savingsAccountBalance: number;
   fdValue?: number;
+  fdRate?: number;
+  fdMaturityYear?: number;
+  fdTenureYears?: number;
   liquidMFValue?: number;
   /** @deprecated Legacy ring-fenced amount from older wizard; merged into weighted emergency total at 100%. Prefer savings + liquid MF + FD + other liquid. */
   emergencyFundCurrent: number;
@@ -167,6 +242,13 @@ export interface FinancialProfile {
   usStocksValueINR?: number;
   usMFValueINR?: number;
   rsuValueINR?: number;
+  totalEquityValue?: number;
+  customInvestments?: Array<{
+    label: string;
+    currentValue: number;
+    monthlyContribution: number;
+    type: "equity" | "debt" | "real_estate" | "other";
+  }>;
   ppfBalance?: number;
   npsBalance?: number;
   epfBalance?: number;
@@ -188,8 +270,14 @@ export interface FinancialProfile {
   ssy?: number;
   /** Principal / current holding in NSC (one-time certificate purchase, not a monthly SIP). */
   nscDepositAmount?: number;
+  nscMaturityYear?: number;
   /** When false, NSC is hidden in the form and not scored in the safety net. */
   investsInNsc?: boolean;
+  odLimit?: number;
+  odUsed?: number;
+  odInterestRate?: number;
+  odInterestOnlyYears?: number;
+  odEMIStartYear?: number;
 
   primaryGoal: string;
   retirementTargetCorpus?: number;
@@ -255,6 +343,11 @@ const optionalWholeNumber = z.preprocess(
   z.number().int("Enter a whole number").min(0, "Cannot be negative").optional(),
 );
 
+const optionalSpouseAge = z.preprocess(
+  parseMoneyInput,
+  z.number().min(0, "Cannot be negative").optional().or(z.literal(0)),
+);
+
 const premiumFrequencySchema = z.enum(PREMIUM_FREQUENCY_VALUES);
 
 const additionalObligationSchema = z.object({
@@ -262,6 +355,22 @@ const additionalObligationSchema = z.object({
   type: z.string().min(1, "Select an obligation type"),
   lenderName: z.string().optional(),
   monthlyAmount: requiredPositiveMoney("Enter the monthly payment amount"),
+  outstandingAmount: optionalMoney,
+  tenureMonths: optionalWholeNumber,
+  loanTakenYear: optionalWholeNumber,
+});
+
+const unifiedLoanSchema = z.object({
+  id: z.string().optional(),
+  loanType: z.enum(UNIFIED_LOAN_TYPE_VALUES),
+  lenderName: z.string().optional(),
+  monthlyEMI: optionalMoney.default(0),
+  outstandingAmount: optionalMoney,
+  interestRate: optionalMoney,
+  remainingMonths: optionalWholeNumber,
+  odLimit: optionalMoney,
+  odUsed: optionalMoney,
+  odInterestOnlyYears: optionalWholeNumber,
 });
 
 const otherInsurancePremiumSchema = z.object({
@@ -269,6 +378,13 @@ const otherInsurancePremiumSchema = z.object({
   policyName: z.string().optional(),
   premiumAmount: optionalMoney,
   frequency: premiumFrequencySchema.default("monthly"),
+});
+
+const customInvestmentSchema = z.object({
+  label: z.string().optional().default(""),
+  currentValue: optionalMoney.default(0),
+  monthlyContribution: optionalMoney.default(0),
+  type: z.enum(["equity", "debt", "real_estate", "other"]).default("other"),
 });
 
 const formShape = {
@@ -286,7 +402,7 @@ const formShape = {
         .min(18, "Age must be between 18 and 80")
         .max(80, "Age must be between 18 and 80"),
     ),
-    spouseAge: optionalWholeNumber,
+    spouseAge: optionalSpouseAge,
     numberOfKids: z.preprocess(
       parseMoneyInput,
       z
@@ -314,8 +430,27 @@ const formShape = {
     bikeEMI: optionalMoney,
     personalLoanEMI: optionalMoney,
     personalLoanOutstanding: optionalMoney,
+    personalLoanLenderName: z.string().optional(),
+    personalLoanRate: optionalMoney,
+    personalLoanRemainingMonths: optionalWholeNumber,
+    homeLoanLenderName: z.string().optional(),
+    homeLoanRate: optionalMoney,
+    homeLoanRemainingMonths: optionalWholeNumber,
+    carLoanLenderName: z.string().optional(),
+    carLoanRate: optionalMoney,
+    carLoanRemainingMonths: optionalWholeNumber,
+    bikeLoanLenderName: z.string().optional(),
+    bikeLoanRate: optionalMoney,
+    bikeLoanRemainingMonths: optionalWholeNumber,
+    bikeOutstanding: optionalMoney,
     creditCardBillMonthly: optionalMoney,
     additionalObligations: z.array(additionalObligationSchema).max(6),
+    unifiedLoans: z.array(unifiedLoanSchema).optional().default([]),
+    odLimit: optionalMoney,
+    odUsed: optionalMoney,
+    odInterestRate: optionalMoney,
+    odInterestOnlyYears: optionalWholeNumber,
+    odEMIStartYear: optionalWholeNumber,
 
     vegetables: optionalMoney,
     grocery: optionalMoney,
@@ -331,6 +466,11 @@ const formShape = {
     entertainment: optionalMoney,
     shopping: optionalMoney,
     personalCare: optionalMoney,
+    foodTotal: optionalMoney,
+    transportTotal: optionalMoney,
+    utilityTotal: optionalMoney,
+    domesticHelpTotal: optionalMoney,
+    lifestyleTotal: optionalMoney,
     kidsSchoolFees: optionalMoney,
     kidsActivities: optionalMoney,
     parentsSupport: optionalMoney,
@@ -346,6 +486,7 @@ const formShape = {
     termInsuranceSumAssured: optionalMoney,
     termInsurancePremiumInput: optionalMoney,
     termInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+    termInsurancePremiumTillYear: optionalWholeNumber,
     carInsurancePremiumInput: optionalMoney,
     carInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
     bikeInsurancePremiumInput: optionalMoney,
@@ -354,9 +495,14 @@ const formShape = {
     otherInsurancePremiumInput: optionalMoney,
     otherInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
     otherInsurancePremiums: z.array(otherInsurancePremiumSchema).max(6).default([]),
+    lifeInsuranceMaturityAmount: optionalMoney,
+    lifeInsuranceMaturityYear: optionalWholeNumber,
 
     savingsAccountBalance: optionalMoney,
     fdValue: optionalMoney,
+    fdRate: optionalMoney,
+    fdMaturityYear: optionalWholeNumber,
+    fdTenureYears: optionalWholeNumber,
     liquidMFValue: optionalMoney,
     emergencyFundCurrent: optionalMoney,
     otherLiquidSavings: optionalMoney,
@@ -365,6 +511,8 @@ const formShape = {
     usStocksValueINR: optionalMoney,
     usMFValueINR: optionalMoney,
     rsuValueINR: optionalMoney,
+    totalEquityValue: optionalMoney,
+    customInvestments: z.array(customInvestmentSchema).max(5).default([]),
     ppfBalance: optionalMoney,
     npsBalance: optionalMoney,
     epfBalance: optionalMoney,
@@ -384,6 +532,7 @@ const formShape = {
     monthlyEPFContribution: optionalMoney,
     ssy: optionalMoney,
     nscDepositAmount: optionalMoney,
+    nscMaturityYear: optionalWholeNumber,
     investsInNsc: z.boolean().optional().default(false),
 
     primaryGoal: z.string().min(1, "Choose a primary goal"),
@@ -410,14 +559,6 @@ const baseFormSchema = z.object(formShape);
 
 const formSchema = baseFormSchema
   .superRefine((data, ctx) => {
-    if ((data.lifeStage === "married" || data.lifeStage === "kids") && !data.spouseAge) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["spouseAge"],
-        message: "Enter spouse age",
-      });
-    }
-
     if (data.lifeStage === "kids") {
       if (!data.numberOfKids) {
         ctx.addIssue({
@@ -556,14 +697,6 @@ export const step1Schema = baseFormSchema.pick({
   kidsGenders: true,
   cityTier: true,
 }).superRefine((data, ctx) => {
-  if ((data.lifeStage === "married" || data.lifeStage === "kids") && !data.spouseAge) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["spouseAge"],
-      message: "Enter spouse age",
-    });
-  }
-
   if (data.lifeStage === "kids") {
     if (!data.numberOfKids) {
       ctx.addIssue({
@@ -608,8 +741,27 @@ export const step3Schema = baseFormSchema.pick({
   bikeEMI: true,
   personalLoanEMI: true,
   personalLoanOutstanding: true,
+  personalLoanLenderName: true,
+  personalLoanRate: true,
+  personalLoanRemainingMonths: true,
+  homeLoanLenderName: true,
+  homeLoanRate: true,
+  homeLoanRemainingMonths: true,
+  carLoanLenderName: true,
+  carLoanRate: true,
+  carLoanRemainingMonths: true,
+  bikeLoanLenderName: true,
+  bikeLoanRate: true,
+  bikeLoanRemainingMonths: true,
+  bikeOutstanding: true,
   creditCardBillMonthly: true,
   additionalObligations: true,
+  unifiedLoans: true,
+  odLimit: true,
+  odUsed: true,
+  odInterestRate: true,
+  odInterestOnlyYears: true,
+  odEMIStartYear: true,
 });
 
 export const step4Schema = baseFormSchema.pick({
@@ -627,6 +779,11 @@ export const step4Schema = baseFormSchema.pick({
   entertainment: true,
   shopping: true,
   personalCare: true,
+  foodTotal: true,
+  transportTotal: true,
+  utilityTotal: true,
+  domesticHelpTotal: true,
+  lifestyleTotal: true,
   kidsSchoolFees: true,
   kidsActivities: true,
   parentsSupport: true,
@@ -644,6 +801,7 @@ export const step5Schema = baseFormSchema.pick({
   termInsuranceSumAssured: true,
   termInsurancePremiumInput: true,
   termInsurancePremiumFrequency: true,
+  termInsurancePremiumTillYear: true,
   carInsurancePremiumInput: true,
   carInsurancePremiumFrequency: true,
   bikeInsurancePremiumInput: true,
@@ -652,6 +810,8 @@ export const step5Schema = baseFormSchema.pick({
   otherInsurancePremiumInput: true,
   otherInsurancePremiumFrequency: true,
   otherInsurancePremiums: true,
+  lifeInsuranceMaturityAmount: true,
+  lifeInsuranceMaturityYear: true,
 }).superRefine((data, ctx) => {
   if (data.hasHealthInsurance) {
     if (!data.healthInsuranceSumInsured) {
@@ -712,6 +872,9 @@ export const step5Schema = baseFormSchema.pick({
 export const step6Schema = baseFormSchema.pick({
   savingsAccountBalance: true,
   fdValue: true,
+  fdRate: true,
+  fdMaturityYear: true,
+  fdTenureYears: true,
   liquidMFValue: true,
   otherLiquidSavings: true,
   mfValue: true,
@@ -719,6 +882,8 @@ export const step6Schema = baseFormSchema.pick({
   usStocksValueINR: true,
   usMFValueINR: true,
   rsuValueINR: true,
+  totalEquityValue: true,
+  customInvestments: true,
   ppfBalance: true,
   npsBalance: true,
   epfBalance: true,
@@ -738,6 +903,7 @@ export const step6Schema = baseFormSchema.pick({
   monthlyEPFContribution: true,
   ssy: true,
   nscDepositAmount: true,
+  nscMaturityYear: true,
   investsInNsc: true,
   bereavementFund: true,
 }).superRefine((data, ctx) => {
@@ -934,6 +1100,25 @@ function migrateLegacyAnalysePartial(
       type: row.type ?? "",
       lenderName: (row.lenderName ?? row.lender ?? "") as string,
       monthlyAmount: row.monthlyAmount ?? 0,
+      outstandingAmount: row.outstandingAmount ?? 0,
+      tenureMonths: row.tenureMonths ?? 0,
+      loanTakenYear: row.loanTakenYear ?? 0,
+    }));
+  }
+
+  const unified = out.unifiedLoans;
+  if (Array.isArray(unified)) {
+    out.unifiedLoans = (unified as Record<string, unknown>[]).map((row) => ({
+      id: row.id,
+      loanType: (row.loanType ?? "other") as UnifiedLoanType,
+      lenderName: (row.lenderName ?? "") as string,
+      monthlyEMI: row.monthlyEMI ?? 0,
+      outstandingAmount: row.outstandingAmount ?? 0,
+      interestRate: row.interestRate ?? 0,
+      remainingMonths: row.remainingMonths ?? 0,
+      odLimit: row.odLimit ?? 0,
+      odUsed: row.odUsed ?? 0,
+      odInterestOnlyYears: row.odInterestOnlyYears ?? 0,
     }));
   }
 
@@ -977,6 +1162,9 @@ export function mergeAnalyseDraftWithProfile(
         type: typeFromDraft || p?.type || "Other",
         monthlyAmount: d?.monthlyAmount ?? p?.monthlyAmount ?? 0,
         lenderName: preferNonEmptyString(d?.lenderName, p?.lenderName),
+        outstandingAmount: d?.outstandingAmount ?? p?.outstandingAmount ?? 0,
+        tenureMonths: d?.tenureMonths ?? p?.tenureMonths ?? 0,
+        loanTakenYear: d?.loanTakenYear ?? p?.loanTakenYear ?? 0,
       };
     });
   }
@@ -993,6 +1181,28 @@ export function mergeAnalyseDraftWithProfile(
         policyName: preferNonEmptyString(d?.policyName, p?.policyName),
         premiumAmount: d?.premiumAmount ?? p?.premiumAmount,
         frequency: (d?.frequency ?? p?.frequency ?? "monthly") as PremiumFrequency,
+      };
+    });
+  }
+
+  const pUnified = profileFormN.unifiedLoans;
+  const dUnified = draftN.unifiedLoans;
+  if ((pUnified?.length ?? 0) > 0 || (dUnified?.length ?? 0) > 0) {
+    const len = Math.max(pUnified?.length ?? 0, dUnified?.length ?? 0);
+    merged.unifiedLoans = Array.from({ length: len }, (_, i) => {
+      const p = pUnified?.[i];
+      const d = dUnified?.[i];
+      return {
+        id: d?.id ?? p?.id ?? newAnalyseRowId(),
+        loanType: (d?.loanType ?? p?.loanType ?? "other") as UnifiedLoanType,
+        lenderName: preferNonEmptyString(d?.lenderName, p?.lenderName),
+        monthlyEMI: d?.monthlyEMI ?? p?.monthlyEMI ?? 0,
+        outstandingAmount: d?.outstandingAmount ?? p?.outstandingAmount ?? 0,
+        interestRate: d?.interestRate ?? p?.interestRate ?? 0,
+        remainingMonths: d?.remainingMonths ?? p?.remainingMonths ?? 0,
+        odLimit: d?.odLimit ?? p?.odLimit ?? 0,
+        odUsed: d?.odUsed ?? p?.odUsed ?? 0,
+        odInterestOnlyYears: d?.odInterestOnlyYears ?? p?.odInterestOnlyYears ?? 0,
       };
     });
   }
@@ -1045,12 +1255,18 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
       lenderName?: string;
       lender?: string;
       monthlyAmount: number;
+      outstandingAmount?: number;
+      tenureMonths?: number;
+      loanTakenYear?: number;
     };
     return {
       id: row.id ?? newAnalyseRowId(),
       type: row.type,
       lenderName: row.lenderName ?? row.lender ?? "",
       monthlyAmount: row.monthlyAmount,
+      outstandingAmount: row.outstandingAmount ?? 0,
+      tenureMonths: row.tenureMonths ?? 0,
+      loanTakenYear: row.loanTakenYear ?? 0,
     };
   });
   const legacyPolicies = (
@@ -1063,6 +1279,93 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     Boolean(p.hasOtherInsurance) ||
     otherPolicies.length > 0 ||
     (p.otherInsurancePremiumMonthly ?? 0) > 0;
+
+  const mapObligationTypeToUnified = (value?: string): UnifiedLoanType => {
+    const v = (value ?? "").toLowerCase();
+    if (v.includes("personal")) return "personal_loan";
+    if (v.includes("car")) return "car_loan";
+    if (v.includes("bike") || v.includes("two")) return "bike_loan";
+    if (v.includes("education")) return "education_loan";
+    if (v.includes("pf")) return "pf_loan";
+    if (v.includes("od") || v.includes("overdraft")) return "overdraft";
+    if (v.includes("gold")) return "gold_loan";
+    if (v.includes("business")) return "business_loan";
+    if (v.includes("credit")) return "credit_card";
+    return "other";
+  };
+
+  const unifiedLoans: NonNullable<AnalyseFormValues["unifiedLoans"]> =
+    (p.unifiedLoans ?? []).map((loan) => ({
+      id: loan.id ?? newAnalyseRowId(),
+      loanType: loan.loanType,
+      lenderName: loan.lenderName ?? "",
+      monthlyEMI: loan.monthlyEMI ?? 0,
+      outstandingAmount: loan.outstandingAmount ?? 0,
+      interestRate: loan.interestRate ?? 0,
+      remainingMonths: loan.remainingMonths ?? 0,
+      odLimit: loan.odLimit ?? 0,
+      odUsed: loan.odUsed ?? 0,
+      odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
+    })) ?? [];
+
+  if (unifiedLoans.length === 0) {
+    if ((p.personalLoanEMI ?? 0) > 0) {
+      unifiedLoans.push({
+        id: newAnalyseRowId(),
+        loanType: "personal_loan",
+        lenderName: p.personalLoanLenderName ?? "",
+        monthlyEMI: p.personalLoanEMI ?? 0,
+        outstandingAmount: p.personalLoanOutstanding ?? 0,
+        interestRate: p.personalLoanRate ?? 0,
+        remainingMonths: p.personalLoanRemainingMonths ?? 0,
+        odLimit: 0,
+        odUsed: 0,
+        odInterestOnlyYears: 0,
+      });
+    }
+    if ((p.carLoanEMI ?? 0) > 0) {
+      unifiedLoans.push({
+        id: newAnalyseRowId(),
+        loanType: "car_loan",
+        lenderName: p.carLoanLenderName ?? "",
+        monthlyEMI: p.carLoanEMI ?? 0,
+        outstandingAmount: p.carLoanOutstanding ?? 0,
+        interestRate: p.carLoanRate ?? 0,
+        remainingMonths: p.carLoanRemainingMonths ?? 0,
+        odLimit: 0,
+        odUsed: 0,
+        odInterestOnlyYears: 0,
+      });
+    }
+    if ((p.bikeEMI ?? 0) > 0) {
+      unifiedLoans.push({
+        id: newAnalyseRowId(),
+        loanType: "bike_loan",
+        lenderName: p.bikeLoanLenderName ?? "",
+        monthlyEMI: p.bikeEMI ?? 0,
+        outstandingAmount: p.bikeOutstanding ?? 0,
+        interestRate: p.bikeLoanRate ?? 0,
+        remainingMonths: p.bikeLoanRemainingMonths ?? 0,
+        odLimit: 0,
+        odUsed: 0,
+        odInterestOnlyYears: 0,
+      });
+    }
+    (p.additionalObligations ?? []).forEach((o) => {
+      unifiedLoans.push({
+        id: o.id ?? newAnalyseRowId(),
+        loanType: mapObligationTypeToUnified(o.type),
+        lenderName: o.lenderName ?? "",
+        monthlyEMI: o.monthlyAmount ?? 0,
+        outstandingAmount: o.outstandingAmount ?? 0,
+        interestRate: o.loanTakenYear ?? 0,
+        remainingMonths: o.tenureMonths ?? 0,
+        odLimit: p.odLimit ?? 0,
+        odUsed: p.odUsed ?? 0,
+        odInterestOnlyYears: p.odInterestOnlyYears ?? 0,
+      });
+    });
+  }
 
   return {
     lifeStage: p.lifeStage,
@@ -1083,8 +1386,27 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     bikeEMI: p.bikeEMI ?? 0,
     personalLoanEMI: p.personalLoanEMI ?? 0,
     personalLoanOutstanding: p.personalLoanOutstanding ?? 0,
+    personalLoanLenderName: p.personalLoanLenderName ?? "",
+    personalLoanRate: p.personalLoanRate ?? 0,
+    personalLoanRemainingMonths: p.personalLoanRemainingMonths ?? 0,
+    homeLoanLenderName: p.homeLoanLenderName ?? "",
+    homeLoanRate: p.homeLoanRate ?? 0,
+    homeLoanRemainingMonths: p.homeLoanRemainingMonths ?? 0,
+    carLoanLenderName: p.carLoanLenderName ?? "",
+    carLoanRate: p.carLoanRate ?? 0,
+    carLoanRemainingMonths: p.carLoanRemainingMonths ?? 0,
+    bikeLoanLenderName: p.bikeLoanLenderName ?? "",
+    bikeLoanRate: p.bikeLoanRate ?? 0,
+    bikeLoanRemainingMonths: p.bikeLoanRemainingMonths ?? 0,
+    bikeOutstanding: p.bikeOutstanding ?? 0,
     creditCardBillMonthly: p.creditCardBillMonthly ?? 0,
     additionalObligations,
+    unifiedLoans,
+    odLimit: p.odLimit ?? 0,
+    odUsed: p.odUsed ?? 0,
+    odInterestRate: p.odInterestRate ?? 0,
+    odInterestOnlyYears: p.odInterestOnlyYears ?? 0,
+    odEMIStartYear: p.odEMIStartYear ?? 0,
     vegetables: p.vegetables,
     grocery: p.grocery,
     medicine: p.medicine,
@@ -1099,6 +1421,11 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     entertainment: p.entertainment,
     shopping: p.shopping,
     personalCare: p.personalCare ?? 0,
+    foodTotal: p.foodTotal ?? 0,
+    transportTotal: p.transportTotal ?? 0,
+    utilityTotal: p.utilityTotal ?? 0,
+    domesticHelpTotal: p.domesticHelpTotal ?? 0,
+    lifestyleTotal: p.lifestyleTotal ?? 0,
     kidsSchoolFees: p.kidsSchoolFees ?? 0,
     kidsActivities: p.kidsActivities ?? 0,
     parentsSupport: p.parentsSupport ?? 0,
@@ -1115,6 +1442,7 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     termInsurancePremiumInput:
       p.termInsurancePremiumInput ?? p.termInsurancePremiumMonthly ?? 0,
     termInsurancePremiumFrequency: p.termInsurancePremiumFrequency ?? "monthly",
+    termInsurancePremiumTillYear: p.termInsurancePremiumTillYear ?? 0,
     carInsurancePremiumInput: p.carInsurancePremiumInput ?? p.carInsurancePremiumMonthly ?? 0,
     carInsurancePremiumFrequency: p.carInsurancePremiumFrequency ?? "monthly",
     bikeInsurancePremiumInput: p.bikeInsurancePremiumInput ?? p.bikeInsurancePremiumMonthly ?? 0,
@@ -1140,8 +1468,13 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
       p.otherInsurancePremiumInput ??
       (otherPolicies.length === 0 ? (p.otherInsurancePremiumMonthly ?? 0) : 0),
     otherInsurancePremiumFrequency: p.otherInsurancePremiumFrequency ?? "monthly",
+    lifeInsuranceMaturityAmount: p.lifeInsuranceMaturityAmount ?? 0,
+    lifeInsuranceMaturityYear: p.lifeInsuranceMaturityYear ?? 0,
     savingsAccountBalance: p.savingsAccountBalance ?? 0,
     fdValue: p.fdValue ?? 0,
+    fdRate: p.fdRate ?? 0,
+    fdMaturityYear: p.fdMaturityYear ?? 0,
+    fdTenureYears: p.fdTenureYears ?? 0,
     liquidMFValue: p.liquidMFValue ?? 0,
     emergencyFundCurrent: p.emergencyFundCurrent ?? 0,
     otherLiquidSavings: p.otherLiquidSavings ?? 0,
@@ -1150,6 +1483,8 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     usStocksValueINR: p.usStocksValueINR ?? 0,
     usMFValueINR: p.usMFValueINR ?? 0,
     rsuValueINR: p.rsuValueINR ?? 0,
+    totalEquityValue: p.totalEquityValue ?? 0,
+    customInvestments: p.customInvestments ?? [],
     ppfBalance: p.ppfBalance ?? 0,
     npsBalance: p.npsBalance ?? 0,
     epfBalance: p.epfBalance ?? 0,
@@ -1173,6 +1508,7 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
       p.nscDepositAmount ??
       (p as FinancialProfile & { nscMonthly?: number }).nscMonthly ??
       0,
+    nscMaturityYear: p.nscMaturityYear ?? 0,
     primaryGoal: p.primaryGoal?.trim() ? p.primaryGoal : "grow_wealth",
     retirementTargetCorpus: p.retirementTargetCorpus,
     retirementAge: p.retirementAge ?? 0,
@@ -1209,7 +1545,124 @@ export function coalesceInsuranceToggles<T extends Partial<AnalyseFormValues>>(d
 
 export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): FinancialProfile {
   const form = migrateLegacyAnalysePartial(data);
-  return {
+  const unifiedLoans = (form.unifiedLoans ?? []).filter((loan) => (loan.monthlyEMI ?? 0) > 0);
+
+  const mapUnifiedToAdditionalType = (type: UnifiedLoanType): string => {
+    switch (type) {
+      case "personal_loan":
+        return "Personal Loan";
+      case "car_loan":
+        return "Car Loan";
+      case "bike_loan":
+        return "Bike Loan";
+      case "education_loan":
+        return "Education Loan";
+      case "pf_loan":
+        return "PF Loan";
+      case "overdraft":
+        return "Overdraft (OD)";
+      case "gold_loan":
+        return "Gold Loan";
+      case "business_loan":
+        return "Business Loan";
+      case "credit_card":
+        return "Credit Card";
+      default:
+        return "Other Loan";
+    }
+  };
+
+  const firstPersonalIndex = unifiedLoans.findIndex((loan) => loan.loanType === "personal_loan");
+  const firstCarIndex = unifiedLoans.findIndex((loan) => loan.loanType === "car_loan");
+  const firstBikeIndex = unifiedLoans.findIndex((loan) => loan.loanType === "bike_loan");
+  const firstPersonal = firstPersonalIndex >= 0 ? unifiedLoans[firstPersonalIndex] : undefined;
+  const firstCar = firstCarIndex >= 0 ? unifiedLoans[firstCarIndex] : undefined;
+  const firstBike = firstBikeIndex >= 0 ? unifiedLoans[firstBikeIndex] : undefined;
+
+  const existingAdditionalObligations = (form.additionalObligations ?? []).map((row) => {
+    const r = row as {
+      id?: string;
+      type: string;
+      lenderName?: string;
+      lender?: string;
+      monthlyAmount: number;
+      outstandingAmount?: number;
+      tenureMonths?: number;
+      loanTakenYear?: number;
+    };
+    return {
+      id: r.id,
+      type: r.type,
+      lenderName: r.lenderName ?? r.lender,
+      monthlyAmount: r.monthlyAmount,
+      outstandingAmount: r.outstandingAmount,
+      tenureMonths: r.tenureMonths,
+      loanTakenYear: r.loanTakenYear,
+    };
+  });
+
+  const additionalFromUnified = unifiedLoans
+    .map((loan, index) => {
+      if (index === firstPersonalIndex) return null;
+      if (index === firstCarIndex) return null;
+      if (index === firstBikeIndex) return null;
+      return {
+        id: loan.id,
+        type: mapUnifiedToAdditionalType(loan.loanType),
+        lenderName: loan.lenderName ?? "",
+        monthlyAmount: loan.monthlyEMI ?? 0,
+        outstandingAmount: loan.outstandingAmount ?? 0,
+        rateOfInterest: loan.interestRate ?? 0,
+        remainingMonths: loan.remainingMonths ?? 0,
+        odLimit: loan.odLimit ?? 0,
+        odUsed: loan.odUsed ?? 0,
+        odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
+        tenureMonths: loan.remainingMonths ?? 0,
+        loanTakenYear: loan.interestRate ?? 0,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+  const foodTotal =
+    (form.foodTotal ?? 0) > 0
+      ? (form.foodTotal ?? 0)
+      : (form.vegetables ?? 0) + (form.grocery ?? 0) + (form.medicine ?? 0);
+  const transportTotal =
+    (form.transportTotal ?? 0) > 0
+      ? (form.transportTotal ?? 0)
+      : (form.fuel ?? 0) + (form.cabMetro ?? 0);
+  const utilityTotal =
+    (form.utilityTotal ?? 0) > 0
+      ? (form.utilityTotal ?? 0)
+      : (form.electricity ?? 0) + (form.internet ?? 0) + (form.gas ?? 0) + (form.water ?? 0);
+  const domesticHelpTotal =
+    (form.domesticHelpTotal ?? 0) > 0
+      ? (form.domesticHelpTotal ?? 0)
+      : (form.houseHelpMonthly ?? 0) + (form.cookHelpMonthly ?? 0);
+  const lifestyleTotal =
+    (form.lifestyleTotal ?? 0) > 0
+      ? (form.lifestyleTotal ?? 0)
+      : (form.entertainment ?? 0) + (form.shopping ?? 0) + (form.personalCare ?? 0);
+
+  const vegetables = (form.foodTotal ?? 0) > 0 ? Math.round(foodTotal * 0.3) : form.vegetables ?? 0;
+  const grocery = (form.foodTotal ?? 0) > 0 ? Math.round(foodTotal * 0.5) : form.grocery ?? 0;
+  const medicine = (form.foodTotal ?? 0) > 0 ? Math.round(foodTotal * 0.2) : form.medicine ?? 0;
+  const fuel = (form.transportTotal ?? 0) > 0 ? Math.round(transportTotal * 0.6) : form.fuel ?? 0;
+  const cabMetro = (form.transportTotal ?? 0) > 0 ? Math.round(transportTotal * 0.4) : form.cabMetro ?? 0;
+  const electricity = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.35) : form.electricity ?? 0;
+  const internet = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.25) : form.internet ?? 0;
+  const gas = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.2) : form.gas ?? 0;
+  const water = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.1) : form.water;
+  const houseHelpMonthly =
+    (form.domesticHelpTotal ?? 0) > 0 ? Math.round(domesticHelpTotal * 0.6) : form.houseHelpMonthly;
+  const cookHelpMonthly =
+    (form.domesticHelpTotal ?? 0) > 0 ? Math.round(domesticHelpTotal * 0.4) : form.cookHelpMonthly;
+  const entertainment =
+    (form.lifestyleTotal ?? 0) > 0 ? Math.round(lifestyleTotal * 0.4) : form.entertainment ?? 0;
+  const shopping = (form.lifestyleTotal ?? 0) > 0 ? Math.round(lifestyleTotal * 0.4) : form.shopping ?? 0;
+  const personalCare =
+    (form.lifestyleTotal ?? 0) > 0 ? Math.round(lifestyleTotal * 0.2) : form.personalCare;
+
+  const normalized: FinancialProfile = {
     lifeStage: form.lifeStage ?? "bachelor",
     selfAge: form.selfAge ?? 18,
     spouseAge: form.lifeStage === "bachelor" ? undefined : form.spouseAge,
@@ -1232,41 +1685,51 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     rentMaintenanceMonthly: form.rentMaintenanceMonthly,
     homeLoanEMI: form.homeLoanEMI ?? 0,
     secondPropertyEMI: form.secondPropertyEMI ?? 0,
-    carLoanEMI: form.carLoanEMI,
-    bikeEMI: form.bikeEMI,
-    personalLoanEMI: form.personalLoanEMI,
-    personalLoanOutstanding: form.personalLoanOutstanding,
+    carLoanEMI: firstCar?.monthlyEMI ?? form.carLoanEMI,
+    bikeEMI: firstBike?.monthlyEMI ?? form.bikeEMI,
+    personalLoanEMI: firstPersonal?.monthlyEMI ?? form.personalLoanEMI,
+    personalLoanOutstanding: firstPersonal?.outstandingAmount ?? form.personalLoanOutstanding,
+    personalLoanLenderName: firstPersonal?.lenderName ?? form.personalLoanLenderName ?? "",
+    personalLoanRate: firstPersonal?.interestRate ?? form.personalLoanRate,
+    personalLoanRemainingMonths: firstPersonal?.remainingMonths ?? form.personalLoanRemainingMonths,
+    homeLoanLenderName: form.homeLoanLenderName ?? "",
+    homeLoanRate: form.homeLoanRate,
+    homeLoanRemainingMonths: form.homeLoanRemainingMonths,
+    carLoanLenderName: firstCar?.lenderName ?? form.carLoanLenderName ?? "",
+    carLoanRate: firstCar?.interestRate ?? form.carLoanRate,
+    carLoanRemainingMonths: firstCar?.remainingMonths ?? form.carLoanRemainingMonths,
+    bikeLoanLenderName: firstBike?.lenderName ?? form.bikeLoanLenderName ?? "",
+    bikeLoanRate: firstBike?.interestRate ?? form.bikeLoanRate,
+    bikeLoanRemainingMonths: firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths,
+    bikeOutstanding: form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
-    additionalObligations: (form.additionalObligations ?? []).map((row) => {
-      const r = row as {
-        id?: string;
-        type: string;
-        lenderName?: string;
-        lender?: string;
-        monthlyAmount: number;
-      };
-      return {
-        id: r.id,
-        type: r.type,
-        lenderName: r.lenderName ?? r.lender,
-        monthlyAmount: r.monthlyAmount,
-      };
-    }),
+    additionalObligations: [...existingAdditionalObligations, ...additionalFromUnified],
+    odLimit: form.odLimit,
+    odUsed: form.odUsed,
+    odInterestRate: form.odInterestRate,
+    odInterestOnlyYears: form.odInterestOnlyYears,
+    odEMIStartYear: form.odEMIStartYear,
+    unifiedLoans,
 
-    vegetables: form.vegetables ?? 0,
-    grocery: form.grocery ?? 0,
-    medicine: form.medicine ?? 0,
-    fuel: form.fuel ?? 0,
-    cabMetro: form.cabMetro ?? 0,
-    electricity: form.electricity ?? 0,
-    internet: form.internet ?? 0,
-    gas: form.gas ?? 0,
-    water: form.water,
-    houseHelpMonthly: form.houseHelpMonthly,
-    cookHelpMonthly: form.cookHelpMonthly,
-    entertainment: form.entertainment ?? 0,
-    shopping: form.shopping ?? 0,
-    personalCare: form.personalCare,
+    vegetables,
+    grocery,
+    medicine,
+    fuel,
+    cabMetro,
+    electricity,
+    internet,
+    gas,
+    water,
+    houseHelpMonthly,
+    cookHelpMonthly,
+    entertainment,
+    shopping,
+    personalCare,
+    foodTotal: form.foodTotal ?? 0,
+    transportTotal: form.transportTotal ?? 0,
+    utilityTotal: form.utilityTotal ?? 0,
+    domesticHelpTotal: form.domesticHelpTotal ?? 0,
+    lifestyleTotal: form.lifestyleTotal ?? 0,
     kidsSchoolFees: form.lifeStage === "kids" ? form.kidsSchoolFees : undefined,
     kidsActivities: form.lifeStage === "kids" ? form.kidsActivities : undefined,
     parentsSupport: form.parentsSupport,
@@ -1306,6 +1769,7 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     termInsurancePremiumFrequency: form.hasTermInsurance
       ? form.termInsurancePremiumFrequency ?? "monthly"
       : undefined,
+    termInsurancePremiumTillYear: form.hasTermInsurance ? form.termInsurancePremiumTillYear : undefined,
     carInsurancePremiumMonthly: toMonthlyEquivalent(
       form.carInsurancePremiumInput,
       form.carInsurancePremiumFrequency,
@@ -1363,9 +1827,14 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     otherInsurancePremiumFrequency: form.hasOtherInsurance
       ? form.otherInsurancePremiumFrequency ?? "monthly"
       : undefined,
+    lifeInsuranceMaturityAmount: form.hasOtherInsurance ? form.lifeInsuranceMaturityAmount : undefined,
+    lifeInsuranceMaturityYear: form.hasOtherInsurance ? form.lifeInsuranceMaturityYear : undefined,
 
     savingsAccountBalance: form.savingsAccountBalance ?? 0,
     fdValue: form.fdValue,
+    fdRate: form.fdRate,
+    fdMaturityYear: form.fdMaturityYear,
+    fdTenureYears: form.fdTenureYears,
     liquidMFValue: form.liquidMFValue,
     emergencyFundCurrent: form.emergencyFundCurrent ?? 0,
     otherLiquidSavings: form.otherLiquidSavings,
@@ -1374,6 +1843,8 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     usStocksValueINR: form.usStocksValueINR,
     usMFValueINR: form.usMFValueINR,
     rsuValueINR: form.rsuValueINR,
+    totalEquityValue: form.totalEquityValue,
+    customInvestments: form.customInvestments ?? [],
     ppfBalance: form.ppfBalance,
     npsBalance: form.npsBalance,
     epfBalance: form.epfBalance,
@@ -1400,6 +1871,7 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
           (form as Partial<AnalyseFormValues> & { nscMonthly?: number }).nscMonthly ??
           0)
       : 0,
+    nscMaturityYear: form.investsInNsc ? form.nscMaturityYear : undefined,
     investsInNsc: form.investsInNsc ?? false,
 
     primaryGoal: form.primaryGoal ?? "",
@@ -1419,6 +1891,16 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     carPurchaseTarget: form.ownsCar ? undefined : form.carPurchaseTarget,
     carPurchaseYear: form.ownsCar ? undefined : form.carPurchaseYear,
   };
+
+  console.log("=== ALL LOANS NORMALIZED ===", {
+    personalLoanEMI: normalized.personalLoanEMI,
+    carLoanEMI: normalized.carLoanEMI,
+    bikeEMI: normalized.bikeEMI,
+    additionalObligations: JSON.stringify(normalized.additionalObligations),
+    totalLoanCount: 1 + (normalized.additionalObligations?.length || 0),
+  });
+
+  return normalized;
 }
 
 export const analyseDefaultValues: Partial<AnalyseFormValues> = {
@@ -1434,6 +1916,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   spouseIncome: 0,
   otherIncome: 0,
   additionalObligations: [],
+  unifiedLoans: [],
   rentAmount: 0,
   rentMaintenanceMonthly: 0,
   homeLoanEMI: 0,
@@ -1442,7 +1925,25 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   bikeEMI: 0,
   personalLoanEMI: 0,
   personalLoanOutstanding: 0,
+  personalLoanLenderName: "",
+  personalLoanRate: 0,
+  personalLoanRemainingMonths: 0,
+  homeLoanLenderName: "",
+  homeLoanRate: 0,
+  homeLoanRemainingMonths: 0,
+  carLoanLenderName: "",
+  carLoanRate: 0,
+  carLoanRemainingMonths: 0,
+  bikeLoanLenderName: "",
+  bikeLoanRate: 0,
+  bikeLoanRemainingMonths: 0,
+  bikeOutstanding: 0,
   creditCardBillMonthly: 0,
+  odLimit: 0,
+  odUsed: 0,
+  odInterestRate: 0,
+  odInterestOnlyYears: 0,
+  odEMIStartYear: 0,
   hasHealthInsurance: false,
   healthInsuranceSumInsured: 0,
   healthInsurancePremiumInput: 0,
@@ -1451,6 +1952,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   termInsuranceSumAssured: 0,
   termInsurancePremiumInput: 0,
   termInsurancePremiumFrequency: "monthly",
+  termInsurancePremiumTillYear: 0,
   carInsurancePremiumInput: 0,
   carInsurancePremiumFrequency: "monthly",
   bikeInsurancePremiumInput: 0,
@@ -1459,6 +1961,8 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   otherInsurancePremiumInput: 0,
   otherInsurancePremiumFrequency: "monthly",
   otherInsurancePremiums: [],
+  lifeInsuranceMaturityAmount: 0,
+  lifeInsuranceMaturityYear: 0,
   ownsHome: false,
   homeMarketValue: 0,
   homeLoanOutstanding: 0,
@@ -1476,9 +1980,13 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   monthlyEPFContribution: 0,
   ssy: 0,
   nscDepositAmount: 0,
+  nscMaturityYear: 0,
   investsInNsc: false,
   savingsAccountBalance: 0,
   fdValue: 0,
+  fdRate: 0,
+  fdMaturityYear: 0,
+  fdTenureYears: 0,
   liquidMFValue: 0,
   emergencyFundCurrent: 0,
   otherLiquidSavings: 0,
@@ -1487,6 +1995,8 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   usStocksValueINR: 0,
   usMFValueINR: 0,
   rsuValueINR: 0,
+  totalEquityValue: 0,
+  customInvestments: [],
   ppfBalance: 0,
   npsBalance: 0,
   epfBalance: 0,
@@ -1504,6 +2014,11 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   entertainment: 0,
   shopping: 0,
   personalCare: 0,
+  foodTotal: 0,
+  transportTotal: 0,
+  utilityTotal: 0,
+  domesticHelpTotal: 0,
+  lifestyleTotal: 0,
   kidsSchoolFees: 0,
   kidsActivities: 0,
   parentsSupport: 0,

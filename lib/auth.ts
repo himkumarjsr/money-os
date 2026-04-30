@@ -1,6 +1,6 @@
 "use client";
 
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase";
 import { useAuthStore, type User } from "@/store/authStore";
 
 function randomReferralCode(seed: string) {
@@ -9,9 +9,6 @@ function randomReferralCode(seed: string) {
 }
 
 export async function signInWithGoogle() {
-  if (!supabase) {
-    return { data: null, error: new Error("Supabase is not configured") };
-  }
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: window.location.origin },
@@ -20,18 +17,12 @@ export async function signInWithGoogle() {
 }
 
 export async function sendOTP(phone: string) {
-  if (!supabase) {
-    return { data: null, error: new Error("Supabase is not configured") };
-  }
   const formatted = `+91${phone.replace(/\D/g, "")}`;
   const { data, error } = await supabase.auth.signInWithOtp({ phone: formatted });
   return { data, error };
 }
 
 export async function verifyOTP(phone: string, token: string) {
-  if (!supabase) {
-    return { data: null, error: new Error("Supabase is not configured") };
-  }
   const formatted = `+91${phone.replace(/\D/g, "")}`;
   const { data, error } = await supabase.auth.verifyOtp({
     phone: formatted,
@@ -67,9 +58,38 @@ export function bootstrapAuthUser(params: {
 }
 
 export async function signOut() {
-  if (supabase) {
-    await supabase.auth.signOut();
-  }
+  await supabase.auth.signOut();
   useAuthStore.getState().logout();
+  return { error: null as string | null };
+}
+
+export async function signUpWithEmail(email: string, password: string, name: string) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { name } },
+  });
+  return { data, error };
+}
+
+export async function signInWithEmail(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  return { data, error };
+}
+
+export async function getCurrentUser() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+}
+
+export async function onAuthChange(callback: (user: any) => void) {
+  return supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session?.user || null);
+  });
 }
 

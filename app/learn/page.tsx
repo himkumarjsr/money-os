@@ -2,24 +2,13 @@ import { LearnHub } from "@/components/learn/learn-hub";
 import { learnArticles } from "@/lib/learnContent";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { generatePageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Learn personal finance — guides for India | Finkoin",
-  description:
-    "Free, practical explainers on tax, investing, insurance, loans, and property — written for Indian households. Filter by topic and read in minutes.",
-  openGraph: {
-    title: "Finkoin Learn — personal finance education",
-    description:
-      "Compound interest, tax regimes, SIPs, home loans, insurance, and more — clear articles with no jargon overload.",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Finkoin Learn — personal finance education",
-    description:
-      "Compound interest, tax regimes, SIPs, home loans, insurance, and more.",
-  },
-};
+export const metadata: Metadata = generatePageMeta(
+  "Learn Personal Finance — Finkoin",
+  "Learn about emergency funds, term insurance, SIP investing, tax saving, and more. Free financial education for Indians.",
+  ["financial education India", "personal finance tips India"],
+);
 
 export default function LearnPage() {
   return (

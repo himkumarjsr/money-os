@@ -53,3 +53,18 @@ export function generateAmortisationTable(
   return rows;
 }
 
+export function calculateOutstanding(
+  emi: number,
+  annualRate: number,
+  remainingMonths: number,
+): number {
+  const e = Math.max(0, emi || 0);
+  const r = Math.max(0, annualRate || 0) / 12 / 100;
+  const n = Math.max(0, Math.round(remainingMonths || 0));
+  if (e <= 0 || n <= 0) return 0;
+  if (r <= 0) return e * n;
+  const discountFactor = 1 - Math.pow(1 + r, -n);
+  if (discountFactor <= 0) return e * n;
+  return (e * discountFactor) / r;
+}
+

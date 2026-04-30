@@ -84,7 +84,7 @@ describe("mergeAnalyseDraftWithProfile", () => {
 
   it("fills lenderName from profile when draft row omits it (legacy lender key)", () => {
     const profile: Partial<AnalyseFormValues> = {
-      additionalObligations: [{ type: "PF Loan", lender: "HDFC PF", monthlyAmount: 5_000 }],
+      additionalObligations: [{ type: "PF Loan", lenderName: "HDFC PF", monthlyAmount: 5_000 }],
     };
 
     const draft: Partial<AnalyseFormValues> = {

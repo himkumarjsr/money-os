@@ -47,10 +47,18 @@
     @apply min-h-dvh bg-surface text-[color:var(--color-text)] transition-colors;
   }
 
+  main {
+    position: relative;
+  }
+
   html::-webkit-scrollbar,
   body::-webkit-scrollbar {
     display: none;
   }
+}
+
+.scroll-container {
+  position: relative;
 }
 
 .nav-underline {
@@ -78,4 +86,15 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

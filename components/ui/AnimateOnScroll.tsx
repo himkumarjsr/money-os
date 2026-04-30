@@ -77,6 +77,7 @@ export default function AnimateOnScroll({
   return (
     <motion.div
       ref={ref}
+      style={{ position: "relative" }}
       variants={variants[variant]}
       initial={aboveFold ? "visible" : "hidden"}
       animate={visible ? "visible" : "hidden"}

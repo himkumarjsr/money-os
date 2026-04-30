@@ -16,7 +16,7 @@ export default function ScrollSection({ children }: { children: React.ReactNode 
   const y = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [28, 0, 0, -28]);
 
   return (
-    <motion.div ref={ref} style={{ y }}>
+    <motion.div ref={ref} style={{ y, position: "relative" }}>
       {children}
     </motion.div>
   );

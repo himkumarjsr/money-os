@@ -202,7 +202,15 @@ export function FinkoinAiPlanView({
                   const plUnknown = personalLoanPrincipalUnknown(d, profile);
                   return (
                     <tr key={`${d.debtType}-${i}`} className="border-t border-slate-100">
-                      <td className="px-3 py-2 font-medium text-slate-900">{d.debtType}</td>
+                      <td className="px-3 py-2 font-medium text-slate-900">
+                        {(d as FinkoinDebtPlanItem & { displayName?: string }).displayName || d.debtType}
+                        {(d as FinkoinDebtPlanItem & { lenderName?: string; displayName?: string }).lenderName &&
+                        !(d as FinkoinDebtPlanItem & { displayName?: string }).displayName ? (
+                          <span className="block text-[11px] text-[#9B9A94]">
+                            {(d as FinkoinDebtPlanItem & { lenderName?: string }).lenderName}
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-3 py-2">
                         {plUnknown ? (
                           <span className="text-slate-500">Not provided</span>

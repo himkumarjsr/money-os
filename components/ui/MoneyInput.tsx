@@ -150,6 +150,19 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
           onBlur={handleBlur}
           {...nativeInputProps}
         />
+        {innerRef.current?.value ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (!innerRef.current) return;
+              innerRef.current.value = "";
+              setWords("");
+            }}
+            className="text-xs font-medium text-[#9B9A94] hover:text-[#5F5E5A]"
+          >
+            Clear
+          </button>
+        ) : null}
       </div>
 
       {words ? <div className="mt-1 pl-1 text-xs text-[#9B9A94]">₹{words}</div> : null}

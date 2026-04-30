@@ -164,21 +164,31 @@ export function getUniversalBucketStatus(
 
 export function getUniversalBucketActuals(data: BucketProfileInput) {
   const kids = data.lifeStage === "kids";
+  const foodActual =
+    n(data.foodTotal) > 0 ? n(data.foodTotal) : n(data.vegetables) + n(data.grocery) + n(data.medicine);
+  const transportActual =
+    n(data.transportTotal) > 0 ? n(data.transportTotal) : n(data.fuel) + n(data.cabMetro);
+  const utilityActual =
+    n(data.utilityTotal) > 0
+      ? n(data.utilityTotal)
+      : n(data.electricity) + n(data.internet) + n(data.gas) + n(data.water);
+  const domesticActual =
+    n(data.domesticHelpTotal) > 0
+      ? n(data.domesticHelpTotal)
+      : n(data.houseHelpMonthly) + n(data.cookHelpMonthly);
+  const lifestyleActual =
+    n(data.lifestyleTotal) > 0
+      ? n(data.lifestyleTotal)
+      : n(data.entertainment) + n(data.shopping) + n(data.personalCare);
+
   let needsActual =
     n(data.rentAmount) +
     (n(data.rentAmount) > 0 ? n(data.rentMaintenanceMonthly) : 0) +
     n(data.homeLoanEMI) +
     n(data.secondPropertyEMI) +
-    n(data.vegetables) +
-    n(data.grocery) +
-    n(data.medicine) +
-    n(data.electricity) +
-    n(data.internet) +
-    n(data.gas) +
-    n(data.water) +
-    n(data.fuel) +
-    n(data.cabMetro) +
-    n(data.entertainment) +
+    foodActual +
+    utilityActual +
+    transportActual +
     (kids ? n(data.kidsSchoolFees) : 0);
 
   if (n(data.parentsSupport) > 0) {
@@ -186,13 +196,11 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
   }
 
   needsActual +=
-    n(data.personalCare) +
     (kids ? n(data.kidsActivities) : 0) +
-    n(data.houseHelpMonthly) +
-    n(data.cookHelpMonthly);
+    domesticActual;
 
   const wantsActual =
-    n(data.shopping);
+    lifestyleActual;
 
   const securityActual =
     healthPremiumMonthly(data) +

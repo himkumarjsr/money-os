@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import CalculatorsClient from "./CalculatorsClient";
 import { getItemById } from "./calculator-config";
+import { generatePageMeta } from "@/lib/seo";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://finkoin.com";
 
@@ -86,26 +87,14 @@ type PageProps = {
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const calc = Array.isArray(searchParams?.calc) ? searchParams?.calc[0] : searchParams?.calc;
-  const seo = getSeoForCalc(calc);
   const canonical = calc ? `/calculators?calc=${calc}` : "/calculators";
   return {
-    title: seo.title,
-    description: seo.description,
-    keywords: seo.keywords,
+    ...generatePageMeta(
+      "Free Financial Calculators for India",
+      "SIP calculator, EMI calculator, PPF calculator, home loan calculator, emergency fund calculator and more. All free.",
+      ["financial calculators India", "SIP calculator", "EMI calculator", "PPF calculator", "home loan calculator"],
+    ),
     alternates: { canonical },
-    openGraph: {
-      title: seo.title,
-      description: seo.description,
-      url: `${siteUrl}${canonical}`,
-      type: "website",
-      images: [{ url: "/assets/brand/finkoin-icon-1024.svg", width: 1024, height: 1024 }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: seo.title,
-      description: seo.description,
-      images: ["/assets/brand/finkoin-icon-1024.svg"],
-    },
   };
 }
 

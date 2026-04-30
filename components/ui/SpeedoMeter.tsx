@@ -538,8 +538,42 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
 export default function SpeedoMeter({
   title = "Your financial health gauges",
   className,
+  singleScore,
+  singleTone,
   ...props
-}: SpeedoMeterProps & { title?: string; className?: string }) {
+}: SpeedoMeterProps & {
+  title?: string;
+  className?: string;
+  singleScore?: number;
+  singleTone?: "red" | "amber" | "green";
+}) {
+  if (singleScore != null) {
+    const score = Math.max(0, Math.min(100, Number(singleScore) || 0));
+    const toneColor = singleTone === "red" ? COLORS.red : singleTone === "amber" ? COLORS.amber : COLORS.green;
+    const angle = -180 + (score / 100) * 180;
+    const rad = (angle * Math.PI) / 180;
+    const x2 = 70 + Math.cos(rad) * 43;
+    const y2 = 70 + Math.sin(rad) * 43;
+    return (
+      <section className={cn("rounded-3xl border border-slate-200 bg-white p-3 shadow-sm", className)}>
+        {title ? <h2 className="mb-2 text-sm font-semibold text-slate-900">{title}</h2> : null}
+        <svg viewBox="0 0 140 90" className="mx-auto h-[120px] w-[180px]" aria-hidden>
+          <path d="M 15 70 A 55 55 0 0 1 59 17" stroke={COLORS.zoneRed} strokeWidth="12" fill="none" strokeLinecap="round" />
+          <path d="M 59 17 A 55 55 0 0 1 107 31" stroke={COLORS.zoneAmber} strokeWidth="12" fill="none" strokeLinecap="round" />
+          <path d="M 107 31 A 55 55 0 0 1 125 70" stroke={COLORS.zoneGreen} strokeWidth="12" fill="none" strokeLinecap="round" />
+          <line x1="70" y1="70" x2={x2} y2={y2} stroke={toneColor} strokeWidth="4" strokeLinecap="round" />
+          <circle cx="70" cy="70" r="5" fill={toneColor} />
+          <text x="70" y="56" textAnchor="middle" className="fill-slate-900 text-[20px] font-bold">
+            {Math.round(score)}
+          </text>
+          <text x="70" y="68" textAnchor="middle" className="fill-slate-500 text-[10px]">
+            /100
+          </text>
+        </svg>
+      </section>
+    );
+  }
+
   const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
   const targets = useMemo(() => {
     const c = resolveCaps(hasHomeLoan, caps);

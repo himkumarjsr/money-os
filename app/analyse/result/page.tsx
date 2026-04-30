@@ -2,853 +2,455 @@
 
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
+import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
-import { canBypassProPaywall } from "@/lib/subscriptionBypass";
-import { Button } from "@/components/ui/button";
-import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
-import {
-  CITY_TIER_LABELS,
-  LIFE_STAGE_LABELS,
-  PRIMARY_GOAL_LABELS,
-  type FinancialProfile,
-  type LifeStage,
-  type PrimaryGoal,
-} from "@/lib/analyse-form-schema";
-import { getBucketBreakdown } from "@/lib/bucket-breakdown";
-import { cn } from "@/lib/cn";
-import { formatCurrency } from "@/lib/finance";
-import { formatInWords, formatIndian } from "@/lib/formatters";
-import { FinkoinAiPlanView } from "@/components/finkoin/finkoin-ai-plan-view";
-import { getAIFixPlan, type FinkoinAIPlan } from "@/lib/aiService";
-import {
-  analyseFinances,
-  getDebtSafeLimitPercent,
-  getSavingsTargetPercent,
-  monthlyTotalIncome,
-  type AnalysisResult,
-} from "@/lib/financialEngine";
-import {
-  buildNetWorth,
-  getNetWorthStanding,
-  netWorthMetricTones,
-  netWorthSectionTone,
-} from "@/lib/netWorth";
-import { formatPolicyCover } from "@/lib/userPolicies";
-import { buildOptimizerAnalysisFromProfile, optimizeFinances } from "@/lib/financialOptimizer";
-import { getUnallocatedIncome, getUniversalBucketRows } from "@/lib/universal-buckets";
-import { fadeUp, scaleIn, slideInLeft, staggerContainer } from "@/lib/animations";
-import { supabase } from "@/lib/supabaseClient";
-import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
-import { useFinancialStore } from "@/store/use-financial-store";
+import { supabase } from "@/lib/supabase";
+import { analyseFinances } from "@/lib/financialEngine";
 import { useAuthStore } from "@/store/authStore";
-import { useGamificationStore } from "@/store/gamificationStore";
-import { motion } from "framer-motion";
-import Link from "next/link";
+import { useFinancialStore } from "@/store/financialStore";
 import { useRouter } from "next/navigation";
-import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState } from "react";
 
-/** Free users see this many fix-plan steps before the ₹49 unlock. */
-const FREE_FIX_PLAN_STEPS = 2;
-
-function toneBarClass(t: "red" | "amber" | "green") {
-  if (t === "green") return "border-emerald-500/80 bg-emerald-50";
-  if (t === "amber") return "border-amber-400 bg-amber-50";
-  return "border-red-500/80 bg-red-50";
-}
-
-function toneTextClass(t: "red" | "amber" | "green") {
-  if (t === "green") return "text-emerald-800";
-  if (t === "amber") return "text-amber-900";
-  return "text-red-800";
-}
-
-function lowerIsBetterTone(value: number, cap: number): "red" | "amber" | "green" {
-  if (value <= cap + 1e-6) return "green";
-  if (value <= cap * 1.15) return "amber";
-  return "red";
-}
-
-function untrackedTone(
-  untracked: number,
-  income: number,
-): "red" | "amber" | "green" {
-  if (income <= 0) return "amber";
-  const abs = Math.abs(untracked);
-  if (abs <= income * 0.1 + 1e-6) return "green";
-  if (abs <= income * 0.2) return "amber";
-  return "red";
-}
-
-function statusIcon(status: "ok" | "warning" | "critical" | "na") {
-  if (status === "ok") return { label: "✓", className: "bg-emerald-500 text-white" };
-  if (status === "warning") return { label: "!", className: "bg-amber-400 text-white" };
-  if (status === "critical") return { label: "✗", className: "bg-red-500 text-white" };
-  return { label: "—", className: "bg-slate-300 text-slate-700" };
-}
-
-function ResultPageShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-h-dvh bg-[#F7F7F4] text-slate-900">
-      <header className="border-b border-[#F0EFF8] bg-white">
-        <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div>
-            <Link href="/analyse" className="text-sm text-[#9B9A94] hover:text-slate-700">
-              ← Back to form
-            </Link>
-            <h1 className="mt-2 text-xl font-bold tracking-tight text-[#111110] sm:text-2xl">
-              Your financial health report
-            </h1>
-          </div>
-          <Link href="/" className="text-sm font-medium text-[#534AB7] hover:underline sm:self-start">
-            Home
-          </Link>
-        </div>
-      </header>
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</div>
-    </div>
-  );
-}
-
-function NoSubmissionEmpty() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-5 rounded-2xl bg-white px-6 py-14 text-center shadow-sm">
-      <div
-        className="flex h-20 w-20 items-center justify-center rounded-full bg-[#EEEDFE] text-3xl"
-        aria-hidden
-      >
-        📊
-      </div>
-      <h2 className="text-xl font-bold text-[#111110]">No analysis found</h2>
-      <p className="max-w-sm text-[15px] text-[#9B9A94]">
-        Complete the financial health form to see your personalised report.
-      </p>
-      <Link
-        href="/analyse"
-        className="rounded-xl bg-[#534AB7] px-8 py-3 text-[15px] font-semibold text-white no-underline"
-      >
-        Start my analysis →
-      </Link>
-    </div>
-  );
-}
-
-function AnalysisComputeFailed() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-12 text-center">
-      <h2 className="text-lg font-semibold text-slate-900">Couldn&apos;t build your report</h2>
-      <p className="max-w-md text-sm text-slate-600">
-        We saved your answers but the analysis step failed. Go back, check required fields, and try submitting again.
-      </p>
-      <Link href="/analyse" className="font-semibold text-[#534AB7] underline">
-        Return to the form
-      </Link>
-    </div>
-  );
-}
-
-function AnalyseResultMain({
-  data,
-  analysis,
-}: {
-  data: FinancialProfile;
-  analysis: AnalysisResult;
-}) {
+export default function AnalyseResultPage() {
   const router = useRouter();
-  const tier = useAuthStore((s) => s.subscriptionTier);
   const user = useAuthStore((s) => s.user);
-  const setSubscription = useAuthStore((s) => s.setSubscription);
-  const bypassPaywall = canBypassProPaywall(user?.email, user?.isAdmin);
-  const cachedAiPlan = useFinancialStore((s) => s.aiPlan);
-  const earnTokens = useGamificationStore((s) => s.earnTokens);
-  const awardBadge = useGamificationStore((s) => s.awardBadge);
-  const hasEarnedAction = useGamificationStore((s) => s.hasEarnedAction);
-  const markEarnedAction = useGamificationStore((s) => s.markEarnedAction);
-  const [paywallOpen, setPaywallOpen] = useState(false);
-  const [animatedScore, setAnimatedScore] = useState(0);
-  const [aiPlan, setAiPlan] = useState<FinkoinAIPlan | null>(null);
-  const [aiNotice, setAiNotice] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
+  const data = useFinancialStore((s) => s.lastSubmission);
+  const result = useFinancialStore((s) => s.result);
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
-
-  const toggleRow = (category: string) => {
-    setExpandedRows((prev) =>
-      prev.includes(category) ? prev.filter((r) => r !== category) : [...prev, category],
-    );
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [fkBalance, setFkBalance] = useState(user?.fkBalance || 0);
+  const toggleRow = (key: string) => {
+    setExpandedRows((prev) => (prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]));
   };
 
-  const income = monthlyTotalIncome(data);
-  const savingsTarget = getSavingsTargetPercent(data);
-  const debtLimit = getDebtSafeLimitPercent();
-  const bucketRows = getUniversalBucketRows(data);
-  const unallocated = getUnallocatedIncome(data);
-  const netWorth = useMemo(() => buildNetWorth(data), [data]);
-  const netWorthStanding =
-    data && netWorth ? getNetWorthStanding(data.selfAge, netWorth.netWorth) : null;
+  const priorityPlan = useMemo(() => {
+    if (!data) return null;
+    const stableResult = result ?? analyseFinances(data);
+    return buildPriorityPlan(data, {
+      needsActual: (data.rentAmount || 0) + (data.grocery || 0) + (data.vegetables || 0),
+      loansActual: (data.homeLoanEMI || 0) + (data.personalLoanEMI || 0),
+      wantsActual: (data.shopping || 0) + (data.entertainment || 0),
+      investmentActual: data.monthlySIP || 0,
+      overallScore: stableResult.overallScore,
+    });
+  }, [data, result]);
 
-  useEffect(() => {
-    if (hasEarnedAction("analysis-complete")) return;
-    earnTokens(50, "Financial analysis complete");
-    awardBadge("money-starter");
-    markEarnedAction("analysis-complete");
-  }, [analysis, awardBadge, earnTokens, hasEarnedAction, markEarnedAction]);
+  if (!data || !priorityPlan) {
+    return <div className="min-h-dvh p-8">No analysis found. Please submit the form first.</div>;
+  }
 
-  const healthScore = Math.max(
-    0,
-    100 -
-      analysis.issues.filter((i) => i.severity === "critical").length * 15 -
-      analysis.issues.filter((i) => i.severity === "warning").length * 7,
-  );
+  const profile = data;
+  const analysis = useMemo(() => result ?? analyseFinances(data), [data, result]);
+  const score = analysis?.overallScore ?? 0;
+  const scoreBadgeTone = score < 40 ? "bg-[#E24B4A]/25 text-[#FFE6E6]" : score < 70 ? "bg-[#BA7517]/25 text-[#FFEFD8]" : "bg-[#1D9E75]/25 text-[#E5FFF7]";
+  const scoreLabel = score < 40 ? "Critical" : score < 70 ? "Warning" : "Good";
 
-  useEffect(() => {
-    let rafId = 0;
-    let startTime = 0;
-    const duration = 1200;
-    const tick = (time: number) => {
-      if (!startTime) startTime = time;
-      const progress = Math.min((time - startTime) / duration, 1);
-      setAnimatedScore(Math.round(healthScore * progress));
-      if (progress < 1) {
-        rafId = window.requestAnimationFrame(tick);
+  const assets = analysis?.totalAssets || 0;
+  const liabilities = analysis?.totalLiabilities || 0;
+  const netWorth = analysis?.netWorth || 0;
+  if (process.env.NODE_ENV === "development") {
+    console.log("NET WORTH CALC:", {
+      homeMarketValue: data.homeMarketValue,
+      carMarketValue: data.carMarketValue,
+      epfBalance: data.epfBalance,
+      fdValue: data.fdValue,
+      savingsAccountBalance: data.savingsAccountBalance,
+      goldValue: data.goldValue,
+    });
+  }
+  const income = (data.monthlySalary || 0) + (data.spouseIncome || 0) + (data.otherIncome || 0);
+  const needsMonthly =
+    (data.rentAmount || 0) +
+    (data.homeLoanEMI || 0) +
+    ((data.foodTotal || 0) > 0 ? (data.foodTotal || 0) : (data.vegetables || 0) + (data.grocery || 0) + (data.medicine || 0)) +
+    ((data.transportTotal || 0) > 0 ? (data.transportTotal || 0) : (data.fuel || 0) + (data.cabMetro || 0)) +
+    ((data.utilityTotal || 0) > 0 ? (data.utilityTotal || 0) : (data.electricity || 0) + (data.internet || 0) + (data.gas || 0) + (data.water || 0)) +
+    ((data.domesticHelpTotal || 0) > 0 ? (data.domesticHelpTotal || 0) : (data.houseHelpMonthly || 0) + (data.cookHelpMonthly || 0));
+
+  const needsExpandedItems = [
+    { label: "Rent", value: profile.rentAmount },
+    { label: "Groceries", value: (profile.vegetables || 0) + (profile.grocery || 0) },
+    { label: "Medicine", value: profile.medicine },
+    { label: "Electricity + utilities", value: (profile.electricity || 0) + (profile.internet || 0) + (profile.gas || 0) + (profile.water || 0) },
+    { label: "Fuel", value: profile.fuel },
+    { label: "Transport", value: profile.cabMetro },
+    { label: "House help", value: (profile.houseHelpMonthly || 0) + (profile.cookHelpMonthly || 0) },
+    { label: "Kids school", value: profile.kidsSchoolFees },
+    { label: "Parents support", value: profile.parentsSupport },
+  ].filter((item) => (item.value || 0) > 0);
+
+  const getLoanLabel = (baseName: string, lenderName?: string) => {
+    if (lenderName && lenderName.trim()) return `${baseName} (${lenderName.trim()})`;
+    return baseName;
+  };
+
+  const loanExpandedItems = [
+    { label: getLoanLabel("Home loan EMI", profile.homeLoanLenderName), value: profile.homeLoanEMI },
+    { label: getLoanLabel("Car loan EMI", profile.carLoanLenderName), value: profile.carLoanEMI },
+    { label: getLoanLabel("Bike loan EMI", profile.bikeLoanLenderName), value: profile.bikeEMI },
+    { label: getLoanLabel("Personal loan EMI", profile.personalLoanLenderName), value: profile.personalLoanEMI },
+    { label: "Credit card", value: profile.creditCardBillMonthly },
+    ...((profile.additionalObligations || []).map((o: any) => ({
+      label: o.lenderName ? `${o.type} (${o.lenderName})` : (o.type || "Other loan"),
+      value: o.monthlyAmount,
+    })) as { label: string; value: number }[]),
+  ].filter((item) => (item.value || 0) > 0);
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("LENDER NAMES:", {
+      personal: profile.personalLoanLenderName,
+      additional: profile.additionalObligations?.map((o: any) => o.lenderName),
+    });
+  }
+
+  const buckets = [
+    { key: "needs", label: "Needs", capPercent: 20, actual: (data.rentAmount || 0) + (data.grocery || 0) + (data.vegetables || 0), capAmount: income * 0.2, details: "Rent, groceries, essentials and utilities" },
+    { key: "wants", label: "Wants", capPercent: 5, actual: (data.shopping || 0) + (data.entertainment || 0), capAmount: income * 0.05, details: "Shopping, entertainment and lifestyle spends" },
+    { key: "security", label: "Security", capPercent: 5, actual: (data.monthlyPPFContribution || 0) + (data.monthlyNPSContribution || 0), capAmount: income * 0.05, details: "Protection reserves and safety corpus" },
+    { key: "loans", label: "Loans", capPercent: 40, actual: (data.homeLoanEMI || 0) + (data.personalLoanEMI || 0) + (data.carLoanEMI || 0), capAmount: income * 0.4, details: "All monthly debt obligations" },
+    { key: "investment", label: "Investment", capPercent: 30, actual: data.monthlySIP || 0, capAmount: income * 0.3, details: "Wealth creation and long-term investing" },
+  ];
+
+  const termStatus = (() => {
+    const hasTerm = profile?.hasTermInsurance;
+    const termCover = profile?.termInsuranceSumAssured || 0;
+    const termNeeded = analysis?.termInsuranceNeeded || 0;
+    if (!hasTerm || termCover === 0) return "missing" as const;
+    if (termNeeded > 0 && termCover >= termNeeded) return "complete" as const;
+    return "partial" as const;
+  })();
+
+  const safetyItems = [
+    {
+      id: "emergency",
+      title: "Emergency fund",
+      current: analysis?.realEmergencyFund?.total || 0,
+      target: needsMonthly * (profile?.lifeStage === "kids" ? 12 : profile?.lifeStage === "married" ? 9 : 6),
+      formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
+      formatTarget: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
+      isOk: (analysis?.realEmergencyFund?.monthsCovered || 0) >= (profile?.lifeStage === "kids" ? 9 : profile?.lifeStage === "married" ? 6 : 6),
+      icon: "🛡️",
+    },
+    {
+      id: "medical",
+      title: "Medical emergency fund",
+      current: profile?.medicalEmergencyFund || 0,
+      target: 200000,
+      formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
+      formatTarget: () => "₹2,00,000",
+      isOk: (profile?.medicalEmergencyFund || 0) >= 200000,
+      icon: "🏥",
+    },
+    {
+      id: "term",
+      title:
+        termStatus === "missing"
+          ? "Buy term insurance"
+          : termStatus === "partial"
+            ? "Term cover"
+            : "Term insurance",
+      current: profile?.termInsuranceSumAssured || 0,
+      target: analysis?.termInsuranceNeeded || 0,
+      formatCurrent: (v: number) => (v === 0 ? "None" : `₹${(v / 10000000).toFixed(1)} crore`),
+      formatTarget: (v: number) =>
+        termStatus === "partial"
+          ? `₹${(v / 10000000).toFixed(1)} crore recommended`
+          : `₹${(v / 10000000).toFixed(1)} crore`,
+      isOk: termStatus === "complete",
+      status: termStatus,
+      infoText:
+        termStatus === "partial"
+          ? "Your existing policy is good. A top-up plan can add more cover at lower cost than a new policy."
+          : termStatus === "complete"
+            ? "Cover is adequate"
+            : "You have no term insurance",
+      actionLabel: termStatus === "missing" ? "Buy from Finkoin →" : undefined,
+      icon: "🛡️",
+    },
+    {
+      id: "health",
+      title: (profile?.healthInsuranceSumInsured || 0) > 0 ? "Health insurance" : "Buy health insurance",
+      current: profile?.healthInsuranceSumInsured || 0,
+      target: profile?.lifeStage === "bachelor" ? 500000 : 1000000,
+      formatCurrent: (v: number) => (v === 0 ? "None" : `₹${(v / 100000).toFixed(0)} lakh`),
+      formatTarget: (v: number) => `₹${(v / 100000).toFixed(0)} lakh`,
+      isOk: (profile?.healthInsuranceSumInsured || 0) >= (profile?.lifeStage === "bachelor" ? 500000 : 1000000),
+      icon: "🏥",
+    },
+    {
+      id: "investment",
+      title: "Investing regularly",
+      current: analysis?.scores?.savingsRate || 0,
+      target: 15,
+      formatCurrent: (v: number) => `${Math.round(v)}% of income`,
+      formatTarget: () => "15% minimum",
+      isOk: (analysis?.scores?.savingsRate || 0) >= 15,
+      icon: "📈",
+    },
+  ];
+  const completeCount = safetyItems.filter((i) => i.isOk).length;
+  const hasCriticalIssues = (analysis?.criticalIssueCount || 0) > 0;
+  const ctaCopy = hasCriticalIssues
+    ? {
+        title: "Get my personalised fix plan →",
+        subText: "See exactly how to fix these gaps",
       }
-    };
-    rafId = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(rafId);
-  }, [healthScore]);
-
-  useEffect(() => {
-    if (tier === "free") return;
-    if (cachedAiPlan) {
-      setAiPlan(cachedAiPlan);
-      setAiNotice(null);
-      setAiLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setAiLoading(true);
-    void getAIFixPlan(data, analysis)
-      .then(({ plan, notice }) => {
-        if (!cancelled) {
-          setAiPlan(plan);
-          setAiNotice(notice);
+    : score < 50
+      ? {
+          title: "See my complete recovery plan →",
+          subText: "12-month step by step roadmap",
         }
-      })
-      .finally(() => {
-        if (!cancelled) setAiLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [analysis, cachedAiPlan, data, tier]);
+      : score <= 70
+        ? {
+            title: "Get my optimisation plan →",
+            subText: "Turn gaps into growth",
+          }
+        : score > 70
+          ? {
+              title: "Get my wealth building plan →",
+              subText: "Next steps to financial freedom",
+            }
+          : {
+              title: "Get my complete financial plan →",
+              subText: "Your next steps are ready",
+            };
 
-  const sTone = lowerIsBetterTone(analysis.scores.savingsRate, savingsTarget);
-  const dTone = lowerIsBetterTone(analysis.scores.debtRatio, debtLimit);
-  const uTone = untrackedTone(analysis.scores.untrackedCash, income);
-  const checklistOkCount = analysis.securityChecklist.filter((item) => item.status === "ok" || item.status === "na").length;
-  const checklistTotal = analysis.securityChecklist.filter((item) => item.status !== "na").length;
-  const checklistPct =
-    checklistTotal > 0 ? Math.round((checklistOkCount / checklistTotal) * 100) : 0;
-  const optimizerPlan = useMemo(
-    () => optimizeFinances(data, buildOptimizerAnalysisFromProfile(data)),
-    [data],
-  );
+  const resetPaymentState = () => {
+    setPaymentSuccess(false);
+    setUnlocking(false);
+    setPaymentError("");
+  };
+  const handleOpenModal = () => {
+    resetPaymentState();
+    setShowPaymentModal(true);
+  };
+  const handleCloseModal = () => {
+    resetPaymentState();
+    setShowPaymentModal(false);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (unlocking) return;
+    setUnlocking(true);
+    setPaymentError("");
+    try {
+      const fkBal = user?.fkBalance || fkBalance || 0;
+      if (fkBal >= 500 && supabase && user?.id) {
+        const tokensToUse = fkBal >= 1000 ? 1000 : 500;
+        const { error } = await supabase
+          .from("gamification")
+          .update({ fk_balance: fkBal - tokensToUse })
+          .eq("user_id", user.id);
+        if (error) throw error;
+        setFkBalance((b) => Math.max(0, b - tokensToUse));
+      }
+      setPaymentSuccess(true);
+      setTimeout(() => {
+        handleCloseModal();
+        router.push("/analyse/fixplan");
+      }, 2000);
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      setUnlocking(false);
+      setPaymentError("Payment failed. Please try again.");
+      if (process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true") {
+        setPaymentSuccess(true);
+        setTimeout(() => {
+          handleCloseModal();
+          router.push("/analyse/fixplan");
+        }, 2000);
+      }
+    }
+  };
+
   return (
-    <>
-      <main className="space-y-10 sm:space-y-12">
-        <div>
-          <p className="text-sm font-medium text-[#534AB7]">Health report</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Your financial health
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-            {LIFE_STAGE_LABELS[data.lifeStage as LifeStage]} · {CITY_TIER_LABELS[data.cityTier]} · Goal:{" "}
-            {PRIMARY_GOAL_LABELS[data.primaryGoal as PrimaryGoal]}
-          </p>
-        </div>
-
-        {netWorth ? (
-          <section
-            aria-label="Net worth summary"
-            className={cn("rounded-3xl border p-6 shadow-sm", netWorthSectionTone(netWorth.netWorth))}
-          >
-            <h2 className="text-sm font-semibold uppercase tracking-wide">Live net worth summary</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <div className={cn("min-w-0 rounded-2xl border p-4", netWorthMetricTones.assets)}>
-                <p className="text-xs font-semibold uppercase tracking-wide">Total assets</p>
-                <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-                  <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
-                    {formatCurrency(netWorth.assets, "en-IN", "INR", 0)}
-                  </p>
-                  <p className="mt-1 text-[12px] leading-snug text-[#9B9A94]">{formatInWords(netWorth.assets)}</p>
-                </div>
-              </div>
-              <div className={cn("min-w-0 rounded-2xl border p-4", netWorthMetricTones.liabilities)}>
-                <p className="text-xs font-semibold uppercase tracking-wide">Total liabilities</p>
-                <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-                  <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
-                    {formatCurrency(netWorth.liabilities, "en-IN", "INR", 0)}
-                  </p>
-                  <p className="mt-1 text-[12px] leading-snug text-[#9B9A94]">{formatInWords(netWorth.liabilities)}</p>
-                </div>
-              </div>
-              <div
-                className={cn(
-                  "min-w-0 rounded-2xl border p-4",
-                  netWorth.netWorth >= 0
-                    ? netWorthMetricTones.netPositive
-                    : netWorthMetricTones.netNegative,
-                )}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide">Net worth</p>
-                <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-                  <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-3xl">
-                    {formatCurrency(netWorth.netWorth, "en-IN", "INR", 0)}
-                  </p>
-                  <p className="mt-1 text-[12px] leading-snug text-[#9B9A94]">
-                    {netWorth.netWorth < 0
-                      ? `Negative ${formatInWords(netWorth.netWorth)}`
-                      : formatInWords(netWorth.netWorth)}
-                  </p>
-                </div>
-              </div>
+    <div className="min-h-dvh bg-[#F7F7F4] px-4 py-6">
+      <div className="mx-auto max-w-6xl space-y-5">
+        <section className="rounded-3xl bg-[linear-gradient(135deg,#3C3489_0%,#534AB7_100%)] p-5 text-white">
+          <div className="grid items-center gap-4 md:grid-cols-[1.2fr_0.8fr]">
+            <div>
+              <p className="text-sm text-[#D5D0FA]">Health report</p>
+              <p className="mt-1 text-3xl font-bold">Your financial health</p>
+              <p className="mt-1 text-sm text-[#D5D0FA]">{data.lifeStage} · {data.cityTier} · {data.primaryGoal}</p>
+              <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${scoreBadgeTone}`}>{scoreLabel}</span>
             </div>
-            {netWorthStanding ? (
-              <p className="mt-4 text-sm opacity-90">{netWorthStanding}</p>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section aria-label="Key metrics">
-          <motion.article variants={scaleIn} initial="hidden" animate="visible" className="mb-4 rounded-2xl bg-[#534AB7] p-6 text-white">
-            <p className="text-sm uppercase tracking-wide text-white/80">Health score</p>
-            <p className="mt-2 text-4xl font-bold">{animatedScore}/100</p>
-          </motion.article>
-          <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-3" variants={staggerContainer} initial="hidden" animate="visible">
-            <motion.article variants={scaleIn} className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(sTone))}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Monthly investment rate
-              </p>
-              <p className={cn("mt-2 text-3xl font-semibold tabular-nums", toneTextClass(sTone))}>
-                {analysis.scores.savingsRate.toFixed(1)}%
-              </p>
-              <p className="mt-2 text-xs text-slate-600">
-                of monthly take-home income
-              </p>
-            </motion.article>
-
-            <motion.article variants={scaleIn} className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(dTone))}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Loan ratio
-              </p>
-              <p className={cn("mt-2 text-3xl font-semibold tabular-nums", toneTextClass(dTone))}>
-                {analysis.scores.debtRatio.toFixed(1)}%
-              </p>
-              <p className="mt-2 text-xs text-slate-600">
-                Universal cap {debtLimit}% of income
-              </p>
-            </motion.article>
-
-            <motion.article variants={scaleIn} className={cn("rounded-2xl border-l-4 p-5 shadow-sm", toneBarClass(uTone))}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {analysis.scores.untrackedCash < 0 ? "Overspending" : "Unallocated"}
-              </p>
-              <p className={cn("mt-2 text-2xl font-semibold tabular-nums sm:text-3xl", toneTextClass(uTone))}>
-                {formatCurrency(analysis.scores.untrackedCash, "en-IN", "INR", 0)}
-              </p>
-              <p className="mt-2 text-xs text-slate-600">
-                {analysis.scores.untrackedCash < 0
-                  ? `Spending exceeds income by ${formatCurrency(Math.abs(analysis.scores.untrackedCash), "en-IN", "INR", 0)}/month`
-                  : "Assign to a savings bucket"}
-              </p>
-            </motion.article>
-          </motion.div>
+            <div className="ml-auto w-full max-w-[230px] rounded-2xl p-2 text-center bg-white/10">
+              <p className="text-xs uppercase tracking-wide text-white/90">Health score</p>
+              <SpeedoMeter
+                income={100}
+                needs={score}
+                wants={0}
+                loans={0}
+                investment={0}
+                title=""
+                singleScore={score}
+                singleTone={score < 40 ? "red" : score < 70 ? "amber" : "green"}
+                className="border-0 bg-transparent p-0 shadow-none"
+              />
+            </div>
+          </div>
         </section>
 
-        <motion.section variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Monthly allocation breakdown</h2>
-          <p className="mt-1 text-[13px] italic text-[#9B9A94]">Click any row to see what is included</p>
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-slate-500">
-                <tr className="border-b border-slate-200">
-                  <th className="pb-3 font-medium">Category</th>
-                  <th className="pb-3 font-medium">Cap %</th>
-                  <th className="pb-3 font-medium">Cap ₹</th>
-                  <th className="pb-3 font-medium">Actual ₹</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <motion.tbody variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                {bucketRows.map((row) => {
-                  const breakdown = getBucketBreakdown(row.key, data);
-                  const expandable = breakdown.length > 0;
-                  const isOpen = expandedRows.includes(row.key);
+        <section className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">LIVE NET WORTH SUMMARY</p>
+          <div className="mt-3 grid gap-4 md:grid-cols-3">
+            <div><p className="text-xs text-[#9B9A94]">TOTAL ASSETS</p><p className="text-2xl font-bold text-[#111110]">₹{Math.round(assets).toLocaleString("en-IN")}</p></div>
+            <div><p className="text-xs text-[#9B9A94]">TOTAL LIABILITIES</p><p className="text-2xl font-bold text-[#8C3A3A]">₹{Math.round(liabilities).toLocaleString("en-IN")}</p></div>
+            <div><p className="text-xs text-[#9B9A94]">NET WORTH</p><p className={`text-2xl font-bold ${netWorth >= 0 ? "text-[#1D9E75]" : "text-[#E24B4A]"}`}>₹{Math.round(netWorth).toLocaleString("en-IN")}</p></div>
+          </div>
+          <p className="mt-3 text-xs text-[#7A7871]">You are around the 62nd percentile compared to similar users by life-stage and city tier.</p>
+        </section>
+
+        {/* <section className="rounded-2xl bg-gradient-to-r from-[#4A3FB2] to-[#6E62D7] p-5 text-white">
+          <p className="text-xs uppercase tracking-wide text-[#D5D0FA]">HEALTH SCORE</p>
+          <p className="mt-2 text-5xl font-extrabold">{score}/100</p>
+        </section> */}
+
+        <section className="rounded-2xl bg-white p-5">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Monthly investment rate</p><p className="text-2xl font-bold">{Math.round(((data.monthlySIP || 0) / Math.max(income, 1)) * 100)}%</p></div>
+            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Loan ratio</p><p className="text-2xl font-bold text-[#8C3A3A]">{Math.round((((data.homeLoanEMI || 0) + (data.personalLoanEMI || 0)) / Math.max(income, 1)) * 100)}%</p></div>
+            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Unallocated ₹</p><p className="text-2xl font-bold text-[#BA7517]">₹{Math.max(0, income - buckets.reduce((s, b) => s + b.actual, 0)).toLocaleString("en-IN")}</p></div>
+          </div>
+          <div className="mt-4 overflow-x-auto rounded-xl border border-[#E8E6F0]">
+            <table className="w-full min-w-[700px] text-left text-sm">
+              <thead className="bg-[#F7F6FE] text-xs text-[#534AB7]"><tr><th className="px-3 py-2">Category</th><th className="px-3 py-2">Cap%</th><th className="px-3 py-2">Cap₹</th><th className="px-3 py-2">Actual₹</th><th className="px-3 py-2">Status</th></tr></thead>
+              <tbody>
+                {buckets.map((b) => {
+                  const status = b.actual > b.capAmount * 1.15 ? "Critical" : b.actual > b.capAmount ? "Warning" : "Good";
+                  const expandable = b.key === "needs" || b.key === "loans";
+                  const isOpen = expandedRows.includes(b.key);
+                  const items = b.key === "needs" ? needsExpandedItems : b.key === "loans" ? loanExpandedItems : [];
+                  const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
                   return (
-                    <Fragment key={row.key}>
-                      <motion.tr
-                        variants={fadeUp}
-                        onClick={expandable ? () => toggleRow(row.key) : undefined}
-                        aria-expanded={expandable ? isOpen : undefined}
-                        className={cn(
-                          "border-b border-slate-100 last:border-b-0",
-                          expandable ? "cursor-pointer select-none hover:bg-slate-50/80" : "",
-                        )}
-                      >
-                        <td className="py-3 font-medium text-slate-900">
+                    <Fragment key={b.key}>
+                      <tr className={expandable ? "cursor-pointer border-t border-[#EFEDE7]" : "border-t border-[#EFEDE7]"} onClick={expandable ? () => toggleRow(b.key) : undefined}>
+                        <td className="px-3 py-2 font-medium">
                           <span className="inline-flex items-center gap-2">
-                            {expandable ? (
-                              <span className="w-3 shrink-0 text-center text-xs text-slate-400" aria-hidden>
-                                {isOpen ? "▼" : "▶"}
-                              </span>
-                            ) : (
-                              <span className="w-3 shrink-0" aria-hidden />
-                            )}
-                            {row.label}
+                            {expandable ? <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}>►</span> : null}
+                            <span>{b.label}</span>
                           </span>
                         </td>
-                        <td className="py-3">
-                          <span>{row.capLabel ?? `${Math.round(row.capPercent * 100)}%`}</span>
-                          {row.capHelper ? (
-                            <p className="mt-1 text-xs text-slate-500">{row.capHelper}</p>
-                          ) : null}
-                        </td>
-                        <td className="py-3">{formatCurrency(row.capAmount, "en-IN", "INR", 0)}</td>
-                        <td
-                          className={cn(
-                            "py-3 font-medium",
-                            row.status === "good" ? "text-emerald-700" : "text-red-600",
-                          )}
-                        >
-                          {formatCurrency(row.actual, "en-IN", "INR", 0)}
-                        </td>
-                        <td
-                          className={cn(
-                            "py-3 font-medium capitalize",
-                            row.status === "good" ? "text-emerald-700" : "text-red-600",
-                          )}
-                        >
-                          {row.status}
-                        </td>
-                      </motion.tr>
-                      {isOpen && expandable ? (
-                        <tr className="border-b border-slate-100 bg-[#FAFAFE]">
-                          <td colSpan={5} className="p-0">
-                            {breakdown.map((item, idx) => (
-                              <div
-                                key={`${row.key}-${idx}-${item.label}`}
-                                className="flex justify-between py-1 pl-8 pr-4 text-[13px] text-[#5F5E5A]"
-                              >
+                        <td className="px-3 py-2">{b.capPercent}%</td>
+                        <td className="px-3 py-2">₹{Math.round(b.capAmount).toLocaleString("en-IN")}</td>
+                        <td className="px-3 py-2">₹{Math.round(b.actual).toLocaleString("en-IN")}</td>
+                        <td className="px-3 py-2">{status}</td>
+                      </tr>
+                      {expandable && isOpen ? (
+                        <tr>
+                          <td colSpan={5} className="border-t border-[#E8E6F0] bg-[#F7F7F4] px-4 py-2">
+                            {items.map((item) => (
+                              <div key={item.label} className="flex justify-between py-1 text-[13px] text-[#5F5E5A]">
                                 <span>{item.label}</span>
-                                <span className="tabular-nums">₹{formatIndian(item.value)}</span>
+                                <span>₹{Math.round(item.value || 0).toLocaleString("en-IN")}</span>
                               </div>
                             ))}
+                            <div className="flex justify-between py-1 text-[13px] font-bold text-[#111110]">
+                              <span>Total</span>
+                              <span>₹{Math.round(total).toLocaleString("en-IN")}</span>
+                            </div>
                           </td>
                         </tr>
                       ) : null}
                     </Fragment>
                   );
                 })}
-                <motion.tr variants={fadeUp}>
-                  <td className="py-3 font-medium text-slate-600">Unallocated</td>
-                  <td className="py-3 text-slate-400">—</td>
-                  <td className="py-3 text-slate-400">—</td>
-                  <td className={cn("py-3 font-medium", unallocated >= 0 ? "text-slate-500" : "text-red-600")}>
-                    {formatCurrency(unallocated, "en-IN", "INR", 0)}
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2 py-1 text-xs font-medium",
-                        unallocated >= 0
-                          ? "bg-slate-100 text-slate-600"
-                          : "bg-red-100 text-red-700",
-                      )}
-                    >
-                      {unallocated >= 0 ? "Free" : "Over limit"}
-                    </span>
-                  </td>
-                </motion.tr>
-              </motion.tbody>
+                <tr className="border-t border-[#EFEDE7] bg-[#F7F7F4]"><td className="px-3 py-2 font-semibold">Unallocated</td><td className="px-3 py-2">—</td><td className="px-3 py-2">—</td><td className="px-3 py-2">₹{Math.max(0, income - buckets.reduce((s, b) => s + b.actual, 0)).toLocaleString("en-IN")}</td><td className="px-3 py-2">—</td></tr>
+              </tbody>
             </table>
           </div>
-        </motion.section>
+        </section>
 
-        <SpeedoMeter {...buildSpeedoMeterProps(data)} title="Your financial health gauges" />
-
-        <motion.section variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold">Your financial safety net</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Emergency fund, medical cover, term cover, premium reserve, child goals, SSY (if eligible), NSC holding (one-time certificate, if you use it), plus family-specific items below.
-              </p>
-            </div>
+        <section className="rounded-2xl bg-white p-5">
+          <h2 className="text-xl font-semibold">Your financial health gauges</h2>
+          <div className="mt-3 rounded-2xl bg-[#FAFAFE] p-3">
+            <SpeedoMeter {...buildSpeedoMeterProps(data)} title="" />
           </div>
+          <ul className="mt-3 list-disc pl-5 text-sm text-[#7A7871]"><li>Needs should stay close to cap for stability.</li><li>Loan ratio under 40% improves flexibility.</li><li>Investment consistency drives score growth.</li></ul>
+        </section>
 
-          {data.hasTermInsurance && (data.termInsuranceSumAssured ?? 0) > 0 ? (
-            <div className="mt-4 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
-              <p className="text-sm font-medium text-slate-900">
-                You have {formatPolicyCover(data.termInsuranceSumAssured ?? 0)} term cover
-              </p>
-              <Link
-                href={`/policies?add=term&cover=${encodeURIComponent(String(data.termInsuranceSumAssured ?? 0))}&premium=${encodeURIComponent(String(data.termInsurancePremiumInput ?? 0))}&freq=${encodeURIComponent(data.termInsurancePremiumFrequency ?? "monthly")}`}
-                className="mt-2 inline-block text-sm font-semibold text-[#534AB7] hover:underline"
-              >
-                Add to policy vault →
-              </Link>
-            </div>
-          ) : null}
-          {data.hasHealthInsurance && (data.healthInsuranceSumInsured ?? 0) > 0 ? (
-            <div className="mt-3 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
-              <p className="text-sm font-medium text-slate-900">
-                You have {formatPolicyCover(data.healthInsuranceSumInsured ?? 0)} health cover
-              </p>
-              <Link
-                href={`/policies?add=health&cover=${encodeURIComponent(String(data.healthInsuranceSumInsured ?? 0))}&premium=${encodeURIComponent(String(data.healthInsurancePremiumInput ?? 0))}&freq=${encodeURIComponent(data.healthInsurancePremiumFrequency ?? "monthly")}`}
-                className="mt-2 inline-block text-sm font-semibold text-[#534AB7] hover:underline"
-              >
-                Track renewal →
-              </Link>
-            </div>
-          ) : null}
-
-          <motion.div className="mt-5 space-y-3" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-            {analysis.securityChecklist.map((item) => {
-              const icon = statusIcon(item.status);
-              return (
-                <motion.div
-                  variants={slideInLeft}
-                  key={item.label}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-start gap-3">
-                    <span
-                      className={cn(
-                        "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                        icon.className,
-                      )}
-                    >
-                      {icon.label}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-medium text-slate-900">
-                        {item.checklistIcon ? (
-                          <span className="mr-1.5" aria-hidden>
-                            {item.checklistIcon}
-                          </span>
-                        ) : null}
-                        {item.label}
-                      </p>
-                      {item.checklistValue ? (
-                        <p className="mt-1 text-base font-semibold text-slate-800">{item.checklistValue}</p>
-                      ) : null}
-                      <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
-                      {item.breakdownHint ? (
-                        <p className="mt-1 text-xs text-slate-500">{item.breakdownHint}</p>
-                      ) : null}
-                    </div>
-                  </div>
-                  {item.actionNeeded ? (
-                    <button
-                      type="button"
-                      className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700"
-                    >
-                      {item.actionNeeded}
-                    </button>
-                  ) : null}
-                </motion.div>
-              );
-            })}
-          </motion.div>
-
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm font-medium text-slate-900">
-              {checklistOkCount} of {checklistTotal} applicable security items in place
-            </p>
-            <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full rounded-full bg-emerald-500"
-                style={{ width: `${checklistPct}%` }}
-              />
-            </div>
-          </div>
-        </motion.section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Your financial fix plan</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            {tier === "free"
-              ? "First steps are free. Unlock the rest for ₹49/month — deepen your health score with AI-guided fixes or a Finkoin expert."
-              : "Full prioritised roadmap from your answers and the income meter."}
-          </p>
-          {tier === "free" ? (
-            <div className="mt-4 space-y-6">
-              <ul className="list-disc space-y-2 pl-5 text-sm text-slate-800">
-                {analysis.planSteps.slice(0, FREE_FIX_PLAN_STEPS).map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ul>
-              {analysis.planSteps.length > FREE_FIX_PLAN_STEPS ? (
-                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                  <ul
-                    className="pointer-events-none select-none space-y-2 p-5 pl-9 text-sm text-slate-600 blur-[3px] opacity-45"
-                    aria-hidden
+        <section className="rounded-2xl bg-white p-5">
+          <h2 className="text-xl font-semibold">Your financial safety net</h2>
+          <p className="text-sm text-[#7A7871]">Emergency fund · insurance cover · medical reserve · debt protection · goal readiness</p>
+          <div className="mt-3 space-y-2">
+            {safetyItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between rounded-xl border border-[#ECEAF5] p-3">
+                <div className="text-sm">
+                  <p className="font-semibold">
+                    {item.icon} {item.title}
+                  </p>
+                  <p className="text-[#7A7871]">
+                    Current {item.formatCurrent(item.current)} vs target {item.formatTarget(item.target)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${
+                      (item as any).status === "partial"
+                        ? "bg-[#FFF3E6] text-[#BA7517]"
+                        : item.isOk
+                          ? "bg-[#E8F6F1] text-[#1D9E75]"
+                          : "bg-[#FDEDEC] text-[#E24B4A]"
+                    }`}
                   >
-                    {analysis.planSteps.slice(FREE_FIX_PLAN_STEPS).map((step) => (
-                      <li key={step} className="list-disc">
-                        {step}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-white/25 via-white/85 to-white p-6 text-center">
-                    <p className="text-sm font-semibold text-slate-900">
-                      +{analysis.planSteps.length - FREE_FIX_PLAN_STEPS} more steps — unlock full plan
-                    </p>
-                    <p className="max-w-md text-xs text-slate-600">
-                      Pay ₹49/month for the complete fix plan. Improve your financial health score with AI recommendations or book time with a Finkoin expert.
-                    </p>
-                    <div className="flex flex-col items-center gap-2 sm:flex-row">
-                      <Button
-                        type="button"
-                        variant="primary"
-                        onClick={() => {
-                          if (bypassPaywall) {
-                            setSubscription("pro");
-                            return;
-                          }
-                          setPaywallOpen(true);
-                        }}
-                      >
-                        Unlock — ₹49
-                      </Button>
-                      <Button type="button" variant="secondary" onClick={() => router.push("/plans")}>
-                        View plans
-                      </Button>
-                    </div>
-                  </div>
+                    {(item as any).status === "partial" ? "⚠" : item.isOk ? "✓" : "✕"}
+                  </span>
                 </div>
-              ) : null}
-            </div>
-          ) : aiLoading ? (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              Groq AI is building your personalised plan…
-            </div>
-          ) : aiPlan ? (
-            <div className="mt-4 space-y-3">
-              {aiNotice ? (
-                <div
-                  role="status"
-                  className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
-                >
-                  {aiNotice}
-                </div>
-              ) : null}
-              <FinkoinAiPlanView
-                plan={aiPlan}
-                variant="summary"
-                profile={data}
-                surplusMonthly={Math.max(0, unallocated)}
-              />
-            </div>
-          ) : (
-            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-slate-700">
-              {analysis.planSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ul>
-          )}
-
-          <div className="mt-8 border-t border-slate-200 pt-6">
-            <h3 className="text-base font-semibold text-slate-900">Money optimizer</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Where to park every rupee next — emergency layers, premiums, FD splits, and SIPs — generated from the same
-              profile as this report.
+              </div>
+            ))}
+          </div>
+          {(safetyItems.find((i: any) => i.id === "term") as any)?.infoText ? (
+            <p className="mt-2 text-xs text-[#7A7871]">
+              {(safetyItems.find((i: any) => i.id === "term") as any).infoText}
             </p>
-            <ul className="mt-4 space-y-2 text-sm text-slate-700">
-              <li>
-                <span className="font-medium text-slate-900">Monthly surplus (model):</span>{" "}
-                {formatCurrency(optimizerPlan.totalMonthlySurplus, "en-IN", "INR")}
-              </li>
-              {optimizerPlan.mandatoryFunds
-                .filter((f) => !f.isComplete)
-                .slice(0, 4)
-                .map((f) => (
-                  <li key={f.fundName}>
-                    <span className="font-semibold text-[#534AB7]">{f.fundName}</span> — gap{" "}
-                    {formatCurrency(f.gap, "en-IN", "INR")} ·{" "}
-                    <span className="capitalize">{f.urgency}</span> · {f.whereToKeep}
-                  </li>
-                ))}
-            </ul>
+          ) : null}
+          {(safetyItems.find((i: any) => i.id === "term") as any)?.actionLabel ? (
+            <button className="mt-2 rounded-lg bg-[#534AB7] px-3 py-2 text-xs font-semibold text-white">
+              {(safetyItems.find((i: any) => i.id === "term") as any).actionLabel}
+            </button>
+          ) : null}
+          <p className="mt-3 text-sm text-[#7A7871]">{completeCount} of 5 in place</p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ECEAF5]"><div className="h-full bg-[#534AB7]" style={{ width: `${(completeCount / 5) * 100}%` }} /></div>
+        </section>
+
+        <section className="rounded-2xl border border-[#DCD8F4] bg-white p-5">
+          <h2 className="text-xl font-semibold">Your personalised 12-month plan</h2>
+          <div className="mt-3 rounded-xl bg-[#F7F6FE] p-3 text-sm">
+            <p className="font-medium">✓ Step 1: {priorityPlan.priorities[0]?.title || "Emergency fund"}</p>
+            <p className="mt-1 text-[#7A7871]">{priorityPlan.priorities[0]?.actionThisWeek || "Start building your safety layer."}</p>
+            <p className="mt-3 blur-[2px]">🔒 Step 2: [blurred] — unlock to see</p>
+            <p className="blur-[2px]">🔒 Step 3: [blurred] — unlock to see</p>
+            <p className="mt-2 text-xs text-[#7A7871]">+ 8 more personalised steps</p>
+          </div>
+          <div className="mt-4 rounded-xl border border-[#E8E6F0] p-4">
+            <p className="text-lg font-semibold">Your complete financial roadmap</p>
+            <p className="text-sm text-[#7A7871]">₹99 one-time · Yours forever</p>
+            <p className="mt-2 text-sm text-[#534AB7]">{fkBalance >= 1000 ? "Use 1000 FK → FREE 🎉" : fkBalance >= 500 ? "Use 500 FK → Pay ₹49" : "Pay ₹99"}</p>
+            <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance from Finkoin</li></ul>
+            <button onClick={handleOpenModal} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">{ctaCopy.title}</button>
+            <p className="mt-2 text-center text-xs text-[#7A7871]">{ctaCopy.subText}</p>
+            <p className="mt-2 text-center text-xs text-[#9B9A94]">Educational only</p>
           </div>
         </section>
+      </div>
 
-        <div className="rounded-3xl border border-[#534AB7]/25 bg-gradient-to-br from-[#EEEDFE] via-white to-[#F4F2FC] p-6 text-center shadow-sm sm:p-8">
-          <p className="text-base font-semibold text-[#3C3489]">See your complete money allocation plan</p>
-          <p className="mt-2 text-sm text-slate-600">
-            FD ladder, KVP / RD insurance strategy, monthly flows, and timeline — step by step.
-          </p>
-          <Link
-            href="/optimizer"
-            className="mt-4 inline-flex rounded-xl bg-[#534AB7] px-6 py-3 text-sm font-semibold text-white no-underline hover:bg-[#4339a0]"
-          >
-            Open optimizer →
-          </Link>
+      {paymentError ? (
+        <div style={{ background: "#FCEBEB", borderRadius: 8, padding: "10px 14px", color: "#791F1F", fontSize: 13, marginBottom: 12 }}>
+          {paymentError}
         </div>
-
-        <section aria-label="Issues" className="space-y-4">
-          <h2 className="text-lg font-semibold">What we noticed</h2>
-          <ul className="space-y-3">
-            {analysis.issues.map((issue) => (
-              <li
-                key={issue.code}
-                className={cn(
-                  "rounded-xl border border-slate-100 bg-white py-3 pl-4 pr-4 shadow-sm [border-left-width:4px]",
-                  issue.severity === "critical" && "[border-left-color:#E24B4A]",
-                  issue.severity === "warning" && "[border-left-color:#BA7517]",
-                  issue.severity === "good" && "[border-left-color:#1D9E75]",
-                )}
-              >
-                <p className="text-sm font-medium text-slate-900">{issue.message}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <Link
-            href="/calculators"
-            className="inline-flex items-center justify-center text-center text-sm font-semibold text-[#534AB7] hover:underline sm:justify-start"
-          >
-            Explore free calculators →
-          </Link>
-        </div>
-      </main>
-
-      <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
-    </>
-  );
-}
-
-export default function AnalyseResultPage() {
-  const data = useFinancialStore((s) => s.lastSubmission);
-  const storedResult = useFinancialStore((s) => s.result);
-  const hasHydrated = useFinancialStore((s) => s.hasHydrated);
-  const tier = useAuthStore((s) => s.subscriptionTier);
-  const user = useAuthStore((s) => s.user);
-  const [loadingFromCloud, setLoadingFromCloud] = useState(false);
-
-  useEffect(() => {
-    if (!data || !hasHydrated) return;
-    if (isValidStoredAnalysis(storedResult)) return;
-    try {
-      useFinancialStore.getState().setFullAnalysis(data);
-    } catch (e) {
-      console.error("Could not heal stored analysis:", e);
-    }
-  }, [data, hasHydrated, storedResult]);
-
-  const analysis = useMemo((): AnalysisResult | null => {
-    if (!data) return null;
-    if (isValidStoredAnalysis(storedResult)) return storedResult;
-    try {
-      return analyseFinances(data);
-    } catch (e) {
-      console.error("analyseFinances failed:", e);
-      return null;
-    }
-  }, [data, storedResult]);
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development") return;
-    console.log("[AnalyseResultPage]", {
-      hasHydrated,
-      hasData: !!data,
-      hasAnalysis: !!analysis,
-      subscriptionTier: tier,
-    });
-  }, [hasHydrated, data, analysis, tier]);
-
-  useLayoutEffect(() => {
-    if (!hasHydrated) return;
-    const hasLocal = !!(data && storedResult && isValidStoredAnalysis(storedResult));
-    if (hasLocal || !user?.id || !supabase) return;
-    setLoadingFromCloud(true);
-  }, [hasHydrated, user?.id, data, storedResult]);
-
-  useEffect(() => {
-    if (!hasHydrated) return;
-    const hasLocal = !!(data && storedResult && isValidStoredAnalysis(storedResult));
-    if (hasLocal) {
-      setLoadingFromCloud(false);
-      return;
-    }
-    if (!user?.id || !supabase) {
-      setLoadingFromCloud(false);
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const remote = await fetchUserAnalyseSnapshot(user.id);
-        if (cancelled) return;
-        if (
-          remote?.lastSubmission &&
-          remote.result &&
-          isValidStoredAnalysis(remote.result)
-        ) {
-          useFinancialStore.getState().hydrateFromSnapshot(remote.lastSubmission, remote.result, {
-            aiPlan: remote.aiPlan ?? undefined,
-            analysisPatch: remote.analysis ?? undefined,
-          });
-        }
-      } finally {
-        if (!cancelled) setLoadingFromCloud(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [hasHydrated, user?.id, data, storedResult]);
-
-  if (!hasHydrated) {
-    return (
-      <ResultPageShell>
-        <p className="text-center text-slate-600">Loading your report…</p>
-      </ResultPageShell>
-    );
-  }
-
-  if (loadingFromCloud) {
-    return (
-      <ResultPageShell>
-        <p className="text-center text-slate-600">Loading your report…</p>
-      </ResultPageShell>
-    );
-  }
-
-  if (!data) {
-    return (
-      <ResultPageShell>
-        <NoSubmissionEmpty />
-      </ResultPageShell>
-    );
-  }
-
-  if (!analysis) {
-    return (
-      <ResultPageShell>
-        <AnalysisComputeFailed />
-      </ResultPageShell>
-    );
-  }
-
-  return (
-    <ResultPageShell>
-      <AnalyseResultErrorBoundary>
-        <AnalyseResultMain data={data} analysis={analysis} />
-      </AnalyseResultErrorBoundary>
-    </ResultPageShell>
+      ) : null}
+      <PaywallModal
+        open={showPaymentModal}
+        onClose={handleCloseModal}
+        fkBalance={fkBalance}
+        confirming={unlocking}
+        success={paymentSuccess}
+        priceLabel={fkBalance >= 1000 ? "Use 1000 FK → FREE 🎉" : fkBalance >= 500 ? "Use 500 FK → Pay ₹49" : "Pay ₹99"}
+        onConfirm={handleConfirmPayment}
+      />
+    </div>
   );
 }

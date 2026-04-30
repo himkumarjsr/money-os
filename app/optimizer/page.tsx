@@ -3,7 +3,9 @@
 import { FinkoinAiPlanView } from "@/components/finkoin/finkoin-ai-plan-view";
 import { getAIFixPlan, type FinkoinAIPlan } from "@/lib/aiService";
 import { monthlyTotalIncome } from "@/lib/financialEngine";
+import { downloadOptimizerPDF } from "@/lib/generatePDF";
 import { fmt, fmtWords } from "@/lib/optimizer-format";
+import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { getUniversalBucketActuals } from "@/lib/universal-buckets";
 import { useFinancialStore } from "@/store/use-financial-store";
 import Link from "next/link";
@@ -19,6 +21,7 @@ export default function OptimizerPage() {
   const [aiPlan, setAiPlan] = useState<FinkoinAIPlan | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [calcSnap, setCalcSnap] = useState<{
     income: number;
     monthlySurplus: number;
@@ -95,6 +98,29 @@ export default function OptimizerPage() {
   const outflow = Math.round(calcSnap?.outflow ?? bucketSummary?.out ?? 0);
   const surplus = Math.round(calcSnap?.monthlySurplus ?? bucketSummary?.surplus ?? 0);
 
+  const handleDownload = async () => {
+    if (!lastSubmission || !analysisResult || !aiPlan) return;
+    setDownloading(true);
+    try {
+      const priorityPlan = buildPriorityPlan(lastSubmission, {
+        needsActual: 0,
+        loansActual: 0,
+        wantsActual: 0,
+        investmentActual: 0,
+        overallScore: analysisResult.overallScore,
+      });
+      const explanations = {
+        greeting: aiPlan.oneLiner || "Your personalised report is ready.",
+        overallSummary: aiPlan.lifeStageInsight?.headline || aiPlan.topPriorityAction || "",
+        debtStrategy: aiPlan.debtPlan?.[0]?.reasoning || "",
+        disclaimer: aiPlan.disclaimer,
+      };
+      await downloadOptimizerPDF(lastSubmission, analysisResult, priorityPlan, explanations, {});
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <main className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6">
       <header className="space-y-2">
@@ -163,6 +189,14 @@ export default function OptimizerPage() {
           </Link>
           .
         </p>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={downloading || !aiPlan}
+          className="rounded-xl border border-[#534AB7] px-4 py-2 text-sm font-semibold text-[#534AB7] disabled:opacity-60"
+        >
+          {downloading ? "Generating PDF..." : "📄 Download full report PDF"}
+        </button>
       </div>
     </main>
   );
