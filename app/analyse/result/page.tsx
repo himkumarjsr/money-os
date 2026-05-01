@@ -1,8 +1,8 @@
 "use client";
 
+import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
-import { canAccessFixPlan } from "@/lib/payment";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { supabase } from "@/lib/supabase";
@@ -10,38 +10,153 @@ import { analyseFinances } from "@/lib/financialEngine";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useRouter } from "next/navigation";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 export default function AnalyseResultPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const data = useFinancialStore((s) => s.lastSubmission);
-  const result = useFinancialStore((s) => s.result);
+  const {
+    result,
+    lastSubmission,
+    hasHydrated,
+    hydrateFromSnapshot,
+  } = useFinancialStore();
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const toggleRow = (key: string) => {
     setExpandedRows((prev) => (prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]));
   };
 
+  useEffect(() => {
+    const restoreData = async () => {
+      if (result && lastSubmission) return;
+      if (!user?.id) return;
+      if (!supabase) return;
+
+      try {
+        const { data } = await supabase
+          .from("user_analyse_snapshots")
+          .select("payload")
+          .eq("user_id", user.id)
+          .single();
+
+        if (data?.payload) {
+          const snapshot = data.payload as any;
+          if (snapshot.lastSubmission && snapshot.result) {
+            hydrateFromSnapshot(snapshot.lastSubmission, snapshot.result, { setAiPlan: true } as any);
+          }
+        }
+      } catch (err) {
+        console.log("No snapshot found:", err);
+      }
+    };
+
+    void restoreData();
+  }, [user?.id, result, lastSubmission, hydrateFromSnapshot]);
+
   const priorityPlan = useMemo(() => {
-    if (!data) return null;
-    const stableResult = result ?? analyseFinances(data);
-    return buildPriorityPlan(data, {
-      needsActual: (data.rentAmount || 0) + (data.grocery || 0) + (data.vegetables || 0),
-      loansActual: (data.homeLoanEMI || 0) + (data.personalLoanEMI || 0),
-      wantsActual: (data.shopping || 0) + (data.entertainment || 0),
-      investmentActual: data.monthlySIP || 0,
+    if (!lastSubmission) return null;
+    const stableResult = result ?? analyseFinances(lastSubmission);
+    return buildPriorityPlan(lastSubmission, {
+      needsActual: (lastSubmission?.rentAmount || 0) + (lastSubmission?.grocery || 0) + (lastSubmission?.vegetables || 0),
+      loansActual: (lastSubmission?.homeLoanEMI || 0) + (lastSubmission?.personalLoanEMI || 0),
+      wantsActual: (lastSubmission?.shopping || 0) + (lastSubmission?.entertainment || 0),
+      investmentActual: lastSubmission?.monthlySIP || 0,
       overallScore: stableResult.overallScore,
     });
-  }, [data, result]);
+  }, [lastSubmission, result]);
 
-  if (!data || !priorityPlan) {
-    return <div className="min-h-dvh p-8">No analysis found. Please submit the form first.</div>;
+  if (!hasHydrated) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            border: "3px solid #534AB7",
+            borderTop: "3px solid transparent",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <p
+          style={{
+            color: "#9B9A94",
+            fontSize: 14,
+          }}
+        >
+          Loading your analysis...
+        </p>
+      </div>
+    );
   }
 
-  const profile = data;
-  const analysis = useMemo(() => result ?? analyseFinances(data), [data, result]);
-  const score = analysis?.overallScore ?? 0;
+  if (!result || !lastSubmission || !priorityPlan) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          flexDirection: "column",
+          gap: 16,
+          padding: 24,
+        }}
+      >
+        <div style={{ fontSize: 48 }}>📊</div>
+        <h2
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: "#111110",
+            textAlign: "center",
+          }}
+        >
+          No analysis found
+        </h2>
+        <p
+          style={{
+            fontSize: 14,
+            color: "#9B9A94",
+            textAlign: "center",
+            maxWidth: 300,
+          }}
+        >
+          Please complete the financial analysis form to see your results.
+        </p>
+        <button
+          onClick={() => router.push("/analyse")}
+          style={{
+            height: 48,
+            padding: "0 24px",
+            borderRadius: 12,
+            background: "#534AB7",
+            color: "white",
+            border: "none",
+            fontSize: 15,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Start analysis →
+        </button>
+      </div>
+    );
+  }
+
+  const profile = lastSubmission;
+  const analysis = useMemo(() => result ?? analyseFinances(lastSubmission), [lastSubmission, result]);
+  const score = result?.overallScore ?? analysis?.overallScore ?? 0;
   const scoreBadgeTone = score < 40 ? "bg-[#E24B4A]/25 text-[#FFE6E6]" : score < 70 ? "bg-[#BA7517]/25 text-[#FFEFD8]" : "bg-[#1D9E75]/25 text-[#E5FFF7]";
   const scoreLabel = score < 40 ? "Critical" : score < 70 ? "Warning" : "Good";
 
@@ -50,62 +165,62 @@ export default function AnalyseResultPage() {
   const netWorth = analysis?.netWorth || 0;
   if (process.env.NODE_ENV === "development") {
     console.log("NET WORTH CALC:", {
-      homeMarketValue: data.homeMarketValue,
-      carMarketValue: data.carMarketValue,
-      epfBalance: data.epfBalance,
-      fdValue: data.fdValue,
-      savingsAccountBalance: data.savingsAccountBalance,
-      goldValue: data.goldValue,
+      homeMarketValue: lastSubmission?.homeMarketValue,
+      carMarketValue: lastSubmission?.carMarketValue,
+      epfBalance: lastSubmission?.epfBalance,
+      fdValue: lastSubmission?.fdValue,
+      savingsAccountBalance: lastSubmission?.savingsAccountBalance,
+      goldValue: lastSubmission?.goldValue,
     });
   }
-  const income = (data.monthlySalary || 0) + (data.spouseIncome || 0) + (data.otherIncome || 0);
+  const income = (lastSubmission?.monthlySalary || 0) + (lastSubmission?.spouseIncome || 0) + (lastSubmission?.otherIncome || 0);
   const foodActual =
-    (data.foodTotal || 0) > 0
-      ? (data.foodTotal || 0)
-      : (data.vegetables || 0) + (data.grocery || 0) + (data.medicine || 0);
+    (lastSubmission?.foodTotal || 0) > 0
+      ? (lastSubmission?.foodTotal || 0)
+      : (lastSubmission?.vegetables || 0) + (lastSubmission?.grocery || 0) + (lastSubmission?.medicine || 0);
   const transportActual =
-    (data.transportTotal || 0) > 0
-      ? (data.transportTotal || 0)
-      : (data.fuel || 0) + (data.cabMetro || 0);
+    (lastSubmission?.transportTotal || 0) > 0
+      ? (lastSubmission?.transportTotal || 0)
+      : (lastSubmission?.fuel || 0) + (lastSubmission?.cabMetro || 0);
   const utilityActual =
-    (data.utilityTotal || 0) > 0
-      ? (data.utilityTotal || 0)
-      : (data.electricity || 0) + (data.internet || 0) + (data.gas || 0) + (data.water || 0);
+    (lastSubmission?.utilityTotal || 0) > 0
+      ? (lastSubmission?.utilityTotal || 0)
+      : (lastSubmission?.electricity || 0) + (lastSubmission?.internet || 0) + (lastSubmission?.gas || 0) + (lastSubmission?.water || 0);
   const domesticActual =
-    (data.domesticHelpTotal || 0) > 0
-      ? (data.domesticHelpTotal || 0)
-      : (data.houseHelpMonthly || 0) + (data.cookHelpMonthly || 0);
+    (lastSubmission?.domesticHelpTotal || 0) > 0
+      ? (lastSubmission?.domesticHelpTotal || 0)
+      : (lastSubmission?.houseHelpMonthly || 0) + (lastSubmission?.cookHelpMonthly || 0);
   const lifestyleActual =
-    (data.lifestyleTotal || 0) > 0
-      ? (data.lifestyleTotal || 0)
-      : (data.entertainment || 0) + (data.shopping || 0) + (data.personalCare || 0);
-  const additionalObligationLoanActual = (data.additionalObligations || []).reduce(
+    (lastSubmission?.lifestyleTotal || 0) > 0
+      ? (lastSubmission?.lifestyleTotal || 0)
+      : (lastSubmission?.entertainment || 0) + (lastSubmission?.shopping || 0) + (lastSubmission?.personalCare || 0);
+  const additionalObligationLoanActual = (lastSubmission?.additionalObligations || []).reduce(
     (sum: number, obligation: any) => sum + (obligation?.monthlyAmount || 0),
     0,
   );
   const needsActual =
-    (data.rentAmount || 0) +
-    (data.rentMaintenanceMonthly || 0) +
-    (data.homeLoanEMI || 0) +
-    (data.secondPropertyEMI || 0) +
+    (lastSubmission?.rentAmount || 0) +
+    (lastSubmission?.rentMaintenanceMonthly || 0) +
+    (lastSubmission?.homeLoanEMI || 0) +
+    (lastSubmission?.secondPropertyEMI || 0) +
     foodActual +
     transportActual +
     utilityActual +
     domesticActual +
-    (data.kidsSchoolFees || 0) +
-    (data.kidsActivities || 0) +
-    (data.parentsSupport || 0);
+    (lastSubmission?.kidsSchoolFees || 0) +
+    (lastSubmission?.kidsActivities || 0) +
+    (lastSubmission?.parentsSupport || 0);
   const loansActual =
-    (data.personalLoanEMI || 0) +
-    (data.carLoanEMI || 0) +
-    (data.bikeEMI || 0) +
-    (data.creditCardBillMonthly || 0) +
+    (lastSubmission?.personalLoanEMI || 0) +
+    (lastSubmission?.carLoanEMI || 0) +
+    (lastSubmission?.bikeEMI || 0) +
+    (lastSubmission?.creditCardBillMonthly || 0) +
     additionalObligationLoanActual;
-  const securityActual = (data.monthlyPPFContribution || 0) + (data.monthlyNPSContribution || 0);
-  const investmentActual = data.monthlySIP || 0;
+  const securityActual = (lastSubmission?.monthlyPPFContribution || 0) + (lastSubmission?.monthlyNPSContribution || 0);
+  const investmentActual = lastSubmission?.monthlySIP || 0;
   const needsMonthly =
-    (data.rentAmount || 0) +
-    (data.homeLoanEMI || 0) +
+    (lastSubmission?.rentAmount || 0) +
+    (lastSubmission?.homeLoanEMI || 0) +
     foodActual +
     transportActual +
     utilityActual +
@@ -262,26 +377,39 @@ export default function AnalyseResultPage() {
             };
 
   const handleUnlockClick = async () => {
-    console.log("Unlock clicked");
+    console.log("=== UNLOCK CLICKED ===");
 
-    const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
-    const { access } = await canAccessFixPlan(user, supabase);
+    try {
+      const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
 
-    console.log("Access:", access);
-    if (skipPayment || access) {
-      console.log("Navigating to fixplan");
-      router.push("/analyse/fixplan");
-      return;
+      console.log("skipPayment:", skipPayment);
+      console.log("user:", user?.id);
+      console.log("subscriptionTier:", user?.subscriptionTier);
+
+      if (skipPayment) {
+        console.log("Skip payment → going to fixplan");
+        router.push("/analyse/fixplan");
+        return;
+      }
+
+      if (user?.subscriptionTier === "pro" || user?.subscriptionTier === "promax") {
+        console.log("Pro user → going to fixplan");
+        router.push("/analyse/fixplan");
+        return;
+      }
+
+      console.log("Opening payment modal");
+      setShowPaymentModal(true);
+    } catch (err) {
+      console.error("Unlock error:", err);
     }
-
-    console.log("Opening payment modal");
-    setShowPaymentModal(true);
   };
   const handleCloseModal = () => {
     setShowPaymentModal(false);
   };
 
   return (
+    <AnalyseResultErrorBoundary>
     <div className="min-h-dvh bg-[#F7F7F4] px-4 py-6">
       <div className="mx-auto max-w-6xl space-y-5">
         <section className="rounded-3xl bg-[linear-gradient(135deg,#3C3489_0%,#534AB7_100%)] p-5 text-white">
@@ -289,7 +417,7 @@ export default function AnalyseResultPage() {
             <div>
               <p className="text-sm text-[#D5D0FA]">Health report</p>
               <p className="mt-1 text-3xl font-bold">Your financial health</p>
-              <p className="mt-1 text-sm text-[#D5D0FA]">{data.lifeStage} · {data.cityTier} · {data.primaryGoal}</p>
+              <p className="mt-1 text-sm text-[#D5D0FA]">{lastSubmission?.lifeStage} · {lastSubmission?.cityTier} · {lastSubmission?.primaryGoal}</p>
               <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${scoreBadgeTone}`}>{scoreLabel}</span>
             </div>
             <div className="ml-auto w-full max-w-[230px] rounded-2xl p-2 text-center bg-white/10">
@@ -326,8 +454,8 @@ export default function AnalyseResultPage() {
 
         <section className="rounded-2xl bg-white p-5">
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Monthly investment rate</p><p className="text-2xl font-bold">{Math.round(((data.monthlySIP || 0) / Math.max(income, 1)) * 100)}%</p></div>
-            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Loan ratio</p><p className="text-2xl font-bold text-[#8C3A3A]">{Math.round((((data.homeLoanEMI || 0) + (data.personalLoanEMI || 0)) / Math.max(income, 1)) * 100)}%</p></div>
+            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Monthly investment rate</p><p className="text-2xl font-bold">{Math.round((((lastSubmission?.monthlySIP || 0) / Math.max(income, 1)) * 100))}%</p></div>
+            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Loan ratio</p><p className="text-2xl font-bold text-[#8C3A3A]">{Math.round(((((lastSubmission?.homeLoanEMI || 0) + (lastSubmission?.personalLoanEMI || 0)) / Math.max(income, 1)) * 100))}%</p></div>
             <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Unallocated ₹</p><p className="text-2xl font-bold text-[#BA7517]">₹{Math.max(0, income - buckets.reduce((s, b) => s + b.actual, 0)).toLocaleString("en-IN")}</p></div>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-[#E8E6F0]">
@@ -382,7 +510,7 @@ export default function AnalyseResultPage() {
         <section className="rounded-2xl bg-white p-5">
           <h2 className="text-xl font-semibold">Your financial health gauges</h2>
           <div className="mt-3 rounded-2xl bg-[#FAFAFE] p-3">
-            <SpeedoMeter {...buildSpeedoMeterProps(data)} title="" />
+            <SpeedoMeter {...buildSpeedoMeterProps(lastSubmission)} title="" />
           </div>
           <ul className="mt-3 list-disc pl-5 text-sm text-[#7A7871]"><li>Needs should stay close to cap for stability.</li><li>Loan ratio under 40% improves flexibility.</li><li>Investment consistency drives score growth.</li></ul>
         </section>
@@ -447,7 +575,7 @@ export default function AnalyseResultPage() {
               Pay ₹99 · Earn Finkoin Keys (FK) for activity — redeem them as discounts on insurance from Finkoin, not on this unlock.
             </p>
             <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance from Finkoin</li></ul>
-            <button onClick={() => void handleUnlockClick()} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">{ctaCopy.title}</button>
+            <button onClick={() => void handleUnlockClick()} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">Get my complete financial plan →</button>
             <p className="mt-2 text-center text-xs text-[#7A7871]">{ctaCopy.subText}</p>
             <p className="mt-2 text-center text-xs text-[#9B9A94]">Educational only</p>
           </div>
@@ -456,5 +584,6 @@ export default function AnalyseResultPage() {
 
       <PaywallModal open={showPaymentModal} onClose={handleCloseModal} priceLabel="Pay ₹99" />
     </div>
+    </AnalyseResultErrorBoundary>
   );
 }

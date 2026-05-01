@@ -1587,6 +1587,9 @@ Important implementation note:
 - Fixed `checkout-config`, `create-order`, and `verify-payment` to use the correct `/api/razorpay/` prefix consistently with `components/analyse/paywall-modal.tsx`.
 - `checkout-config` returns Key ID from `NEXT_PUBLIC_RAZORPAY_KEY_ID` or `RAZORPAY_KEY_ID`; `create-order` is unauthenticated and creates a fixed ₹99 order; `verify-payment` requires Bearer auth and sets `subscription_tier = pro` after signature verification.
 - Documentation Section 10 updated for all three Razorpay routes. Build verified passing.
+- Fixed `/analyse/result` reload behavior: page now waits for `financialStore.hasHydrated`, restores missing `lastSubmission`/`result` from `user_analyse_snapshots`, and shows safe fallback UI when no snapshot exists (instead of crashing on empty store state).
+- Fixed unlock navigation flow on result page with explicit skip/subscription checks and stable `router.push('/analyse/fixplan')` behavior before opening payment modal.
+- Fixed `/analyse/fixplan` access gate to honor `NEXT_PUBLIC_SKIP_PAYMENT === 'true'` without redirect loop back to result.
 
 ### 2026-04-30
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { downloadOptimizerPDF } from "@/lib/generatePDF";
-import { canAccessFixPlan } from "@/lib/payment";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -78,11 +77,22 @@ export default function FixPlanPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const accessResult = await canAccessFixPlan(user, supabase);
-      console.log("fixplan access check:", accessResult.access);
-      if (!accessResult.access) {
-        router.replace("/analyse/result");
-        return;
+      const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
+
+      if (skipPayment) {
+        console.log("fixplan: skip payment enabled");
+        // Allow access — do not redirect
+      } else {
+        const hasAccess =
+          user?.subscriptionTier === "pro" ||
+          user?.subscriptionTier === "promax" ||
+          user?.isAdmin;
+
+        if (!hasAccess) {
+          console.log("fixplan: no access, redirecting to result");
+          router.push("/analyse/result");
+          return;
+        }
       }
       if (mounted) void loadFixPlan();
     })();
