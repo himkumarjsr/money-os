@@ -94,12 +94,6 @@ export function PaywallModal({
     if (rzpLoading) return;
     setRzpError("");
 
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    if (!keyId) {
-      setRzpError("Payments are not configured. Missing NEXT_PUBLIC_RAZORPAY_KEY_ID.");
-      return;
-    }
-
     if (!supabase || !user?.id) {
       setRzpError("Please sign in to complete payment.");
       return;
@@ -107,6 +101,13 @@ export function PaywallModal({
 
     setRzpLoading(true);
     try {
+      const cfgRes = await fetch("/api/razorpay/checkout-config");
+      const cfgJson = (await cfgRes.json()) as { keyId?: string; error?: string };
+      if (!cfgRes.ok || !cfgJson.keyId) {
+        throw new Error(cfgJson.error || "Payments are not configured.");
+      }
+      const keyId = cfgJson.keyId;
+
       await loadRazorpayScript();
 
       const { data: sessionData } = await supabase.auth.getSession();
