@@ -194,9 +194,19 @@ export default function AnalyseResultPage() {
     (lastSubmission?.lifestyleTotal || 0) > 0
       ? (lastSubmission?.lifestyleTotal || 0)
       : (lastSubmission?.entertainment || 0) + (lastSubmission?.shopping || 0) + (lastSubmission?.personalCare || 0);
-  const additionalObligationLoanActual = (lastSubmission?.additionalObligations || []).reduce(
-    (sum: number, obligation: any) => sum + (obligation?.monthlyAmount || 0),
-    0,
+  const dedupedAdditionalObligations = Array.from(
+    new Map(
+      ((profile.additionalObligations || []) as any[])
+        .filter((o) => (o?.monthlyAmount || 0) > 0)
+        .map((o) => {
+          const key = [
+            String(o?.type || "other").toLowerCase().trim(),
+            String(o?.lenderName || "").toLowerCase().trim(),
+            Math.round(Number(o?.monthlyAmount || 0)),
+          ].join("|");
+          return [key, o] as const;
+        }),
+    ).values(),
   );
   const needsActual =
     (lastSubmission?.rentAmount || 0) +
@@ -215,7 +225,7 @@ export default function AnalyseResultPage() {
     (lastSubmission?.carLoanEMI || 0) +
     (lastSubmission?.bikeEMI || 0) +
     (lastSubmission?.creditCardBillMonthly || 0) +
-    additionalObligationLoanActual;
+    dedupedAdditionalObligations.reduce((sum: number, obligation: any) => sum + (obligation?.monthlyAmount || 0), 0);
   const securityActual = (lastSubmission?.monthlyPPFContribution || 0) + (lastSubmission?.monthlyNPSContribution || 0);
   const investmentActual = lastSubmission?.monthlySIP || 0;
   const needsMonthly =
@@ -249,7 +259,7 @@ export default function AnalyseResultPage() {
     { label: getLoanLabel("Bike loan EMI", profile.bikeLoanLenderName), value: profile.bikeEMI },
     { label: getLoanLabel("Personal loan EMI", profile.personalLoanLenderName), value: profile.personalLoanEMI },
     { label: "Credit card", value: profile.creditCardBillMonthly },
-    ...((profile.additionalObligations || []).map((o: any) => ({
+    ...(dedupedAdditionalObligations.map((o: any) => ({
       label: o.lenderName ? `${o.type} (${o.lenderName})` : (o.type || "Other loan"),
       value: o.monthlyAmount,
     })) as { label: string; value: number }[]),
@@ -267,18 +277,18 @@ export default function AnalyseResultPage() {
     (lastSubmission?.spouseIncome || 0) +
     (lastSubmission?.otherIncome || 0);
   const totalExpenses =
-    (result?.universalBuckets?.needs?.actual || 0) +
-    (result?.universalBuckets?.loans?.actual || 0) +
-    (result?.universalBuckets?.wants?.actual || 0) +
-    (result?.universalBuckets?.security?.actual || 0) +
-    (result?.universalBuckets?.investment?.actual || 0);
+    needsActual +
+    loansActual +
+    lifestyleActual +
+    securityActual +
+    investmentActual;
   const amountLeftInHand = totalIncome - totalExpenses;
   const buckets = [
     { key: "needs", label: "Needs", capPercent: 30, actual: needsActual, capAmount: income * 0.3, details: "Housing + essentials + family support" },
     { key: "wants", label: "Wants", capPercent: 5, actual: lifestyleActual, capAmount: income * 0.05, details: "Shopping, entertainment and lifestyle spends" },
     { key: "security", label: "Security", capPercent: 5, actual: securityActual, capAmount: income * 0.05, details: "Protection reserves and safety corpus" },
     { key: "loans", label: "Loans", capPercent: 40, actual: loansActual, capAmount: income * 0.4, details: "All monthly debt obligations" },
-    { key: "investment", label: "Investment", capPercent: 30, actual: investmentActual, capAmount: income * 0.3, details: "Wealth creation and long-term investing" },
+    { key: "investment", label: "Investment", capPercent: 20, actual: investmentActual, capAmount: income * 0.2, details: "Wealth creation and long-term investing" },
   ];
 
   const termStatus = (() => {

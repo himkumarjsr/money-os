@@ -215,8 +215,22 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     otherInsurancePremiumMonthly(data) +
     n(data.ssy);
 
-  const additionalEmiTotal = (data.additionalObligations ?? []).reduce(
-    (sum, row) => sum + n(row.monthlyAmount),
+  const dedupedAdditionalRows = Array.from(
+    new Map(
+      (data.additionalObligations ?? [])
+        .filter((row) => n(row.monthlyAmount) > 0)
+        .map((row) => {
+          const key = [
+            String((row as any)?.type || "other").toLowerCase().trim(),
+            String((row as any)?.lenderName || "").toLowerCase().trim(),
+            Math.round(n((row as any)?.monthlyAmount)),
+          ].join("|");
+          return [key, row] as const;
+        }),
+    ).values(),
+  );
+  const additionalEmiTotal = dedupedAdditionalRows.reduce(
+    (sum, row) => sum + n((row as any).monthlyAmount),
     0,
   );
   const loansActual =
