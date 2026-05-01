@@ -2,13 +2,19 @@
 
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
+import { canAccessFixPlan } from "@/lib/payment";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
+import { supabase } from "@/lib/supabase";
 import { analyseFinances } from "@/lib/financialEngine";
+import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
 
 export default function AnalyseResultPage() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const data = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
@@ -255,7 +261,20 @@ export default function AnalyseResultPage() {
               subText: "Your next steps are ready",
             };
 
-  const handleOpenModal = () => {
+  const handleUnlockClick = async () => {
+    console.log("Unlock clicked");
+
+    const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
+    const { access } = await canAccessFixPlan(user, supabase);
+
+    console.log("Access:", access);
+    if (skipPayment || access) {
+      console.log("Navigating to fixplan");
+      router.push("/analyse/fixplan");
+      return;
+    }
+
+    console.log("Opening payment modal");
     setShowPaymentModal(true);
   };
   const handleCloseModal = () => {
@@ -428,7 +447,7 @@ export default function AnalyseResultPage() {
               Pay ₹99 · Earn Finkoin Keys (FK) for activity — redeem them as discounts on insurance from Finkoin, not on this unlock.
             </p>
             <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance from Finkoin</li></ul>
-            <button onClick={handleOpenModal} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">{ctaCopy.title}</button>
+            <button onClick={() => void handleUnlockClick()} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">{ctaCopy.title}</button>
             <p className="mt-2 text-center text-xs text-[#7A7871]">{ctaCopy.subText}</p>
             <p className="mt-2 text-center text-xs text-[#9B9A94]">Educational only</p>
           </div>

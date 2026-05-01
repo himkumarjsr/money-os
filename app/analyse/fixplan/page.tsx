@@ -78,8 +78,9 @@ export default function FixPlanPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const access = await canAccessFixPlan(user, supabase);
-      if (!access.canAccess) {
+      const accessResult = await canAccessFixPlan(user, supabase);
+      console.log("fixplan access check:", accessResult.access);
+      if (!accessResult.access) {
         router.replace("/analyse/result");
         return;
       }

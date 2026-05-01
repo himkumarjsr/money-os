@@ -2,41 +2,48 @@ export async function canAccessFixPlan(
   user: any,
   supabase: any,
 ): Promise<{
-  canAccess: boolean;
+  access: boolean;
   reason: string;
-  fkBalance: number;
 }> {
-  if (user?.isAdmin || process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true") {
+  // Skip payment for dev/testing
+  if (process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true") {
+    console.log("canAccessFixPlan: skip payment enabled");
     return {
-      canAccess: true,
-      reason: "admin",
-      fkBalance: 500,
+      access: true,
+      reason: "skip",
     };
   }
 
+  // Admin always has access
+  if (user?.isAdmin) {
+    return {
+      access: true,
+      reason: "admin",
+    };
+  }
+
+  // Pro/promax subscription
   if (user?.subscriptionTier === "pro" || user?.subscriptionTier === "promax") {
     return {
-      canAccess: true,
+      access: true,
       reason: "subscription",
-      fkBalance: user?.fkBalance || 0,
     };
   }
 
+  // Check if AI plan exists in DB
   if (supabase && user?.id) {
     const { data } = await supabase.from("user_analysis").select("ai_fix_plan").eq("user_id", user.id).single();
     if (data?.ai_fix_plan) {
       return {
-        canAccess: true,
-        reason: "previously_purchased",
-        fkBalance: user?.fkBalance || 0,
+        access: true,
+        reason: "existing_plan",
       };
     }
   }
 
   return {
-    canAccess: false,
+    access: false,
     reason: "payment_required",
-    fkBalance: user?.fkBalance || 0,
   };
 }
 
