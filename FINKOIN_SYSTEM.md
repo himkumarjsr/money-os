@@ -42,7 +42,7 @@ the documentation generation prompt again.
 27. What Not to Touch
 
 # FINKOIN SYSTEM DOCUMENTATION
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 Generated from: actual codebase
 
 ---
@@ -166,7 +166,9 @@ Complete inventory with one-line purpose per file:
 | `app/legal/terms/page.tsx` | Legal terms page |
 | `app/legal/disclaimer/page.tsx` | Legal disclaimer page |
 | `app/api/ai/analyse/route.ts` | AI analysis API route |
+| `app/api/razorpay/checkout-config/route.ts` | Razorpay Key ID for Standard Checkout (server → frontend) |
 | `app/api/razorpay/create-order/route.ts` | Razorpay order API route |
+| `app/api/razorpay/verify-payment/route.ts` | Razorpay payment signature verification + pro tier |
 | `components/global-navbar.tsx` | Main header/navbar + profile dropdown |
 | `components/AuthSessionSync.tsx` | Sync Supabase session into auth store |
 | `components/FinancialStoreAuthSync.tsx` | Rehydrate financial store on auth user switch |
@@ -683,25 +685,70 @@ Response:
 }
 ```
 
-### POST `/api/razorpay/create-order`
-File: `app/api/razorpay/create-order/route.ts`
+### GET `/api/razorpay/checkout-config`
+File: `app/api/razorpay/checkout-config/route.ts`  
+Auth required: No
 
-Request body:
+Returns the Razorpay **Key ID** to the frontend (safe to expose). Never exposes `RAZORPAY_KEY_SECRET`.
+
+Reads `NEXT_PUBLIC_RAZORPAY_KEY_ID`, falls back to `RAZORPAY_KEY_ID`.
+
+Response (success):
 ```json
 {
-  "plan": "pro"
+  "keyId": "rzp_test_..."
 }
 ```
+
+Errors: **503** `{ "error": "Payments are not configured." }` when neither env Key ID is set.
+
+---
+
+### POST `/api/razorpay/create-order`
+File: `app/api/razorpay/create-order/route.ts`  
+Auth required: No
+
+Creates a fixed **₹99** (9900 paise) INR order via Razorpay Orders API.
+
+Request body: none required.
 
 Response:
 ```json
 {
-  "orderId": "",
-  "amount": 0,
-  "currency": "INR",
-  "label": ""
+  "orderId": "order_...",
+  "amount": 9900,
+  "currency": "INR"
 }
 ```
+
+Errors: **503** if keys missing; **502** if Razorpay API fails (`error`, `detail`).
+
+---
+
+### POST `/api/razorpay/verify-payment`
+File: `app/api/razorpay/verify-payment/route.ts`  
+Auth required: Yes — `Authorization: Bearer <Supabase access_token>`
+
+Body:
+```json
+{
+  "razorpay_order_id": "",
+  "razorpay_payment_id": "",
+  "razorpay_signature": ""
+}
+```
+
+Verifies **HMAC-SHA256** over `order_id|payment_id` using `RAZORPAY_KEY_SECRET` (`timingSafeEqual`).  
+On success: updates **`users.subscription_tier`** to **`pro`** for the authenticated user.
+
+Response:
+```json
+{
+  "ok": true
+}
+```
+
+Errors: **401** without valid session; **400** missing fields or signature mismatch; **503** if secret not configured.
 
 ---
 
@@ -1533,6 +1580,13 @@ Important implementation note:
 ---
 
 ## CHANGE LOG
+
+### 2026-05-01
+
+- Cleaned up duplicate Razorpay routes created by generic integration prompt (none remained under `app/api/` root; canonical routes are only under `app/api/razorpay/`).
+- Fixed `checkout-config`, `create-order`, and `verify-payment` to use the correct `/api/razorpay/` prefix consistently with `components/analyse/paywall-modal.tsx`.
+- `checkout-config` returns Key ID from `NEXT_PUBLIC_RAZORPAY_KEY_ID` or `RAZORPAY_KEY_ID`; `create-order` is unauthenticated and creates a fixed ₹99 order; `verify-payment` requires Bearer auth and sets `subscription_tier = pro` after signature verification.
+- Documentation Section 10 updated for all three Razorpay routes. Build verified passing.
 
 ### 2026-04-30
 

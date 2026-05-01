@@ -9,7 +9,7 @@ type VerifyBody = {
 };
 
 export async function POST(req: Request) {
-  const secret = process.env.RAZORPAY_KEY_SECRET;
+  const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
   if (!secret) {
     return NextResponse.json({ error: "Razorpay is not configured on the server." }, { status: 503 });
   }

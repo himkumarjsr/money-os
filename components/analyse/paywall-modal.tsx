@@ -31,9 +31,23 @@ type RazorpayConstructorOptions = {
   theme?: { color?: string };
 };
 
+type RazorpayFailedPayload = {
+  error?: {
+    description?: string;
+    reason?: string;
+    code?: string;
+    metadata?: { order_id?: string; payment_id?: string };
+  };
+};
+
+type RazorpayCheckoutInstance = {
+  open: () => void;
+  on?: (event: string, handler: (response: RazorpayFailedPayload) => void) => void;
+};
+
 declare global {
   interface Window {
-    Razorpay?: new (options: RazorpayConstructorOptions) => { open: () => void };
+    Razorpay?: new (options: RazorpayConstructorOptions) => RazorpayCheckoutInstance;
   }
 }
 
@@ -118,7 +132,6 @@ export function PaywallModal({
 
       const orderRes = await fetch("/api/razorpay/create-order", {
         method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
       });
       const orderJson = (await orderRes.json()) as {
         orderId?: string;
@@ -198,6 +211,14 @@ export function PaywallModal({
       };
 
       const instance = new Rzp(options);
+      instance.on?.("payment.failed", (response) => {
+        setRzpLoading(false);
+        const msg =
+          response?.error?.description ||
+          response?.error?.reason ||
+          "Payment failed. Please try again or use another method.";
+        setRzpError(msg);
+      });
       instance.open();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong.";
