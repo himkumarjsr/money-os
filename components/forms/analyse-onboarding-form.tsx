@@ -403,6 +403,7 @@ export function AnalyseOnboardingForm() {
     handleSubmit,
     watch,
     setValue,
+    resetField,
     reset,
     setError,
     clearErrors,
@@ -483,6 +484,19 @@ export function AnalyseOnboardingForm() {
     control,
     name: "otherInsurancePremiums",
   });
+
+  const addOtherInsuranceRow = useCallback(() => {
+    const nextIndex = otherInsuranceFields.length;
+    appendOtherInsurance({
+      id: newAnalyseRowId(),
+      policyName: "",
+      premiumAmount: 0,
+      frequency: "monthly",
+    });
+    resetField(`otherInsurancePremiums.${nextIndex}.policyName` as const, { defaultValue: "" });
+    resetField(`otherInsurancePremiums.${nextIndex}.premiumAmount` as const, { defaultValue: 0 });
+    resetField(`otherInsurancePremiums.${nextIndex}.frequency` as const, { defaultValue: "monthly" });
+  }, [appendOtherInsurance, otherInsuranceFields.length, resetField]);
   const {
     fields: customInvestmentFields,
     append: appendCustomInvestment,
@@ -770,18 +784,13 @@ export function AnalyseOnboardingForm() {
   useEffect(() => {
     const prev = prevHasOtherInsuranceRef.current;
     if (hasOtherInsurance && prev === false && otherInsuranceFields.length === 0) {
-      appendOtherInsurance({
-        id: newAnalyseRowId(),
-        policyName: "",
-        premiumAmount: 0,
-        frequency: "monthly",
-      });
+      addOtherInsuranceRow();
     }
     if (prev === true && hasOtherInsurance === false) {
       setValue("otherInsurancePremiums", []);
     }
     prevHasOtherInsuranceRef.current = hasOtherInsurance;
-  }, [appendOtherInsurance, hasOtherInsurance, otherInsuranceFields.length, setValue]);
+  }, [addOtherInsuranceRow, hasOtherInsurance, otherInsuranceFields.length, setValue]);
 
   useEffect(() => {
     const prev = prevOwnsHomeRef.current;
@@ -1987,14 +1996,7 @@ export function AnalyseOnboardingForm() {
                       variant="secondary"
                       className="border-slate-200"
                       disabled={otherInsuranceFields.length >= 6}
-                      onClick={() =>
-                        appendOtherInsurance({
-                          id: newAnalyseRowId(),
-                          policyName: "",
-                          premiumAmount: 0,
-                          frequency: "monthly",
-                        })
-                      }
+                      onClick={addOtherInsuranceRow}
                     >
                       Add
                     </Button>

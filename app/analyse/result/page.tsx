@@ -4,24 +4,15 @@ import { PaywallModal } from "@/components/analyse/paywall-modal";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
-import { supabase } from "@/lib/supabase";
 import { analyseFinances } from "@/lib/financialEngine";
-import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
-import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
 
 export default function AnalyseResultPage() {
-  const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const data = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [unlocking, setUnlocking] = useState(false);
-  const [paymentError, setPaymentError] = useState("");
-  const [fkBalance, setFkBalance] = useState(user?.fkBalance || 0);
   const toggleRow = (key: string) => {
     setExpandedRows((prev) => (prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]));
   };
@@ -62,23 +53,69 @@ export default function AnalyseResultPage() {
     });
   }
   const income = (data.monthlySalary || 0) + (data.spouseIncome || 0) + (data.otherIncome || 0);
+  const foodActual =
+    (data.foodTotal || 0) > 0
+      ? (data.foodTotal || 0)
+      : (data.vegetables || 0) + (data.grocery || 0) + (data.medicine || 0);
+  const transportActual =
+    (data.transportTotal || 0) > 0
+      ? (data.transportTotal || 0)
+      : (data.fuel || 0) + (data.cabMetro || 0);
+  const utilityActual =
+    (data.utilityTotal || 0) > 0
+      ? (data.utilityTotal || 0)
+      : (data.electricity || 0) + (data.internet || 0) + (data.gas || 0) + (data.water || 0);
+  const domesticActual =
+    (data.domesticHelpTotal || 0) > 0
+      ? (data.domesticHelpTotal || 0)
+      : (data.houseHelpMonthly || 0) + (data.cookHelpMonthly || 0);
+  const lifestyleActual =
+    (data.lifestyleTotal || 0) > 0
+      ? (data.lifestyleTotal || 0)
+      : (data.entertainment || 0) + (data.shopping || 0) + (data.personalCare || 0);
+  const additionalObligationLoanActual = (data.additionalObligations || []).reduce(
+    (sum: number, obligation: any) => sum + (obligation?.monthlyAmount || 0),
+    0,
+  );
+  const needsActual =
+    (data.rentAmount || 0) +
+    (data.rentMaintenanceMonthly || 0) +
+    (data.homeLoanEMI || 0) +
+    (data.secondPropertyEMI || 0) +
+    foodActual +
+    transportActual +
+    utilityActual +
+    domesticActual +
+    (data.kidsSchoolFees || 0) +
+    (data.kidsActivities || 0) +
+    (data.parentsSupport || 0);
+  const loansActual =
+    (data.personalLoanEMI || 0) +
+    (data.carLoanEMI || 0) +
+    (data.bikeEMI || 0) +
+    (data.creditCardBillMonthly || 0) +
+    additionalObligationLoanActual;
+  const securityActual = (data.monthlyPPFContribution || 0) + (data.monthlyNPSContribution || 0);
+  const investmentActual = data.monthlySIP || 0;
   const needsMonthly =
     (data.rentAmount || 0) +
     (data.homeLoanEMI || 0) +
-    ((data.foodTotal || 0) > 0 ? (data.foodTotal || 0) : (data.vegetables || 0) + (data.grocery || 0) + (data.medicine || 0)) +
-    ((data.transportTotal || 0) > 0 ? (data.transportTotal || 0) : (data.fuel || 0) + (data.cabMetro || 0)) +
-    ((data.utilityTotal || 0) > 0 ? (data.utilityTotal || 0) : (data.electricity || 0) + (data.internet || 0) + (data.gas || 0) + (data.water || 0)) +
-    ((data.domesticHelpTotal || 0) > 0 ? (data.domesticHelpTotal || 0) : (data.houseHelpMonthly || 0) + (data.cookHelpMonthly || 0));
+    foodActual +
+    transportActual +
+    utilityActual +
+    domesticActual;
 
   const needsExpandedItems = [
     { label: "Rent", value: profile.rentAmount },
-    { label: "Groceries", value: (profile.vegetables || 0) + (profile.grocery || 0) },
-    { label: "Medicine", value: profile.medicine },
-    { label: "Electricity + utilities", value: (profile.electricity || 0) + (profile.internet || 0) + (profile.gas || 0) + (profile.water || 0) },
-    { label: "Fuel", value: profile.fuel },
-    { label: "Transport", value: profile.cabMetro },
-    { label: "House help", value: (profile.houseHelpMonthly || 0) + (profile.cookHelpMonthly || 0) },
+    { label: "Rent maintenance", value: profile.rentMaintenanceMonthly },
+    { label: "Home loan EMI", value: profile.homeLoanEMI },
+    { label: "Second property EMI", value: profile.secondPropertyEMI },
+    { label: "Food and daily essentials", value: foodActual },
+    { label: "Transport", value: transportActual },
+    { label: "Utilities", value: utilityActual },
+    { label: "Domestic help", value: domesticActual },
     { label: "Kids school", value: profile.kidsSchoolFees },
+    { label: "Kids activities", value: profile.kidsActivities },
     { label: "Parents support", value: profile.parentsSupport },
   ].filter((item) => (item.value || 0) > 0);
 
@@ -107,11 +144,11 @@ export default function AnalyseResultPage() {
   }
 
   const buckets = [
-    { key: "needs", label: "Needs", capPercent: 20, actual: (data.rentAmount || 0) + (data.grocery || 0) + (data.vegetables || 0), capAmount: income * 0.2, details: "Rent, groceries, essentials and utilities" },
-    { key: "wants", label: "Wants", capPercent: 5, actual: (data.shopping || 0) + (data.entertainment || 0), capAmount: income * 0.05, details: "Shopping, entertainment and lifestyle spends" },
-    { key: "security", label: "Security", capPercent: 5, actual: (data.monthlyPPFContribution || 0) + (data.monthlyNPSContribution || 0), capAmount: income * 0.05, details: "Protection reserves and safety corpus" },
-    { key: "loans", label: "Loans", capPercent: 40, actual: (data.homeLoanEMI || 0) + (data.personalLoanEMI || 0) + (data.carLoanEMI || 0), capAmount: income * 0.4, details: "All monthly debt obligations" },
-    { key: "investment", label: "Investment", capPercent: 30, actual: data.monthlySIP || 0, capAmount: income * 0.3, details: "Wealth creation and long-term investing" },
+    { key: "needs", label: "Needs", capPercent: 20, actual: needsActual, capAmount: income * 0.2, details: "Housing + essentials + family support" },
+    { key: "wants", label: "Wants", capPercent: 5, actual: lifestyleActual, capAmount: income * 0.05, details: "Shopping, entertainment and lifestyle spends" },
+    { key: "security", label: "Security", capPercent: 5, actual: securityActual, capAmount: income * 0.05, details: "Protection reserves and safety corpus" },
+    { key: "loans", label: "Loans", capPercent: 40, actual: loansActual, capAmount: income * 0.4, details: "All monthly debt obligations" },
+    { key: "investment", label: "Investment", capPercent: 30, actual: investmentActual, capAmount: income * 0.3, details: "Wealth creation and long-term investing" },
   ];
 
   const termStatus = (() => {
@@ -218,52 +255,11 @@ export default function AnalyseResultPage() {
               subText: "Your next steps are ready",
             };
 
-  const resetPaymentState = () => {
-    setPaymentSuccess(false);
-    setUnlocking(false);
-    setPaymentError("");
-  };
   const handleOpenModal = () => {
-    resetPaymentState();
     setShowPaymentModal(true);
   };
   const handleCloseModal = () => {
-    resetPaymentState();
     setShowPaymentModal(false);
-  };
-
-  const handleConfirmPayment = async () => {
-    if (unlocking) return;
-    setUnlocking(true);
-    setPaymentError("");
-    try {
-      const fkBal = user?.fkBalance || fkBalance || 0;
-      if (fkBal >= 500 && supabase && user?.id) {
-        const tokensToUse = fkBal >= 1000 ? 1000 : 500;
-        const { error } = await supabase
-          .from("gamification")
-          .update({ fk_balance: fkBal - tokensToUse })
-          .eq("user_id", user.id);
-        if (error) throw error;
-        setFkBalance((b) => Math.max(0, b - tokensToUse));
-      }
-      setPaymentSuccess(true);
-      setTimeout(() => {
-        handleCloseModal();
-        router.push("/analyse/fixplan");
-      }, 2000);
-    } catch (err: any) {
-      console.error("Payment error:", err);
-      setUnlocking(false);
-      setPaymentError("Payment failed. Please try again.");
-      if (process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true") {
-        setPaymentSuccess(true);
-        setTimeout(() => {
-          handleCloseModal();
-          router.push("/analyse/fixplan");
-        }, 2000);
-      }
-    }
   };
 
   return (
@@ -428,7 +424,9 @@ export default function AnalyseResultPage() {
           <div className="mt-4 rounded-xl border border-[#E8E6F0] p-4">
             <p className="text-lg font-semibold">Your complete financial roadmap</p>
             <p className="text-sm text-[#7A7871]">₹99 one-time · Yours forever</p>
-            <p className="mt-2 text-sm text-[#534AB7]">{fkBalance >= 1000 ? "Use 1000 FK → FREE 🎉" : fkBalance >= 500 ? "Use 500 FK → Pay ₹49" : "Pay ₹99"}</p>
+            <p className="mt-2 text-sm text-[#534AB7]">
+              Pay ₹99 · Earn Finkoin Keys (FK) for activity — redeem them as discounts on insurance from Finkoin, not on this unlock.
+            </p>
             <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance from Finkoin</li></ul>
             <button onClick={handleOpenModal} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">{ctaCopy.title}</button>
             <p className="mt-2 text-center text-xs text-[#7A7871]">{ctaCopy.subText}</p>
@@ -437,20 +435,7 @@ export default function AnalyseResultPage() {
         </section>
       </div>
 
-      {paymentError ? (
-        <div style={{ background: "#FCEBEB", borderRadius: 8, padding: "10px 14px", color: "#791F1F", fontSize: 13, marginBottom: 12 }}>
-          {paymentError}
-        </div>
-      ) : null}
-      <PaywallModal
-        open={showPaymentModal}
-        onClose={handleCloseModal}
-        fkBalance={fkBalance}
-        confirming={unlocking}
-        success={paymentSuccess}
-        priceLabel={fkBalance >= 1000 ? "Use 1000 FK → FREE 🎉" : fkBalance >= 500 ? "Use 500 FK → Pay ₹49" : "Pay ₹99"}
-        onConfirm={handleConfirmPayment}
-      />
+      <PaywallModal open={showPaymentModal} onClose={handleCloseModal} priceLabel="Pay ₹99" />
     </div>
   );
 }
