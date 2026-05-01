@@ -125,6 +125,13 @@ export type AnalysisResult = {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
+  universalBuckets: {
+    needs: { capPercent: number; capAmount: number; actual: number; status: string };
+    wants: { capPercent: number; capAmount: number; actual: number; status: string };
+    security: { capPercent: number; capAmount: number; actual: number; status: string };
+    loans: { capPercent: number; capAmount: number; actual: number; status: string };
+    investment: { capPercent: number; capAmount: number; actual: number; status: string };
+  };
 };
 
 function n(v: number | undefined): number {
@@ -1024,5 +1031,37 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     totalAssets,
     totalLiabilities,
     netWorth,
+    universalBuckets: {
+      needs: {
+        capPercent: bucketRows.find((r) => r.key === "needs")?.capPercent ?? 0.3,
+        capAmount: bucketRows.find((r) => r.key === "needs")?.capAmount ?? 0,
+        actual: bucketRows.find((r) => r.key === "needs")?.actual ?? 0,
+        status: bucketRows.find((r) => r.key === "needs")?.status ?? "good",
+      },
+      wants: {
+        capPercent: bucketRows.find((r) => r.key === "wants")?.capPercent ?? 0.05,
+        capAmount: bucketRows.find((r) => r.key === "wants")?.capAmount ?? 0,
+        actual: bucketRows.find((r) => r.key === "wants")?.actual ?? 0,
+        status: bucketRows.find((r) => r.key === "wants")?.status ?? "good",
+      },
+      security: {
+        capPercent: bucketRows.find((r) => r.key === "security")?.capPercent ?? 0.05,
+        capAmount: bucketRows.find((r) => r.key === "security")?.capAmount ?? 0,
+        actual: bucketRows.find((r) => r.key === "security")?.actual ?? 0,
+        status: bucketRows.find((r) => r.key === "security")?.status ?? "good",
+      },
+      loans: {
+        capPercent: bucketRows.find((r) => r.key === "loans")?.capPercent ?? 0.4,
+        capAmount: bucketRows.find((r) => r.key === "loans")?.capAmount ?? 0,
+        actual: bucketRows.find((r) => r.key === "loans")?.actual ?? 0,
+        status: bucketRows.find((r) => r.key === "loans")?.status ?? "good",
+      },
+      investment: {
+        capPercent: bucketRows.find((r) => r.key === "investment")?.capPercent ?? 0.2,
+        capAmount: bucketRows.find((r) => r.key === "investment")?.capAmount ?? 0,
+        actual: bucketRows.find((r) => r.key === "investment")?.actual ?? 0,
+        status: bucketRows.find((r) => r.key === "investment")?.status ?? "good",
+      },
+    },
   };
 }

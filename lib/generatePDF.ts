@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { getUniversalBucketRows } from "@/lib/universal-buckets";
 
 const PURPLE = [83, 74, 183] as const;
 const GREEN = [29, 158, 117] as const;
@@ -81,6 +82,12 @@ export async function downloadOptimizerPDF(
   const newPage = () => {
     doc.addPage();
     y = 20;
+    doc.setFillColor(248, 246, 255);
+    doc.rect(0, 0, W, 14, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PURPLE);
+    doc.text("Finkoin Financial Health Report", M, 9);
     addPageNumber();
   };
 
@@ -175,6 +182,13 @@ export async function downloadOptimizerPDF(
     (profile.bikeEMI || 0) * 24 +
     (profile.creditCardBillMonthly || 0) * 3;
   const calcNetWorth = calcAssets - calcLiabilities;
+  const monthlyIncome =
+    (profile?.monthlySalary || 0) +
+    (profile?.spouseIncome || 0) +
+    (profile?.otherIncome || 0);
+  const bucketRowsForSummary = getUniversalBucketRows(profile);
+  const totalOutflow = bucketRowsForSummary.reduce((sum, row) => sum + (row.actual || 0), 0);
+  const amountLeftInHand = Math.round(monthlyIncome - totalOutflow);
   const buildPhases = () => {
     const surplus = priorityPlan?.monthlySurplus || 0;
     const debts = priorityPlan?.debts || [];
@@ -292,6 +306,21 @@ export async function downloadOptimizerPDF(
     doc.text(lines, M, y);
     y += lines.length * 6 + 4;
   }
+  y += 2;
+  addSmallTable(
+    ["MONTHLY SUMMARY", "Amount"],
+    [
+      ["Total Income", fmt(monthlyIncome)],
+      ["Total Outflow", fmt(totalOutflow)],
+      ["Left in hand", `${fmt(Math.abs(amountLeftInHand))} ${amountLeftInHand >= 0 ? "(available to invest)" : "(overspending)"}`],
+      ["Net Worth", fmt(calcNetWorth)],
+    ],
+    [120, 60],
+  );
+  addText("Top 3 actions this week", 11, DARK, true);
+  (priorityPlan?.priorities || []).slice(0, 3).forEach((p: any, i: number) => {
+    addText(`${i + 1}. ${p.actionThisWeek || p.title}`, 9, GREY);
+  });
   addPageNumber();
 
   newPage();
@@ -321,43 +350,31 @@ export async function downloadOptimizerPDF(
     ]);
     addSmallTable(["Category", "Cap%", "Cap₹", "Actual₹", "Status"], bucketRows, [35, 20, 35, 35, 25]);
   } else {
-    const income = (profile.monthlySalary || 0) + (profile.spouseIncome || 0) + (profile.otherIncome || 0);
-    const needsActual =
-      (profile.rentAmount || 0) +
-      (profile.vegetables || 0) +
-      (profile.grocery || 0) +
-      (profile.electricity || 0) +
-      (profile.internet || 0) +
-      (profile.fuel || 0) +
-      (profile.cabMetro || 0) +
-      (profile.medicine || 0) +
-      (profile.gas || 0) +
-      (profile.water || 0) +
-      (profile.houseHelpMonthly || 0) +
-      (profile.kidsSchoolFees || 0) +
-      (profile.parentsSupport || 0) +
-      (profile.homeLoanEMI || 0);
-    const loansActual =
-      (profile.carLoanEMI || 0) +
-      (profile.bikeEMI || 0) +
-      (profile.personalLoanEMI || 0) +
-      (profile.creditCardBillMonthly || 0);
-    const investmentActual =
-      (profile.monthlySIP || 0) +
-      (profile.monthlyRD || 0) +
-      (profile.monthlyPPFContribution || 0) +
-      (profile.monthlyNPSContribution || 0) +
-      (profile.monthlyEPFContribution || 0) +
-      (profile.ssy || 0);
-    const wantsActual = (profile.entertainment || 0) + (profile.shopping || 0) + (profile.personalCare || 0);
-    const hasHomeLoan = (profile.homeLoanEMI || 0) > 0;
-    const fallbackBuckets = [
-      ["Needs", hasHomeLoan ? "30%" : "20%", fmt(income * (hasHomeLoan ? 0.3 : 0.2)), fmt(needsActual), needsActual > income * (hasHomeLoan ? 0.345 : 0.23) ? "Critical" : "Good"],
-      ["Loans", "40%", fmt(income * 0.4), fmt(loansActual), loansActual > income * 0.46 ? "Critical" : "Good"],
-      ["Wants", "5%", fmt(income * 0.05), fmt(wantsActual), "Good"],
-      ["Investment", hasHomeLoan ? "20%" : "30%", fmt(income * (hasHomeLoan ? 0.2 : 0.3)), fmt(investmentActual), investmentActual < income * 0.15 ? "Low" : "Good"],
-    ];
+    const fallbackBuckets = getUniversalBucketRows(profile).map((row) => [
+      row.label,
+      `${Math.round(row.capPercent * 100)}%`,
+      fmt(row.capAmount),
+      fmt(row.actual),
+      row.status,
+    ]);
     addSmallTable(["Category", "Cap%", "Cap₹", "Actual₹", "Status"], fallbackBuckets, [35, 20, 35, 35, 25]);
+  }
+
+  if (priorityPlan?.surplusBreakdown) {
+    y += 2;
+    addText("How recommendations are funded", 11, DARK, true);
+    addSmallTable(
+      ["Item", "Amount"],
+      [
+        ["Monthly income", fmt(priorityPlan.surplusBreakdown.totalIncome || 0)],
+        ["Living expenses (needs)", `-${fmt(priorityPlan.surplusBreakdown.needsActual || 0)}`],
+        ["Loan EMIs", `-${fmt(priorityPlan.surplusBreakdown.loansActual || 0)}`],
+        ["Insurance premiums", `-${fmt(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0)}`],
+        ["Lifestyle / wants", `-${fmt(priorityPlan.surplusBreakdown.wantsActual || 0)}`],
+        ["Surplus available", fmt(priorityPlan.surplusBreakdown.netSurplus || 0)],
+      ],
+      [120, 60],
+    );
   }
 
   newPage();
@@ -383,6 +400,13 @@ export async function downloadOptimizerPDF(
       `Gap: ${fmtCr(p.gap || 0)} · Monthly: ${fmt(p.monthlyContribution || 0)} · ${p.monthsToComplete || 0} months`,
       M + 6,
       y + 13,
+    );
+    doc.setFontSize(8);
+    doc.setTextColor(...GREY);
+    doc.text(
+      `From surplus ₹${Math.round(priorityPlan?.monthlySurplus || 0).toLocaleString("en-IN")} · left after this step ₹${Math.round(p.surplusAfterThis || 0).toLocaleString("en-IN")}`,
+      M + 6,
+      y + 18,
     );
     y += 24;
     if (p.instrument) {
@@ -429,17 +453,28 @@ export async function downloadOptimizerPDF(
       y += 4;
     }
     addSmallTable(
-      ["Debt", "Rate", "EMI", "Extra/mo", "Clear in", "Rank"],
+      ["Debt", "Rate", "EMI", "Extra/mo", "Payoff date", "Rank"],
       debts.map((d: any) => [
         d.displayName || d.type,
         `${d.rate}%`,
         fmt(d.emi),
         fmt(d.extraEMIRecommended),
-        d.monthsToClearWithExtra > 0 ? `${d.monthsToClearWithExtra}mo` : "—",
+        d.monthsToClearWithExtra > 0
+          ? new Date(
+              new Date().getFullYear(),
+              new Date().getMonth() + Number(d.monthsToClearWithExtra),
+              1,
+            ).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
+          : "—",
         String(d.priorityRank),
       ]),
       [35, 15, 25, 25, 20, 15],
     );
+    const totalInterestSavedEstimate = debts.reduce(
+      (sum: number, d: any) => sum + Math.max(0, Number(d.extraEMIRecommended || 0) * Math.max(0, Number(d.monthsToClearWithExtra || 0)) * 0.35),
+      0,
+    );
+    addText(`Estimated interest saved by debt priority order: ${fmt(totalInterestSavedEstimate)}`, 9, GREEN, true);
   }
 
   newPage();

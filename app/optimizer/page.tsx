@@ -97,6 +97,28 @@ export default function OptimizerPage() {
   const income = Math.round(calcSnap?.income ?? bucketSummary?.income ?? 0);
   const outflow = Math.round(calcSnap?.outflow ?? bucketSummary?.out ?? 0);
   const surplus = Math.round(calcSnap?.monthlySurplus ?? bucketSummary?.surplus ?? 0);
+  const totalIncome =
+    (lastSubmission?.monthlySalary || 0) +
+    (lastSubmission?.spouseIncome || 0) +
+    (lastSubmission?.otherIncome || 0);
+  const totalExpenses =
+    (analysisResult?.universalBuckets?.needs?.actual || 0) +
+    (analysisResult?.universalBuckets?.loans?.actual || 0) +
+    (analysisResult?.universalBuckets?.wants?.actual || 0) +
+    (analysisResult?.universalBuckets?.security?.actual || 0) +
+    (analysisResult?.universalBuckets?.investment?.actual || 0);
+  const amountLeftInHand = Math.round(totalIncome - totalExpenses);
+  const allocationSuggestion = {
+    emergencyFund: Math.max(0, Math.round(amountLeftInHand * 0.3)),
+    termInsurance: Math.max(0, Math.round(amountLeftInHand * 0.1)),
+    sip: Math.max(0, Math.round(amountLeftInHand * 0.4)),
+    medicalFund: Math.max(0, Math.round(amountLeftInHand * 0.2)),
+  };
+  const needsActual = analysisResult?.universalBuckets?.needs?.actual || 0;
+  const loansActual = analysisResult?.universalBuckets?.loans?.actual || 0;
+  const wantsActual = analysisResult?.universalBuckets?.wants?.actual || 0;
+  const securityActual = analysisResult?.universalBuckets?.security?.actual || 0;
+  const investmentActual = analysisResult?.universalBuckets?.investment?.actual || 0;
 
   const handleDownload = async () => {
     if (!lastSubmission || !analysisResult || !aiPlan) return;
@@ -123,6 +145,24 @@ export default function OptimizerPage() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6">
+      <button
+        onClick={() => router.push("/analyse/result")}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          color: "#534AB7",
+          fontSize: 14,
+          fontWeight: 600,
+          padding: "16px 0",
+          marginBottom: 8,
+        }}
+      >
+        ← Back to report
+      </button>
       <header className="space-y-2">
         <p className="text-sm font-medium text-[#534AB7]">Finkoin optimizer</p>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Your money optimizer</h1>
@@ -157,6 +197,64 @@ export default function OptimizerPage() {
         <p className="mt-4 text-sm text-white/85">
           If the AI service is unavailable, you still see a rule-based plan that follows Finkoin safety ordering.
         </p>
+      </div>
+
+      <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Monthly Summary</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div><p className="text-xs text-[#9B9A94]">Total income</p><p className="text-2xl font-bold text-[#111110]">₹{Math.round(totalIncome).toLocaleString("en-IN")}</p></div>
+          <div><p className="text-xs text-[#9B9A94]">Total outflow</p><p className="text-2xl font-bold text-[#E24B4A]">₹{Math.round(totalExpenses).toLocaleString("en-IN")}</p></div>
+          <div><p className="text-xs text-[#9B9A94]">Left in hand</p><p className={`text-2xl font-bold ${amountLeftInHand >= 0 ? "text-[#1D9E75]" : "text-[#E24B4A]"}`}>₹{Math.abs(amountLeftInHand).toLocaleString("en-IN")}</p></div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
+        <h3 className="text-lg font-semibold">Where Every Rupee Goes</h3>
+        <div className="mt-3 space-y-2 text-sm">
+          {[
+            ["Needs", needsActual, "#534AB7"],
+            ["Loans", loansActual, "#E24B4A"],
+            ["Wants", wantsActual, "#BA7517"],
+            ["Security", securityActual, "#1D9E75"],
+            ["Investment", investmentActual, "#3C3489"],
+          ].map(([label, value, color]: any) => {
+            const pct = totalIncome > 0 ? Math.min(100, (value / totalIncome) * 100) : 0;
+            return (
+              <div key={label}>
+                <div className="mb-1 flex justify-between"><span>{label}</span><span>₹{Math.round(value).toLocaleString("en-IN")} ({pct.toFixed(1)}%)</span></div>
+                <div className="h-2 rounded-full bg-[#ECEAF5]"><div className="h-2 rounded-full" style={{ width: `${pct}%`, background: color }} /></div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
+        <h3 className="text-lg font-semibold">Your Surplus Allocation</h3>
+        <p className="mt-1 text-sm text-[#5F5E5A]">You have ₹{Math.max(0, amountLeftInHand).toLocaleString("en-IN")} left each month. Here is the optimal way to use it:</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg bg-[#F7F7F4] p-3 text-sm">Emergency fund top-up: ₹{allocationSuggestion.emergencyFund.toLocaleString("en-IN")}/month</div>
+          <div className="rounded-lg bg-[#F7F7F4] p-3 text-sm">Term insurance premium: ₹{allocationSuggestion.termInsurance.toLocaleString("en-IN")}/month</div>
+          <div className="rounded-lg bg-[#F7F7F4] p-3 text-sm">SIP investment: ₹{allocationSuggestion.sip.toLocaleString("en-IN")}/month</div>
+          <div className="rounded-lg bg-[#F7F7F4] p-3 text-sm">Medical emergency fund: ₹{allocationSuggestion.medicalFund.toLocaleString("en-IN")}/month</div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
+        <h3 className="text-lg font-semibold">Debt Payoff Calculator</h3>
+        <div className="mt-3 space-y-2 text-sm">
+          {(buildPriorityPlan(lastSubmission, analysisResult)?.debts || []).map((d: any) => {
+            const currentMonths = d.emi > 0 ? Math.ceil((d.outstanding || 0) / d.emi) : 0;
+            const improvedMonths = d.monthsToClearWithExtra || currentMonths;
+            return (
+              <div key={`${d.type}-${d.priorityRank}`} className="rounded-lg bg-[#F7F7F4] p-3">
+                <p className="font-medium">{d.displayName || d.type}</p>
+                <p>Current payoff: {currentMonths} months · With extra ₹{Math.round(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/month: {improvedMonths} months</p>
+                <p>Months saved: {Math.max(0, currentMonths - improvedMonths)}</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {aiNotice ? (

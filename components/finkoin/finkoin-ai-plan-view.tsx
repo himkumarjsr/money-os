@@ -52,6 +52,16 @@ function sanitizeCopy(s: string): string {
     .trim();
 }
 
+function daysToAchieve(gap: number, monthlyAmount: number): string | null {
+  if (monthlyAmount <= 0) return null;
+  const months = Math.ceil(gap / monthlyAmount);
+  const days = months * 30;
+  if (days <= 30) return `${days} days`;
+  if (months <= 12) return `${months} months`;
+  const years = (months / 12).toFixed(1);
+  return `${years} years`;
+}
+
 function SectionTitle({ children }: { children: ReactNode }) {
   return <h3 className="text-base font-semibold text-slate-900">{children}</h3>;
 }
@@ -127,10 +137,24 @@ export function FinkoinAiPlanView({
     { name: "Buffer", value: Math.round(bufferAmount), fill: PIE_BUFFER },
   ].filter((d) => d.value > 0);
   const totalPie = pieAgg.reduce((s, d) => s + d.value, 0);
+  const wantsFromRows = rows
+    .filter((r) => /(wants|lifestyle|shopping|entertainment|personal)/i.test(String(r.category ?? "")))
+    .reduce((s, r) => s + num(r.amount), 0);
+  const loansFromRows = rows
+    .filter((r) => /(loan|debt|emi|credit card)/i.test(String(r.category ?? "")))
+    .reduce((s, r) => s + num(r.amount), 0);
+  const insuranceFromRows = rows
+    .filter((r) => /(insurance|premium|term|health)/i.test(String(r.category ?? "")))
+    .reduce((s, r) => s + num(r.amount), 0);
+  const needsFromRows = rows
+    .filter((r) => /(needs|living|rent|food|utility|transport|domestic)/i.test(String(r.category ?? "")))
+    .reduce((s, r) => s + num(r.amount), 0);
 
   const ladder = computeMisladder(profile ?? null, kvp);
   const phaseNums =
     variant === "full" ? getOptimizerPhaseNumbers(profile ?? null, surplusMonthly ?? 0) : null;
+  const runtimePriorityItems = ((plan as any)?.priorityPlan?.priorities ?? []) as Array<any>;
+  const isFallback = !!(plan as any)?.isFallback;
 
   return (
     <div className="space-y-6">
@@ -178,6 +202,28 @@ export function FinkoinAiPlanView({
           <p className="text-xs font-bold uppercase tracking-wide text-[#3C3489]">Top priority this week</p>
           <p className="mt-2 text-sm font-medium text-slate-900">{sanitizeCopy(plan.topPriorityAction)}</p>
         </div>
+      ) : null}
+
+      <p className="text-xs text-slate-500">{isFallback ? "ℹ️ Showing estimated plan — AI analysis will load shortly" : "✓ AI personalised analysis"}</p>
+
+      {surplusMonthly != null ? (
+        <details className="rounded-xl bg-gray-50 p-4 text-sm">
+          <summary className="cursor-pointer font-semibold text-gray-700">
+            Your monthly surplus: ₹{Math.round(surplusMonthly).toLocaleString("en-IN")}
+            <span className="ml-2 font-normal text-gray-400">(tap to see breakdown)</span>
+          </summary>
+          <div className="mt-3 space-y-1 text-gray-600">
+            <div className="flex justify-between"><span>Monthly income (net)</span><span className="font-medium">+₹{Math.round((surplusMonthly || 0) + needsFromRows + loansFromRows + insuranceFromRows + wantsFromRows).toLocaleString("en-IN")}</span></div>
+            <div className="flex justify-between text-red-600"><span>Living expenses (needs)</span><span>-₹{Math.round(needsFromRows).toLocaleString("en-IN")}</span></div>
+            <div className="flex justify-between text-red-600"><span>Loan EMIs</span><span>-₹{Math.round(loansFromRows).toLocaleString("en-IN")}</span></div>
+            <div className="flex justify-between text-red-600"><span>Insurance premiums</span><span>-₹{Math.round(insuranceFromRows).toLocaleString("en-IN")}</span></div>
+            <div className="flex justify-between text-red-600"><span>Lifestyle / wants</span><span>-₹{Math.round(wantsFromRows).toLocaleString("en-IN")}</span></div>
+            <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 font-bold text-emerald-700">
+              <span>Your available surplus</span>
+              <span>₹{Math.round(surplusMonthly).toLocaleString("en-IN")}</span>
+            </div>
+          </div>
+        </details>
       ) : null}
 
       {plan.oneLiner ? <p className="text-sm font-medium text-slate-800">{sanitizeCopy(plan.oneLiner)}</p> : null}
@@ -302,6 +348,36 @@ export function FinkoinAiPlanView({
               </li>
             ))}
           </ul>
+        </div>
+      ) : null}
+
+      {runtimePriorityItems.length > 0 ? (
+        <div className="space-y-3">
+          <SectionTitle>Priority timeline</SectionTitle>
+          {runtimePriorityItems.map((item, idx) => {
+            const gap = num(item.gap);
+            const monthly = num(item.monthlyContribution);
+            const eta = daysToAchieve(gap, monthly) ?? "—";
+            return (
+              <div key={`rt-priority-${item.id}-${idx}`} style={{ background: "#F7F7F4", borderRadius: 10, padding: "12px 16px", marginTop: 12 }}>
+                <p className="mb-2 text-sm font-semibold text-slate-900">{item.title}</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, textAlign: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#9B9A94" }}>Gap</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111110" }}>₹{Math.round(gap).toLocaleString("en-IN")}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#9B9A94" }}>Monthly</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#534AB7" }}>₹{Math.round(monthly).toLocaleString("en-IN")}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#9B9A94" }}>Achieve in</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#1D9E75" }}>{eta}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : null}
 

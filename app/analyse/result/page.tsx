@@ -201,8 +201,6 @@ export default function AnalyseResultPage() {
   const needsActual =
     (lastSubmission?.rentAmount || 0) +
     (lastSubmission?.rentMaintenanceMonthly || 0) +
-    (lastSubmission?.homeLoanEMI || 0) +
-    (lastSubmission?.secondPropertyEMI || 0) +
     foodActual +
     transportActual +
     utilityActual +
@@ -211,6 +209,8 @@ export default function AnalyseResultPage() {
     (lastSubmission?.kidsActivities || 0) +
     (lastSubmission?.parentsSupport || 0);
   const loansActual =
+    (lastSubmission?.homeLoanEMI || 0) +
+    (lastSubmission?.secondPropertyEMI || 0) +
     (lastSubmission?.personalLoanEMI || 0) +
     (lastSubmission?.carLoanEMI || 0) +
     (lastSubmission?.bikeEMI || 0) +
@@ -229,8 +229,6 @@ export default function AnalyseResultPage() {
   const needsExpandedItems = [
     { label: "Rent", value: profile.rentAmount },
     { label: "Rent maintenance", value: profile.rentMaintenanceMonthly },
-    { label: "Home loan EMI", value: profile.homeLoanEMI },
-    { label: "Second property EMI", value: profile.secondPropertyEMI },
     { label: "Food and daily essentials", value: foodActual },
     { label: "Transport", value: transportActual },
     { label: "Utilities", value: utilityActual },
@@ -264,8 +262,19 @@ export default function AnalyseResultPage() {
     });
   }
 
+  const totalIncome =
+    (lastSubmission?.monthlySalary || 0) +
+    (lastSubmission?.spouseIncome || 0) +
+    (lastSubmission?.otherIncome || 0);
+  const totalExpenses =
+    (result?.universalBuckets?.needs?.actual || 0) +
+    (result?.universalBuckets?.loans?.actual || 0) +
+    (result?.universalBuckets?.wants?.actual || 0) +
+    (result?.universalBuckets?.security?.actual || 0) +
+    (result?.universalBuckets?.investment?.actual || 0);
+  const amountLeftInHand = totalIncome - totalExpenses;
   const buckets = [
-    { key: "needs", label: "Needs", capPercent: 20, actual: needsActual, capAmount: income * 0.2, details: "Housing + essentials + family support" },
+    { key: "needs", label: "Needs", capPercent: 30, actual: needsActual, capAmount: income * 0.3, details: "Housing + essentials + family support" },
     { key: "wants", label: "Wants", capPercent: 5, actual: lifestyleActual, capAmount: income * 0.05, details: "Shopping, entertainment and lifestyle spends" },
     { key: "security", label: "Security", capPercent: 5, actual: securityActual, capAmount: income * 0.05, details: "Protection reserves and safety corpus" },
     { key: "loans", label: "Loans", capPercent: 40, actual: loansActual, capAmount: income * 0.4, details: "All monthly debt obligations" },
@@ -412,6 +421,24 @@ export default function AnalyseResultPage() {
     <AnalyseResultErrorBoundary>
     <div className="min-h-dvh bg-[#F7F7F4] px-4 py-6">
       <div className="mx-auto max-w-6xl space-y-5">
+        <button
+          onClick={() => router.push("/analyse")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#534AB7",
+            fontSize: 14,
+            fontWeight: 600,
+            padding: "16px 0",
+            marginBottom: 8,
+          }}
+        >
+          ← Back to form
+        </button>
         <section className="rounded-3xl bg-[linear-gradient(135deg,#3C3489_0%,#534AB7_100%)] p-5 text-white">
           <div className="grid items-center gap-4 md:grid-cols-[1.2fr_0.8fr]">
             <div>
@@ -436,6 +463,60 @@ export default function AnalyseResultPage() {
             </div>
           </div>
         </section>
+
+        <div
+          style={{
+            background: "white",
+            borderRadius: 16,
+            padding: "20px 24px",
+            marginBottom: 16,
+            border: "1px solid #E8E6F0",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#534AB7",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              marginBottom: 16,
+            }}
+          >
+            MONTHLY SUMMARY
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 16,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 4 }}>Total income</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#111110" }}>
+                ₹{Math.round(totalIncome).toLocaleString("en-IN")}
+              </div>
+              <div style={{ fontSize: 11, color: "#9B9A94" }}>per month</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 4 }}>Total outflow</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#E24B4A" }}>
+                ₹{Math.round(totalExpenses).toLocaleString("en-IN")}
+              </div>
+              <div style={{ fontSize: 11, color: "#9B9A94" }}>needs + loans + wants</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 4 }}>Left in hand</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: amountLeftInHand >= 0 ? "#1D9E75" : "#E24B4A" }}>
+                ₹{Math.abs(Math.round(amountLeftInHand)).toLocaleString("en-IN")}
+              </div>
+              <div style={{ fontSize: 11, color: amountLeftInHand >= 0 ? "#1D9E75" : "#E24B4A" }}>
+                {amountLeftInHand >= 0 ? "available to invest" : "overspending"}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <section className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">LIVE NET WORTH SUMMARY</p>
@@ -574,6 +655,18 @@ export default function AnalyseResultPage() {
             <p className="mt-2 text-sm text-[#534AB7]">
               Pay ₹99 · Earn Finkoin Keys (FK) for activity — redeem them as discounts on insurance from Finkoin, not on this unlock.
             </p>
+            {priorityPlan?.surplusBreakdown ? (
+              <div className="mt-3 rounded-lg border border-[#E8E6F0] bg-[#FAFAFE] p-3 text-xs text-[#5F5E5A]">
+                <div className="flex items-center justify-between"><span>Monthly Income</span><span>₹{Math.round(priorityPlan.surplusBreakdown.totalIncome || 0).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Living expenses</span><span>-₹{Math.round(priorityPlan.surplusBreakdown.needsActual || 0).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Loan EMIs</span><span>-₹{Math.round(priorityPlan.surplusBreakdown.loansActual || 0).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Insurance</span><span>-₹{Math.round(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0).toLocaleString("en-IN")}</span></div>
+                <div className="mt-2 border-t border-[#E8E6F0] pt-2 text-sm font-semibold text-[#3C3489] flex items-center justify-between">
+                  <span>Your Monthly Surplus</span>
+                  <span>₹{Math.round(priorityPlan.surplusBreakdown.netSurplus || 0).toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            ) : null}
             <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance from Finkoin</li></ul>
             <button onClick={() => void handleUnlockClick()} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">Get my complete financial plan →</button>
             <p className="mt-2 text-center text-xs text-[#7A7871]">{ctaCopy.subText}</p>

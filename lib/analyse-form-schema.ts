@@ -1622,6 +1622,25 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
+  const existingAdditionalKeys = new Set(
+    existingAdditionalObligations.map((row) =>
+      [
+        (row.type ?? "").toLowerCase().trim(),
+        (row.lenderName ?? "").toLowerCase().trim(),
+        Math.round(row.monthlyAmount ?? 0),
+      ].join("|"),
+    ),
+  );
+  const dedupedAdditionalFromUnified = additionalFromUnified.filter((row) => {
+    const key = [
+      (row.type ?? "").toLowerCase().trim(),
+      (row.lenderName ?? "").toLowerCase().trim(),
+      Math.round(row.monthlyAmount ?? 0),
+    ].join("|");
+    if (existingAdditionalKeys.has(key)) return false;
+    existingAdditionalKeys.add(key);
+    return true;
+  });
   const foodTotal =
     (form.foodTotal ?? 0) > 0
       ? (form.foodTotal ?? 0)
@@ -1703,7 +1722,7 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     bikeLoanRemainingMonths: firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths,
     bikeOutstanding: form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
-    additionalObligations: [...existingAdditionalObligations, ...additionalFromUnified],
+    additionalObligations: [...existingAdditionalObligations, ...dedupedAdditionalFromUnified],
     odLimit: form.odLimit,
     odUsed: form.odUsed,
     odInterestRate: form.odInterestRate,

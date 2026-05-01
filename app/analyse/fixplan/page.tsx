@@ -31,11 +31,11 @@ export default function FixPlanPage() {
     return () => clearInterval(id);
   }, []);
 
-  const loadFixPlan = async () => {
+  const loadFixPlan = async (forceRefresh = false) => {
     if (!profile || !result) return;
     const { hashProfile, getCachedPlan, setCachedPlan } = await import("@/lib/cache");
     const currentHash = hashProfile(profile);
-    const cached = getCachedPlan(currentHash);
+    const cached = !forceRefresh ? getCachedPlan(currentHash) : null;
     if (cached) {
       console.log("Using cached AI plan ✓");
       setAiPlan(cached.aiPlan);
@@ -53,7 +53,7 @@ export default function FixPlanPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI failed");
-      const combinedPlan = { priorityPlan: data.priorityPlan, explanations: data.explanations };
+      const combinedPlan = { priorityPlan: data.priorityPlan, explanations: data.explanations, isFallback: !!data.isFallback };
       setCachedPlan(currentHash, combinedPlan, null);
 
       if (supabase && user?.id) {
@@ -100,6 +100,15 @@ export default function FixPlanPage() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (aiPlan?.isFallback) {
+      const timer = setTimeout(async () => {
+        await loadFixPlan(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [aiPlan?.isFallback]);
 
   const lastSubmission = profile;
   const aiData = aiPlan;
@@ -178,11 +187,52 @@ export default function FixPlanPage() {
   return (
     <div className="min-h-dvh bg-[#F7F7F4] p-4">
       <div className="mx-auto max-w-5xl space-y-4">
+        <button
+          onClick={() => router.push("/analyse/result")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#534AB7",
+            fontSize: 14,
+            fontWeight: 600,
+            padding: "16px 0",
+            marginBottom: 8,
+          }}
+        >
+          ← Back to report
+        </button>
         <section className="rounded-2xl bg-gradient-to-r from-[#534AB7] to-[#6E62D7] p-5 text-white">
           <p className="text-xs uppercase tracking-wide text-white/80">Finkoin AI</p>
           <p className="mt-2 text-sm italic">{aiPlan.explanations?.greeting || "Your personalised plan is ready."}</p>
           <p className="mt-2 text-sm text-white/90">{aiPlan.explanations?.overallSummary || "This plan improves your score by prioritising safety, debt and growth in sequence."}</p>
+          <p className="mt-1 text-xs text-white/90">
+            {aiPlan?.isFallback ? "ℹ️ Showing estimated plan — AI analysis will load shortly" : "✓ AI personalised analysis"}
+          </p>
         </section>
+
+        {aiPlan.priorityPlan?.surplusBreakdown ? (
+          <details className="rounded-xl bg-[#F7F7F4] p-4 text-sm">
+            <summary className="cursor-pointer font-semibold text-[#3C3489]">
+              Your monthly surplus: ₹{Math.round(aiPlan.priorityPlan.surplusBreakdown.netSurplus || 0).toLocaleString("en-IN")}
+              <span className="ml-2 font-normal text-[#9B9A94]">(tap to see breakdown)</span>
+            </summary>
+            <div className="mt-3 space-y-1 text-[#5F5E5A]">
+              <div className="flex justify-between"><span>Monthly income</span><span className="font-medium">+₹{Math.round(aiPlan.priorityPlan.surplusBreakdown.totalIncome || 0).toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between text-[#8C3A3A]"><span>Living expenses (needs)</span><span>-₹{Math.round(aiPlan.priorityPlan.surplusBreakdown.needsActual || 0).toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between text-[#8C3A3A]"><span>Loan EMIs</span><span>-₹{Math.round(aiPlan.priorityPlan.surplusBreakdown.loansActual || 0).toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between text-[#8C3A3A]"><span>Insurance premiums</span><span>-₹{Math.round(aiPlan.priorityPlan.surplusBreakdown.existingInsurancePremiums || 0).toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between text-[#8C3A3A]"><span>Lifestyle / wants</span><span>-₹{Math.round(aiPlan.priorityPlan.surplusBreakdown.wantsActual || 0).toLocaleString("en-IN")}</span></div>
+              <div className="mt-2 flex justify-between border-t border-[#E8E6F0] pt-2 font-bold text-[#1D9E75]">
+                <span>Your available surplus</span>
+                <span>₹{Math.round(aiPlan.priorityPlan.surplusBreakdown.netSurplus || 0).toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+          </details>
+        ) : null}
 
         {(aiPlan.priorityPlan?.priorities || []).map((p: any) => (
           <section key={p.id} className={`rounded-2xl border-l-4 bg-white p-4 shadow-sm ${(p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "critical" ? "border-[#E24B4A]" : (p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "high" ? "border-[#BA7517]" : "border-[#1D9E75]"}`}>
@@ -195,7 +245,13 @@ export default function FixPlanPage() {
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
               <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">Gap ₹{p.gap?.toLocaleString("en-IN")}</div>
-              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">Monthly ₹{p.monthlyContribution?.toLocaleString("en-IN")}</div>
+              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
+                Monthly ₹{p.monthlyContribution?.toLocaleString("en-IN")}
+                <p className="mt-0.5 text-xs text-gray-500">
+                  From your ₹{Math.round(aiPlan.priorityPlan?.monthlySurplus || 0).toLocaleString("en-IN")} surplus
+                  {" · "}₹{Math.round(p.surplusAfterThis || 0).toLocaleString("en-IN")} left after this step
+                </p>
+              </div>
               <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">Timeline {p.monthsToComplete} months</div>
             </div>
             <p className="mt-2 text-sm text-[#534AB7]">Where to invest: {p.instrument || "As recommended in your plan"}</p>
@@ -216,6 +272,29 @@ export default function FixPlanPage() {
             ) : null}
           </section>
         ))}
+
+        {aiPlan.priorityPlan?.priorities?.length > 0 ? (
+          <section className="rounded-2xl border border-[#E8E6F0] bg-white p-4 shadow-sm">
+            <h3 className="text-lg font-semibold">Surplus Allocation Summary</h3>
+            <div className="mt-3 space-y-1 text-sm text-[#5F5E5A]">
+              <div className="flex justify-between font-medium">
+                <span>Your surplus</span>
+                <span>₹{Math.round(aiPlan.priorityPlan.monthlySurplus || 0).toLocaleString("en-IN")}</span>
+              </div>
+              {(aiPlan.priorityPlan.priorities || []).map((p: any, idx: number) => (
+                <div key={`surplus-line-${p.id}-${idx}`} className="flex justify-between">
+                  <span>Step {idx + 1} — {p.title}</span>
+                  <span>-₹{Math.round(p.monthlyContribution || 0).toLocaleString("en-IN")}</span>
+                </div>
+              ))}
+              <div className="mt-2 flex justify-between border-t border-[#E8E6F0] pt-2 font-bold text-[#1D9E75]">
+                <span>Remaining buffer</span>
+                <span>₹{Math.round(aiPlan.priorityPlan?.surplusBreakdown?.afterAllPriorities ?? 0).toLocaleString("en-IN")}</span>
+              </div>
+              <p className="text-xs text-[#9B9A94]">(Available for debt extra payment + future SIP)</p>
+            </div>
+          </section>
+        ) : null}
 
         {aiPlan.priorityPlan?.debts?.length > 0 ? (
           <section className="rounded-2xl bg-white p-4 shadow-sm">

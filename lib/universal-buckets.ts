@@ -112,11 +112,19 @@ export function getInsurancePremiumsMonthly(data: BucketProfileInput): number {
   );
 }
 
-export const BASE_UNIVERSAL_CAPS = {
+export const BUCKET_CAPS = {
+  needs: 0.3,
   wants: 0.05,
   security: 0.05,
   loans: 0.4,
   investment: 0.2,
+} as const;
+
+export const BASE_UNIVERSAL_CAPS = {
+  wants: BUCKET_CAPS.wants,
+  security: BUCKET_CAPS.security,
+  loans: BUCKET_CAPS.loans,
+  investment: BUCKET_CAPS.investment,
 } as const;
 
 export type UniversalBucketKey = "needs" | keyof typeof BASE_UNIVERSAL_CAPS;
@@ -143,13 +151,12 @@ export function hasHomeLoan(data: Partial<FinancialProfile>) {
 }
 
 export function getUniversalCaps(data: Partial<FinancialProfile>) {
-  const homeEmiNeeds = hasHomeLoan(data) ? 0.3 : 0.2;
   return {
-    needs: homeEmiNeeds,
-    wants: BASE_UNIVERSAL_CAPS.wants,
-    security: BASE_UNIVERSAL_CAPS.security,
-    loans: BASE_UNIVERSAL_CAPS.loans,
-    investment: hasHomeLoan(data) ? BASE_UNIVERSAL_CAPS.investment : 0.3,
+    needs: BUCKET_CAPS.needs,
+    wants: BUCKET_CAPS.wants,
+    security: BUCKET_CAPS.security,
+    loans: BUCKET_CAPS.loans,
+    investment: BUCKET_CAPS.investment,
   } as const;
 }
 
@@ -184,8 +191,6 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
   let needsActual =
     n(data.rentAmount) +
     (n(data.rentAmount) > 0 ? n(data.rentMaintenanceMonthly) : 0) +
-    n(data.homeLoanEMI) +
-    n(data.secondPropertyEMI) +
     foodActual +
     utilityActual +
     transportActual +
@@ -215,6 +220,8 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     0,
   );
   const loansActual =
+    n(data.homeLoanEMI) +
+    n(data.secondPropertyEMI) +
     n(data.carLoanEMI) +
     n(data.bikeEMI) +
     n(data.personalLoanEMI) +
@@ -260,9 +267,7 @@ export function getUniversalBucketRows(data: BucketProfileInput): UniversalBucke
       capPercent,
       capLabel:
         key === "needs"
-          ? hasHomeLoan(data)
-            ? "30% (home EMI adjustment)"
-            : "20%"
+          ? "30%"
           : key === "wants"
             ? "5%"
           : key === "security"
@@ -270,13 +275,11 @@ export function getUniversalBucketRows(data: BucketProfileInput): UniversalBucke
           : key === "loans"
             ? "40%"
           : key === "investment"
-            ? hasHomeLoan(data)
-              ? "20%"
-              : "30% (extra 10% when no home EMI)"
+            ? "20%"
             : `${Math.round(capPercent * 100)}%`,
       capHelper:
         key === "loans"
-          ? "(home EMI sits in Needs)"
+          ? "(includes home EMI obligations)"
           : undefined,
       capAmount,
       actual,

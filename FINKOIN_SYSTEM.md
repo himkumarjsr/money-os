@@ -1171,12 +1171,12 @@ Source: `lib/financialEngine.ts`, `lib/universal-buckets.ts`, `lib/priorityEngin
 
 ### Bucket caps (exact percentages)
 
-- `needs`: `20%` of monthly income by default.
-- `needs`: `30%` if `homeLoanEMI > 0` OR `secondPropertyEMI > 0`.
+- `needs`: `30%` of monthly income (fixed).
 - `wants`: `5%`.
 - `security`: `5%`.
-- `loans`: `40%` (note: home EMI is counted in `needs`, not in `loans`).
-- `investment`: `30%` when no home EMI; `20%` when home EMI exists.
+- `loans`: `40%` (includes home-loan and second-property EMI obligations).
+- `investment`: `20%`.
+- Total cap allocation is always `100%` (`30+5+5+40+20`).
 
 ### Consolidated expense actuals (implemented)
 
@@ -1590,6 +1590,41 @@ Important implementation note:
 - Fixed `/analyse/result` reload behavior: page now waits for `financialStore.hasHydrated`, restores missing `lastSubmission`/`result` from `user_analyse_snapshots`, and shows safe fallback UI when no snapshot exists (instead of crashing on empty store state).
 - Fixed unlock navigation flow on result page with explicit skip/subscription checks and stable `router.push('/analyse/fixplan')` behavior before opening payment modal.
 - Fixed `/analyse/fixplan` access gate to honor `NEXT_PUBLIC_SKIP_PAYMENT === 'true'` without redirect loop back to result.
+- ISSUES FIXED TODAY:
+  - Razorpay integration complete: `create-order`, `verify-payment`, and `checkout-config` routes created.
+  - `checkout-config` was missing, causing build/undefined 403 error.
+  - Missing route was created to resolve the above issue.
+  - Vercel key values were empty, causing 403 responses.
+  - `NEXT_PUBLIC_SKIP_PAYMENT` added to Vercel.
+- PENDING FIXES (not done yet):
+  - Result page crashes on reload (`/analyse/result`) with application error.
+    - Fix: add `hasHydrated` check and optional chaining.
+    - Fix: restore from Supabase on reload.
+  - Clicking unlock button does nothing.
+    - Fix: clean `handleUnlockClick` function.
+    - Fix: fixplan access gate redirect loop.
+  - Razorpay modal not opening.
+    - Cause: empty key values in Vercel.
+    - Fix: add actual key values from Razorpay dashboard.
+    - When ready to charge: set `NEXT_PUBLIC_SKIP_PAYMENT=false` and add real key values.
+- CURRENT STATUS:
+  - `NEXT_PUBLIC_SKIP_PAYMENT = true` in Vercel.
+  - Users can access fixplan without payment.
+  - Good for testing and soft launch.
+- ENVIRONMENT VARIABLES IN VERCEL:
+  - `NEXT_PUBLIC_SKIP_PAYMENT = true`
+  - `RAZORPAY_KEY_ID = needs real value`
+  - `RAZORPAY_KEY_SECRET = needs real value`
+  - `NEXT_PUBLIC_RAZORPAY_KEY_ID = needs real value`
+  - All Supabase vars = configured
+  - `GROQ_API_KEY = configured`
+- Optimizer and report revamp:
+  - Standardized universal bucket caps to fixed 100% allocation (`needs 30%, wants 5%, security 5%, loans 40%, investment 20%`).
+  - Added back-navigation arrows on result/fixplan/optimizer pages.
+  - Added monthly income/outflow/left-in-hand summary cards on result and optimizer pages.
+  - Added surplus allocation guidance and richer optimizer sections for allocation, debt payoff, and timelines.
+  - Added AI/fallback state indicator and fallback-refresh retry in fixplan flow.
+  - Expanded PDF output with monthly summary on page 1, corrected bucket table logic, payoff-date debt table, and stronger sectioned formatting.
 
 ### 2026-04-30
 
