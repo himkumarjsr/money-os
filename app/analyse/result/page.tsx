@@ -544,12 +544,7 @@ export default function AnalyseResultPage() {
         </section> */}
 
         <section className="rounded-2xl bg-white p-5">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Monthly investment rate</p><p className="text-2xl font-bold">{Math.round((((lastSubmission?.monthlySIP || 0) / Math.max(income, 1)) * 100))}%</p></div>
-            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Loan ratio</p><p className="text-2xl font-bold text-[#8C3A3A]">{Math.round(((((lastSubmission?.homeLoanEMI || 0) + (lastSubmission?.personalLoanEMI || 0)) / Math.max(income, 1)) * 100))}%</p></div>
-            <div className="rounded-xl border border-[#E8E6F0] p-3"><p className="text-xs text-[#9B9A94]">Unallocated ₹</p><p className="text-2xl font-bold text-[#BA7517]">₹{Math.max(0, income - buckets.reduce((s, b) => s + b.actual, 0)).toLocaleString("en-IN")}</p></div>
-          </div>
-          <div className="mt-4 overflow-x-auto rounded-xl border border-[#E8E6F0]">
+          <div className="overflow-x-auto rounded-xl border border-[#E8E6F0]">
             <table className="w-full min-w-[700px] text-left text-sm">
               <thead className="bg-[#F7F6FE] text-xs text-[#534AB7]"><tr><th className="px-3 py-2">Category</th><th className="px-3 py-2">Cap%</th><th className="px-3 py-2">Cap₹</th><th className="px-3 py-2">Actual₹</th><th className="px-3 py-2">Status</th></tr></thead>
               <tbody>
@@ -667,13 +662,14 @@ export default function AnalyseResultPage() {
             </p>
             {priorityPlan?.surplusBreakdown ? (
               <div className="mt-3 rounded-lg border border-[#E8E6F0] bg-[#FAFAFE] p-3 text-xs text-[#5F5E5A]">
-                <div className="flex items-center justify-between"><span>Monthly Income</span><span>₹{Math.round(priorityPlan.surplusBreakdown.totalIncome || 0).toLocaleString("en-IN")}</span></div>
-                <div className="flex items-center justify-between"><span>Less: Living expenses</span><span>-₹{Math.round(priorityPlan.surplusBreakdown.needsActual || 0).toLocaleString("en-IN")}</span></div>
-                <div className="flex items-center justify-between"><span>Less: Loan EMIs</span><span>-₹{Math.round(priorityPlan.surplusBreakdown.loansActual || 0).toLocaleString("en-IN")}</span></div>
-                <div className="flex items-center justify-between"><span>Less: Insurance</span><span>-₹{Math.round(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Monthly Income</span><span>₹{Math.round(totalIncome).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Living expenses (Needs)</span><span>-₹{Math.round(needsActual).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Loan EMIs</span><span>-₹{Math.round(loansActual).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Wants + lifestyle</span><span>-₹{Math.round(lifestyleActual).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Security + investment</span><span>-₹{Math.round(securityActual + investmentActual).toLocaleString("en-IN")}</span></div>
                 <div className="mt-2 border-t border-[#E8E6F0] pt-2 text-sm font-semibold text-[#3C3489] flex items-center justify-between">
                   <span>Your Monthly Surplus</span>
-                  <span>₹{Math.round(priorityPlan.surplusBreakdown.netSurplus || 0).toLocaleString("en-IN")}</span>
+                  <span>₹{Math.round(amountLeftInHand).toLocaleString("en-IN")}</span>
                 </div>
               </div>
             ) : null}
