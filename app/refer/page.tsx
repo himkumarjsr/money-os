@@ -69,11 +69,22 @@ export default function ReferPage() {
               if (!referralUrl) return;
               await navigator.clipboard.writeText(referralUrl);
               setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
+              setTimeout(() => setCopied(false), 2500);
             }}
-            className="h-10 shrink-0 rounded-[10px] bg-[#534AB7] px-4 text-[13px] font-bold text-white disabled:opacity-50"
+            className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[10px] px-4 text-[13px] font-bold transition-colors disabled:opacity-50 ${
+              copied ? "bg-emerald-600 text-white" : "bg-[#534AB7] text-white hover:opacity-95"
+            }`}
           >
-            {copied ? "✓ Copied!" : "Copy"}
+            {copied ? (
+              <>
+                <span className="text-lg leading-none" aria-hidden>
+                  ✓
+                </span>
+                Copied
+              </>
+            ) : (
+              "Copy"
+            )}
           </button>
         </div>
 

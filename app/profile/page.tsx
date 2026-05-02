@@ -1,8 +1,10 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
-import { verifyPAN } from "@/lib/kycVerification";
+import { analyseFinances } from "@/lib/financialEngine";
 import { formatIndian } from "@/lib/formatters";
+import { verifyPAN } from "@/lib/kycVerification";
+import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
@@ -21,11 +23,20 @@ export default function ProfilePage() {
   const [pan, setPan] = useState("");
   const [panLoading, setPanLoading] = useState(false);
   const [panMessage, setPanMessage] = useState("");
+  const [referralCopied, setReferralCopied] = useState(false);
 
   const referralLink = useMemo(() => {
     const code = user?.referralCode ?? "FINK0000";
-    return `finkoin.com?ref=${code}`;
+    const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://finkoin.com").replace(/\/$/, "");
+    return `${origin}/?ref=${encodeURIComponent(code)}`;
   }, [user?.referralCode]);
+
+  const analysisSnapshot = useMemo(() => {
+    if (!submission) return null;
+    return result ?? analyseFinances(submission);
+  }, [submission, result]);
+
+  const netWorthDisplay = analysisSnapshot?.netWorth;
 
   const healthScore = useMemo(() => {
     if (!result) return null;
@@ -47,15 +58,26 @@ export default function ProfilePage() {
     setPanLoading(false);
     setPanMessage(res.message);
     if (res.verified) {
+      const panNorm = pan.trim().toUpperCase();
+      const last4 = panNorm.slice(-4);
       updateUser({
         panVerified: true,
-        panLast4: `${pan.slice(-4)}${pan.charAt(0).toUpperCase()}`,
+        panLast4: `${last4}${panNorm.charAt(0)}`,
       });
+      try {
+        const supabase = getSupabase();
+        await supabase.from("users").update({ pan_verified: true, pan_last4: last4 }).eq("id", user.id);
+        await useAuthStore.getState().refreshUser();
+      } catch (e) {
+        console.warn("Could not persist PAN to profile:", e);
+      }
     }
   };
 
-  const copyLink = async () => {
+  const copyReferralLink = async () => {
     await navigator.clipboard.writeText(referralLink);
+    setReferralCopied(true);
+    window.setTimeout(() => setReferralCopied(false), 2500);
   };
 
   return (
@@ -94,9 +116,14 @@ export default function ProfilePage() {
         </div>
         <div>
           <p className="text-xs text-slate-500">Net worth snapshot</p>
-          <p className="text-xl font-bold text-slate-900">
-            {submission ? `₹${formatIndian((submission.savingsAccountBalance ?? 0) + (submission.mfValue ?? 0) - (submission.homeLoanOutstanding ?? 0))}` : "—"}
+          <p
+            className={`text-xl font-bold ${typeof netWorthDisplay === "number" && netWorthDisplay < 0 ? "text-red-600" : "text-slate-900"}`}
+          >
+            {typeof netWorthDisplay === "number"
+              ? `₹${formatIndian(Math.round(netWorthDisplay))}`
+              : "—"}
           </p>
+          <p className="mt-1 text-[11px] text-slate-400">Same formula as your analysis report (assets − liabilities).</p>
         </div>
         <div>
           <p className="text-xs text-slate-500">FK tokens</p>
@@ -122,6 +149,9 @@ export default function ProfilePage() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-lg font-semibold">KYC verification</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          PAN: we check the official pattern only (not a government database). Your verified flag is saved on your Finkoin profile.
+        </p>
         <div className="mt-3 space-y-3">
           <div className="rounded-lg border border-slate-100 p-3">
             {!user?.panVerified ? (
@@ -142,7 +172,9 @@ export default function ProfilePage() {
                 </button>
               </div>
             ) : (
-              <p className="text-sm font-medium text-emerald-700">✓ PAN ••••••{user.panLast4} verified</p>
+              <p className="text-sm font-medium text-emerald-700">
+                ✓ PAN verified{user.panLast4 ? ` · ••••${user.panLast4}` : ""}
+              </p>
             )}
             {panMessage ? <p className="mt-1 text-xs text-slate-500">{panMessage}</p> : null}
           </div>
@@ -156,9 +188,26 @@ export default function ProfilePage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-lg font-semibold">Refer friends · Earn FK tokens</h2>
         <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">{referralLink}</p>
-        <div className="mt-3 flex gap-2">
-          <button type="button" className="rounded-lg border border-slate-200 px-3 py-2 text-sm" onClick={copyLink}>
-            Copy link
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              referralCopied
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+            }`}
+            onClick={() => void copyReferralLink()}
+          >
+            {referralCopied ? (
+              <>
+                <span className="text-emerald-600" aria-hidden>
+                  ✓
+                </span>
+                Copied
+              </>
+            ) : (
+              "Copy link"
+            )}
           </button>
           <a
             className="rounded-lg bg-[#25D366] px-3 py-2 text-sm font-semibold text-white"

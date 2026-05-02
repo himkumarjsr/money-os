@@ -27,6 +27,7 @@ type UsersRow = {
   referred_by?: string | null;
   fk_balance?: number | null;
   pan_verified?: boolean | null;
+  pan_last4?: string | null;
 };
 
 export interface User {
@@ -244,7 +245,7 @@ export const useAuthStore = create<AuthState>()(
             phone: row?.phone ?? authUser.phone ?? null,
             photoURL: rowAvatar ?? metaAvatar,
             panVerified: Boolean(row?.pan_verified),
-            panLast4: null,
+            panLast4: typeof row?.pan_last4 === "string" && row.pan_last4.length > 0 ? row.pan_last4 : null,
             aadhaarVerified: false,
             subscriptionTier: tier,
             subscriptionExpiry: row?.subscription_expiry ?? null,
