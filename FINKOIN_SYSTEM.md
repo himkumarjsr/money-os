@@ -164,10 +164,11 @@ Complete inventory with one-line purpose per file:
 | `app/calculators/[id]/page.tsx` | Dynamic calculator page |
 | `app/plans/page.tsx` | Subscription plans page (contains TODO Razorpay note) |
 | `app/pricing/page.tsx` | Pricing placeholder page |
-| `app/privacy/page.tsx` | Privacy placeholder page |
-| `app/terms/page.tsx` | Terms placeholder page |
-| `app/legal/privacy/page.tsx` | Legal privacy page |
-| `app/legal/terms/page.tsx` | Legal terms page |
+| `app/privacy/page.tsx` | Redirects to `/legal/privacy` |
+| `app/terms/page.tsx` | Redirects to `/legal/terms` |
+| `app/legal/privacy/page.tsx` | Privacy Policy (India / DPDP 2023–aligned content) |
+| `app/legal/terms/page.tsx` | Terms of Service |
+| `app/legal/refund/page.tsx` | Refund Policy (Razorpay / digital goods) |
 | `app/legal/disclaimer/page.tsx` | Legal disclaimer page |
 | `app/api/ai/analyse/route.ts` | AI analysis API route |
 | `app/api/razorpay/checkout-config/route.ts` | Razorpay Key ID for Standard Checkout (server → frontend) |
@@ -939,10 +940,16 @@ Current status: **partially implemented**
 ### Known placeholders / coming-soon pages
 - `app/goals/page.tsx`: coming soon
 - `app/pricing/page.tsx`: full plans coming soon
-- `app/privacy/page.tsx`: content coming soon
-- `app/terms/page.tsx`: content coming soon
 - `lib/kycVerification.ts`: PAN verification is mock logic
 - `app/insurance/page.tsx`: full comparison engine not complete
+
+### Legal pages (complete)
+- **`/legal/privacy`**: Full Privacy Policy (DPDP Act 2023 rights, grievance officer, processors: Supabase, Vercel, Groq, Razorpay).
+- **`/legal/terms`**: Full Terms of Service (educational-only / not SEBI-RIA disclaimer, payments, liability cap).
+- **`/legal/refund`**: Standalone Refund Policy for digital products (Razorpay-friendly).
+- **`/legal/disclaimer`**: Existing disclaimer page unchanged by this batch unless edited separately.
+- **`/privacy`** and **`/terms`** redirect to the canonical **`/legal/*`** routes.
+- Footer **Legal** column and profile menu link to Privacy, Terms, Refund, and Disclaimer.
 
 ### Hardcoded values needing future dynamic handling
 - Some paywall and token thresholds are hardcoded in result/fixplan/payment flow
@@ -1616,6 +1623,8 @@ Important implementation note:
 ## CHANGE LOG
 
 ### 2026-05-02
+
+- **Legal (India / DPDP):** Replaced **`/legal/privacy`** and **`/legal/terms`** with full policies (readable layout, AI/Groq cross-border note, Razorpay, grievance officer, DPDP rights). Added **`/legal/refund`** for Razorpay. **`/privacy`** and **`/terms`** now **`redirect()`** to canonical legal URLs. Footer Legal column + profile dropdown include Privacy, Terms, Refunds, Disclaimer.
 
 - **Auth (complete UX):** **`/login`** is a single **login · sign-up · forgot-password** page (inline reset email, Google OAuth with **`offline`/`consent`** and **`next`** deep-link preservation). **`lib/supabase.ts`** browser client sets **`auth.storageKey: 'finkoin-auth-token'`** and session refresh flags. **`/auth/callback`** uses **`Suspense`**, **`exchangeCodeForSession`**, **`initAuth()`**, **`type=recovery`** → **`/auth/update-password`**, optional **`next`** redirect. **`middleware`** merges refreshed cookies onto login redirects for protected routes. **`authStore`** **`partialize`** persists only **`user`** + **`isLoggedIn`**; **`subscriptionTier`** for UI reads from **`user?.subscriptionTier`** where needed. **Global navbar** **`Log in`** → **`/login`**; **`LoginSheet`** removed from navbar wiring.
 - **Auth (production pass):** Added **`@supabase/ssr`**; browser **`createBrowserClient`** + middleware **`createServerClient`** refresh; **`AppInitializer`** waits for Zustand **`persist` rehydration** then **`initAuth()`** to avoid refresh crashes from stale persisted user; **`authStore`** **`hasInitialized`**, **`refreshUser`**, **`signUpWithEmail`**, single **`onAuthStateChange`** subscription, **`logout`** clears persist + sensitive localStorage keys and syncs **`gamificationStore`** FK from **`refreshUser`**; **`AuthSessionSync`** visibility + **`storage`** hooks; protected routes in **`middleware`**; **`/auth/reset-password`** and **`/auth/update-password`**; login **`Suspense`** + **`redirect`** query + Google OAuth + forgot-password link; **`lib/supabaseServer`** **`createSupabaseServerClient`** + lazy admin client; profile sign-out uses **`signOut()`** (full Supabase logout).

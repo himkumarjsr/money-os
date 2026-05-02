@@ -247,6 +247,36 @@ export function GlobalNavbar() {
             </nav>
 
             <div className="my-3 border-t border-[#F0EFF8]" />
+            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 text-[11px] text-slate-500">
+              <Link href="/legal/privacy" scroll className="hover:text-[#534AB7]" onClick={() => setProfileOpen(false)}>
+                Privacy
+              </Link>
+              <span aria-hidden className="text-slate-300">
+                ·
+              </span>
+              <Link href="/legal/terms" scroll className="hover:text-[#534AB7]" onClick={() => setProfileOpen(false)}>
+                Terms
+              </Link>
+              <span aria-hidden className="text-slate-300">
+                ·
+              </span>
+              <Link href="/legal/refund" scroll className="hover:text-[#534AB7]" onClick={() => setProfileOpen(false)}>
+                Refunds
+              </Link>
+              <span aria-hidden className="text-slate-300">
+                ·
+              </span>
+              <Link
+                href="/legal/disclaimer"
+                scroll
+                className="hover:text-[#534AB7]"
+                onClick={() => setProfileOpen(false)}
+              >
+                Disclaimer
+              </Link>
+            </div>
+
+            <div className="my-3 border-t border-[#F0EFF8]" />
             <button
               type="button"
               onClick={async () => {
