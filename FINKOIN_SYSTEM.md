@@ -61,6 +61,7 @@ The core value proposition is: collect profile + money data once, run determinis
 |---------|---------|---------|
 | @hookform/resolvers | ^3.9.1 | Zod integration with react-hook-form |
 | @supabase/supabase-js | ^2.103.0 | Supabase auth + database client |
+| @supabase/ssr | ^0.x | Cookie-aligned browser/server Supabase clients + middleware session refresh |
 | clsx | ^2.1.1 | Conditional class names |
 | framer-motion | ^11.18.2 | Animations/transitions |
 | groq-sdk | ^1.1.2 | Groq API client for AI route |
@@ -125,7 +126,7 @@ Complete inventory with one-line purpose per file:
 | `postcss.config.mjs` | PostCSS plugin setup |
 | `eslint.config.mjs` | ESLint configuration |
 | `vitest.config.ts` | Vitest configuration |
-| `middleware.ts` | Next middleware entry |
+| `middleware.ts` | Supabase session refresh + protected-route gate |
 | `FINKOIN_SYSTEM.md` | This documentation file |
 | `.expo/settings.json` | Local editor/tooling settings |
 | `public/logo.png` | Public logo asset |
@@ -138,8 +139,11 @@ Complete inventory with one-line purpose per file:
 | `app/analyse/page.tsx` | Analyse route wrapper for onboarding form |
 | `app/analyse/result/page.tsx` | Analysis result/paywall flow |
 | `app/analyse/fixplan/page.tsx` | Full AI fix-plan page with cache/access gating |
-| `app/login/page.tsx` | Email login/signup page |
-| `app/auth/callback/page.tsx` | OAuth callback/session exchange |
+| `app/login/page.tsx` | Email login/signup + Google OAuth entry |
+| `app/auth/callback/page.tsx` | OAuth / email-link callback (PKCE code exchange) |
+| `app/auth/reset-password/page.tsx` | Request password reset email |
+| `app/auth/update-password/page.tsx` | Set new password after recovery link |
+| `components/AppInitializer.tsx` | Client gate: Zustand persist rehydrate then `initAuth()` before app shell |
 | `app/optimizer/page.tsx` | Optimizer page |
 | `app/insurance/page.tsx` | Insurance marketplace placeholder/comparison entry |
 | `app/policies/page.tsx` | Policy vault page wrapper |
@@ -242,9 +246,9 @@ Complete inventory with one-line purpose per file:
 | `lib/generatePDF.ts` | Multi-page optimizer/fix-plan PDF report generator |
 | `lib/payment.ts` | Access check + FK redemption logic |
 | `lib/auth.ts` | Auth helper methods |
-| `lib/supabase.ts` | Main Supabase client |
-| `lib/supabaseClient.ts` | Re-exported client |
-| `lib/supabaseServer.ts` | Service-role Supabase client |
+| `lib/supabase.ts` | Browser `createBrowserClient` singleton (`getSupabase`) + lazy `supabase` proxy |
+| `lib/supabaseClient.ts` | Re-exports browser helpers |
+| `lib/supabaseServer.ts` | `createSupabaseServerClient()` (cookies) + lazy service-role admin proxy |
 | `lib/userAnalyseSnapshot.ts` | Snapshot fetch/upsert helpers |
 | `lib/userPolicies.ts` | Policy types and Supabase operations |
 | `lib/kycVerification.ts` | PAN verification mock logic |
@@ -533,10 +537,10 @@ Actions:
 
 ### authStore
 File: `store/authStore.ts`  
-Persisted: Yes (`finkoin-auth`)
+Persisted: Yes (`finkoin-auth`) — partializes `user`, `isLoggedIn`, `subscriptionTier`, `userId` (not `isLoading` / `hasInitialized`)
 
-State: `user`, `isLoggedIn`, `isLoading`, `subscriptionTier`, `userId`  
-Actions: `setUser`, `updateUser`, `setLoading`, `setSubscription`, `logout`, `signInWithEmail`, `initAuth`
+State: `user`, `isLoggedIn`, `isLoading`, `hasInitialized`, `subscriptionTier`, `userId`  
+Actions: `setUser`, `updateUser`, `setLoading`, `setSubscription`, `logout` (async: Supabase sign-out + clears persist + financial/AI cache keys), `initAuth`, `refreshUser`, `signInWithEmail`, `signUpWithEmail`
 
 ### gamificationStore
 File: `store/gamificationStore.ts`  
@@ -809,25 +813,43 @@ Source categories used in DB rows include:
 
 ## 13. AUTH FLOW
 
+### Overview (production-oriented)
+
+1. **Browser client** (`lib/supabase.ts`): `@supabase/ssr` **`createBrowserClient`** singleton via **`getSupabase()`**. Sessions are stored in **HTTP cookies** (SSR-aligned) so they match the server middleware refresh path. A **`supabase` proxy** preserves legacy `import { supabase } from "@/lib/supabase"` call sites (client-only).
+
+2. **Middleware** (`middleware.ts`): **`createServerClient`** from `@supabase/ssr` reads request cookies, runs **`auth.getUser()`** (validates JWT + refreshes / rotates refresh token), writes updated cookies on the response. If env vars are missing, middleware no-ops.
+
+3. **Protected routes**: `/analyse/fixplan`, `/profile`, `/policies`, `/rewards` — unauthenticated users are redirected to **`/login?redirect=<path>`**.
+
+4. **App bootstrap** (`components/AppInitializer.tsx`): Waits for **`useAuthStore.persist.rehydrate()`** + hydration completion, then **`initAuth()`** so UI does not trust persisted Zustand user state before Supabase **`getSession()`** validates the session.
+
+5. **`initAuth` / `refreshUser`** (`store/authStore.ts`): Loads **`users`** + **`gamification`** (creates gamification row if missing), maps **`subscription_tier`**, **`referral_code`**, **`fk_balance`**, and syncs **`useGamificationStore`** FK display with Supabase. Registers **one** **`onAuthStateChange`** listener (sign-in, token refresh, sign-out).
+
+6. **Cross-tab**: `components/AuthSessionSync.tsx` listens for **`storage`** (persist / Supabase keys) and **`visibilitychange`** to **`refreshUser()`** when returning to a tab.
+
+7. **Logout**: `logout()` calls **`supabase.auth.signOut()`**, **`persist.clearStorage()`** for `finkoin-auth`, removes **`finkoin-financial`** and **`finkoin_ai_cache`** from `localStorage`. Navbar uses **`signOut()`** from `lib/auth` (delegates to store).
+
 ### Sign up
-1. User submits email/password/name (`app/login/page.tsx`)
-2. `signUpWithEmail` -> `supabase.auth.signUp`
-3. DB trigger `handle_new_user()` inserts `users` + `gamification` + `user_stats`
-4. `initAuth()` hydrates store
-5. Redirect to `/analyse`
+1. User submits email/password/name on **`/login`** (or sheet flows that call the store).
+2. **`signUpWithEmail`** → `supabase.auth.signUp` with **`emailRedirectTo`** → `{origin}/auth/callback`.
+3. DB trigger **`handle_new_user()`** inserts **`users`** + **`gamification`** + **`user_stats`** when the auth user is confirmed.
+4. If a session is returned immediately, **`refreshUser()`** runs; otherwise the user verifies email and completes login via callback.
 
 ### Sign in
-1. User submits email/password
-2. `signInWithEmail` -> `supabase.auth.signInWithPassword`
-3. `initAuth()` loads `users` row + FK balance
-4. Redirect to `/analyse`
+1. **`signInWithEmail`** → **`signInWithPassword`** → **`refreshUser()`**.
+2. Optional **`?redirect=`** query preserves deep links after login.
 
-### Session management
-- Supabase client configured with:
-  - `persistSession: true`
-  - `autoRefreshToken: true`
-  - `detectSessionInUrl: true`
-- `AuthSessionSync` keeps Zustand auth in sync with Supabase session
+### OAuth (Google)
+1. **`signInWithOAuth`** with **`redirectTo`** `{origin}/auth/callback`.
+2. **`/auth/callback`** exchanges **`?code=`** via **`exchangeCodeForSession`**, then **`refreshUser()`**, then redirect to **`/analyse`**.
+
+### Password reset
+1. **`/auth/reset-password`** → **`resetPasswordForEmail`** with **`redirectTo`** `{origin}/auth/update-password`.
+2. **`/auth/update-password`** → **`auth.updateUser({ password })`** when a recovery session exists.
+
+### JWT / refresh (dashboard configuration)
+
+Configure in **Supabase Dashboard → Authentication**: JWT expiry (e.g. **3600s**), **refresh token rotation ON**, reuse interval as recommended. Middleware **`getUser()`** ensures cookies stay fresh on navigations.
 
 ---
 
@@ -1590,6 +1612,7 @@ Important implementation note:
 
 ### 2026-05-02
 
+- **Auth (production pass):** Added **`@supabase/ssr`**; browser **`createBrowserClient`** + middleware **`createServerClient`** refresh; **`AppInitializer`** waits for Zustand **`persist` rehydration** then **`initAuth()`** to avoid refresh crashes from stale persisted user; **`authStore`** **`hasInitialized`**, **`refreshUser`**, **`signUpWithEmail`**, single **`onAuthStateChange`** subscription, **`logout`** clears persist + sensitive localStorage keys and syncs **`gamificationStore`** FK from **`refreshUser`**; **`AuthSessionSync`** visibility + **`storage`** hooks; protected routes in **`middleware`**; **`/auth/reset-password`** and **`/auth/update-password`**; login **`Suspense`** + **`redirect`** query + Google OAuth + forgot-password link; **`lib/supabaseServer`** **`createSupabaseServerClient`** + lazy admin client; profile sign-out uses **`signOut()`** (full Supabase logout).
 - **Tax regime calculator UX & persistence:** progressive-disclosure **toggle sections** for optional income (HRA, 80GG when no HRA, LTA, RSU/ESOP vest+sale, gratuity, leave encashment, business modes 44AD/44ADA/regular, rental NAV worksheet, pension/family pension + commuted sketch, interest splits, dividends, capital gains buckets, agricultural toggle, other income incl. lottery at illustrative 30%); **sticky LIVE SUMMARY** + mobile summary; **localStorage** key **`finkoin_tax_calculator`** with restore on mount and **Reset** reload; **“What you learned today”** recap from enabled sections; reusable **`ToggleSection`** (`components/calculators/ToggleSection.tsx`); illustrative helpers in **`lib/taxCalculatorHelpers.ts`**; engine adds **`slabTaxedOtherGains`**, **`propertyLtcgGains`**, **`lotteryGamblingIncome`**, **`interestSavingsPortion`** (80TTA nudge), updates equity CG illustration to **20% STCG / 12.5% LTCG after ₹1.25L** plus property-LTCG and lottery components in **`computeScheduleRateTax`** (`lib/taxRegimeComparisonFY2026.ts`).
 - Added **Tax Regime Comparison** calculator (`tax-regime`): compares **old vs new** regime for **FY 2025-26 (AY 2026-27)** with inputs for salary, other income, age bracket (regular / senior / super senior), HRA flow (metro vs non-metro), 80C/80D/24(b)/80CCD(1B)/other deductions; implements illustrative slabs, ₹75k standard deduction on new regime, ₹50k on old, simplified **87A** (tax wiped when taxable ≤ ₹12L new / ₹5L old), surcharge brackets, and **4% cess**.
 - New tax engine lives in `lib/taxRegimeComparisonFY2026.ts`; UI in `components/calculators/TaxRegimeCalculator.tsx` with comparison table, winner banner, monthly take-home diff, free tips, and **₹99 paywall** for expanded narrative + print/PDF via browser (reuses `PaywallModal` with configurable title, bullets, Razorpay description, and **post-payment redirect** back to `/calculators?calc=tax-regime`).

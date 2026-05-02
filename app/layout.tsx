@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
+import AppInitializer from "@/components/AppInitializer";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import { GlobalNavbar } from "@/components/global-navbar";
@@ -157,13 +158,15 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
-        <ScrollToTopOnRouteChange />
-        <AuthSessionSync />
-        <FinancialStoreAuthSync />
-        <GlobalNavbar />
-        <RenewalReminderBanner />
-        <main className="relative">{children}</main>
-        <Toast />
+        <AppInitializer>
+          <ScrollToTopOnRouteChange />
+          <AuthSessionSync />
+          <FinancialStoreAuthSync />
+          <GlobalNavbar />
+          <RenewalReminderBanner />
+          <main className="relative">{children}</main>
+          <Toast />
+        </AppInitializer>
       </body>
     </html>
   );

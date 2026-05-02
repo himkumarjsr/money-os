@@ -1,16 +1,18 @@
 "use client";
 
+import { signOut } from "@/lib/auth";
 import { verifyPAN } from "@/lib/kycVerification";
 import { formatIndian } from "@/lib/formatters";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const logout = useAuthStore((s) => s.logout);
   const result = useFinancialStore((s) => s.result);
   const submission = useFinancialStore((s) => s.lastSubmission);
   const fkBalance = useGamificationStore((s) => s.fkBalance);
@@ -173,7 +175,14 @@ export default function ProfilePage() {
           <button type="button" className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600">
             Delete all my data
           </button>
-          <button type="button" className="rounded-lg border border-slate-200 px-3 py-2 text-sm" onClick={logout}>
+          <button
+            type="button"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            onClick={async () => {
+              await signOut();
+              router.push("/");
+            }}
+          >
             Sign out
           </button>
         </div>

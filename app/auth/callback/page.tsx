@@ -1,75 +1,57 @@
 "use client";
 
-import { useEffect } from "react";
+import { getSupabase } from "@/lib/supabase";
+import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect } from "react";
 
-export default function AuthCallback() {
+export default function AuthCallbackPage() {
   const router = useRouter();
+  const refreshUser = useAuthStore((s) => s.refreshUser);
 
   useEffect(() => {
-    const handleCallback = async () => {
-      if (!supabase) {
-        router.push("/login");
-        return;
-      }
+    void (async () => {
+      try {
+        const supabase = getSupabase();
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("code");
 
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          router.push("/login");
-          return;
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error("Auth callback:", error);
+            router.replace("/login?error=auth_failed");
+            return;
+          }
         }
+
+        await refreshUser();
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        router.replace(session ? "/analyse" : "/login");
+      } catch (e) {
+        console.error("Auth callback error:", e);
+        router.replace("/login?error=auth_failed");
       }
-
-      const { data } = await supabase.auth.getSession();
-
-      if (data.session) {
-        router.push("/analyse");
-      } else {
-        router.push("/login");
-      }
-    };
-
-    void handleCallback();
-  }, [router]);
+    })();
+  }, [router, refreshUser]);
 
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         height: "100vh",
-        gap: "16px",
+        flexDirection: "column",
+        gap: 16,
       }}
     >
-      <svg width="40" height="40" viewBox="0 0 64 64">
-        <rect width="64" height="64" rx="14" fill="#534AB7" />
-        <text
-          x="32"
-          y="39"
-          textAnchor="middle"
-          fontFamily="system-ui"
-          fontWeight="800"
-          fontSize="20"
-          fill="#FFFFFF"
-        >
-          FK
-        </text>
-      </svg>
-      <p
-        style={{
-          color: "#534AB7",
-          fontWeight: 600,
-          fontSize: 16,
-        }}
-      >
-        Setting up your account...
-      </p>
+      <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
+      <p style={{ fontSize: 14, color: "#9B9A94" }}>Completing login…</p>
     </div>
   );
 }

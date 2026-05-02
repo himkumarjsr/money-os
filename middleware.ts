@@ -1,20 +1,46 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-/**
- * Supabase hash fragments (#access_token=..., type=invite, etc.) are not available
- * in middleware or Route Handlers — only in the browser. Client pages under
- * /auth/callback and /login finish the session (see exchangeCodeForSession +
- * getSession / onAuthStateChange there).
- *
- * PKCE uses ?code= in the query string; the callback page exchanges it client-side.
- */
-export function middleware(_request: NextRequest) {
-  return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return NextResponse.next();
+  }
+
+  let supabaseResponse = NextResponse.next({ request });
+
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
+      },
+    },
+  });
+
+  const protectedPaths = ["/analyse/fixplan", "/profile", "/policies", "/rewards"];
+  const isProtected = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path));
+
+  // Validates JWT and refreshes session / rotates refresh cookie when needed.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (isProtected && !user) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return supabaseResponse;
 }
 
 export const config = {
-  matcher: [
-    // Skip all Next internals (static chunks, HMR, image optimizer, etc.) — avoids extra work on chunk requests.
-    "/((?!_next/|favicon.ico|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/((?!_next/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

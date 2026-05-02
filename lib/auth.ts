@@ -11,7 +11,9 @@ function randomReferralCode(seed: string) {
 export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: window.location.origin },
+    options: {
+      redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
+    },
   });
   return { data, error };
 }
@@ -57,27 +59,25 @@ export function bootstrapAuthUser(params: {
   useAuthStore.getState().setUser(user);
 }
 
+/** Ends Supabase session, clears persisted auth + sensitive local caches. */
 export async function signOut() {
-  await supabase.auth.signOut();
-  useAuthStore.getState().logout();
+  await useAuthStore.getState().logout();
   return { error: null as string | null };
 }
 
 export async function signUpWithEmail(email: string, password: string, name: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { name } },
-  });
-  return { data, error };
+  return useAuthStore.getState().signUpWithEmail(email, password, name).then((r) => ({
+    data: null as null,
+    error: r.error ? { message: r.error } : null,
+  }));
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  return { data, error };
+  const res = await useAuthStore.getState().signInWithEmail(email, password);
+  return {
+    data: res.error ? null : ({} as unknown),
+    error: res.error ? { message: res.error } : null,
+  };
 }
 
 export async function getCurrentUser() {
@@ -87,9 +87,8 @@ export async function getCurrentUser() {
   return user;
 }
 
-export async function onAuthChange(callback: (user: any) => void) {
+export async function onAuthChange(callback: (user: unknown) => void) {
   return supabase.auth.onAuthStateChange((_event, session) => {
     callback(session?.user || null);
   });
 }
-
