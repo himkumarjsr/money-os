@@ -11,15 +11,16 @@ interface AddExpenseModalProps {
   onClose: () => void;
   onSaved: () => void;
   defaultDate?: string;
+  defaultBucket?: string;
 }
 
-export default function AddExpenseModal({ onClose, onSaved, defaultDate }: AddExpenseModalProps) {
+export default function AddExpenseModal({ onClose, onSaved, defaultDate, defaultBucket }: AddExpenseModalProps) {
   const user = useAuthStore((s) => s.user);
   const today = new Date().toISOString().split("T")[0];
 
   const [date, setDate] = useState(defaultDate || today);
   const [amount, setAmount] = useState(0);
-  const [bucket, setBucket] = useState("");
+  const [bucket, setBucket] = useState(defaultBucket || "");
   const [subcategory, setSubcategory] = useState("");
   const [description, setDescription] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("upi");
@@ -172,6 +173,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate }: AddEx
           />
         </div>
 
+        {!defaultBucket ? (
         <div style={{ marginBottom: 16 }}>
           <label
             style={{
@@ -191,9 +193,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate }: AddEx
               gap: 8,
             }}
           >
-            {Object.entries(TRACKER_CATEGORIES)
-              .filter(([key]) => key !== "income")
-              .map(([key, cat]) => (
+            {Object.entries(TRACKER_CATEGORIES).map(([key, cat]) => (
                 <button
                   key={key}
                   type="button"
@@ -219,6 +219,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate }: AddEx
               ))}
           </div>
         </div>
+        ) : null}
 
         {selectedBucket ? (
           <div style={{ marginBottom: 16 }}>
@@ -286,6 +287,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate }: AddEx
           />
         </div>
 
+        {bucket !== "income" ? (
         <div style={{ marginBottom: 20 }}>
           <label
             style={{
@@ -326,6 +328,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate }: AddEx
             ))}
           </div>
         </div>
+        ) : null}
 
         {error ? (
           <div

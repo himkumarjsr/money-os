@@ -1,6 +1,6 @@
 "use client";
 
-import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
+import { STORAGE_KEY } from "@/lib/referralRewards";
 import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
@@ -13,7 +13,7 @@ export function ReferralCapture() {
       const ref = searchParams.get("ref")?.trim();
       if (ref) {
         localStorage.setItem(
-          REFERRAL_PENDING_STORAGE_KEY,
+          STORAGE_KEY,
           JSON.stringify({
             code: ref,
             savedAt: new Date().toISOString(),

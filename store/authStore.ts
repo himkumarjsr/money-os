@@ -340,7 +340,7 @@ export const useAuthStore = create<AuthState>()(
                   const createdAt = new Date(sess.user.created_at);
                   const ageMinutes = (Date.now() - createdAt.getTime()) / 60000;
 
-                  console.log("SIGNED_IN: account age", ageMinutes, "minutes");
+                  console.log("SIGNED_IN: account age minutes =", ageMinutes);
 
                   if (ageMinutes < 30) {
                     const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
@@ -349,7 +349,7 @@ export const useAuthStore = create<AuthState>()(
                     console.log("Referral: processed on SIGNED_IN");
                   }
                 } catch (e) {
-                  console.warn("Referral SIGNED_IN error:", e);
+                  console.warn("Referral error:", e);
                 }
               } else if ((event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && sess?.user) {
                 await get().refreshUser();
@@ -391,7 +391,8 @@ export const useAuthStore = create<AuthState>()(
             await get().refreshUser();
             try {
               const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
-              await applyPendingReferralRewards(getSupabase(), data.session.user.id);
+              const supabase = getSupabase();
+              await applyPendingReferralRewards(supabase, data.session.user.id);
               console.log("Referral: processed after email signup");
             } catch (e) {
               console.warn("Referral signup error:", e);

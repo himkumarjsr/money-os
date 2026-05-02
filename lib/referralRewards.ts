@@ -15,29 +15,25 @@ const referralApplyLocks = new Set<string>();
 export function consumePendingReferralCode(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const stored = localStorage.getItem(REFERRAL_PENDING_STORAGE_KEY);
-
+    const stored = localStorage.getItem("finkoin_pending_ref");
     if (!stored) return null;
 
     let code: string | null = null;
 
     try {
       const parsed = JSON.parse(stored) as { code?: string; expires?: string };
-
       if (parsed.expires && new Date(parsed.expires) < new Date()) {
-        localStorage.removeItem(REFERRAL_PENDING_STORAGE_KEY);
+        localStorage.removeItem("finkoin_pending_ref");
+        console.log("Referral: code expired");
         return null;
       }
-
       code = parsed.code || null;
     } catch {
       code = stored;
     }
 
-    localStorage.removeItem(REFERRAL_PENDING_STORAGE_KEY);
-
-    console.log("Referral: consumed code", code);
-
+    localStorage.removeItem("finkoin_pending_ref");
+    console.log("Referral: consumed code =", code);
     return code;
   } catch (err) {
     console.error("consumeReferral error:", err);
@@ -50,7 +46,7 @@ export function consumePendingReferralCode(): string | null {
  * Inserts `public.referrals` when RLS allows. Best-effort on failures.
  */
 export async function applyPendingReferralRewards(supabase: SupabaseClient, newUserId: string): Promise<void> {
-  console.log("applyPendingReferralRewards: called for user", newUserId);
+  console.log("applyPendingReferralRewards called:", newUserId);
 
   if (referralApplyLocks.has(newUserId)) return;
   referralApplyLocks.add(newUserId);
@@ -62,15 +58,15 @@ export async function applyPendingReferralRewards(supabase: SupabaseClient, newU
       return;
     }
 
-    const refCode = consumePendingReferralCode();
-    console.log("applyPendingReferralRewards: code=", refCode);
+    const code = consumePendingReferralCode();
+    console.log("pending referral code:", code);
 
-    if (!refCode) {
-      console.log("applyPendingReferralRewards: no pending referral code");
+    if (!code) {
+      console.log("No pending referral code");
       return;
     }
 
-    const { data: referrer } = await supabase.from("users").select("id").eq("referral_code", refCode).maybeSingle();
+    const { data: referrer } = await supabase.from("users").select("id").eq("referral_code", code).maybeSingle();
     console.log("applyPendingReferralRewards: referrer found", referrer?.id);
 
     if (!referrer?.id || referrer.id === newUserId) return;
@@ -96,7 +92,7 @@ export async function applyPendingReferralRewards(supabase: SupabaseClient, newU
     await bump(referrer.id, 200);
     await bump(newUserId, 100);
 
-    console.log("applyPendingReferralRewards: FK awarded to both users");
+    console.log("Referral: FK awarded");
 
     const { error: refErr } = await supabase.from("referrals").insert({
       referrer_user_id: referrer.id,
