@@ -1,5 +1,6 @@
 "use client";
 
+import { STORAGE_KEY } from "@/components/ReferralCapture";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -100,6 +101,17 @@ function LoginContent() {
       }
 
       await initAuth();
+
+      if (data.session?.user?.id) {
+        try {
+          const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
+          await applyPendingReferralRewards(getSupabase(), data.session.user.id);
+          console.log("Referral processed after email signup");
+        } catch (e) {
+          console.warn("Referral error:", e);
+        }
+      }
+
       router.push(redirectTo.startsWith("/") ? redirectTo : "/analyse");
       return;
     }

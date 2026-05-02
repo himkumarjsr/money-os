@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import AppInitializer from "@/components/AppInitializer";
 import { ReferralCapture } from "@/components/ReferralCapture";
+import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import Footer from "@/components/landing/Footer";
@@ -160,7 +162,9 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
-        <ReferralCapture />
+        <Suspense fallback={null}>
+          <ReferralCapture />
+        </Suspense>
         <AppInitializer>
           <ScrollToTopOnRouteChange />
           <AuthSessionSync />
@@ -171,6 +175,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <ReferralSuccessToast />
           <Toast />
         </AppInitializer>
       </body>
