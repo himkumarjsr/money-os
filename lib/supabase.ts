@@ -7,11 +7,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 export const isConfigured = !!(supabaseUrl && supabaseAnonKey);
 export const isSupabaseConfigured = isConfigured;
 
-let supabaseInstance: SupabaseClient | null = null;
+let _supabase: SupabaseClient | null = null;
 
 /**
- * Browser-only Supabase client (@supabase/ssr).
- * Uses cookie-backed session storage compatible with middleware refresh.
+ * Singleton browser client (@supabase/ssr). Cookie-backed session aligns with middleware.
  */
 export function getSupabase(): SupabaseClient {
   if (typeof window === "undefined") {
@@ -20,17 +19,10 @@ export function getSupabase(): SupabaseClient {
   if (!isConfigured) {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
   }
-  if (!supabaseInstance) {
-    supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storageKey: "finkoin-auth-token",
-      },
-    });
+  if (!_supabase) {
+    _supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
   }
-  return supabaseInstance;
+  return _supabase;
 }
 
 /**

@@ -9,6 +9,11 @@ const nextConfig = {
     if (dev && !isServer && config.output) {
       config.output.chunkLoadTimeout = 300_000;
     }
+    // Dev-only: filesystem PackFileCacheStrategy logs "Serializing big strings …" for very large modules (e.g. big TSX).
+    // In-memory cache avoids that disk serialization path; prod builds keep Webpack's default filesystem cache.
+    if (dev) {
+      config.cache = { type: "memory" };
+    }
     return config;
   },
 };

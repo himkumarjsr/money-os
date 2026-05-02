@@ -105,6 +105,7 @@ export const useAuthStore = create<AuthState>()(
         })),
 
       logout: async () => {
+        console.log("Logout: starting");
         try {
           await fetch("/api/auth/sign-out", {
             method: "POST",
@@ -117,36 +118,47 @@ export const useAuthStore = create<AuthState>()(
         try {
           const supabase = getSupabase();
           await supabase.auth.signOut({ scope: "global" });
-        } catch (e) {
-          console.warn("client signOut failed:", e);
+        } catch (err) {
+          console.error("Supabase signout error:", err);
+        } finally {
+          useGamificationStore.setState({
+            fkBalance: 0,
+            badges: [],
+            streakDays: 0,
+            earnedActions: [],
+            toastMessage: null,
+          });
+          set({
+            user: null,
+            isLoggedIn: false,
+            userId: null,
+            subscriptionTier: "free",
+            isLoading: false,
+            hasInitialized: true,
+          });
+          try {
+            await useAuthStore.persist.clearStorage();
+          } catch {
+            /* ignore */
+          }
+          try {
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (
+                key &&
+                (key.startsWith("finkoin") || key.includes("supabase") || key.toLowerCase().includes("auth-token"))
+              ) {
+                keysToRemove.push(key);
+              }
+            }
+            keysToRemove.forEach((key) => localStorage.removeItem(key));
+          } catch {
+            /* ignore */
+          }
+          authListenerStarted = false;
+          console.log("Logout: complete");
         }
-        try {
-          await useAuthStore.persist.clearStorage();
-        } catch {
-          /* ignore */
-        }
-        try {
-          localStorage.removeItem("finkoin-financial");
-          localStorage.removeItem("finkoin_ai_cache");
-          localStorage.removeItem("finkoin-gamification");
-        } catch {
-          /* ignore */
-        }
-        useGamificationStore.setState({
-          fkBalance: 0,
-          badges: [],
-          streakDays: 0,
-          earnedActions: [],
-          toastMessage: null,
-        });
-        set({
-          user: null,
-          isLoggedIn: false,
-          isLoading: false,
-          hasInitialized: true,
-          subscriptionTier: "free",
-          userId: null,
-        });
       },
 
       refreshUser: async () => {
@@ -156,7 +168,15 @@ export const useAuthStore = create<AuthState>()(
             data: { session },
           } = await supabase.auth.getSession();
 
-          if (!session?.user) {
+          let authUser = session?.user ?? null;
+          if (!authUser) {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            authUser = user;
+          }
+
+          if (!authUser) {
             set({
               user: null,
               isLoggedIn: false,
@@ -168,7 +188,6 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
 
-          const authUser = session.user;
           const userId = authUser.id;
 
           const { data: userData } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
@@ -258,15 +277,29 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initAuth: async () => {
+        console.log("initAuth: starting");
+        const supabase = getSupabase();
         set({ isLoading: true });
-        try {
-          const supabase = getSupabase();
 
+        try {
           const {
             data: { session },
           } = await supabase.auth.getSession();
+          console.log("initAuth: session=", !!session?.user);
 
-          if (!session?.user) {
+          let recoveredUser = session?.user ?? null;
+          if (!recoveredUser) {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            recoveredUser = user;
+            console.log("initAuth: user=", !!user);
+          }
+
+          if (recoveredUser) {
+            await get().refreshUser();
+            set({ hasInitialized: true, isLoading: false });
+          } else {
             set({
               user: null,
               isLoggedIn: false,
@@ -275,20 +308,18 @@ export const useAuthStore = create<AuthState>()(
               subscriptionTier: "free",
               userId: null,
             });
-          } else {
-            await get().refreshUser();
           }
 
-          // Guarantee flags after getSession + refreshUser (all success paths).
-          set((s) => ({
-            ...s,
+          console.log("initAuth: complete", {
             hasInitialized: true,
-            isLoading: false,
-          }));
+            isLoggedIn: get().isLoggedIn,
+          });
 
           if (!authListenerStarted) {
             authListenerStarted = true;
             supabase.auth.onAuthStateChange(async (event, sess) => {
+              console.log("Auth event:", event);
+
               if (event === "SIGNED_OUT") {
                 set({
                   user: null,
@@ -300,7 +331,8 @@ export const useAuthStore = create<AuthState>()(
                 });
                 return;
               }
-              if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "USER_UPDATED") {
+
+              if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
                 if (sess?.user) await get().refreshUser();
               }
             });

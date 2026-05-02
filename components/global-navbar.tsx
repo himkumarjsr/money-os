@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGamificationStore } from "@/store/gamificationStore";
 
 const centerNavItems = [
@@ -18,7 +18,6 @@ const centerNavItems = [
 
 export function GlobalNavbar() {
   const router = useRouter();
-  const logoutAction = useAuthStore((s) => s.logout);
   const fkBalance = useGamificationStore((s) => s.fkBalance);
   const badges = useGamificationStore((s) => s.badges.length);
   const streakDays = useGamificationStore((s) => s.streakDays);
@@ -65,6 +64,25 @@ export function GlobalNavbar() {
     () => (user?.name?.trim()?.charAt(0) || "U").toUpperCase(),
     [user?.name],
   );
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      setProfileOpen(false);
+      await useAuthStore.getState().logout();
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      console.error("Logout error:", err);
+      useAuthStore.setState({
+        user: null,
+        isLoggedIn: false,
+        userId: null,
+        subscriptionTier: "free",
+      });
+      router.push("/");
+      router.refresh();
+    }
+  }, [router]);
 
   return (
     <>
@@ -267,10 +285,20 @@ export function GlobalNavbar() {
                 ["👥", "Refer & Earn", "/refer"],
                 ["⚙️", "Settings", "/settings"],
               ].map(([icon, label, href]) => (
-                <Link key={href} href={href} scroll onClick={() => setProfileOpen(false)} className="flex items-center justify-between rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
-                  <span>{icon} {label}</span>
-                  <span>›</span>
-                </Link>
+                <button
+                  key={href}
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    router.push(href);
+                  }}
+                >
+                  <span>
+                    {icon} {label}
+                  </span>
+                  <span aria-hidden>›</span>
+                </button>
               ))}
             </nav>
 
@@ -305,21 +333,7 @@ export function GlobalNavbar() {
             </div>
 
             <div className="my-3 border-t border-[#F0EFF8]" />
-            <button
-              type="button"
-              onClick={async () => {
-                setProfileOpen(false);
-                try {
-                  await logoutAction();
-                } catch (err) {
-                  console.error("Sign out error:", err);
-                } finally {
-                  router.push("/");
-                  router.refresh();
-                }
-              }}
-              className="w-full text-center text-sm font-semibold text-red-600"
-            >
+            <button type="button" onClick={() => void handleSignOut()} className="w-full text-center text-sm font-semibold text-red-600">
               🚪 Sign out
             </button>
             <p className="mt-1 text-center text-[11px] text-slate-500">

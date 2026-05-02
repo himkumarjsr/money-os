@@ -2,32 +2,53 @@
 
 import { useAuthStore } from "@/store/authStore";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 
-/**
- * Waits for `hasInitialized` before treating `isLoggedIn` as authoritative.
- * Avoids false redirects to `/login` on refresh while Zustand + Supabase hydrate.
- */
 export function ProtectedGate({ children }: { children: ReactNode }) {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const router = useRouter();
   const pathname = usePathname();
+  const redirected = useRef(false);
 
   useEffect(() => {
-    if (!hasInitialized || isLoggedIn) return;
-    const redirect = pathname || "/";
-    router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
+    console.log("ProtectedGate:", { hasInitialized, isLoggedIn, pathname });
+    if (isLoggedIn) redirected.current = false;
+
+    if (hasInitialized && !isLoggedIn && !redirected.current) {
+      redirected.current = true;
+      const redirect = pathname || "/";
+      router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
+    }
   }, [hasInitialized, isLoggedIn, router, pathname]);
 
   if (!hasInitialized) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 bg-[#FAFAFA] px-4">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "60vh",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
         <div
-          className="h-11 w-11 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent"
-          aria-hidden
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: "3px solid #534AB7",
+            borderTop: "3px solid transparent",
+            animation: "spin 0.8s linear infinite",
+          }}
         />
-        <p className="text-sm font-medium text-[#9B9A94]">Loading…</p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
