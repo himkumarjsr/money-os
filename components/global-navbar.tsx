@@ -22,6 +22,7 @@ export function GlobalNavbar() {
   const fkBalance = useGamificationStore((s) => s.fkBalance);
   const badges = useGamificationStore((s) => s.badges.length);
   const streakDays = useGamificationStore((s) => s.streakDays);
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
   const subscriptionTier = useAuthStore((s) => s.user?.subscriptionTier ?? "free");
@@ -157,6 +158,7 @@ export function GlobalNavbar() {
               ref={profileButtonRef}
               type="button"
               onClick={() => {
+                if (!hasInitialized) return;
                 if (!isLoggedIn) {
                   router.push("/login");
                   return;

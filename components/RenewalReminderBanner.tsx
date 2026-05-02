@@ -25,6 +25,7 @@ function isDismissedActive(): boolean {
 }
 
 export function RenewalReminderBanner() {
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   /** Re-check renewals after AuthSessionSync aligns id with Supabase session */
   const authUserId = useAuthStore((s) => s.user?.id);
@@ -60,7 +61,7 @@ export function RenewalReminderBanner() {
     );
     setSampleDate(formatRenewalDayMonth(first.renewalDate));
     setShow(true);
-  }, [isLoggedIn]);
+  }, [hasInitialized, isLoggedIn]);
 
   useEffect(() => {
     void check();

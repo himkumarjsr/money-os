@@ -252,6 +252,7 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (err) {
           console.error("refreshUser error:", err);
+          // Do not clear persisted user here — visibility/tab sync may retry; avoid logout on transient errors.
           set({ isLoading: false, hasInitialized: true });
         }
       },
@@ -278,6 +279,13 @@ export const useAuthStore = create<AuthState>()(
             await get().refreshUser();
           }
 
+          // Guarantee flags after getSession + refreshUser (all success paths).
+          set((s) => ({
+            ...s,
+            hasInitialized: true,
+            isLoading: false,
+          }));
+
           if (!authListenerStarted) {
             authListenerStarted = true;
             supabase.auth.onAuthStateChange(async (event, sess) => {
@@ -287,6 +295,8 @@ export const useAuthStore = create<AuthState>()(
                   isLoggedIn: false,
                   userId: null,
                   subscriptionTier: "free",
+                  isLoading: false,
+                  hasInitialized: true,
                 });
                 return;
               }
@@ -302,6 +312,8 @@ export const useAuthStore = create<AuthState>()(
             isLoggedIn: false,
             isLoading: false,
             hasInitialized: true,
+            subscriptionTier: "free",
+            userId: null,
           });
         }
       },

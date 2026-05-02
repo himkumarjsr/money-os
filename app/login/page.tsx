@@ -10,7 +10,9 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/analyse";
 
-  const { isLoggedIn, initAuth } = useAuthStore();
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const initAuth = useAuthStore((s) => s.initAuth);
 
   const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
 
@@ -23,10 +25,10 @@ function LoginContent() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (hasInitialized && isLoggedIn) {
       router.push(redirectTo.startsWith("/") ? redirectTo : "/analyse");
     }
-  }, [isLoggedIn, router, redirectTo]);
+  }, [hasInitialized, isLoggedIn, router, redirectTo]);
 
   const handleSubmit = async () => {
     setError("");

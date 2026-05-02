@@ -19,6 +19,7 @@ const LOADING_MESSAGES = [
 export default function FixPlanPage() {
   const router = useRouter();
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
   const profile = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
@@ -151,6 +152,10 @@ export default function FixPlanPage() {
 
   useEffect(() => {
     if (!hasInitialized) return;
+    if (!isLoggedIn) {
+      router.replace("/login?redirect=/analyse/fixplan");
+      return;
+    }
     let mounted = true;
     (async () => {
       const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
@@ -174,7 +179,7 @@ export default function FixPlanPage() {
     return () => {
       mounted = false;
     };
-  }, [hasInitialized, user?.subscriptionTier, user?.isAdmin, router]);
+  }, [hasInitialized, isLoggedIn, user?.subscriptionTier, user?.isAdmin, router]);
 
   useEffect(() => {
     if (aiPlan?.isFallback) {
