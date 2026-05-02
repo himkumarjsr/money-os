@@ -253,9 +253,9 @@ export default function HomePage() {
               Start here
             </p>
             <p className="mx-auto mt-2 max-w-xl text-center text-lg font-semibold text-slate-900 sm:text-xl">
-              Three ways to level up your money this week
+              Four ways to level up your money this week
             </p>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Link
                 href="/analyse"
                 className="group flex flex-col rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-white to-indigo-50/90 p-6 shadow-md shadow-indigo-500/10 transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-lg"
@@ -272,7 +272,7 @@ export default function HomePage() {
                 </span>
               </Link>
               <Link
-                href="/calculators?calc=tax-regime"
+                href="/calculators/tax-regime-2026"
                 className="group flex flex-col rounded-2xl border border-violet-200/80 bg-gradient-to-br from-white to-violet-50/90 p-6 shadow-md shadow-violet-500/10 transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-lg"
               >
                 <span className="text-2xl" aria-hidden>
@@ -286,19 +286,39 @@ export default function HomePage() {
                   Open calculator →
                 </span>
               </Link>
-              <div className="relative flex flex-col rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-6 text-slate-600">
-                <span className="absolute right-4 top-4 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
-                  Coming soon
-                </span>
-                <span className="text-2xl opacity-60" aria-hidden>
+              <Link
+                href="/portfolio"
+                className="group flex flex-col rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/90 p-6 shadow-md shadow-slate-500/10 transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-lg"
+              >
+                <span className="text-2xl" aria-hidden>
                   📊
                 </span>
-                <span className="mt-3 text-lg font-bold text-slate-800">Portfolio analysis</span>
-                <span className="mt-2 flex-1 text-sm leading-relaxed">
-                  Upload holdings for allocation, risk, and overlap insights — we&apos;re shipping this next on Finkoin.
+                <span className="mt-3 text-lg font-bold text-slate-900">Portfolio analysis</span>
+                <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
+                  Review holdings and allocation in one workspace — built for Indian investors.
                 </span>
-                <span className="mt-4 text-sm font-medium text-slate-500">Stay tuned</span>
-              </div>
+                <span className="mt-4 text-sm font-semibold text-slate-800 group-hover:underline">
+                  Open portfolio →
+                </span>
+              </Link>
+              <Link
+                href="/tracker"
+                className="relative group flex flex-col rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/90 p-6 shadow-md shadow-emerald-500/10 transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-lg"
+              >
+                <span className="absolute right-4 top-4 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  NEW
+                </span>
+                <span className="text-2xl" aria-hidden>
+                  📊
+                </span>
+                <span className="mt-3 text-lg font-bold text-slate-900">Expense Tracker</span>
+                <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
+                  Track every rupee. See where money goes. Get insights to spend better.
+                </span>
+                <span className="mt-4 text-sm font-semibold text-emerald-700 group-hover:underline">
+                  Start tracking →
+                </span>
+              </Link>
             </div>
           </div>
         </section>

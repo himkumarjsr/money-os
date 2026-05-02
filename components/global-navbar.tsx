@@ -10,6 +10,7 @@ import { useGamificationStore } from "@/store/gamificationStore";
 
 const centerNavItems = [
   { href: "/analyse", label: "Analyse" },
+  { href: "/tracker", label: "Tracker" },
   { href: "/calculators", label: "Calculators" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/optimizer", label: "Optimizer" },
@@ -276,6 +277,7 @@ export function GlobalNavbar() {
             <nav className="space-y-1 text-sm">
               {[
                 ["👤", "My Profile", "/profile"],
+                ["📒", "Expense Tracker", "/tracker"],
                 ["📊", "My Analysis", "/analyse/result"],
                 ["🛡️", "My Policies", "/policies"],
                 ["🎯", "My Goals", "/goals"],

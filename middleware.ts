@@ -26,6 +26,7 @@ export async function middleware(request: NextRequest) {
   });
 
   const protectedPaths = [
+    "/tracker",
     "/analyse/fixplan",
     "/profile",
     "/policies",
