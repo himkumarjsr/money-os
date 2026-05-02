@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGamificationStore } from "@/store/gamificationStore";
+import { usePathname } from "next/navigation";
 
 const centerNavItems = [
   { href: "/analyse", label: "Analyse" },
@@ -19,6 +20,7 @@ const centerNavItems = [
 
 export function GlobalNavbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const fkBalance = useGamificationStore((s) => s.fkBalance);
   const badges = useGamificationStore((s) => s.badges.length);
   const streakDays = useGamificationStore((s) => s.streakDays);
@@ -397,6 +399,53 @@ export function GlobalNavbar() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      <nav
+        aria-label="Mobile quick navigation"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E8E6F0] bg-white/95 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 shadow-[0_-6px_20px_rgba(30,30,60,0.08)] backdrop-blur md:hidden"
+      >
+        <div className="mx-auto grid max-w-md grid-cols-5 items-end gap-1">
+          {(() => {
+            const calcActive = pathname === "/calculators" || pathname.startsWith("/calculators/");
+            return (
+              <Link href="/calculators" scroll className={`col-start-1 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${calcActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
+                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${calcActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>🧮</span>
+                <span>Calc</span>
+              </Link>
+            );
+          })()}
+
+          {(() => {
+            const trackerActive = pathname === "/tracker" || pathname.startsWith("/tracker/");
+            return (
+              <Link href="/tracker" scroll className={`col-start-3 mb-[-14px] inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${trackerActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#534AB7] text-base text-white shadow-md shadow-indigo-500/30">📒</span>
+                <span>Tracker</span>
+              </Link>
+            );
+          })()}
+
+          {(() => {
+            const analyseActive = pathname === "/analyse" || pathname.startsWith("/analyse/");
+            return (
+              <Link href="/analyse" scroll className={`col-start-4 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${analyseActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
+                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${analyseActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>📊</span>
+                <span>Analyse</span>
+              </Link>
+            );
+          })()}
+
+          {(() => {
+            const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
+            return (
+              <Link href="/profile" scroll className={`col-start-5 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${profileActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
+                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${profileActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>👤</span>
+                <span>Profile</span>
+              </Link>
+            );
+          })()}
+        </div>
+      </nav>
     </>
   );
 }

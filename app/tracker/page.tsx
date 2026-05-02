@@ -105,6 +105,7 @@ function TrackerContent() {
   const user = useAuthStore((s) => s.user);
   const [hasConsent, setHasConsent] = useState<boolean | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<TrackerTransaction | null>(null);
   const [transactions, setTransactions] = useState<TrackerTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBucket, setExpandedBucket] = useState<string | null>("needs");
@@ -288,6 +289,7 @@ function TrackerContent() {
             type="button"
             onClick={() => {
               setDefaultBucket("income");
+              setEditingExpense(null);
               setShowAddModal(true);
             }}
             style={{ marginTop: 12, width: "100%", height: 36, background: "rgba(255,255,255,0.2)", border: "1px dashed rgba(255,255,255,0.5)", borderRadius: 8, color: "white", fontSize: 13, cursor: "pointer" }}
@@ -354,15 +356,41 @@ function TrackerContent() {
                         const subTotal = txns.reduce((a, t) => a + Number(t.amount), 0);
                         const sub = cat.subcategories.find((s) => s.id === subId);
                         return (
-                          <div key={subId} style={{ padding: "10px 16px", borderBottom: "1px solid #F7F7F4", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span style={{ fontSize: 16 }}>{sub?.emoji || "💸"}</span>
-                              <div>
-                                <div style={{ fontSize: 14, color: "#111110", fontWeight: 500 }}>{sub?.label || subId}</div>
-                                <div style={{ fontSize: 12, color: "#9B9A94" }}>{txns.length} {txns.length === 1 ? "transaction" : "transactions"}</div>
+                          <div key={subId} style={{ borderBottom: "1px solid #F7F7F4" }}>
+                            <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{ fontSize: 16 }}>{sub?.emoji || "💸"}</span>
+                                <div>
+                                  <div style={{ fontSize: 14, color: "#111110", fontWeight: 500 }}>{sub?.label || subId}</div>
+                                  <div style={{ fontSize: 12, color: "#9B9A94" }}>{txns.length} {txns.length === 1 ? "transaction" : "transactions"}</div>
+                                </div>
                               </div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#111110" }}>₹{subTotal.toLocaleString("en-IN")}</div>
                             </div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111110" }}>₹{subTotal.toLocaleString("en-IN")}</div>
+                            <div style={{ padding: "0 16px 10px 42px", display: "grid", gap: 8 }}>
+                              {txns.map((txn) => (
+                                <div key={txn.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: 8, background: "#F9F9FC", padding: "6px 10px" }}>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: 12, color: "#111110", fontWeight: 600 }}>₹{Number(txn.amount).toLocaleString("en-IN")}</div>
+                                    <div style={{ fontSize: 11, color: "#9B9A94", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }}>
+                                      {txn.description || new Date(txn.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    aria-label="Edit expense"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingExpense(txn);
+                                      setShowAddModal(true);
+                                    }}
+                                    style={{ border: "none", background: "transparent", color: "#534AB7", fontSize: 15, cursor: "pointer", lineHeight: 1 }}
+                                  >
+                                    ✏️
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         );
                       })
@@ -375,6 +403,7 @@ function TrackerContent() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setDefaultBucket(bucketKey);
+                          setEditingExpense(null);
                           setShowAddModal(true);
                         }}
                         style={{ width: "100%", height: 40, borderRadius: 10, background: `${cat.color}15`, border: `1px dashed ${cat.color}`, color: cat.color, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -394,10 +423,27 @@ function TrackerContent() {
       {showAddModal ? (
         <AddExpenseModal
           defaultBucket={defaultBucket || undefined}
-          onClose={() => setShowAddModal(false)}
+          editExpense={
+            editingExpense
+              ? {
+                  id: editingExpense.id,
+                  date: editingExpense.date,
+                  amount: editingExpense.amount,
+                  bucket: editingExpense.bucket,
+                  subcategory: editingExpense.subcategory,
+                  description: editingExpense.description,
+                  payment_method: editingExpense.payment_method,
+                }
+              : undefined
+          }
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingExpense(null);
+          }}
           onSaved={() => {
             setShowAddModal(false);
             setDefaultBucket("");
+            setEditingExpense(null);
             void fetchTransactions();
           }}
         />

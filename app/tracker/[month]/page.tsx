@@ -31,6 +31,7 @@ function TrackerMonthContent() {
   const [transactions, setTransactions] = useState<TrackerTransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<TrackerTransactionRow | null>(null);
 
   useEffect(() => {
     if (!parsed) {
@@ -140,7 +141,10 @@ function TrackerMonthContent() {
         </div>
         <button
           type="button"
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setEditingExpense(null);
+            setShowAddModal(true);
+          }}
           style={{
             height: 44,
             padding: "0 20px",
@@ -182,16 +186,40 @@ function TrackerMonthContent() {
         {loading ? (
           <div style={{ padding: "32px", textAlign: "center", color: "#9B9A94" }}>Loading...</div>
         ) : (
-          <ExpenseTable transactions={transactions} onChanged={() => void fetchTransactions()} />
+          <ExpenseTable
+            transactions={transactions}
+            onChanged={() => void fetchTransactions()}
+            onEdit={(txn) => {
+              setEditingExpense(txn);
+              setShowAddModal(true);
+            }}
+          />
         )}
       </div>
 
       {showAddModal ? (
         <AddExpenseModal
           defaultDate={defaultDateForModal}
-          onClose={() => setShowAddModal(false)}
+          editExpense={
+            editingExpense
+              ? {
+                  id: editingExpense.id,
+                  date: editingExpense.date,
+                  amount: editingExpense.amount,
+                  bucket: editingExpense.bucket,
+                  subcategory: editingExpense.subcategory,
+                  description: editingExpense.description,
+                  payment_method: editingExpense.payment_method,
+                }
+              : undefined
+          }
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingExpense(null);
+          }}
           onSaved={() => {
             setShowAddModal(false);
+            setEditingExpense(null);
             void fetchTransactions();
           }}
         />

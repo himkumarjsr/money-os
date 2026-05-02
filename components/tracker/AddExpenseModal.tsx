@@ -12,18 +12,27 @@ interface AddExpenseModalProps {
   onSaved: () => void;
   defaultDate?: string;
   defaultBucket?: string;
+  editExpense?: {
+    id: string;
+    date: string;
+    amount: number;
+    bucket: string;
+    subcategory: string | null;
+    description: string | null;
+    payment_method: string | null;
+  };
 }
 
-export default function AddExpenseModal({ onClose, onSaved, defaultDate, defaultBucket }: AddExpenseModalProps) {
+export default function AddExpenseModal({ onClose, onSaved, defaultDate, defaultBucket, editExpense }: AddExpenseModalProps) {
   const user = useAuthStore((s) => s.user);
   const today = new Date().toISOString().split("T")[0];
 
-  const [date, setDate] = useState(defaultDate || today);
-  const [amount, setAmount] = useState(0);
-  const [bucket, setBucket] = useState(defaultBucket || "");
-  const [subcategory, setSubcategory] = useState("");
-  const [description, setDescription] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [date, setDate] = useState(editExpense?.date || defaultDate || today);
+  const [amount, setAmount] = useState(editExpense?.amount || 0);
+  const [bucket, setBucket] = useState(editExpense?.bucket || defaultBucket || "");
+  const [subcategory, setSubcategory] = useState(editExpense?.subcategory || "");
+  const [description, setDescription] = useState(editExpense?.description || "");
+  const [paymentMethod, setPaymentMethod] = useState(editExpense?.payment_method || "upi");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -45,7 +54,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
     const supabase = getSupabase();
     const dateObj = new Date(date);
 
-    const { error: dbError } = await supabase.from("expense_transactions").insert({
+    const payload = {
       user_id: user.id,
       date,
       amount,
@@ -56,7 +65,11 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
       payment_method: paymentMethod,
       month: dateObj.toLocaleString("default", { month: "long" }),
       year: dateObj.getFullYear(),
-    });
+    };
+
+    const { error: dbError } = editExpense?.id
+      ? await supabase.from("expense_transactions").update(payload).eq("id", editExpense.id).eq("user_id", user.id)
+      : await supabase.from("expense_transactions").insert(payload);
 
     setSaving(false);
 
@@ -113,7 +126,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
               margin: 0,
             }}
           >
-            Add expense
+            {editExpense ? "Edit expense" : "Add expense"}
           </h3>
           <button
             type="button"
@@ -137,6 +150,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             id="tracker-expense-amount"
             label="Amount (₹)"
             placeholder="0"
+            defaultValue={amount > 0 ? String(amount) : ""}
             onChange={(e) => {
               const parsed = handleMoneyInput(e.target.value, 0, 1_000_000_000);
               setAmount(parsed ?? 0);
@@ -361,7 +375,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             cursor: saving ? "not-allowed" : "pointer",
           }}
         >
-          {saving ? "Saving..." : "Save expense"}
+          {saving ? "Saving..." : editExpense ? "Update expense" : "Save expense"}
         </button>
       </div>
     </div>

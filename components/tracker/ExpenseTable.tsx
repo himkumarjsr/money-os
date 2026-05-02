@@ -19,9 +19,11 @@ export type TrackerTransactionRow = {
 export default function ExpenseTable({
   transactions,
   onChanged,
+  onEdit,
 }: {
   transactions: TrackerTransactionRow[];
   onChanged: () => void;
+  onEdit?: (txn: TrackerTransactionRow) => void;
 }) {
   const user = useAuthStore((s) => s.user);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -81,21 +83,40 @@ export default function ExpenseTable({
                   {t.bucket === "investment" ? "+" : "−"}₹{Number(t.amount).toLocaleString("en-IN")}
                 </td>
                 <td style={{ padding: "12px" }}>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(t.id)}
-                    disabled={deletingId === t.id}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#E24B4A",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {deletingId === t.id ? "…" : "Remove"}
-                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                    {onEdit ? (
+                      <button
+                        type="button"
+                        aria-label="Edit expense"
+                        onClick={() => onEdit(t)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#534AB7",
+                          cursor: "pointer",
+                          fontSize: 14,
+                          fontWeight: 600,
+                        }}
+                      >
+                        ✏️
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(t.id)}
+                      disabled={deletingId === t.id}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#E24B4A",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {deletingId === t.id ? "…" : "Remove"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
