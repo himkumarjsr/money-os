@@ -65,6 +65,11 @@ export async function downloadOptimizerPDF(
   optimizerData: any,
 ) {
   const doc = new jsPDF("p", "mm", "a4");
+  const userName =
+    profile?.name?.trim() ||
+    profile?.fullName?.trim() ||
+    profile?.email?.split("@")[0] ||
+    "User";
   const W = doc.internal.pageSize.width;
   const H = doc.internal.pageSize.height;
   const M = 14;
@@ -88,6 +93,10 @@ export async function downloadOptimizerPDF(
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...PURPLE);
     doc.text("Finkoin Financial Health Report", M, 9);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...GREY);
+    doc.text(`Prepared for: ${userName}`, W - M - 60, 9);
     addPageNumber();
   };
 
@@ -159,6 +168,34 @@ export async function downloadOptimizerPDF(
     if (n >= 10000000) return "₹" + (n / 10000000).toFixed(1) + " crore";
     if (n >= 100000) return "₹" + (n / 100000).toFixed(1) + " lakh";
     return fmt(n);
+  };
+  const drawPieChart = (
+    cx: number,
+    cy: number,
+    r: number,
+    slices: Array<{ value: number; color: [number, number, number] }>,
+  ) => {
+    const total = Math.max(1, slices.reduce((s, sl) => s + Math.max(0, sl.value), 0));
+    let startAngle = -Math.PI / 2;
+    slices.forEach((slice) => {
+      const value = Math.max(0, slice.value);
+      if (value <= 0) return;
+      const sweep = (value / total) * Math.PI * 2;
+      const segments = Math.max(6, Math.ceil(((sweep * 180) / Math.PI) / 4));
+      doc.setFillColor(slice.color[0], slice.color[1], slice.color[2]);
+      for (let i = 0; i < segments; i++) {
+        const a1 = startAngle + (sweep * i) / segments;
+        const a2 = startAngle + (sweep * (i + 1)) / segments;
+        const x1 = cx + r * Math.cos(a1);
+        const y1 = cy + r * Math.sin(a1);
+        const x2 = cx + r * Math.cos(a2);
+        const y2 = cy + r * Math.sin(a2);
+        doc.triangle(cx, cy, x1, y1, x2, y2, "F");
+      }
+      startAngle += sweep;
+    });
+    doc.setFillColor(255, 255, 255);
+    doc.circle(cx, cy, r * 0.45, "F");
   };
   const calcAssets =
     (profile.savingsAccountBalance || 0) +
@@ -253,7 +290,7 @@ export async function downloadOptimizerPDF(
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text("Finkoin Financial Report", M, 20);
+  doc.text("FINKOIN · Personal Financial Fix Plan", M, 20);
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(175, 169, 236);
@@ -262,7 +299,6 @@ export async function downloadOptimizerPDF(
     M,
     30,
   );
-  const userName = profile?.name || profile?.email?.split("@")[0] || "User";
   doc.text(`Prepared for: ${userName}`, M, 38);
   y = 60;
 
@@ -281,6 +317,27 @@ export async function downloadOptimizerPDF(
   doc.setFontSize(11);
   doc.text(scoreLabel, M + 50, y + 21);
   y += 36;
+  const needsPie = bucketRowsForSummary.find((b) => b.key === "needs")?.actual || 0;
+  const wantsPie = bucketRowsForSummary.find((b) => b.key === "wants")?.actual || 0;
+  const securityPie = bucketRowsForSummary.find((b) => b.key === "security")?.actual || 0;
+  const loansPie = bucketRowsForSummary.find((b) => b.key === "loans")?.actual || 0;
+  const investPie = bucketRowsForSummary.find((b) => b.key === "investment")?.actual || 0;
+  drawPieChart(M + 22, y + 20, 16, [
+    { value: needsPie, color: [83, 74, 183] },
+    { value: loansPie, color: [226, 75, 74] },
+    { value: wantsPie, color: [186, 117, 23] },
+    { value: securityPie, color: [29, 158, 117] },
+    { value: investPie, color: [60, 52, 137] },
+  ]);
+  doc.setFontSize(9);
+  doc.setTextColor(...DARK);
+  doc.text("Income split", M + 45, y + 8);
+  doc.text(`Needs: ${fmt(needsPie)}`, M + 45, y + 14);
+  doc.text(`Loans: ${fmt(loansPie)}`, M + 45, y + 20);
+  doc.text(`Wants: ${fmt(wantsPie)}`, M + 45, y + 26);
+  doc.text(`Security: ${fmt(securityPie)}`, M + 45, y + 32);
+  doc.text(`Investment: ${fmt(investPie)}`, M + 45, y + 38);
+  y += 46;
 
   doc.setFontSize(10);
   doc.setTextColor(...DARK);
@@ -324,7 +381,7 @@ export async function downloadOptimizerPDF(
   addPageNumber();
 
   newPage();
-  addHeading("Financial Snapshot");
+  addHeading("FINANCIAL SNAPSHOT — CORRECTED NUMBERS");
   addText("Net Worth Summary", 11, DARK, true);
   y += 2;
   addSmallTable(
@@ -378,7 +435,41 @@ export async function downloadOptimizerPDF(
   }
 
   newPage();
-  addHeading("Your Priority Plan");
+  addHeading("YOUR MONEY MAP — WHERE EVERY RUPEE GOES");
+  addText(
+    `This page answers one question: where does the money come from for each recommendation? Every step is funded from your surplus of ${fmt(priorityPlan?.monthlySurplus || 0)}.`,
+    9,
+    GREY,
+  );
+  if (priorityPlan?.surplusBreakdown) {
+    addSmallTable(
+      ["Category", "Amount/Month", "% Income", "Notes"],
+      [
+        ["Monthly income", fmt(priorityPlan.surplusBreakdown.totalIncome || 0), "100%", "Take-home salary + other income"],
+        ["Less: Living expenses", `-${fmt(priorityPlan.surplusBreakdown.needsActual || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.needsActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Needs bucket"],
+        ["Less: Loan EMIs", `-${fmt(priorityPlan.surplusBreakdown.loansActual || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.loansActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "All EMIs (deduped)"],
+        ["Less: Insurance", `-${fmt(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.existingInsurancePremiums || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Protection premiums"],
+        ["Less: Wants", `-${fmt(priorityPlan.surplusBreakdown.wantsActual || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.wantsActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Lifestyle bucket"],
+        ["= Your surplus", fmt(priorityPlan.surplusBreakdown.netSurplus || 0), `${Math.round(((priorityPlan.surplusBreakdown.netSurplus || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Available for priorities"],
+      ],
+      [58, 35, 20, 67],
+    );
+  }
+  addText("How your surplus gets deployed", 11, DARK, true);
+  addSmallTable(
+    ["Step", "Purpose", "Monthly", "When", "Surplus left"],
+    (priorityPlan?.priorities || []).slice(0, 4).map((p: any, idx: number) => [
+      `Step ${idx + 1}`,
+      p.title,
+      fmt(p.monthlyContribution || 0),
+      idx === 0 ? "Month 1+" : "Month 2+",
+      fmt(p.surplusAfterThis || 0),
+    ]),
+    [20, 70, 28, 25, 37],
+  );
+
+  newPage();
+  addHeading("PRIORITY STEPS — DETAILED PLAN");
   addText(explanations?.overallSummary || "Follow these priorities in order.", 10, GREY);
   y += 4;
   const priorities = priorityPlan?.priorities || [];
@@ -447,7 +538,7 @@ export async function downloadOptimizerPDF(
   const debts = priorityPlan?.debts || [];
   if (debts.length > 0) {
     newPage();
-    addHeading("Debt Clearance Strategy");
+    addHeading("DEBT CLEARANCE — STEP-BY-STEP STRATEGY");
     if (explanations?.debtStrategy) {
       addText(explanations.debtStrategy, 10, GREY);
       y += 4;
@@ -478,7 +569,7 @@ export async function downloadOptimizerPDF(
   }
 
   newPage();
-  addHeading("Your 12-Month Action Plan");
+  addHeading("12-MONTH ACTION PLAN");
   const phases = buildPhases();
   phases.forEach((phase: any) => {
     if (y > H - 60) newPage();
@@ -526,7 +617,7 @@ export async function downloadOptimizerPDF(
   });
 
   newPage();
-  addHeading("Goal Plan");
+  addHeading("GOALS & SCORE PROJECTION");
   const firstGoal = priorityPlan?.goals?.[0];
   if (firstGoal) {
     addSmallTable(
@@ -537,6 +628,23 @@ export async function downloadOptimizerPDF(
     addText(`Instrument: ${firstGoal.instrument || "—"}`, 10, DARK);
   } else {
     addText("No goal data available.", 10, GREY);
+  }
+
+  newPage();
+  addHeading("YOUR 12-MONTH CHECKLIST");
+  const checklistRows: string[][] = [];
+  (priorityPlan?.priorities || []).slice(0, 6).forEach((p: any, idx: number) => {
+    checklistRows.push([
+      String(idx + 1),
+      idx === 0 ? "Month 1, Week 1" : `Month ${Math.min(12, idx + 1)}`,
+      p.actionThisWeek || p.title,
+      "□",
+    ]);
+  });
+  if (checklistRows.length > 0) {
+    addSmallTable(["#", "When", "Action", "Done?"], checklistRows, [10, 32, 128, 10]);
+  } else {
+    addText("Checklist will populate after generating priorities.", 10, GREY);
   }
 
   newPage();
@@ -623,6 +731,7 @@ export async function downloadOptimizerPDF(
     doc.text("Educational only. Not SEBI advice.", M, H - 8);
   }
 
-  const fileName = `Finkoin-Report-${userName.replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
+  const safeUser = userName.replace(/[^a-zA-Z0-9-_ ]/g, "").trim().replace(/\s+/g, "-") || "User";
+  const fileName = `Finkoin-Report-${safeUser}-${new Date().toISOString().split("T")[0]}.pdf`;
   doc.save(fileName);
 }

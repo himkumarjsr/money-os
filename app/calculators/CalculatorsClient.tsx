@@ -131,7 +131,10 @@ export default function CalculatorsClient({ initialCalcId }: { initialCalcId: st
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
           aria-live="polite"
         >
-          <h2 className="text-lg font-semibold text-slate-900">{activeItem.title}</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            {activeItem.icon ? `${activeItem.icon} ` : ""}
+            {activeItem.title}
+          </h2>
           <p className="mt-1 text-sm text-slate-600">{activeItem.blurb}</p>
           <div className="mt-8">
             <ActiveCalc />
@@ -173,7 +176,11 @@ export default function CalculatorsClient({ initialCalcId }: { initialCalcId: st
         </motion.ul>
       </div>
 
-      <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} title={activeItem.title}>
+      <BottomSheet
+        isOpen={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={`${activeItem.icon ? `${activeItem.icon} ` : ""}${activeItem.title}`}
+      >
         <motion.section
           key={calcId}
           variants={scaleIn}

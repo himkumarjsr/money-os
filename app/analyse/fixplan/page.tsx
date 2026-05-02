@@ -1,6 +1,7 @@
 "use client";
 
 import { downloadOptimizerPDF } from "@/lib/generatePDF";
+import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -25,6 +26,12 @@ export default function FixPlanPage() {
   const [aiPlan, setAiPlan] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
+  const monthsFromGap = (gap: number, monthly: number) =>
+    monthly > 0 ? Math.max(1, Math.ceil(gap / monthly)) : 0;
+  const monthsForPriority = (id: string, gap: number, monthly: number) => {
+    if (id === "term_insurance" || id === "health_insurance") return 1;
+    return monthsFromGap(gap, monthly);
+  };
 
   useEffect(() => {
     const id = setInterval(() => setMessageIndex((i) => (i + 1) % LOADING_MESSAGES.length), 2500);
@@ -38,7 +45,41 @@ export default function FixPlanPage() {
     const cached = !forceRefresh ? getCachedPlan(currentHash) : null;
     if (cached) {
       console.log("Using cached AI plan ✓");
-      setAiPlan(cached.aiPlan);
+      const enginePriorityPlan = buildPriorityPlan(profile, result);
+      const cachedPlan = cached.aiPlan || {};
+      const mergedCachedPriority = {
+        ...enginePriorityPlan,
+        ...(cachedPlan.priorityPlan || {}),
+        priorities: (enginePriorityPlan.priorities || []).map((p: any, idx: number) => {
+          const cp = (cachedPlan.priorityPlan?.priorities || [])[idx] || {};
+          const monthly = Math.max(0, Number(p.monthlyContribution || 0));
+          const gap = Math.max(0, Number(p.gap || 0));
+          const isComplete = gap <= 0 || monthly <= 0 || p.status === "complete";
+          return {
+            ...p,
+            rank: p.rank,
+            gap,
+            monthlyContribution: monthly,
+            monthlyRequired: Number(p.monthlyRequired || monthly),
+            monthsToComplete: monthsForPriority(String(p.id || ""), gap, monthly),
+            surplusBefore: Number(p.surplusBefore || 0),
+            surplusAfterThis: Number(p.surplusAfterThis || 0),
+            title: cp.title || p.title,
+            instrument: isComplete ? p.instrument : (cp.instrument || p.instrument),
+            actionThisWeek: isComplete ? "Maintain this completed bucket and continue monitoring monthly." : p.actionThisWeek,
+            whyThisMatters: isComplete ? "This bucket is already on track. Keep it funded and shift new surplus to the next gap." : (cp.whyThisMatters || p.whyThisMatters),
+          };
+        }),
+        debts: enginePriorityPlan.debts,
+        goals: enginePriorityPlan.goals,
+        monthlyIncome: enginePriorityPlan.monthlyIncome,
+        monthlySurplus: enginePriorityPlan.monthlySurplus,
+        surplusBreakdown: enginePriorityPlan.surplusBreakdown,
+      };
+      setAiPlan({
+        ...cachedPlan,
+        priorityPlan: mergedCachedPriority,
+      });
       setAiLoading(false);
       return;
     }
@@ -53,7 +94,40 @@ export default function FixPlanPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI failed");
-      const combinedPlan = { priorityPlan: data.priorityPlan, explanations: data.explanations, isFallback: !!data.isFallback };
+      const enginePriorityPlan = buildPriorityPlan(profile, result);
+      const aiPriorityPlan = data.priorityPlan || {};
+      const mergedPriorityPlan = {
+        ...enginePriorityPlan,
+        ...aiPriorityPlan,
+        priorities: (enginePriorityPlan.priorities || []).map((p: any, idx: number) => {
+          const aiP = (aiPriorityPlan.priorities || [])[idx] || {};
+          const monthly = Math.max(0, Number(p.monthlyContribution || 0));
+          const gap = Math.max(0, Number(p.gap || 0));
+          const isComplete = gap <= 0 || monthly <= 0 || p.status === "complete";
+          return {
+            ...p,
+            // keep deterministic numbers from engine as source of truth
+            rank: p.rank,
+            gap,
+            monthlyContribution: monthly,
+            monthlyRequired: Number(p.monthlyRequired || monthly),
+            monthsToComplete: monthsForPriority(String(p.id || ""), gap, monthly),
+            surplusBefore: Number(p.surplusBefore || 0),
+            surplusAfterThis: Number(p.surplusAfterThis || 0),
+            // allow AI to enhance text/instrument if provided
+            title: aiP.title || p.title,
+            instrument: isComplete ? p.instrument : (aiP.instrument || p.instrument),
+            actionThisWeek: isComplete ? "Maintain this completed bucket and continue monitoring monthly." : p.actionThisWeek,
+            whyThisMatters: isComplete ? "This bucket is already on track. Keep it funded and shift new surplus to the next gap." : (aiP.whyThisMatters || p.whyThisMatters),
+          };
+        }),
+        debts: enginePriorityPlan.debts || aiPriorityPlan.debts || [],
+        goals: enginePriorityPlan.goals || aiPriorityPlan.goals || [],
+        monthlyIncome: enginePriorityPlan.monthlyIncome,
+        monthlySurplus: enginePriorityPlan.monthlySurplus,
+        surplusBreakdown: enginePriorityPlan.surplusBreakdown || aiPriorityPlan.surplusBreakdown,
+      };
+      const combinedPlan = { priorityPlan: mergedPriorityPlan, explanations: data.explanations, isFallback: !!data.isFallback };
       setCachedPlan(currentHash, combinedPlan, null);
 
       if (supabase && user?.id) {
@@ -112,6 +186,18 @@ export default function FixPlanPage() {
 
   const lastSubmission = profile;
   const aiData = aiPlan;
+  const visiblePriorities = (aiPlan?.priorityPlan?.priorities || []).filter((p: any) => {
+    const gap = Number(p?.gap || 0);
+    const monthly = Number(p?.monthlyContribution || 0);
+    return gap > 0 || monthly > 0;
+  });
+  const attentionCount = visiblePriorities.length;
+  const monthlyPlanRows = aiPlan?.priorityPlan?.monthlyPlan || [];
+  const showEmergencyCol = monthlyPlanRows.some((m: any) => Number(m?.emergency || 0) > 0);
+  const showMedicalCol = monthlyPlanRows.some((m: any) => Number(m?.medical || 0) > 0);
+  const showTermCol = monthlyPlanRows.some((m: any) => Number(m?.termYearly || 0) > 0);
+  const showSipCol = monthlyPlanRows.some((m: any) => Number(m?.sip || 0) > 0);
+  const showDebtCol = monthlyPlanRows.some((m: any) => Number(m?.extraDebt || 0) > 0);
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
@@ -207,7 +293,11 @@ export default function FixPlanPage() {
         </button>
         <section className="rounded-2xl bg-gradient-to-r from-[#534AB7] to-[#6E62D7] p-5 text-white">
           <p className="text-xs uppercase tracking-wide text-white/80">Finkoin AI</p>
-          <p className="mt-2 text-sm italic">{aiPlan.explanations?.greeting || "Your personalised plan is ready."}</p>
+          <p className="mt-2 text-sm italic">
+            {attentionCount > 0
+              ? `Based on your financial profile, we identified ${attentionCount} ${attentionCount === 1 ? "area" : "areas"} that need attention.`
+              : "Your core safety and allocation buckets are currently on track."}
+          </p>
           <p className="mt-2 text-sm text-white/90">{aiPlan.explanations?.overallSummary || "This plan improves your score by prioritising safety, debt and growth in sequence."}</p>
           <p className="mt-1 text-xs text-white/90">
             {aiPlan?.isFallback ? "ℹ️ Showing estimated plan — AI analysis will load shortly" : "✓ AI personalised analysis"}
@@ -234,7 +324,9 @@ export default function FixPlanPage() {
           </details>
         ) : null}
 
-        {(aiPlan.priorityPlan?.priorities || []).map((p: any) => (
+        {visiblePriorities
+          .filter((p: any) => !["emergency_fund", "medical_fund", "term_insurance", "start_sip"].includes(String(p.id)))
+          .map((p: any) => (
           <section key={p.id} className={`rounded-2xl border-l-4 bg-white p-4 shadow-sm ${(p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "critical" ? "border-[#E24B4A]" : (p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "high" ? "border-[#BA7517]" : "border-[#1D9E75]"}`}>
             <div className="flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-lg font-semibold">
@@ -252,7 +344,7 @@ export default function FixPlanPage() {
                   {" · "}₹{Math.round(p.surplusAfterThis || 0).toLocaleString("en-IN")} left after this step
                 </p>
               </div>
-              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">Timeline {p.monthsToComplete} months</div>
+              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">Timeline {monthsForPriority(String(p.id || ""), Number(p.gap || 0), Number(p.monthlyContribution || 0))} months</div>
             </div>
             <p className="mt-2 text-sm text-[#534AB7]">Where to invest: {p.instrument || "As recommended in your plan"}</p>
             <p className="mt-2 text-sm italic text-[#7A7871]">
@@ -273,7 +365,7 @@ export default function FixPlanPage() {
           </section>
         ))}
 
-        {aiPlan.priorityPlan?.priorities?.length > 0 ? (
+        {visiblePriorities.length > 0 ? (
           <section className="rounded-2xl border border-[#E8E6F0] bg-white p-4 shadow-sm">
             <h3 className="text-lg font-semibold">Surplus Allocation Summary</h3>
             <div className="mt-3 space-y-1 text-sm text-[#5F5E5A]">
@@ -281,7 +373,7 @@ export default function FixPlanPage() {
                 <span>Your surplus</span>
                 <span>₹{Math.round(aiPlan.priorityPlan.monthlySurplus || 0).toLocaleString("en-IN")}</span>
               </div>
-              {(aiPlan.priorityPlan.priorities || []).map((p: any, idx: number) => (
+              {visiblePriorities.map((p: any, idx: number) => (
                 <div key={`surplus-line-${p.id}-${idx}`} className="flex justify-between">
                   <span>Step {idx + 1} — {p.title}</span>
                   <span>-₹{Math.round(p.monthlyContribution || 0).toLocaleString("en-IN")}</span>
@@ -292,6 +384,42 @@ export default function FixPlanPage() {
                 <span>₹{Math.round(aiPlan.priorityPlan?.surplusBreakdown?.afterAllPriorities ?? 0).toLocaleString("en-IN")}</span>
               </div>
               <p className="text-xs text-[#9B9A94]">(Available for debt extra payment + future SIP)</p>
+            </div>
+          </section>
+        ) : null}
+
+        {monthlyPlanRows.length > 0 ? (
+          <section className="rounded-2xl bg-white p-4 shadow-sm">
+            <h3 className="text-lg font-semibold">Month-wise execution plan (12 months)</h3>
+            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full min-w-[980px] text-left text-sm">
+                <thead className="bg-slate-50 text-xs text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2">Month</th>
+                    {showEmergencyCol ? <th className="px-3 py-2">Emergency</th> : null}
+                    {showMedicalCol ? <th className="px-3 py-2">Medical</th> : null}
+                    {showTermCol ? <th className="px-3 py-2">Term (yearly)</th> : null}
+                    {showSipCol ? <th className="px-3 py-2">SIP</th> : null}
+                    {showDebtCol ? <th className="px-3 py-2">Extra debt</th> : null}
+                    <th className="px-3 py-2">Remaining</th>
+                    <th className="px-3 py-2">Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlyPlanRows.map((m: any) => (
+                    <tr key={`month-plan-${m.month}`} className="border-t border-slate-100">
+                      <td className="px-3 py-2 font-medium">{m.month}</td>
+                      {showEmergencyCol ? <td className="px-3 py-2">₹{Math.round(m.emergency || 0).toLocaleString("en-IN")}</td> : null}
+                      {showMedicalCol ? <td className="px-3 py-2">₹{Math.round(m.medical || 0).toLocaleString("en-IN")}</td> : null}
+                      {showTermCol ? <td className="px-3 py-2">₹{Math.round(m.termYearly || 0).toLocaleString("en-IN")}</td> : null}
+                      {showSipCol ? <td className="px-3 py-2">₹{Math.round(m.sip || 0).toLocaleString("en-IN")}</td> : null}
+                      {showDebtCol ? <td className="px-3 py-2">₹{Math.round(m.extraDebt || 0).toLocaleString("en-IN")}</td> : null}
+                      <td className="px-3 py-2">₹{Math.round(m.remaining || 0).toLocaleString("en-IN")}</td>
+                      <td className="px-3 py-2 text-xs text-slate-600">{m.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         ) : null}

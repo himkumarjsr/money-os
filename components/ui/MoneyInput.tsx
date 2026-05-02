@@ -9,12 +9,15 @@ import {
   useRef,
   useState,
   type MutableRefObject,
+  type ReactNode,
   type Ref,
 } from "react";
 
 type MoneyInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   id: string;
   label: string;
+  /** Shown on the right of the label row (e.g. tax teach ? tooltip) */
+  labelAction?: ReactNode;
   error?: string;
   helper?: string;
   required?: boolean;
@@ -30,6 +33,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
   {
     id,
     label,
+    labelAction,
     error,
     helper,
     required,
@@ -119,14 +123,15 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
 
   return (
     <div className="mb-5">
-      <div className="mb-1.5 flex items-center justify-between">
-        <label htmlFor={id} className="text-sm font-medium text-[#5F5E5A]">
+      <div className="mb-1.5 flex items-start justify-between gap-2">
+        <label htmlFor={id} className="min-w-0 flex-1 text-sm font-medium text-[#5F5E5A]">
           {label}
           {required ? <span className="text-[#E24B4A]"> *</span> : null}
           {optional ? (
             <span className="ml-1.5 text-[11px] font-normal text-[#9B9A94]">optional</span>
           ) : null}
         </label>
+        {labelAction ? <span className="shrink-0 pt-0.5">{labelAction}</span> : null}
       </div>
 
       <div

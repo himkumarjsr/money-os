@@ -10,6 +10,16 @@ type PaywallModalProps = {
   onClose: () => void;
   /** Shown in the price row (fix plan is always ₹99; FK is not applied here). */
   priceLabel?: string;
+  /** Override default fix-plan headline */
+  title?: string;
+  /** Short supporting line under the title */
+  subtitle?: string;
+  /** Razorpay order description */
+  checkoutDescription?: string;
+  /** Bullet list under the price card */
+  bulletPoints?: string[];
+  /** Where to send the user after a successful unlock (default: fix plan) */
+  navigateAfterUnlock?: string;
 };
 
 type RazorpaySuccessPayload = {
@@ -73,10 +83,23 @@ function loadRazorpayScript(): Promise<void> {
   });
 }
 
+const DEFAULT_BULLETS = [
+  "Complete priority plan",
+  "Debt clearance strategy",
+  "12-month action roadmap",
+  "Downloadable PDF report",
+  "Insurance recommendations from Finkoin",
+];
+
 export function PaywallModal({
   open,
   onClose,
   priceLabel = "Pay ₹99",
+  title = "Unlock your fix plan",
+  subtitle = "Your complete AI roadmap is ready to unlock.",
+  checkoutDescription = "Unlock full AI fix plan",
+  bulletPoints = DEFAULT_BULLETS,
+  navigateAfterUnlock = "/analyse/fixplan",
 }: PaywallModalProps) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -166,7 +189,7 @@ export function PaywallModal({
         amount,
         currency,
         name: "Finkoin",
-        description: "Unlock full AI fix plan",
+        description: checkoutDescription,
         order_id: orderId,
         prefill: {
           email: user.email ?? undefined,
@@ -201,7 +224,7 @@ export function PaywallModal({
             setSubscription("pro");
             setRzpLoading(false);
             onClose();
-            router.push("/analyse/fixplan");
+            router.push(navigateAfterUnlock);
           } catch (e) {
             const msg = e instanceof Error ? e.message : "Verification failed.";
             setRzpError(msg);
@@ -246,9 +269,9 @@ export function PaywallModal({
               F
             </div>
             <h2 id="paywall-title" className="text-xl font-semibold text-slate-900">
-              Unlock your fix plan
+              {title}
             </h2>
-            <p className="mt-1 text-sm text-slate-600">Your complete AI roadmap is ready to unlock.</p>
+            <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
           </div>
           <button
             type="button"
@@ -276,11 +299,9 @@ export function PaywallModal({
         ) : null}
 
         <ul className="mt-4 space-y-2 text-sm text-slate-700">
-          <li>✓ Complete priority plan</li>
-          <li>✓ Debt clearance strategy</li>
-          <li>✓ 12-month action roadmap</li>
-          <li>✓ Downloadable PDF report</li>
-          <li>✓ Insurance recommendations from Finkoin</li>
+          {bulletPoints.map((line) => (
+            <li key={line}>✓ {line}</li>
+          ))}
         </ul>
 
         <button

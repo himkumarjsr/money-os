@@ -97,6 +97,8 @@ export default function OptimizerPage() {
   const income = Math.round(calcSnap?.income ?? bucketSummary?.income ?? 0);
   const outflow = Math.round(calcSnap?.outflow ?? bucketSummary?.out ?? 0);
   const surplus = Math.round(calcSnap?.monthlySurplus ?? bucketSummary?.surplus ?? 0);
+  const computedPriorityPlan = buildPriorityPlan(lastSubmission, analysisResult);
+  const activePriorityPlan = (aiPlan as any)?.priorityPlan ?? computedPriorityPlan;
   const totalIncome =
     (lastSubmission?.monthlySalary || 0) +
     (lastSubmission?.spouseIncome || 0) +
@@ -119,18 +121,31 @@ export default function OptimizerPage() {
   const wantsActual = analysisResult?.universalBuckets?.wants?.actual || 0;
   const securityActual = analysisResult?.universalBuckets?.security?.actual || 0;
   const investmentActual = analysisResult?.universalBuckets?.investment?.actual || 0;
+  const pieTotal = Math.max(
+    totalIncome,
+    needsActual + loansActual + wantsActual + securityActual + investmentActual,
+    1,
+  );
+  const pNeeds = (needsActual / pieTotal) * 100;
+  const pLoans = (loansActual / pieTotal) * 100;
+  const pWants = (wantsActual / pieTotal) * 100;
+  const pSecurity = (securityActual / pieTotal) * 100;
+  const pInvestment = (investmentActual / pieTotal) * 100;
+  const pieStyle = {
+    background: `conic-gradient(
+      #534AB7 0 ${pNeeds}%,
+      #E24B4A ${pNeeds}% ${pNeeds + pLoans}%,
+      #BA7517 ${pNeeds + pLoans}% ${pNeeds + pLoans + pWants}%,
+      #1D9E75 ${pNeeds + pLoans + pWants}% ${pNeeds + pLoans + pWants + pSecurity}%,
+      #3C3489 ${pNeeds + pLoans + pWants + pSecurity}% 100%
+    )`,
+  } as const;
 
   const handleDownload = async () => {
     if (!lastSubmission || !analysisResult || !aiPlan) return;
     setDownloading(true);
     try {
-      const priorityPlan = buildPriorityPlan(lastSubmission, {
-        needsActual: 0,
-        loansActual: 0,
-        wantsActual: 0,
-        investmentActual: 0,
-        overallScore: analysisResult.overallScore,
-      });
+      const priorityPlan = (aiPlan as any)?.priorityPlan ?? buildPriorityPlan(lastSubmission, analysisResult);
       const explanations = {
         greeting: aiPlan.oneLiner || "Your personalised report is ready.",
         overallSummary: aiPlan.lifeStageInsight?.headline || aiPlan.topPriorityAction || "",
@@ -206,10 +221,23 @@ export default function OptimizerPage() {
           <div><p className="text-xs text-[#9B9A94]">Total outflow</p><p className="text-2xl font-bold text-[#E24B4A]">₹{Math.round(totalExpenses).toLocaleString("en-IN")}</p></div>
           <div><p className="text-xs text-[#9B9A94]">Left in hand</p><p className={`text-2xl font-bold ${amountLeftInHand >= 0 ? "text-[#1D9E75]" : "text-[#E24B4A]"}`}>₹{Math.abs(amountLeftInHand).toLocaleString("en-IN")}</p></div>
         </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-[220px_1fr]">
+          <div className="flex items-center justify-center">
+            <div className="h-44 w-44 rounded-full" style={pieStyle} />
+          </div>
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold text-[#111110]">Income split pie (monthly)</p>
+            <p className="text-[#5F5E5A]"><span className="inline-block h-2 w-2 rounded-full bg-[#534AB7] mr-2" />Needs: ₹{Math.round(needsActual).toLocaleString("en-IN")} ({pNeeds.toFixed(1)}%)</p>
+            <p className="text-[#5F5E5A]"><span className="inline-block h-2 w-2 rounded-full bg-[#E24B4A] mr-2" />Loans: ₹{Math.round(loansActual).toLocaleString("en-IN")} ({pLoans.toFixed(1)}%)</p>
+            <p className="text-[#5F5E5A]"><span className="inline-block h-2 w-2 rounded-full bg-[#BA7517] mr-2" />Wants: ₹{Math.round(wantsActual).toLocaleString("en-IN")} ({pWants.toFixed(1)}%)</p>
+            <p className="text-[#5F5E5A]"><span className="inline-block h-2 w-2 rounded-full bg-[#1D9E75] mr-2" />Security: ₹{Math.round(securityActual).toLocaleString("en-IN")} ({pSecurity.toFixed(1)}%)</p>
+            <p className="text-[#5F5E5A]"><span className="inline-block h-2 w-2 rounded-full bg-[#3C3489] mr-2" />Investment: ₹{Math.round(investmentActual).toLocaleString("en-IN")} ({pInvestment.toFixed(1)}%)</p>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
-        <h3 className="text-lg font-semibold">Where Every Rupee Goes</h3>
+        <h3 className="text-lg font-semibold">SECTION 2 — Where Every Rupee Goes</h3>
         <div className="mt-3 space-y-2 text-sm">
           {[
             ["Needs", needsActual, "#534AB7"],
@@ -230,7 +258,7 @@ export default function OptimizerPage() {
       </div>
 
       <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
-        <h3 className="text-lg font-semibold">Your Surplus Allocation</h3>
+        <h3 className="text-lg font-semibold">SECTION 3 — Your Surplus Allocation</h3>
         <p className="mt-1 text-sm text-[#5F5E5A]">You have ₹{Math.max(0, amountLeftInHand).toLocaleString("en-IN")} left each month. Here is the optimal way to use it:</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div className="rounded-lg bg-[#F7F7F4] p-3 text-sm">Emergency fund top-up: ₹{allocationSuggestion.emergencyFund.toLocaleString("en-IN")}/month</div>
@@ -238,12 +266,21 @@ export default function OptimizerPage() {
           <div className="rounded-lg bg-[#F7F7F4] p-3 text-sm">SIP investment: ₹{allocationSuggestion.sip.toLocaleString("en-IN")}/month</div>
           <div className="rounded-lg bg-[#F7F7F4] p-3 text-sm">Medical emergency fund: ₹{allocationSuggestion.medicalFund.toLocaleString("en-IN")}/month</div>
         </div>
+        <div className="mt-4 space-y-2 rounded-xl bg-[#FAFAFE] p-4 text-sm">
+          {(activePriorityPlan?.priorities || []).slice(0, 4).map((p: any, idx: number) => (
+            <div key={`priority-alloc-${p.id}-${idx}`} className="rounded-lg border border-[#E8E6F0] bg-white p-3">
+              <p className="font-semibold">Priority {idx + 1}: {p.title}</p>
+              <p className="text-[#5F5E5A]">Invest ₹{Math.round(p.monthlyContribution || 0).toLocaleString("en-IN")}/month · Achieve in {p.monthsToComplete || 0} months</p>
+              <p className="text-[#534AB7]">Where: {p.instrument || "As suggested in your AI plan"}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
-        <h3 className="text-lg font-semibold">Debt Payoff Calculator</h3>
+        <h3 className="text-lg font-semibold">SECTION 4 — Debt Payoff Calculator</h3>
         <div className="mt-3 space-y-2 text-sm">
-          {(buildPriorityPlan(lastSubmission, analysisResult)?.debts || []).map((d: any) => {
+          {(activePriorityPlan?.debts || []).map((d: any) => {
             const currentMonths = d.emi > 0 ? Math.ceil((d.outstanding || 0) / d.emi) : 0;
             const improvedMonths = d.monthsToClearWithExtra || currentMonths;
             return (
@@ -256,6 +293,41 @@ export default function OptimizerPage() {
           })}
         </div>
       </div>
+
+      <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
+        <h3 className="text-lg font-semibold">SECTION 5 — Goal Timeline</h3>
+        {activePriorityPlan?.goals?.[0] ? (
+          <>
+            <p className="mt-1 text-sm text-[#5F5E5A]">
+              {activePriorityPlan.goals[0].goalType}: target ₹{Math.round(activePriorityPlan.goals[0].targetAmount || 0).toLocaleString("en-IN")} ·
+              timeline {activePriorityPlan.goals[0].yearsToGoal || 0} years
+            </p>
+            <div className="mt-3 h-2 rounded-full bg-[#ECEAF5]">
+              <div
+                className="h-2 rounded-full bg-[#534AB7]"
+                style={{ width: `${Math.min(100, ((activePriorityPlan.goals[0].currentSaved || 0) / Math.max(activePriorityPlan.goals[0].targetAmount || 1, 1)) * 100)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-[#5F5E5A]">
+              Monthly required: ₹{Math.round(activePriorityPlan.goals[0].monthlyRequired || 0).toLocaleString("en-IN")} ·
+              instrument: {activePriorityPlan.goals[0].instrument || "As suggested"}
+            </p>
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-[#5F5E5A]">Goal timeline will appear once the AI goal plan is generated.</p>
+        )}
+      </div>
+
+      {activePriorityPlan?.fdSuggestion ? (
+        <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
+          <h3 className="text-lg font-semibold">SECTION 6 — FD Rate Alert</h3>
+          <p className="mt-2 text-sm text-[#5F5E5A]">{activePriorityPlan.fdSuggestion.message}</p>
+          <p className="mt-1 text-sm text-[#534AB7]">
+            Current: {activePriorityPlan.fdSuggestion.currentRate}% · Better: {activePriorityPlan.fdSuggestion.bestRate}% ·
+            Extra/year: ₹{Math.round(activePriorityPlan.fdSuggestion.extraAnnual || 0).toLocaleString("en-IN")}
+          </p>
+        </div>
+      ) : null}
 
       {aiNotice ? (
         <div

@@ -34,6 +34,46 @@ const SEO_COPY: Record<
       },
     ],
   },
+  "tax-regime": {
+    title: "Tax Regime Calculator 2026 — Old vs New | Finkoin",
+    description:
+      "Free India income tax calculator FY 2025-26: salaried, business, freelancer, pensioner, NRI (illustrative), senior citizen. Compare old vs new regime with 80C, 80D, HRA, 80GG, 24(b), 80EEA & missed deduction alerts.",
+    keywords: [
+      "old vs new tax regime 2026",
+      "income tax calculator India 2026",
+      "which tax regime is better",
+      "tax regime calculator India",
+      "new tax regime slab 2026",
+      "freelancer tax calculator India",
+      "NRI tax calculator India",
+      "80GG rent without HRA calculator",
+      "80TTA 80TTB calculator",
+      "senior citizen income tax calculator",
+      "business owner old vs new tax regime",
+    ],
+    faq: [
+      {
+        q: "Which tax regime is better for salaried employees in India?",
+        a: "It depends on deductions such as 80C, 80D, HRA, and home loan interest. Use the calculator with your actual numbers to compare old vs new regime.",
+      },
+      {
+        q: "Does the new tax regime allow HRA exemption?",
+        a: "Typically HRA-related exemptions are tied to the old regime structure in planning tools. This calculator applies HRA only on the old regime side.",
+      },
+      {
+        q: "Can freelancers and business owners use this calculator?",
+        a: "Yes — enter business profit and freelance income separately; old regime includes Chapter VI-A entries you qualify for; new regime uses illustrative ₹75k standard deduction only.",
+      },
+      {
+        q: "How are NRIs handled?",
+        a: "There is an NRI toggle for context — tax residency and DTAA rules are not modelled in detail; use the results as non-binding illustrations only.",
+      },
+      {
+        q: "Is this calculator official for filing?",
+        a: "No — it is an educational estimate using FY 2025-26 illustrative slabs. Confirm with your CA and Form 16.",
+      },
+    ],
+  },
   emi: {
     title: "EMI Calculator - Loan EMI Calculator Online | Finkoin",
     description:
@@ -86,14 +126,12 @@ type PageProps = {
 };
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
-  const calc = Array.isArray(searchParams?.calc) ? searchParams?.calc[0] : searchParams?.calc;
-  const canonical = calc ? `/calculators?calc=${calc}` : "/calculators";
+  const calcParam = Array.isArray(searchParams?.calc) ? searchParams?.calc[0] : searchParams?.calc;
+  const activeItem = getItemById(calcParam);
+  const seo = getSeoForCalc(activeItem.id);
+  const canonical = calcParam ? `/calculators?calc=${calcParam}` : "/calculators";
   return {
-    ...generatePageMeta(
-      "Free Financial Calculators for India",
-      "SIP calculator, EMI calculator, PPF calculator, home loan calculator, emergency fund calculator and more. All free.",
-      ["financial calculators India", "SIP calculator", "EMI calculator", "PPF calculator", "home loan calculator"],
-    ),
+    ...generatePageMeta(seo.title, seo.description, seo.keywords),
     alternates: { canonical },
   };
 }

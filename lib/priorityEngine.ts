@@ -21,6 +21,7 @@ export interface PriorityItem {
   icon: string;
   canBuyFromFinkoin: boolean;
   finkoinProductType?: string;
+  startMonth?: number;
 }
 
 export interface DebtItem {
@@ -81,6 +82,16 @@ export interface PriorityPlan {
     currentRate: number;
     extraAnnual: number;
   };
+  monthlyPlan?: Array<{
+    month: number;
+    emergency: number;
+    medical: number;
+    termYearly: number;
+    sip: number;
+    extraDebt: number;
+    remaining: number;
+    note: string;
+  }>;
 }
 
 function normalizeStage(
@@ -130,7 +141,21 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.kidsSchoolFees || 0) +
     (profile.kidsActivities || 0) +
     (profile.parentsSupport || 0);
-  const additionalLoanObligations = (profile.additionalObligations || []).reduce(
+  const dedupedAdditionalRows = Array.from(
+    new Map(
+      (profile.additionalObligations || [])
+        .filter((row: any) => Number(row?.monthlyAmount || 0) > 0)
+        .map((row: any) => {
+          const key = [
+            String(row?.type || "other").toLowerCase().trim(),
+            String(row?.lenderName || "").toLowerCase().trim(),
+            Math.round(Number(row?.monthlyAmount || 0)),
+          ].join("|");
+          return [key, row] as const;
+        }),
+    ).values(),
+  );
+  const additionalLoanObligations = dedupedAdditionalRows.reduce(
     (sum: number, row: any) => sum + (row?.monthlyAmount || 0),
     0,
   );
@@ -198,7 +223,13 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
                   ? 12
                   : 6;
 
-  const emergencyTarget = needsActual * emergencyMonthsNeeded;
+  // Keep emergency target consistent with report expectation:
+  // emergency buffer should also account for housing EMI continuity risk.
+  const emergencyBaseMonthly =
+    needsActual +
+    (profile.homeLoanEMI || 0) +
+    (profile.secondPropertyEMI || 0);
+  const emergencyTarget = emergencyBaseMonthly * emergencyMonthsNeeded;
   const emergencyCurrent =
     (profile.savingsAccountBalance || 0) * 1.0 +
     (profile.liquidMFValue || 0) * 0.95 +
@@ -206,10 +237,14 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.otherLiquidSavings || 0) * 0.5;
   const emergencyMonthsCovered = needsActual > 0 ? emergencyCurrent / needsActual : 0;
   const emergencyGap = Math.max(0, emergencyTarget - emergencyCurrent);
-  const emergencySuggested = emergencyGap > 0 ? Math.round(Math.min(monthlySurplus * 0.4, emergencyGap / 12)) : 0;
+  const hardPriorityMode = emergencyGap > 0;
+  const emergencySuggested =
+    emergencyGap > 0 ? Math.round(Math.min(monthlySurplus, emergencyGap)) : 0;
   const emergencyMonthly = Math.max(0, Math.min(emergencySuggested, runningSurplus));
   const emergencySurplusBefore = runningSurplus;
   runningSurplus = Math.max(0, runningSurplus - emergencyMonthly);
+  const emergencyMonthsToComplete =
+    emergencyGap > 0 && emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0;
 
   priorities.push({
     rank: rank++,
@@ -230,7 +265,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     monthlyContribution: emergencyMonthly,
     surplusBefore: emergencySurplusBefore,
     surplusAfterThis: runningSurplus,
-    monthsToComplete: emergencyGap > 0 && emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0,
+    monthsToComplete: emergencyMonthsToComplete,
     instrument: "Liquid Mutual Fund + Savings account",
     actionThisWeek:
       emergencyGap > 0
@@ -239,15 +274,21 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     whyThisMatters: `If your income stops tomorrow you need ${emergencyMonthsNeeded} months to recover.`,
     icon: "🛡️",
     canBuyFromFinkoin: false,
+    startMonth: 1,
   });
 
   const medicalTarget = 200000;
   const medicalCurrent = Math.min((profile.liquidMFValue || 0) * 0.5, medicalTarget);
   const medicalGap = Math.max(0, medicalTarget - medicalCurrent);
-  const medicalSuggested = medicalGap > 0 ? Math.round(Math.min(monthlySurplus * 0.2, medicalGap / 6)) : 0;
+  const medicalStartMonth = hardPriorityMode && emergencyMonthsToComplete > 0 ? emergencyMonthsToComplete + 1 : 1;
+  const medicalSuggested = medicalGap > 0
+    ? Math.round(Math.min(Math.max(0, monthlySurplus - emergencyMonthly), Math.ceil(medicalGap / 6)))
+    : 0;
   const medicalMonthly = Math.max(0, Math.min(medicalSuggested, runningSurplus));
   const medicalSurplusBefore = runningSurplus;
   runningSurplus = Math.max(0, runningSurplus - medicalMonthly);
+  const medicalMonthsToComplete =
+    medicalGap > 0 && medicalMonthly > 0 ? Math.ceil(medicalGap / medicalMonthly) : 0;
   priorities.push({
     rank: rank++,
     id: "medical_fund",
@@ -262,12 +303,18 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     monthlyContribution: medicalMonthly,
     surplusBefore: medicalSurplusBefore,
     surplusAfterThis: runningSurplus,
-    monthsToComplete: medicalGap > 0 && medicalMonthly > 0 ? Math.ceil(medicalGap / medicalMonthly) : 0,
+    monthsToComplete: medicalMonthsToComplete,
     instrument: "Liquid Mutual Fund",
-    actionThisWeek: medicalGap > 0 ? `Invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month.` : "Medical fund ready.",
+    actionThisWeek:
+      medicalGap > 0
+        ? medicalStartMonth > 1
+          ? `From month ${medicalStartMonth}, invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month for medical fund.`
+          : `Invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month.`
+        : "Medical fund ready.",
     whyThisMatters: "Insurance has waiting periods; you need cash for immediate hospitalization.",
     icon: "🏥",
     canBuyFromFinkoin: false,
+    startMonth: medicalStartMonth,
   });
 
   const annualIncome = monthlyIncome * 12;
@@ -319,7 +366,12 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         : age < 40
           ? Math.round(termGap / 10000000 * 1700)
           : Math.round(termGap / 10000000 * 2500);
-  const termPremiumEst = Math.max(0, Math.min(termPremiumEstRaw, runningSurplus));
+  const termStartMonth =
+    medicalGap > 0 && medicalMonthsToComplete > 0
+      ? medicalStartMonth + medicalMonthsToComplete
+      : medicalStartMonth;
+  const termPremiumEst = Math.max(0, Math.min(termPremiumEstRaw, monthlySurplus));
+  const termYearlyPremium = termGap > 0 ? Math.max(termPremiumEstRaw * 12, 12000) : 0;
 
   if (termGap > 0) {
     priorities.push({
@@ -344,13 +396,17 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusAfterThis: Math.max(0, runningSurplus - termPremiumEst),
       monthsToComplete: 1,
       instrument: "HDFC Click2Protect or Max Life Smart Secure — pure term only",
-      actionThisWeek: `Compare 3 term insurance quotes online. Budget ₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${(termGap / 10000000).toFixed(1)} crore cover.`,
+      actionThisWeek:
+        termStartMonth > 1
+          ? `From month ${termStartMonth}, buy top-up term plan. Budget ₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${(termGap / 10000000).toFixed(1)} crore cover.`
+          : `Compare 3 term insurance quotes online. Budget ₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${(termGap / 10000000).toFixed(1)} crore cover.`,
       whyThisMatters: termHave === 0
         ? "Your family has zero income if you pass away. All EMIs continue with no salary."
         : `Gap of ₹${(termGap / 10000000).toFixed(1)} crore leaves family underprotected.`,
       icon: "🛡️",
       canBuyFromFinkoin: true,
       finkoinProductType: "term",
+      startMonth: termStartMonth,
     });
     runningSurplus = Math.max(0, runningSurplus - termPremiumEst);
   }
@@ -402,6 +458,105 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       finkoinProductType: "health",
     });
     runningSurplus = Math.max(0, runningSurplus - healthPremiumEst);
+  }
+
+  const sipStartMonth = termGap > 0 ? termStartMonth + 1 : (medicalGap > 0 ? medicalStartMonth + medicalMonthsToComplete : 1);
+  const sipMonthly = Math.max(0, monthlySurplus - termPremiumEst - healthPremiumEst);
+  if (sipMonthly > 0) {
+    priorities.push({
+      rank: rank++,
+      id: "start_sip",
+      title: "Start SIP wealth building",
+      category: "investment",
+      urgency: "medium",
+      status: "missing",
+      currentAmount: investmentActual,
+      targetAmount: sipMonthly,
+      gap: Math.max(0, sipMonthly - investmentActual),
+      monthlyRequired: sipMonthly,
+      monthlyContribution: sipMonthly,
+      surplusBefore: sipMonthly,
+      surplusAfterThis: 0,
+      monthsToComplete: 1,
+      instrument: "Nifty 50 index fund / flexi-cap fund SIP",
+      actionThisWeek:
+        sipStartMonth > 1
+          ? `Start SIP of ₹${Math.round(sipMonthly).toLocaleString("en-IN")}/month from month ${sipStartMonth} once safety gaps are complete.`
+          : `Start SIP of ₹${Math.round(sipMonthly).toLocaleString("en-IN")}/month now.`,
+      whyThisMatters: "After safety buckets are completed, this surplus should compound through disciplined SIP investing.",
+      icon: "📈",
+      canBuyFromFinkoin: false,
+      startMonth: sipStartMonth,
+    });
+  }
+
+  // Month-wise execution plan (12 months) with hard-priority sequencing.
+  const monthlyPlan: PriorityPlan["monthlyPlan"] = [];
+  let emRemaining = Math.max(0, Math.round(emergencyGap));
+  let medRemaining = Math.max(0, Math.round(medicalGap));
+  let termRemaining = Math.max(0, Math.round(termYearlyPremium));
+  const debtExtraBudgetBase = Math.max(0, Math.round(monthlySurplus * 0.5));
+  const minSipByIncome = Math.max(0, Math.round(monthlyIncome * 0.2));
+  const sipBySurplus = Math.max(0, Math.round(monthlySurplus * 0.5));
+  const targetSip = Math.max(minSipByIncome, sipBySurplus);
+
+  for (let month = 1; month <= 12; month += 1) {
+    let left = Math.max(0, Math.round(monthlySurplus));
+    let emergency = 0;
+    let medical = 0;
+    let termYearly = 0;
+    let sip = 0;
+    let extraDebt = 0;
+    let note = "";
+
+    // Goal 1: Close emergency in 2 months.
+    if (emRemaining > 0) {
+      emergency = Math.min(left, emRemaining);
+      emRemaining = Math.max(0, emRemaining - emergency);
+      left -= emergency;
+    }
+
+    // Goal 2: Fill medical with remaining and post-emergency freed surplus.
+    if (medRemaining > 0 && left > 0) {
+      medical = Math.min(left, medRemaining);
+      medRemaining = Math.max(0, medRemaining - medical);
+      left -= medical;
+    }
+
+    // Term premium as yearly payment month after emergency focus.
+    if (termRemaining > 0 && month >= 3 && left > 0) {
+      termYearly = Math.min(left, termRemaining);
+      termRemaining = Math.max(0, termRemaining - termYearly);
+      left -= termYearly;
+    }
+
+    const safetyDone = emRemaining === 0 && medRemaining === 0 && termRemaining === 0;
+    if (safetyDone && left > 0) {
+      sip = Math.min(left, targetSip);
+      left -= sip;
+      extraDebt = Math.min(left, debtExtraBudgetBase);
+      left -= extraDebt;
+      note = `Safety complete. Start SIP from month ${month} and route remaining to debt prepay.`;
+    } else if (emRemaining > 0) {
+      note = "Emergency fund focus month.";
+    } else if (medRemaining > 0) {
+      note = "Medical fund acceleration month.";
+    } else if (termRemaining > 0) {
+      note = "Pay yearly term premium this month.";
+    } else {
+      note = "Maintain allocation discipline.";
+    }
+
+    monthlyPlan.push({
+      month,
+      emergency,
+      medical,
+      termYearly,
+      sip,
+      extraDebt,
+      remaining: left,
+      note,
+    });
   }
 
   const kidsWithDemographics = profile.kidsAges
@@ -544,9 +699,20 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     }
   });
 
-  const additionalDebts =
-    (profile.additionalObligations || [])
-      .filter((o: any) => o.monthlyAmount > 0);
+  const additionalDebts = Array.from(
+    new Map(
+      (profile.additionalObligations || [])
+        .filter((o: any) => Number(o?.monthlyAmount || 0) > 0)
+        .map((o: any) => {
+          const key = [
+            String(o?.type || "other").toLowerCase().trim(),
+            String(o?.lenderName || "").toLowerCase().trim(),
+            Math.round(Number(o?.monthlyAmount || 0)),
+          ].join("|");
+          return [key, o] as const;
+        }),
+    ).values(),
+  );
 
   additionalDebts.forEach((debt: any, i: number) => {
     const emi = debt.monthlyAmount || 0;
@@ -719,5 +885,6 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     scoreAfter12Months,
     topAction: priorities.find((p) => p.status !== "complete")?.actionThisWeek || "All priorities complete!",
     fdSuggestion,
+    monthlyPlan,
   };
 }

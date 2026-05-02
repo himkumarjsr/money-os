@@ -1,9 +1,12 @@
-export type Cat = "investment" | "loans" | "life" | "postoffice";
+export type Cat = "investment" | "loans" | "life" | "postoffice" | "tax";
 
 export type Item = {
   id: string;
   title: string;
   blurb: string;
+  icon?: string;
+  keywords?: string[];
+  isPremium?: boolean;
 };
 
 export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
@@ -40,6 +43,26 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
     id: "postoffice",
     label: "Post Office",
     items: [{ id: "po", title: "Post Office suite", blurb: "Seven popular schemes" }],
+  },
+  {
+    id: "tax",
+    label: "Tax",
+    items: [
+      {
+        id: "tax-regime",
+        title: "Tax Regime Comparison",
+        blurb: "Old vs New regime — which saves more tax in 2026",
+        icon: "🧾",
+        isPremium: false,
+        keywords: [
+          "tax regime 2026",
+          "old vs new tax regime",
+          "income tax calculator India",
+          "tax saving India",
+          "which tax regime is better",
+        ],
+      },
+    ],
   },
 ];
 

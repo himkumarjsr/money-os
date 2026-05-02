@@ -39,4 +39,7 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
     import("./WhenToBuyCarCalculator").then((m) => ({ default: m.WhenToBuyCarCalculator })),
   ),
   po: dyn(() => import("./PostOfficeCalculator").then((m) => ({ default: m.PostOfficeCalculator }))),
+  "tax-regime": dyn(() =>
+    import("./TaxRegimeCalculator").then((m) => ({ default: m.TaxRegimeCalculator })),
+  ),
 };

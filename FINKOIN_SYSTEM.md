@@ -42,7 +42,7 @@ the documentation generation prompt again.
 27. What Not to Touch
 
 # FINKOIN SYSTEM DOCUMENTATION
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 Generated from: actual codebase
 
 ---
@@ -218,6 +218,11 @@ Complete inventory with one-line purpose per file:
 | `components/calculators/NSCCalculator.tsx` | NSC calculator |
 | `components/calculators/SWPCalculator.tsx` | SWP calculator |
 | `components/calculators/EmergencyFundCalculator.tsx` | Emergency fund calculator |
+| `components/calculators/TaxRegimeCalculator.tsx` | Old vs new regime comparison UI (toggles, autosave `finkoin_tax_calculator`, live summary) |
+| `components/calculators/ToggleSection.tsx` | Expand/collapse income/deduction section shell with pill toggle |
+| `lib/taxCalculatorHelpers.ts` | Illustrative gratuity / leave / LTA / rental / business / pension / RSU helpers for tax UI |
+| `lib/taxRegimeComparisonFY2026.ts` | Pure tax comparison helpers (slabs, HRA exemption, 80GG illustrative, surcharge, cess, 87A model) |
+| `lib/taxMissedDeductionAlerts.ts` | Plain-language “missed deduction” nudges for tax regime calculator |
 | `components/calculators/compound-interest-calculator.tsx` | Compound interest calculator |
 | `components/calculators/spending-trend-chart.tsx` | Spending chart component |
 | `lib/analyse-form-schema.ts` | Form schema, normalization, shared model types |
@@ -788,6 +793,7 @@ Source categories used in DB rows include:
 | Data | Where | When saved | When cleared |
 |------|-------|-----------|--------------|
 | Form/profile draft | Zustand persisted localStorage | During form updates | reset/clear actions |
+| Tax regime calculator inputs | localStorage `finkoin_tax_calculator` | On any field/toggle change (TaxRegimeCalculator) | Reset button or manual clear |
 | Analysis result | Zustand + optional Supabase snapshot | On submit/runAnalysis | reset/clear |
 | AI fix plan | localStorage (`finkoin_ai_cache`) + optional `user_analysis.ai_fix_plan` | After AI call in fixplan page | hash change / expiry / clearCache |
 | Cross-device profile | user_analyse_snapshots (Supabase) | After every form submit (if logged in) | Never auto-cleared — user must reset |
@@ -1562,6 +1568,7 @@ Important implementation note:
 - Groq key: `.env.local` (`GROQ_API_KEY`)
 - Cache key name: `'finkoin_ai_cache'`
 - Financial store key: `'finkoin-financial'` (scoped per-user in localStorage)
+- Tax calculator key: `'finkoin_tax_calculator'` (tax regime planner autosave; not user-scoped — device-only)
 - Auth store key: `'finkoin-auth'`
 
 ### To check what is saved in Supabase
@@ -1580,6 +1587,14 @@ Important implementation note:
 ---
 
 ## CHANGE LOG
+
+### 2026-05-02
+
+- **Tax regime calculator UX & persistence:** progressive-disclosure **toggle sections** for optional income (HRA, 80GG when no HRA, LTA, RSU/ESOP vest+sale, gratuity, leave encashment, business modes 44AD/44ADA/regular, rental NAV worksheet, pension/family pension + commuted sketch, interest splits, dividends, capital gains buckets, agricultural toggle, other income incl. lottery at illustrative 30%); **sticky LIVE SUMMARY** + mobile summary; **localStorage** key **`finkoin_tax_calculator`** with restore on mount and **Reset** reload; **“What you learned today”** recap from enabled sections; reusable **`ToggleSection`** (`components/calculators/ToggleSection.tsx`); illustrative helpers in **`lib/taxCalculatorHelpers.ts`**; engine adds **`slabTaxedOtherGains`**, **`propertyLtcgGains`**, **`lotteryGamblingIncome`**, **`interestSavingsPortion`** (80TTA nudge), updates equity CG illustration to **20% STCG / 12.5% LTCG after ₹1.25L** plus property-LTCG and lottery components in **`computeScheduleRateTax`** (`lib/taxRegimeComparisonFY2026.ts`).
+- Added **Tax Regime Comparison** calculator (`tax-regime`): compares **old vs new** regime for **FY 2025-26 (AY 2026-27)** with inputs for salary, other income, age bracket (regular / senior / super senior), HRA flow (metro vs non-metro), 80C/80D/24(b)/80CCD(1B)/other deductions; implements illustrative slabs, ₹75k standard deduction on new regime, ₹50k on old, simplified **87A** (tax wiped when taxable ≤ ₹12L new / ₹5L old), surcharge brackets, and **4% cess**.
+- New tax engine lives in `lib/taxRegimeComparisonFY2026.ts`; UI in `components/calculators/TaxRegimeCalculator.tsx` with comparison table, winner banner, monthly take-home diff, free tips, and **₹99 paywall** for expanded narrative + print/PDF via browser (reuses `PaywallModal` with configurable title, bullets, Razorpay description, and **post-payment redirect** back to `/calculators?calc=tax-regime`).
+- Registered calculator in `app/calculators/calculator-config.ts` (new **Tax** category), `components/calculators/lazy-calculators.tsx`, and SEO entry + **dynamic `generateMetadata`** on `app/calculators/page.tsx` for `tax-regime` (title/description/keywords targeting old vs new regime 2026).
+- **Expanded (same release):** multi-income inputs (salary, business, freelance, pension, rental, interest, CG/dividend proxy, optional agricultural), employment/person flags (incl. NRI toggle), full Chapter VI-A set (80C through 80RRB, 24(b), professional tax, **HRA** + **80GG** auto), **deduction line-by-line** in old-regime card, **missed deduction alerts** (`lib/taxMissedDeductionAlerts.ts`), on-page **FAQ**, and broader SEO keywords.
 
 ### 2026-05-01
 

@@ -248,6 +248,62 @@ export default function HomePage() {
           </motion.div>
         </section>
 
+        <section className="relative z-10 border-b border-indigo-100/80 bg-white/55 px-4 py-12 backdrop-blur-md sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-5xl">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85">
+              Start here
+            </p>
+            <p className="mx-auto mt-2 max-w-xl text-center text-lg font-semibold text-slate-900 sm:text-xl">
+              Three ways to level up your money this week
+            </p>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <Link
+                href="/analyse"
+                className="group flex flex-col rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-white to-indigo-50/90 p-6 shadow-md shadow-indigo-500/10 transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-lg"
+              >
+                <span className="text-2xl" aria-hidden>
+                  ◉
+                </span>
+                <span className="mt-3 text-lg font-bold text-slate-900">Financial health check</span>
+                <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
+                  Answer a short questionnaire — see gaps in emergency fund, insurance, debt, and investing.
+                </span>
+                <span className="mt-4 text-sm font-semibold text-indigo-700 group-hover:underline">
+                  Start free →
+                </span>
+              </Link>
+              <Link
+                href="/calculators?calc=tax-regime"
+                className="group flex flex-col rounded-2xl border border-violet-200/80 bg-gradient-to-br from-white to-violet-50/90 p-6 shadow-md shadow-violet-500/10 transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-lg"
+              >
+                <span className="text-2xl" aria-hidden>
+                  🧾
+                </span>
+                <span className="mt-3 text-lg font-bold text-slate-900">Tax regime calculator</span>
+                <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
+                  Compare old vs new regime with HRA, 80C, NPS, equity gains — built for FY 2025-26 planning.
+                </span>
+                <span className="mt-4 text-sm font-semibold text-violet-700 group-hover:underline">
+                  Open calculator →
+                </span>
+              </Link>
+              <div className="relative flex flex-col rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-6 text-slate-600">
+                <span className="absolute right-4 top-4 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                  Coming soon
+                </span>
+                <span className="text-2xl opacity-60" aria-hidden>
+                  📊
+                </span>
+                <span className="mt-3 text-lg font-bold text-slate-800">Portfolio analysis</span>
+                <span className="mt-2 flex-1 text-sm leading-relaxed">
+                  Upload holdings for allocation, risk, and overlap insights — we&apos;re shipping this next on Finkoin.
+                </span>
+                <span className="mt-4 text-sm font-medium text-slate-500">Stay tuned</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <StorySection className="z-20 border-b border-indigo-100/60 bg-gradient-to-b from-white/80 via-indigo-50/30 to-violet-50/40">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-px max-w-3xl bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"

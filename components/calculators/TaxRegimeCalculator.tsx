@@ -1,0 +1,2299 @@
+"use client";
+
+import { PaywallModal } from "@/components/analyse/paywall-modal";
+import MoneyInput from "@/components/ui/MoneyInput";
+import NumberInput from "@/components/ui/NumberInput";
+import { cn } from "@/lib/cn";
+import { parseMoneyInput } from "@/lib/analyse-form-schema";
+import {
+  businessIncomeIllustrative,
+  commutedPensionExemptIllustrative,
+  familyPensionExemptAnnual,
+  gratuityTaxableExempt,
+  leaveEncashmentTaxableExemptIllustrative,
+  ltaSplit,
+  pensionAnnualFromMonthly,
+  rentalTaxableIncomeIllustrative,
+  rsuSaleGain,
+  rsuVestingIncomeAnnual,
+  type BusinessMode,
+  type GratuityEmployer,
+  type LeaveEncashEmployer,
+  type LeaveEncashTiming,
+  type PensionKind,
+  type RsuListing,
+} from "@/lib/taxCalculatorHelpers";
+import { formatIndian } from "@/lib/formatters";
+import { TEACH } from "@/lib/taxTeachContent";
+import { buildMissedDeductionAlerts } from "@/lib/taxMissedDeductionAlerts";
+import {
+  calculateHRAExemption,
+  compareRegimes,
+  computeIllustrativeEquityCgTax,
+  getDeduction80GGComputed,
+  salaryAnnualFromMonthly,
+  sumEquityLtcg,
+  sumEquityStcg,
+  sumOrdinaryGross,
+  type ComparisonInputs,
+  type EmploymentKind,
+  type RegimeBreakdown,
+} from "@/lib/taxRegimeComparisonFY2026";
+import Link from "next/link";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { Insight } from "./calculator-ui";
+import type { TaxTeachContent } from "@/lib/taxTeachContent";
+import { TaxTeachTooltip } from "./TaxTeachTooltip";
+import { ToggleSection } from "./ToggleSection";
+
+export const TAX_CALCULATOR_STORAGE_KEY = "finkoin_tax_calculator";
+
+function Mt(
+  props: Omit<ComponentProps<typeof MoneyInput>, "labelAction"> & { teach: TaxTeachContent },
+) {
+  const { teach, ...rest } = props;
+  return <MoneyInput {...rest} labelAction={<TaxTeachTooltip content={teach} />} />;
+}
+
+function rupees(n: number) {
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+
+function fmtSideRow(label: string, value: string) {
+  return (
+    <div className="flex justify-between gap-2 text-sm">
+      <span className="text-[#5F5E5A]">{label}</span>
+      <span className="shrink-0 font-semibold tabular-nums text-[#111110]">{value}</span>
+    </div>
+  );
+}
+
+function regimeColumn(row: RegimeBreakdown, deductionLabel: string, showLines: boolean) {
+  const preCess = row.taxBeforeSurcharge + row.surcharge;
+  return (
+    <div className="space-y-2 rounded-xl border border-[#E8E6F0] bg-[#FAFAFE]/60 p-4">
+      {fmtSideRow("Ordinary gross income", rupees(row.ordinaryGrossIncome))}
+      {row.equityStcgGains > 0 ? fmtSideRow("Equity STCG gains (entered)", rupees(row.equityStcgGains)) : null}
+      {row.equityLtcgGains > 0 ? fmtSideRow("Equity LTCG gains (entered)", rupees(row.equityLtcgGains)) : null}
+      {fmtSideRow("Gross for surcharge (ord. + gains)", rupees(row.grossForSurcharge))}
+      {fmtSideRow(deductionLabel, rupees(row.deductionAmount))}
+      {showLines && row.deductionLines.length > 0 ? (
+        <details className="rounded-lg border border-[#E8E6F0] bg-white/80 px-3 py-2 text-xs">
+          <summary className="cursor-pointer font-medium text-[#534AB7]">Deduction detail</summary>
+          <ul className="mt-2 space-y-1 border-t border-[#F0EFF8] pt-2">
+            {row.deductionLines.map((d) => (
+              <li key={d.label} className="flex justify-between gap-2">
+                <span className="text-[#7A7871]">{d.label}</span>
+                <span className="tabular-nums">{rupees(d.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+      {fmtSideRow("Taxable income (slab base)", rupees(row.taxableIncome))}
+      {fmtSideRow("Slab tax (before 87A)", rupees(row.slabTaxBeforeRebate))}
+      {row.rebate87A ? fmtSideRow("87A rebate", "Applied on slab income") : null}
+      {fmtSideRow("Slab tax after 87A", rupees(row.slabTaxNetOfRebate))}
+      {fmtSideRow("Illustrative CG / specific-rate tax", rupees(row.equityCgTax))}
+      {fmtSideRow("Tax + surcharge (before cess)", rupees(preCess))}
+      {fmtSideRow("Cess (4%)", rupees(row.cess))}
+      <div className="border-t border-[#E8E6F0] pt-2 font-bold">{fmtSideRow("TOTAL TAX", rupees(row.totalTax))}</div>
+    </div>
+  );
+}
+
+const EMPLOYMENT_OPTIONS: { id: EmploymentKind; label: string }[] = [
+  { id: "salaried", label: "Salaried" },
+  { id: "business_owner", label: "Business owner" },
+  { id: "freelancer", label: "Freelancer" },
+  { id: "retired", label: "Retired" },
+  { id: "pensioner", label: "Pensioner" },
+];
+
+function chip(active: boolean, label: string, onClick: () => void) {
+  const pill = "rounded-full px-3 py-2 text-sm font-semibold transition sm:px-4";
+  return (
+    <button
+      type="button"
+      className={cn(pill, active ? "bg-[#534AB7] text-white" : "bg-slate-100 text-slate-700")}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+export function TaxRegimeCalculator() {
+  const [storageReady, setStorageReady] = useState(false);
+  const [inputEpoch, setInputEpoch] = useState(0);
+  const [savedAtDisplay, setSavedAtDisplay] = useState<string | null>(null);
+
+  const [employment, setEmployment] = useState<EmploymentKind>("salaried");
+  const [widowed, setWidowed] = useState(false);
+  const [disabledSelf, setDisabledSelf] = useState(false);
+  const [nri, setNri] = useState(false);
+  const [parentsSenior, setParentsSenior] = useState(false);
+  const [age, setAge] = useState(35);
+
+  const [basicMonthly, setBasicMonthly] = useState(70_000);
+  const [specialAllowanceMonthly, setSpecialAllowanceMonthly] = useState(10_000);
+
+  const [secHRA, setSecHRA] = useState(true);
+  const [hraMonthly, setHraMonthly] = useState(20_000);
+  const [rentPaidMonthly, setRentPaidMonthly] = useState(20_000);
+  const [isMetro, setIsMetro] = useState(true);
+
+  const [sec80GG, setSec80GG] = useState(false);
+  const [rentPaidNoHra, setRentPaidNoHra] = useState(0);
+
+  const [secLTA, setSecLTA] = useState(false);
+  const [ltaAnnualRecv, setLtaAnnualRecv] = useState(0);
+  const [ltaClaiming, setLtaClaiming] = useState(false);
+  const [ltaTravelCost, setLtaTravelCost] = useState(0);
+
+  const [secRSU, setSecRSU] = useState(false);
+  const [_rsuListing, setRsuListing] = useState<RsuListing>("india");
+  const [rsuUnits, setRsuUnits] = useState(0);
+  const [rsuFmvPerUnit, setRsuFmvPerUnit] = useState(0);
+  const [rsuPlanSell, setRsuPlanSell] = useState(false);
+  const [rsuUnitsSold, setRsuUnitsSold] = useState(0);
+  const [rsuSalePrice, setRsuSalePrice] = useState(0);
+  const [rsuCostPrice, setRsuCostPrice] = useState(0);
+  const [rsuShortTerm, setRsuShortTerm] = useState(true);
+
+  const [secGratuity, setSecGratuity] = useState(false);
+  const [gratEmployer, setGratEmployer] = useState<GratuityEmployer>("private");
+  const [gratReceived, setGratReceived] = useState(0);
+  const [gratYears, setGratYears] = useState(5);
+  const [gratLastSalaryAnnual, setGratLastSalaryAnnual] = useState(12_00_000);
+
+  const [secLeave, setSecLeave] = useState(false);
+  const [leaveTiming, setLeaveTiming] = useState<LeaveEncashTiming>("during_service");
+  const [leaveEmployer, setLeaveEmployer] = useState<LeaveEncashEmployer>("private");
+  const [leaveReceived, setLeaveReceived] = useState(0);
+  const [leaveAvgMonthly, setLeaveAvgMonthly] = useState(80_000);
+  const [leaveYears, setLeaveYears] = useState(8);
+  const [leaveDays, setLeaveDays] = useState(45);
+
+  const [secBusiness, setSecBusiness] = useState(false);
+  const [bizMode, setBizMode] = useState<BusinessMode>("regular");
+  const [bizGrossReceipts, setBizGrossReceipts] = useState(0);
+  const [bizExpenses, setBizExpenses] = useState(0);
+  const [bizTurnover44AD, setBizTurnover44AD] = useState(0);
+  const [bizDigital44AD, setBizDigital44AD] = useState(false);
+  const [bizReceipts44ADA, setBizReceipts44ADA] = useState(0);
+
+  const [secRental, setSecRental] = useState(false);
+  const [rentAnnualGross, setRentAnnualGross] = useState(0);
+  const [rentMunicipal, setRentMunicipal] = useState(0);
+  const [rentLoanInterest, setRentLoanInterest] = useState(0);
+
+  const [secPension, setSecPension] = useState(false);
+  const [pensionKind, setPensionKind] = useState<PensionKind>("private");
+  const [pensionMonthly, setPensionMonthly] = useState(0);
+  const [familyPensionMonthly, setFamilyPensionMonthly] = useState(0);
+  const [commutedPension, setCommutedPension] = useState(0);
+
+  const [secInterest, setSecInterest] = useState(false);
+  const [savingsInterest, setSavingsInterest] = useState(0);
+  const [fdInterest, setFdInterest] = useState(0);
+  const [postOfficeInterest, setPostOfficeInterest] = useState(0);
+  const [bondsInterest, setBondsInterest] = useState(0);
+
+  const [secDividend, setSecDividend] = useState(false);
+  const [divIndian, setDivIndian] = useState(0);
+  const [divMF, setDivMF] = useState(0);
+  const [divForeign, setDivForeign] = useState(0);
+
+  const [secCG, setSecCG] = useState(false);
+  const [cgEquityStcgExtra, setCgEquityStcgExtra] = useState(0);
+  const [cgEquityLtcgExtra, setCgEquityLtcgExtra] = useState(0);
+  const [cgDebtStcg, setCgDebtStcg] = useState(0);
+  const [cgDebtLtcg, setCgDebtLtcg] = useState(0);
+  const [cgPropStcg, setCgPropStcg] = useState(0);
+  const [cgPropLtcg, setCgPropLtcg] = useState(0);
+
+  const [secAgri, setSecAgri] = useState(false);
+  const [agriculturalIncome, setAgriculturalIncome] = useState(0);
+  const [excludeAgriculturalFromTax, setExcludeAgriculturalFromTax] = useState(true);
+
+  const [secOther, setSecOther] = useState(false);
+  const [lotteryIncome, setLotteryIncome] = useState(0);
+  const [giftsTaxable, setGiftsTaxable] = useState(0);
+  const [commissionIncome, setCommissionIncome] = useState(0);
+  const [otherMiscIncome, setOtherMiscIncome] = useState(0);
+
+  const [freelanceIncome, setFreelanceIncome] = useState(0);
+
+  const [secDed80c, setSecDed80c] = useState(true);
+  const [secDed80d, setSecDed80d] = useState(true);
+  const [secDedRest, setSecDedRest] = useState(true);
+
+  const [c80Elss, setC80Elss] = useState(60_000);
+  const [c80Ppf, setC80Ppf] = useState(40_000);
+  const [c80Lic, setC80Lic] = useState(15_000);
+  const [c80Epf, setC80Epf] = useState(35_000);
+  const [c80Tuition, setC80Tuition] = useState(0);
+  const [c80Principal, setC80Principal] = useState(0);
+  const [nps80CCD1B, setNps80CCD1B] = useState(50_000);
+  const [deductions80DSelf, setDeductions80DSelf] = useState(25_000);
+  const [deductions80DParents, setDeductions80DParents] = useState(0);
+  const [deduction80DD, setDeduction80DD] = useState(0);
+  const [deduction80DDB, setDeduction80DDB] = useState(0);
+  const [deduction80E, setDeduction80E] = useState(0);
+  const [deduction80EEA, setDeduction80EEA] = useState(0);
+  const [deduction80G, setDeduction80G] = useState(0);
+  const [deduction80TTA, setDeduction80TTA] = useState(0);
+  const [deduction80TTB, setDeduction80TTB] = useState(0);
+  const [deduction80U, setDeduction80U] = useState(0);
+  const [deduction80RRB, setDeduction80RRB] = useState(0);
+  const [homeLoanInterest24b, setHomeLoanInterest24b] = useState(0);
+  const [professionalTax, setProfessionalTax] = useState(2_400);
+
+  const [hraSalaryBaseAnnualOverride, setHraSalaryBaseAnnualOverride] = useState(0);
+
+  const [paywallOpen, setPaywallOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(TAX_CALCULATOR_STORAGE_KEY);
+      if (!saved) {
+        setStorageReady(true);
+        setInputEpoch((e) => e + 1);
+        return;
+      }
+      const d = JSON.parse(saved) as Record<string, unknown>;
+      const g = <T,>(key: string, fallback: T): T =>
+        (d[key] !== undefined && d[key] !== null ? (d[key] as T) : fallback);
+
+      setEmployment(g("employment", "salaried"));
+      setWidowed(g("widowed", false));
+      setDisabledSelf(g("disabledSelf", false));
+      setNri(g("nri", false));
+      setParentsSenior(g("parentsSenior", false));
+      setAge(g("age", 35));
+      setBasicMonthly(g("basicMonthly", 70_000));
+      setSpecialAllowanceMonthly(g("specialAllowanceMonthly", g("allowancesMonthly", 10_000)));
+      setSecHRA(g("secHRA", g("hasHRA", true)));
+      setHraMonthly(g("hraMonthly", 20_000));
+      setRentPaidMonthly(g("rentPaidMonthly", 20_000));
+      setIsMetro(g("isMetro", true));
+      setSec80GG(g("sec80GG", false));
+      setRentPaidNoHra(g("rentPaidNoHra", 0));
+      setSecLTA(g("secLTA", false));
+      setLtaAnnualRecv(g("ltaAnnualRecv", 0));
+      setLtaClaiming(g("ltaClaiming", false));
+      setLtaTravelCost(g("ltaTravelCost", 0));
+      setSecRSU(g("secRSU", false));
+      setRsuListing(g("rsuListing", "india"));
+      setRsuUnits(g("rsuUnits", 0));
+      setRsuFmvPerUnit(g("rsuFmvPerUnit", 0));
+      setRsuPlanSell(g("rsuPlanSell", false));
+      setRsuUnitsSold(g("rsuUnitsSold", 0));
+      setRsuSalePrice(g("rsuSalePrice", 0));
+      setRsuCostPrice(g("rsuCostPrice", 0));
+      setRsuShortTerm(g("rsuShortTerm", true));
+      setSecGratuity(g("secGratuity", false));
+      setGratEmployer(g("gratEmployer", "private"));
+      setGratReceived(g("gratReceived", 0));
+      setGratYears(g("gratYears", 5));
+      setGratLastSalaryAnnual(g("gratLastSalaryAnnual", 12_00_000));
+      setSecLeave(g("secLeave", false));
+      setLeaveTiming(g("leaveTiming", "during_service"));
+      setLeaveEmployer(g("leaveEmployer", "private"));
+      setLeaveReceived(g("leaveReceived", 0));
+      setLeaveAvgMonthly(g("leaveAvgMonthly", 80_000));
+      setLeaveYears(g("leaveYears", 8));
+      setLeaveDays(g("leaveDays", 45));
+      setSecBusiness(g("secBusiness", false));
+      setBizMode(g("bizMode", "regular"));
+      setBizGrossReceipts(g("bizGrossReceipts", 0));
+      setBizExpenses(g("bizExpenses", 0));
+      setBizTurnover44AD(g("bizTurnover44AD", 0));
+      setBizDigital44AD(g("bizDigital44AD", false));
+      setBizReceipts44ADA(g("bizReceipts44ADA", 0));
+      setSecRental(g("secRental", false));
+      setRentAnnualGross(g("rentAnnualGross", 0));
+      setRentMunicipal(g("rentMunicipal", 0));
+      setRentLoanInterest(g("rentLoanInterest", 0));
+      setSecPension(g("secPension", false));
+      setPensionKind(g("pensionKind", "private"));
+      setPensionMonthly(g("pensionMonthly", 0));
+      setFamilyPensionMonthly(g("familyPensionMonthly", 0));
+      setCommutedPension(g("commutedPension", 0));
+      setSecInterest(g("secInterest", false));
+      setSavingsInterest(g("savingsInterest", 0));
+      setFdInterest(g("fdInterest", 0));
+      setPostOfficeInterest(g("postOfficeInterest", 0));
+      setBondsInterest(g("bondsInterest", 0));
+      setSecDividend(g("secDividend", false));
+      setDivIndian(g("divIndian", 0));
+      setDivMF(g("divMF", 0));
+      setDivForeign(g("divForeign", 0));
+      setSecCG(g("secCG", false));
+      setCgEquityStcgExtra(g("cgEquityStcgExtra", g("otherStcg", 0)));
+      setCgEquityLtcgExtra(g("cgEquityLtcgExtra", g("otherLtcg", 0)));
+      setCgDebtStcg(g("cgDebtStcg", 0));
+      setCgDebtLtcg(g("cgDebtLtcg", 0));
+      setCgPropStcg(g("cgPropStcg", 0));
+      setCgPropLtcg(g("cgPropLtcg", 0));
+      setSecAgri(g("secAgri", false));
+      setAgriculturalIncome(g("agriculturalIncome", 0));
+      setExcludeAgriculturalFromTax(g("excludeAgriculturalFromTax", true));
+      setSecOther(g("secOther", false));
+      setLotteryIncome(g("lotteryIncome", 0));
+      setGiftsTaxable(g("giftsTaxable", 0));
+      setCommissionIncome(g("commissionIncome", 0));
+      setOtherMiscIncome(g("otherMiscIncome", 0));
+      setFreelanceIncome(g("freelanceIncome", 0));
+      setSecDed80c(g("secDed80c", true));
+      setSecDed80d(g("secDed80d", true));
+      setSecDedRest(g("secDedRest", true));
+      setC80Elss(g("c80Elss", 60_000));
+      setC80Ppf(g("c80Ppf", 40_000));
+      setC80Lic(g("c80Lic", 15_000));
+      setC80Epf(g("c80Epf", 35_000));
+      setC80Tuition(g("c80Tuition", 0));
+      setC80Principal(g("c80Principal", 0));
+      setNps80CCD1B(g("nps80CCD1B", 50_000));
+      setDeductions80DSelf(g("deductions80DSelf", 25_000));
+      setDeductions80DParents(g("deductions80DParents", 0));
+      setDeduction80DD(g("deduction80DD", 0));
+      setDeduction80DDB(g("deduction80DDB", 0));
+      setDeduction80E(g("deduction80E", 0));
+      setDeduction80EEA(g("deduction80EEA", 0));
+      setDeduction80G(g("deduction80G", 0));
+      setDeduction80TTA(g("deduction80TTA", 0));
+      setDeduction80TTB(g("deduction80TTB", 0));
+      setDeduction80U(g("deduction80U", 0));
+      setDeduction80RRB(g("deduction80RRB", 0));
+      setHomeLoanInterest24b(g("homeLoanInterest24b", 0));
+      setProfessionalTax(g("professionalTax", 2_400));
+      setHraSalaryBaseAnnualOverride(g("hraSalaryBaseAnnualOverride", 0));
+
+      if (typeof d.savedAt === "string") setSavedAtDisplay(d.savedAt);
+    } catch {
+      /* ignore */
+    }
+    setStorageReady(true);
+    setInputEpoch((e) => e + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    try {
+      const dataToSave = {
+        employment,
+        widowed,
+        disabledSelf,
+        nri,
+        parentsSenior,
+        age,
+        basicMonthly,
+        specialAllowanceMonthly,
+        secHRA,
+        hraMonthly,
+        rentPaidMonthly,
+        isMetro,
+        sec80GG,
+        rentPaidNoHra,
+        secLTA,
+        ltaAnnualRecv,
+        ltaClaiming,
+        ltaTravelCost,
+        secRSU,
+        rsuListing: _rsuListing,
+        rsuUnits,
+        rsuFmvPerUnit,
+        rsuPlanSell,
+        rsuUnitsSold,
+        rsuSalePrice,
+        rsuCostPrice,
+        rsuShortTerm,
+        secGratuity,
+        gratEmployer,
+        gratReceived,
+        gratYears,
+        gratLastSalaryAnnual,
+        secLeave,
+        leaveTiming,
+        leaveEmployer,
+        leaveReceived,
+        leaveAvgMonthly,
+        leaveYears,
+        leaveDays,
+        secBusiness,
+        bizMode,
+        bizGrossReceipts,
+        bizExpenses,
+        bizTurnover44AD,
+        bizDigital44AD,
+        bizReceipts44ADA,
+        secRental,
+        rentAnnualGross,
+        rentMunicipal,
+        rentLoanInterest,
+        secPension,
+        pensionKind,
+        pensionMonthly,
+        familyPensionMonthly,
+        commutedPension,
+        secInterest,
+        savingsInterest,
+        fdInterest,
+        postOfficeInterest,
+        bondsInterest,
+        secDividend,
+        divIndian,
+        divMF,
+        divForeign,
+        secCG,
+        cgEquityStcgExtra,
+        cgEquityLtcgExtra,
+        cgDebtStcg,
+        cgDebtLtcg,
+        cgPropStcg,
+        cgPropLtcg,
+        secAgri,
+        agriculturalIncome,
+        excludeAgriculturalFromTax,
+        secOther,
+        lotteryIncome,
+        giftsTaxable,
+        commissionIncome,
+        otherMiscIncome,
+        freelanceIncome,
+        secDed80c,
+        secDed80d,
+        secDedRest,
+        c80Elss,
+        c80Ppf,
+        c80Lic,
+        c80Epf,
+        c80Tuition,
+        c80Principal,
+        nps80CCD1B,
+        deductions80DSelf,
+        deductions80DParents,
+        deduction80DD,
+        deduction80DDB,
+        deduction80E,
+        deduction80EEA,
+        deduction80G,
+        deduction80TTA,
+        deduction80TTB,
+        deduction80U,
+        deduction80RRB,
+        homeLoanInterest24b,
+        professionalTax,
+        hraSalaryBaseAnnualOverride,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(TAX_CALCULATOR_STORAGE_KEY, JSON.stringify(dataToSave));
+      setSavedAtDisplay(dataToSave.savedAt);
+    } catch {
+      /* ignore */
+    }
+  }, [
+    storageReady,
+    employment,
+    widowed,
+    disabledSelf,
+    nri,
+    parentsSenior,
+    age,
+    basicMonthly,
+    specialAllowanceMonthly,
+    secHRA,
+    hraMonthly,
+    rentPaidMonthly,
+    isMetro,
+    sec80GG,
+    rentPaidNoHra,
+    secLTA,
+    ltaAnnualRecv,
+    ltaClaiming,
+    ltaTravelCost,
+    secRSU,
+    _rsuListing,
+    rsuUnits,
+    rsuFmvPerUnit,
+    rsuPlanSell,
+    rsuUnitsSold,
+    rsuSalePrice,
+    rsuCostPrice,
+    rsuShortTerm,
+    secGratuity,
+    gratEmployer,
+    gratReceived,
+    gratYears,
+    gratLastSalaryAnnual,
+    secLeave,
+    leaveTiming,
+    leaveEmployer,
+    leaveReceived,
+    leaveAvgMonthly,
+    leaveYears,
+    leaveDays,
+    secBusiness,
+    bizMode,
+    bizGrossReceipts,
+    bizExpenses,
+    bizTurnover44AD,
+    bizDigital44AD,
+    bizReceipts44ADA,
+    secRental,
+    rentAnnualGross,
+    rentMunicipal,
+    rentLoanInterest,
+    secPension,
+    pensionKind,
+    pensionMonthly,
+    familyPensionMonthly,
+    commutedPension,
+    secInterest,
+    savingsInterest,
+    fdInterest,
+    postOfficeInterest,
+    bondsInterest,
+    secDividend,
+    divIndian,
+    divMF,
+    divForeign,
+    secCG,
+    cgEquityStcgExtra,
+    cgEquityLtcgExtra,
+    cgDebtStcg,
+    cgDebtLtcg,
+    cgPropStcg,
+    cgPropLtcg,
+    secAgri,
+    agriculturalIncome,
+    excludeAgriculturalFromTax,
+    secOther,
+    lotteryIncome,
+    giftsTaxable,
+    commissionIncome,
+    otherMiscIncome,
+    freelanceIncome,
+    secDed80c,
+    secDed80d,
+    secDedRest,
+    c80Elss,
+    c80Ppf,
+    c80Lic,
+    c80Epf,
+    c80Tuition,
+    c80Principal,
+    nps80CCD1B,
+    deductions80DSelf,
+    deductions80DParents,
+    deduction80DD,
+    deduction80DDB,
+    deduction80E,
+    deduction80EEA,
+    deduction80G,
+    deduction80TTA,
+    deduction80TTB,
+    deduction80U,
+    deduction80RRB,
+    homeLoanInterest24b,
+    professionalTax,
+    hraSalaryBaseAnnualOverride,
+  ]);
+
+  useEffect(() => {
+    if (age >= 60) setDeduction80TTA(0);
+  }, [age]);
+
+  const derived = useMemo(() => {
+    const rsuVestingAnnual = secRSU ? rsuVestingIncomeAnnual(rsuUnits, rsuFmvPerUnit) : 0;
+    let rsuSaleStcg = 0;
+    let rsuSaleLtcg = 0;
+    if (secRSU && rsuPlanSell) {
+      const g = rsuSaleGain(rsuUnitsSold, rsuSalePrice, rsuCostPrice > 0 ? rsuCostPrice : rsuFmvPerUnit);
+      if (g > 0) {
+        if (rsuShortTerm) rsuSaleStcg = g;
+        else rsuSaleLtcg = g;
+      }
+    }
+
+    const grat = secGratuity
+      ? gratuityTaxableExempt(gratReceived, gratEmployer, gratLastSalaryAnnual, gratYears)
+      : { exempt: 0, taxable: 0 };
+
+    const leave = secLeave
+      ? leaveEncashmentTaxableExemptIllustrative(
+          leaveReceived,
+          leaveTiming,
+          leaveEmployer,
+          leaveAvgMonthly,
+          leaveYears,
+          leaveDays,
+        )
+      : { exempt: 0, taxable: 0 };
+
+    const lta = secLTA ? ltaSplit(ltaAnnualRecv, ltaClaiming, ltaTravelCost) : { exempt: 0, taxable: 0 };
+
+    const bizProfit = secBusiness
+      ? businessIncomeIllustrative(
+          bizMode,
+          bizGrossReceipts,
+          bizExpenses,
+          bizTurnover44AD,
+          bizDigital44AD,
+          bizReceipts44ADA,
+        )
+      : 0;
+
+    const rental = secRental ? rentalTaxableIncomeIllustrative(rentAnnualGross, rentMunicipal, rentLoanInterest) : null;
+
+    let pensionForEngine = 0;
+    let familyPensionForEngine = 0;
+    if (secPension) {
+      if (pensionKind === "family") {
+        const fam = pensionAnnualFromMonthly(familyPensionMonthly);
+        const ex = familyPensionExemptAnnual(familyPensionMonthly);
+        familyPensionForEngine = Math.max(0, fam - ex);
+      } else {
+        const reg = pensionAnnualFromMonthly(pensionMonthly);
+        const commEx = commutedPensionExemptIllustrative(commutedPension, pensionKind);
+        const commTaxable = Math.max(0, commutedPension - commEx);
+        pensionForEngine = reg + commTaxable;
+      }
+    }
+
+    const interestTotal =
+      secInterest ? savingsInterest + fdInterest + postOfficeInterest + bondsInterest : 0;
+
+    const dividendTotal = secDividend ? divIndian + divMF + divForeign : 0;
+
+    const slabExtrasOther =
+      (secCG ? cgDebtStcg + cgDebtLtcg + cgPropStcg : 0) +
+      (secOther ? giftsTaxable + commissionIncome + otherMiscIncome : 0);
+
+    const equityStcgTotal = (secCG ? cgEquityStcgExtra : 0) + rsuSaleStcg;
+    const equityLtcgTotal = (secCG ? cgEquityLtcgExtra : 0) + rsuSaleLtcg;
+
+    const hraSalaryAnnualForEngine = secHRA ? hraMonthly : 0;
+    const hasHRAFlag = secHRA;
+    const rentAnnualEngine = secHRA ? Math.round(rentPaidMonthly * 12) : 0;
+    const rentNoHraEngine = !secHRA && sec80GG ? rentPaidNoHra : 0;
+
+    const salaryAnnualCore =
+      (Math.max(0, basicMonthly) + Math.max(0, hraSalaryAnnualForEngine) + Math.max(0, specialAllowanceMonthly)) * 12;
+
+    return {
+      rsuVestingAnnual,
+      rsuSaleStcg,
+      rsuSaleLtcg,
+      gratuityTaxable: grat.taxable,
+      gratuityExemptRec: grat.exempt,
+      leaveTaxable: leave.taxable,
+      leaveExemptRec: leave.exempt,
+      ltaTaxable: lta.taxable,
+      ltaExemptRec: lta.exempt,
+      businessProfit: bizProfit,
+      rentalTaxable: rental?.taxable ?? 0,
+      rentalBreakdown: rental,
+      pensionForEngine,
+      familyPensionForEngine,
+      interestIncome: interestTotal,
+      dividendIncome: dividendTotal,
+      slabTaxedOtherGains: slabExtrasOther,
+      propertyLtcgGains: secCG ? cgPropLtcg : 0,
+      lotteryGamblingIncome: secOther ? lotteryIncome : 0,
+      equityStcgTotal,
+      equityLtcgTotal,
+      hasHRAFlag,
+      rentAnnualEngine,
+      rentNoHraEngine,
+      salaryAnnualCore,
+      interestFor80TTAHint: secInterest ? savingsInterest : 0,
+    };
+  }, [
+    secRSU,
+    rsuUnits,
+    rsuFmvPerUnit,
+    rsuPlanSell,
+    rsuUnitsSold,
+    rsuSalePrice,
+    rsuCostPrice,
+    rsuShortTerm,
+    secGratuity,
+    gratReceived,
+    gratEmployer,
+    gratLastSalaryAnnual,
+    gratYears,
+    secLeave,
+    leaveReceived,
+    leaveTiming,
+    leaveEmployer,
+    leaveAvgMonthly,
+    leaveYears,
+    leaveDays,
+    secLTA,
+    ltaAnnualRecv,
+    ltaClaiming,
+    ltaTravelCost,
+    secBusiness,
+    bizMode,
+    bizGrossReceipts,
+    bizExpenses,
+    bizTurnover44AD,
+    bizDigital44AD,
+    bizReceipts44ADA,
+    secRental,
+    rentAnnualGross,
+    rentMunicipal,
+    rentLoanInterest,
+    secPension,
+    pensionKind,
+    pensionMonthly,
+    familyPensionMonthly,
+    commutedPension,
+    secInterest,
+    savingsInterest,
+    fdInterest,
+    postOfficeInterest,
+    bondsInterest,
+    secDividend,
+    divIndian,
+    divMF,
+    divForeign,
+    secCG,
+    cgEquityStcgExtra,
+    cgEquityLtcgExtra,
+    cgDebtStcg,
+    cgDebtLtcg,
+    cgPropStcg,
+    cgPropLtcg,
+    secOther,
+    lotteryIncome,
+    giftsTaxable,
+    commissionIncome,
+    otherMiscIncome,
+    secHRA,
+    hraMonthly,
+    basicMonthly,
+    specialAllowanceMonthly,
+    rentPaidMonthly,
+    sec80GG,
+    rentPaidNoHra,
+  ]);
+
+  const running80C = Math.min(
+    150_000,
+    c80Elss + c80Ppf + c80Lic + c80Epf + c80Tuition + c80Principal,
+  );
+
+  const comparisonInputs = useMemo<ComparisonInputs>(() => {
+    const inputs: ComparisonInputs = {
+      age,
+      employment,
+      flags: { widowed, disabledSelf, nri },
+      basicMonthly,
+      hraMonthly: secHRA ? hraMonthly : 0,
+      allowancesMonthly: specialAllowanceMonthly,
+      hraSalaryBaseAnnualOverride,
+      rsuVestingAnnual: derived.rsuVestingAnnual,
+      rsuSaleStcg: derived.rsuSaleStcg,
+      rsuSaleLtcg: derived.rsuSaleLtcg,
+      otherStcg: secCG ? cgEquityStcgExtra : 0,
+      otherLtcg: secCG ? cgEquityLtcgExtra : 0,
+      leaveEncashmentTaxable: derived.leaveTaxable,
+      gratuityTaxable: derived.gratuityTaxable,
+      ltaTaxable: derived.ltaTaxable,
+      businessProfit: derived.businessProfit,
+      freelanceIncome,
+      pension: derived.pensionForEngine,
+      familyPension: derived.familyPensionForEngine,
+      rentalIncome: derived.rentalTaxable,
+      interestIncome: derived.interestIncome,
+      interestSavingsPortion: derived.interestFor80TTAHint,
+      dividendIncome: derived.dividendIncome,
+      slabTaxedOtherGains: derived.slabTaxedOtherGains,
+      propertyLtcgGains: derived.propertyLtcgGains,
+      lotteryGamblingIncome: derived.lotteryGamblingIncome,
+      agriculturalIncome: secAgri ? agriculturalIncome : 0,
+      excludeAgriculturalFromTax,
+      hasHRA: derived.hasHRAFlag,
+      hraReceivedAnnual: secHRA ? Math.round(hraMonthly * 12) : 0,
+      rentPaidAnnual: derived.rentAnnualEngine,
+      isMetro,
+      rentPaidNoHra: derived.rentNoHraEngine,
+      deductions80C: secDed80c ? running80C : 0,
+      nps80CCD1B: secDed80c ? nps80CCD1B : 0,
+      deductions80DSelf: secDed80d ? deductions80DSelf : 0,
+      deductions80DParents: secDed80d ? deductions80DParents : 0,
+      parentsSenior,
+      deduction80DD: secDedRest ? deduction80DD : 0,
+      deduction80DDB: secDedRest ? deduction80DDB : 0,
+      deduction80E: secDedRest ? deduction80E : 0,
+      deduction80EEA: secDedRest ? deduction80EEA : 0,
+      deduction80G: secDedRest ? deduction80G : 0,
+      deduction80TTA: secDedRest ? deduction80TTA : 0,
+      deduction80TTB: secDedRest ? deduction80TTB : 0,
+      deduction80U: secDedRest ? deduction80U : 0,
+      deduction80RRB: secDedRest ? deduction80RRB : 0,
+      homeLoanInterest24b: secDedRest ? homeLoanInterest24b : 0,
+      professionalTax: secDedRest ? professionalTax : 0,
+    };
+    return inputs;
+  }, [
+    age,
+    employment,
+    widowed,
+    disabledSelf,
+    nri,
+    basicMonthly,
+    secHRA,
+    hraMonthly,
+    specialAllowanceMonthly,
+    hraSalaryBaseAnnualOverride,
+    derived,
+    freelanceIncome,
+    secPension,
+    pensionKind,
+    pensionMonthly,
+    familyPensionMonthly,
+    secAgri,
+    agriculturalIncome,
+    excludeAgriculturalFromTax,
+    isMetro,
+    secDed80c,
+    running80C,
+    nps80CCD1B,
+    secDed80d,
+    deductions80DSelf,
+    deductions80DParents,
+    parentsSenior,
+    secDedRest,
+    deduction80DD,
+    deduction80DDB,
+    deduction80E,
+    deduction80EEA,
+    deduction80G,
+    deduction80TTA,
+    deduction80TTB,
+    deduction80U,
+    deduction80RRB,
+    homeLoanInterest24b,
+    professionalTax,
+    secCG,
+    cgEquityStcgExtra,
+    cgEquityLtcgExtra,
+  ]);
+
+  const salaryAnnualPreview = useMemo(() => salaryAnnualFromMonthly(comparisonInputs), [comparisonInputs]);
+
+  const { old: oldR, new: newR } = useMemo(() => compareRegimes(comparisonInputs), [comparisonInputs]);
+
+  const missedAlerts = useMemo(() => buildMissedDeductionAlerts(comparisonInputs), [comparisonInputs]);
+
+  const ggPreview = useMemo(() => getDeduction80GGComputed(comparisonInputs), [comparisonInputs]);
+
+  const salaryForHraPreview =
+    hraSalaryBaseAnnualOverride > 0 ? hraSalaryBaseAnnualOverride : Math.max(0, basicMonthly) * 12;
+  const hraReceivedAnnualPreview = secHRA ? Math.round(hraMonthly * 12) : 0;
+  const rentPaidAnnualPreview = secHRA ? Math.round(rentPaidMonthly * 12) : 0;
+  const hraExemptAnnualPreview =
+    secHRA && comparisonInputs.hasHRA
+      ? calculateHRAExemption({
+          hasHRA: true,
+          salaryForHra: salaryForHraPreview,
+          hraReceivedAnnual: hraReceivedAnnualPreview,
+          rentPaidAnnual: rentPaidAnnualPreview,
+          isMetro,
+        })
+      : 0;
+  const hraTaxableAnnualPreview = Math.max(0, hraReceivedAnnualPreview - hraExemptAnnualPreview);
+
+  const totalLtCgForExemption = sumEquityLtcg(comparisonInputs);
+  const ltcgExemptionUsed = Math.min(totalLtCgForExemption, 125_000);
+
+  const equityCgTaxOnly = useMemo(
+    () =>
+      computeIllustrativeEquityCgTax(sumEquityStcg(comparisonInputs), sumEquityLtcg(comparisonInputs)),
+    [comparisonInputs],
+  );
+
+  const winner =
+    oldR.totalTax < newR.totalTax ? "old" : newR.totalTax < oldR.totalTax ? "new" : "tie";
+  const saveAmount = Math.abs(oldR.totalTax - newR.totalTax);
+
+  const oldMonthly = (oldR.grossForSurcharge - oldR.totalTax) / 12;
+  const newMonthly = (newR.grossForSurcharge - newR.totalTax) / 12;
+
+  const grossOrdinaryPreview = useMemo(() => sumOrdinaryGross(comparisonInputs), [comparisonInputs]);
+
+  const totalDeductionsOld = oldR.deductionAmount;
+
+  const tips = useMemo(() => {
+    const out: string[] = [];
+    if (winner === "old") {
+      out.push(
+        "Old regime likely wins because deductions (80C stack, 80D split, HRA/80GG, loan interest) compress taxable income more than new slabs offset.",
+      );
+      out.push("Share Form 16 drafts with payroll early — regime switches affect TDS cash-flow.");
+    } else if (winner === "new") {
+      out.push(
+        "New regime can win when deductions are thin — fewer proofs and ₹75k standard deduction (modelled here) help simplicity.",
+      );
+      out.push(`Approx annual advantage vs old at these inputs: ${rupees(saveAmount)}.`);
+    } else {
+      out.push("Nearly tied — choose based on proof workload and expected income trajectory.");
+    }
+    if (nri) out.push("NRIs: validate residency and DTAA — this model is domestic illustrative.");
+    return out.slice(0, 4);
+  }, [winner, saveAmount, nri]);
+
+  const pill =
+    "rounded-full px-3 py-2 text-sm font-semibold transition sm:px-4";
+
+  const resetCalculator = () => {
+    try {
+      localStorage.removeItem(TAX_CALCULATOR_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    window.location.reload();
+  };
+
+  const learnTaxLinks = [
+    { href: "/learn/old-vs-new-tax-regime-which-saves-you-more-money", label: "Old vs new regime — complete guide" },
+    { href: "/learn/80c-complete-guide-tax-saving-india", label: "80C complete guide" },
+    { href: "/learn/hra-exemption-complete-guide-india", label: "HRA exemption guide" },
+    { href: "/learn/nps-tax-deductions-guide-india", label: "NPS tax guide" },
+    { href: "/learn/rsu-esop-tax-india-explained", label: "RSU / ESOP tax guide" },
+    { href: "/learn/hidden-tax-savings-salary-india", label: "Hidden tax savings" },
+    { href: "/learn/tax-planning-calendar-india-fy", label: "Tax planning calendar" },
+  ];
+
+  const learnedToday = useMemo(() => {
+    const rows: { emoji: string; title: string; body: string }[] = [];
+    if (secHRA) {
+      rows.push({
+        emoji: "🏠",
+        title: "HRA",
+        body: `Approx exempt ₹${Math.round(hraExemptAnnualPreview).toLocaleString("en-IN")}/yr · taxable HRA slice ₹${Math.round(hraTaxableAnnualPreview).toLocaleString("en-IN")}/yr (illustrative three-part test).`,
+      });
+    }
+    if (!secHRA && sec80GG && rentPaidNoHra > 0) {
+      rows.push({
+        emoji: "🏠",
+        title: "80GG rent (no HRA)",
+        body: `Illustrative deduction ₹${Math.round(ggPreview).toLocaleString("en-IN")} — keep rent proofs.`,
+      });
+    }
+    if (secLTA && (derived.ltaExemptRec > 0 || derived.ltaTaxable > 0)) {
+      rows.push({
+        emoji: "✈️",
+        title: "LTA",
+        body: `Exempt ₹${derived.ltaExemptRec.toLocaleString("en-IN")} · taxable ₹${derived.ltaTaxable.toLocaleString("en-IN")}. Blocks apply — verify with payroll.`,
+      });
+    }
+    if (secRSU && derived.rsuVestingAnnual > 0) {
+      rows.push({
+        emoji: "📈",
+        title: "RSU / ESOP",
+        body: `Perquisite-style salary income ₹${derived.rsuVestingAnnual.toLocaleString("en-IN")}; sale modeled ₹${(derived.rsuSaleStcg + derived.rsuSaleLtcg).toLocaleString("en-IN")} gains under equity CG rates.`,
+      });
+    }
+    if (secGratuity && gratReceived > 0) {
+      rows.push({
+        emoji: "🎁",
+        title: "Gratuity",
+        body: `Exempt ₹${derived.gratuityExemptRec.toLocaleString("en-IN")} · taxable ₹${derived.gratuityTaxable.toLocaleString("en-IN")}.`,
+      });
+    }
+    if (secLeave && leaveReceived > 0) {
+      rows.push({
+        emoji: "🌴",
+        title: "Leave encashment",
+        body: `Exempt ₹${derived.leaveExemptRec.toLocaleString("en-IN")} · taxable ₹${derived.leaveTaxable.toLocaleString("en-IN")}. Section 10(10AA) nuances apply.`,
+      });
+    }
+    if (secBusiness && derived.businessProfit > 0) {
+      rows.push({
+        emoji: "💼",
+        title: "Business income",
+        body: `Modeled profit ₹${derived.businessProfit.toLocaleString("en-IN")} (${bizMode.toUpperCase()} illustration).`,
+      });
+    }
+    if (secRental && derived.rentalBreakdown) {
+      const r = derived.rentalBreakdown;
+      rows.push({
+        emoji: "🏢",
+        title: "Rental income",
+        body: `NAV ₹${Math.round(r.nav).toLocaleString("en-IN")} · after 30% standard & loan interest → taxable ₹${derived.rentalTaxable.toLocaleString("en-IN")}.`,
+      });
+    }
+    if (secPension && (derived.pensionForEngine > 0 || derived.familyPensionForEngine > 0)) {
+      rows.push({
+        emoji: "🏖️",
+        title: "Pension",
+        body: `Taxable pension slices entering ordinary income total ₹${(derived.pensionForEngine + derived.familyPensionForEngine).toLocaleString("en-IN")} (exemptions applied in-tool).`,
+      });
+    }
+    if (secInterest && derived.interestIncome > 0) {
+      rows.push({
+        emoji: "🏦",
+        title: "Interest",
+        body: `Total interest ₹${derived.interestIncome.toLocaleString("en-IN")}; align 80TTA/80TTB entries with savings vs FD buckets.`,
+      });
+    }
+    if (secDividend && derived.dividendIncome > 0) {
+      rows.push({
+        emoji: "💰",
+        title: "Dividends",
+        body: `₹${derived.dividendIncome.toLocaleString("en-IN")} taxed at slab in your hands (DDT removed).`,
+      });
+    }
+    if (secCG) {
+      rows.push({
+        emoji: "📊",
+        title: "Capital gains",
+        body: `Equity CG tax (illustrative) ₹${equityCgTaxOnly.toLocaleString("en-IN")}; LTCG exemption used ₹${Math.round(ltcgExemptionUsed).toLocaleString("en-IN")} of ₹1,25,000.`,
+      });
+    }
+    if (secAgri && agriculturalIncome > 0) {
+      rows.push({
+        emoji: "🌾",
+        title: "Agricultural income",
+        body: excludeAgriculturalFromTax
+          ? "Excluded from ordinary gross in this run — partial integration not modeled."
+          : "Included in ordinary gross — confirm exemption vs integration with a CA.",
+      });
+    }
+    if (secOther && (lotteryIncome > 0 || giftsTaxable > 0 || commissionIncome > 0 || otherMiscIncome > 0)) {
+      rows.push({
+        emoji: "💫",
+        title: "Other income",
+        body: `Lottery modeled at 30% flat on ₹${lotteryIncome.toLocaleString("en-IN")}; other slab items ₹${(giftsTaxable + commissionIncome + otherMiscIncome).toLocaleString("en-IN")}.`,
+      });
+    }
+    return rows;
+  }, [
+    secHRA,
+    sec80GG,
+    rentPaidNoHra,
+    ggPreview,
+    secLTA,
+    derived,
+    secRSU,
+    secGratuity,
+    gratReceived,
+    secLeave,
+    leaveReceived,
+    secBusiness,
+    bizMode,
+    secRental,
+    secPension,
+    secInterest,
+    secDividend,
+    secCG,
+    equityCgTaxOnly,
+    ltcgExemptionUsed,
+    secAgri,
+    agriculturalIncome,
+    excludeAgriculturalFromTax,
+    secOther,
+    lotteryIncome,
+    giftsTaxable,
+    commissionIncome,
+    otherMiscIncome,
+    hraExemptAnnualPreview,
+    hraTaxableAnnualPreview,
+  ]);
+
+  function sectionSummary(title: string, teach: TaxTeachContent) {
+    return (
+      <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+        <span className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">{title}</span>
+        <TaxTeachTooltip content={teach} ariaLabel={`About ${title}`} />
+      </summary>
+    );
+  }
+
+  const liveSummaryCard = (
+    <div
+      style={{
+        background: "white",
+        border: "1px solid #E8E6F0",
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 20,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: "#534AB7",
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+          marginBottom: 12,
+        }}
+      >
+        LIVE SUMMARY
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, color: "#9B9A94" }}>Gross ordinary income</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#111110" }}>
+            ₹{Math.round(grossOrdinaryPreview).toLocaleString("en-IN")}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: "#9B9A94" }}>Old regime deductions</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#1D9E75" }}>
+            ₹{Math.round(totalDeductionsOld).toLocaleString("en-IN")}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: "#9B9A94" }}>New regime tax</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#E24B4A" }}>
+            ₹{Math.round(newR.totalTax).toLocaleString("en-IN")}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: "#9B9A94" }}>Old regime tax</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#E24B4A" }}>
+            ₹{Math.round(oldR.totalTax).toLocaleString("en-IN")}
+          </div>
+        </div>
+      </div>
+      <div
+        style={{
+          marginTop: 12,
+          padding: "8px 12px",
+          borderRadius: 8,
+          background: winner === "new" ? "#E1F5EE" : winner === "old" ? "#EEEDFE" : "#F7F7F4",
+          fontSize: 13,
+          fontWeight: 600,
+          color: winner === "new" ? "#1D9E75" : winner === "old" ? "#534AB7" : "#5F5E5A",
+          textAlign: "center",
+        }}
+      >
+        {winner === "tie"
+          ? "Rough tie — refine deductions / income to separate regimes."
+          : winner === "new"
+            ? `New regime saves ~${rupees(saveAmount)}/yr`
+            : `Old regime saves ~${rupees(saveAmount)}/yr`}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 print:bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-[#9B9A94]">
+          {storageReady ? "✓ Progress auto-saved locally" : null}
+          {savedAtDisplay ? (
+            <span className="ml-2 block text-[10px] text-[#C5C4BD] sm:inline">
+              Last saved {new Date(savedAtDisplay).toLocaleString("en-IN")}
+            </span>
+          ) : null}
+        </p>
+        <button
+          type="button"
+          onClick={resetCalculator}
+          style={{
+            background: "none",
+            border: "1px solid #E8E6F0",
+            borderRadius: 8,
+            padding: "8px 16px",
+            fontSize: 13,
+            color: "#9B9A94",
+            cursor: "pointer",
+          }}
+        >
+          Reset calculator
+        </button>
+      </div>
+
+      <p className="text-xs text-[#7A7871]">
+        FY 2025-26 (AY 2026-27) planner. Tap <span className="font-semibold text-[#534AB7]">?</span> on any row for context.
+        Equity CG uses illustrative 20% STCG / 12.5% LTCG after ₹1.25L — verify with a CA.
+      </p>
+
+      <div className="lg:hidden">{liveSummaryCard}</div>
+
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-8">
+        <div className="min-w-0 space-y-6">
+          <details open className="rounded-xl border border-[#F0EFF8] bg-white p-4">
+            {sectionSummary("Step 1 · Profile & person type", TEACH.sections.profile)}
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="mb-2 text-sm font-medium text-[#5F5E5A]">Work / income style</p>
+                <div className="flex flex-wrap gap-2">
+                  {EMPLOYMENT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={cn(
+                        pill,
+                        employment === opt.id ? "bg-[#534AB7] text-white" : "bg-slate-100 text-slate-700",
+                      )}
+                      onClick={() => setEmployment(opt.id)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
+                  <input
+                    type="checkbox"
+                    checked={widowed}
+                    onChange={(e) => setWidowed(e.target.checked)}
+                    className="accent-[#534AB7]"
+                  />
+                  Widowed
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
+                  <input
+                    type="checkbox"
+                    checked={disabledSelf}
+                    onChange={(e) => setDisabledSelf(e.target.checked)}
+                    className="accent-[#534AB7]"
+                  />
+                  Self disability
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
+                  <input type="checkbox" checked={nri} onChange={(e) => setNri(e.target.checked)} className="accent-[#534AB7]" />
+                  NRI / overseas tie
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
+                  <input
+                    type="checkbox"
+                    checked={parentsSenior}
+                    onChange={(e) => setParentsSenior(e.target.checked)}
+                    className="accent-[#534AB7]"
+                  />
+                  Parents are senior (80D cap ₹50k)
+                </label>
+              </div>
+              <div>
+                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-[#5F5E5A]">
+                  Age
+                  <TaxTeachTooltip content={TEACH.sections.profile} ariaLabel="Age bands" />
+                </label>
+                <input
+                  type="range"
+                  min={18}
+                  max={100}
+                  step={1}
+                  value={age}
+                  onChange={(e) => setAge(Number(e.target.value))}
+                  className="h-2 w-full cursor-pointer accent-[#534AB7]"
+                />
+                <p className="mt-1 text-right text-xs text-[#9B9A94]">
+                  {age} yrs — {age >= 80 ? "super senior" : age >= 60 ? "senior citizen" : "regular"}
+                </p>
+              </div>
+            </div>
+          </details>
+
+          <details open className="rounded-xl border border-[#F0EFF8] bg-white p-4">
+            {sectionSummary("Step 2 · Core salary income", TEACH.sections.income)}
+            <div className="mt-4 space-y-1">
+              <p className="mb-2 text-xs text-[#7A7871]">
+                Annualised salary (Basic + optional HRA toggle + special allowance) ≈ {rupees(salaryAnnualPreview)} before add-ons.
+              </p>
+              <Mt
+                key={`${inputEpoch}-basic`}
+                id="tax-basic-m"
+                label="Basic salary (monthly)"
+                teach={TEACH.income.basicMonthly}
+                defaultValue={formatIndian(basicMonthly)}
+                max={10_000_000}
+                onChange={(e) => setBasicMonthly(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-special`}
+                id="tax-special-m"
+                label="Special allowance (monthly)"
+                teach={TEACH.income.allowancesMonthly}
+                optional
+                defaultValue={specialAllowanceMonthly ? formatIndian(specialAllowanceMonthly) : ""}
+                max={10_000_000}
+                onChange={(e) => setSpecialAllowanceMonthly(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-freelance`}
+                id="tax-free"
+                label="Freelance / professional income (annual)"
+                teach={TEACH.income.freelanceIncome}
+                optional
+                defaultValue={freelanceIncome ? formatIndian(freelanceIncome) : ""}
+                max={500000000}
+                onChange={(e) => setFreelanceIncome(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <div className="rounded-lg border border-[#EEEDFE] bg-[#FAFAFE] px-3 py-2 text-xs text-[#5F5E5A]">
+                Core annual (Basic + Special only) ≈ ₹
+                {Math.round((basicMonthly + specialAllowanceMonthly) * 12).toLocaleString("en-IN")}
+              </div>
+            </div>
+          </details>
+
+          <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Step 3 · Additional income</p>
+            <p className="mb-3 mt-1 text-xs text-[#7A7871]">Turn on only what applies — keeps the form calm.</p>
+
+            <ToggleSection
+              id="hra"
+              emoji="🏠"
+              title="HRA — House Rent Allowance"
+              subtitle="I receive HRA and pay rent"
+              isOn={secHRA}
+              onToggle={(v) => {
+                setSecHRA(v);
+                if (v) setSec80GG(false);
+              }}
+            >
+              <Mt
+                key={`${inputEpoch}-hra`}
+                id="tax-hra-m"
+                label="Monthly HRA received"
+                teach={TEACH.income.hraMonthly}
+                defaultValue={formatIndian(hraMonthly)}
+                max={10_000_000}
+                onChange={(e) => setHraMonthly(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-rent`}
+                id="tax-rent-m"
+                label="Monthly rent paid"
+                teach={TEACH.deductions.eightyGG}
+                defaultValue={formatIndian(rentPaidMonthly)}
+                max={10_000_000}
+                onChange={(e) => setRentPaidMonthly(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <p className="text-sm font-medium text-[#5F5E5A]">City type</p>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {chip(isMetro, "Metro", () => setIsMetro(true))}
+                {chip(!isMetro, "Non-metro", () => setIsMetro(false))}
+              </div>
+              <Mt
+                key={`${inputEpoch}-hra-base`}
+                id="tax-hra-base-annual"
+                label="Annual salary base for HRA 10% rule (optional)"
+                helper="Leave ₹0 to use Basic×12."
+                teach={TEACH.income.hraBaseAnnual}
+                optional
+                defaultValue={hraSalaryBaseAnnualOverride ? formatIndian(hraSalaryBaseAnnualOverride) : ""}
+                max={500000000}
+                onChange={(e) => setHraSalaryBaseAnnualOverride(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              {secHRA ? (
+                <div className="rounded-lg border border-[#E8E6F0] bg-[#FAFAFE] px-3 py-2 text-sm text-[#5F5E5A]">
+                  <div>HRA exempt (illustrative): {rupees(hraExemptAnnualPreview / 12)}/mo</div>
+                  <div>Taxable HRA remainder: {rupees(hraTaxableAnnualPreview / 12)}/mo</div>
+                </div>
+              ) : null}
+            </ToggleSection>
+
+            <ToggleSection
+              id="80gg"
+              emoji="🏠"
+              title="Rent without HRA (80GG)"
+              subtitle="I pay rent but don’t get HRA"
+              isOn={sec80GG}
+              onToggle={(v) => {
+                setSec80GG(v);
+                if (v) setSecHRA(false);
+              }}
+            >
+              <Mt
+                key={`${inputEpoch}-80gg`}
+                id="tax-rent-nohra"
+                label="Annual rent paid"
+                helper={`Illustrative 80GG ≈ ${rupees(ggPreview)}`}
+                teach={TEACH.deductions.eightyGG}
+                defaultValue={rentPaidNoHra ? formatIndian(rentPaidNoHra) : ""}
+                max={500000000}
+                onChange={(e) => setRentPaidNoHra(parseMoneyInput(e.target.value) ?? 0)}
+              />
+            </ToggleSection>
+
+            <ToggleSection
+              id="lta"
+              emoji="✈️"
+              title="LTA — Leave Travel Allowance"
+              subtitle="I receive LTA from employer"
+              isOn={secLTA}
+              onToggle={setSecLTA}
+            >
+              <Mt
+                key={`${inputEpoch}-lta`}
+                id="tax-lta-recv"
+                label="Annual LTA received"
+                teach={TEACH.income.ltaTaxable}
+                optional
+                defaultValue={ltaAnnualRecv ? formatIndian(ltaAnnualRecv) : ""}
+                max={500000000}
+                onChange={(e) => setLtaAnnualRecv(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <label className="flex cursor-pointer items-center gap-2 py-2 text-sm text-[#5F5E5A]">
+                <input
+                  type="checkbox"
+                  checked={ltaClaiming}
+                  onChange={(e) => setLtaClaiming(e.target.checked)}
+                  className="accent-[#534AB7]"
+                />
+                Claiming eligible travel this year?
+              </label>
+              {ltaClaiming ? (
+                <Mt
+                  key={`${inputEpoch}-lta-travel`}
+                  id="tax-lta-cost"
+                  label="Actual travel cost"
+                  teach={TEACH.income.ltaExempt}
+                  optional
+                  defaultValue={ltaTravelCost ? formatIndian(ltaTravelCost) : ""}
+                  max={500000000}
+                  onChange={(e) => setLtaTravelCost(parseMoneyInput(e.target.value) ?? 0)}
+                />
+              ) : null}
+              <p className="text-xs text-[#7A7871]">
+                LTA exemption needs domestic travel proofs; blocks are claim-limited — verify with payroll.
+              </p>
+              <div className="mt-2 text-sm text-[#5F5E5A]">
+                Exempt ₹{derived.ltaExemptRec.toLocaleString("en-IN")} · Taxable ₹
+                {derived.ltaTaxable.toLocaleString("en-IN")}
+              </div>
+            </ToggleSection>
+
+            <ToggleSection
+              id="rsu"
+              emoji="📈"
+              title="RSU / ESOP — Company shares"
+              subtitle="RSUs or ESOPs vesting this year"
+              isOn={secRSU}
+              onToggle={setSecRSU}
+            >
+              <p className="mb-2 text-sm font-medium text-[#5F5E5A]">Listing (for your notes)</p>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={cn(pill, _rsuListing === "india" ? "bg-[#534AB7] text-white" : "bg-slate-100")}
+                  onClick={() => setRsuListing("india")}
+                >
+                  India listed
+                </button>
+                <button
+                  type="button"
+                  className={cn(pill, _rsuListing === "us" ? "bg-[#534AB7] text-white" : "bg-slate-100")}
+                  onClick={() => setRsuListing("us")}
+                >
+                  US listed
+                </button>
+                <button
+                  type="button"
+                  className={cn(pill, _rsuListing === "other" ? "bg-[#534AB7] text-white" : "bg-slate-100")}
+                  onClick={() => setRsuListing("other")}
+                >
+                  Other
+                </button>
+              </div>
+              <NumberInput label="Units vesting this FY" value={rsuUnits} onChange={setRsuUnits} min={0} step={1} />
+              <Mt
+                key={`${inputEpoch}-rsu-fmv`}
+                id="tax-rsu-fmv"
+                label="FMV per unit on vest"
+                teach={TEACH.income.rsuVesting}
+                optional
+                defaultValue={rsuFmvPerUnit ? formatIndian(rsuFmvPerUnit) : ""}
+                max={500000000}
+                onChange={(e) => setRsuFmvPerUnit(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <div className="text-sm font-semibold text-[#111110]">
+                RSU salary income ≈ {rupees(rsuVestingIncomeAnnual(rsuUnits, rsuFmvPerUnit))}
+              </div>
+              <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
+                <input
+                  type="checkbox"
+                  checked={rsuPlanSell}
+                  onChange={(e) => setRsuPlanSell(e.target.checked)}
+                  className="accent-[#534AB7]"
+                />
+                Planning to sell vested units?
+              </label>
+              {rsuPlanSell ? (
+                <div className="mt-2 space-y-2">
+                  <NumberInput label="Units sold" value={rsuUnitsSold} onChange={setRsuUnitsSold} min={0} step={1} />
+                  <Mt
+                    key={`${inputEpoch}-rsu-sale`}
+                    id="tax-rsu-sale"
+                    label="Sale price per unit"
+                    teach={TEACH.income.rsuSaleStcg}
+                    optional
+                    defaultValue={rsuSalePrice ? formatIndian(rsuSalePrice) : ""}
+                    max={500000000}
+                    onChange={(e) => setRsuSalePrice(parseMoneyInput(e.target.value) ?? 0)}
+                  />
+                  <Mt
+                    key={`${inputEpoch}-rsu-cost`}
+                    id="tax-rsu-cost"
+                    label="Cost / FMV per unit at vest"
+                    teach={TEACH.income.rsuSaleLtcg}
+                    optional
+                    defaultValue={rsuCostPrice ? formatIndian(rsuCostPrice) : formatIndian(rsuFmvPerUnit)}
+                    max={500000000}
+                    onChange={(e) => setRsuCostPrice(parseMoneyInput(e.target.value) ?? 0)}
+                  />
+                  <p className="text-sm font-medium text-[#5F5E5A]">Holding bucket</p>
+                  <div className="flex flex-wrap gap-2">
+                    {chip(rsuShortTerm, "Short-term (equity)", () => setRsuShortTerm(true))}
+                    {chip(!rsuShortTerm, "Long-term (equity)", () => setRsuShortTerm(false))}
+                  </div>
+                  <div className="text-sm text-[#5F5E5A]">
+                    Gain ₹
+                    {Math.max(
+                      0,
+                      rsuSaleGain(rsuUnitsSold, rsuSalePrice, rsuCostPrice > 0 ? rsuCostPrice : rsuFmvPerUnit),
+                    ).toLocaleString("en-IN")}{" "}
+                    → {rsuShortTerm ? "STCG bucket" : "LTCG bucket"}
+                  </div>
+                </div>
+              ) : null}
+            </ToggleSection>
+
+            <ToggleSection
+              id="gratuity"
+              emoji="🎁"
+              title="Gratuity"
+              subtitle="Received gratuity this year"
+              isOn={secGratuity}
+              onToggle={setSecGratuity}
+            >
+              <div className="mb-2 flex flex-wrap gap-2">
+                {chip(gratEmployer === "government", "Government", () => setGratEmployer("government"))}
+                {chip(gratEmployer === "private", "Private sector", () => setGratEmployer("private"))}
+              </div>
+              <Mt
+                key={`${inputEpoch}-grat`}
+                id="tax-grat-amt"
+                label="Gratuity received"
+                teach={TEACH.income.gratuityTaxable}
+                optional
+                defaultValue={gratReceived ? formatIndian(gratReceived) : ""}
+                max={500000000}
+                onChange={(e) => setGratReceived(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <NumberInput label="Years of service" value={gratYears} onChange={setGratYears} min={0} step={1} />
+              <Mt
+                key={`${inputEpoch}-grat-sal`}
+                id="tax-grat-salary"
+                label="Last drawn salary (annual, for formula)"
+                teach={TEACH.income.gratuityExempt}
+                optional
+                defaultValue={gratLastSalaryAnnual ? formatIndian(gratLastSalaryAnnual) : ""}
+                max={500000000}
+                onChange={(e) => setGratLastSalaryAnnual(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <div className="text-sm text-[#5F5E5A]">
+                Exempt ₹{derived.gratuityExemptRec.toLocaleString("en-IN")} · Taxable ₹
+                {derived.gratuityTaxable.toLocaleString("en-IN")}
+              </div>
+              <p className="text-xs text-[#7A7871]">
+                Private employees: ₹20L cumulative exemption ceiling applies — confirm notifications with payroll.
+              </p>
+            </ToggleSection>
+
+            <ToggleSection
+              id="leave"
+              emoji="🌴"
+              title="Leave encashment"
+              subtitle="Encashed leave this year"
+              isOn={secLeave}
+              onToggle={setSecLeave}
+            >
+              <div className="mb-2 flex flex-wrap gap-2">
+                {chip(leaveTiming === "retirement", "At retirement", () => setLeaveTiming("retirement"))}
+                {chip(leaveTiming === "during_service", "During service", () => setLeaveTiming("during_service"))}
+              </div>
+              <div className="mb-2 flex flex-wrap gap-2">
+                {chip(leaveEmployer === "government", "Government employer", () => setLeaveEmployer("government"))}
+                {chip(leaveEmployer === "private", "Private employer", () => setLeaveEmployer("private"))}
+              </div>
+              <Mt
+                key={`${inputEpoch}-leave-amt`}
+                id="tax-leave-amt"
+                label="Amount received"
+                teach={TEACH.income.leaveEncashmentTaxable}
+                optional
+                defaultValue={leaveReceived ? formatIndian(leaveReceived) : ""}
+                max={500000000}
+                onChange={(e) => setLeaveReceived(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-leave-avg`}
+                id="tax-leave-avg"
+                label="Avg monthly salary (last 10 months)"
+                teach={TEACH.income.leaveEncashmentTaxable}
+                optional
+                defaultValue={leaveAvgMonthly ? formatIndian(leaveAvgMonthly) : ""}
+                max={500000000}
+                onChange={(e) => setLeaveAvgMonthly(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <NumberInput label="Years of service" value={leaveYears} onChange={setLeaveYears} min={0} step={1} />
+              <NumberInput label="Accumulated leave days" value={leaveDays} onChange={setLeaveDays} min={0} step={1} />
+              <div className="text-sm text-[#5F5E5A]">
+                Exempt ₹{derived.leaveExemptRec.toLocaleString("en-IN")} · Taxable ₹
+                {derived.leaveTaxable.toLocaleString("en-IN")}
+              </div>
+              <p className="text-xs text-[#7A7871]">Section 10(10AA) — illustrative split only.</p>
+            </ToggleSection>
+
+            <ToggleSection
+              id="biz"
+              emoji="💼"
+              title="Business income"
+              subtitle="Business / profession"
+              isOn={secBusiness}
+              onToggle={setSecBusiness}
+            >
+              <div className="mb-2 flex flex-wrap gap-2">
+                {chip(bizMode === "regular", "Regular (actuals)", () => setBizMode("regular"))}
+                {chip(bizMode === "44ad", "44AD presumptive", () => setBizMode("44ad"))}
+                {chip(bizMode === "44ada", "44ADA presumptive", () => setBizMode("44ada"))}
+              </div>
+              {bizMode === "regular" ? (
+                <>
+                  <Mt
+                    key={`${inputEpoch}-biz-gross`}
+                    id="tax-biz-gross"
+                    label="Gross receipts"
+                    teach={TEACH.income.businessProfit}
+                    optional
+                    defaultValue={bizGrossReceipts ? formatIndian(bizGrossReceipts) : ""}
+                    max={500000000}
+                    onChange={(e) => setBizGrossReceipts(parseMoneyInput(e.target.value) ?? 0)}
+                  />
+                  <Mt
+                    key={`${inputEpoch}-biz-exp`}
+                    id="tax-biz-exp"
+                    label="Expenses"
+                    teach={TEACH.income.businessProfit}
+                    optional
+                    defaultValue={bizExpenses ? formatIndian(bizExpenses) : ""}
+                    max={500000000}
+                    onChange={(e) => setBizExpenses(parseMoneyInput(e.target.value) ?? 0)}
+                  />
+                </>
+              ) : null}
+              {bizMode === "44ad" ? (
+                <>
+                  <Mt
+                    key={`${inputEpoch}-biz-to`}
+                    id="tax-biz-to"
+                    label="Annual turnover"
+                    teach={TEACH.income.businessProfit}
+                    optional
+                    defaultValue={bizTurnover44AD ? formatIndian(bizTurnover44AD) : ""}
+                    max={500000000}
+                    onChange={(e) => setBizTurnover44AD(parseMoneyInput(e.target.value) ?? 0)}
+                  />
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
+                    <input
+                      type="checkbox"
+                      checked={bizDigital44AD}
+                      onChange={(e) => setBizDigital44AD(e.target.checked)}
+                      className="accent-[#534AB7]"
+                    />
+                    Mostly digital receipts (use 6% presumptive)
+                  </label>
+                </>
+              ) : null}
+              {bizMode === "44ada" ? (
+                <Mt
+                  key={`${inputEpoch}-biz-ada`}
+                  id="tax-biz-ada"
+                  label="Professional receipts"
+                  teach={TEACH.income.businessProfit}
+                  optional
+                  defaultValue={bizReceipts44ADA ? formatIndian(bizReceipts44ADA) : ""}
+                  max={500000000}
+                  onChange={(e) => setBizReceipts44ADA(parseMoneyInput(e.target.value) ?? 0)}
+                />
+              ) : null}
+              <div className="text-sm font-semibold text-[#111110]">
+                Net / presumptive income ≈ {rupees(derived.businessProfit)}
+              </div>
+              <p className="text-xs text-[#7A7871]">Presumptive schemes limit expense claims — confirm eligibility.</p>
+            </ToggleSection>
+
+            <ToggleSection
+              id="rental"
+              emoji="🏢"
+              title="Rental income"
+              subtitle="Rent from property"
+              isOn={secRental}
+              onToggle={setSecRental}
+            >
+              <Mt
+                key={`${inputEpoch}-rent-g`}
+                id="tax-rent-gross"
+                label="Annual rent received"
+                teach={TEACH.income.rentalIncome}
+                optional
+                defaultValue={rentAnnualGross ? formatIndian(rentAnnualGross) : ""}
+                max={500000000}
+                onChange={(e) => setRentAnnualGross(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-rent-mun`}
+                id="tax-rent-mun"
+                label="Municipal taxes paid"
+                teach={TEACH.income.rentalIncome}
+                optional
+                defaultValue={rentMunicipal ? formatIndian(rentMunicipal) : ""}
+                max={500000000}
+                onChange={(e) => setRentMunicipal(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-rent-loan`}
+                id="tax-rent-loan"
+                label="Home loan interest (let-out)"
+                teach={TEACH.income.rentalIncome}
+                optional
+                defaultValue={rentLoanInterest ? formatIndian(rentLoanInterest) : ""}
+                max={500000000}
+                onChange={(e) => setRentLoanInterest(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              {derived.rentalBreakdown ? (
+                <div className="space-y-1 text-xs text-[#5F5E5A]">
+                  <div>Gross ₹{derived.rentalBreakdown.grossRent.toLocaleString("en-IN")}</div>
+                  <div>Less municipal ₹{derived.rentalBreakdown.lessMunicipal.toLocaleString("en-IN")}</div>
+                  <div>NAV ₹{Math.round(derived.rentalBreakdown.nav).toLocaleString("en-IN")}</div>
+                  <div>Less 30% ₹{Math.round(derived.rentalBreakdown.less30).toLocaleString("en-IN")}</div>
+                  <div>Less interest ₹{derived.rentalBreakdown.lessInterest.toLocaleString("en-IN")}</div>
+                  <div className="font-semibold text-[#111110]">
+                    Taxable rental ₹{derived.rentalTaxable.toLocaleString("en-IN")}
+                  </div>
+                </div>
+              ) : null}
+            </ToggleSection>
+
+            <ToggleSection
+              id="pension"
+              emoji="🏖️"
+              title="Pension income"
+              subtitle="Pension or family pension"
+              isOn={secPension}
+              onToggle={setSecPension}
+            >
+              <div className="mb-2 flex flex-wrap gap-2">
+                {chip(pensionKind === "government", "Government service", () => setPensionKind("government"))}
+                {chip(pensionKind === "private", "Private pension", () => setPensionKind("private"))}
+                {chip(pensionKind === "family", "Family pension", () => setPensionKind("family"))}
+              </div>
+              {pensionKind === "family" ? (
+                <Mt
+                  key={`${inputEpoch}-fam-pen`}
+                  id="tax-fam-pen"
+                  label="Monthly family pension"
+                  teach={TEACH.income.familyPension}
+                  optional
+                  defaultValue={familyPensionMonthly ? formatIndian(familyPensionMonthly) : ""}
+                  max={500000000}
+                  onChange={(e) => setFamilyPensionMonthly(parseMoneyInput(e.target.value) ?? 0)}
+                />
+              ) : (
+                <>
+                  <Mt
+                    key={`${inputEpoch}-pen`}
+                    id="tax-pen"
+                    label="Monthly pension"
+                    teach={TEACH.income.pension}
+                    optional
+                    defaultValue={pensionMonthly ? formatIndian(pensionMonthly) : ""}
+                    max={500000000}
+                    onChange={(e) => setPensionMonthly(parseMoneyInput(e.target.value) ?? 0)}
+                  />
+                  <Mt
+                    key={`${inputEpoch}-comm`}
+                    id="tax-comm"
+                    label="Commuted pension received (lump sum)"
+                    teach={TEACH.income.pension}
+                    optional
+                    defaultValue={commutedPension ? formatIndian(commutedPension) : ""}
+                    max={500000000}
+                    onChange={(e) => setCommutedPension(parseMoneyInput(e.target.value) ?? 0)}
+                  />
+                </>
+              )}
+              <p className="text-xs text-[#7A7871]">
+                Tool applies simple exemption sketches on commuted / family pension — confirm Form 16 treatment.
+              </p>
+            </ToggleSection>
+
+            <ToggleSection
+              id="interest"
+              emoji="🏦"
+              title="Interest income"
+              subtitle="Savings, FD, bonds"
+              isOn={secInterest}
+              onToggle={setSecInterest}
+            >
+              <Mt
+                key={`${inputEpoch}-int-sav`}
+                id="tax-int-sav"
+                label="Savings account interest"
+                helper="80TTA / 80TTB may offset small slices."
+                teach={TEACH.income.interestIncome}
+                optional
+                defaultValue={savingsInterest ? formatIndian(savingsInterest) : ""}
+                max={500000000}
+                onChange={(e) => setSavingsInterest(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-int-fd`}
+                id="tax-int-fd"
+                label="FD / RD interest"
+                teach={TEACH.income.interestIncome}
+                optional
+                defaultValue={fdInterest ? formatIndian(fdInterest) : ""}
+                max={500000000}
+                onChange={(e) => setFdInterest(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-int-po`}
+                id="tax-int-po"
+                label="Post office interest"
+                teach={TEACH.income.interestIncome}
+                optional
+                defaultValue={postOfficeInterest ? formatIndian(postOfficeInterest) : ""}
+                max={500000000}
+                onChange={(e) => setPostOfficeInterest(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-int-bond`}
+                id="tax-int-bond"
+                label="Bond / debenture interest"
+                teach={TEACH.income.interestIncome}
+                optional
+                defaultValue={bondsInterest ? formatIndian(bondsInterest) : ""}
+                max={500000000}
+                onChange={(e) => setBondsInterest(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <div className="text-sm font-semibold text-[#111110]">
+                Total interest ₹{derived.interestIncome.toLocaleString("en-IN")}
+              </div>
+            </ToggleSection>
+
+            <ToggleSection
+              id="div"
+              emoji="💰"
+              title="Dividend income"
+              subtitle="Stocks / MF / foreign"
+              isOn={secDividend}
+              onToggle={setSecDividend}
+            >
+              <Mt
+                key={`${inputEpoch}-div-in`}
+                id="tax-div-in"
+                label="Indian companies"
+                teach={TEACH.income.dividendIncome}
+                optional
+                defaultValue={divIndian ? formatIndian(divIndian) : ""}
+                max={500000000}
+                onChange={(e) => setDivIndian(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-div-mf`}
+                id="tax-div-mf"
+                label="Mutual funds"
+                teach={TEACH.income.dividendIncome}
+                optional
+                defaultValue={divMF ? formatIndian(divMF) : ""}
+                max={500000000}
+                onChange={(e) => setDivMF(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-div-fr`}
+                id="tax-div-fr"
+                label="Foreign companies"
+                teach={TEACH.income.dividendIncome}
+                optional
+                defaultValue={divForeign ? formatIndian(divForeign) : ""}
+                max={500000000}
+                onChange={(e) => setDivForeign(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <p className="text-xs text-[#7A7871]">Dividends taxable at slab; TDS may apply over thresholds.</p>
+            </ToggleSection>
+
+            <ToggleSection
+              id="cg"
+              emoji="📊"
+              title="Capital gains"
+              subtitle="Equity, debt MF, property"
+              isOn={secCG}
+              onToggle={setSecCG}
+            >
+              <Mt
+                key={`${inputEpoch}-cg-eq-st`}
+                id="tax-cg-eq-st"
+                label="Equity STCG gains"
+                helper="Illustrative 20% in engine."
+                teach={TEACH.income.otherStcg}
+                optional
+                defaultValue={cgEquityStcgExtra ? formatIndian(cgEquityStcgExtra) : ""}
+                max={500000000}
+                onChange={(e) => setCgEquityStcgExtra(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-cg-eq-lt`}
+                id="tax-cg-eq-lt"
+                label="Equity LTCG gains"
+                helper="₹1.25L exemption then 12.5% illustrative."
+                teach={TEACH.income.otherLtcg}
+                optional
+                defaultValue={cgEquityLtcgExtra ? formatIndian(cgEquityLtcgExtra) : ""}
+                max={500000000}
+                onChange={(e) => setCgEquityLtcgExtra(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-cg-debt-st`}
+                id="tax-cg-debt-st"
+                label="Debt MF / similar STCG (slab)"
+                teach={TEACH.income.otherStcg}
+                optional
+                defaultValue={cgDebtStcg ? formatIndian(cgDebtStcg) : ""}
+                max={500000000}
+                onChange={(e) => setCgDebtStcg(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-cg-debt-lt`}
+                id="tax-cg-debt-lt"
+                label="Debt MF LTCG (slab illustration)"
+                teach={TEACH.income.otherLtcg}
+                optional
+                defaultValue={cgDebtLtcg ? formatIndian(cgDebtLtcg) : ""}
+                max={500000000}
+                onChange={(e) => setCgDebtLtcg(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-cg-prop-st`}
+                id="tax-cg-prop-st"
+                label="Property STCG (slab illustration)"
+                teach={TEACH.income.otherStcg}
+                optional
+                defaultValue={cgPropStcg ? formatIndian(cgPropStcg) : ""}
+                max={500000000}
+                onChange={(e) => setCgPropStcg(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-cg-prop-lt`}
+                id="tax-cg-prop-lt"
+                label="Property LTCG (12.5% illustrative)"
+                teach={TEACH.income.otherLtcg}
+                optional
+                defaultValue={cgPropLtcg ? formatIndian(cgPropLtcg) : ""}
+                max={500000000}
+                onChange={(e) => setCgPropLtcg(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <div className="text-xs text-[#5F5E5A]">
+                Equity schedule tax ₹{equityCgTaxOnly.toLocaleString("en-IN")} · LTCG exemption band used ₹
+                {Math.round(ltcgExemptionUsed).toLocaleString("en-IN")} / ₹1,25,000
+              </div>
+            </ToggleSection>
+
+            <ToggleSection
+              id="agri"
+              emoji="🌾"
+              title="Agricultural income"
+              subtitle="Farming / agri (planning toggle)"
+              isOn={secAgri}
+              onToggle={setSecAgri}
+            >
+              <Mt
+                key={`${inputEpoch}-agri`}
+                id="tax-agri"
+                label="Annual agricultural income"
+                teach={TEACH.income.agriculturalIncome}
+                optional
+                defaultValue={agriculturalIncome ? formatIndian(agriculturalIncome) : ""}
+                max={500000000}
+                onChange={(e) => setAgriculturalIncome(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <label className="flex cursor-pointer items-center gap-2 py-2 text-sm text-[#5F5E5A]">
+                <input
+                  type="checkbox"
+                  checked={excludeAgriculturalFromTax}
+                  onChange={(e) => setExcludeAgriculturalFromTax(e.target.checked)}
+                  className="accent-[#534AB7]"
+                />
+                Exclude from ordinary gross in this planner (partial integration not modeled)
+              </label>
+            </ToggleSection>
+
+            <ToggleSection
+              id="other"
+              emoji="💫"
+              title="Other income"
+              subtitle="Lottery, gifts, commission…"
+              isOn={secOther}
+              onToggle={setSecOther}
+            >
+              <Mt
+                key={`${inputEpoch}-lot`}
+                id="tax-lot"
+                label="Lottery / gambling winnings"
+                helper="30% flat illustrative tax."
+                teach={TEACH.sections.income}
+                optional
+                defaultValue={lotteryIncome ? formatIndian(lotteryIncome) : ""}
+                max={500000000}
+                onChange={(e) => setLotteryIncome(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-gift`}
+                id="tax-gift"
+                label="Taxable gifts (net)"
+                teach={TEACH.sections.income}
+                optional
+                defaultValue={giftsTaxable ? formatIndian(giftsTaxable) : ""}
+                max={500000000}
+                onChange={(e) => setGiftsTaxable(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-comm-inc`}
+                id="tax-comm-inc"
+                label="Commission"
+                teach={TEACH.income.freelanceIncome}
+                optional
+                defaultValue={commissionIncome ? formatIndian(commissionIncome) : ""}
+                max={500000000}
+                onChange={(e) => setCommissionIncome(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <Mt
+                key={`${inputEpoch}-oth`}
+                id="tax-oth-misc"
+                label="Other taxable income"
+                teach={TEACH.sections.income}
+                optional
+                defaultValue={otherMiscIncome ? formatIndian(otherMiscIncome) : ""}
+                max={500000000}
+                onChange={(e) => setOtherMiscIncome(parseMoneyInput(e.target.value) ?? 0)}
+              />
+            </ToggleSection>
+          </div>
+
+          <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">
+              Step 4 · Deductions (old regime)
+            </p>
+
+            <ToggleSection
+              id="ded-c"
+              emoji="📒"
+              title="80C basket & NPS 80CCD(1B)"
+              subtitle="Tax-saving investments"
+              isOn={secDed80c}
+              onToggle={setSecDed80c}
+            >
+              <div className="mb-3 rounded-lg border border-[#EEEDFE] bg-[#FAFAFE] p-3 text-xs text-[#5F5E5A]">
+                <span className="font-semibold text-[#534AB7]">
+                  80C running total {rupees(c80Elss + c80Ppf + c80Lic + c80Epf + c80Tuition + c80Principal)} · Applied{" "}
+                  {rupees(running80C)} / ₹1,50,000
+                </span>
+                <TaxTeachTooltip content={TEACH.deductions.eightyCRunning} />
+              </div>
+              <Mt key={`${inputEpoch}-elss`} id="tax-c-elss" label="ELSS / 80C equity" teach={TEACH.deductions.eightyCElss} optional defaultValue={c80Elss ? formatIndian(c80Elss) : ""} max={150000} onChange={(e) => setC80Elss(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt key={`${inputEpoch}-ppf`} id="tax-c-ppf" label="PPF" teach={TEACH.deductions.eightyCPpf} optional defaultValue={c80Ppf ? formatIndian(c80Ppf) : ""} max={150000} onChange={(e) => setC80Ppf(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt key={`${inputEpoch}-lic`} id="tax-c-lic" label="LIC / insurance (80C basket)" teach={TEACH.deductions.eightyCLic} optional defaultValue={c80Lic ? formatIndian(c80Lic) : ""} max={150000} onChange={(e) => setC80Lic(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt key={`${inputEpoch}-epf`} id="tax-c-epf" label="EPF / employee PF" teach={TEACH.deductions.eightyCEpf} optional defaultValue={c80Epf ? formatIndian(c80Epf) : ""} max={150000} onChange={(e) => setC80Epf(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt key={`${inputEpoch}-tuition`} id="tax-c-tuition" label="Tuition fees" teach={TEACH.deductions.eightyCTuition} optional defaultValue={c80Tuition ? formatIndian(c80Tuition) : ""} max={150000} onChange={(e) => setC80Tuition(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt key={`${inputEpoch}-principal`} id="tax-c-principal" label="Home loan principal" teach={TEACH.deductions.eightyCHomePrincipal} optional defaultValue={c80Principal ? formatIndian(c80Principal) : ""} max={150000} onChange={(e) => setC80Principal(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt key={`${inputEpoch}-nps`} id="tax-nps" label="80CCD(1B) NPS additional" teach={TEACH.deductions.eightyCCD} max={50000} defaultValue={formatIndian(nps80CCD1B)} onChange={(e) => setNps80CCD1B(parseMoneyInput(e.target.value) ?? 0)} />
+            </ToggleSection>
+
+            <ToggleSection
+              id="ded-d"
+              emoji="🩺"
+              title="80D medical insurance"
+              subtitle="Self & parents premiums"
+              isOn={secDed80d}
+              onToggle={setSecDed80d}
+            >
+              <Mt id="tax-80d-self" label="80D — self / spouse / kids" teach={TEACH.deductions.eightyDSelf} max={age >= 60 ? 50000 : 25000} defaultValue={formatIndian(deductions80DSelf)} onChange={(e) => setDeductions80DSelf(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80d-par" label="80D — parents" teach={TEACH.deductions.eightyDParents} max={parentsSenior ? 50000 : 25000} optional defaultValue={deductions80DParents ? formatIndian(deductions80DParents) : ""} onChange={(e) => setDeductions80DParents(parseMoneyInput(e.target.value) ?? 0)} />
+            </ToggleSection>
+
+            <ToggleSection
+              id="ded-rest"
+              emoji="📑"
+              title="Other Chapter VI-A & 24(b)"
+              subtitle="Remaining deductions"
+              isOn={secDedRest}
+              onToggle={setSecDedRest}
+            >
+              <Mt id="tax-80dd" label="80DD" teach={TEACH.deductions.eightyDD} max={125000} optional defaultValue={deduction80DD ? formatIndian(deduction80DD) : ""} onChange={(e) => setDeduction80DD(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80ddb" label="80DDB" teach={TEACH.deductions.eightyDDB} max={age >= 60 ? 100000 : 40000} optional defaultValue={deduction80DDB ? formatIndian(deduction80DDB) : ""} onChange={(e) => setDeduction80DDB(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80e" label="80E education loan interest" teach={TEACH.deductions.eightyE} optional defaultValue={deduction80E ? formatIndian(deduction80E) : ""} max={500000000} onChange={(e) => setDeduction80E(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80eea" label="80EEA" teach={TEACH.deductions.eightyEEA} max={150000} optional defaultValue={deduction80EEA ? formatIndian(deduction80EEA) : ""} onChange={(e) => setDeduction80EEA(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80g" label="80G donations" teach={TEACH.deductions.eightyG} optional defaultValue={deduction80G ? formatIndian(deduction80G) : ""} max={500000000} onChange={(e) => setDeduction80G(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80tta" label="80TTA" teach={TEACH.deductions.eightyTTA} max={10000} optional disabled={age >= 60} defaultValue={deduction80TTA ? formatIndian(deduction80TTA) : ""} onChange={(e) => setDeduction80TTA(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80ttb" label="80TTB" teach={TEACH.deductions.eightyTTB} max={50000} optional defaultValue={deduction80TTB ? formatIndian(deduction80TTB) : ""} onChange={(e) => setDeduction80TTB(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80u" label="80U" teach={TEACH.deductions.eightyU} max={125000} optional defaultValue={deduction80U ? formatIndian(deduction80U) : ""} onChange={(e) => setDeduction80U(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80rrb" label="80RRB royalty" teach={TEACH.deductions.eightyRRB} max={300000} optional defaultValue={deduction80RRB ? formatIndian(deduction80RRB) : ""} onChange={(e) => setDeduction80RRB(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-24b" label="24(b) home loan interest" teach={TEACH.deductions.twentyFourB} max={200000} optional defaultValue={homeLoanInterest24b ? formatIndian(homeLoanInterest24b) : ""} onChange={(e) => setHomeLoanInterest24b(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-pt" label="Professional tax" teach={TEACH.deductions.professionalTax} max={5000} optional defaultValue={professionalTax ? formatIndian(professionalTax) : ""} onChange={(e) => setProfessionalTax(parseMoneyInput(e.target.value) ?? 0)} />
+              <div className="flex items-start gap-2 rounded-lg border border-dashed border-[#E8E6F0] px-3 py-2 text-xs text-[#7A7871]">
+                <TaxTeachTooltip content={TEACH.deductions.standardOld} ariaLabel="Standard deduction old" />
+                <span>
+                  Old regime ₹50k standard deduction; new regime ₹75k in this tool (
+                  <TaxTeachTooltip content={TEACH.deductions.standardNew} ariaLabel="Standard deduction new" />).
+                </span>
+              </div>
+            </ToggleSection>
+          </div>
+
+          {(derived.leaveExemptRec > 0 || derived.gratuityExemptRec > 0 || derived.ltaExemptRec > 0) ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#5F5E5A]">
+              <span className="font-semibold text-slate-800">Recorded exempt amounts (memo): </span>
+              {[derived.leaveExemptRec > 0 ? `Leave ₹${derived.leaveExemptRec.toLocaleString("en-IN")}` : null, derived.gratuityExemptRec > 0 ? `Gratuity ₹${derived.gratuityExemptRec.toLocaleString("en-IN")}` : null, derived.ltaExemptRec > 0 ? `LTA ₹${derived.ltaExemptRec.toLocaleString("en-IN")}` : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          ) : null}
+
+          <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Step 5 · Results</p>
+            <div className="overflow-hidden rounded-xl border border-[#E8E6F0] bg-white">
+              <div className="grid border-b border-[#E8E6F0] bg-[#F7F6FE] px-4 py-3 text-sm font-semibold text-[#111110] md:grid-cols-2">
+                <div className="border-b border-[#E8E6F0] py-2 md:border-b-0 md:border-r md:py-0 md:pr-4">Old regime</div>
+                <div className="py-2 md:py-0 md:pl-4">New regime</div>
+              </div>
+              <div className="grid gap-4 p-4 md:grid-cols-2">
+                {regimeColumn(oldR, "Total deductions", true)}
+                {regimeColumn(newR, "Standard deduction (₹75k)", true)}
+              </div>
+            </div>
+
+            {winner === "new" ? (
+              <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-950">
+                <p className="text-lg font-bold">Winner: New regime — about {rupees(saveAmount)} / year</p>
+              </div>
+            ) : winner === "old" ? (
+              <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-sky-950">
+                <p className="text-lg font-bold">Winner: Old regime — about {rupees(saveAmount)} / year</p>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900">
+                <p className="text-lg font-bold">Rough tie between regimes</p>
+              </div>
+            )}
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Old — monthly take-home</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">{rupees(oldMonthly)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">New — monthly take-home</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">{rupees(newMonthly)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Monthly difference</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">{rupees(Math.abs(oldMonthly - newMonthly))}</p>
+              </div>
+            </div>
+
+            {missedAlerts.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-950">
+                <p className="font-semibold">Possible missed deductions / checks</p>
+                <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm">
+                  {missedAlerts.map((a) => (
+                    <li key={a}>{a}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <Insight tone="good">
+              <span className="font-semibold">Plain-language next steps</span>
+              <ul className="mt-2 list-disc space-y-1 pl-5 font-normal">
+                {tips.map((t, idx) => (
+                  <li key={`tip-${idx}`}>{t}</li>
+                ))}
+              </ul>
+            </Insight>
+
+            {learnedToday.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-[#EEEDFE] bg-[#FAFAFE] px-4 py-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-[#534AB7]">What you learned today</p>
+                <ul className="mt-3 space-y-3">
+                  {learnedToday.map((row) => (
+                    <li key={row.title} className="text-sm text-[#5F5E5A]">
+                      <span className="font-semibold text-[#111110]">
+                        {row.emoji} {row.title}
+                      </span>
+                      <div className="mt-0.5 leading-relaxed">{row.body}</div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <section className="mt-4 rounded-xl border border-[#E8E6F0] bg-white p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">FAQ</p>
+                <TaxTeachTooltip content={TEACH.sections.deductions} ariaLabel="Tax glossary context" />
+              </div>
+              <div className="mt-3 space-y-2">
+                <details className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                  <summary className="cursor-pointer text-sm font-medium text-slate-900">
+                    How are RSU vest and sale taxed differently?
+                  </summary>
+                  <p className="mt-2 text-sm leading-relaxed text-[#5F5E5A]">
+                    Vesting is generally salary perquisite; sales later pick up capital gains — verify broker statements.
+                  </p>
+                </details>
+                <details className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                  <summary className="cursor-pointer text-sm font-medium text-slate-900">Where can I read deeper guides?</summary>
+                  <ul className="mt-2 list-none space-y-1.5 text-sm text-[#534AB7]">
+                    {learnTaxLinks.map((l) => (
+                      <li key={l.href}>
+                        <Link href={l.href} className="hover:underline">
+                          {l.label} →
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </div>
+            </section>
+          </div>
+
+          <PaywallModal
+            open={paywallOpen}
+            onClose={() => setPaywallOpen(false)}
+            priceLabel="Pay ₹99"
+            title="Unlock tax regime deep report"
+            subtitle="Full narrative and printable layout."
+            checkoutDescription="Unlock tax regime comparison deep report"
+            bulletPoints={[
+              "Slab + equity CG narrative",
+              "What-if scenarios",
+              "Print / PDF via browser",
+              "Checklist for CA review",
+            ]}
+            navigateAfterUnlock="/calculators?calc=tax-regime"
+          />
+
+          <p className="text-xs text-[#9B9A94]">Educational only — verify against notified law and Form 16.</p>
+        </div>
+
+        <aside className="hidden lg:block">
+          <div style={{ position: "sticky", top: 80 }}>{liveSummaryCard}</div>
+        </aside>
+      </div>
+    </div>
+  );
+}
