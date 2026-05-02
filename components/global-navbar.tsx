@@ -410,7 +410,17 @@ export function GlobalNavbar() {
             return (
               <Link href="/calculator" scroll className={`col-start-1 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${calcActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
                 <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${calcActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>🧮</span>
-                <span>Calc</span>
+                <span>Calci</span>
+              </Link>
+            );
+          })()}
+
+          {(() => {
+            const trackerActive = pathname === "/learn" || pathname.startsWith("/learn/");
+            return (
+              <Link href="/tracker" scroll className={`col-start-3 mb-[-14px] inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${trackerActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#534AB7] text-base text-white shadow-md shadow-indigo-500/30">📒</span>
+                <span>Learn</span>
               </Link>
             );
           })()}
@@ -436,11 +446,11 @@ export function GlobalNavbar() {
           })()}
 
           {(() => {
-            const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
+            const profileActive = pathname === "/profile" || pathname.startsWith("/");
             return (
               <Link href="/profile" scroll className={`col-start-5 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${profileActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
                 <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${profileActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>👤</span>
-                <span>Profile</span>
+                <span>Home</span>
               </Link>
             );
           })()}
