@@ -9,7 +9,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 function TrackerMonthContent() {
   const params = useParams<{ month: string }>();
@@ -32,6 +32,7 @@ function TrackerMonthContent() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<TrackerTransactionRow | null>(null);
+  const fetchReqId = useRef(0);
 
   useEffect(() => {
     if (!parsed) {
@@ -52,17 +53,21 @@ function TrackerMonthContent() {
 
     const checkDB = async () => {
       if (!user?.id) return;
-      const supabase = getSupabase();
-      const { data } = await supabase.from("tracker_consent").select("consent_given").eq("user_id", user.id).maybeSingle();
+      try {
+        const supabase = getSupabase();
+        const { data } = await supabase.from("tracker_consent").select("consent_given").eq("user_id", user.id).maybeSingle();
 
-      if (data?.consent_given) {
-        try {
-          localStorage.setItem("finkoin_tracker_consent", "v1");
-        } catch {
-          /* ignore */
+        if (data?.consent_given) {
+          try {
+            localStorage.setItem("finkoin_tracker_consent", "v1");
+          } catch {
+            /* ignore */
+          }
+          setHasConsent(true);
+        } else {
+          setHasConsent(false);
         }
-        setHasConsent(true);
-      } else {
+      } catch {
         setHasConsent(false);
       }
     };
@@ -71,23 +76,46 @@ function TrackerMonthContent() {
   }, [user?.id]);
 
   const fetchTransactions = useCallback(async () => {
-    if (!user?.id || !hasConsent || !parsed) return;
+    if (!hasConsent || !parsed) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    const myId = ++fetchReqId.current;
     setLoading(true);
-    const supabase = getSupabase();
-    const { data } = await supabase
-      .from("expense_transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("month", parsed.monthName)
-      .eq("year", parsed.year)
-      .order("date", { ascending: false });
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from("expense_transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("month", parsed.monthName)
+        .eq("year", parsed.year)
+        .order("date", { ascending: false });
 
-    setTransactions((data as TrackerTransactionRow[]) || []);
-    setLoading(false);
+      if (fetchReqId.current !== myId) return;
+      if (error) console.warn("tracker month fetch:", error.message);
+      setTransactions((data as TrackerTransactionRow[]) || []);
+    } catch (e) {
+      if (fetchReqId.current !== myId) return;
+      console.warn("tracker month fetch failed", e);
+      setTransactions([]);
+    } finally {
+      if (fetchReqId.current === myId) setLoading(false);
+    }
   }, [user?.id, hasConsent, parsed]);
 
   useEffect(() => {
     if (hasConsent) void fetchTransactions();
+  }, [hasConsent, fetchTransactions]);
+
+  useEffect(() => {
+    if (!hasConsent) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void fetchTransactions();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [hasConsent, fetchTransactions]);
 
   const defaultDateForModal = parsed

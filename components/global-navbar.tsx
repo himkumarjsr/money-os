@@ -406,9 +406,9 @@ export function GlobalNavbar() {
       >
         <div className="mx-auto grid max-w-md grid-cols-5 items-end gap-1">
           {(() => {
-            const calcActive = pathname === "/calculators" || pathname.startsWith("/calculators/");
+            const calcActive = pathname === "/calculator";
             return (
-              <Link href="/calculators" scroll className={`col-start-1 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${calcActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
+              <Link href="/calculator" scroll className={`col-start-1 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${calcActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
                 <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${calcActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>🧮</span>
                 <span>Calc</span>
               </Link>
