@@ -2,32 +2,77 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { consumePendingReferralCode } from "@/components/ReferralCapture";
 import { useAuthStore } from "@/store/authStore";
+
+/** Same key everywhere for pending `?ref=` attribution. */
+export const REFERRAL_PENDING_STORAGE_KEY = "finkoin_pending_ref";
+export const STORAGE_KEY = REFERRAL_PENDING_STORAGE_KEY;
 
 export const FINKOIN_REFERRAL_SUCCESS_KEY = "finkoin_referral_success";
 
 const referralApplyLocks = new Set<string>();
+
+export function consumePendingReferralCode(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(REFERRAL_PENDING_STORAGE_KEY);
+
+    if (!stored) return null;
+
+    let code: string | null = null;
+
+    try {
+      const parsed = JSON.parse(stored) as { code?: string; expires?: string };
+
+      if (parsed.expires && new Date(parsed.expires) < new Date()) {
+        localStorage.removeItem(REFERRAL_PENDING_STORAGE_KEY);
+        return null;
+      }
+
+      code = parsed.code || null;
+    } catch {
+      code = stored;
+    }
+
+    localStorage.removeItem(REFERRAL_PENDING_STORAGE_KEY);
+
+    console.log("Referral: consumed code", code);
+
+    return code;
+  } catch (err) {
+    console.error("consumeReferral error:", err);
+    return null;
+  }
+}
 
 /**
  * Links new user to referrer from localStorage (`finkoin_pending_ref`) and grants FK bonuses.
  * Inserts `public.referrals` when RLS allows. Best-effort on failures.
  */
 export async function applyPendingReferralRewards(supabase: SupabaseClient, newUserId: string): Promise<void> {
+  console.log("applyPendingReferralRewards: called for user", newUserId);
+
   if (referralApplyLocks.has(newUserId)) return;
   referralApplyLocks.add(newUserId);
 
   try {
-    const refCode = consumePendingReferralCode();
-    if (!refCode) return;
-
-    const { data: self } = await supabase.from("users").select("id, referred_by").eq("id", newUserId).maybeSingle();
-    if (self?.referred_by) {
+    const { data: selfPre } = await supabase.from("users").select("id, referred_by").eq("id", newUserId).maybeSingle();
+    if (selfPre?.referred_by) {
       console.log("Referral already processed (referred_by set)");
       return;
     }
 
+    const refCode = consumePendingReferralCode();
+    console.log("applyPendingReferralRewards: code=", refCode);
+
+    if (!refCode) {
+      console.log("applyPendingReferralRewards: no pending referral code");
+      return;
+    }
+
     const { data: referrer } = await supabase.from("users").select("id").eq("referral_code", refCode).maybeSingle();
+    console.log("applyPendingReferralRewards: referrer found", referrer?.id);
+
     if (!referrer?.id || referrer.id === newUserId) return;
 
     await supabase.from("users").update({ referred_by: referrer.id }).eq("id", newUserId);
@@ -50,6 +95,8 @@ export async function applyPendingReferralRewards(supabase: SupabaseClient, newU
 
     await bump(referrer.id, 200);
     await bump(newUserId, 100);
+
+    console.log("applyPendingReferralRewards: FK awarded to both users");
 
     const { error: refErr } = await supabase.from("referrals").insert({
       referrer_user_id: referrer.id,

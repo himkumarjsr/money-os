@@ -333,28 +333,26 @@ export const useAuthStore = create<AuthState>()(
                 return;
               }
 
-              if (
-                event === "SIGNED_IN" ||
-                event === "TOKEN_REFRESHED" ||
-                event === "USER_UPDATED"
-              ) {
-                if (sess?.user) {
-                  await get().refreshUser();
+              if (event === "SIGNED_IN" && sess?.user) {
+                await get().refreshUser();
 
-                  if (event === "SIGNED_IN") {
-                    const createdAt = new Date(sess.user.created_at);
-                    const minutesOld = (Date.now() - createdAt.getTime()) / 1000 / 60;
-                    if (minutesOld < 10) {
-                      try {
-                        const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
-                        await applyPendingReferralRewards(getSupabase(), sess.user.id);
-                        console.log("Referral processed on SIGNED_IN");
-                      } catch (e) {
-                        console.warn("Referral SIGNED_IN error:", e);
-                      }
-                    }
+                try {
+                  const createdAt = new Date(sess.user.created_at);
+                  const ageMinutes = (Date.now() - createdAt.getTime()) / 60000;
+
+                  console.log("SIGNED_IN: account age", ageMinutes, "minutes");
+
+                  if (ageMinutes < 30) {
+                    const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
+                    const supabase = getSupabase();
+                    await applyPendingReferralRewards(supabase, sess.user.id);
+                    console.log("Referral: processed on SIGNED_IN");
                   }
+                } catch (e) {
+                  console.warn("Referral SIGNED_IN error:", e);
                 }
+              } else if ((event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && sess?.user) {
+                await get().refreshUser();
               }
             });
           }
@@ -394,9 +392,9 @@ export const useAuthStore = create<AuthState>()(
             try {
               const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
               await applyPendingReferralRewards(getSupabase(), data.session.user.id);
-              console.log("Referral processed after email signup");
+              console.log("Referral: processed after email signup");
             } catch (e) {
-              console.warn("Referral error:", e);
+              console.warn("Referral signup error:", e);
             }
           }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { STORAGE_KEY } from "@/components/ReferralCapture";
+import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -30,6 +30,27 @@ function LoginContent() {
       router.push(redirectTo.startsWith("/") ? redirectTo : "/analyse");
     }
   }, [hasInitialized, isLoggedIn, router, redirectTo]);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref")?.trim();
+
+      if (ref) {
+        localStorage.setItem(
+          REFERRAL_PENDING_STORAGE_KEY,
+          JSON.stringify({
+            code: ref,
+            savedAt: new Date().toISOString(),
+            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          }),
+        );
+        console.log("Login: captured ref", ref);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const handleSubmit = async () => {
     setError("");
@@ -106,9 +127,9 @@ function LoginContent() {
         try {
           const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
           await applyPendingReferralRewards(getSupabase(), data.session.user.id);
-          console.log("Referral processed after email signup");
+          console.log("Referral: processed after email signup");
         } catch (e) {
-          console.warn("Referral error:", e);
+          console.warn("Referral signup error:", e);
         }
       }
 
