@@ -5,8 +5,8 @@ import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
 import { getSupabase } from "@/lib/supabase";
+import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import { useAuthStore } from "@/store/authStore";
-import { useFinancialStore } from "@/store/financialStore";
 import { useCallback, useEffect, useState } from "react";
 
 export type TrackerTransaction = {
@@ -111,6 +111,7 @@ function TrackerContent() {
   const [defaultBucket, setDefaultBucket] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
   const currentMonth = new Date(selectedYear, selectedMonth, 1).toLocaleString("default", { month: "long" });
   const currentYear = selectedYear;
 
@@ -166,6 +167,19 @@ function TrackerContent() {
     if (hasConsent) void fetchTransactions();
   }, [hasConsent, fetchTransactions]);
 
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    let cancelled = false;
+    const supabase = getSupabase();
+    void (async () => {
+      const v = await getProfileMonthlySalaryCached(supabase, user.id);
+      if (!cancelled) setProfileMonthlyFromDb(v);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasConsent, user?.id]);
+
   if (hasConsent === null) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -189,8 +203,7 @@ function TrackerContent() {
   const monthlyIncome = transactions
     .filter((t) => t.bucket === "income")
     .reduce((a, t) => a + Number(t.amount), 0);
-  const profileIncome = useFinancialStore.getState().lastSubmission?.monthlySalary || 0;
-  const displayIncome = monthlyIncome || profileIncome;
+  const displayIncome = monthlyIncome || profileMonthlyFromDb;
   const totalSpent = transactions
     .filter((t) => t.bucket !== "income")
     .reduce((a, t) => a + Number(t.amount), 0);

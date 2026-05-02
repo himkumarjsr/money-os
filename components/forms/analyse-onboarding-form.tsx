@@ -35,6 +35,7 @@ import { formatCurrency } from "@/lib/finance";
 import { formatIndian, formatInWords } from "@/lib/formatters";
 import { cn } from "@/lib/cn";
 import { getAIFixPlan } from "@/lib/aiService";
+import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
 import { fetchUserAnalyseSnapshot, upsertUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuthStore } from "@/store/authStore";
@@ -938,6 +939,7 @@ export function AnalyseOnboardingForm() {
           analysis: mergedValues,
         }).then(({ error }) => {
           if (error) console.warn("Snapshot save failed:", error.message);
+          else invalidateProfileMonthlySalaryCache(uid);
         });
       }
 
