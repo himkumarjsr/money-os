@@ -180,6 +180,7 @@ export default function ProfilePage() {
             className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
             onClick={async () => {
               await signOut();
+              router.refresh();
               router.push("/");
             }}
           >

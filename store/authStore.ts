@@ -105,10 +105,19 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
-          const supabase = getSupabase();
-          await supabase.auth.signOut();
+          await fetch("/api/auth/sign-out", {
+            method: "POST",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          });
         } catch (e) {
-          console.warn("signOut failed:", e);
+          console.warn("server sign-out failed:", e);
+        }
+        try {
+          const supabase = getSupabase();
+          await supabase.auth.signOut({ scope: "global" });
+        } catch (e) {
+          console.warn("client signOut failed:", e);
         }
         try {
           await useAuthStore.persist.clearStorage();
@@ -118,9 +127,17 @@ export const useAuthStore = create<AuthState>()(
         try {
           localStorage.removeItem("finkoin-financial");
           localStorage.removeItem("finkoin_ai_cache");
+          localStorage.removeItem("finkoin-gamification");
         } catch {
           /* ignore */
         }
+        useGamificationStore.setState({
+          fkBalance: 0,
+          badges: [],
+          streakDays: 0,
+          earnedActions: [],
+          toastMessage: null,
+        });
         set({
           user: null,
           isLoggedIn: false,

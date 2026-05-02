@@ -6,6 +6,7 @@ import LoginSheet from "@/components/ui/LoginSheet";
 import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useGamificationStore } from "@/store/gamificationStore";
 
@@ -18,6 +19,7 @@ const centerNavItems = [
 ] as const;
 
 export function GlobalNavbar() {
+  const router = useRouter();
   const fkBalance = useGamificationStore((s) => s.fkBalance);
   const badges = useGamificationStore((s) => s.badges.length);
   const streakDays = useGamificationStore((s) => s.streakDays);
@@ -242,6 +244,7 @@ export function GlobalNavbar() {
               onClick={async () => {
                 await signOut();
                 setProfileOpen(false);
+                router.refresh();
               }}
               className="w-full text-center text-sm font-semibold text-red-600"
             >
