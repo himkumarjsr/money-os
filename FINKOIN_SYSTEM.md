@@ -61,7 +61,7 @@ The core value proposition is: collect profile + money data once, run determinis
 |---------|---------|---------|
 | @hookform/resolvers | ^3.9.1 | Zod integration with react-hook-form |
 | @supabase/supabase-js | ^2.103.0 | Supabase auth + database client |
-| @supabase/ssr | ^0.x | Cookie-aligned browser/server Supabase clients + middleware session refresh |
+| @supabase/ssr | ^0.10.2 | Cookie-aligned browser/server Supabase clients + middleware session refresh |
 | clsx | ^2.1.1 | Conditional class names |
 | framer-motion | ^11.18.2 | Animations/transitions |
 | groq-sdk | ^1.1.2 | Groq API client for AI route |

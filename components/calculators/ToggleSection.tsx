@@ -1,11 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
 export function ToggleSection({
   emoji,
   title,
   subtitle,
+  oneLiner,
   isOn,
   onToggle,
   children,
@@ -14,37 +16,29 @@ export function ToggleSection({
   emoji: string;
   title: string;
   subtitle: string;
+  /** Extra grey helper line under the subtitle (desktop: full; phone: clamped — tap ? inside row for detail). */
+  oneLiner?: string;
   isOn: boolean;
   onToggle: (val: boolean) => void;
   children: ReactNode;
 }) {
   return (
     <div
+      className="mb-3 overflow-hidden rounded-[14px] transition-[border-color] duration-200 sm:mb-[12px]"
       style={{
         border: `1.5px solid ${isOn ? "#534AB7" : "#E8E6F0"}`,
-        borderRadius: 14,
-        marginBottom: 12,
-        overflow: "hidden",
-        transition: "border-color 0.2s",
       }}
     >
       <button
         type="button"
         onClick={() => onToggle(!isOn)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-          padding: "16px 18px",
-          cursor: "pointer",
-          background: isOn ? "#FAFAFE" : "white",
-          userSelect: "none",
-          border: "none",
-          textAlign: "left",
-        }}
+        className={cn(
+          "flex w-full cursor-pointer items-start gap-2 border-none bg-white px-3 py-3 text-left sm:items-center sm:gap-3 sm:px-[18px] sm:py-4",
+          isOn && "bg-[#FAFAFE]",
+        )}
+        style={{ userSelect: "none" }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="flex min-w-0 flex-1 items-start gap-2 sm:items-center sm:gap-3">
           <div
             style={{
               width: 40,
@@ -57,16 +51,23 @@ export function ToggleSection({
               fontSize: 20,
               transition: "background 0.2s",
             }}
+            className="mt-0.5 shrink-0 sm:mt-0"
           >
             {emoji}
           </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#111110" }}>{title}</div>
-            <div style={{ fontSize: 12, color: "#9B9A94", marginTop: 2 }}>{subtitle}</div>
+          <div className="min-w-0 flex-1 pr-1">
+            <div className="text-sm font-semibold leading-snug text-[#111110] sm:text-[15px]">{title}</div>
+            <div className="mt-0.5 text-[11px] leading-snug text-[#9B9A94] sm:text-xs">{subtitle}</div>
+            {oneLiner ? (
+              <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-[#B0AFA8] sm:mt-1 sm:line-clamp-none sm:text-[11px] sm:leading-[1.35]">
+                {oneLiner}
+              </p>
+            ) : null}
           </div>
         </div>
 
         <div
+          className="mt-1 shrink-0 sm:mt-0"
           style={{
             width: 44,
             height: 24,
@@ -74,7 +75,6 @@ export function ToggleSection({
             background: isOn ? "#534AB7" : "#E8E6F0",
             position: "relative",
             transition: "background 0.2s",
-            flexShrink: 0,
           }}
           aria-hidden
         >
@@ -95,8 +95,8 @@ export function ToggleSection({
       </button>
 
       {isOn ? (
-        <div style={{ padding: "0 18px 18px", borderTop: "1px solid #F0EFF8" }}>
-          <div style={{ height: 16 }} />
+        <div className="border-t border-[#F0EFF8] px-3 pb-4 pt-0 sm:px-[18px] sm:pb-[18px]">
+          <div className="h-3 sm:h-4" />
           {children}
         </div>
       ) : null}

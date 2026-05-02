@@ -34,7 +34,6 @@ import {
   salaryAnnualFromMonthly,
   sumEquityLtcg,
   sumEquityStcg,
-  sumOrdinaryGross,
   type ComparisonInputs,
   type EmploymentKind,
   type RegimeBreakdown,
@@ -47,6 +46,7 @@ import { TaxTeachTooltip } from "./TaxTeachTooltip";
 import { ToggleSection } from "./ToggleSection";
 
 export const TAX_CALCULATOR_STORAGE_KEY = "finkoin_tax_calculator";
+const TAX_CALC_SCHEMA_VERSION = 2;
 
 function Mt(
   props: Omit<ComponentProps<typeof MoneyInput>, "labelAction"> & { teach: TaxTeachContent },
@@ -61,9 +61,9 @@ function rupees(n: number) {
 
 function fmtSideRow(label: string, value: string) {
   return (
-    <div className="flex justify-between gap-2 text-sm">
-      <span className="text-[#5F5E5A]">{label}</span>
-      <span className="shrink-0 font-semibold tabular-nums text-[#111110]">{value}</span>
+    <div className="flex gap-2 py-0.5 text-xs sm:py-0 sm:text-sm">
+      <span className="min-w-0 flex-1 break-words text-[#5F5E5A]">{label}</span>
+      <span className="max-w-[52%] shrink-0 text-right font-semibold tabular-nums text-[#111110] sm:max-w-none">{value}</span>
     </div>
   );
 }
@@ -71,7 +71,7 @@ function fmtSideRow(label: string, value: string) {
 function regimeColumn(row: RegimeBreakdown, deductionLabel: string, showLines: boolean) {
   const preCess = row.taxBeforeSurcharge + row.surcharge;
   return (
-    <div className="space-y-2 rounded-xl border border-[#E8E6F0] bg-[#FAFAFE]/60 p-4">
+    <div className="space-y-1.5 rounded-xl border border-[#E8E6F0] bg-[#FAFAFE]/60 p-3 sm:space-y-2 sm:p-4">
       {fmtSideRow("Ordinary gross income", rupees(row.ordinaryGrossIncome))}
       {row.equityStcgGains > 0 ? fmtSideRow("Equity STCG gains (entered)", rupees(row.equityStcgGains)) : null}
       {row.equityLtcgGains > 0 ? fmtSideRow("Equity LTCG gains (entered)", rupees(row.equityLtcgGains)) : null}
@@ -110,6 +110,14 @@ const EMPLOYMENT_OPTIONS: { id: EmploymentKind; label: string }[] = [
   { id: "pensioner", label: "Pensioner" },
 ];
 
+function sectionBlurb(text: string) {
+  return (
+    <p className="mt-2 line-clamp-3 text-[11px] leading-snug text-[#7A7871] sm:line-clamp-none sm:text-xs sm:leading-relaxed">
+      {text}
+    </p>
+  );
+}
+
 function chip(active: boolean, label: string, onClick: () => void) {
   const pill = "rounded-full px-3 py-2 text-sm font-semibold transition sm:px-4";
   return (
@@ -133,14 +141,14 @@ export function TaxRegimeCalculator() {
   const [disabledSelf, setDisabledSelf] = useState(false);
   const [nri, setNri] = useState(false);
   const [parentsSenior, setParentsSenior] = useState(false);
-  const [age, setAge] = useState(35);
+  const [age, setAge] = useState(18);
 
-  const [basicMonthly, setBasicMonthly] = useState(70_000);
-  const [specialAllowanceMonthly, setSpecialAllowanceMonthly] = useState(10_000);
+  const [basicMonthly, setBasicMonthly] = useState(0);
+  const [specialAllowanceMonthly, setSpecialAllowanceMonthly] = useState(0);
 
-  const [secHRA, setSecHRA] = useState(true);
-  const [hraMonthly, setHraMonthly] = useState(20_000);
-  const [rentPaidMonthly, setRentPaidMonthly] = useState(20_000);
+  const [secHRA, setSecHRA] = useState(false);
+  const [hraMonthly, setHraMonthly] = useState(0);
+  const [rentPaidMonthly, setRentPaidMonthly] = useState(0);
   const [isMetro, setIsMetro] = useState(true);
 
   const [sec80GG, setSec80GG] = useState(false);
@@ -164,16 +172,16 @@ export function TaxRegimeCalculator() {
   const [secGratuity, setSecGratuity] = useState(false);
   const [gratEmployer, setGratEmployer] = useState<GratuityEmployer>("private");
   const [gratReceived, setGratReceived] = useState(0);
-  const [gratYears, setGratYears] = useState(5);
-  const [gratLastSalaryAnnual, setGratLastSalaryAnnual] = useState(12_00_000);
+  const [gratYears, setGratYears] = useState(0);
+  const [gratLastSalaryAnnual, setGratLastSalaryAnnual] = useState(0);
 
   const [secLeave, setSecLeave] = useState(false);
   const [leaveTiming, setLeaveTiming] = useState<LeaveEncashTiming>("during_service");
   const [leaveEmployer, setLeaveEmployer] = useState<LeaveEncashEmployer>("private");
   const [leaveReceived, setLeaveReceived] = useState(0);
-  const [leaveAvgMonthly, setLeaveAvgMonthly] = useState(80_000);
-  const [leaveYears, setLeaveYears] = useState(8);
-  const [leaveDays, setLeaveDays] = useState(45);
+  const [leaveAvgMonthly, setLeaveAvgMonthly] = useState(0);
+  const [leaveYears, setLeaveYears] = useState(0);
+  const [leaveDays, setLeaveDays] = useState(0);
 
   const [secBusiness, setSecBusiness] = useState(false);
   const [bizMode, setBizMode] = useState<BusinessMode>("regular");
@@ -225,18 +233,18 @@ export function TaxRegimeCalculator() {
 
   const [freelanceIncome, setFreelanceIncome] = useState(0);
 
-  const [secDed80c, setSecDed80c] = useState(true);
-  const [secDed80d, setSecDed80d] = useState(true);
-  const [secDedRest, setSecDedRest] = useState(true);
+  const [secDed80c, setSecDed80c] = useState(false);
+  const [secDed80d, setSecDed80d] = useState(false);
+  const [secDedRest, setSecDedRest] = useState(false);
 
-  const [c80Elss, setC80Elss] = useState(60_000);
-  const [c80Ppf, setC80Ppf] = useState(40_000);
-  const [c80Lic, setC80Lic] = useState(15_000);
-  const [c80Epf, setC80Epf] = useState(35_000);
+  const [c80Elss, setC80Elss] = useState(0);
+  const [c80Ppf, setC80Ppf] = useState(0);
+  const [c80Lic, setC80Lic] = useState(0);
+  const [c80Epf, setC80Epf] = useState(0);
   const [c80Tuition, setC80Tuition] = useState(0);
   const [c80Principal, setC80Principal] = useState(0);
-  const [nps80CCD1B, setNps80CCD1B] = useState(50_000);
-  const [deductions80DSelf, setDeductions80DSelf] = useState(25_000);
+  const [nps80CCD1B, setNps80CCD1B] = useState(0);
+  const [deductions80DSelf, setDeductions80DSelf] = useState(0);
   const [deductions80DParents, setDeductions80DParents] = useState(0);
   const [deduction80DD, setDeduction80DD] = useState(0);
   const [deduction80DDB, setDeduction80DDB] = useState(0);
@@ -248,7 +256,7 @@ export function TaxRegimeCalculator() {
   const [deduction80U, setDeduction80U] = useState(0);
   const [deduction80RRB, setDeduction80RRB] = useState(0);
   const [homeLoanInterest24b, setHomeLoanInterest24b] = useState(0);
-  const [professionalTax, setProfessionalTax] = useState(2_400);
+  const [professionalTax, setProfessionalTax] = useState(0);
 
   const [hraSalaryBaseAnnualOverride, setHraSalaryBaseAnnualOverride] = useState(0);
 
@@ -263,6 +271,17 @@ export function TaxRegimeCalculator() {
         return;
       }
       const d = JSON.parse(saved) as Record<string, unknown>;
+      if (
+        typeof d !== "object" ||
+        d === null ||
+        (d as { schemaVersion?: number }).schemaVersion !== TAX_CALC_SCHEMA_VERSION
+      ) {
+        localStorage.removeItem(TAX_CALCULATOR_STORAGE_KEY);
+        setStorageReady(true);
+        setInputEpoch((e) => e + 1);
+        return;
+      }
+
       const g = <T,>(key: string, fallback: T): T =>
         (d[key] !== undefined && d[key] !== null ? (d[key] as T) : fallback);
 
@@ -271,12 +290,12 @@ export function TaxRegimeCalculator() {
       setDisabledSelf(g("disabledSelf", false));
       setNri(g("nri", false));
       setParentsSenior(g("parentsSenior", false));
-      setAge(g("age", 35));
-      setBasicMonthly(g("basicMonthly", 70_000));
-      setSpecialAllowanceMonthly(g("specialAllowanceMonthly", g("allowancesMonthly", 10_000)));
-      setSecHRA(g("secHRA", g("hasHRA", true)));
-      setHraMonthly(g("hraMonthly", 20_000));
-      setRentPaidMonthly(g("rentPaidMonthly", 20_000));
+      setAge(g("age", 18));
+      setBasicMonthly(g("basicMonthly", 0));
+      setSpecialAllowanceMonthly(g("specialAllowanceMonthly", g("allowancesMonthly", 0)));
+      setSecHRA(g("secHRA", g("hasHRA", false)));
+      setHraMonthly(g("hraMonthly", 0));
+      setRentPaidMonthly(g("rentPaidMonthly", 0));
       setIsMetro(g("isMetro", true));
       setSec80GG(g("sec80GG", false));
       setRentPaidNoHra(g("rentPaidNoHra", 0));
@@ -296,15 +315,15 @@ export function TaxRegimeCalculator() {
       setSecGratuity(g("secGratuity", false));
       setGratEmployer(g("gratEmployer", "private"));
       setGratReceived(g("gratReceived", 0));
-      setGratYears(g("gratYears", 5));
-      setGratLastSalaryAnnual(g("gratLastSalaryAnnual", 12_00_000));
+      setGratYears(g("gratYears", 0));
+      setGratLastSalaryAnnual(g("gratLastSalaryAnnual", 0));
       setSecLeave(g("secLeave", false));
       setLeaveTiming(g("leaveTiming", "during_service"));
       setLeaveEmployer(g("leaveEmployer", "private"));
       setLeaveReceived(g("leaveReceived", 0));
-      setLeaveAvgMonthly(g("leaveAvgMonthly", 80_000));
-      setLeaveYears(g("leaveYears", 8));
-      setLeaveDays(g("leaveDays", 45));
+      setLeaveAvgMonthly(g("leaveAvgMonthly", 0));
+      setLeaveYears(g("leaveYears", 0));
+      setLeaveDays(g("leaveDays", 0));
       setSecBusiness(g("secBusiness", false));
       setBizMode(g("bizMode", "regular"));
       setBizGrossReceipts(g("bizGrossReceipts", 0));
@@ -346,17 +365,17 @@ export function TaxRegimeCalculator() {
       setCommissionIncome(g("commissionIncome", 0));
       setOtherMiscIncome(g("otherMiscIncome", 0));
       setFreelanceIncome(g("freelanceIncome", 0));
-      setSecDed80c(g("secDed80c", true));
-      setSecDed80d(g("secDed80d", true));
-      setSecDedRest(g("secDedRest", true));
-      setC80Elss(g("c80Elss", 60_000));
-      setC80Ppf(g("c80Ppf", 40_000));
-      setC80Lic(g("c80Lic", 15_000));
-      setC80Epf(g("c80Epf", 35_000));
+      setSecDed80c(g("secDed80c", false));
+      setSecDed80d(g("secDed80d", false));
+      setSecDedRest(g("secDedRest", false));
+      setC80Elss(g("c80Elss", 0));
+      setC80Ppf(g("c80Ppf", 0));
+      setC80Lic(g("c80Lic", 0));
+      setC80Epf(g("c80Epf", 0));
       setC80Tuition(g("c80Tuition", 0));
       setC80Principal(g("c80Principal", 0));
-      setNps80CCD1B(g("nps80CCD1B", 50_000));
-      setDeductions80DSelf(g("deductions80DSelf", 25_000));
+      setNps80CCD1B(g("nps80CCD1B", 0));
+      setDeductions80DSelf(g("deductions80DSelf", 0));
       setDeductions80DParents(g("deductions80DParents", 0));
       setDeduction80DD(g("deduction80DD", 0));
       setDeduction80DDB(g("deduction80DDB", 0));
@@ -368,7 +387,7 @@ export function TaxRegimeCalculator() {
       setDeduction80U(g("deduction80U", 0));
       setDeduction80RRB(g("deduction80RRB", 0));
       setHomeLoanInterest24b(g("homeLoanInterest24b", 0));
-      setProfessionalTax(g("professionalTax", 2_400));
+      setProfessionalTax(g("professionalTax", 0));
       setHraSalaryBaseAnnualOverride(g("hraSalaryBaseAnnualOverride", 0));
 
       if (typeof d.savedAt === "string") setSavedAtDisplay(d.savedAt);
@@ -383,6 +402,7 @@ export function TaxRegimeCalculator() {
     if (!storageReady) return;
     try {
       const dataToSave = {
+        schemaVersion: TAX_CALC_SCHEMA_VERSION,
         employment,
         widowed,
         disabledSelf,
@@ -925,10 +945,6 @@ export function TaxRegimeCalculator() {
   const oldMonthly = (oldR.grossForSurcharge - oldR.totalTax) / 12;
   const newMonthly = (newR.grossForSurcharge - newR.totalTax) / 12;
 
-  const grossOrdinaryPreview = useMemo(() => sumOrdinaryGross(comparisonInputs), [comparisonInputs]);
-
-  const totalDeductionsOld = oldR.deductionAmount;
-
   const tips = useMemo(() => {
     const out: string[] = [];
     if (winner === "old") {
@@ -1116,75 +1132,6 @@ export function TaxRegimeCalculator() {
     );
   }
 
-  const liveSummaryCard = (
-    <div
-      style={{
-        background: "white",
-        border: "1px solid #E8E6F0",
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          color: "#534AB7",
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-          marginBottom: 12,
-        }}
-      >
-        LIVE SUMMARY
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 11, color: "#9B9A94" }}>Gross ordinary income</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#111110" }}>
-            ₹{Math.round(grossOrdinaryPreview).toLocaleString("en-IN")}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 11, color: "#9B9A94" }}>Old regime deductions</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#1D9E75" }}>
-            ₹{Math.round(totalDeductionsOld).toLocaleString("en-IN")}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 11, color: "#9B9A94" }}>New regime tax</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#E24B4A" }}>
-            ₹{Math.round(newR.totalTax).toLocaleString("en-IN")}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 11, color: "#9B9A94" }}>Old regime tax</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#E24B4A" }}>
-            ₹{Math.round(oldR.totalTax).toLocaleString("en-IN")}
-          </div>
-        </div>
-      </div>
-      <div
-        style={{
-          marginTop: 12,
-          padding: "8px 12px",
-          borderRadius: 8,
-          background: winner === "new" ? "#E1F5EE" : winner === "old" ? "#EEEDFE" : "#F7F7F4",
-          fontSize: 13,
-          fontWeight: 600,
-          color: winner === "new" ? "#1D9E75" : winner === "old" ? "#534AB7" : "#5F5E5A",
-          textAlign: "center",
-        }}
-      >
-        {winner === "tie"
-          ? "Rough tie — refine deductions / income to separate regimes."
-          : winner === "new"
-            ? `New regime saves ~${rupees(saveAmount)}/yr`
-            : `Old regime saves ~${rupees(saveAmount)}/yr`}
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6 print:bg-white">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1218,12 +1165,10 @@ export function TaxRegimeCalculator() {
         Equity CG uses illustrative 20% STCG / 12.5% LTCG after ₹1.25L — verify with a CA.
       </p>
 
-      <div className="lg:hidden">{liveSummaryCard}</div>
-
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-8">
-        <div className="min-w-0 space-y-6">
+      <div className="min-w-0 space-y-6">
           <details open className="rounded-xl border border-[#F0EFF8] bg-white p-4">
             {sectionSummary("Step 1 · Profile & person type", TEACH.sections.profile)}
+            {sectionBlurb("Age and employment shape slab brackets; flags tune deduction caps (80D, 80TTB) and hints.")}
             <div className="mt-4 space-y-4">
               <div>
                 <p className="mb-2 text-sm font-medium text-[#5F5E5A]">Work / income style</p>
@@ -1299,16 +1244,20 @@ export function TaxRegimeCalculator() {
 
           <details open className="rounded-xl border border-[#F0EFF8] bg-white p-4">
             {sectionSummary("Step 2 · Core salary income", TEACH.sections.income)}
+            {sectionBlurb(
+              "Enter recurring payslip salary only here — turn on Step 3 cards for HRA, bonuses-in-kind, or side income.",
+            )}
             <div className="mt-4 space-y-1">
               <p className="mb-2 text-xs text-[#7A7871]">
-                Annualised salary (Basic + optional HRA toggle + special allowance) ≈ {rupees(salaryAnnualPreview)} before add-ons.
+                Annualised core salary (Basic + Special below; add Step 3 for HRA in salary) ≈{" "}
+                {rupees(salaryAnnualPreview)} before toggled buckets.
               </p>
               <Mt
                 key={`${inputEpoch}-basic`}
                 id="tax-basic-m"
                 label="Basic salary (monthly)"
                 teach={TEACH.income.basicMonthly}
-                defaultValue={formatIndian(basicMonthly)}
+                defaultValue={basicMonthly ? formatIndian(basicMonthly) : ""}
                 max={10_000_000}
                 onChange={(e) => setBasicMonthly(parseMoneyInput(e.target.value) ?? 0)}
               />
@@ -1341,13 +1290,16 @@ export function TaxRegimeCalculator() {
 
           <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Step 3 · Additional income</p>
-            <p className="mb-3 mt-1 text-xs text-[#7A7871]">Turn on only what applies — keeps the form calm.</p>
+            {sectionBlurb(
+              "Enable each strip only when it applies — unused toggles stay closed so the worksheet stays readable.",
+            )}
 
             <ToggleSection
               id="hra"
               emoji="🏠"
               title="HRA — House Rent Allowance"
               subtitle="I receive HRA and pay rent"
+              oneLiner="Uses rent paid, metro vs non-metro, and salary base for the 10% test — opens old-regime exemption math."
               isOn={secHRA}
               onToggle={(v) => {
                 setSecHRA(v);
@@ -1359,7 +1311,7 @@ export function TaxRegimeCalculator() {
                 id="tax-hra-m"
                 label="Monthly HRA received"
                 teach={TEACH.income.hraMonthly}
-                defaultValue={formatIndian(hraMonthly)}
+                defaultValue={hraMonthly ? formatIndian(hraMonthly) : ""}
                 max={10_000_000}
                 onChange={(e) => setHraMonthly(parseMoneyInput(e.target.value) ?? 0)}
               />
@@ -1368,7 +1320,7 @@ export function TaxRegimeCalculator() {
                 id="tax-rent-m"
                 label="Monthly rent paid"
                 teach={TEACH.deductions.eightyGG}
-                defaultValue={formatIndian(rentPaidMonthly)}
+                defaultValue={rentPaidMonthly ? formatIndian(rentPaidMonthly) : ""}
                 max={10_000_000}
                 onChange={(e) => setRentPaidMonthly(parseMoneyInput(e.target.value) ?? 0)}
               />
@@ -1401,6 +1353,7 @@ export function TaxRegimeCalculator() {
               emoji="🏠"
               title="Rent without HRA (80GG)"
               subtitle="I pay rent but don’t get HRA"
+              oneLiner="Illustrative ₹60k / rent−10% income cap — only matters when old regime wins on deductions."
               isOn={sec80GG}
               onToggle={(v) => {
                 setSec80GG(v);
@@ -1424,6 +1377,7 @@ export function TaxRegimeCalculator() {
               emoji="✈️"
               title="LTA — Leave Travel Allowance"
               subtitle="I receive LTA from employer"
+              oneLiner="Exemption tracks eligible domestic travel spend up to the allowance — payroll blocks still apply."
               isOn={secLTA}
               onToggle={setSecLTA}
             >
@@ -1472,6 +1426,7 @@ export function TaxRegimeCalculator() {
               emoji="📈"
               title="RSU / ESOP — Company shares"
               subtitle="RSUs or ESOPs vesting this year"
+              oneLiner="FMV at vest flows like salary; later sales map into equity STCG/LTCG buckets in this model."
               isOn={secRSU}
               onToggle={setSecRSU}
             >
@@ -1541,7 +1496,9 @@ export function TaxRegimeCalculator() {
                     label="Cost / FMV per unit at vest"
                     teach={TEACH.income.rsuSaleLtcg}
                     optional
-                    defaultValue={rsuCostPrice ? formatIndian(rsuCostPrice) : formatIndian(rsuFmvPerUnit)}
+                    defaultValue={
+                      rsuCostPrice ? formatIndian(rsuCostPrice) : rsuFmvPerUnit ? formatIndian(rsuFmvPerUnit) : ""
+                    }
                     max={500000000}
                     onChange={(e) => setRsuCostPrice(parseMoneyInput(e.target.value) ?? 0)}
                   />
@@ -1567,6 +1524,7 @@ export function TaxRegimeCalculator() {
               emoji="🎁"
               title="Gratuity"
               subtitle="Received gratuity this year"
+              oneLiner="Government payouts modeled fully exempt; private sector uses ₹20L-aware illustrative formula."
               isOn={secGratuity}
               onToggle={setSecGratuity}
             >
@@ -1609,6 +1567,7 @@ export function TaxRegimeCalculator() {
               emoji="🌴"
               title="Leave encashment"
               subtitle="Encashed leave this year"
+              oneLiner="Retirement vs in-service paths change exemption sketches — confirm HR worksheets."
               isOn={secLeave}
               onToggle={setSecLeave}
             >
@@ -1654,6 +1613,7 @@ export function TaxRegimeCalculator() {
               emoji="💼"
               title="Business income"
               subtitle="Business / profession"
+              oneLiner="Pick actual books or presumptive (44AD/44ADA) — you generally shouldn’t mix expense claims with presumptive."
               isOn={secBusiness}
               onToggle={setSecBusiness}
             >
@@ -1732,6 +1692,7 @@ export function TaxRegimeCalculator() {
               emoji="🏢"
               title="Rental income"
               subtitle="Rent from property"
+              oneLiner="Let-out workflow: NAV minus statutory 30% and interest on rental loan before slab tax."
               isOn={secRental}
               onToggle={setSecRental}
             >
@@ -1784,6 +1745,7 @@ export function TaxRegimeCalculator() {
               emoji="🏖️"
               title="Pension income"
               subtitle="Pension or family pension"
+              oneLiner="Monthly pension is ordinary income; commuted / family pension apply simplified exemption math here."
               isOn={secPension}
               onToggle={setSecPension}
             >
@@ -1837,6 +1799,7 @@ export function TaxRegimeCalculator() {
               emoji="🏦"
               title="Interest income"
               subtitle="Savings, FD, bonds"
+              oneLiner="Splitting savings vs FD interest helps the planner nudge 80TTA vs manual slab inclusion."
               isOn={secInterest}
               onToggle={setSecInterest}
             >
@@ -1891,6 +1854,7 @@ export function TaxRegimeCalculator() {
               emoji="💰"
               title="Dividend income"
               subtitle="Stocks / MF / foreign"
+              oneLiner="Post-2020 dividends sit in your slab; tag foreign flows if DTAA withholding applies."
               isOn={secDividend}
               onToggle={setSecDividend}
             >
@@ -1932,6 +1896,7 @@ export function TaxRegimeCalculator() {
               emoji="📊"
               title="Capital gains"
               subtitle="Equity, debt MF, property"
+              oneLiner="Equity follows illustrative schedule rates; debt/property STCG slices here ride ordinary slab totals."
               isOn={secCG}
               onToggle={setSecCG}
             >
@@ -2008,6 +1973,7 @@ export function TaxRegimeCalculator() {
               emoji="🌾"
               title="Agricultural income"
               subtitle="Farming / agri (planning toggle)"
+              oneLiner="Section 10(1) exempt in principle — we optionally exclude it from ordinary gross; integration not modeled."
               isOn={secAgri}
               onToggle={setSecAgri}
             >
@@ -2037,6 +2003,7 @@ export function TaxRegimeCalculator() {
               emoji="💫"
               title="Other income"
               subtitle="Lottery, gifts, commission…"
+              oneLiner="Lottery taxed at flat illustrative 30%; gifts/commission only if you mark them taxable."
               isOn={secOther}
               onToggle={setSecOther}
             >
@@ -2088,12 +2055,16 @@ export function TaxRegimeCalculator() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">
               Step 4 · Deductions (old regime)
             </p>
+            {sectionBlurb(
+              "Turn these on only when comparing old regime savings — Chapter VI-A (except employer NPS) largely disappears under new.",
+            )}
 
             <ToggleSection
               id="ded-c"
               emoji="📒"
               title="80C basket & NPS 80CCD(1B)"
               subtitle="Tax-saving investments"
+              oneLiner="Shared ₹1.5L 80C bucket plus optional ₹50k extra NPS — relevant only when old regime wins."
               isOn={secDed80c}
               onToggle={setSecDed80c}
             >
@@ -2110,7 +2081,7 @@ export function TaxRegimeCalculator() {
               <Mt key={`${inputEpoch}-epf`} id="tax-c-epf" label="EPF / employee PF" teach={TEACH.deductions.eightyCEpf} optional defaultValue={c80Epf ? formatIndian(c80Epf) : ""} max={150000} onChange={(e) => setC80Epf(parseMoneyInput(e.target.value) ?? 0)} />
               <Mt key={`${inputEpoch}-tuition`} id="tax-c-tuition" label="Tuition fees" teach={TEACH.deductions.eightyCTuition} optional defaultValue={c80Tuition ? formatIndian(c80Tuition) : ""} max={150000} onChange={(e) => setC80Tuition(parseMoneyInput(e.target.value) ?? 0)} />
               <Mt key={`${inputEpoch}-principal`} id="tax-c-principal" label="Home loan principal" teach={TEACH.deductions.eightyCHomePrincipal} optional defaultValue={c80Principal ? formatIndian(c80Principal) : ""} max={150000} onChange={(e) => setC80Principal(parseMoneyInput(e.target.value) ?? 0)} />
-              <Mt key={`${inputEpoch}-nps`} id="tax-nps" label="80CCD(1B) NPS additional" teach={TEACH.deductions.eightyCCD} max={50000} defaultValue={formatIndian(nps80CCD1B)} onChange={(e) => setNps80CCD1B(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt key={`${inputEpoch}-nps`} id="tax-nps" label="80CCD(1B) NPS additional" teach={TEACH.deductions.eightyCCD} max={50000} defaultValue={nps80CCD1B ? formatIndian(nps80CCD1B) : ""} onChange={(e) => setNps80CCD1B(parseMoneyInput(e.target.value) ?? 0)} />
             </ToggleSection>
 
             <ToggleSection
@@ -2118,10 +2089,11 @@ export function TaxRegimeCalculator() {
               emoji="🩺"
               title="80D medical insurance"
               subtitle="Self & parents premiums"
+              oneLiner="Caps shift with senior citizen toggles — combine with parents-senior checkbox for ₹50k rails."
               isOn={secDed80d}
               onToggle={setSecDed80d}
             >
-              <Mt id="tax-80d-self" label="80D — self / spouse / kids" teach={TEACH.deductions.eightyDSelf} max={age >= 60 ? 50000 : 25000} defaultValue={formatIndian(deductions80DSelf)} onChange={(e) => setDeductions80DSelf(parseMoneyInput(e.target.value) ?? 0)} />
+              <Mt id="tax-80d-self" label="80D — self / spouse / kids" teach={TEACH.deductions.eightyDSelf} max={age >= 60 ? 50000 : 25000} defaultValue={deductions80DSelf ? formatIndian(deductions80DSelf) : ""} onChange={(e) => setDeductions80DSelf(parseMoneyInput(e.target.value) ?? 0)} />
               <Mt id="tax-80d-par" label="80D — parents" teach={TEACH.deductions.eightyDParents} max={parentsSenior ? 50000 : 25000} optional defaultValue={deductions80DParents ? formatIndian(deductions80DParents) : ""} onChange={(e) => setDeductions80DParents(parseMoneyInput(e.target.value) ?? 0)} />
             </ToggleSection>
 
@@ -2130,6 +2102,7 @@ export function TaxRegimeCalculator() {
               emoji="📑"
               title="Other Chapter VI-A & 24(b)"
               subtitle="Remaining deductions"
+              oneLiner="Donations, disability, education-loan interest, first-home boosts, and ₹2L housing-loan interest slices."
               isOn={secDedRest}
               onToggle={setSecDedRest}
             >
@@ -2165,14 +2138,39 @@ export function TaxRegimeCalculator() {
 
           <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Step 5 · Results</p>
+            {sectionBlurb(
+              "Side-by-side slab math with surcharge & cess flags — exportable PDF mirrors these rounded totals.",
+            )}
             <div className="overflow-hidden rounded-xl border border-[#E8E6F0] bg-white">
-              <div className="grid border-b border-[#E8E6F0] bg-[#F7F6FE] px-4 py-3 text-sm font-semibold text-[#111110] md:grid-cols-2">
-                <div className="border-b border-[#E8E6F0] py-2 md:border-b-0 md:border-r md:py-0 md:pr-4">Old regime</div>
-                <div className="py-2 md:py-0 md:pl-4">New regime</div>
+              {/* Phone: at-a-glance tax comparison + swipeable full breakdowns */}
+              <div className="grid grid-cols-2 gap-px border-b border-[#E8E6F0] bg-[#E8E6F0] md:hidden">
+                <div className="bg-[#F7F6FE] px-2 py-3 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#534AB7]">Old regime</p>
+                  <p className="mt-1 text-base font-bold tabular-nums text-[#111110]">{rupees(oldR.totalTax)}</p>
+                  <p className="mt-0.5 text-[10px] text-[#7A7871]">Total tax</p>
+                </div>
+                <div className="bg-[#F7F6FE] px-2 py-3 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#534AB7]">New regime</p>
+                  <p className="mt-1 text-base font-bold tabular-nums text-[#111110]">{rupees(newR.totalTax)}</p>
+                  <p className="mt-0.5 text-[10px] text-[#7A7871]">Total tax</p>
+                </div>
               </div>
-              <div className="grid gap-4 p-4 md:grid-cols-2">
-                {regimeColumn(oldR, "Total deductions", true)}
-                {regimeColumn(newR, "Standard deduction (₹75k)", true)}
+              <p className="px-3 pt-2 text-center text-[10px] text-[#9B9A94] md:hidden">
+                Swipe sideways for full slab breakdown per regime.
+              </p>
+              <div className="hidden border-b border-[#E8E6F0] bg-[#F7F6FE] px-4 py-3 text-sm font-semibold text-[#111110] md:grid md:grid-cols-2">
+                <div className="border-r border-[#E8E6F0] pr-4">Old regime</div>
+                <div className="pl-4">New regime</div>
+              </div>
+              <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:gap-4 md:overflow-visible md:p-4 md:pb-4 md:pt-4">
+                <div className="w-[min(88vw,340px)] shrink-0 snap-center md:w-auto md:min-w-0 md:shrink">
+                  <p className="mb-2 hidden text-xs font-semibold text-[#534AB7] md:block">Old regime — detail</p>
+                  {regimeColumn(oldR, "Total deductions", true)}
+                </div>
+                <div className="w-[min(88vw,340px)] shrink-0 snap-center md:w-auto md:min-w-0 md:shrink">
+                  <p className="mb-2 hidden text-xs font-semibold text-[#534AB7] md:block">New regime — detail</p>
+                  {regimeColumn(newR, "Standard deduction (₹75k)", true)}
+                </div>
               </div>
             </div>
 
@@ -2246,6 +2244,7 @@ export function TaxRegimeCalculator() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">FAQ</p>
                 <TaxTeachTooltip content={TEACH.sections.deductions} ariaLabel="Tax glossary context" />
               </div>
+              {sectionBlurb("Quick clarifiers only — use deeper guides or your CA for filing-grade nuance.")}
               <div className="mt-3 space-y-2">
                 <details className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
                   <summary className="cursor-pointer text-sm font-medium text-slate-900">
@@ -2288,11 +2287,6 @@ export function TaxRegimeCalculator() {
           />
 
           <p className="text-xs text-[#9B9A94]">Educational only — verify against notified law and Form 16.</p>
-        </div>
-
-        <aside className="hidden lg:block">
-          <div style={{ position: "sticky", top: 80 }}>{liveSummaryCard}</div>
-        </aside>
       </div>
     </div>
   );
