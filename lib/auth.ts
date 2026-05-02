@@ -13,6 +13,10 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
     },
   });
   return { data, error };

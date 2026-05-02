@@ -354,8 +354,6 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isLoggedIn: state.isLoggedIn,
-        subscriptionTier: state.subscriptionTier,
-        userId: state.userId,
       }),
     },
   ),

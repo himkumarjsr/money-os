@@ -15,7 +15,7 @@ const fallbackFunds: PortfolioFund[] = [
 ];
 
 export default function PortfolioPage() {
-  const tier = useAuthStore((s) => s.subscriptionTier);
+  const tier = useAuthStore((s) => s.user?.subscriptionTier ?? "free");
   const setLastAnalysis = usePortfolioStore((s) => s.setLastAnalysis);
   const lastAnalysis = usePortfolioStore((s) => s.lastAnalysis);
   const earnTokens = useGamificationStore((s) => s.earnTokens);

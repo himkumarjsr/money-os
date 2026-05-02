@@ -201,7 +201,7 @@ Complete inventory with one-line purpose per file:
 | `components/ui/SpeedoMeter.tsx` | Multi-gauge speedometer component |
 | `components/ui/BottomSheet.tsx` | Bottom sheet UI |
 | `components/ui/Toast.tsx` | Toast UI |
-| `components/ui/LoginSheet.tsx` | Login modal sheet |
+| `components/ui/LoginSheet.tsx` | Login bottom sheet (optional; primary auth is **`/login`**) |
 | `components/ui/brand-logo.tsx` | Brand logo UI |
 | `components/ui/ScrollSection.tsx` | Scroll section wrapper |
 | `components/ui/AnimateOnScroll.tsx` | Scroll animation wrapper |
@@ -537,7 +537,7 @@ Actions:
 
 ### authStore
 File: `store/authStore.ts`  
-Persisted: Yes (`finkoin-auth`) — partializes `user`, `isLoggedIn`, `subscriptionTier`, `userId` (not `isLoading` / `hasInitialized`)
+Persisted: Yes (`finkoin-auth`) — partializes **`user`** and **`isLoggedIn` only** (not `subscriptionTier`, `userId`, `isLoading`, or `hasInitialized`; tier stays on `user` and is refetched after `initAuth`)
 
 State: `user`, `isLoggedIn`, `isLoading`, `hasInitialized`, `subscriptionTier`, `userId`  
 Actions: `setUser`, `updateUser`, `setLoading`, `setSubscription`, `logout` (async: Supabase sign-out + clears persist + financial/AI cache keys), `initAuth`, `refreshUser`, `signInWithEmail`, `signUpWithEmail`
@@ -815,37 +815,42 @@ Source categories used in DB rows include:
 
 ### Overview (production-oriented)
 
-1. **Browser client** (`lib/supabase.ts`): `@supabase/ssr` **`createBrowserClient`** singleton via **`getSupabase()`**. Sessions are stored in **HTTP cookies** (SSR-aligned) so they match the server middleware refresh path. A **`supabase` proxy** preserves legacy `import { supabase } from "@/lib/supabase"` call sites (client-only).
+1. **Browser client** (`lib/supabase.ts`): `@supabase/ssr` **`createBrowserClient`** singleton via **`getSupabase()`**. Sessions use **cookie-backed storage** aligned with middleware. Options include **`auth.storageKey: 'finkoin-auth-token'`**, **`persistSession`**, **`autoRefreshToken`**, **`detectSessionInUrl`**. A **`supabase` proxy** preserves legacy `import { supabase } from "@/lib/supabase"` call sites (client-only).
 
-2. **Middleware** (`middleware.ts`): **`createServerClient`** from `@supabase/ssr` reads request cookies, runs **`auth.getUser()`** (validates JWT + refreshes / rotates refresh token), writes updated cookies on the response. If env vars are missing, middleware no-ops.
+2. **Middleware** (`middleware.ts`): **`createServerClient`** from `@supabase/ssr` reads request cookies, runs **`auth.getUser()`** (validates JWT + refreshes / rotates refresh token when needed), writes updated cookies on the response via **`setAll`** (including forwarded **`headers`** per `@supabase/ssr`). If env vars are missing, middleware no-ops. Redirects to login **merge cookies** from the refreshed response onto the redirect so rotated tokens are not dropped.
 
 3. **Protected routes**: `/analyse/fixplan`, `/profile`, `/policies`, `/rewards` — unauthenticated users are redirected to **`/login?redirect=<path>`**.
 
-4. **App bootstrap** (`components/AppInitializer.tsx`): Waits for **`useAuthStore.persist.rehydrate()`** + hydration completion, then **`initAuth()`** so UI does not trust persisted Zustand user state before Supabase **`getSession()`** validates the session.
+4. **App bootstrap** (`components/AppInitializer.tsx`): Waits for **`useAuthStore.persist.rehydrate()`** + hydration completion, then **`initAuth()`** so UI does not trust persisted Zustand user state before Supabase **`getSession()`** validates the session (avoids **refresh crashes** from stale persisted user).
 
 5. **`initAuth` / `refreshUser`** (`store/authStore.ts`): Loads **`users`** + **`gamification`** (creates gamification row if missing), maps **`subscription_tier`**, **`referral_code`**, **`fk_balance`**, and syncs **`useGamificationStore`** FK display with Supabase. Registers **one** **`onAuthStateChange`** listener (sign-in, token refresh, sign-out).
 
 6. **Cross-tab**: `components/AuthSessionSync.tsx` listens for **`storage`** (persist / Supabase keys) and **`visibilitychange`** to **`refreshUser()`** when returning to a tab.
 
-7. **Logout**: `logout()` calls **`supabase.auth.signOut()`**, **`persist.clearStorage()`** for `finkoin-auth`, removes **`finkoin-financial`** and **`finkoin_ai_cache`** from `localStorage`. Navbar uses **`signOut()`** from `lib/auth` (delegates to store).
+7. **Logout**: `logout()` calls **`POST /api/auth/sign-out`**, client **`supabase.auth.signOut({ scope: 'global' })`**, **`persist.clearStorage()`** for `finkoin-auth`, removes **`finkoin-financial`** / **`finkoin_ai_cache`** / **`finkoin-gamification`** from `localStorage`. Navbar uses **`signOut()`** from `lib/auth` (delegates to store).
+
+8. **Navbar**: Logged-out users see **`Log in`** → **`/login`** (desktop + mobile); profile avatar also navigates to **`/login`**. `components/ui/LoginSheet.tsx` remains in the repo but is **not** wired from the global navbar (primary auth UX is **`/login`**).
 
 ### Sign up
-1. User submits email/password/name on **`/login`** (or sheet flows that call the store).
-2. **`signUpWithEmail`** → `supabase.auth.signUp` with **`emailRedirectTo`** → `{origin}/auth/callback`.
-3. DB trigger **`handle_new_user()`** inserts **`users`** + **`gamification`** + **`user_stats`** when the auth user is confirmed.
-4. If a session is returned immediately, **`refreshUser()`** runs; otherwise the user verifies email and completes login via callback.
+1. User opens **`/login`**, **Sign up** tab, submits name + email + password (or uses **`signUpWithEmail`** elsewhere).
+2. **`supabase.auth.signUp`** with **`emailRedirectTo`** → `{origin}/auth/callback`.
+3. If **no session** is returned (email confirmation required), UI prompts to verify email, then user logs in on the **Login** tab.
+4. DB trigger **`handle_new_user()`** inserts **`users`** + **`gamification`** + **`user_stats`** when the auth user is confirmed.
+5. After session exists, **`initAuth()`** / **`refreshUser()`** loads profile and gamification.
 
 ### Sign in
-1. **`signInWithEmail`** → **`signInWithPassword`** → **`refreshUser()`**.
-2. Optional **`?redirect=`** query preserves deep links after login.
+1. **`/login`** → **`signInWithPassword`** → **`initAuth()`** → redirect to **`?redirect=`** or **`/analyse`**.
+2. **`?redirect=`** preserves deep links after login.
 
 ### OAuth (Google)
-1. **`signInWithOAuth`** with **`redirectTo`** `{origin}/auth/callback`.
-2. **`/auth/callback`** exchanges **`?code=`** via **`exchangeCodeForSession`**, then **`refreshUser()`**, then redirect to **`/analyse`**.
+1. **`signInWithOAuth`** (`/login` or **`lib/auth`** **`signInWithGoogle`**) with **`redirectTo`** **`{origin}/auth/callback?next=<encoded-path>`** so deep links survive OAuth.
+2. **`/auth/callback`** (wrapped in **`Suspense`**): **`exchangeCodeForSession(code)`** when **`?code=`** present, then **`initAuth()`**, then redirect to **`next`** (default **`/analyse`**).
+3. **Supabase Dashboard → Authentication → URL configuration**: add **`Site URL`** and **Redirect URLs** that include **`/auth/callback`** (and variants with query strings if your project enforces exact redirect matching).
 
 ### Password reset
-1. **`/auth/reset-password`** → **`resetPasswordForEmail`** with **`redirectTo`** `{origin}/auth/update-password`.
-2. **`/auth/update-password`** → **`auth.updateUser({ password })`** when a recovery session exists.
+1. **`/login`** → **Forgot password?** inline mode, or **`/auth/reset-password`**, calls **`resetPasswordForEmail`** with **`redirectTo`** **`{origin}/auth/callback?type=recovery`** so the magic link establishes a session via PKCE before **`/auth/update-password`**.
+2. **`/auth/callback`** with **`type=recovery`** → **`/auth/update-password`** after **`initAuth()`**.
+3. **`/auth/update-password`** → **`auth.updateUser({ password })`** when a recovery session exists.
 
 ### JWT / refresh (dashboard configuration)
 
@@ -1612,6 +1617,7 @@ Important implementation note:
 
 ### 2026-05-02
 
+- **Auth (complete UX):** **`/login`** is a single **login · sign-up · forgot-password** page (inline reset email, Google OAuth with **`offline`/`consent`** and **`next`** deep-link preservation). **`lib/supabase.ts`** browser client sets **`auth.storageKey: 'finkoin-auth-token'`** and session refresh flags. **`/auth/callback`** uses **`Suspense`**, **`exchangeCodeForSession`**, **`initAuth()`**, **`type=recovery`** → **`/auth/update-password`**, optional **`next`** redirect. **`middleware`** merges refreshed cookies onto login redirects for protected routes. **`authStore`** **`partialize`** persists only **`user`** + **`isLoggedIn`**; **`subscriptionTier`** for UI reads from **`user?.subscriptionTier`** where needed. **Global navbar** **`Log in`** → **`/login`**; **`LoginSheet`** removed from navbar wiring.
 - **Auth (production pass):** Added **`@supabase/ssr`**; browser **`createBrowserClient`** + middleware **`createServerClient`** refresh; **`AppInitializer`** waits for Zustand **`persist` rehydration** then **`initAuth()`** to avoid refresh crashes from stale persisted user; **`authStore`** **`hasInitialized`**, **`refreshUser`**, **`signUpWithEmail`**, single **`onAuthStateChange`** subscription, **`logout`** clears persist + sensitive localStorage keys and syncs **`gamificationStore`** FK from **`refreshUser`**; **`AuthSessionSync`** visibility + **`storage`** hooks; protected routes in **`middleware`**; **`/auth/reset-password`** and **`/auth/update-password`**; login **`Suspense`** + **`redirect`** query + Google OAuth + forgot-password link; **`lib/supabaseServer`** **`createSupabaseServerClient`** + lazy admin client; profile sign-out uses **`signOut()`** (full Supabase logout).
 - **Tax regime calculator UX & persistence:** progressive-disclosure **toggle sections** for optional income (HRA, 80GG when no HRA, LTA, RSU/ESOP vest+sale, gratuity, leave encashment, business modes 44AD/44ADA/regular, rental NAV worksheet, pension/family pension + commuted sketch, interest splits, dividends, capital gains buckets, agricultural toggle, other income incl. lottery at illustrative 30%); **sticky LIVE SUMMARY** + mobile summary; **localStorage** key **`finkoin_tax_calculator`** with restore on mount and **Reset** reload; **“What you learned today”** recap from enabled sections; reusable **`ToggleSection`** (`components/calculators/ToggleSection.tsx`); illustrative helpers in **`lib/taxCalculatorHelpers.ts`**; engine adds **`slabTaxedOtherGains`**, **`propertyLtcgGains`**, **`lotteryGamblingIncome`**, **`interestSavingsPortion`** (80TTA nudge), updates equity CG illustration to **20% STCG / 12.5% LTCG after ₹1.25L** plus property-LTCG and lottery components in **`computeScheduleRateTax`** (`lib/taxRegimeComparisonFY2026.ts`).
 - Added **Tax Regime Comparison** calculator (`tax-regime`): compares **old vs new** regime for **FY 2025-26 (AY 2026-27)** with inputs for salary, other income, age bracket (regular / senior / super senior), HRA flow (metro vs non-metro), 80C/80D/24(b)/80CCD(1B)/other deductions; implements illustrative slabs, ₹75k standard deduction on new regime, ₹50k on old, simplified **87A** (tax wiped when taxable ≤ ₹12L new / ₹5L old), surcharge brackets, and **4% cess**.

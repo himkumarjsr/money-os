@@ -2,7 +2,6 @@
 
 import { fadeIn } from "@/lib/animations";
 import { signOut } from "@/lib/auth";
-import LoginSheet from "@/components/ui/LoginSheet";
 import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
@@ -25,10 +24,9 @@ export function GlobalNavbar() {
   const streakDays = useGamificationStore((s) => s.streakDays);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
-  const subscriptionTier = useAuthStore((s) => s.subscriptionTier);
+  const subscriptionTier = useAuthStore((s) => s.user?.subscriptionTier ?? "free");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const profileButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -136,12 +134,22 @@ export function GlobalNavbar() {
               View Plans
             </Link>
 
+            {!isLoggedIn ? (
+              <Link
+                href="/login"
+                scroll
+                className="hidden rounded-xl border border-[#E8E6F0] bg-white px-3.5 py-2 text-sm font-semibold text-[#534AB7] shadow-sm transition-colors hover:border-[#534AB7]/40 md:inline-flex"
+              >
+                Log in
+              </Link>
+            ) : null}
+
             <button
               ref={profileButtonRef}
               type="button"
               onClick={() => {
                 if (!isLoggedIn) {
-                  setLoginOpen(true);
+                  router.push("/login");
                   return;
                 }
                 setProfileOpen((v) => !v);
@@ -280,6 +288,16 @@ export function GlobalNavbar() {
               </button>
             </div>
             <nav className="mt-8 flex flex-col gap-5">
+              {!isLoggedIn ? (
+                <Link
+                  href="/login"
+                  scroll
+                  className="text-2xl font-semibold text-[#534AB7]"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Log in
+                </Link>
+              ) : null}
               {[...centerNavItems, { href: "/plans", label: "Plans" }].map((item) => (
                 <Link
                   key={item.href}
@@ -298,7 +316,6 @@ export function GlobalNavbar() {
           </motion.div>
         ) : null}
       </AnimatePresence>
-      <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   );
 }
