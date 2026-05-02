@@ -148,7 +148,7 @@ export function GlobalNavbar() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {fkBalance > 0 ? (
+            {isLoggedIn && fkBalance > 0 ? (
               <span className="hidden rounded-full bg-[#EEEDFE] px-3 py-1 text-xs font-semibold text-[#3C3489] md:inline-flex">
                 🪙 {fkBalance} FK
               </span>
@@ -355,7 +355,7 @@ export function GlobalNavbar() {
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-900">
-                {fkBalance > 0 ? `🪙 ${fkBalance} FK earned` : "🪙 0 FK earned"}
+                {isLoggedIn ? (fkBalance > 0 ? `🪙 ${fkBalance} FK earned` : "🪙 0 FK earned") : "Menu"}
               </p>
               <button
                 type="button"
