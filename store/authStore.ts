@@ -332,8 +332,18 @@ export const useAuthStore = create<AuthState>()(
                 return;
               }
 
-              if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-                if (sess?.user) await get().refreshUser();
+              if (event === "SIGNED_IN" && sess?.user) {
+                await get().refreshUser();
+
+                const createdAt = new Date(sess.user.created_at);
+                const minutesOld = (Date.now() - createdAt.getTime()) / 1000 / 60;
+
+                if (minutesOld < 10) {
+                  const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
+                  await applyPendingReferralRewards(getSupabase(), sess.user.id);
+                }
+              } else if ((event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && sess?.user) {
+                await get().refreshUser();
               }
             });
           }

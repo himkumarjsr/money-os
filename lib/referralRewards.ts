@@ -6,7 +6,7 @@ import { consumePendingReferralCode } from "@/components/ReferralCapture";
 import { useAuthStore } from "@/store/authStore";
 
 /**
- * Links new user to referrer from sessionStorage (`finkoin_pending_ref`) and grants FK bonuses.
+ * Links new user to referrer from localStorage (`finkoin_pending_ref`, JSON with 7d expiry) and grants FK bonuses.
  * Best-effort: ignores failures (RLS, missing rows).
  */
 export async function applyPendingReferralRewards(supabase: SupabaseClient, newUserId: string): Promise<void> {
