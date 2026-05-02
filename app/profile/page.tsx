@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "@/lib/auth";
+import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { verifyPAN } from "@/lib/kycVerification";
 import { formatIndian } from "@/lib/formatters";
 import { useAuthStore } from "@/store/authStore";
@@ -12,6 +12,7 @@ import { useMemo, useState } from "react";
 export default function ProfilePage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const logoutAction = useAuthStore((s) => s.logout);
   const updateUser = useAuthStore((s) => s.updateUser);
   const result = useFinancialStore((s) => s.result);
   const submission = useFinancialStore((s) => s.lastSubmission);
@@ -58,6 +59,7 @@ export default function ProfilePage() {
   };
 
   return (
+    <ProtectedGate>
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
         <div className="mx-auto inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-2xl font-bold text-white">
@@ -179,9 +181,12 @@ export default function ProfilePage() {
             type="button"
             className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
             onClick={async () => {
-              await signOut();
-              router.refresh();
-              router.push("/");
+              try {
+                await logoutAction();
+              } finally {
+                router.push("/");
+                router.refresh();
+              }
             }}
           >
             Sign out
@@ -189,6 +194,7 @@ export default function ProfilePage() {
         </div>
       </section>
     </main>
+    </ProtectedGate>
   );
 }
 

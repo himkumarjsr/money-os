@@ -1,7 +1,6 @@
 "use client";
 
 import { fadeIn } from "@/lib/animations";
-import { signOut } from "@/lib/auth";
 import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
@@ -19,6 +18,7 @@ const centerNavItems = [
 
 export function GlobalNavbar() {
   const router = useRouter();
+  const logoutAction = useAuthStore((s) => s.logout);
   const fkBalance = useGamificationStore((s) => s.fkBalance);
   const badges = useGamificationStore((s) => s.badges.length);
   const streakDays = useGamificationStore((s) => s.streakDays);
@@ -36,6 +36,15 @@ export function GlobalNavbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [profileOpen]);
 
   useEffect(() => {
     if (!profileOpen) return;
@@ -186,13 +195,31 @@ export function GlobalNavbar() {
 
       <AnimatePresence>
         {profileOpen && isLoggedIn ? (
-          <motion.div
-            ref={profileMenuRef}
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="fixed right-4 top-14 z-[1000] w-[320px] rounded-2xl border border-[#F0EFF8] bg-white p-4 shadow-[0_8px_40px_rgba(0,0,0,0.12)]"
-          >
+          <>
+            <motion.button
+              key="profile-backdrop"
+              type="button"
+              aria-label="Close profile menu"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-[998] bg-black/35 backdrop-blur-[1px]"
+              onClick={() => setProfileOpen(false)}
+            />
+            <motion.div
+              key="profile-panel"
+              ref={profileMenuRef}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                maxHeight: "calc(100dvh - 4rem)",
+                WebkitOverflowScrolling: "touch",
+              }}
+              className="fixed right-4 top-14 z-[1000] w-[min(320px,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-2xl border border-[#F0EFF8] bg-white p-4 shadow-[0_8px_40px_rgba(0,0,0,0.12)]"
+            >
             <div className="text-center">
               <div className="mx-auto mb-2 inline-flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-lg font-bold text-white">
                 {user?.photoURL ? (
@@ -228,15 +255,14 @@ export function GlobalNavbar() {
             <div className="my-3 border-t border-[#F0EFF8]" />
             <nav className="space-y-1 text-sm">
               {[
-                ["👤", "My profile", "/profile"],
-                ["🛡️", "My policies", "/policies"],
-                ["📊", "My analysis", "/analyse/result"],
-                ["🎯", "My goals", "/goals"],
-                ["💰", "Investments", "/investments"],
+                ["👤", "My Profile", "/profile"],
+                ["📊", "My Analysis", "/analyse/result"],
+                ["🛡️", "My Policies", "/policies"],
+                ["🎯", "My Goals", "/goals"],
+                ["📈", "My Investments", "/investments"],
                 ["🏆", "Leaderboard", "/leaderboard"],
                 ["🎁", "Rewards", "/rewards"],
-                ["👥", "Refer and earn", "/refer"],
-                ["📋", "KYC status", "/kyc"],
+                ["👥", "Refer & Earn", "/refer"],
                 ["⚙️", "Settings", "/settings"],
               ].map(([icon, label, href]) => (
                 <Link key={href} href={href} scroll onClick={() => setProfileOpen(false)} className="flex items-center justify-between rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
@@ -280,18 +306,25 @@ export function GlobalNavbar() {
             <button
               type="button"
               onClick={async () => {
-                await signOut();
                 setProfileOpen(false);
-                router.refresh();
+                try {
+                  await logoutAction();
+                } catch (err) {
+                  console.error("Sign out error:", err);
+                } finally {
+                  router.push("/");
+                  router.refresh();
+                }
               }}
               className="w-full text-center text-sm font-semibold text-red-600"
             >
-              Sign out
+              🚪 Sign out
             </button>
             <p className="mt-1 text-center text-[11px] text-slate-500">
               Signed in as {user?.phone ?? user?.email ?? "user"}
             </p>
           </motion.div>
+          </>
         ) : null}
       </AnimatePresence>
 

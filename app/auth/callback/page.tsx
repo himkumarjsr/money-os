@@ -1,5 +1,6 @@
 "use client";
 
+import { applyPendingReferralRewards } from "@/lib/referralRewards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -47,6 +48,8 @@ function AuthCallbackContent() {
           router.replace("/auth/update-password");
           return;
         }
+
+        await applyPendingReferralRewards(supabase, session.user.id);
 
         router.replace(next);
       } catch (e) {

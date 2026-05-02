@@ -174,7 +174,10 @@ Complete inventory with one-line purpose per file:
 | `app/api/razorpay/checkout-config/route.ts` | Razorpay Key ID for Standard Checkout (server → frontend) |
 | `app/api/razorpay/create-order/route.ts` | Razorpay order API route |
 | `app/api/razorpay/verify-payment/route.ts` | Razorpay payment signature verification + pro tier |
-| `components/global-navbar.tsx` | Main header/navbar + profile dropdown |
+| `components/global-navbar.tsx` | Main header/navbar + profile dropdown (backdrop, scroll lock) |
+| `components/auth/ProtectedGate.tsx` | Client gate: wait **`hasInitialized`** then enforce **`isLoggedIn`** |
+| `components/ReferralCapture.tsx` | Captures **`?ref=`** into **`sessionStorage`** for post-login attribution |
+| `lib/referralRewards.ts` | Applies pending referral + FK bumps after successful **`/auth/callback`** |
 | `components/AuthSessionSync.tsx` | Sync Supabase session into auth store |
 | `components/FinancialStoreAuthSync.tsx` | Rehydrate financial store on auth user switch |
 | `components/ScrollToTopOnRouteChange.tsx` | Scroll reset on route change |
@@ -820,7 +823,7 @@ Source categories used in DB rows include:
 
 2. **Middleware** (`middleware.ts`): **`createServerClient`** from `@supabase/ssr` reads request cookies, runs **`auth.getUser()`** (validates JWT + refreshes / rotates refresh token when needed), writes updated cookies on the response via **`setAll`** (including forwarded **`headers`** per `@supabase/ssr`). If env vars are missing, middleware no-ops. Redirects to login **merge cookies** from the refreshed response onto the redirect so rotated tokens are not dropped.
 
-3. **Protected routes**: `/analyse/fixplan`, `/profile`, `/policies`, `/rewards` — unauthenticated users are redirected to **`/login?redirect=<path>`**.
+3. **Protected routes** (middleware): `/analyse/fixplan`, `/profile`, `/policies`, `/rewards`, `/goals`, `/investments`, `/leaderboard`, `/refer`, `/settings` — unauthenticated users are redirected to **`/login?redirect=<path>`**. Client pages also wrap with **`components/auth/ProtectedGate.tsx`**, which waits for **`hasInitialized`** before treating **`isLoggedIn`** as authoritative (avoids false redirects while auth hydrates).
 
 4. **App bootstrap** (`components/AppInitializer.tsx`): Waits for **`useAuthStore.persist.rehydrate()`** + hydration completion, then **`initAuth()`** so UI does not trust persisted Zustand user state before Supabase **`getSession()`** validates the session (avoids **refresh crashes** from stale persisted user).
 
@@ -828,9 +831,13 @@ Source categories used in DB rows include:
 
 6. **Cross-tab**: `components/AuthSessionSync.tsx` listens for **`storage`** (persist / Supabase keys) and **`visibilitychange`** to **`refreshUser()`** when returning to a tab.
 
-7. **Logout**: `logout()` calls **`POST /api/auth/sign-out`**, client **`supabase.auth.signOut({ scope: 'global' })`**, **`persist.clearStorage()`** for `finkoin-auth`, removes **`finkoin-financial`** / **`finkoin_ai_cache`** / **`finkoin-gamification`** from `localStorage`. Navbar uses **`signOut()`** from `lib/auth` (delegates to store).
+7. **Logout**: `logout()` calls **`POST /api/auth/sign-out`**, client **`supabase.auth.signOut({ scope: 'global' })`**, **`persist.clearStorage()`** for `finkoin-auth`, removes **`finkoin-financial`** / **`finkoin_ai_cache`** / **`finkoin-gamification`** from `localStorage`. Profile menu **Sign out** calls **`logout()`** then **`router.push('/')`** / **`refresh()`**.
 
-8. **Navbar**: Logged-out users see **`Log in`** → **`/login`** (desktop + mobile); profile avatar also navigates to **`/login`**. `components/ui/LoginSheet.tsx` remains in the repo but is **not** wired from the global navbar (primary auth UX is **`/login`**).
+8. **Navbar / profile menu**: Logged-out users see **`Log in`** → **`/login`**; avatar opens **`/login`** when logged out. Logged-in dropdown: **My Profile**, **My Analysis**, **My Policies**, **My Goals**, **My Investments**, **Leaderboard**, **Rewards**, **Refer & Earn**, **Settings**, legal shortcuts, **Sign out**. **KYC** entry removed from this menu (KYC remains on **`/profile`** page until insurance flows mature). Dropdown is **scrollable** on small screens (**`max-height` + `overflow-y: auto`**), uses a **backdrop**, and locks **`document.body`** overflow while open.
+
+9. **Referral capture**: **`components/ReferralCapture.tsx`** (mounted in root layout) stores **`?ref=`** in **`sessionStorage`**; **`lib/referralRewards.ts`** applies pending referral after OAuth/password login on **`/auth/callback`** (best-effort FK bonuses + **`referred_by`**).
+
+10. **`LoginSheet`**: `components/ui/LoginSheet.tsx` remains optional/unwired from the global navbar.
 
 ### Sign up
 1. User opens **`/login`**, **Sign up** tab, submits name + email + password (or uses **`signUpWithEmail`** elsewhere).
@@ -1624,6 +1631,7 @@ Important implementation note:
 
 ### 2026-05-02
 
+- **Profile & protected UX:** **`ProtectedGate`** waits on **`hasInitialized`** before redirecting to **`/login`**; applied to **`/profile`**, **`/goals`**, **`/investments`**, **`/leaderboard`**, **`/rewards`**, **`/refer`**, **`/settings`**; **`PolicyVaultClient`** and **`/analyse/fixplan`** gate on **`hasInitialized`** to avoid false logged-out UI. Middleware protects the same route prefixes. Navbar profile panel: backdrop, **body scroll lock**, scrollable panel, **KYC removed** from menu, **Sign out** uses **`logout()`** + home redirect. **`refreshUser`** reads **`users.avatar_url`** into **`photoURL`** and persists generated **`referral_code`** when missing. **`ReferralCapture`** + **`applyPendingReferralRewards`** on auth callback. **`/settings`**: name save, avatar upload (**`avatars`** bucket — run **`supabase/manual/referral_code_avatars.sql`**), password reset email, notification toggles (local), JSON export. **`/leaderboard`** reads **`gamification`** + **`users`** names (anonymised). **`/refer`** full share UX + referred list. **`/rewards`** shows live **`gamification`** row.
 - **Legal (India / DPDP):** Replaced **`/legal/privacy`** and **`/legal/terms`** with full policies (readable layout, AI/Groq cross-border note, Razorpay, grievance officer, DPDP rights). Added **`/legal/refund`** for Razorpay. **`/privacy`** and **`/terms`** now **`redirect()`** to canonical legal URLs. Footer Legal column + profile dropdown include Privacy, Terms, Refunds, Disclaimer.
 
 - **Auth (complete UX):** **`/login`** is a single **login · sign-up · forgot-password** page (inline reset email, Google OAuth with **`offline`/`consent`** and **`next`** deep-link preservation). **`lib/supabase.ts`** browser client sets **`auth.storageKey: 'finkoin-auth-token'`** and session refresh flags. **`/auth/callback`** uses **`Suspense`**, **`exchangeCodeForSession`**, **`initAuth()`**, **`type=recovery`** → **`/auth/update-password`**, optional **`next`** redirect. **`middleware`** merges refreshed cookies onto login redirects for protected routes. **`authStore`** **`partialize`** persists only **`user`** + **`isLoggedIn`**; **`subscriptionTier`** for UI reads from **`user?.subscriptionTier`** where needed. **Global navbar** **`Log in`** → **`/login`**; **`LoginSheet`** removed from navbar wiring.

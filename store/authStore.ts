@@ -19,6 +19,7 @@ type UsersRow = {
   name?: string | null;
   email?: string | null;
   phone?: string | null;
+  avatar_url?: string | null;
   subscription_tier?: string | null;
   subscription_expiry?: string | null;
   is_admin?: boolean | null;
@@ -199,7 +200,19 @@ export const useAuthStore = create<AuthState>()(
               ? row.referral_code
               : randomReferralCode(userId);
 
+          if (row && (!row.referral_code || String(row.referral_code).length === 0)) {
+            try {
+              await supabase.from("users").update({ referral_code: referral }).eq("id", userId);
+            } catch {
+              /* ignore RLS / network */
+            }
+          }
+
           const meta = authUser.user_metadata ?? {};
+
+          const rowAvatar =
+            typeof row?.avatar_url === "string" && row.avatar_url.length > 0 ? row.avatar_url : null;
+          const metaAvatar = typeof meta.avatar_url === "string" && meta.avatar_url.length > 0 ? meta.avatar_url : null;
 
           const nextUser: User = {
             id: userId,
@@ -210,7 +223,7 @@ export const useAuthStore = create<AuthState>()(
               null,
             email: row?.email ?? authUser.email ?? null,
             phone: row?.phone ?? authUser.phone ?? null,
-            photoURL: typeof meta.avatar_url === "string" ? meta.avatar_url : null,
+            photoURL: rowAvatar ?? metaAvatar,
             panVerified: Boolean(row?.pan_verified),
             panLast4: null,
             aadhaarVerified: false,

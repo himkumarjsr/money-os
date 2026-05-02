@@ -25,7 +25,17 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const protectedPaths = ["/analyse/fixplan", "/profile", "/policies", "/rewards"];
+  const protectedPaths = [
+    "/analyse/fixplan",
+    "/profile",
+    "/policies",
+    "/rewards",
+    "/goals",
+    "/investments",
+    "/leaderboard",
+    "/refer",
+    "/settings",
+  ];
   const isProtected = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path));
 
   // Validates JWT and refreshes session / rotates refresh cookie when needed.

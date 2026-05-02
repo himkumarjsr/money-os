@@ -18,6 +18,7 @@ const LOADING_MESSAGES = [
 
 export default function FixPlanPage() {
   const router = useRouter();
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const user = useAuthStore((s) => s.user);
   const profile = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
@@ -149,13 +150,13 @@ export default function FixPlanPage() {
   };
 
   useEffect(() => {
+    if (!hasInitialized) return;
     let mounted = true;
     (async () => {
       const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
 
       if (skipPayment) {
         console.log("fixplan: skip payment enabled");
-        // Allow access — do not redirect
       } else {
         const hasAccess =
           user?.subscriptionTier === "pro" ||
@@ -164,7 +165,7 @@ export default function FixPlanPage() {
 
         if (!hasAccess) {
           console.log("fixplan: no access, redirecting to result");
-          router.push("/analyse/result");
+          router.replace("/analyse/result");
           return;
         }
       }
@@ -173,7 +174,7 @@ export default function FixPlanPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [hasInitialized, user?.subscriptionTier, user?.isAdmin, router]);
 
   useEffect(() => {
     if (aiPlan?.isFallback) {
@@ -198,6 +199,15 @@ export default function FixPlanPage() {
   const showTermCol = monthlyPlanRows.some((m: any) => Number(m?.termYearly || 0) > 0);
   const showSipCol = monthlyPlanRows.some((m: any) => Number(m?.sip || 0) > 0);
   const showDebtCol = monthlyPlanRows.some((m: any) => Number(m?.extraDebt || 0) > 0);
+
+  if (!hasInitialized) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#F7F7F4]">
+        <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
+        <p className="text-sm text-[#9B9A94]">Loading…</p>
+      </div>
+    );
+  }
 
   const handleDownloadPDF = async () => {
     setDownloading(true);

@@ -2,7 +2,7 @@
 
 import BottomSheet from "@/components/ui/BottomSheet";
 import MoneyInput from "@/components/ui/MoneyInput";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { formatIndian, handleMoneyInput } from "@/lib/formatters";
 import {
   POLICY_TYPES,
@@ -110,6 +110,7 @@ function isHealthCategory(t: PolicyType): boolean {
 export default function PolicyVaultClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const authUserId = useAuthStore((s) => s.user?.id);
 
@@ -150,15 +151,16 @@ export default function PolicyVaultClient() {
       return;
     }
     setPolicies(list);
-  }, [isLoggedIn]);
+  }, [isLoggedIn, hasInitialized]);
 
   useEffect(() => {
+    if (!hasInitialized) return;
     void reload();
-  }, [reload, authUserId]);
+  }, [reload, authUserId, hasInitialized]);
 
   useEffect(() => {
     const add = searchParams.get("add");
-    if (!add || !isLoggedIn) return;
+    if (!add || !hasInitialized || !isLoggedIn) return;
     const cover = Number(searchParams.get("cover")) || 0;
     const premium = Number(searchParams.get("premium")) || 0;
     const freq = (searchParams.get("freq") === "yearly" ? "yearly" : "monthly") as PremiumFrequency;
@@ -189,7 +191,7 @@ export default function PolicyVaultClient() {
       setAddOpen(true);
       router.replace("/policies", { scroll: false });
     }
-  }, [searchParams, isLoggedIn, router]);
+  }, [searchParams, isLoggedIn, router, hasInitialized]);
 
   const openNew = () => {
     setForm(emptyPolicyForm());
@@ -295,6 +297,15 @@ export default function PolicyVaultClient() {
     return form.premiumFrequency === "yearly" ? `${sym}/year` : `${sym}/month`;
   }, [form.premiumAmount, form.premiumFrequency]);
 
+  if (!hasInitialized) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 bg-[#F7F7F4]">
+        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
+        <p className="text-sm text-[#9B9A94]">Loading…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-[#F7F7F4] pb-16 pt-6">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
@@ -308,7 +319,7 @@ export default function PolicyVaultClient() {
             className="shrink-0 self-start bg-[#534AB7] text-white hover:opacity-95"
             onClick={() => {
               if (!isLoggedIn) {
-                router.push("/login");
+                router.push("/login?redirect=/policies");
                 return;
               }
               openNew();
@@ -335,7 +346,7 @@ export default function PolicyVaultClient() {
               Save policies to Supabase, get renewal reminders, and sync across devices.
             </p>
             <Link
-              href="/login"
+              href="/login?redirect=/policies"
               className="rounded-xl bg-[#534AB7] px-8 py-3 text-[15px] font-semibold text-white no-underline"
             >
               Sign in →
@@ -350,11 +361,16 @@ export default function PolicyVaultClient() {
             </div>
             <h2 className="text-xl font-bold text-[#111110]">No policies added yet</h2>
             <p className="max-w-sm text-[15px] text-[#9B9A94]">
-              Add your existing policies to track renewals and get better cover advice
+              Add your insurance policies to track premiums and coverage, or explore plans on the marketplace.
             </p>
-            <Button type="button" className="bg-[#534AB7] text-white" onClick={openNew}>
-              Add first policy →
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button type="button" className="bg-[#534AB7] text-white" onClick={openNew}>
+                Add first policy →
+              </Button>
+              <ButtonLink href="/insurance" variant="secondary" className="border-[#E8E6F0]">
+                Browse marketplace →
+              </ButtonLink>
+            </div>
           </div>
         ) : (
           <ul className="space-y-4">

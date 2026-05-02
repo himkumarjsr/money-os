@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import AppInitializer from "@/components/AppInitializer";
+import { ReferralCapture } from "@/components/ReferralCapture";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import Footer from "@/components/landing/Footer";
@@ -159,6 +160,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
+        <ReferralCapture />
         <AppInitializer>
           <ScrollToTopOnRouteChange />
           <AuthSessionSync />
