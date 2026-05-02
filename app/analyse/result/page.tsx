@@ -157,7 +157,8 @@ export default function AnalyseResultPage() {
   const profile = lastSubmission;
   const analysis = useMemo(() => result ?? analyseFinances(lastSubmission), [lastSubmission, result]);
   const score = result?.overallScore ?? analysis?.overallScore ?? 0;
-  const scoreBadgeTone = score < 40 ? "bg-[#E24B4A]/25 text-[#FFE6E6]" : score < 70 ? "bg-[#BA7517]/25 text-[#FFEFD8]" : "bg-[#1D9E75]/25 text-[#E5FFF7]";
+  const scoreBadgeTone =
+    score < 40 ? "bg-[#FDEDED] text-[#991B1B]" : score < 70 ? "bg-[#FFF4E5] text-[#92400E]" : "bg-[#DCFCE7] text-[#166534]";
   const scoreLabel = score < 40 ? "Critical" : score < 70 ? "Warning" : "Good";
 
   const assets = analysis?.totalAssets || 0;
@@ -450,15 +451,17 @@ export default function AnalyseResultPage() {
           ← Back to form
         </button>
         <section className="rounded-3xl bg-[linear-gradient(135deg,#3C3489_0%,#534AB7_100%)] p-5 text-white">
-          <div className="grid items-center gap-4 md:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <p className="text-sm text-[#D5D0FA]">Health report</p>
-              <p className="mt-1 text-3xl font-bold">Your financial health</p>
-              <p className="mt-1 text-sm text-[#D5D0FA]">{lastSubmission?.lifeStage} · {lastSubmission?.cityTier} · {lastSubmission?.primaryGoal}</p>
+          <div className="grid items-center gap-6 md:grid-cols-[1.2fr_0.8fr] md:gap-4">
+            <div className="text-center md:text-left">
+              <p className="text-sm font-medium text-white/90">Health report</p>
+              <p className="mt-1 text-3xl font-bold text-white">Your financial health</p>
+              <p className="mt-1 text-sm text-white/85">
+                {lastSubmission?.lifeStage} · {lastSubmission?.cityTier} · {lastSubmission?.primaryGoal}
+              </p>
               <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${scoreBadgeTone}`}>{scoreLabel}</span>
             </div>
-            <div className="ml-auto w-full max-w-[230px] rounded-2xl p-2 text-center bg-white/10">
-              <p className="text-xs uppercase tracking-wide text-white/90">Health score</p>
+            <div className="mx-auto w-full max-w-[280px] rounded-2xl bg-white/15 p-3 text-center md:mx-0 md:ml-auto md:mr-0 md:max-w-[240px] md:bg-white/10 md:p-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white">Health score</p>
               <SpeedoMeter
                 income={100}
                 needs={score}
@@ -468,60 +471,39 @@ export default function AnalyseResultPage() {
                 title=""
                 singleScore={score}
                 singleTone={score < 40 ? "red" : score < 70 ? "amber" : "green"}
-                className="border-0 bg-transparent p-0 shadow-none"
+                className="border-0 bg-transparent p-0 shadow-none [&_svg]:mx-auto [&_svg]:h-[132px] [&_svg]:w-[min(100%,220px)] sm:[&_svg]:h-[120px] sm:[&_svg]:w-[180px]"
               />
             </div>
           </div>
         </section>
 
-        <div
-          style={{
-            background: "white",
-            borderRadius: 16,
-            padding: "20px 24px",
-            marginBottom: 16,
-            border: "1px solid #E8E6F0",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#534AB7",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-              marginBottom: 16,
-            }}
-          >
-            MONTHLY SUMMARY
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 16,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 4 }}>Total income</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#111110" }}>
+        <div className="mb-4 rounded-2xl border border-[#E8E6F0] bg-white p-4 sm:p-6">
+          <div className="mb-4 text-[11px] font-bold uppercase tracking-wide text-[#534AB7]">Monthly summary</div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+            <div className="min-w-0 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] p-4 sm:border-0 sm:bg-transparent sm:p-0">
+              <div className="mb-1 text-xs font-semibold text-[#5F5E5A]">Total income</div>
+              <div className="break-words font-extrabold leading-tight text-[#111110] tabular-nums text-[length:clamp(14px,calc(8px + 4.2vw),22px)] sm:text-[22px]">
                 ₹{Math.round(totalIncome).toLocaleString("en-IN")}
               </div>
-              <div style={{ fontSize: 11, color: "#9B9A94" }}>per month</div>
+              <div className="mt-1 text-xs font-medium text-[#5F5E5A]">per month</div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 4 }}>Total outflow</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#E24B4A" }}>
+            <div className="min-w-0 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] p-4 sm:border-0 sm:bg-transparent sm:p-0">
+              <div className="mb-1 text-xs font-semibold text-[#5F5E5A]">Total outflow</div>
+              <div className="break-words font-extrabold leading-tight text-[#B42323] tabular-nums text-[length:clamp(14px,calc(8px + 4.2vw),22px)] sm:text-[22px]">
                 ₹{Math.round(totalExpenses).toLocaleString("en-IN")}
               </div>
-              <div style={{ fontSize: 11, color: "#9B9A94" }}>needs + loans + wants</div>
+              <div className="mt-1 text-xs font-medium text-[#5F5E5A]">needs + loans + wants</div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 4 }}>Left in hand</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: amountLeftInHand >= 0 ? "#1D9E75" : "#E24B4A" }}>
+            <div className="min-w-0 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] p-4 sm:border-0 sm:bg-transparent sm:p-0">
+              <div className="mb-1 text-xs font-semibold text-[#5F5E5A]">Left in hand</div>
+              <div
+                className={`break-words font-extrabold leading-tight tabular-nums text-[length:clamp(14px,calc(8px + 4.2vw),22px)] sm:text-[22px] ${amountLeftInHand >= 0 ? "text-[#0F766E]" : "text-[#B42323]"}`}
+              >
                 ₹{Math.abs(Math.round(amountLeftInHand)).toLocaleString("en-IN")}
               </div>
-              <div style={{ fontSize: 11, color: amountLeftInHand >= 0 ? "#1D9E75" : "#E24B4A" }}>
+              <div
+                className={`mt-1 text-xs font-semibold ${amountLeftInHand >= 0 ? "text-[#0F766E]" : "text-[#B42323]"}`}
+              >
                 {amountLeftInHand >= 0 ? "available to invest" : "overspending"}
               </div>
             </div>
@@ -529,13 +511,32 @@ export default function AnalyseResultPage() {
         </div>
 
         <section className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">LIVE NET WORTH SUMMARY</p>
-          <div className="mt-3 grid gap-4 md:grid-cols-3">
-            <div><p className="text-xs text-[#9B9A94]">TOTAL ASSETS</p><p className="text-2xl font-bold text-[#111110]">₹{Math.round(assets).toLocaleString("en-IN")}</p></div>
-            <div><p className="text-xs text-[#9B9A94]">TOTAL LIABILITIES</p><p className="text-2xl font-bold text-[#8C3A3A]">₹{Math.round(liabilities).toLocaleString("en-IN")}</p></div>
-            <div><p className="text-xs text-[#9B9A94]">NET WORTH</p><p className={`text-2xl font-bold ${netWorth >= 0 ? "text-[#1D9E75]" : "text-[#E24B4A]"}`}>₹{Math.round(netWorth).toLocaleString("en-IN")}</p></div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Live net worth summary</p>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[#5F5E5A]">Total assets</p>
+              <p className="break-words font-bold leading-tight text-[#111110] tabular-nums text-[length:clamp(15px,calc(9px + 3.8vw),24px)] sm:text-2xl">
+                ₹{Math.round(assets).toLocaleString("en-IN")}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[#5F5E5A]">Total liabilities</p>
+              <p className="break-words font-bold leading-tight text-[#8C3A3A] tabular-nums text-[length:clamp(15px,calc(9px + 3.8vw),24px)] sm:text-2xl">
+                ₹{Math.round(liabilities).toLocaleString("en-IN")}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[#5F5E5A]">Net worth</p>
+              <p
+                className={`break-words font-bold leading-tight tabular-nums text-[length:clamp(15px,calc(9px + 3.8vw),24px)] sm:text-2xl ${netWorth >= 0 ? "text-[#0F766E]" : "text-[#B42323]"}`}
+              >
+                ₹{Math.round(netWorth).toLocaleString("en-IN")}
+              </p>
+            </div>
           </div>
-          <p className="mt-3 text-xs text-[#7A7871]">You are around the 62nd percentile compared to similar users by life-stage and city tier.</p>
+          <p className="mt-3 text-xs font-medium leading-relaxed text-[#5F5E5A]">
+            You are around the 62nd percentile compared to similar users by life-stage and city tier.
+          </p>
         </section>
 
         {/* <section className="rounded-2xl bg-gradient-to-r from-[#4A3FB2] to-[#6E62D7] p-5 text-white">
@@ -543,11 +544,114 @@ export default function AnalyseResultPage() {
           <p className="mt-2 text-5xl font-extrabold">{score}/100</p>
         </section> */}
 
-        <section className="rounded-2xl bg-white p-5">
-          <div className="overflow-x-auto rounded-xl border border-[#E8E6F0]">
-            <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="bg-[#F7F6FE] text-xs text-[#534AB7]"><tr><th className="px-3 py-2">Category</th><th className="px-3 py-2">Cap%</th><th className="px-3 py-2">Cap₹</th><th className="px-3 py-2">Actual₹</th><th className="px-3 py-2">Status</th></tr></thead>
-              <tbody>
+        <section className="rounded-2xl bg-white p-4 sm:p-5">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">
+            Category caps vs actual
+          </p>
+
+          <div className="space-y-3 md:hidden">
+            {buckets.map((b) => {
+              const status = b.actual > b.capAmount * 1.15 ? "Critical" : b.actual > b.capAmount ? "Warning" : "Good";
+              const statusClass =
+                status === "Critical"
+                  ? "bg-[#FDEDED] text-[#991B1B]"
+                  : status === "Warning"
+                    ? "bg-[#FFF4E5] text-[#92400E]"
+                    : "bg-[#DCFCE7] text-[#166534]";
+              const expandable = b.key === "needs" || b.key === "loans";
+              const isOpen = expandedRows.includes(b.key);
+              const items = b.key === "needs" ? needsExpandedItems : b.key === "loans" ? loanExpandedItems : [];
+              const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
+              return (
+                <div
+                  key={`m-${b.key}`}
+                  role={expandable ? "button" : undefined}
+                  tabIndex={expandable ? 0 : undefined}
+                  className={`rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4 ${expandable ? "cursor-pointer active:bg-[#F3F2FB]" : ""}`}
+                  onClick={expandable ? () => toggleRow(b.key) : undefined}
+                  onKeyDown={
+                    expandable
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleRow(b.key);
+                          }
+                        }
+                      : undefined
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 font-semibold text-[#111110]">
+                        {expandable ? (
+                          <span className={`inline-block text-[#534AB7] transition-transform ${isOpen ? "rotate-90" : ""}`}>▸</span>
+                        ) : null}
+                        <span>{b.label}</span>
+                      </div>
+                      <p className="mt-1 text-xs leading-snug text-[#5F5E5A]">{b.details}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusClass}`}>{status}</span>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#5F5E5A]">Cap %</dt>
+                      <dd className="font-bold tabular-nums text-[#111110]">{b.capPercent}%</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#5F5E5A]">Cap ₹</dt>
+                      <dd className="break-all font-bold tabular-nums text-[#111110]">
+                        ₹{Math.round(b.capAmount).toLocaleString("en-IN")}
+                      </dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#5F5E5A]">Actual ₹</dt>
+                      <dd className="break-all text-lg font-extrabold tabular-nums text-[#111110]">
+                        ₹{Math.round(b.actual).toLocaleString("en-IN")}
+                      </dd>
+                    </div>
+                  </dl>
+                  {expandable && isOpen ? (
+                    <div className="mt-3 border-t border-[#E8E6F0] pt-3">
+                      {items.map((item) => (
+                        <div key={item.label} className="flex justify-between gap-3 py-1.5 text-[13px] text-[#454442]">
+                          <span className="min-w-0 flex-1 leading-snug">{item.label}</span>
+                          <span className="shrink-0 font-semibold tabular-nums text-[#111110]">
+                            ₹{Math.round(item.value || 0).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="mt-2 flex justify-between border-t border-[#E8E6F0] pt-2 text-[13px] font-bold text-[#111110]">
+                        <span>Total</span>
+                        <span className="tabular-nums">₹{Math.round(total).toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+            <div className="rounded-2xl border border-dashed border-[#D4D2F5] bg-[#F7F7F4] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <span className="font-semibold text-[#111110]">Unallocated</span>
+                <span className="break-all text-right font-bold tabular-nums text-[#111110]">
+                  ₹{Math.max(0, income - buckets.reduce((s, b) => s + b.actual, 0)).toLocaleString("en-IN")}
+                </span>
+              </div>
+              <p className="mt-2 text-xs font-medium text-[#5F5E5A]">Income not mapped into these buckets.</p>
+            </div>
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-xl border border-[#E8E6F0] md:block">
+            <table className="w-full min-w-[640px] text-left text-sm text-[#111110]">
+              <thead className="bg-[#F7F6FE] text-xs font-semibold text-[#3C3489]">
+                <tr>
+                  <th className="px-3 py-2">Category</th>
+                  <th className="px-3 py-2">Cap%</th>
+                  <th className="px-3 py-2">Cap₹</th>
+                  <th className="px-3 py-2">Actual₹</th>
+                  <th className="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody className="text-[#111110]">
                 {buckets.map((b) => {
                   const status = b.actual > b.capAmount * 1.15 ? "Critical" : b.actual > b.capAmount ? "Warning" : "Good";
                   const expandable = b.key === "needs" || b.key === "loans";
@@ -556,30 +660,35 @@ export default function AnalyseResultPage() {
                   const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
                   return (
                     <Fragment key={b.key}>
-                      <tr className={expandable ? "cursor-pointer border-t border-[#EFEDE7]" : "border-t border-[#EFEDE7]"} onClick={expandable ? () => toggleRow(b.key) : undefined}>
-                        <td className="px-3 py-2 font-medium">
+                      <tr
+                        className={`border-t border-[#EFEDE7] ${expandable ? "cursor-pointer hover:bg-[#FAFAFE]" : ""}`}
+                        onClick={expandable ? () => toggleRow(b.key) : undefined}
+                      >
+                        <td className="px-3 py-2 font-medium text-[#111110]">
                           <span className="inline-flex items-center gap-2">
-                            {expandable ? <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}>►</span> : null}
+                            {expandable ? <span className={`text-[#534AB7] transition-transform ${isOpen ? "rotate-90" : ""}`}>▸</span> : null}
                             <span>{b.label}</span>
                           </span>
                         </td>
-                        <td className="px-3 py-2">{b.capPercent}%</td>
-                        <td className="px-3 py-2">₹{Math.round(b.capAmount).toLocaleString("en-IN")}</td>
-                        <td className="px-3 py-2">₹{Math.round(b.actual).toLocaleString("en-IN")}</td>
-                        <td className="px-3 py-2">{status}</td>
+                        <td className="px-3 py-2 font-semibold tabular-nums">{b.capPercent}%</td>
+                        <td className="px-3 py-2 font-semibold tabular-nums">₹{Math.round(b.capAmount).toLocaleString("en-IN")}</td>
+                        <td className="px-3 py-2 font-semibold tabular-nums">₹{Math.round(b.actual).toLocaleString("en-IN")}</td>
+                        <td className="px-3 py-2 font-semibold">{status}</td>
                       </tr>
                       {expandable && isOpen ? (
                         <tr>
                           <td colSpan={5} className="border-t border-[#E8E6F0] bg-[#F7F7F4] px-4 py-2">
                             {items.map((item) => (
-                              <div key={item.label} className="flex justify-between py-1 text-[13px] text-[#5F5E5A]">
+                              <div key={item.label} className="flex justify-between py-1 text-[13px] text-[#454442]">
                                 <span>{item.label}</span>
-                                <span>₹{Math.round(item.value || 0).toLocaleString("en-IN")}</span>
+                                <span className="font-semibold tabular-nums text-[#111110]">
+                                  ₹{Math.round(item.value || 0).toLocaleString("en-IN")}
+                                </span>
                               </div>
                             ))}
                             <div className="flex justify-between py-1 text-[13px] font-bold text-[#111110]">
                               <span>Total</span>
-                              <span>₹{Math.round(total).toLocaleString("en-IN")}</span>
+                              <span className="tabular-nums">₹{Math.round(total).toLocaleString("en-IN")}</span>
                             </div>
                           </td>
                         </tr>
@@ -587,7 +696,15 @@ export default function AnalyseResultPage() {
                     </Fragment>
                   );
                 })}
-                <tr className="border-t border-[#EFEDE7] bg-[#F7F7F4]"><td className="px-3 py-2 font-semibold">Unallocated</td><td className="px-3 py-2">—</td><td className="px-3 py-2">—</td><td className="px-3 py-2">₹{Math.max(0, income - buckets.reduce((s, b) => s + b.actual, 0)).toLocaleString("en-IN")}</td><td className="px-3 py-2">—</td></tr>
+                <tr className="border-t border-[#EFEDE7] bg-[#F7F7F4]">
+                  <td className="px-3 py-2 font-semibold text-[#111110]">Unallocated</td>
+                  <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                  <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                  <td className="px-3 py-2 font-semibold tabular-nums text-[#111110]">
+                    ₹{Math.max(0, income - buckets.reduce((s, b) => s + b.actual, 0)).toLocaleString("en-IN")}
+                  </td>
+                  <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -598,12 +715,18 @@ export default function AnalyseResultPage() {
           <div className="mt-3 rounded-2xl bg-[#FAFAFE] p-3">
             <SpeedoMeter {...buildSpeedoMeterProps(lastSubmission)} title="" />
           </div>
-          <ul className="mt-3 list-disc pl-5 text-sm text-[#7A7871]"><li>Needs should stay close to cap for stability.</li><li>Loan ratio under 40% improves flexibility.</li><li>Investment consistency drives score growth.</li></ul>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm font-medium leading-relaxed text-[#454442]">
+            <li>Needs should stay close to cap for stability.</li>
+            <li>Loan ratio under 40% improves flexibility.</li>
+            <li>Investment consistency drives score growth.</li>
+          </ul>
         </section>
 
         <section className="rounded-2xl bg-white p-5">
           <h2 className="text-xl font-semibold">Your financial safety net</h2>
-          <p className="text-sm text-[#7A7871]">Emergency fund · insurance cover · medical reserve · debt protection · goal readiness</p>
+          <p className="text-sm font-medium leading-relaxed text-[#454442]">
+            Emergency fund · insurance cover · medical reserve · debt protection · goal readiness
+          </p>
           <div className="mt-3 space-y-2">
             {safetyItems.map((item) => (
               <div key={item.id} className="flex items-center justify-between rounded-xl border border-[#ECEAF5] p-3">
@@ -611,7 +734,7 @@ export default function AnalyseResultPage() {
                   <p className="font-semibold">
                     {item.icon} {item.title}
                   </p>
-                  <p className="text-[#7A7871]">
+                  <p className="text-[13px] font-medium leading-snug text-[#454442]">
                     Current {item.formatCurrent(item.current)} vs target {item.formatTarget(item.target)}
                   </p>
                 </div>
@@ -632,7 +755,7 @@ export default function AnalyseResultPage() {
             ))}
           </div>
           {(safetyItems.find((i: any) => i.id === "term") as any)?.infoText ? (
-            <p className="mt-2 text-xs text-[#7A7871]">
+            <p className="mt-2 text-xs font-medium leading-relaxed text-[#5F5E5A]">
               {(safetyItems.find((i: any) => i.id === "term") as any).infoText}
             </p>
           ) : null}
@@ -641,7 +764,7 @@ export default function AnalyseResultPage() {
               {(safetyItems.find((i: any) => i.id === "term") as any).actionLabel}
             </button>
           ) : null}
-          <p className="mt-3 text-sm text-[#7A7871]">{completeCount} of 5 in place</p>
+          <p className="mt-3 text-sm font-semibold text-[#454442]">{completeCount} of 5 in place</p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ECEAF5]"><div className="h-full bg-[#534AB7]" style={{ width: `${(completeCount / 5) * 100}%` }} /></div>
         </section>
 
@@ -649,14 +772,16 @@ export default function AnalyseResultPage() {
           <h2 className="text-xl font-semibold">Your personalised 12-month plan</h2>
           <div className="mt-3 rounded-xl bg-[#F7F6FE] p-3 text-sm">
             <p className="font-medium">✓ Step 1: {priorityPlan.priorities[0]?.title || "Emergency fund"}</p>
-            <p className="mt-1 text-[#7A7871]">{priorityPlan.priorities[0]?.actionThisWeek || "Start building your safety layer."}</p>
+            <p className="mt-1 font-medium leading-relaxed text-[#454442]">
+              {priorityPlan.priorities[0]?.actionThisWeek || "Start building your safety layer."}
+            </p>
             <p className="mt-3 blur-[2px]">🔒 Step 2: [blurred] — unlock to see</p>
             <p className="blur-[2px]">🔒 Step 3: [blurred] — unlock to see</p>
-            <p className="mt-2 text-xs text-[#7A7871]">+ 8 more personalised steps</p>
+            <p className="mt-2 text-xs font-medium text-[#5F5E5A]">+ 8 more personalised steps</p>
           </div>
           <div className="mt-4 rounded-xl border border-[#E8E6F0] p-4">
             <p className="text-lg font-semibold">Your complete financial roadmap</p>
-            <p className="text-sm text-[#7A7871]">₹99 one-time · Yours forever</p>
+            <p className="text-sm font-medium text-[#454442]">₹99 one-time · Yours forever</p>
             <p className="mt-2 text-sm text-[#534AB7]">
               Pay ₹99 · Earn Finkoin Keys (FK) for activity — redeem them as discounts on insurance from Finkoin, not on this unlock.
             </p>
@@ -675,8 +800,8 @@ export default function AnalyseResultPage() {
             ) : null}
             <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance from Finkoin</li></ul>
             <button onClick={() => void handleUnlockClick()} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">Get my complete financial plan →</button>
-            <p className="mt-2 text-center text-xs text-[#7A7871]">{ctaCopy.subText}</p>
-            <p className="mt-2 text-center text-xs text-[#9B9A94]">Educational only</p>
+            <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">{ctaCopy.subText}</p>
+            <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">Educational only</p>
           </div>
         </section>
       </div>

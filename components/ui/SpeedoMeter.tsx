@@ -369,7 +369,7 @@ function GaugesBlock({
   const investCapLabel = `min ${INVEST_FLOOR_PCT}% · cap ${Math.round(investCap * 100)}%`;
 
   return (
-    <div className="grid grid-cols-4 gap-1 sm:gap-3">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
       <GaugeColumn
         title="Needs"
         labelColor={COLORS.needs}
@@ -566,7 +566,7 @@ export default function SpeedoMeter({
           <text x="70" y="56" textAnchor="middle" className="fill-slate-900 text-[20px] font-bold">
             {Math.round(score)}
           </text>
-          <text x="70" y="68" textAnchor="middle" className="fill-slate-500 text-[10px]">
+          <text x="70" y="68" textAnchor="middle" className="fill-slate-700 text-[10px] font-semibold">
             /100
           </text>
         </svg>
@@ -592,7 +592,7 @@ export default function SpeedoMeter({
       <GaugesBlock props={props} compact={false} anim={anim} />
       <ChipsRow props={props} />
       <InsightBlock props={props} />
-      <p className="mt-3 text-center text-[0.65rem] text-slate-500">
+      <p className="mt-3 text-center text-[0.65rem] font-medium text-slate-600">
         Monthly figures; yearly premiums use a monthly equivalent (÷12).
       </p>
     </section>

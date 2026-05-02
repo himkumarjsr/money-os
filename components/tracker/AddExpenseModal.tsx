@@ -135,11 +135,15 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
               background: "#F7F7F4",
               border: "none",
               borderRadius: 8,
-              width: 32,
-              height: 32,
+              width: 36,
+              height: 36,
               cursor: "pointer",
-              fontSize: 16,
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#111110",
+              lineHeight: 1,
             }}
+            aria-label="Close"
           >
             ✕
           </button>

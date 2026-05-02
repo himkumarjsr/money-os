@@ -276,14 +276,14 @@ export function PaywallModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            className="rounded-lg p-2 text-lg font-semibold leading-none text-slate-900 hover:bg-slate-100"
             aria-label="Close"
           >
             ✕
           </button>
         </div>
 
-        <p className="mt-3 text-xs text-[#7A7871]">
+        <p className="mt-3 text-xs font-medium leading-relaxed text-[#454442]">
           Finkoin Keys (FK) are for rewards on Finkoin — use them for discounts when you buy insurance here. They do not reduce this unlock price.
         </p>
 

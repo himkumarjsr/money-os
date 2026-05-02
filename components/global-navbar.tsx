@@ -363,7 +363,7 @@ export function GlobalNavbar() {
               </p>
               <button
                 type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-700"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xl font-semibold leading-none text-[#111110]"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close menu"
               >

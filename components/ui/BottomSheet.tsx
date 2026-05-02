@@ -79,7 +79,7 @@ export default function BottomSheet({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F4F4F0] text-base text-slate-700"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F4F4F0] text-xl font-semibold leading-none text-[#111110]"
             aria-label="Close sheet"
           >
             ×

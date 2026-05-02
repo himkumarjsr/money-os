@@ -113,24 +113,28 @@ export default function CalculatorPage() {
   }, [display, fresh, pendingOp, read, stored]);
 
   const btn =
-    "flex h-14 items-center justify-center rounded-2xl text-lg font-semibold active:scale-[0.97] transition select-none touch-manipulation";
+    "flex min-h-[4.25rem] items-center justify-center rounded-2xl text-xl font-semibold shadow-sm active:scale-[0.97] transition select-none touch-manipulation sm:min-h-[3.75rem] sm:text-lg";
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-28 pt-6 md:pb-10">
-      <h1 className="mb-1 text-center text-sm font-semibold uppercase tracking-wide text-[#534AB7]">Calculator</h1>
-      <p className="mb-6 text-center text-xs text-slate-500">Quick sums — not tax or SIP tools</p>
+    <div className="mx-auto flex min-h-[calc(100dvh-5.5rem)] w-full max-w-lg flex-col px-3 pb-28 pt-4 sm:min-h-0 sm:px-4 md:pb-10">
+      <h1 className="mb-1 text-center text-base font-semibold uppercase tracking-wide text-[#534AB7] sm:text-sm">
+        Calculator
+      </h1>
+      <p className="mb-4 text-center text-sm text-slate-600 sm:mb-6 sm:text-xs sm:text-slate-500">
+        Quick sums — not tax or SIP tools
+      </p>
 
-      <div className="overflow-hidden rounded-3xl border border-[#E8E6F0] bg-[#111110] p-4 shadow-lg">
-        <div className="mb-4 min-h-[3.5rem] text-right font-mono text-4xl font-medium tabular-nums text-white">
+      <div className="mt-auto overflow-hidden rounded-[28px] border border-[#E8E6F0] bg-[#111110] p-3 shadow-xl sm:mt-0 sm:p-4">
+        <div className="mb-3 min-h-[4rem] overflow-x-auto whitespace-nowrap text-right font-mono text-[length:clamp(2rem,10vw,2.75rem)] font-medium tabular-nums leading-tight text-white sm:mb-4 sm:min-h-[3.5rem] sm:text-4xl">
           {display}
         </div>
         {stored !== null && pendingOp ? (
-          <div className="mb-2 text-right text-xs text-white/50">
+          <div className="mb-2 text-right text-sm text-white/70 sm:text-xs sm:text-white/50">
             {formatDisplay(stored)} {pendingOp}
           </div>
         ) : null}
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2.5 sm:gap-2">
           <button type="button" className={`${btn} bg-[#5C5C5E] text-white`} onClick={clearAll}>
             AC
           </button>

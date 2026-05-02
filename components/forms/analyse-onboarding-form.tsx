@@ -1458,7 +1458,7 @@ export function AnalyseOnboardingForm() {
                     <button
                       type="button"
                       onClick={() => removeUnifiedLoan(index)}
-                      className="absolute right-3 top-3 border-none bg-transparent text-lg leading-none text-[#9B9A94]"
+                      className="absolute right-3 top-3 border-none bg-transparent text-xl font-semibold leading-none text-[#111110] hover:text-[#534AB7]"
                     >
                       ×
                     </button>
@@ -2018,7 +2018,7 @@ export function AnalyseOnboardingForm() {
                           <button
                             type="button"
                             onClick={() => removeOtherInsurance(index)}
-                            className="text-sm font-medium text-slate-500 hover:text-slate-900"
+                            className="text-lg font-semibold leading-none text-[#111110] hover:text-slate-900"
                           >
                             ×
                           </button>
