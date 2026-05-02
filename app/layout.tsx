@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import AppInitializer from "@/components/AppInitializer";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
+import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
 import { SEO_CONFIG } from "@/lib/seo";
@@ -153,7 +154,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans">
+      <body className="font-sans min-h-dvh flex flex-col bg-white antialiased">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
@@ -164,7 +165,10 @@ export default function RootLayout({
           <FinancialStoreAuthSync />
           <GlobalNavbar />
           <RenewalReminderBanner />
-          <main className="relative">{children}</main>
+          <main id="main-content" className="relative flex min-h-0 flex-1 flex-col">
+            {children}
+          </main>
+          <Footer />
           <Toast />
         </AppInitializer>
       </body>

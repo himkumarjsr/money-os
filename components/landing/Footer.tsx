@@ -66,7 +66,11 @@ const socialLinks = [
 
 export default function Footer() {
   return (
-    <footer className="relative mt-16 overflow-hidden bg-gradient-to-br from-[#161430] via-[#221944] to-[#0d0d17] text-white">
+    <footer
+      className="relative w-full shrink-0 overflow-hidden border-t border-white/10 bg-gradient-to-br from-[#161430] via-[#221944] to-[#0d0d17] text-white shadow-[0_-12px_40px_rgba(22,20,48,0.12)]"
+      role="contentinfo"
+      aria-label="Site footer"
+    >
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/60 to-transparent"
         aria-hidden

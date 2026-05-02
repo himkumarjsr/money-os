@@ -1,7 +1,6 @@
 "use client";
 
 import FeatureCardsCarousel from "@/components/landing/FeatureCardsCarousel";
-import Footer from "@/components/landing/Footer";
 import { ButtonLink } from "@/components/ui/button";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
@@ -411,8 +410,6 @@ export default function HomePage() {
           </div>
         </StorySection>
       </main>
-
-      <Footer />
     </div>
   );
 }
