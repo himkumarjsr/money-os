@@ -402,58 +402,173 @@ export function GlobalNavbar() {
 
       <nav
         aria-label="Mobile quick navigation"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E8E6F0] bg-white/95 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 shadow-[0_-6px_20px_rgba(30,30,60,0.08)] backdrop-blur md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#E8E6F0] bg-white pb-[calc(env(safe-area-inset-bottom)+10px)] pt-1 shadow-[0_-4px_24px_rgba(30,30,60,0.06)] md:hidden"
       >
-        <div className="mx-auto grid max-w-md grid-cols-5 items-end gap-1">
-          {(() => {
-            const calcActive = pathname === "/calculator";
-            return (
-              <Link href="/calculator" scroll className={`col-start-1 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${calcActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
-                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${calcActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>🧮</span>
-                <span>Calci</span>
-              </Link>
-            );
-          })()}
+        <div className="relative mx-auto max-w-md px-1">
+          <div className="grid grid-cols-5 items-end gap-0.5">
+            <Link
+              href="/"
+              scroll
+              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${pathname === "/" ? "text-[#534AB7]" : "text-[#9B9A94]"}`}
+            >
+              <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className={`text-[11px] leading-none ${pathname === "/" ? "font-semibold" : "font-medium"}`}>Home</span>
+              <span
+                className={`h-1 w-1 shrink-0 rounded-full ${pathname === "/" ? "bg-[#534AB7]" : "bg-transparent"}`}
+                aria-hidden
+              />
+            </Link>
 
-          {(() => {
-            const trackerActive = pathname === "/learn" || pathname.startsWith("/learn/");
-            return (
-              <Link href="/tracker" scroll className={`col-start-3 mb-[-14px] inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${trackerActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#534AB7] text-base text-white shadow-md shadow-indigo-500/30">📒</span>
-                <span>Learn</span>
-              </Link>
-            );
-          })()}
+            <Link
+              href="/analyse"
+              scroll
+              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
+                pathname === "/analyse" || pathname.startsWith("/analyse/") ? "text-[#534AB7]" : "text-[#9B9A94]"
+              }`}
+            >
+              <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span
+                className={`text-[11px] leading-none ${
+                  pathname === "/analyse" || pathname.startsWith("/analyse/") ? "font-semibold" : "font-medium"
+                }`}
+              >
+                Report
+              </span>
+              <span
+                className={`h-1 w-1 shrink-0 rounded-full ${
+                  pathname === "/analyse" || pathname.startsWith("/analyse/") ? "bg-[#534AB7]" : "bg-transparent"
+                }`}
+                aria-hidden
+              />
+            </Link>
 
-          {(() => {
-            const trackerActive = pathname === "/tracker" || pathname.startsWith("/tracker/");
-            return (
-              <Link href="/tracker" scroll className={`col-start-3 mb-[-14px] inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${trackerActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#534AB7] text-base text-white shadow-md shadow-indigo-500/30">📒</span>
-                <span>Tracker</span>
-              </Link>
-            );
-          })()}
+            <Link
+              href="/tracker"
+              scroll
+              className="relative flex w-full min-h-[64px] flex-col items-center justify-end gap-0.5 pb-1 pt-2 outline-none"
+            >
+              <span className="relative z-10 -mt-5 mb-0.5 flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-white p-1 shadow-[0_2px_12px_rgba(0,0,0,0.1)] ring-1 ring-[#E8E6F0]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#534AB7] text-[28px] font-light leading-none text-white shadow-[0_4px_16px_rgba(83,74,183,0.45)]">
+                  +
+                </span>
+              </span>
+              <span
+                className={`text-[11px] leading-none ${
+                  pathname === "/tracker" || pathname.startsWith("/tracker/") ? "font-semibold text-[#534AB7]" : "font-medium text-[#9B9A94]"
+                }`}
+              >
+                Track
+              </span>
+              <span
+                className={`h-1 w-1 shrink-0 rounded-full ${
+                  pathname === "/tracker" || pathname.startsWith("/tracker/") ? "bg-[#534AB7]" : "bg-transparent"
+                }`}
+                aria-hidden
+              />
+            </Link>
 
-          {(() => {
-            const analyseActive = pathname === "/analyse" || pathname.startsWith("/analyse/");
-            return (
-              <Link href="/analyse" scroll className={`col-start-4 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${analyseActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
-                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${analyseActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>📊</span>
-                <span>Analyse</span>
-              </Link>
-            );
-          })()}
+            <Link
+              href="/calculators"
+              scroll
+              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
+                pathname === "/calculators" || pathname === "/calculator" || pathname.startsWith("/calculators/")
+                  ? "text-[#534AB7]"
+                  : "text-[#9B9A94]"
+              }`}
+            >
+              <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span
+                className={`text-[11px] leading-none ${
+                  pathname === "/calculators" || pathname === "/calculator" || pathname.startsWith("/calculators/")
+                    ? "font-semibold"
+                    : "font-medium"
+                }`}
+              >
+                Calculators
+              </span>
+              <span
+                className={`h-1 w-1 shrink-0 rounded-full ${
+                  pathname === "/calculators" || pathname === "/calculator" || pathname.startsWith("/calculators/")
+                    ? "bg-[#534AB7]"
+                    : "bg-transparent"
+                }`}
+                aria-hidden
+              />
+            </Link>
 
-          {(() => {
-            const profileActive = pathname === "/profile" || pathname.startsWith("/");
-            return (
-              <Link href="/profile" scroll className={`col-start-5 inline-flex flex-col items-center justify-center gap-1 rounded-xl py-1 text-[11px] font-semibold transition ${profileActive ? "text-[#534AB7]" : "text-slate-500 hover:text-slate-700"}`}>
-                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base ${profileActive ? "bg-[#EEEDFE]" : "bg-[#F7F7FA]"}`}>👤</span>
-                <span>Home</span>
-              </Link>
-            );
-          })()}
+            <Link
+              href="/profile"
+              scroll
+              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
+                pathname === "/profile" || pathname.startsWith("/profile/") ? "text-[#534AB7]" : "text-[#9B9A94]"
+              }`}
+            >
+              <span className="relative inline-flex h-7 w-7 items-center justify-center">
+                {!isLoggedIn ? (
+                  <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-[#E8E6F0] bg-[#F4F2FC]">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <circle cx="12" cy="8" r="4" stroke="#534AB7" strokeWidth="1.5" />
+                      <path
+                        d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5"
+                        stroke="#534AB7"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                ) : user?.photoURL ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.photoURL} alt="" className="h-7 w-7 rounded-full border border-[#E8E6F0] object-cover" />
+                ) : (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8E6F0] bg-[#534AB7] text-xs font-bold text-white">
+                    {avatarLetter}
+                  </span>
+                )}
+                {isLoggedIn ? (
+                  <span className="absolute -right-1 -top-0.5 min-h-[16px] min-w-[16px] rounded bg-[#534AB7] px-1 text-[9px] font-bold leading-[14px] text-white">
+                    {fkBalance > 999 ? "999+" : fkBalance}
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className={`text-[11px] leading-none ${
+                  pathname === "/profile" || pathname.startsWith("/profile/") ? "font-semibold" : "font-medium"
+                }`}
+              >
+                Profile
+              </span>
+              <span
+                className={`h-1 w-1 shrink-0 rounded-full ${
+                  pathname === "/profile" || pathname.startsWith("/profile/") ? "bg-[#534AB7]" : "bg-transparent"
+                }`}
+                aria-hidden
+              />
+            </Link>
+          </div>
         </div>
       </nav>
     </>
