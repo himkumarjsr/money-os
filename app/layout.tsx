@@ -74,6 +74,60 @@ export const metadata: Metadata = {
       "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
     images: [`${siteUrl}/assets/brand/finkoin-icon-1024.svg`],
   },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Finkoin",
+    startupImage: [
+      {
+        url: "/splash/apple-splash-2048-2732.png",
+        media: "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/splash/apple-splash-1668-2388.png",
+        media: "(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/splash/apple-splash-1536-2048.png",
+        media: "(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/splash/apple-splash-1125-2436.png",
+        media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      {
+        url: "/splash/apple-splash-1242-2688.png",
+        media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      {
+        url: "/splash/apple-splash-828-1792.png",
+        media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/splash/apple-splash-1242-2208.png",
+        media: "(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)",
+      },
+      {
+        url: "/splash/apple-splash-750-1334.png",
+        media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)",
+      },
+      {
+        url: "/splash/apple-splash-640-1136.png",
+        media: "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)",
+      },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "Finkoin",
+    "application-name": "Finkoin",
+    "msapplication-TileColor": "#534AB7",
+    "msapplication-tap-highlight": "no",
+    "format-detection": "telephone=no",
+  },
   icons: {
     icon: [
       {
@@ -81,9 +135,14 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
         sizes: "any",
       },
+      { url: "/icons/icon-192x192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512x512.png", type: "image/png", sizes: "512x512" },
     ],
     shortcut: "/assets/brand/finkoin-icon-1024.svg",
-    apple: "/assets/brand/finkoin-icon-1024.svg",
+    apple: [
+      { url: "/icons/icon-192x192.png", sizes: "192x192" },
+      { url: "/icons/icon-152x152.png", sizes: "152x152" },
+    ],
   },
 };
 
@@ -131,6 +190,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
+        <meta name="theme-color" content="#534AB7" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Finkoin" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

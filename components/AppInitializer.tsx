@@ -1,5 +1,6 @@
 "use client";
 
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
 
@@ -80,5 +81,10 @@ export default function AppInitializer({ children }: { children: React.ReactNode
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <PWAInstallPrompt />
+    </>
+  );
 }

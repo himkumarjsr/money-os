@@ -173,15 +173,15 @@ export default function HomePage() {
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" delay={0.02} aboveFold>
               <h1 className="mt-4 text-balance text-4xl font-bold leading-[1.04] tracking-tight text-slate-900 sm:mt-5 sm:text-5xl md:text-6xl">
-              Fix your finances with AI
+                Know your Financial Health Score
               </h1>
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" delay={0.1} aboveFold>
               <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:mt-6 sm:text-xl sm:leading-relaxed">
-              Track, analyze, and act on your finances with a guided plan tailored for India. Start free and get clarity instantly.
+              Free. 5 minutes. No PAN. No Aadhaar.
               </p>
             </AnimateOnScroll>
-            <div className="mt-10 flex flex-col items-center gap-4 sm:mt-12">
+            <div className="mt-3 flex flex-col items-center gap-4 sm:mt-3">
               <AnimateOnScroll variant="fadeUp" delay={0.2} aboveFold>
                 <div className="relative flex w-full max-w-md flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center">
                   <div
@@ -194,20 +194,20 @@ export default function HomePage() {
                     size="lg"
                     className="relative z-10 w-full bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-xl hover:shadow-indigo-500/35 active:scale-[0.99] sm:w-auto"
                   >
-                    Get My Financial Plan (Free)
+                    Check my score
                   </ButtonLink>
-                  <ButtonLink
+                  {/* <ButtonLink
                     href="/plans"
                     variant="ghost"
                     size="lg"
                     className="w-full border border-indigo-200/80 bg-white/70 text-indigo-700 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-white sm:w-auto"
                   >
                     See Pro Features
-                  </ButtonLink>
+                  </ButtonLink> */}
                 </div>
-                <p className="mt-3 text-center text-xs font-medium text-slate-500 sm:text-sm">
+                {/* <p className="mt-3 text-center text-xs font-medium text-slate-500 sm:text-sm">
                 Free to start • Takes 2 minutes • No credit card
-                </p>
+                </p> */}
                
               </AnimateOnScroll>
               <AnimateOnScroll variant="fadeUp" delay={0.3} aboveFold>
