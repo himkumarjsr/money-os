@@ -30,7 +30,9 @@ export default function MonthSummary({
                   <span className="shrink-0">{cat.emoji}</span>
                   <span className="min-w-0 font-medium leading-snug text-[#111110]">{cat.label}</span>
                   {cat.cap > 0 ? (
-                    <span className="shrink-0 text-[10px] font-semibold text-[#5F5E5A] sm:text-[11px]">({cat.cap}% cap)</span>
+                    <span className="shrink-0 text-[10px] font-semibold text-[#111110] sm:text-[11px] opacity-90">
+                      ({cat.cap}% cap)
+                    </span>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">

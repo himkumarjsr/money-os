@@ -70,6 +70,17 @@
     }
   }
 
+  /* iOS Safari: native date/month picks readable text on white/light backgrounds */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"],
+  input[type="time"] {
+    color: #111110 !important;
+    -webkit-text-fill-color: #111110 !important;
+    color-scheme: light;
+  }
+
   html::-webkit-scrollbar,
   body::-webkit-scrollbar {
     display: none;

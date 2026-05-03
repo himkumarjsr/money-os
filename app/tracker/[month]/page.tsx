@@ -31,6 +31,7 @@ function TrackerMonthContent() {
   const [transactions, setTransactions] = useState<TrackerTransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [modalDefaultBucket, setModalDefaultBucket] = useState<string | undefined>(undefined);
   const [editingExpense, setEditingExpense] = useState<TrackerTransactionRow | null>(null);
   const fetchReqId = useRef(0);
 
@@ -124,7 +125,7 @@ function TrackerMonthContent() {
 
   if (!parsed) {
     return (
-      <div className="flex h-[40vh] items-center justify-center text-sm text-[#9B9A94]">
+      <div className="flex h-[40vh] items-center justify-center text-sm text-[#111110]">
         Redirecting…
       </div>
     );
@@ -165,28 +166,52 @@ function TrackerMonthContent() {
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111110", margin: 0 }}>
             {parsed.monthName} {parsed.year}
           </h1>
-          <p style={{ fontSize: 13, color: "#9B9A94", margin: "4px 0 0" }}>All transactions</p>
+          <p style={{ fontSize: 13, color: "#111110", margin: "4px 0 0", opacity: 0.88 }}>All transactions</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingExpense(null);
-            setShowAddModal(true);
-          }}
-          style={{
-            height: 44,
-            padding: "0 20px",
-            borderRadius: 12,
-            background: "#534AB7",
-            color: "white",
-            border: "none",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          + Add
-        </button>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingExpense(null);
+              setModalDefaultBucket("income");
+              setShowAddModal(true);
+            }}
+            style={{
+              height: 44,
+              padding: "0 16px",
+              borderRadius: 12,
+              background: "#E8F8EF",
+              color: "#1D9E75",
+              border: "1.5px solid #1D9E75",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            + Add income
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingExpense(null);
+              setModalDefaultBucket(undefined);
+              setShowAddModal(true);
+            }}
+            style={{
+              height: 44,
+              padding: "0 16px",
+              borderRadius: 12,
+              background: "#534AB7",
+              color: "white",
+              border: "none",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            + Add expense
+          </button>
+        </div>
       </div>
 
       <div
@@ -207,12 +232,12 @@ function TrackerMonthContent() {
 
       <div style={{ background: "white", border: "1px solid #E8E6F0", borderRadius: 16, overflow: "hidden" }}>
         <div style={{ padding: "16px", borderBottom: "1px solid #F0EFF8" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#9B9A94", textTransform: "uppercase" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#111110", textTransform: "uppercase" }}>
             ALL TRANSACTIONS
           </span>
         </div>
         {loading ? (
-          <div style={{ padding: "32px", textAlign: "center", color: "#9B9A94" }}>Loading...</div>
+          <div style={{ padding: "32px", textAlign: "center", color: "#111110" }}>Loading...</div>
         ) : (
           <ExpenseTable
             transactions={transactions}
@@ -227,6 +252,7 @@ function TrackerMonthContent() {
 
       {showAddModal ? (
         <AddExpenseModal
+          defaultBucket={editingExpense ? editingExpense.bucket : modalDefaultBucket}
           defaultDate={defaultDateForModal}
           editExpense={
             editingExpense
@@ -244,10 +270,12 @@ function TrackerMonthContent() {
           onClose={() => {
             setShowAddModal(false);
             setEditingExpense(null);
+            setModalDefaultBucket(undefined);
           }}
           onSaved={() => {
             setShowAddModal(false);
             setEditingExpense(null);
+            setModalDefaultBucket(undefined);
             void fetchTransactions();
           }}
         />

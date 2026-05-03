@@ -109,6 +109,7 @@ function TrackerContent() {
   const [transactions, setTransactions] = useState<TrackerTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBucket, setExpandedBucket] = useState<string | null>("needs");
+  const [expandedIncome, setExpandedIncome] = useState(true);
   const [defaultBucket, setDefaultBucket] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -208,6 +209,21 @@ function TrackerContent() {
     };
   }, [hasConsent, user?.id]);
 
+  const deleteTransaction = useCallback(
+    async (id: string) => {
+      if (!user?.id) return;
+      if (!window.confirm("Remove this entry?")) return;
+      try {
+        const supabase = getSupabase();
+        await supabase.from("expense_transactions").delete().eq("id", id).eq("user_id", user.id);
+        void fetchTransactions();
+      } catch (e) {
+        console.warn("tracker delete failed", e);
+      }
+    },
+    [user?.id, fetchTransactions],
+  );
+
   if (hasConsent === null) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -228,9 +244,9 @@ function TrackerContent() {
     {} as Record<string, number>,
   );
 
-  const monthlyIncome = transactions
-    .filter((t) => t.bucket === "income")
-    .reduce((a, t) => a + Number(t.amount), 0);
+  const incomeTxns = transactions.filter((t) => t.bucket === "income");
+  const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
+  const incomeCat = TRACKER_CATEGORIES.income;
   const displayIncome = monthlyIncome || profileMonthlyFromDb;
   const totalSpent = transactions
     .filter((t) => t.bucket !== "income")
@@ -311,23 +327,182 @@ function TrackerContent() {
             <div style={{ height: "100%", width: `${spentPercent}%`, background: spentPercent > 90 ? "#FF6B6B" : spentPercent > 70 ? "#FFD93D" : "#6BCB77", borderRadius: 4, transition: "width 0.5s ease" }} />
           </div>
         </div>
-        {displayIncome === 0 ? (
-          <button
-            type="button"
-            onClick={() => {
-              setDefaultBucket("income");
-              setEditingExpense(null);
-              setShowAddModal(true);
-            }}
-            style={{ marginTop: 12, width: "100%", height: 36, background: "rgba(255,255,255,0.2)", border: "1px dashed rgba(255,255,255,0.5)", borderRadius: 8, color: "white", fontSize: 13, cursor: "pointer" }}
-          >
-            + Add your monthly income
-          </button>
-        ) : null}
       </div>
 
+      {!loading ? (
+        <div
+          style={{
+            background: "white",
+            border: `1.5px solid ${expandedIncome ? incomeCat.color : "#E8E6F0"}`,
+            borderRadius: 16,
+            marginBottom: 10,
+            overflow: "hidden",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setExpandedIncome((e) => !e)}
+            style={{
+              width: "100%",
+              padding: "16px",
+              cursor: "pointer",
+              border: "none",
+              background: "white",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: `${incomeCat.color}15`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 20,
+                  }}
+                >
+                  {incomeCat.emoji}
+                </div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#111110" }}>{incomeCat.label}</div>
+                  <div style={{ fontSize: 12, color: "#111110", opacity: 0.85 }}>
+                    {incomeTxns.length} {incomeTxns.length === 1 ? "entry" : "entries"}
+                    {monthlyIncome === 0 && profileMonthlyFromDb > 0
+                      ? ` · ₹${profileMonthlyFromDb.toLocaleString("en-IN")} from profile`
+                      : ""}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#111110" }}>
+                  ₹{monthlyIncome.toLocaleString("en-IN")}
+                </div>
+                <span style={{ fontSize: 14, color: "#111110", transform: expandedIncome ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+              </div>
+            </div>
+          </button>
+          {expandedIncome ? (
+            <div style={{ borderTop: "1px solid #F0EFF8" }}>
+              {incomeTxns.length > 0 ? (
+                <div style={{ padding: "8px 16px 12px", display: "grid", gap: 8 }}>
+                  {incomeTxns.map((txn) => {
+                    const sub = incomeCat.subcategories.find((s) => s.id === (txn.subcategory ?? txn.category));
+                    const dateLabel = new Date(txn.date).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    });
+                    return (
+                      <div
+                        key={txn.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          borderRadius: 8,
+                          background: "#F9F9FC",
+                          padding: "10px 12px",
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#111110" }}>
+                            ₹{Number(txn.amount).toLocaleString("en-IN")}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#111110", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {sub?.label ?? txn.category} · {txn.description?.trim() || dateLabel}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            aria-label="Edit income"
+                            title="Edit income"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDefaultBucket("income");
+                              setEditingExpense(txn);
+                              setShowAddModal(true);
+                            }}
+                            style={{
+                              border: "none",
+                              background: "transparent",
+                              color: "#534AB7",
+                              fontSize: 14,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              padding: "6px 8px",
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Delete income"
+                            title="Delete income"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void deleteTransaction(txn.id);
+                            }}
+                            style={{
+                              border: "none",
+                              background: "transparent",
+                              color: "#E24B4A",
+                              fontSize: 14,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              padding: "6px 8px",
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ padding: "16px", textAlign: "center", color: "#111110", fontSize: 13 }}>
+                  {profileMonthlyFromDb > 0
+                    ? `No income logged yet. Your dashboard shows ₹${profileMonthlyFromDb.toLocaleString("en-IN")} from your profile — tap Add income to record it here.`
+                    : "No income logged this month. Tap Add income to get started."}
+                </div>
+              )}
+              <div style={{ padding: "12px 16px 16px" }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDefaultBucket("income");
+                    setEditingExpense(null);
+                    setShowAddModal(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    height: 44,
+                    borderRadius: 10,
+                    background: `${incomeCat.color}18`,
+                    border: `1.5px dashed ${incomeCat.color}`,
+                    color: incomeCat.color,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add income
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {loading ? (
-        <div style={{ padding: "32px", textAlign: "center", color: "#9B9A94", fontSize: 14 }}>Loading...</div>
+        <div style={{ padding: "32px", textAlign: "center", color: "#111110", fontSize: 14 }}>Loading...</div>
       ) : (
         <>
           {buckets.map((bucketKey) => {
@@ -356,15 +531,31 @@ function TrackerContent() {
                       <div style={{ width: 40, height: 40, borderRadius: 12, background: `${cat.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{cat.emoji}</div>
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: "#111110" }}>{cat.label}</div>
-                        <div style={{ fontSize: 12, color: "#9B9A94" }}>{bucketTxns.length} items{cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}</div>
+                        <div style={{ fontSize: 12, color: "#111110", opacity: 0.88 }}>
+                          {bucketTxns.length} items{cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
+                        </div>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 16, fontWeight: 800, color: overBudget ? "#E24B4A" : "#111110" }}>₹{bucketTotal.toLocaleString("en-IN")}</div>
-                        {budgetAmount > 0 ? <div style={{ fontSize: 11, color: "#9B9A94" }}>of ₹{budgetAmount.toLocaleString("en-IN")}</div> : null}
+                        {budgetAmount > 0 ? (
+                          <div style={{ fontSize: 11, color: "#111110", opacity: 0.88 }}>
+                            of ₹{budgetAmount.toLocaleString("en-IN")}
+                          </div>
+                        ) : null}
                       </div>
-                      <div style={{ fontSize: 14, color: "#9B9A94", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "none" }}>▼</div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "#111110",
+                          opacity: 0.75,
+                          transition: "transform 0.2s",
+                          transform: isExpanded ? "rotate(180deg)" : "none",
+                        }}
+                      >
+                        ▼
+                      </div>
                     </div>
                   </div>
                   {budgetAmount > 0 ? (
@@ -389,32 +580,88 @@ function TrackerContent() {
                                 <span style={{ fontSize: 16 }}>{sub?.emoji || "💸"}</span>
                                 <div>
                                   <div style={{ fontSize: 14, color: "#111110", fontWeight: 500 }}>{sub?.label || subId}</div>
-                                  <div style={{ fontSize: 12, color: "#9B9A94" }}>{txns.length} {txns.length === 1 ? "transaction" : "transactions"}</div>
+                                  <div style={{ fontSize: 12, color: "#111110", opacity: 0.88 }}>
+                                    {txns.length} {txns.length === 1 ? "transaction" : "transactions"}
+                                  </div>
                                 </div>
                               </div>
                               <div style={{ fontSize: 14, fontWeight: 700, color: "#111110" }}>₹{subTotal.toLocaleString("en-IN")}</div>
                             </div>
                             <div style={{ padding: "0 16px 10px 42px", display: "grid", gap: 8 }}>
                               {txns.map((txn) => (
-                                <div key={txn.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: 8, background: "#F9F9FC", padding: "6px 10px" }}>
-                                  <div style={{ minWidth: 0 }}>
-                                    <div style={{ fontSize: 12, color: "#111110", fontWeight: 600 }}>₹{Number(txn.amount).toLocaleString("en-IN")}</div>
-                                    <div style={{ fontSize: 11, color: "#9B9A94", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 220 }}>
+                                <div
+                                  key={txn.id}
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    borderRadius: 8,
+                                    background: "#F9F9FC",
+                                    padding: "8px 10px",
+                                    gap: 8,
+                                  }}
+                                >
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ fontSize: 12, color: "#111110", fontWeight: 700 }}>
+                                      ₹{Number(txn.amount).toLocaleString("en-IN")}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: 11,
+                                        color: "#111110",
+                                        fontWeight: 500,
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        maxWidth: 220,
+                                      }}
+                                    >
                                       {txn.description || new Date(txn.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                                     </div>
                                   </div>
-                                  <button
-                                    type="button"
-                                    aria-label="Edit expense"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingExpense(txn);
-                                      setShowAddModal(true);
-                                    }}
-                                    style={{ border: "none", background: "transparent", color: "#534AB7", fontSize: 15, cursor: "pointer", lineHeight: 1 }}
-                                  >
-                                    ✏️
-                                  </button>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                                    <button
+                                      type="button"
+                                      aria-label="Edit expense"
+                                      title="Edit expense"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingExpense(txn);
+                                        setShowAddModal(true);
+                                      }}
+                                      style={{
+                                        border: "none",
+                                        background: "transparent",
+                                        color: "#534AB7",
+                                        fontSize: 13,
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        padding: "6px 8px",
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label="Delete expense"
+                                      title="Delete expense"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void deleteTransaction(txn.id);
+                                      }}
+                                      style={{
+                                        border: "none",
+                                        background: "transparent",
+                                        color: "#E24B4A",
+                                        fontSize: 13,
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        padding: "6px 8px",
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -422,7 +669,9 @@ function TrackerContent() {
                         );
                       })
                     ) : (
-                      <div style={{ padding: "20px 16px", textAlign: "center", color: "#9B9A94", fontSize: 13 }}>No {cat.label.toLowerCase()} expenses this month</div>
+                      <div style={{ padding: "20px 16px", textAlign: "center", color: "#111110", fontSize: 13 }}>
+                        No {cat.label.toLowerCase()} expenses this month
+                      </div>
                     )}
                     <div style={{ padding: "12px 16px" }}>
                       <button
@@ -433,9 +682,19 @@ function TrackerContent() {
                           setEditingExpense(null);
                           setShowAddModal(true);
                         }}
-                        style={{ width: "100%", height: 40, borderRadius: 10, background: `${cat.color}15`, border: `1px dashed ${cat.color}`, color: cat.color, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                        style={{
+                          width: "100%",
+                          height: 40,
+                          borderRadius: 10,
+                          background: `${cat.color}15`,
+                          border: `1px dashed ${cat.color}`,
+                          color: cat.color,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
                       >
-                        + Add {cat.label} expense
+                        + Add expense · {cat.label}
                       </button>
                     </div>
                   </div>
@@ -449,7 +708,7 @@ function TrackerContent() {
 
       {showAddModal ? (
         <AddExpenseModal
-          defaultBucket={defaultBucket || undefined}
+          defaultBucket={editingExpense ? editingExpense.bucket : defaultBucket || undefined}
           editExpense={
             editingExpense
               ? {

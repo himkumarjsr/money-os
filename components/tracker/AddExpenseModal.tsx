@@ -5,7 +5,7 @@ import { handleMoneyInput } from "@/lib/formatters";
 import { getSupabase } from "@/lib/supabase";
 import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
 import { useAuthStore } from "@/store/authStore";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 
 interface AddExpenseModalProps {
   onClose: () => void;
@@ -23,6 +23,21 @@ interface AddExpenseModalProps {
   };
 }
 
+const FIELD_LABEL_COLOR = "#111110";
+const IOS_DATE_INPUT_STYLE: CSSProperties = {
+  width: "100%",
+  height: 48,
+  borderRadius: 12,
+  border: "1.5px solid #E8E6F0",
+  padding: "0 16px",
+  fontSize: 16,
+  boxSizing: "border-box",
+  color: "#111110",
+  WebkitTextFillColor: "#111110",
+  backgroundColor: "#ffffff",
+  opacity: 1,
+};
+
 export default function AddExpenseModal({ onClose, onSaved, defaultDate, defaultBucket, editExpense }: AddExpenseModalProps) {
   const user = useAuthStore((s) => s.user);
   const today = new Date().toISOString().split("T")[0];
@@ -37,6 +52,15 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
   const [error, setError] = useState("");
 
   const selectedBucket = bucket ? TRACKER_CATEGORIES[bucket as keyof typeof TRACKER_CATEGORIES] : null;
+  const isIncome = bucket === "income";
+  const modalTitle = editExpense
+    ? isIncome
+      ? "Edit income"
+      : "Edit expense"
+    : isIncome
+      ? "Add income"
+      : "Add expense";
+  const primaryCta = saving ? "Saving..." : editExpense ? (isIncome ? "Update income" : "Update expense") : isIncome ? "Save income" : "Save expense";
 
   const handleSave = async () => {
     if (!amount || !bucket || !subcategory) {
@@ -126,7 +150,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
               margin: 0,
             }}
           >
-            {editExpense ? "Edit Income" : "Add Income"}
+            {modalTitle}
           </h3>
           <button
             type="button"
@@ -152,7 +176,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
         <div style={{ marginBottom: 8 }}>
           <MoneyInput
             id="tracker-expense-amount"
-            label="Amount (₹)"
+            label={isIncome ? "Income amount (₹)" : "Expense amount (₹)"}
             placeholder="0"
             defaultValue={amount > 0 ? String(amount) : ""}
             onChange={(e) => {
@@ -167,7 +191,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             style={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#5F5E5A",
+              color: FIELD_LABEL_COLOR,
               display: "block",
               marginBottom: 6,
             }}
@@ -179,15 +203,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             value={date}
             onChange={(e) => setDate(e.target.value)}
             max={today}
-            style={{
-              width: "100%",
-              height: 48,
-              borderRadius: 12,
-              border: "1.5px solid #E8E6F0",
-              padding: "0 16px",
-              fontSize: 15,
-              boxSizing: "border-box",
-            }}
+            style={IOS_DATE_INPUT_STYLE}
           />
         </div>
 
@@ -197,7 +213,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             style={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#5F5E5A",
+              color: FIELD_LABEL_COLOR,
               display: "block",
               marginBottom: 8,
             }}
@@ -227,7 +243,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
                     cursor: "pointer",
                     fontSize: 11,
                     fontWeight: 600,
-                    color: bucket === key ? cat.color : "#5F5E5A",
+                    color: bucket === key ? cat.color : "#111110",
                     textAlign: "center",
                   }}
                 >
@@ -242,16 +258,16 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
         {selectedBucket ? (
           <div style={{ marginBottom: 16 }}>
             <label
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#5F5E5A",
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              Type
-            </label>
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: FIELD_LABEL_COLOR,
+              display: "block",
+              marginBottom: 8,
+            }}
+          >
+            Type
+          </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {selectedBucket.subcategories.map((sub) => (
                 <button
@@ -265,7 +281,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
                     background: subcategory === sub.id ? `${selectedBucket.color}15` : "white",
                     cursor: "pointer",
                     fontSize: 12,
-                    color: subcategory === sub.id ? selectedBucket.color : "#5F5E5A",
+                    color: subcategory === sub.id ? selectedBucket.color : "#111110",
                     fontWeight: subcategory === sub.id ? 700 : 400,
                   }}
                 >
@@ -281,7 +297,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             style={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#5F5E5A",
+              color: FIELD_LABEL_COLOR,
               display: "block",
               marginBottom: 6,
             }}
@@ -294,13 +310,9 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g. Zomato dinner order"
             style={{
-              width: "100%",
-              height: 48,
-              borderRadius: 12,
-              border: "1.5px solid #E8E6F0",
-              padding: "0 16px",
-              fontSize: 15,
-              boxSizing: "border-box",
+              ...IOS_DATE_INPUT_STYLE,
+              color: "#111110",
+              WebkitTextFillColor: "#111110",
             }}
           />
         </div>
@@ -311,7 +323,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             style={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#5F5E5A",
+              color: FIELD_LABEL_COLOR,
               display: "block",
               marginBottom: 8,
             }}
@@ -337,7 +349,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
                   background: paymentMethod === pm.id ? "#EEEDFE" : "white",
                   cursor: "pointer",
                   fontSize: 13,
-                  color: paymentMethod === pm.id ? "#534AB7" : "#5F5E5A",
+                  color: paymentMethod === pm.id ? "#534AB7" : "#111110",
                   fontWeight: paymentMethod === pm.id ? 700 : 400,
                 }}
               >
@@ -379,7 +391,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
             cursor: saving ? "not-allowed" : "pointer",
           }}
         >
-          {saving ? "Saving..." : editExpense ? "Update expense" : "Save expense"}
+          {primaryCta}
         </button>
       </div>
     </div>
