@@ -126,7 +126,7 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
               margin: 0,
             }}
           >
-            {editExpense ? "Edit expense" : "Add expense"}
+            {editExpense ? "Edit Income" : "Add Income"}
           </h3>
           <button
             type="button"

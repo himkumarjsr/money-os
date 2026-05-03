@@ -6,7 +6,8 @@ import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { supabase } from "@/lib/supabase";
-import { analyseFinances } from "@/lib/financialEngine";
+import { analyseFinances, monthlyTotalIncome } from "@/lib/financialEngine";
+import { getUniversalBucketActuals } from "@/lib/universal-buckets";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useRouter } from "next/navigation";
@@ -174,7 +175,6 @@ export default function AnalyseResultPage() {
       goldValue: lastSubmission?.goldValue,
     });
   }
-  const income = (lastSubmission?.monthlySalary || 0) + (lastSubmission?.spouseIncome || 0) + (lastSubmission?.otherIncome || 0);
   const foodActual =
     (lastSubmission?.foodTotal || 0) > 0
       ? (lastSubmission?.foodTotal || 0)
@@ -191,10 +191,6 @@ export default function AnalyseResultPage() {
     (lastSubmission?.domesticHelpTotal || 0) > 0
       ? (lastSubmission?.domesticHelpTotal || 0)
       : (lastSubmission?.houseHelpMonthly || 0) + (lastSubmission?.cookHelpMonthly || 0);
-  const lifestyleActual =
-    (lastSubmission?.lifestyleTotal || 0) > 0
-      ? (lastSubmission?.lifestyleTotal || 0)
-      : (lastSubmission?.entertainment || 0) + (lastSubmission?.shopping || 0) + (lastSubmission?.personalCare || 0);
   const dedupedAdditionalObligations = Array.from(
     new Map(
       ((profile.additionalObligations || []) as any[])
@@ -209,33 +205,15 @@ export default function AnalyseResultPage() {
         }),
     ).values(),
   );
-  const needsActual =
-    (lastSubmission?.rentAmount || 0) +
-    (lastSubmission?.rentMaintenanceMonthly || 0) +
-    foodActual +
-    transportActual +
-    utilityActual +
-    domesticActual +
-    (lastSubmission?.kidsSchoolFees || 0) +
-    (lastSubmission?.kidsActivities || 0) +
-    (lastSubmission?.parentsSupport || 0);
-  const loansActual =
-    (lastSubmission?.homeLoanEMI || 0) +
-    (lastSubmission?.secondPropertyEMI || 0) +
-    (lastSubmission?.personalLoanEMI || 0) +
-    (lastSubmission?.carLoanEMI || 0) +
-    (lastSubmission?.bikeEMI || 0) +
-    (lastSubmission?.creditCardBillMonthly || 0) +
-    dedupedAdditionalObligations.reduce((sum: number, obligation: any) => sum + (obligation?.monthlyAmount || 0), 0);
-  const securityActual = (lastSubmission?.monthlyPPFContribution || 0) + (lastSubmission?.monthlyNPSContribution || 0);
-  const investmentActual = lastSubmission?.monthlySIP || 0;
-  const needsMonthly =
-    (lastSubmission?.rentAmount || 0) +
-    (lastSubmission?.homeLoanEMI || 0) +
-    foodActual +
-    transportActual +
-    utilityActual +
-    domesticActual;
+
+  const bucketActuals = getUniversalBucketActuals(profile);
+  const income = monthlyTotalIncome(profile);
+  const needsActual = bucketActuals.needs;
+  const loansActual = bucketActuals.loans;
+  const securityActual = bucketActuals.security;
+  const investmentActual = bucketActuals.investment;
+  const lifestyleActual = bucketActuals.wants;
+  const needsMonthly = bucketActuals.needs;
 
   const needsExpandedItems = [
     { label: "Rent", value: profile.rentAmount },
@@ -273,23 +251,34 @@ export default function AnalyseResultPage() {
     });
   }
 
-  const totalIncome =
-    (lastSubmission?.monthlySalary || 0) +
-    (lastSubmission?.spouseIncome || 0) +
-    (lastSubmission?.otherIncome || 0);
+  const totalIncome = income;
   const totalExpenses =
-    needsActual +
-    loansActual +
-    lifestyleActual +
-    securityActual +
-    investmentActual;
+    bucketActuals.needs +
+    bucketActuals.wants +
+    bucketActuals.security +
+    bucketActuals.loans +
+    bucketActuals.investment;
   const amountLeftInHand = totalIncome - totalExpenses;
   const buckets = [
     { key: "needs", label: "Needs", capPercent: 30, actual: needsActual, capAmount: income * 0.3, details: "Housing + essentials + family support" },
     { key: "wants", label: "Wants", capPercent: 5, actual: lifestyleActual, capAmount: income * 0.05, details: "Shopping, entertainment and lifestyle spends" },
-    { key: "security", label: "Security", capPercent: 5, actual: securityActual, capAmount: income * 0.05, details: "Protection reserves and safety corpus" },
+    {
+      key: "security",
+      label: "Insurance premiums",
+      capPercent: 5,
+      actual: securityActual,
+      capAmount: income * 0.05,
+      details: "Term, health, motor and other insurance premiums (monthly)",
+    },
     { key: "loans", label: "Loans", capPercent: 40, actual: loansActual, capAmount: income * 0.4, details: "All monthly debt obligations" },
-    { key: "investment", label: "Investment", capPercent: 20, actual: investmentActual, capAmount: income * 0.2, details: "Wealth creation and long-term investing" },
+    {
+      key: "investment",
+      label: "Investment",
+      capPercent: 20,
+      actual: investmentActual,
+      capAmount: income * 0.2,
+      details: "SIP, RD, NPS, PPF, EPF and SSY contributions",
+    },
   ];
 
   const termStatus = (() => {
@@ -791,7 +780,7 @@ export default function AnalyseResultPage() {
                 <div className="flex items-center justify-between"><span>Less: Living expenses (Needs)</span><span>-₹{Math.round(needsActual).toLocaleString("en-IN")}</span></div>
                 <div className="flex items-center justify-between"><span>Less: Loan EMIs</span><span>-₹{Math.round(loansActual).toLocaleString("en-IN")}</span></div>
                 <div className="flex items-center justify-between"><span>Less: Wants + lifestyle</span><span>-₹{Math.round(lifestyleActual).toLocaleString("en-IN")}</span></div>
-                <div className="flex items-center justify-between"><span>Less: Security + investment</span><span>-₹{Math.round(securityActual + investmentActual).toLocaleString("en-IN")}</span></div>
+                <div className="flex items-center justify-between"><span>Less: Insurance premiums + investment</span><span>-₹{Math.round(securityActual + investmentActual).toLocaleString("en-IN")}</span></div>
                 <div className="mt-2 border-t border-[#E8E6F0] pt-2 text-sm font-semibold text-[#3C3489] flex items-center justify-between">
                   <span>Your Monthly Surplus</span>
                   <span>₹{Math.round(amountLeftInHand).toLocaleString("en-IN")}</span>

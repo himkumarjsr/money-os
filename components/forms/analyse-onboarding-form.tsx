@@ -55,6 +55,17 @@ import {
 } from "react";
 import { Controller, useFieldArray, useForm, type FieldPath } from "react-hook-form";
 
+function wipeAnalyseLocalCaches() {
+  try {
+    const uid = useAuthStore.getState().user?.id ?? "__guest__";
+    localStorage.removeItem(`finkoin-financial:${uid}`);
+    localStorage.removeItem("finkoin-financial");
+    localStorage.removeItem("finkoin_ai_cache");
+  } catch {
+    /* ignore */
+  }
+}
+
 const STEPS = [
   { title: "Personal profile", short: "Profile" },
   { title: "Income", short: "Income" },
@@ -69,6 +80,7 @@ const LOAN_TYPE_OPTIONS: Array<{
   value: (typeof UNIFIED_LOAN_TYPE_VALUES)[number];
   label: string;
 }> = [
+  { value: "home_loan", label: "Home loan" },
   { value: "personal_loan", label: "Personal loan" },
   { value: "car_loan", label: "Car loan" },
   { value: "bike_loan", label: "Two-wheeler loan" },
@@ -114,7 +126,10 @@ function detectLastStep(profile: Partial<AnalyseFormValues> | null): number {
   if (food > 0 || (p.utilityTotal ?? 0) > 0 || (p.electricity ?? 0) > 0 || (p.transportTotal ?? 0) > 0 || (p.fuel ?? 0) > 0) {
     return 3;
   }
-  if ((p.rentAmount ?? 0) > 0 || (p.homeLoanEMI ?? 0) > 0) {
+  const hasHomeLoanFlow =
+    (p.homeLoanEMI ?? 0) > 0 ||
+    (p.unifiedLoans ?? []).some((l) => l.loanType === "home_loan" && (l.monthlyEMI ?? 0) > 0);
+  if ((p.rentAmount ?? 0) > 0 || hasHomeLoanFlow) {
     return 2;
   }
   if ((p.monthlySalary ?? 0) > 0) {
@@ -227,7 +242,7 @@ function Note({
   tone = "yellow",
   children,
 }: {
-  tone?: "yellow" | "red" | "green";
+  tone?: "yellow" | "red" | "green" | "blue";
   children: React.ReactNode;
 }) {
   return (
@@ -237,6 +252,8 @@ function Note({
           ? "border-red-200 bg-red-50 text-red-800"
           : tone === "green"
             ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+            : tone === "blue"
+              ? "border-[#C9C4F2] bg-[#EEEDFE] text-[#3C3489]"
           : "border-amber-200 bg-amber-50 text-amber-900"
       }`}
     >
@@ -381,8 +398,6 @@ export function AnalyseOnboardingForm() {
 
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [isRenting, setIsRenting] = useState((lastSubmission?.rentAmount || 0) > 0);
-  const [ownsFlat, setOwnsFlat] = useState((lastSubmission?.homeLoanEMI || 0) > 0);
-  const [homeOnLoan, setHomeOnLoan] = useState((lastSubmission?.homeLoanEMI || 0) > 0);
   const [hasCreditCardOutstanding, setHasCreditCardOutstanding] = useState(
     (lastSubmission?.creditCardBillMonthly || 0) > 0,
   );
@@ -493,10 +508,14 @@ export function AnalyseOnboardingForm() {
       policyName: "",
       premiumAmount: 0,
       frequency: "monthly",
+      maturityAmount: 0,
+      maturityYear: 0,
     });
     resetField(`otherInsurancePremiums.${nextIndex}.policyName` as const, { defaultValue: "" });
     resetField(`otherInsurancePremiums.${nextIndex}.premiumAmount` as const, { defaultValue: 0 });
     resetField(`otherInsurancePremiums.${nextIndex}.frequency` as const, { defaultValue: "monthly" });
+    resetField(`otherInsurancePremiums.${nextIndex}.maturityAmount` as const, { defaultValue: 0 });
+    resetField(`otherInsurancePremiums.${nextIndex}.maturityYear` as const, { defaultValue: 0 });
   }, [appendOtherInsurance, otherInsuranceFields.length, resetField]);
   const {
     fields: customInvestmentFields,
@@ -527,16 +546,8 @@ export function AnalyseOnboardingForm() {
     hasVehicleToggle === true;
   useEffect(() => {
     if ((watchedValues.rentAmount ?? 0) > 0) setIsRenting(true);
-    if ((watchedValues.homeLoanEMI ?? 0) > 0) {
-      setOwnsFlat(true);
-      setHomeOnLoan(true);
-    }
     if ((watchedValues.creditCardBillMonthly ?? 0) > 0) setHasCreditCardOutstanding(true);
-  }, [
-    watchedValues.rentAmount,
-    watchedValues.homeLoanEMI,
-    watchedValues.creditCardBillMonthly,
-  ]);
+  }, [watchedValues.rentAmount, watchedValues.creditCardBillMonthly]);
   useEffect(() => {
     if (
       (watchedValues.carLoanEMI || 0) > 0 ||
@@ -552,10 +563,18 @@ export function AnalyseOnboardingForm() {
     lifeStage !== "bachelor" ? watchedValues.spouseIncome : 0,
     watchedValues.otherIncome,
   ]);
+  const homeLoanEmiLive = useMemo(() => {
+    const rows = watchedValues.unifiedLoans ?? [];
+    const fromUnified = rows
+      .filter((r) => r.loanType === "home_loan")
+      .reduce((s, r) => s + (r.monthlyEMI ?? 0), 0);
+    if (fromUnified > 0) return fromUnified;
+    return watchedValues.homeLoanEMI ?? 0;
+  }, [watchedValues.unifiedLoans, watchedValues.homeLoanEMI]);
+
   const fixedObligations: number = sum([
     watchedValues.rentAmount,
     (watchedValues.rentAmount ?? 0) > 0 ? watchedValues.rentMaintenanceMonthly : 0,
-    watchedValues.homeLoanEMI,
     watchedValues.secondPropertyEMI,
     watchedValues.creditCardBillMonthly,
     ...(watchedValues.unifiedLoans ?? []).map((row) => row.monthlyEMI ?? 0),
@@ -957,14 +976,10 @@ export function AnalyseOnboardingForm() {
       ? "Your fixed obligations are above 50% of household income. That can make cash flow fragile."
       : null;
 
-  const housingTotal = sum([
-    watchedValues.rentAmount,
-    watchedValues.homeLoanEMI,
-    watchedValues.secondPropertyEMI,
-  ]);
+  const housingTotal = sum([watchedValues.rentAmount, homeLoanEmiLive, watchedValues.secondPropertyEMI]);
   const housingNote = (() => {
     const rent = watchedValues.rentAmount ?? 0;
-    const homeLoan = watchedValues.homeLoanEMI ?? 0;
+    const homeLoan = homeLoanEmiLive;
     const secondProperty = watchedValues.secondPropertyEMI ?? 0;
 
     if (rent > 0 && homeLoan > 0 && secondProperty > 0) {
@@ -975,8 +990,9 @@ export function AnalyseOnboardingForm() {
     }
     if (rent > 0 && homeLoan > 0) {
       return {
-        tone: "yellow" as const,
-        text: `You are paying both rent and EMI — total housing cost is ${formatCurrency(housingTotal, "en-IN", "INR")}/month. This is common for under-construction buyers. We will flag if it exceeds safe limits.`,
+        tone: "blue" as const,
+        text:
+          "You have both rent and home loan. This is valid if your mortgaged property is rented out and you live in a rented place.",
       };
     }
     if (rent > 0) {
@@ -990,12 +1006,33 @@ export function AnalyseOnboardingForm() {
         tone: "green" as const,
         text:
           secondProperty > 0 && homeLoan === 0
-            ? `Own home / property EMI — ${formatCurrency(housingTotal, "en-IN", "INR")}/month`
-            : `Own home — EMI ${formatCurrency(housingTotal, "en-IN", "INR")}/month`,
+            ? `Second property EMI — ${formatCurrency(housingTotal, "en-IN", "INR")}/month`
+            : `Home loan EMI — ${formatCurrency(housingTotal, "en-IN", "INR")}/month`,
       };
     }
     return null;
   })();
+
+  const handleStartFresh = useCallback(() => {
+    skipCloudHydrateRef.current = true;
+    wipeAnalyseLocalCaches();
+    useFinancialStore.getState().resetStore();
+    reset(
+      coalesceInsuranceToggles({
+        ...analyseDefaultValues,
+        unifiedLoans: [],
+        additionalObligations: [],
+        otherInsurancePremiums: [],
+        customInvestments: [],
+      } as AnalyseFormValues),
+    );
+    setIsRenting(false);
+    setHasCreditCardOutstanding(false);
+    setHasVehicleToggle(false);
+    setShowResumeOption(false);
+    setShowResumeBanner(false);
+    window.scrollTo(0, 0);
+  }, [reset]);
 
   return (
     <div className="mx-auto max-w-xl px-4 py-8 sm:px-6 sm:py-10 lg:max-w-2xl">
@@ -1023,17 +1060,7 @@ export function AnalyseOnboardingForm() {
             </Link>
             <button
               type="button"
-              onClick={() => {
-                skipCloudHydrateRef.current = true;
-                useFinancialStore.getState().resetAll();
-                reset(coalesceInsuranceToggles(analyseDefaultValues as AnalyseFormValues));
-                setIsRenting(false);
-                setOwnsFlat(false);
-                setHomeOnLoan(false);
-                setHasCreditCardOutstanding(false);
-                setShowResumeOption(false);
-                setShowResumeBanner(false);
-              }}
+              onClick={handleStartFresh}
               className="rounded-lg border border-[#E8E6F0] bg-transparent px-3.5 py-2 text-[13px] text-[#9B9A94]"
             >
               Start fresh
@@ -1104,16 +1131,7 @@ export function AnalyseOnboardingForm() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                skipCloudHydrateRef.current = true;
-                useFinancialStore.getState().resetAll();
-                reset(coalesceInsuranceToggles(analyseDefaultValues as AnalyseFormValues));
-                setIsRenting(false);
-                setOwnsFlat(false);
-                setHomeOnLoan(false);
-                setHasCreditCardOutstanding(false);
-                setShowResumeBanner(false);
-              }}
+              onClick={handleStartFresh}
               className="rounded-lg border border-[#E8E6F0] bg-transparent px-3.5 py-2 text-[13px] text-[#9B9A94]"
             >
               Start fresh
@@ -1328,6 +1346,7 @@ export function AnalyseOnboardingForm() {
                     <MoneyInput
                       id="rentAmount"
                       label="Rent you pay monthly"
+                      helper="Enter your monthly rent if you live in a rented house. If you have a home loan (own house), enter 0 here — your EMI goes in the Loans section below."
                       error={errors.rentAmount?.message}
                       {...bindMoneyField("rentAmount")}
                     />
@@ -1340,108 +1359,6 @@ export function AnalyseOnboardingForm() {
                     />
                   </div>
                 ) : null}
-                <div className="space-y-4 border-l-[3px] border-[#534AB7] pl-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-medium text-slate-800">Do you own a flat?</p>
-                    <div className="w-[180px]">
-                      <ToggleButtons
-                        options={[
-                          { label: "Yes", value: "yes" },
-                          { label: "No", value: "no" },
-                        ]}
-                        value={ownsFlat ? "yes" : "no"}
-                        onChange={(value) => {
-                          const next = value === "yes";
-                          setOwnsFlat(next);
-                          if (!next) {
-                            setHomeOnLoan(false);
-                            setValue("homeLoanEMI", 0);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  {ownsFlat ? (
-                    <div className="space-y-4 pl-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="text-sm font-medium text-slate-800">Is this flat on loan?</p>
-                        <div className="w-[180px]">
-                          <ToggleButtons
-                            options={[
-                              { label: "Yes", value: "yes" },
-                              { label: "No", value: "no" },
-                            ]}
-                            value={homeOnLoan ? "yes" : "no"}
-                            onChange={(value) => {
-                              const next = value === "yes";
-                              setHomeOnLoan(next);
-                              if (!next) {
-                                setValue("homeLoanEMI", 0);
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-                      {homeOnLoan ? (
-                        <div className="grid gap-5 pl-4 sm:grid-cols-2">
-                          <MoneyInput
-                            id="homeLoanEMI"
-                            label="Home loan EMI"
-                            error={errors.homeLoanEMI?.message}
-                            {...bindMoneyField("homeLoanEMI")}
-                          />
-                          <Controller
-                            control={control}
-                            name="homeLoanOutstanding"
-                            render={({ field }) => (
-                              <MoneyInput
-                                id="homeLoanOutstanding"
-                                label="Home loan outstanding amount"
-                                helper="Approximate principal left, if known"
-                                error={errors.homeLoanOutstanding?.message}
-                                value={field.value ?? ""}
-                                onFocus={(e) => {
-                                  const numericValue =
-                                    typeof field.value === "number" ? field.value : Number(field.value ?? 0);
-                                  if (!Number.isFinite(numericValue) || numericValue === 0) {
-                                    field.onChange(undefined);
-                                    e.currentTarget.value = "";
-                                  }
-                                }}
-                                onBlur={field.onBlur}
-                                onChange={(e) =>
-                                  field.onChange(parseMoneyInput(e.currentTarget.value) ?? undefined)
-                                }
-                              />
-                            )}
-                          />
-                          <NumberInput
-                            label="Home loan ROI %"
-                            value={watch("homeLoanRate") || 0}
-                            onChange={(val: number) => setValue("homeLoanRate", val)}
-                            placeholder="e.g. 8.75"
-                            suffix="%"
-                            min={0}
-                            max={36}
-                            step={0.1}
-                            helper="Check your loan statement"
-                          />
-                          <NumberInput
-                            label="Tenure left to pay (months)"
-                            value={watch("homeLoanRemainingMonths") || 0}
-                            onChange={(val: number) => setValue("homeLoanRemainingMonths", Math.round(val))}
-                            placeholder="e.g. 120"
-                            suffix="mo"
-                            min={0}
-                            max={360}
-                            step={1}
-                            helper="Months left to pay"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
               </div>
               {housingNote ? <Note tone={housingNote.tone}>{housingNote.text}</Note> : null}
             </div>
@@ -1449,7 +1366,7 @@ export function AnalyseOnboardingForm() {
             <div className="mt-6 space-y-4">
               <h3 className="text-[11px] font-bold uppercase tracking-[0.5px] text-[#534AB7]">My loans</h3>
               <p className="-mt-2 text-[13px] text-[#9B9A94]">
-                Add all your active loans — personal, car, PF, education, OD, or any other.
+                Add <strong className="font-semibold text-slate-700">home loan</strong> here if you pay EMI on your residence or investment property, plus personal, car, PF, education, OD, or any other loan.
               </p>
 
               <div className="space-y-3">
@@ -1501,7 +1418,11 @@ export function AnalyseOnboardingForm() {
                           <MoneyInput
                             id={`unifiedLoans.${index}.monthlyEMI`}
                             label="Monthly EMI *"
-                            helper="EMI you pay each month"
+                            helper={
+                              watch(`unifiedLoans.${index}.loanType` as const) === "home_loan"
+                                ? "Enter your home loan EMI. This includes both principal and interest. Check your bank statement for the exact amount."
+                                : "EMI you pay each month"
+                            }
                             value={field.value ?? 0}
                             onChange={(e) => field.onChange(parseMoneyInput(e.currentTarget.value) ?? 0)}
                           />
@@ -2067,16 +1988,23 @@ export function AnalyseOnboardingForm() {
                             />
                           </PremiumField>
                           <MoneyInput
-                            id="lifeInsuranceMaturityAmount"
+                            id={`otherInsurancePremiums.${index}.maturityAmount`}
                             label="Maturity amount (if any)"
                             helper="Amount you receive at maturity"
-                            error={errors.lifeInsuranceMaturityAmount?.message}
-                            {...bindMoneyField("lifeInsuranceMaturityAmount")}
+                            error={errors.otherInsurancePremiums?.[index]?.maturityAmount?.message}
+                            {...bindMoneyField(`otherInsurancePremiums.${index}.maturityAmount` as const)}
                           />
                           <NumberInput
                             label="Maturity year (optional)"
-                            value={watch("lifeInsuranceMaturityYear") || 0}
-                            onChange={(val: number) => setValue("lifeInsuranceMaturityYear", Math.round(val))}
+                            value={
+                              watch(`otherInsurancePremiums.${index}.maturityYear` as const) || 0
+                            }
+                            onChange={(val: number) =>
+                              setValue(
+                                `otherInsurancePremiums.${index}.maturityYear` as const,
+                                Math.round(val),
+                              )
+                            }
                             placeholder="e.g. 2035"
                             min={2024}
                             max={2060}

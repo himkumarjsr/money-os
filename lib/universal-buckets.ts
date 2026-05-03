@@ -207,13 +207,14 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
   const wantsActual =
     lifestyleActual;
 
+  // Security = insurance premiums only (health + term + motor + other policies).
+  // NOT EPF/PF/NPS or SSY — those belong in the investment bucket as monthly contributions.
   const securityActual =
     healthPremiumMonthly(data) +
     termPremiumMonthly(data) +
     carPremiumMonthly(data) +
     bikePremiumMonthly(data) +
-    otherInsurancePremiumMonthly(data) +
-    n(data.ssy);
+    otherInsurancePremiumMonthly(data);
 
   const dedupedAdditionalRows = Array.from(
     new Map(
@@ -242,13 +243,14 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.creditCardBillMonthly) +
     additionalEmiTotal;
 
-  // MONTHLY CONTRIBUTIONS ONLY
-  // Asset values (mfValue, epfBalance etc.)
-  // go to netWorth calculation, not here
-  // Insurance and SSY are treated as security / goal buckets,
-  // not monthly investment flow in the take-home income meter.
+  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY deposits.
   const investmentActual =
-    n(data.monthlySIP) + n(data.monthlyRD) + n(data.monthlyNPSContribution);
+    n(data.monthlySIP) +
+    n(data.monthlyRD) +
+    n(data.monthlyNPSContribution) +
+    n(data.monthlyPPFContribution) +
+    n(data.monthlyEPFContribution) +
+    n(data.ssy);
 
   return {
     needs: needsActual,
@@ -266,7 +268,7 @@ export function getUniversalBucketRows(data: BucketProfileInput): UniversalBucke
   const defs: Array<{ key: UniversalBucketKey; label: string }> = [
     { key: "needs", label: "Needs" },
     { key: "wants", label: "Wants" },
-    { key: "security", label: "Security" },
+    { key: "security", label: "Insurance (monthly)" },
     { key: "loans", label: "Loans" },
     { key: "investment", label: "Investment" },
   ];

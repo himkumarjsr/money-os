@@ -77,6 +77,7 @@ export const ADDITIONAL_OBLIGATION_TYPE_VALUES = [
 ] as const;
 
 export const UNIFIED_LOAN_TYPE_VALUES = [
+  "home_loan",
   "personal_loan",
   "car_loan",
   "bike_loan",
@@ -225,6 +226,8 @@ export interface FinancialProfile {
     frequency?: PremiumFrequency;
     /** Monthly rupees (filled when persisting profile). */
     monthlyAmount?: number;
+    maturityAmount?: number;
+    maturityYear?: number;
   }>;
 
   savingsAccountBalance: number;
@@ -378,6 +381,8 @@ const otherInsurancePremiumSchema = z.object({
   policyName: z.string().optional(),
   premiumAmount: optionalMoney,
   frequency: premiumFrequencySchema.default("monthly"),
+  maturityAmount: optionalMoney,
+  maturityYear: optionalWholeNumber,
 });
 
 const customInvestmentSchema = z.object({
@@ -1181,6 +1186,8 @@ export function mergeAnalyseDraftWithProfile(
         policyName: preferNonEmptyString(d?.policyName, p?.policyName),
         premiumAmount: d?.premiumAmount ?? p?.premiumAmount,
         frequency: (d?.frequency ?? p?.frequency ?? "monthly") as PremiumFrequency,
+        maturityAmount: d?.maturityAmount ?? p?.maturityAmount ?? 0,
+        maturityYear: d?.maturityYear ?? p?.maturityYear ?? 0,
       };
     });
   }
@@ -1282,6 +1289,7 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
 
   const mapObligationTypeToUnified = (value?: string): UnifiedLoanType => {
     const v = (value ?? "").toLowerCase();
+    if (v.includes("home")) return "home_loan";
     if (v.includes("personal")) return "personal_loan";
     if (v.includes("car")) return "car_loan";
     if (v.includes("bike") || v.includes("two")) return "bike_loan";
@@ -1309,6 +1317,20 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     })) ?? [];
 
   if (unifiedLoans.length === 0) {
+    if ((p.homeLoanEMI ?? 0) > 0) {
+      unifiedLoans.push({
+        id: newAnalyseRowId(),
+        loanType: "home_loan",
+        lenderName: p.homeLoanLenderName ?? "",
+        monthlyEMI: p.homeLoanEMI ?? 0,
+        outstandingAmount: p.homeLoanOutstanding ?? 0,
+        interestRate: p.homeLoanRate ?? 0,
+        remainingMonths: p.homeLoanRemainingMonths ?? 0,
+        odLimit: 0,
+        odUsed: 0,
+        odInterestOnlyYears: 0,
+      });
+    }
     if ((p.personalLoanEMI ?? 0) > 0) {
       unifiedLoans.push({
         id: newAnalyseRowId(),
@@ -1456,12 +1478,16 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
         premiumInput?: number;
         frequency?: PremiumFrequency;
         monthlyAmount?: number;
+        maturityAmount?: number;
+        maturityYear?: number;
       };
       return {
         id: r.id ?? newAnalyseRowId(),
         policyName: r.policyName,
         premiumAmount: r.premiumAmount ?? r.premiumInput ?? 0,
         frequency: r.frequency ?? "monthly",
+        maturityAmount: r.maturityAmount ?? 0,
+        maturityYear: r.maturityYear ?? 0,
       };
     }),
     otherInsurancePremiumInput:
@@ -1549,6 +1575,8 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
 
   const mapUnifiedToAdditionalType = (type: UnifiedLoanType): string => {
     switch (type) {
+      case "home_loan":
+        return "Home Loan";
       case "personal_loan":
         return "Personal Loan";
       case "car_loan":
@@ -1572,9 +1600,11 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     }
   };
 
+  const firstHomeIndex = unifiedLoans.findIndex((loan) => loan.loanType === "home_loan");
   const firstPersonalIndex = unifiedLoans.findIndex((loan) => loan.loanType === "personal_loan");
   const firstCarIndex = unifiedLoans.findIndex((loan) => loan.loanType === "car_loan");
   const firstBikeIndex = unifiedLoans.findIndex((loan) => loan.loanType === "bike_loan");
+  const firstHome = firstHomeIndex >= 0 ? unifiedLoans[firstHomeIndex] : undefined;
   const firstPersonal = firstPersonalIndex >= 0 ? unifiedLoans[firstPersonalIndex] : undefined;
   const firstCar = firstCarIndex >= 0 ? unifiedLoans[firstCarIndex] : undefined;
   const firstBike = firstBikeIndex >= 0 ? unifiedLoans[firstBikeIndex] : undefined;
@@ -1603,6 +1633,7 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
 
   const additionalFromUnified = unifiedLoans
     .map((loan, index) => {
+      if (index === firstHomeIndex) return null;
       if (index === firstPersonalIndex) return null;
       if (index === firstCarIndex) return null;
       if (index === firstBikeIndex) return null;
@@ -1702,7 +1733,7 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
 
     rentAmount: form.rentAmount ?? 0,
     rentMaintenanceMonthly: form.rentMaintenanceMonthly,
-    homeLoanEMI: form.homeLoanEMI ?? 0,
+    homeLoanEMI: firstHome?.monthlyEMI ?? form.homeLoanEMI ?? 0,
     secondPropertyEMI: form.secondPropertyEMI ?? 0,
     carLoanEMI: firstCar?.monthlyEMI ?? form.carLoanEMI,
     bikeEMI: firstBike?.monthlyEMI ?? form.bikeEMI,
@@ -1711,9 +1742,9 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     personalLoanLenderName: firstPersonal?.lenderName ?? form.personalLoanLenderName ?? "",
     personalLoanRate: firstPersonal?.interestRate ?? form.personalLoanRate,
     personalLoanRemainingMonths: firstPersonal?.remainingMonths ?? form.personalLoanRemainingMonths,
-    homeLoanLenderName: form.homeLoanLenderName ?? "",
-    homeLoanRate: form.homeLoanRate,
-    homeLoanRemainingMonths: form.homeLoanRemainingMonths,
+    homeLoanLenderName: firstHome?.lenderName ?? form.homeLoanLenderName ?? "",
+    homeLoanRate: firstHome?.interestRate ?? form.homeLoanRate,
+    homeLoanRemainingMonths: firstHome?.remainingMonths ?? form.homeLoanRemainingMonths,
     carLoanLenderName: firstCar?.lenderName ?? form.carLoanLenderName ?? "",
     carLoanRate: firstCar?.interestRate ?? form.carLoanRate,
     carLoanRemainingMonths: firstCar?.remainingMonths ?? form.carLoanRemainingMonths,
@@ -1810,6 +1841,8 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
             premiumAmount?: number;
             premiumInput?: number;
             frequency?: PremiumFrequency;
+            maturityAmount?: number;
+            maturityYear?: number;
           };
           const amount = r.premiumAmount ?? r.premiumInput;
           const freq = r.frequency ?? "monthly";
@@ -1819,6 +1852,8 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
             premiumAmount: amount,
             frequency: freq,
             monthlyAmount: toMonthlyEquivalent(amount, freq) ?? 0,
+            maturityAmount: r.maturityAmount ?? 0,
+            maturityYear: r.maturityYear ?? 0,
           };
         })
       : [],

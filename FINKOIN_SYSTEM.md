@@ -586,6 +586,10 @@ From `lib/financialEngine.ts` + `lib/universal-buckets.ts`:
   - loans: 40%
   - investment: 30% (or 20% if home loan present)
 
+### Monthly bucket actuals (`getUniversalBucketActuals`)
+- **Insurance (“security”) bucket:** Sum of **insurance premiums** converted to monthly (health, term, motor/other policies). **Not** EPF / PF / NPS / SSY — those are monthly contributions counted under **investment**.
+- **Investment bucket:** `monthlySIP` + `monthlyRD` + `monthlyNPSContribution` + `monthlyPPFContribution` + `monthlyEPFContribution` + `ssy`.
+
 ### Status Rules
 - `good`: actual <= cap
 - `warning`: actual <= cap * 1.15
@@ -1641,6 +1645,7 @@ Important implementation note:
 ### 2026-05-03
 
 - **Progressive Web App (PWA):** **`next-pwa`** wraps **`next.config.mjs`** (disabled in **`development`**); production emits **`public/sw.js`** and **`workbox-*.js`** (gitignored). **`public/manifest.json`** defines install metadata, shortcuts, and icons. **`app/layout.tsx`** adds manifest link, **`appleWebApp`** startup images, theme color, and Apple touch meta. **`app/offline/page.tsx`** is the document fallback when offline. **`components/PWAInstallPrompt.tsx`** nudges iOS (Add to Home Screen) and Android (**`beforeinstallprompt`**). Asset scripts: **`npm run pwa:assets`** → **`scripts/generate-icons.mjs`** + **`scripts/generate-splashes.mjs`** (requires **`sharp`**). **`middleware.ts`** excludes service worker URLs from Supabase session handling. See **Section 28**.
+- **Analyse form & buckets:** **Start fresh** resets **`react-hook-form`** with **`unifiedLoans`**, **`otherInsurancePremiums`**, **`customInvestments`**, **`additionalObligations`** cleared, wipes **`finkoin-financial:<uid>`** + **`finkoin_ai_cache`**, calls **`resetStore()`**. Home loan EMI moved out of the housing card into **My loans** as unified type **`home_loan`** (normalizer maps first row to **`homeLoanEMI`**). Rent helpers + rent+EMI disclaimer updated. Other-insurance rows use per-row **`maturityAmount`** / **`maturityYear`** so new rows don’t inherit maturity. Global **`16px`** inputs (**`app/globals.css`**, **`MoneyInput`**, **`NumberInput`**) to reduce iOS focus zoom. **`lib/universal-buckets.ts`**: security = premiums only; investment includes PPF/EPF/NPS/SSY. **`app/analyse/result/page.tsx`** roadmap buckets use **`getUniversalBucketActuals`** + **`monthlyTotalIncome`** with **Insurance premiums** label. **`app/optimizer/page.tsx`** reuses persisted **`aiPlan`** when present to skip a redundant AI fetch after analyse.
 
 ### 2026-05-02
 

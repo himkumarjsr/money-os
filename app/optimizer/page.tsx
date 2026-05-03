@@ -17,6 +17,7 @@ export default function OptimizerPage() {
   const hasHydrated = useFinancialStore((s) => s.hasHydrated);
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analysisResult = useFinancialStore((s) => s.result);
+  const persistedAiPlan = useFinancialStore((s) => s.aiPlan);
 
   const [aiPlan, setAiPlan] = useState<FinkoinAIPlan | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
@@ -43,6 +44,12 @@ export default function OptimizerPage() {
 
   useEffect(() => {
     if (!lastSubmission || !analysisResult) return;
+    if (persistedAiPlan) {
+      setAiPlan(persistedAiPlan);
+      setAiNotice(null);
+      setAiLoading(false);
+      return;
+    }
     let cancelled = false;
     setAiLoading(true);
     setAiNotice(null);
@@ -67,7 +74,7 @@ export default function OptimizerPage() {
     return () => {
       cancelled = true;
     };
-  }, [lastSubmission, analysisResult]);
+  }, [lastSubmission, analysisResult, persistedAiPlan]);
 
   if (!hasHydrated || !lastSubmission) {
     return (

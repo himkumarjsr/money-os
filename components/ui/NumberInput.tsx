@@ -73,7 +73,7 @@ export default function NumberInput({
           paddingRight: 14,
           gap: 6,
           boxShadow: focused ? "0 0 0 3px rgba(83,74,183,0.1)" : "none",
-          transition: "all 0.15s",
+          transition: "border-color 0.15s ease, box-shadow 0.15s ease",
           cursor: disabled ? "not-allowed" : "text",
         }}
       >
@@ -93,7 +93,7 @@ export default function NumberInput({
             border: "none",
             outline: "none",
             background: "transparent",
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: value > 0 ? 600 : 400,
             color: value > 0 ? "#111110" : "#9B9A94",
             fontFamily: "inherit",

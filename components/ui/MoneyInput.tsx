@@ -135,7 +135,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
       </div>
 
       <div
-        className={`flex items-center gap-2 rounded-[10px] px-3.5 py-2.5 transition-colors ${
+        className={`flex items-center gap-2 rounded-[10px] px-3.5 py-2.5 transition-[border-color,background-color] ${
           isFocused
             ? "border-[1.5px] border-[#534AB7] bg-[#FAFAFE]"
             : "border border-[#E8E6F0] bg-white"
@@ -148,7 +148,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold text-[#111110] outline-none placeholder:text-slate-400"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[16px] font-semibold leading-snug text-[#111110] outline-none placeholder:text-slate-400"
           placeholder={placeholder}
           onChange={handleChange}
           onFocus={handleFocus}
