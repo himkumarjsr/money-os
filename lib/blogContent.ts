@@ -1,3 +1,5 @@
+import oldVsNewTaxRoi2026 from "./data/blog-old-vs-new-tax-roi-2026";
+
 export type BlogArticle = {
   slug: string;
   title: string;
@@ -6,9 +8,11 @@ export type BlogArticle = {
   publishedAt: string;
   category: string;
   body: string;
+  faq?: { q: string; a: string }[];
 };
 
 export const BLOG_ARTICLES: BlogArticle[] = [
+  oldVsNewTaxRoi2026 as BlogArticle,
   {
     slug: "old-vs-new-tax-regime-2026",
     title: "Old vs New Tax Regime 2026: Which Saves More Money?",

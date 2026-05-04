@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BLOG_ARTICLES, getBlogArticle } from "@/lib/blogContent";
+import { renderBlogBody } from "@/lib/renderBlogBody";
 import { SITE_URL } from "@/lib/seo";
 
 type Props = { params: { slug: string } };
@@ -43,49 +44,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function renderMarkdownish(body: string) {
-  const blocks = body.trim().split(/\n\n+/);
-  return blocks.map((block, i) => {
-    const lines = block.split("\n");
-    const first = lines[0] ?? "";
-    if (first.startsWith("## ")) {
-      return (
-        <h2 key={i} className="mt-10 text-xl font-bold text-slate-900">
-          {first.replace(/^##\s+/, "")}
-        </h2>
-      );
-    }
-    const parts = block.split(/(\[[^\]]+\]\([^)]+\))/g);
-    return (
-      <p key={i} className="mt-4 text-base leading-relaxed text-slate-700">
-        {parts.map((part, j) => {
-          const m = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-          if (m) {
-            return (
-              <Link key={j} href={m[2]} className="font-semibold text-[#534AB7] hover:underline">
-                {m[1]}
-              </Link>
-            );
-          }
-          const bolded = part.split(/\*\*([^*]+)\*\*/g);
-          if (bolded.length > 1) {
-            return bolded.map((b, k) =>
-              k % 2 === 1 ? (
-                <strong key={k} className="font-semibold text-slate-900">
-                  {b}
-                </strong>
-              ) : (
-                <span key={k}>{b}</span>
-              ),
-            );
-          }
-          return <span key={j}>{part}</span>;
-        })}
-      </p>
-    );
-  });
-}
-
 export default function BlogArticlePage({ params }: Props) {
   const article = getBlogArticle(params.slug);
   if (!article) notFound();
@@ -116,11 +74,30 @@ export default function BlogArticlePage({ params }: Props) {
     },
   };
 
+  const faqJsonLd =
+    article.faq && article.faq.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: article.faq.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: f.a,
+            },
+          })),
+        }
+      : null;
+
   const others = BLOG_ARTICLES.filter((a) => a.slug !== article.slug).slice(0, 2);
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      {faqJsonLd ? (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      ) : null}
       <article className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
         <Link href="/blog" className="text-sm font-semibold text-[#534AB7] hover:underline">
           ← All articles
@@ -130,7 +107,24 @@ export default function BlogArticlePage({ params }: Props) {
         <p className="mt-2 text-sm text-slate-500">
           By Himanshu Kumar · {article.publishedAt}
         </p>
-        <div className="prose-slate mt-8 max-w-none">{renderMarkdownish(article.body)}</div>
+        <div className="prose-slate mt-8 max-w-none">{renderBlogBody(article.body)}</div>
+
+        {article.faq && article.faq.length > 0 ? (
+          <section className="mt-14 border-t border-slate-200 pt-10" aria-labelledby="faq-heading">
+            <h2 id="faq-heading" className="text-xl font-bold text-slate-900">
+              Frequently asked questions
+            </h2>
+            <dl className="mt-6 space-y-6">
+              {article.faq.map((f) => (
+                <div key={f.q}>
+                  <dt className="text-base font-semibold text-slate-900">{f.q}</dt>
+                  <dd className="mt-2 text-base leading-relaxed text-slate-700">{f.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : null}
+
         <section className="mt-12 rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <h2 className="text-sm font-semibold text-slate-900">Next steps</h2>
           <ul className="mt-3 space-y-2 text-sm font-semibold text-[#534AB7]">

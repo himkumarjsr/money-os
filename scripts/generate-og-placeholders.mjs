@@ -44,6 +44,7 @@ const jobs = [
 ];
 
 const slugs = [
+  "old-vs-new-tax-regime-roi-2026",
   "old-vs-new-tax-regime-2026",
   "term-insurance-calculator-india",
   "emergency-fund-calculator-india",
