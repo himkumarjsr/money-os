@@ -10,7 +10,7 @@ import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
-import { SEO_CONFIG } from "@/lib/seo";
+import { SEO_CONFIG, SITE_URL } from "@/lib/seo";
 
 const RenewalReminderBanner = dynamic(
   () =>
@@ -26,7 +26,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://finkoin.com";
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -59,11 +59,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: `${siteUrl}/assets/brand/finkoin-icon-1024.svg`,
-        secureUrl: `${siteUrl}/assets/brand/finkoin-icon-1024.svg`,
-        width: 1024,
-        height: 1024,
-        alt: "Finkoin logo",
+        url: `${siteUrl}/og/home.png`,
+        width: 1200,
+        height: 630,
+        alt: "Finkoin",
       },
     ],
   },
@@ -72,7 +71,7 @@ export const metadata: Metadata = {
     title: "Finkoin - AI Personal Finance Advisor for India",
     description:
       "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
-    images: [`${siteUrl}/assets/brand/finkoin-icon-1024.svg`],
+    images: [`${siteUrl}/og/home.png`],
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -169,16 +168,30 @@ export default function RootLayout({
         url: siteUrl,
         logo: {
           "@type": "ImageObject",
-          url: `${siteUrl}/assets/brand/finkoin-icon-1024.svg`,
-          width: 1024,
-          height: 1024,
+          url: `${siteUrl}/icons/icon-512x512.png`,
+          width: 512,
+          height: 512,
         },
-        sameAs: [],
+        contactPoint: {
+          "@type": "ContactPoint",
+          email: "hello@finkoin.com",
+          contactType: "customer service",
+        },
+        sameAs: ["https://twitter.com/finkoin", "https://linkedin.com/company/finkoin"],
       },
       {
         "@type": "WebSite",
         name: "Finkoin",
         url: siteUrl,
+        description: "Free financial health check for India",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${siteUrl}/learn?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
         publisher: {
           "@type": "Organization",
           name: "Finkoin",
@@ -210,7 +223,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebApplication",
               name: "Finkoin",
-              url: "https://finkoin.com",
+              url: siteUrl,
               description: "Personal financial health check and wealth planning for India",
               applicationCategory: "FinanceApplication",
               operatingSystem: "Web",
@@ -223,7 +236,7 @@ export default function RootLayout({
               provider: {
                 "@type": "Organization",
                 name: "Finkoin",
-                url: "https://finkoin.com",
+                url: siteUrl,
               },
             }),
           }}

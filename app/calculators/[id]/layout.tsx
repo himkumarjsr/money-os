@@ -9,11 +9,13 @@ type LayoutProps = {
 
 export function generateMetadata({ params }: LayoutProps): Metadata {
   const calc = getItemById(params.id);
-  return generatePageMeta(
-    `${calc.title} Calculator`,
-    calc.blurb,
-    [`${calc.title.toLowerCase()} calculator India`, "financial calculators India"],
-  );
+  return generatePageMeta(`${calc.title} Calculator`, calc.blurb, [
+    `${calc.title.toLowerCase()} calculator India`,
+    "financial calculators India",
+  ], {
+    canonicalPath: `/calculators/${params.id}`,
+    openGraphImagePath: "/og/home.png",
+  });
 }
 
 export default function CalculatorIdLayout({ children }: LayoutProps) {

@@ -1,88 +1,97 @@
 import type { MetadataRoute } from "next";
+import { BLOG_ARTICLES } from "@/lib/blogContent";
 
-const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://finkoin.com";
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://finkoin.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  return [
+  const staticEntries: MetadataRoute.Sitemap = [
     {
-      url: base,
+      url: baseUrl,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1.0,
     },
     {
-      url: `${base}/analyse`,
+      url: `${baseUrl}/analyse`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.95,
     },
     {
-      url: `${base}/calculators`,
+      url: `${baseUrl}/calculators`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
-      url: `${base}/calculators/tax-regime-2026`,
+      url: `${baseUrl}/calculators/tax-regime-2026`,
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.95,
     },
     {
-      url: `${base}/calculators/sip`,
+      url: `${baseUrl}/calculators/sip`,
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.8,
     },
     {
-      url: `${base}/tracker`,
+      url: `${baseUrl}/tracker`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.85,
     },
     {
-      url: `${base}/learn`,
+      url: `${baseUrl}/learn`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
-      url: `${base}/blog`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.85,
-    },
-    {
-      url: `${base}/about`,
+      url: `${baseUrl}/about`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: `${base}/legal/privacy`,
+      url: `${baseUrl}/blog`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    ...BLOG_ARTICLES.map((a) => ({
+      url: `${baseUrl}/blog/${a.slug}`,
+      lastModified: new Date(a.publishedAt),
+      changeFrequency: "monthly" as const,
+      priority: 0.75,
+    })),
+    {
+      url: `${baseUrl}/legal/privacy`,
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${base}/legal/terms`,
+      url: `${baseUrl}/legal/terms`,
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${base}/legal/refund`,
+      url: `${baseUrl}/legal/refund`,
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.2,
     },
     {
-      url: `${base}/legal/disclaimer`,
+      url: `${baseUrl}/legal/disclaimer`,
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.2,
     },
   ];
+
+  return staticEntries;
 }

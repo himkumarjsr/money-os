@@ -6,18 +6,18 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/auth/", "/analyse/fixplan", "/_next/"],
+        disallow: ["/api/", "/analyse/fixplan", "/auth/", "/_next/"],
       },
       {
         userAgent: "GPTBot",
         allow: "/",
       },
       {
-        userAgent: "PerplexityBot",
+        userAgent: "anthropic-ai",
         allow: "/",
       },
       {
-        userAgent: "anthropic-ai",
+        userAgent: "PerplexityBot",
         allow: "/",
       },
     ],

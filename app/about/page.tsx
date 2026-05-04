@@ -1,10 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "About Finkoin — India's Personal Finance Health Platform",
+  title: {
+    absolute: "About Finkoin — Financial Health Platform for India",
+  },
   description:
-    "Finkoin helps Indians understand their financial health with AI-powered analysis. Our mission is to make personal finance simple and accessible for every Indian.",
+    "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "About Finkoin — Financial Health Platform for India",
+    description:
+      "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
+    url: `${SITE_URL}/about`,
+    siteName: "Finkoin",
+    type: "website",
+    images: [{ url: `${SITE_URL}/og/home.png`, width: 1200, height: 630, alt: "About Finkoin" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Finkoin — Financial Health Platform for India",
+    description:
+      "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
+    images: [`${SITE_URL}/og/home.png`],
+  },
 };
 
 export default function AboutPage() {

@@ -82,17 +82,39 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 365,
+  },
   experimental: {
-    // Tree-shake barrel imports from chart lib (smaller chunks when recharts is used).
-    optimizePackageImports: ["recharts"],
+    optimizePackageImports: ["recharts", "framer-motion"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-DNS-Prefetch-Control", value: "on" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+      {
+        source: "/icons/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        source: "/fonts/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
   },
   webpack: (config, { dev, isServer }) => {
-    // Dev-only: slow compiles (large layout graph, cold start) can exceed the default chunk load timeout in the browser.
     if (dev && !isServer && config.output) {
       config.output.chunkLoadTimeout = 300_000;
     }
-    // Dev-only: filesystem PackFileCacheStrategy logs "Serializing big strings …" for very large modules (e.g. big TSX).
-    // In-memory cache avoids that disk serialization path; prod builds keep Webpack's default filesystem cache.
     if (dev) {
       config.cache = { type: "memory" };
     }

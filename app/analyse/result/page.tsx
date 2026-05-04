@@ -10,6 +10,7 @@ import { analyseFinances, monthlyTotalIncome } from "@/lib/financialEngine";
 import { getUniversalBucketActuals } from "@/lib/universal-buckets";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
@@ -792,6 +793,30 @@ export default function AnalyseResultPage() {
             <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">{ctaCopy.subText}</p>
             <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">Educational only</p>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 className="text-xl font-semibold text-slate-900">Keep going</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Explore calculators and tools that pair with your report.
+          </p>
+          <ul className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-[#534AB7]">
+            <li>
+              <Link href="/calculators/tax-regime-2026" className="hover:underline">
+                Tax regime calculator
+              </Link>
+            </li>
+            <li>
+              <Link href="/tracker" className="hover:underline">
+                Expense tracker
+              </Link>
+            </li>
+            <li>
+              <Link href="/learn" className="hover:underline">
+                Learn personal finance
+              </Link>
+            </li>
+          </ul>
         </section>
       </div>
 

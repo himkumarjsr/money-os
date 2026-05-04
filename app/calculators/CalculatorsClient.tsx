@@ -17,7 +17,14 @@ function findCategoryForCalc(calcId: string): Cat {
   return CATEGORIES[0].id;
 }
 
-export default function CalculatorsClient({ initialCalcId }: { initialCalcId: string }) {
+export default function CalculatorsClient({
+  initialCalcId,
+  urlBaseForTaxCanonical,
+}: {
+  initialCalcId: string;
+  /** When set, keeps tax-regime on this path; other calcs use `/calculators?calc=…`. */
+  urlBaseForTaxCanonical?: string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,17 +43,33 @@ export default function CalculatorsClient({ initialCalcId }: { initialCalcId: st
   const ActiveCalc =
     lazyCalculatorsById[activeItem.id] ?? lazyCalculatorsById[activeCat.items[0].id];
 
-  const updateCalcInUrl = useCallback((nextCalcId: string) => {
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("calc", nextCalcId);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  }, [pathname, router, searchParams]);
+  const updateCalcInUrl = useCallback(
+    (nextCalcId: string) => {
+      if (urlBaseForTaxCanonical) {
+        if (nextCalcId === "tax-regime") {
+          router.replace(urlBaseForTaxCanonical, { scroll: false });
+          return;
+        }
+        router.replace(`/calculators?calc=${encodeURIComponent(nextCalcId)}`, { scroll: false });
+        return;
+      }
+      const next = new URLSearchParams(searchParams.toString());
+      next.set("calc", nextCalcId);
+      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams, urlBaseForTaxCanonical],
+  );
 
   useEffect(() => {
+    if (urlBaseForTaxCanonical && calcId === "tax-regime") {
+      if (pathname === urlBaseForTaxCanonical) return;
+      router.replace(urlBaseForTaxCanonical, { scroll: false });
+      return;
+    }
     const currentCalc = searchParams.get("calc");
     if (currentCalc === calcId) return;
     updateCalcInUrl(calcId);
-  }, [calcId, searchParams, updateCalcInUrl]);
+  }, [calcId, pathname, router, searchParams, updateCalcInUrl, urlBaseForTaxCanonical]);
 
   return (
     <div className="min-h-dvh bg-white text-slate-900">

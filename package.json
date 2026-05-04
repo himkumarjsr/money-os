@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "pwa:icons": "node scripts/generate-icons.mjs",
     "pwa:splashes": "node scripts/generate-splashes.mjs",
-    "pwa:assets": "node scripts/generate-icons.mjs && node scripts/generate-splashes.mjs"
+    "pwa:assets": "node scripts/generate-icons.mjs && node scripts/generate-splashes.mjs",
+    "og:placeholders": "node scripts/generate-og-placeholders.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

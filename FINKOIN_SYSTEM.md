@@ -2087,3 +2087,23 @@ LAYER 5: Data Encryption
   All connections use HTTPS/TLS
   jsonb fields store JSON securely
 
+---
+
+## SEO & organic discovery (2026-05-04)
+
+**Sitemap:** `app/sitemap.ts` → served at `/sitemap.xml`. Includes homepage, analyse, calculators hub, `/calculators/tax-regime-2026`, `/calculators/sip` (redirect route), tracker, learn, about, blog index, each `/blog/[slug]` article, and legal pages (privacy, terms, refund, disclaimer).
+
+**Robots:** `app/robots.ts` → `/robots.txt`. Allows `GPTBot`, `anthropic-ai`, `PerplexityBot`; disallows `/api/`, `/analyse/fixplan`, `/auth/`, `/_next/`; sitemap URL `https://finkoin.com/sitemap.xml`.
+
+**Metadata:** Per-route `metadata` / `generateMetadata` on landing (`app/page.tsx`), analyse layout, calculators hub + tax landing, tracker layout, learn, about, blog index & articles, result layout, calculator `[id]` layout. Uses `metadataBase` from `NEXT_PUBLIC_SITE_URL` and absolute titles where the root `title.template` would duplicate the brand.
+
+**Structured data (JSON-LD):** Root `app/layout.tsx` — WebApplication (head), `@graph` in body with Organization (logo `icons/icon-512x512.png`, `hello@finkoin.com`, sameAs Twitter/LinkedIn) and WebSite (`SearchAction` → `/learn?q={search_term_string}`). Homepage FAQPage; calculators hub SoftwareApplication + FAQPage; tax landing `WebApplication` + FAQPage (FY 2025-26 FAQ); blog articles `Article` schema.
+
+**OG images:** `public/og/home.png`, `tax-calculator.png`, `analyse.png`, and `public/og/blog/<slug>.png` — generated via `npm run og:placeholders` (`scripts/generate-og-placeholders.mjs`, Sharp). Replace with designed 1200×630 assets when ready.
+
+**Internal links:** Tax landing footer links analyse / learn / blog / SIP; learn header links analyse; blog index links tools; analyse result page “Keep going” links tax calculator, tracker, learn; article bodies link calculators and health check.
+
+**Performance / headers:** `next.config.mjs` — `images.formats` (AVIF/WebP), `minimumCacheTTL`, `experimental.optimizePackageImports` (`recharts`, `framer-motion`), security/cache headers on `/:path*`, `/icons/*`, `/fonts/*`.
+
+**Changelog — 2026-05-04:** Full SEO pass: blog as real routes with `lib/blogContent.ts`, dedicated tax calculator URL, expanded sitemap/robots, JSON-LD and OG placeholders, metadata on key marketing routes.
+

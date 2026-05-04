@@ -2,13 +2,41 @@ import { LearnHub } from "@/components/learn/learn-hub";
 import { learnArticles } from "@/lib/learnContent";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { generatePageMeta } from "@/lib/seo";
+import { SITE_URL } from "@/lib/seo";
 
-export const metadata: Metadata = generatePageMeta(
-  "Learn Personal Finance — Finkoin",
-  "Learn about emergency funds, term insurance, SIP investing, tax saving, and more. Free financial education for Indians.",
-  ["financial education India", "personal finance tips India"],
-);
+export const metadata: Metadata = {
+  title: {
+    absolute: "Learn Personal Finance — India Guide | Finkoin",
+  },
+  description:
+    "Learn personal finance the Indian way. Emergency fund, term insurance, SIP investing, tax saving — all explained simply with examples.",
+  keywords: [
+    "personal finance India guide",
+    "how to save tax India",
+    "term insurance guide India",
+    "SIP investment guide India",
+    "emergency fund guide India",
+  ],
+  alternates: {
+    canonical: "/learn",
+  },
+  openGraph: {
+    title: "Learn Personal Finance — India Guide | Finkoin",
+    description:
+      "Learn personal finance the Indian way. Emergency fund, term insurance, SIP investing, tax saving — all explained simply with examples.",
+    url: `${SITE_URL}/learn`,
+    siteName: "Finkoin",
+    type: "website",
+    images: [{ url: `${SITE_URL}/og/home.png`, width: 1200, height: 630, alt: "Finkoin Learn" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Learn Personal Finance — India Guide | Finkoin",
+    description:
+      "Learn personal finance the Indian way. Emergency fund, term insurance, SIP investing, tax saving — all explained simply with examples.",
+    images: [`${SITE_URL}/og/home.png`],
+  },
+};
 
 export default function LearnPage() {
   return (
@@ -30,12 +58,14 @@ export default function LearnPage() {
               category or browse everything.
             </p>
           </div>
-          <Link
-            href="/calculators"
-            className="text-sm font-semibold text-[#534AB7] hover:underline"
-          >
-            Try calculators →
-          </Link>
+          <div className="flex flex-wrap gap-4 text-sm font-semibold text-[#534AB7]">
+            <Link href="/calculators" className="hover:underline">
+              Try calculators →
+            </Link>
+            <Link href="/analyse" className="hover:underline">
+              Financial health check →
+            </Link>
+          </div>
         </div>
       </header>
 

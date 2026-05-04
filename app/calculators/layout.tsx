@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Finance Calculators - SIP, EMI, Tax & More | Finkoin",
+  title: "Free Financial Calculators for India 2026 | Finkoin",
   description:
-    "Explore free finance calculators for SIP, EMI, tax planning, home loans and more. Make smarter money decisions with Finkoin.",
+    "Free calculators for India: Tax regime comparison, SIP returns, emergency fund, term insurance, net worth. Updated for FY 2025-26.",
   keywords: [
+    "financial calculator India free",
+    "tax calculator India 2026",
     "SIP calculator India",
-    "EMI calculator",
-    "Income tax calculator India",
-    "financial calculators India",
+    "term insurance calculator",
+    "net worth calculator India",
   ],
-  alternates: {
-    canonical: "/calculators",
-  },
 };
 
 export default function CalculatorsLayout({ children }: { children: React.ReactNode }) {
