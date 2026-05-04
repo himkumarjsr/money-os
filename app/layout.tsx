@@ -195,6 +195,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
         <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
         <meta name="theme-color" content="#534AB7" />
+        <meta
+          name="google-site-verification"
+          content="INyXjW5d4nLIwegnwnH_DAKX81o3a_cYup7iq_Jt-6U"
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Finkoin" />
