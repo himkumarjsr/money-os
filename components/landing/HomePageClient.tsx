@@ -130,7 +130,7 @@ export default function HomePageClient() {
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" delay={0.02} aboveFold>
               <h1 className="mt-4 text-balance text-4xl font-bold leading-[1.04] tracking-tight text-slate-900 sm:mt-5 sm:text-5xl md:text-6xl">
-                Know your Financial Health Score
+                Check your Financial Freedom Score
               </h1>
             </AnimateOnScroll>
             <AnimateOnScroll variant="fadeUp" delay={0.1} aboveFold>

@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     absolute: "Finkoin — Free Financial Health Check for India",
   },
   description:
-    "Know your financial health score in 5 minutes. Check emergency fund, insurance gap, loans, and investments. Free. No PAN. No Aadhaar. Built for India.",
+    "See how close you are to achieving financial independence in 5 minutes. Check emergency fund, insurance gap, loans, and investments. Free. No PAN. No Aadhaar. Built for India.",
   keywords: [
     "financial health check India",
     "personal finance app India free",
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Finkoin — Free Financial Health Check for India",
-    description: "Know your financial health score in 5 minutes. Free. No PAN. No Aadhaar.",
+    description: "See how close you are to achieving financial independence in 5 minutes. Free. No PAN. No Aadhaar.",
     url: SITE_URL,
     siteName: "Finkoin",
     type: "website",
@@ -73,7 +73,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Finkoin — Free Financial Health Check for India",
-    description: "Know your financial health score in 5 minutes. Free. No PAN. No Aadhaar.",
+    description: "See how close you are to achieving financial independence in 5 minutes. Free. No PAN. No Aadhaar.",
     images: [`${SITE_URL}/og/home.png`],
   },
   alternates: {

@@ -48,6 +48,28 @@ import { ToggleSection } from "./ToggleSection";
 export const TAX_CALCULATOR_STORAGE_KEY = "finkoin_tax_calculator";
 const TAX_CALC_SCHEMA_VERSION = 2;
 
+/** Step 1 (checklist): only screen with voice. Spaced for clearer TTS. */
+const PERSONAL_CA_STEP1_WELCOME_TTS =
+  "Welcome to Finkoin — your Personal CA. Please have your documents ready before we start.";
+
+function pickPersonalCAFemaleVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
+  const voices = synth.getVoices();
+  if (voices.length === 0) return null;
+  const rank = (v: SpeechSynthesisVoice): number => {
+    const blob = `${v.name} ${v.voiceURI}`.toLowerCase();
+    if (/female|woman|\bf\s|\(f\)/.test(blob)) return 5;
+    if (/\b(zira|samantha|karen|victoria|veena|tessa|fiona|serena|martha|moira|paayal|sangeeta|lekha)\b/.test(blob)) return 4;
+    if (/google.+(english|us|uk).+female|microsoft.+female/.test(blob)) return 4;
+    return 0;
+  };
+  const en = voices.filter((v) => /^en/i.test(v.lang || ""));
+  const pool = en.length > 0 ? en : voices;
+  const byRank = [...pool].sort((a, b) => rank(b) - rank(a));
+  const best = byRank.find((v) => rank(v) > 0);
+  if (best) return best;
+  return pool.find((v) => /en[-_]IN/i.test(v.lang)) || pool.find((v) => /en[-_]US/i.test(v.lang)) || pool[0] || null;
+}
+
 function Mt(
   props: Omit<ComponentProps<typeof MoneyInput>, "labelAction"> & { teach: TaxTeachContent },
 ) {
@@ -261,6 +283,18 @@ export function TaxRegimeCalculator() {
   const [hraSalaryBaseAnnualOverride, setHraSalaryBaseAnnualOverride] = useState(0);
 
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [personalCAOpen, setPersonalCAOpen] = useState(true);
+  const [personalCAStep, setPersonalCAStep] = useState(0);
+  const [speechMuted, setSpeechMuted] = useState(false);
+  const [caChecklist, setCaChecklist] = useState({
+    salary: false,
+    form16: false,
+    interest: false,
+    dividends: false,
+    investments: false,
+    rentLoan: false,
+    gains: false,
+  });
 
   useEffect(() => {
     try {
@@ -976,6 +1010,103 @@ export function TaxRegimeCalculator() {
     window.location.reload();
   };
 
+  const personalCATotalSteps = 19;
+  const personalCAProgress = Math.round((Math.min(personalCAStep + 1, personalCATotalSteps) / personalCATotalSteps) * 100);
+  const checklistReady = Object.values(caChecklist).every(Boolean);
+
+  const personalCASection = (() => {
+    if (personalCAStep === 0) return "Get ready";
+    if (personalCAStep <= 2) return "Profile & income";
+    if (personalCAStep <= 10) return "Income details";
+    if (personalCAStep <= 16) return "Deductions";
+    return "Review";
+  })();
+
+  const syncWizardToggles = () => {
+    setSecHRA(hraMonthly > 0 || rentPaidMonthly > 0);
+    setSec80GG(!(hraMonthly > 0 || rentPaidMonthly > 0) && rentPaidNoHra > 0);
+    setSecInterest(savingsInterest > 0 || fdInterest > 0 || postOfficeInterest > 0 || bondsInterest > 0);
+    setSecDividend(divIndian > 0 || divMF > 0 || divForeign > 0);
+    setSecLTA(ltaAnnualRecv > 0 || ltaTravelCost > 0);
+    setSecRSU(rsuUnits > 0 || rsuUnitsSold > 0);
+    setSecLeave(leaveReceived > 0 || leaveDays > 0);
+    setSecRental(rentAnnualGross > 0 || rentMunicipal > 0 || rentLoanInterest > 0);
+    setSecCG(
+      cgEquityStcgExtra > 0 ||
+        cgEquityLtcgExtra > 0 ||
+        cgDebtStcg > 0 ||
+        cgDebtLtcg > 0 ||
+        cgPropStcg > 0 ||
+        cgPropLtcg > 0,
+    );
+    setSecOther(lotteryIncome > 0 || giftsTaxable > 0 || commissionIncome > 0 || otherMiscIncome > 0);
+    setSecAgri(agriculturalIncome > 0);
+    setSecDed80c(c80Elss + c80Ppf + c80Lic + c80Epf + c80Tuition + c80Principal + nps80CCD1B > 0);
+    setSecDed80d(deductions80DSelf + deductions80DParents > 0);
+    setSecDedRest(
+      deduction80DD +
+        deduction80DDB +
+        deduction80E +
+        deduction80EEA +
+        deduction80G +
+        deduction80TTA +
+        deduction80TTB +
+        deduction80U +
+        deduction80RRB +
+        homeLoanInterest24b +
+        professionalTax >
+        0,
+    );
+  };
+
+  const nextPersonalCAStep = () => {
+    if (personalCAStep === 0 && !checklistReady) return;
+    setPersonalCAStep((s) => Math.min(personalCATotalSteps - 1, s + 1));
+  };
+
+  const prevPersonalCAStep = () => {
+    setPersonalCAStep((s) => Math.max(0, s - 1));
+  };
+
+  const closePersonalCA = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setPersonalCAOpen(false);
+    setPersonalCAStep(0);
+  };
+
+  useEffect(() => {
+    if (personalCAOpen) return;
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, [personalCAOpen]);
+
+  useEffect(() => {
+    if (!personalCAOpen || speechMuted || personalCAStep !== 0) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const synth = window.speechSynthesis;
+    synth.resume?.();
+    void synth.getVoices();
+
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(PERSONAL_CA_STEP1_WELCOME_TTS);
+    utter.rate = 0.94;
+    utter.pitch = 1.06;
+    const voice = pickPersonalCAFemaleVoice(synth);
+    if (voice) {
+      utter.voice = voice;
+      utter.lang = voice.lang || "en-IN";
+    } else {
+      utter.lang = "en-IN";
+      utter.pitch = 1.12;
+    }
+    synth.speak(utter);
+    return () => synth.cancel();
+  }, [personalCAOpen, personalCAStep, speechMuted]);
+
   const learnTaxLinks = [
     { href: "/learn/old-vs-new-tax-regime-which-saves-you-more-money", label: "Old vs new regime — complete guide" },
     { href: "/learn/80c-complete-guide-tax-saving-india", label: "80C complete guide" },
@@ -1143,21 +1274,33 @@ export function TaxRegimeCalculator() {
             </span>
           ) : null}
         </p>
-        <button
-          type="button"
-          onClick={resetCalculator}
-          style={{
-            background: "none",
-            border: "1px solid #E8E6F0",
-            borderRadius: 8,
-            padding: "8px 16px",
-            fontSize: 13,
-            color: "#9B9A94",
-            cursor: "pointer",
-          }}
-        >
-          Reset calculator
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setPersonalCAOpen(true);
+              setPersonalCAStep(0);
+            }}
+            className="rounded-lg border border-[#DCD9F7] bg-[#F7F6FE] px-3 py-2 text-xs font-semibold text-[#534AB7] transition hover:bg-[#EEEDFE]"
+          >
+            Personal CA (guided)
+          </button>
+          <button
+            type="button"
+            onClick={resetCalculator}
+            style={{
+              background: "none",
+              border: "1px solid #E8E6F0",
+              borderRadius: 8,
+              padding: "8px 16px",
+              fontSize: 13,
+              color: "#9B9A94",
+              cursor: "pointer",
+            }}
+          >
+            Reset calculator
+          </button>
+        </div>
       </div>
 
       <p className="text-xs text-[#7A7871]">
@@ -2285,6 +2428,452 @@ export function TaxRegimeCalculator() {
             ]}
             navigateAfterUnlock="/calculators?calc=tax-regime"
           />
+
+          {personalCAOpen ? (
+            <div
+              className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="personal-ca-title"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) closePersonalCA();
+              }}
+            >
+              <div className="w-full max-w-2xl rounded-3xl bg-white p-4 shadow-xl sm:p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Personal CA</p>
+                    <h2 id="personal-ca-title" className="text-lg font-semibold text-slate-900 sm:text-xl">
+                      Your guided tax Q&A
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-600 sm:text-sm">
+                      Step {Math.min(personalCAStep + 1, personalCATotalSteps)} of {personalCATotalSteps} · {personalCASection}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSpeechMuted((v) => {
+                          const next = !v;
+                          if (next && typeof window !== "undefined" && "speechSynthesis" in window) {
+                            window.speechSynthesis.cancel();
+                          }
+                          return next;
+                        })
+                      }
+                      className="rounded-lg border border-[#E8E6F0] px-2.5 py-1.5 text-base leading-none text-[#5F5E5A] hover:bg-slate-50"
+                      aria-label={speechMuted ? "Unmute voice" : "Mute voice"}
+                      title={speechMuted ? "Unmute voice" : "Mute voice"}
+                    >
+                      {speechMuted ? "🔇" : "🔊"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closePersonalCA}
+                      className="rounded-lg p-2 text-lg leading-none text-slate-900 hover:bg-slate-100"
+                      aria-label="Close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#EEEDFE]">
+                  <div
+                    className="h-full rounded-full bg-[#534AB7] transition-all duration-300"
+                    style={{ width: `${personalCAProgress}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-right text-[11px] text-[#7A7871]">{personalCAProgress}% complete</p>
+
+                <div className="mt-4 max-h-[62vh] overflow-y-auto pr-1">
+                  {personalCAStep === 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-[#111110]">
+                        Before we start, keep these details ready so your Personal CA flow is accurate.
+                      </p>
+                      {[
+                        ["salary", "Latest salary slips + Form 16 (if available)"],
+                        ["interest", "Savings, FD/RD, post office and bond interest totals"],
+                        ["dividends", "Dividend totals (Indian stocks, mutual funds, foreign)"],
+                        ["investments", "Tax-saving proof: PF, PPF, ELSS, LIC, tuition, home principal, NPS"],
+                        ["rentLoan", "Rent paid, HRA details, and home-loan interest/principal details"],
+                        ["gains", "Capital gains summary (equity/debt/property, STCG/LTCG)"],
+                        ["form16", "Any deduction proofs: medical, donation, education loan, disability, royalty, etc."],
+                      ].map(([k, label]) => (
+                        <label key={k} className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#ECEAF8] px-3 py-2 text-sm text-[#5F5E5A]">
+                          <input
+                            type="checkbox"
+                            checked={caChecklist[k as keyof typeof caChecklist]}
+                            onChange={(e) => setCaChecklist((prev) => ({ ...prev, [k]: e.target.checked }))}
+                            className="mt-0.5 accent-[#534AB7]"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                      {!checklistReady ? (
+                        <p className="text-xs text-amber-700">Please tick all items to continue.</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 1 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-[#111110]">What best describes you?</p>
+                      <div className="flex flex-wrap gap-2">
+                        {EMPLOYMENT_OPTIONS.map((opt) => (
+                          <button
+                            key={`ca-${opt.id}`}
+                            type="button"
+                            className={cn(
+                              pill,
+                              employment === opt.id ? "bg-[#534AB7] text-white" : "bg-slate-100 text-slate-700",
+                            )}
+                            onClick={() => setEmployment(opt.id)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      <NumberInput label="Your age" value={age} onChange={setAge} min={18} max={100} step={1} />
+                      <div className="flex flex-wrap gap-3 pt-1">
+                        <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
+                          <input type="checkbox" checked={parentsSenior} onChange={(e) => setParentsSenior(e.target.checked)} className="accent-[#534AB7]" />
+                          Parents are senior citizens
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
+                          <input type="checkbox" checked={nri} onChange={(e) => setNri(e.target.checked)} className="accent-[#534AB7]" />
+                          NRI / overseas tie
+                        </label>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 2 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Let us capture your core income first.</p>
+                      <Mt id="ca-basic" label="Monthly basic salary" teach={TEACH.income.basicMonthly} defaultValue={basicMonthly ? formatIndian(basicMonthly) : ""} onChange={(e) => setBasicMonthly(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-special" label="Monthly special allowance" teach={TEACH.income.allowancesMonthly} optional defaultValue={specialAllowanceMonthly ? formatIndian(specialAllowanceMonthly) : ""} onChange={(e) => setSpecialAllowanceMonthly(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-free" label="Freelance/professional income (annual)" teach={TEACH.income.freelanceIncome} optional defaultValue={freelanceIncome ? formatIndian(freelanceIncome) : ""} onChange={(e) => setFreelanceIncome(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 3 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-[#111110]">Do you receive HRA from employer? <span className="text-[#7A7871]">(Sec 10(13A))</span></p>
+                      <div className="flex gap-2">
+                        {chip(secHRA, "Yes", () => {
+                          setSecHRA(true);
+                          setSec80GG(false);
+                        })}
+                        {chip(!secHRA, "No", () => setSecHRA(false))}
+                      </div>
+                      {secHRA ? (
+                        <>
+                          <Mt id="ca-hra" label="Monthly HRA received" teach={TEACH.income.hraMonthly} defaultValue={hraMonthly ? formatIndian(hraMonthly) : ""} onChange={(e) => setHraMonthly(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-rent" label="Monthly rent paid" teach={TEACH.deductions.eightyGG} defaultValue={rentPaidMonthly ? formatIndian(rentPaidMonthly) : ""} onChange={(e) => setRentPaidMonthly(parseMoneyInput(e.target.value) ?? 0)} />
+                          <div className="flex gap-2">
+                            {chip(isMetro, "Metro city", () => setIsMetro(true))}
+                            {chip(!isMetro, "Non-metro city", () => setIsMetro(false))}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-[#7A7871]">If you pay rent without HRA, this goes under Sec 80GG (illustrative cap up to ₹60,000).</p>
+                          <Mt id="ca-rent-no-hra" label="Annual rent paid without HRA (Sec 80GG)" teach={TEACH.deductions.eightyGG} optional defaultValue={rentPaidNoHra ? formatIndian(rentPaidNoHra) : ""} onChange={(e) => setRentPaidNoHra(parseMoneyInput(e.target.value) ?? 0)} />
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 4 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Now income from bank/investments.</p>
+                      <Mt id="ca-sav-int" label="Savings account interest (Sec 80TTA/80TTB link)" teach={TEACH.income.interestIncome} optional defaultValue={savingsInterest ? formatIndian(savingsInterest) : ""} onChange={(e) => setSavingsInterest(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-fd-int" label="FD/RD interest" teach={TEACH.income.interestIncome} optional defaultValue={fdInterest ? formatIndian(fdInterest) : ""} onChange={(e) => setFdInterest(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-po-int" label="Post office interest" teach={TEACH.income.interestIncome} optional defaultValue={postOfficeInterest ? formatIndian(postOfficeInterest) : ""} onChange={(e) => setPostOfficeInterest(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-bond-int" label="Bond/debenture interest" teach={TEACH.income.interestIncome} optional defaultValue={bondsInterest ? formatIndian(bondsInterest) : ""} onChange={(e) => setBondsInterest(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-div-ind" label="Dividend from Indian companies" teach={TEACH.income.dividendIncome} optional defaultValue={divIndian ? formatIndian(divIndian) : ""} onChange={(e) => setDivIndian(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-div-mf" label="Dividend from mutual funds" teach={TEACH.income.dividendIncome} optional defaultValue={divMF ? formatIndian(divMF) : ""} onChange={(e) => setDivMF(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-div-foreign" label="Dividend from foreign companies" teach={TEACH.income.dividendIncome} optional defaultValue={divForeign ? formatIndian(divForeign) : ""} onChange={(e) => setDivForeign(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 5 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Did you receive Leave Travel Allowance? <span className="text-[#7A7871]">(LTA / Sec 10(5))</span></p>
+                      <div className="flex gap-2">
+                        {chip(secLTA, "Yes", () => setSecLTA(true))}
+                        {chip(!secLTA, "No", () => setSecLTA(false))}
+                      </div>
+                      {secLTA ? (
+                        <>
+                          <Mt id="ca-lta-recv" label="Annual LTA received" teach={TEACH.income.ltaTaxable} optional defaultValue={ltaAnnualRecv ? formatIndian(ltaAnnualRecv) : ""} onChange={(e) => setLtaAnnualRecv(parseMoneyInput(e.target.value) ?? 0)} />
+                          <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
+                            <input type="checkbox" checked={ltaClaiming} onChange={(e) => setLtaClaiming(e.target.checked)} className="accent-[#534AB7]" />
+                            Claiming travel this year?
+                          </label>
+                          {ltaClaiming ? (
+                            <Mt id="ca-lta-cost" label="Actual travel cost used for claim" teach={TEACH.income.ltaExempt} optional defaultValue={ltaTravelCost ? formatIndian(ltaTravelCost) : ""} onChange={(e) => setLtaTravelCost(parseMoneyInput(e.target.value) ?? 0)} />
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 6 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Any RSU / ESOP vesting or sale this year?</p>
+                      <div className="flex gap-2">
+                        {chip(secRSU, "Yes", () => setSecRSU(true))}
+                        {chip(!secRSU, "No", () => setSecRSU(false))}
+                      </div>
+                      {secRSU ? (
+                        <>
+                          <NumberInput label="Units vested this FY" value={rsuUnits} onChange={setRsuUnits} min={0} step={1} />
+                          <Mt id="ca-rsu-fmv" label="FMV per vested unit" teach={TEACH.income.rsuVesting} optional defaultValue={rsuFmvPerUnit ? formatIndian(rsuFmvPerUnit) : ""} onChange={(e) => setRsuFmvPerUnit(parseMoneyInput(e.target.value) ?? 0)} />
+                          <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
+                            <input type="checkbox" checked={rsuPlanSell} onChange={(e) => setRsuPlanSell(e.target.checked)} className="accent-[#534AB7]" />
+                            Sold vested units?
+                          </label>
+                          {rsuPlanSell ? (
+                            <>
+                              <NumberInput label="Units sold" value={rsuUnitsSold} onChange={setRsuUnitsSold} min={0} step={1} />
+                              <Mt id="ca-rsu-sale-px" label="Sale price per unit" teach={TEACH.income.rsuSaleStcg} optional defaultValue={rsuSalePrice ? formatIndian(rsuSalePrice) : ""} onChange={(e) => setRsuSalePrice(parseMoneyInput(e.target.value) ?? 0)} />
+                              <Mt id="ca-rsu-cost-px" label="Cost/FMV per unit at vest" teach={TEACH.income.rsuSaleLtcg} optional defaultValue={rsuCostPrice ? formatIndian(rsuCostPrice) : ""} onChange={(e) => setRsuCostPrice(parseMoneyInput(e.target.value) ?? 0)} />
+                              <div className="flex gap-2">
+                                {chip(rsuShortTerm, "Short-term", () => setRsuShortTerm(true))}
+                                {chip(!rsuShortTerm, "Long-term", () => setRsuShortTerm(false))}
+                              </div>
+                            </>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 7 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Any leave encashment received this year? <span className="text-[#7A7871]">(Sec 10(10AA))</span></p>
+                      <div className="flex gap-2">
+                        {chip(secLeave, "Yes", () => setSecLeave(true))}
+                        {chip(!secLeave, "No", () => setSecLeave(false))}
+                      </div>
+                      {secLeave ? (
+                        <>
+                          <div className="flex gap-2">
+                            {chip(leaveTiming === "retirement", "At retirement", () => setLeaveTiming("retirement"))}
+                            {chip(leaveTiming === "during_service", "During service", () => setLeaveTiming("during_service"))}
+                          </div>
+                          <div className="flex gap-2">
+                            {chip(leaveEmployer === "government", "Government employer", () => setLeaveEmployer("government"))}
+                            {chip(leaveEmployer === "private", "Private employer", () => setLeaveEmployer("private"))}
+                          </div>
+                          <Mt id="ca-leave-amt" label="Leave encashment amount received" teach={TEACH.income.leaveEncashmentTaxable} optional defaultValue={leaveReceived ? formatIndian(leaveReceived) : ""} onChange={(e) => setLeaveReceived(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-leave-avg" label="Average monthly salary for calc" teach={TEACH.income.leaveEncashmentTaxable} optional defaultValue={leaveAvgMonthly ? formatIndian(leaveAvgMonthly) : ""} onChange={(e) => setLeaveAvgMonthly(parseMoneyInput(e.target.value) ?? 0)} />
+                          <NumberInput label="Accumulated leave days" value={leaveDays} onChange={setLeaveDays} min={0} step={1} />
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 8 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Any rental income from property?</p>
+                      <div className="flex gap-2">
+                        {chip(secRental, "Yes", () => setSecRental(true))}
+                        {chip(!secRental, "No", () => setSecRental(false))}
+                      </div>
+                      {secRental ? (
+                        <>
+                          <Mt id="ca-rent-gross" label="Annual rent received" teach={TEACH.income.rentalIncome} optional defaultValue={rentAnnualGross ? formatIndian(rentAnnualGross) : ""} onChange={(e) => setRentAnnualGross(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-rent-muni" label="Municipal taxes paid" teach={TEACH.income.rentalIncome} optional defaultValue={rentMunicipal ? formatIndian(rentMunicipal) : ""} onChange={(e) => setRentMunicipal(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-rent-int" label="Home loan interest (let-out)" teach={TEACH.income.rentalIncome} optional defaultValue={rentLoanInterest ? formatIndian(rentLoanInterest) : ""} onChange={(e) => setRentLoanInterest(parseMoneyInput(e.target.value) ?? 0)} />
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 9 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Any capital gains this year? If yes, fill all applicable buckets.</p>
+                      <div className="flex gap-2">
+                        {chip(secCG, "Yes", () => setSecCG(true))}
+                        {chip(!secCG, "No", () => setSecCG(false))}
+                      </div>
+                      {secCG ? (
+                        <>
+                          <Mt id="ca-cg-eq-st" label="Equity STCG gains (illustrative 20%)" teach={TEACH.income.otherStcg} optional defaultValue={cgEquityStcgExtra ? formatIndian(cgEquityStcgExtra) : ""} onChange={(e) => setCgEquityStcgExtra(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-cg-eq-lt" label="Equity LTCG gains (₹1.25L exemption then 12.5%)" teach={TEACH.income.otherLtcg} optional defaultValue={cgEquityLtcgExtra ? formatIndian(cgEquityLtcgExtra) : ""} onChange={(e) => setCgEquityLtcgExtra(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-cg-debt-st" label="Debt STCG (slab)" teach={TEACH.income.otherStcg} optional defaultValue={cgDebtStcg ? formatIndian(cgDebtStcg) : ""} onChange={(e) => setCgDebtStcg(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-cg-debt-lt" label="Debt LTCG (slab in this planner)" teach={TEACH.income.otherLtcg} optional defaultValue={cgDebtLtcg ? formatIndian(cgDebtLtcg) : ""} onChange={(e) => setCgDebtLtcg(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-cg-prop-st" label="Property STCG (slab)" teach={TEACH.income.otherStcg} optional defaultValue={cgPropStcg ? formatIndian(cgPropStcg) : ""} onChange={(e) => setCgPropStcg(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-cg-prop-lt" label="Property LTCG (illustrative 12.5%)" teach={TEACH.income.otherLtcg} optional defaultValue={cgPropLtcg ? formatIndian(cgPropLtcg) : ""} onChange={(e) => setCgPropLtcg(parseMoneyInput(e.target.value) ?? 0)} />
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 10 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Any other taxable income or agricultural income to include?</p>
+                      <div className="flex gap-2">
+                        {chip(secOther, "Other income: Yes", () => setSecOther(true))}
+                        {chip(!secOther, "Other income: No", () => setSecOther(false))}
+                      </div>
+                      {secOther ? (
+                        <>
+                          <Mt id="ca-lottery" label="Lottery/gambling winnings (flat 30% illustrative)" teach={TEACH.sections.income} optional defaultValue={lotteryIncome ? formatIndian(lotteryIncome) : ""} onChange={(e) => setLotteryIncome(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-gift" label="Taxable gifts" teach={TEACH.sections.income} optional defaultValue={giftsTaxable ? formatIndian(giftsTaxable) : ""} onChange={(e) => setGiftsTaxable(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-comm" label="Commission income" teach={TEACH.income.freelanceIncome} optional defaultValue={commissionIncome ? formatIndian(commissionIncome) : ""} onChange={(e) => setCommissionIncome(parseMoneyInput(e.target.value) ?? 0)} />
+                          <Mt id="ca-omisc" label="Other taxable income" teach={TEACH.sections.income} optional defaultValue={otherMiscIncome ? formatIndian(otherMiscIncome) : ""} onChange={(e) => setOtherMiscIncome(parseMoneyInput(e.target.value) ?? 0)} />
+                        </>
+                      ) : null}
+                      <div className="flex gap-2 pt-1">
+                        {chip(secAgri, "Agricultural income: Yes", () => setSecAgri(true))}
+                        {chip(!secAgri, "Agricultural income: No", () => setSecAgri(false))}
+                      </div>
+                      {secAgri ? (
+                        <>
+                          <Mt id="ca-agri" label="Annual agricultural income" teach={TEACH.income.agriculturalIncome} optional defaultValue={agriculturalIncome ? formatIndian(agriculturalIncome) : ""} onChange={(e) => setAgriculturalIncome(parseMoneyInput(e.target.value) ?? 0)} />
+                          <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
+                            <input type="checkbox" checked={excludeAgriculturalFromTax} onChange={(e) => setExcludeAgriculturalFromTax(e.target.checked)} className="accent-[#534AB7]" />
+                            Exclude from ordinary taxable gross in this planner
+                          </label>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 11 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">
+                        80C means tax-saving investments like PF, PPF, ELSS, LIC, tuition fee, home-loan principal. Cap: ₹1,50,000. Extra NPS 80CCD(1B) cap: ₹50,000.
+                        <span className="text-[#7A7871]"> (Sec 80C / 80CCD(1B))</span>
+                      </p>
+                      <Mt id="ca-epf" label="EPF / PF contribution" teach={TEACH.deductions.eightyCEpf} optional defaultValue={c80Epf ? formatIndian(c80Epf) : ""} onChange={(e) => setC80Epf(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-ppf" label="PPF contribution" teach={TEACH.deductions.eightyCPpf} optional defaultValue={c80Ppf ? formatIndian(c80Ppf) : ""} onChange={(e) => setC80Ppf(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-elss" label="ELSS investment" teach={TEACH.deductions.eightyCElss} optional defaultValue={c80Elss ? formatIndian(c80Elss) : ""} onChange={(e) => setC80Elss(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-lic" label="LIC premium" teach={TEACH.deductions.eightyCLic} optional defaultValue={c80Lic ? formatIndian(c80Lic) : ""} onChange={(e) => setC80Lic(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-tuition" label="Eligible tuition fee" teach={TEACH.deductions.eightyCTuition} optional defaultValue={c80Tuition ? formatIndian(c80Tuition) : ""} onChange={(e) => setC80Tuition(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-principal" label="Home-loan principal repaid" teach={TEACH.deductions.eightyCHomePrincipal} optional defaultValue={c80Principal ? formatIndian(c80Principal) : ""} onChange={(e) => setC80Principal(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-nps" label="Extra NPS (Sec 80CCD(1B))" teach={TEACH.deductions.eightyCCD} optional defaultValue={nps80CCD1B ? formatIndian(nps80CCD1B) : ""} onChange={(e) => setNps80CCD1B(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 12 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Health insurance premiums. Caps: self/family ₹25k or ₹50k (senior), parents ₹25k or ₹50k (senior). <span className="text-[#7A7871]">(Sec 80D)</span></p>
+                      <Mt id="ca-80d-self" label="Self/spouse/kids premium" teach={TEACH.deductions.eightyDSelf} optional defaultValue={deductions80DSelf ? formatIndian(deductions80DSelf) : ""} onChange={(e) => setDeductions80DSelf(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-80d-parent" label="Parents premium" teach={TEACH.deductions.eightyDParents} optional defaultValue={deductions80DParents ? formatIndian(deductions80DParents) : ""} onChange={(e) => setDeductions80DParents(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 13 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Housing loan deductions. Sec 24(b) cap: ₹2,00,000. Sec 80EEA cap: ₹1,50,000.</p>
+                      <Mt id="ca-24b" label="Home loan interest on self-occupied house (Sec 24(b))" teach={TEACH.deductions.twentyFourB} optional defaultValue={homeLoanInterest24b ? formatIndian(homeLoanInterest24b) : ""} onChange={(e) => setHomeLoanInterest24b(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-80eea" label="Additional affordable housing interest (Sec 80EEA)" teach={TEACH.deductions.eightyEEA} optional defaultValue={deduction80EEA ? formatIndian(deduction80EEA) : ""} onChange={(e) => setDeduction80EEA(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 14 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Education loan and donations.</p>
+                      <Mt id="ca-80e" label="Education loan interest paid (Sec 80E)" teach={TEACH.deductions.eightyE} optional defaultValue={deduction80E ? formatIndian(deduction80E) : ""} onChange={(e) => setDeduction80E(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-80g" label="Eligible donations (Sec 80G)" teach={TEACH.deductions.eightyG} optional defaultValue={deduction80G ? formatIndian(deduction80G) : ""} onChange={(e) => setDeduction80G(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 15 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Disability and medical-condition deductions. 80DD cap: ₹1,25,000. 80DDB cap: ₹40,000 or ₹1,00,000 (senior). 80U cap: ₹1,25,000.</p>
+                      <Mt id="ca-80dd" label="Dependent disability (Sec 80DD)" teach={TEACH.deductions.eightyDD} optional defaultValue={deduction80DD ? formatIndian(deduction80DD) : ""} onChange={(e) => setDeduction80DD(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-80ddb" label="Specified disease treatment (Sec 80DDB)" teach={TEACH.deductions.eightyDDB} optional defaultValue={deduction80DDB ? formatIndian(deduction80DDB) : ""} onChange={(e) => setDeduction80DDB(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-80u" label="Self disability deduction (Sec 80U)" teach={TEACH.deductions.eightyU} optional defaultValue={deduction80U ? formatIndian(deduction80U) : ""} onChange={(e) => setDeduction80U(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 16 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-[#111110]">Interest/royalty/prof-tax deductions. 80TTA cap ₹10k (non-senior), 80TTB cap ₹50k, 80RRB cap ₹3,00,000, professional tax cap ₹5,000.</p>
+                      <Mt id="ca-80tta" label="Savings account interest deduction (Sec 80TTA)" teach={TEACH.deductions.eightyTTA} optional disabled={age >= 60} defaultValue={deduction80TTA ? formatIndian(deduction80TTA) : ""} onChange={(e) => setDeduction80TTA(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-80ttb" label="Senior citizen interest deduction (Sec 80TTB)" teach={TEACH.deductions.eightyTTB} optional defaultValue={deduction80TTB ? formatIndian(deduction80TTB) : ""} onChange={(e) => setDeduction80TTB(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-80rrb" label="Royalty income deduction (Sec 80RRB)" teach={TEACH.deductions.eightyRRB} optional defaultValue={deduction80RRB ? formatIndian(deduction80RRB) : ""} onChange={(e) => setDeduction80RRB(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-prof-tax" label="Professional tax paid" teach={TEACH.deductions.professionalTax} optional defaultValue={professionalTax ? formatIndian(professionalTax) : ""} onChange={(e) => setProfessionalTax(parseMoneyInput(e.target.value) ?? 0)} />
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 17 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-[#111110]">Quick review before calculation</p>
+                      <div className="rounded-lg border border-[#ECEAF8] bg-[#FAFAFE] p-3 text-sm text-[#5F5E5A]">
+                        <p>Salary captured: ₹{Math.round((basicMonthly + specialAllowanceMonthly) * 12).toLocaleString("en-IN")} yearly base</p>
+                        <p>80C+NPS total entered: ₹{(c80Elss + c80Ppf + c80Lic + c80Epf + c80Tuition + c80Principal + nps80CCD1B).toLocaleString("en-IN")}</p>
+                        <p>80D total entered: ₹{(deductions80DSelf + deductions80DParents).toLocaleString("en-IN")}</p>
+                        <p>Other deductions entered: ₹{(deduction80DD + deduction80DDB + deduction80E + deduction80EEA + deduction80G + deduction80TTA + deduction80TTB + deduction80U + deduction80RRB + homeLoanInterest24b).toLocaleString("en-IN")}</p>
+                      </div>
+                      <p className="text-xs text-[#7A7871]">You can go back and edit any answer. We will not change tax logic, only fill fields.</p>
+                    </div>
+                  ) : null}
+
+                  {personalCAStep === 18 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-[#111110]">Done. I have filled your tax form fields from this Personal CA flow.</p>
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                        Next step: tap <span className="font-semibold">Calculate</span> in Step 5 results to compare old vs new regime.
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={prevPersonalCAStep}
+                    disabled={personalCAStep === 0}
+                    className="rounded-lg border border-[#E8E6F0] px-3 py-2 text-sm text-[#5F5E5A] disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {personalCAStep >= 1 && personalCAStep < personalCATotalSteps - 1 ? (
+                      <button
+                        type="button"
+                        onClick={nextPersonalCAStep}
+                        className="rounded-lg border border-[#E8E6F0] px-3 py-2 text-sm text-[#5F5E5A]"
+                      >
+                        Skip
+                      </button>
+                    ) : null}
+                    {personalCAStep < personalCATotalSteps - 1 ? (
+                      <button
+                        type="button"
+                        onClick={nextPersonalCAStep}
+                        className="rounded-lg bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        disabled={personalCAStep === 0 && !checklistReady}
+                      >
+                        Save & Continue
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          syncWizardToggles();
+                          closePersonalCA();
+                        }}
+                        className="rounded-lg bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        Use these answers
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <p className="text-xs text-[#9B9A94]">Educational only — verify against notified law and Form 16.</p>
       </div>
