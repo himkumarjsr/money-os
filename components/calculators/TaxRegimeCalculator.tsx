@@ -1107,6 +1107,15 @@ export function TaxRegimeCalculator() {
     return () => synth.cancel();
   }, [personalCAOpen, personalCAStep, speechMuted]);
 
+  useEffect(() => {
+    if (!personalCAOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [personalCAOpen]);
+
   const learnTaxLinks = [
     { href: "/learn/old-vs-new-tax-regime-which-saves-you-more-money", label: "Old vs new regime — complete guide" },
     { href: "/learn/80c-complete-guide-tax-saving-india", label: "80C complete guide" },
@@ -1265,6 +1274,8 @@ export function TaxRegimeCalculator() {
 
   return (
     <div className="space-y-6 print:bg-white">
+      {!personalCAOpen ? (
+        <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-[#9B9A94]">
           {storageReady ? "✓ Progress auto-saved locally" : null}
@@ -2412,6 +2423,9 @@ export function TaxRegimeCalculator() {
               </div>
             </section>
           </div>
+        </div>
+        </>
+      ) : null}
 
           <PaywallModal
             open={paywallOpen}
@@ -2431,7 +2445,7 @@ export function TaxRegimeCalculator() {
 
           {personalCAOpen ? (
             <div
-              className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-slate-900/60 p-4 py-8 sm:p-6"
               role="dialog"
               aria-modal="true"
               aria-labelledby="personal-ca-title"
@@ -2439,8 +2453,8 @@ export function TaxRegimeCalculator() {
                 if (e.target === e.currentTarget) closePersonalCA();
               }}
             >
-              <div className="w-full max-w-2xl rounded-3xl bg-white p-4 shadow-xl sm:p-6">
-                <div className="flex items-start justify-between gap-4">
+              <div className="my-auto w-full max-w-2xl max-h-[min(88dvh,52rem)] overflow-hidden rounded-3xl bg-white shadow-xl flex flex-col p-4 sm:p-6">
+                <div className="flex shrink-0 items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Personal CA</p>
                     <h2 id="personal-ca-title" className="text-lg font-semibold text-slate-900 sm:text-xl">
@@ -2479,15 +2493,15 @@ export function TaxRegimeCalculator() {
                   </div>
                 </div>
 
-                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#EEEDFE]">
+                <div className="mt-3 h-2 w-full shrink-0 overflow-hidden rounded-full bg-[#EEEDFE]">
                   <div
                     className="h-full rounded-full bg-[#534AB7] transition-all duration-300"
                     style={{ width: `${personalCAProgress}%` }}
                   />
                 </div>
-                <p className="mt-1 text-right text-[11px] text-[#7A7871]">{personalCAProgress}% complete</p>
+                <p className="mt-1 shrink-0 text-right text-[11px] text-[#7A7871]">{personalCAProgress}% complete</p>
 
-                <div className="mt-4 max-h-[62vh] overflow-y-auto pr-1">
+                <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
                   {personalCAStep === 0 ? (
                     <div className="space-y-3">
                       <p className="text-sm font-medium text-[#111110]">
@@ -2828,7 +2842,7 @@ export function TaxRegimeCalculator() {
                   ) : null}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between gap-2">
+                <div className="mt-4 flex shrink-0 items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={prevPersonalCAStep}
@@ -2875,8 +2889,9 @@ export function TaxRegimeCalculator() {
             </div>
           ) : null}
 
-          <p className="text-xs text-[#9B9A94]">Educational only — verify against notified law and Form 16.</p>
-      </div>
+          {!personalCAOpen ? (
+            <p className="text-xs text-[#9B9A94]">Educational only — verify against notified law and Form 16.</p>
+          ) : null}
     </div>
   );
 }
