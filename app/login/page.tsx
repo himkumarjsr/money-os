@@ -15,7 +15,12 @@ function LoginContent() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const initAuth = useAuthStore((s) => s.initAuth);
 
-  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "reset">(() => {
+    const m = searchParams.get("mode");
+    if (m === "signup") return "signup";
+    if (m === "reset") return "reset";
+    return "login";
+  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
