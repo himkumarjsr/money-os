@@ -1,7 +1,7 @@
 "use client";
 
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
-import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
+import { AnimatePresence, m, useMotionValue, useTransform } from "framer-motion";
 import { useMemo, useState } from "react";
 
 type Feature = { readonly title: string; readonly body: string };
@@ -75,7 +75,7 @@ export default function FeatureCardsCarousel({
       <div className="relative px-1 md:hidden">
         <div className="relative" style={{ perspective: "1000px" }}>
           <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
+            <m.div
               key={activeFeature.title}
               custom={direction}
               variants={mobileVariants}
@@ -101,12 +101,12 @@ export default function FeatureCardsCarousel({
               >
                 <FeatureCardContent {...activeFeature} />
               </AnimateOnScroll>
-              <motion.div
+              <m.div
                 aria-hidden
                 style={{ opacity: shadowOpacity }}
                 className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-900/10 via-transparent to-violet-900/10"
               />
-            </motion.div>
+            </m.div>
           </AnimatePresence>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import CalculatorsClient from "./CalculatorsClient";
 import { getItemById } from "./calculator-config";
 import { generatePageMeta, SITE_URL } from "@/lib/seo";
@@ -233,7 +234,15 @@ export default async function CalculatorsPage({ searchParams }: PageProps) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <CalculatorsClient initialCalcId={active.id} />
+      <Suspense
+        fallback={
+          <div className="flex min-h-dvh items-center justify-center bg-white text-sm text-slate-600">
+            Loading calculators…
+          </div>
+        }
+      >
+        <CalculatorsClient initialCalcId={active.id} />
+      </Suspense>
     </>
   );
 }

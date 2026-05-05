@@ -1,7 +1,7 @@
 "use client";
 
 import { fadeIn, fadeUp, scaleIn, slideInLeft, slideInRight } from "@/lib/animations";
-import { motion, useInView } from "framer-motion";
+import { m, useInView } from "framer-motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const variants = {
@@ -75,7 +75,7 @@ export default function AnimateOnScroll({
   const visible = aboveFold || isInView || inViewOnLayout;
 
   return (
-    <motion.div
+    <m.div
       ref={ref}
       style={{ position: "relative" }}
       variants={variants[variant]}
@@ -85,6 +85,6 @@ export default function AnimateOnScroll({
       className={className}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

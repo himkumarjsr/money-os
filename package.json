@@ -2,6 +2,13 @@
   "name": "finkoin",
   "version": "0.1.0",
   "private": true,
+  "browserslist": [
+    "chrome >= 93",
+    "edge >= 93",
+    "firefox >= 92",
+    "safari >= 15.4",
+    "ios_saf >= 15.4"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

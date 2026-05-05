@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import CalculatorsClient from "../CalculatorsClient";
 import { SITE_URL } from "@/lib/seo";
 
@@ -114,7 +115,15 @@ export default function TaxRegime2026Page() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      <CalculatorsClient initialCalcId="tax-regime" urlBaseForTaxCanonical="/calculators/tax-regime-2026" />
+      <Suspense
+        fallback={
+          <div className="flex min-h-dvh items-center justify-center bg-white text-sm text-slate-600">
+            Loading calculator…
+          </div>
+        }
+      >
+        <CalculatorsClient initialCalcId="tax-regime" urlBaseForTaxCanonical="/calculators/tax-regime-2026" />
+      </Suspense>
       <section className="mx-auto max-w-6xl border-t border-slate-200 px-4 py-8 sm:px-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Explore more</h2>
         <ul className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-[#534AB7]">

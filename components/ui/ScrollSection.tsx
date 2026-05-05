@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { m, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
 export default function ScrollSection({ children }: { children: React.ReactNode }) {
@@ -16,8 +16,8 @@ export default function ScrollSection({ children }: { children: React.ReactNode 
   const y = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [28, 0, 0, -28]);
 
   return (
-    <motion.div ref={ref} style={{ y, position: "relative" }}>
+    <m.div ref={ref} style={{ y, position: "relative" }}>
       {children}
-    </motion.div>
+    </m.div>
   );
 }

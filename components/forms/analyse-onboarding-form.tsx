@@ -41,7 +41,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuthStore } from "@/store/authStore";
 
 import { useFinancialStore } from "@/store/financialStore";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -1152,7 +1152,7 @@ export function AnalyseOnboardingForm() {
         }}
       >
         <AnimatePresence mode="wait">
-          <motion.div
+          <m.div
             key={step}
             initial={{ opacity: 0, x: direction === "forward" ? 40 : -40 }}
             animate={{ opacity: 1, x: 0 }}
@@ -2122,7 +2122,7 @@ export function AnalyseOnboardingForm() {
                   </button>
                   <AnimatePresence initial={false}>
                     {liquidMfInfoOpen ? (
-                      <motion.div
+                      <m.div
                         key="liquid-mf-info"
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
@@ -2158,7 +2158,7 @@ export function AnalyseOnboardingForm() {
                             This is not investment advice. Please research before investing.
                           </p>
                         </div>
-                      </motion.div>
+                      </m.div>
                     ) : null}
                   </AnimatePresence>
                 </div>
@@ -2576,7 +2576,7 @@ export function AnalyseOnboardingForm() {
 
           </div>
         ) : null}
-          </motion.div>
+          </m.div>
         </AnimatePresence>
 
         <div className="relative z-10 flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-between">

@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import AppInitializer from "@/components/AppInitializer";
+import { MotionLazyProvider } from "@/components/MotionLazyProvider";
 import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
@@ -73,7 +74,6 @@ export const metadata: Metadata = {
       "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
     images: [`${siteUrl}/og/home.png`],
   },
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -216,6 +216,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Finkoin" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="manifest" href="/manifest.json" fetchPriority="low" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -247,22 +248,24 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
-        <Suspense fallback={null}>
-          <ReferralCapture />
-        </Suspense>
-        <AppInitializer>
-          <ScrollToTopOnRouteChange />
-          <AuthSessionSync />
-          <FinancialStoreAuthSync />
-          <GlobalNavbar />
-          <RenewalReminderBanner />
-          <main id="main-content" className="relative flex min-h-0 flex-1 flex-col">
-            {children}
-          </main>
-          <Footer />
-          <ReferralSuccessToast />
-          <Toast />
-        </AppInitializer>
+        <MotionLazyProvider>
+          <Suspense fallback={null}>
+            <ReferralCapture />
+          </Suspense>
+          <AppInitializer>
+            <ScrollToTopOnRouteChange />
+            <AuthSessionSync />
+            <FinancialStoreAuthSync />
+            <GlobalNavbar />
+            <RenewalReminderBanner />
+            <main id="main-content" className="relative flex min-h-0 flex-1 flex-col">
+              {children}
+            </main>
+            <Footer />
+            <ReferralSuccessToast />
+            <Toast />
+          </AppInitializer>
+        </MotionLazyProvider>
       </body>
     </html>
   );

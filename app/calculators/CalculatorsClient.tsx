@@ -4,7 +4,7 @@ import { lazyCalculatorsById } from "@/components/calculators/lazy-calculators";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { fadeUp, scaleIn, staggerContainer } from "@/lib/animations";
 import { cn } from "@/lib/cn";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -166,22 +166,22 @@ export default function CalculatorsClient({
       </div>
 
       <div className="mx-auto px-4 py-6 md:hidden">
-        <motion.p
+        <m.p
           variants={fadeUp}
           initial="hidden"
           animate="visible"
           className="text-xs font-semibold uppercase tracking-wide text-slate-500"
         >
           {activeCat.label}
-        </motion.p>
-        <motion.ul
+        </m.p>
+        <m.ul
           className="mt-3 space-y-2"
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
         >
           {activeCat.items.map((item, index) => (
-            <motion.li key={item.id} variants={fadeUp} transition={{ delay: index * 0.05 }}>
+            <m.li key={item.id} variants={fadeUp} transition={{ delay: index * 0.05 }}>
               <button
                 type="button"
                 onClick={() => {
@@ -194,9 +194,9 @@ export default function CalculatorsClient({
                 <span className="block text-sm font-semibold text-slate-900">{item.title}</span>
                 <span className="mt-0.5 block text-xs text-slate-500">{item.blurb}</span>
               </button>
-            </motion.li>
+            </m.li>
           ))}
-        </motion.ul>
+        </m.ul>
       </div>
 
       <BottomSheet
@@ -207,7 +207,7 @@ export default function CalculatorsClient({
         closeOnBackdrop={false}
         closeOnDrag={false}
       >
-        <motion.section
+        <m.section
           key={calcId}
           variants={scaleIn}
           initial="hidden"
@@ -219,7 +219,7 @@ export default function CalculatorsClient({
           <div className="mt-5">
             <ActiveCalc />
           </div>
-        </motion.section>
+        </m.section>
       </BottomSheet>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { fadeIn } from "@/lib/animations";
 import { useAuthStore } from "@/store/authStore";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -89,7 +89,7 @@ export function GlobalNavbar() {
 
   return (
     <>
-      <motion.header
+      <m.header
         variants={fadeIn}
         initial={false}
         animate={{ opacity: 1, y: 0 }}
@@ -214,12 +214,12 @@ export function GlobalNavbar() {
             </button>
           </div>
         </div>
-      </motion.header>
+      </m.header>
 
       <AnimatePresence>
         {profileOpen && isLoggedIn ? (
           <>
-            <motion.button
+            <m.button
               key="profile-backdrop"
               type="button"
               aria-label="Close profile menu"
@@ -230,7 +230,7 @@ export function GlobalNavbar() {
               className="fixed inset-0 z-[998] bg-black/35 backdrop-blur-[1px]"
               onClick={() => setProfileOpen(false)}
             />
-            <motion.div
+            <m.div
               key="profile-panel"
               ref={profileMenuRef}
               initial={{ opacity: 0, y: -8 }}
@@ -343,14 +343,14 @@ export function GlobalNavbar() {
             <p className="mt-1 text-center text-[11px] text-slate-500">
               Signed in as {user?.phone ?? user?.email ?? "user"}
             </p>
-          </motion.div>
+          </m.div>
           </>
         ) : null}
       </AnimatePresence>
 
       <AnimatePresence>
         {mobileOpen ? (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
@@ -396,7 +396,7 @@ export function GlobalNavbar() {
             <p className="absolute bottom-8 text-xs text-slate-400">
               Finkoin is educational and does not provide investment advice.
             </p>
-          </motion.div>
+          </m.div>
         ) : null}
       </AnimatePresence>
 

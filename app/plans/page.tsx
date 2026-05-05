@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
 import { fadeUp } from "@/lib/animations";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 const plans = [
   {
@@ -74,7 +74,7 @@ export default function PlansPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm">
                 {plan.features.map((feature, featureIndex) => (
-                  <motion.li
+                  <m.li
                     key={feature.label}
                     variants={fadeUp}
                     initial="hidden"
@@ -84,7 +84,7 @@ export default function PlansPage() {
                     className={feature.yes ? "text-slate-800" : "text-slate-500"}
                   >
                     {feature.yes ? "✓" : "✗"} {feature.label}
-                  </motion.li>
+                  </m.li>
                 ))}
               </ul>
               <div className="mt-6">
