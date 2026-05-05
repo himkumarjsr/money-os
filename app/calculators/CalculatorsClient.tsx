@@ -203,6 +203,9 @@ export default function CalculatorsClient({
         isOpen={sheetOpen}
         onClose={() => setSheetOpen(false)}
         title={`${activeItem.icon ? `${activeItem.icon} ` : ""}${activeItem.title}`}
+        fullscreen
+        closeOnBackdrop={false}
+        closeOnDrag={false}
       >
         <motion.section
           key={calcId}
