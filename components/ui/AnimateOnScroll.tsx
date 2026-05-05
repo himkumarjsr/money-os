@@ -22,19 +22,17 @@ function elementIntersectsViewport(el: HTMLElement) {
   return r.top < vh && r.bottom > 0 && r.left < vw && r.right > 0;
 }
 
-export default function AnimateOnScroll({
+/** Below-fold only: uses IO + occasional geometry reads when IO is slow (no synchronous layout on hero). */
+function AnimateOnScrollDeferred({
   children,
   variant = "fadeUp",
   delay = 0,
   className = "",
-  /** Hero / first screen: skip opacity-0 initial state so first paint is never blank. */
-  aboveFold = false,
 }: {
   children: React.ReactNode;
   variant?: VariantName;
   delay?: number;
   className?: string;
-  aboveFold?: boolean;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const isInView = useInView(ref, {
@@ -43,8 +41,6 @@ export default function AnimateOnScroll({
     amount: 0.01,
   });
 
-  // useInView + ref timing can miss the first frame (Framer ref + IO). Re-check after layout
-  // and again on the next animation frame so the first paint is not stuck at opacity 0.
   const [inViewOnLayout, setInViewOnLayout] = useState(false);
   const measure = () => {
     const el = ref.current;
@@ -60,31 +56,65 @@ export default function AnimateOnScroll({
     return () => cancelAnimationFrame(id);
   }, []);
 
-  // IntersectionObserver can lag on cold navigation; re-check a few times if still in viewport.
   useEffect(() => {
-    if (aboveFold) return;
     const tick = () => {
       const el = ref.current;
       if (!el) return;
       if (elementIntersectsViewport(el)) setInViewOnLayout(true);
     };
     const timers = [0, 50, 200, 500, 1200].map((ms) => window.setTimeout(tick, ms));
-    return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [aboveFold]);
+    return () => timers.forEach((tid) => window.clearTimeout(tid));
+  }, []);
 
-  const visible = aboveFold || isInView || inViewOnLayout;
+  const visible = isInView || inViewOnLayout;
 
   return (
     <m.div
       ref={ref}
       style={{ position: "relative" }}
       variants={variants[variant]}
-      initial={aboveFold ? "visible" : "hidden"}
+      initial="hidden"
       animate={visible ? "visible" : "hidden"}
       transition={{ delay }}
       className={className}
     >
       {children}
     </m.div>
+  );
+}
+
+export default function AnimateOnScroll({
+  children,
+  variant = "fadeUp",
+  delay = 0,
+  className = "",
+  /** Hero / first screen: no observers or geometry reads — avoids forced reflow on LCP path. */
+  aboveFold = false,
+}: {
+  children: React.ReactNode;
+  variant?: VariantName;
+  delay?: number;
+  className?: string;
+  aboveFold?: boolean;
+}) {
+  if (aboveFold) {
+    return (
+      <m.div
+        style={{ position: "relative" }}
+        variants={variants[variant]}
+        initial="visible"
+        animate="visible"
+        transition={{ delay }}
+        className={className}
+      >
+        {children}
+      </m.div>
+    );
+  }
+
+  return (
+    <AnimateOnScrollDeferred variant={variant} delay={delay} className={className}>
+      {children}
+    </AnimateOnScrollDeferred>
   );
 }

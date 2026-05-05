@@ -253,7 +253,7 @@ export function GlobalNavbar() {
                 )}
               </div>
               <p className="text-base font-bold text-slate-900">{user?.name ?? "Finkoin user"}</p>
-              <p className="text-xs text-slate-500">{user?.phone ?? user?.email ?? "No contact added"}</p>
+              <p className="text-xs text-slate-600">{user?.phone ?? user?.email ?? "No contact added"}</p>
               <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold ${subscriptionTier === "promax" ? "bg-slate-900 text-white" : subscriptionTier === "pro" ? "bg-[#EEEDFE] text-[#534AB7]" : "bg-slate-100 text-slate-700"}`}>
                 {subscriptionTier === "free" ? "Free plan" : subscriptionTier === "pro" ? "Pro" : "Pro Max"}
               </span>
@@ -263,15 +263,15 @@ export function GlobalNavbar() {
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-slate-50 p-2">
                 <p className="text-sm font-bold text-slate-900">🪙 {fkBalance}</p>
-                <p className="text-[10px] text-slate-500">tokens earned</p>
+                <p className="text-[10px] text-slate-600">tokens earned</p>
               </div>
               <div className="rounded-lg bg-slate-50 p-2">
                 <p className="text-sm font-bold text-slate-900">{badges}</p>
-                <p className="text-[10px] text-slate-500">badges</p>
+                <p className="text-[10px] text-slate-600">badges</p>
               </div>
               <div className="rounded-lg bg-slate-50 p-2">
                 <p className="text-sm font-bold text-slate-900">🔥 {streakDays}</p>
-                <p className="text-[10px] text-slate-500">day streak</p>
+                <p className="text-[10px] text-slate-600">day streak</p>
               </div>
             </div>
 
@@ -307,7 +307,7 @@ export function GlobalNavbar() {
             </nav>
 
             <div className="my-3 border-t border-[#F0EFF8]" />
-            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 text-[11px] text-slate-500">
+            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 text-[11px] text-slate-600">
               <Link href="/legal/privacy" scroll className="hover:text-[#534AB7]" onClick={() => setProfileOpen(false)}>
                 Privacy
               </Link>
@@ -340,7 +340,7 @@ export function GlobalNavbar() {
             <button type="button" onClick={() => void handleSignOut()} className="w-full text-center text-sm font-semibold text-red-600">
               🚪 Sign out
             </button>
-            <p className="mt-1 text-center text-[11px] text-slate-500">
+            <p className="mt-1 text-center text-[11px] text-slate-600">
               Signed in as {user?.phone ?? user?.email ?? "user"}
             </p>
           </m.div>
@@ -409,7 +409,8 @@ export function GlobalNavbar() {
             <Link
               href="/"
               scroll
-              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${pathname === "/" ? "text-[#534AB7]" : "text-[#9B9A94]"}`}
+              aria-current={pathname === "/" ? "page" : undefined}
+              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${pathname === "/" ? "text-[#534AB7]" : "text-slate-600"}`}
             >
               <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -431,8 +432,11 @@ export function GlobalNavbar() {
             <Link
               href="/analyse"
               scroll
+              aria-current={
+                pathname === "/analyse" || pathname.startsWith("/analyse/") ? "page" : undefined
+              }
               className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                pathname === "/analyse" || pathname.startsWith("/analyse/") ? "text-[#534AB7]" : "text-[#9B9A94]"
+                pathname === "/analyse" || pathname.startsWith("/analyse/") ? "text-[#534AB7]" : "text-slate-600"
               }`}
             >
               <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
@@ -464,6 +468,9 @@ export function GlobalNavbar() {
             <Link
               href="/tracker"
               scroll
+              aria-current={
+                pathname === "/tracker" || pathname.startsWith("/tracker/") ? "page" : undefined
+              }
               className="relative flex w-full min-h-[64px] flex-col items-center justify-end gap-0.5 pb-1 pt-2 outline-none"
             >
               <span className="relative z-10 -mt-5 mb-0.5 flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-white p-1 shadow-[0_2px_12px_rgba(0,0,0,0.1)] ring-1 ring-[#E8E6F0]">
@@ -473,7 +480,7 @@ export function GlobalNavbar() {
               </span>
               <span
                 className={`text-[11px] leading-none ${
-                  pathname === "/tracker" || pathname.startsWith("/tracker/") ? "font-semibold text-[#534AB7]" : "font-medium text-[#9B9A94]"
+                  pathname === "/tracker" || pathname.startsWith("/tracker/") ? "font-semibold text-[#534AB7]" : "font-medium text-slate-600"
                 }`}
               >
                 Track
@@ -489,10 +496,17 @@ export function GlobalNavbar() {
             <Link
               href="/calculators"
               scroll
+              aria-current={
+                pathname === "/calculators" ||
+                pathname === "/calculator" ||
+                pathname.startsWith("/calculators/")
+                  ? "page"
+                  : undefined
+              }
               className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
                 pathname === "/calculators" || pathname === "/calculator" || pathname.startsWith("/calculators/")
                   ? "text-[#534AB7]"
-                  : "text-[#9B9A94]"
+                  : "text-slate-600"
               }`}
             >
               <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
@@ -523,8 +537,11 @@ export function GlobalNavbar() {
             <Link
               href="/profile"
               scroll
+              aria-current={
+                pathname === "/profile" || pathname.startsWith("/profile/") ? "page" : undefined
+              }
               className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                pathname === "/profile" || pathname.startsWith("/profile/") ? "text-[#534AB7]" : "text-[#9B9A94]"
+                pathname === "/profile" || pathname.startsWith("/profile/") ? "text-[#534AB7]" : "text-slate-600"
               }`}
             >
               <span className="relative inline-flex h-7 w-7 items-center justify-center">

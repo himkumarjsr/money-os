@@ -136,7 +136,7 @@ export default function HomePageBelowFold() {
               href="/tracker"
               className="relative group flex flex-col rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/90 p-6 shadow-md shadow-emerald-500/10 transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-lg"
             >
-              <span className="absolute right-4 top-4 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="absolute right-4 top-4 rounded-full bg-emerald-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                 NEW
               </span>
               <span className="text-2xl" aria-hidden>
@@ -240,7 +240,7 @@ export default function HomePageBelowFold() {
                   <span className="text-3xl font-semibold tracking-tight text-slate-900">
                     {tier.price}
                   </span>
-                  <span className="text-slate-500">{tier.period}</span>
+                  <span className="text-slate-600">{tier.period}</span>
                 </p>
                 <p className="mt-4 flex-1 text-sm leading-relaxed text-slate-600">{tier.description}</p>
                 <Link
@@ -248,7 +248,7 @@ export default function HomePageBelowFold() {
                   className={`relative mt-6 inline-flex min-h-11 items-center justify-center rounded-xl text-center text-sm font-semibold no-underline transition duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.99] ${
                     tier.cta.highlight
                       ? "bg-[#534AB7] text-white shadow-md shadow-indigo-500/25 hover:bg-[#44399a] hover:shadow-indigo-500/35"
-                      : "border border-slate-200/90 bg-white/90 text-slate-900 hover:border-indigo-200 hover:bg-white"
+                      : "border border-slate-300 bg-white text-slate-900 hover:border-indigo-300 hover:bg-white"
                   } `}
                 >
                   {tier.cta.label}
