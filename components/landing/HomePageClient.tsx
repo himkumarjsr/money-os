@@ -1,6 +1,6 @@
 "use client";
 
-import { ButtonLink } from "@/components/ui/button";
+import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
 import { m, useScroll, useSpring, useTransform } from "framer-motion";
 import dynamic from "next/dynamic";
@@ -67,34 +67,11 @@ export default function HomePageClient() {
                 Finkoin · Money OS for India
               </p>
             </AnimateOnScroll>
-            <AnimateOnScroll variant="fadeUp" delay={0.02} aboveFold>
-              <h1 className="mt-4 text-balance text-4xl font-bold leading-[1.04] tracking-tight text-slate-900 sm:mt-5 sm:text-5xl md:text-6xl">
-                Check your Financial Freedom Score
-              </h1>
-            </AnimateOnScroll>
-            <AnimateOnScroll variant="fadeUp" delay={0.1} aboveFold>
-              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:mt-6 sm:text-xl sm:leading-relaxed">
-                Free. 5 minutes. No PAN. No Aadhaar.
-              </p>
-            </AnimateOnScroll>
+            <div className="mt-4 sm:mt-5">
+              <HomeHeroCarousel />
+            </div>
             <div className="mt-3 flex flex-col items-center gap-4 sm:mt-3">
               <AnimateOnScroll variant="fadeUp" delay={0.2} aboveFold>
-                <div className="relative flex w-full max-w-md flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center">
-                  <div
-                    className="pointer-events-none absolute inset-0 -z-10 scale-[1.35] rounded-3xl bg-gradient-to-r from-indigo-500/45 via-violet-500/40 to-purple-500/35 opacity-90 blur-2xl"
-                    aria-hidden
-                  />
-                  <ButtonLink
-                    href="/analyse"
-                    variant="primary"
-                    size="lg"
-                    className="relative z-10 w-full bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-xl hover:shadow-indigo-500/35 active:scale-[0.99] sm:w-auto"
-                  >
-                    Check my score
-                  </ButtonLink>
-                </div>
-              </AnimateOnScroll>
-              <AnimateOnScroll variant="fadeUp" delay={0.3} aboveFold>
                 <div
                   className="flex flex-col items-center gap-3 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-4 sm:gap-y-2"
                   role="list"

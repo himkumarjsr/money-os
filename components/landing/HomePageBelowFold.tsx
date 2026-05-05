@@ -84,9 +84,9 @@ export default function HomePageBelowFold() {
             Start here
           </p>
           <p className="mx-auto mt-2 max-w-xl text-center text-lg font-semibold text-slate-900 sm:text-xl">
-            Four ways to level up your money this week
+            Top picks on Finkoin — score, tax, portfolio, and tracking
           </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Link
               href="/analyse"
               className="group flex flex-col rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-white to-indigo-50/90 p-6 shadow-md shadow-indigo-500/10 transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-lg"
@@ -94,12 +94,12 @@ export default function HomePageBelowFold() {
               <span className="text-2xl" aria-hidden>
                 ◉
               </span>
-              <span className="mt-3 text-lg font-bold text-slate-900">Financial health check</span>
+              <span className="mt-3 text-lg font-bold text-slate-900">Check your score</span>
               <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
-                Answer a short questionnaire — see gaps in emergency fund, insurance, debt, and investing.
+                Your financial freedom score in minutes — emergency fund, insurance, debt, and investing gaps.
               </span>
               <span className="mt-4 text-sm font-semibold text-indigo-700 group-hover:underline">
-                Start free →
+                Check my score →
               </span>
             </Link>
             <Link
@@ -109,29 +109,30 @@ export default function HomePageBelowFold() {
               <span className="text-2xl" aria-hidden>
                 🧾
               </span>
-              <span className="mt-3 text-lg font-bold text-slate-900">Tax regime calculator</span>
+              <span className="mt-3 text-lg font-bold text-slate-900">New vs old tax regime</span>
               <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
-                Compare old vs new regime with HRA, 80C, NPS, equity gains — built for FY 2025-26 planning.
+                Compare regimes with HRA, 80C, NPS, and equity gains — built for FY 2025-26 planning.
               </span>
               <span className="mt-4 text-sm font-semibold text-violet-700 group-hover:underline">
                 Open calculator →
               </span>
             </Link>
-            <Link
-              href="/portfolio"
-              className="group flex flex-col rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/90 p-6 shadow-md shadow-slate-500/10 transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-lg"
+            <div
+              className="relative flex flex-col rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm"
+              aria-label="Portfolio analysis — coming soon"
             >
-              <span className="text-2xl" aria-hidden>
+              <span className="absolute right-4 top-4 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-800">
+                Coming soon
+              </span>
+              <span className="text-2xl opacity-80" aria-hidden>
                 📊
               </span>
               <span className="mt-3 text-lg font-bold text-slate-900">Portfolio analysis</span>
               <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
                 Review holdings and allocation in one workspace — built for Indian investors.
               </span>
-              <span className="mt-4 text-sm font-semibold text-slate-800 group-hover:underline">
-                Open portfolio →
-              </span>
-            </Link>
+              <span className="mt-4 text-sm font-semibold text-slate-500">Coming soon</span>
+            </div>
             <Link
               href="/tracker"
               className="relative group flex flex-col rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/90 p-6 shadow-md shadow-emerald-500/10 transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-lg"
