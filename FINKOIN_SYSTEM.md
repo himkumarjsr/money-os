@@ -112,6 +112,19 @@ The core value proposition is: collect profile + money data once, run determinis
 | NEXT_PUBLIC_DEBUG_AI | Optional | AI debug logging in client service | Internal config |
 | NEXT_PUBLIC_AI_TIMEOUT_MS | Optional | Client-side AI timeout override | Internal config |
 
+### 3.1 Secret hygiene (what you should do)
+
+1. **Keep real values only in** `.env.local` (local) and **Vercel → Environment Variables** (hosted). Never commit `.env.local` — it is **gitignored**; use **`.env.example`** only as a blank template (no live keys).
+2. **Never prefix server secrets with `NEXT_PUBLIC_`.** Anything `NEXT_PUBLIC_*` is embedded in the browser bundle. Safe there: Supabase **anon** key (RLS-enforced), Razorpay **Key ID**, GA Measurement ID. **Never** expose: `SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_SECRET`, `GROQ_API_KEY`.
+3. **Run `npm run check:secrets` before PRs.** Script: `scripts/check-server-secrets-scope.mjs` — fails if `process.env.SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_SECRET`, or `GROQ_API_KEY` appears outside `app/api/**`, `lib/supabaseServer.ts`, or `scripts/`.
+4. **Rotate keys** if they were ever pasted into chat, committed, or exposed in a screenshot.
+
+### 3.2 Tax calculator (`lib/tax*` + `TaxRegimeCalculator`) — client vs server
+
+- **Current design:** All regime math runs **in the browser** (`lib/taxRegimeComparisonFY2026.ts`, helpers, UI). That gives instant feedback and works offline after load.
+- **Security reality:** Slabs and deduction rules are **public law**, not proprietary secrets; a competitor can reimplement from the Income Tax Act. Moving logic to **`/api/...`** would **not** hide it from someone who calls the API, but would add latency and hosting cost.
+- **Recommendation:** **Keep tax computation client-side** unless you add **authenticated**, rate-limited server endpoints for another reason (e.g. audit logs only server-side). **Do keep** payment verification and AI (`GROQ_API_KEY`) strictly server-side — already the case.
+
 ---
 
 ## 4. FOLDER STRUCTURE
@@ -123,6 +136,7 @@ Complete inventory with one-line purpose per file:
 | `README.md` | Project overview, setup, and known constraints |
 | `package.json` | Scripts and dependency manifest |
 | `package-lock.json` | NPM lockfile |
+| `scripts/check-server-secrets-scope.mjs` | CI/dev guard: server env vars only in API / `supabaseServer` (`npm run check:secrets`) |
 | `.gitignore` | Git ignore rules |
 | `next-env.d.ts` | Next.js TypeScript ambient types |
 | `next.config.mjs` | Next runtime/build configuration |
@@ -1622,6 +1636,9 @@ Important implementation note:
 - File: `lib/priorityEngine.ts`
 - Where: `buildPriorityPlan()` and priority `push` order.
 
+### To verify env / secrets layout
+- Run `npm run check:secrets` (fails if service-role / Razorpay secret / Groq key are referenced outside allowed server files).
+
 ### To add a new page
 1. Create `app/[pagename]/page.tsx`
 2. Add route link in `components/global-navbar.tsx`
@@ -1638,6 +1655,7 @@ Important implementation note:
 - Supabase URL: `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`)
 - GA4 Measurement ID (optional): `.env.local` / Vercel (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
 - Groq key: `.env.local` (`GROQ_API_KEY`)
+- Secret scope audit: `npm run check:secrets`
 - Cache key name: `'finkoin_ai_cache'`
 - Financial store key: `'finkoin-financial'` (scoped per-user in localStorage)
 - Tax calculator key: `'finkoin_tax_calculator'` (tax regime planner autosave; not user-scoped — device-only)
@@ -1669,6 +1687,7 @@ Important implementation note:
 - **Auth / stability:** **`AppInitializer`** single-flight **`initStartedRef`** for **`initAuth`**. **`app/analyse/page.tsx`** **`redirectedToLoginRef`** for login redirect. Defensive optional chaining: **`useSearchParams`** / **`usePathname`** nullability in **`CalculatorsClient`**, **`login`**, **`PolicyVaultClient`**, **`ReferralCapture`**, **`global-navbar`** (**`currentPath`**).
 - **PWA build:** **`pages/_document.tsx`** minimal **`Document`** for **`next-pwa`** compatibility with App Router builds.
 - **Analyse consent persistence:** Consent stored on **`public.users`** (**`data_consent_given`**, **`data_consent_at`**, **`data_consent_version`**) with **`localStorage`** cache **`finkoin_analyse_consent_v2_<userId>`** to avoid repeated DB reads.
+- **Secrets & env hygiene:** **`.env.example`** expanded as a safe template (removed any committed real IDs); documents **`NEXT_PUBLIC_`** vs server-only keys; **`npm run check:secrets`** (`scripts/check-server-secrets-scope.mjs`) enforces server secrets only in **`app/api/**`** and **`lib/supabaseServer.ts`**. **§3.1–§3.2** document checklist + tax-module client/server recommendation (tax stays client-side; payment + Groq stay server-side).
 
 ### 2026-05-03
 

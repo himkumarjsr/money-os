@@ -16,6 +16,7 @@
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:secrets": "node scripts/check-server-secrets-scope.mjs",
     "pwa:icons": "node scripts/generate-icons.mjs",
     "pwa:splashes": "node scripts/generate-splashes.mjs",
     "pwa:assets": "node scripts/generate-icons.mjs && node scripts/generate-splashes.mjs",
