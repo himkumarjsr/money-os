@@ -46,7 +46,7 @@ import { TaxTeachTooltip } from "./TaxTeachTooltip";
 import { ToggleSection } from "./ToggleSection";
 
 export const TAX_CALCULATOR_STORAGE_KEY = "finkoin_tax_calculator";
-const TAX_CALC_SCHEMA_VERSION = 2;
+const TAX_CALC_SCHEMA_VERSION = 3;
 
 /** Step 1 (checklist): only screen with voice. Spaced for clearer TTS. */
 const PERSONAL_CA_STEP1_WELCOME_TTS =
@@ -90,6 +90,11 @@ function fmtSideRow(label: string, value: string) {
   );
 }
 
+function unlockPageScroll() {
+  if (typeof document === "undefined") return;
+  document.body.style.overflow = "";
+}
+
 function regimeColumn(row: RegimeBreakdown, deductionLabel: string, showLines: boolean) {
   const preCess = row.taxBeforeSurcharge + row.surcharge;
   return (
@@ -120,6 +125,86 @@ function regimeColumn(row: RegimeBreakdown, deductionLabel: string, showLines: b
       {fmtSideRow("Tax + surcharge (before cess)", rupees(preCess))}
       {fmtSideRow("Cess (4%)", rupees(row.cess))}
       <div className="border-t border-[#E8E6F0] pt-2 font-bold">{fmtSideRow("TOTAL TAX", rupees(row.totalTax))}</div>
+    </div>
+  );
+}
+
+function mobileComparisonTable(oldR: RegimeBreakdown, newR: RegimeBreakdown) {
+  const oldPreCess = oldR.taxBeforeSurcharge + oldR.surcharge;
+  const newPreCess = newR.taxBeforeSurcharge + newR.surcharge;
+  const rows = [
+    { label: "Ordinary gross", old: rupees(oldR.ordinaryGrossIncome), next: rupees(newR.ordinaryGrossIncome) },
+    { label: "Gross for surcharge", old: rupees(oldR.grossForSurcharge), next: rupees(newR.grossForSurcharge) },
+    { label: "Deductions", old: rupees(oldR.deductionAmount), next: rupees(newR.deductionAmount) },
+    { label: "Taxable income", old: rupees(oldR.taxableIncome), next: rupees(newR.taxableIncome) },
+    { label: "Slab tax (pre 87A)", old: rupees(oldR.slabTaxBeforeRebate), next: rupees(newR.slabTaxBeforeRebate) },
+    {
+      label: "87A rebate",
+      old: oldR.rebate87A ? "Applied" : "No",
+      next: newR.rebate87A ? "Applied" : "No",
+    },
+    { label: "Slab tax (post 87A)", old: rupees(oldR.slabTaxNetOfRebate), next: rupees(newR.slabTaxNetOfRebate) },
+    { label: "CG / specific-rate tax", old: rupees(oldR.equityCgTax), next: rupees(newR.equityCgTax) },
+    { label: "Tax + surcharge", old: rupees(oldPreCess), next: rupees(newPreCess) },
+    { label: "Cess (4%)", old: rupees(oldR.cess), next: rupees(newR.cess) },
+    { label: "TOTAL TAX", old: rupees(oldR.totalTax), next: rupees(newR.totalTax), total: true },
+  ];
+
+  return (
+    <div className="md:hidden">
+      <div className="overflow-hidden rounded-lg bg-white">
+        <div className="grid grid-cols-[1.2fr_1fr_1fr] border-b border-[#F0EFF8] bg-[#FCFCFF] px-3 py-2 text-[11px] font-semibold text-[#534AB7]">
+          <span>Category</span>
+          <span className="text-right">Old</span>
+          <span className="text-right">New</span>
+        </div>
+        <div className="divide-y divide-[#F4F3FA] bg-white">
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className={cn(
+                "grid grid-cols-[1.2fr_1fr_1fr] gap-2 px-3 py-2 text-xs",
+                row.total ? "bg-[#FCFCFF] font-bold text-[#111110]" : "",
+              )}
+            >
+              <span className="text-[#5F5E5A]">{row.label}</span>
+              <span className="text-right tabular-nums text-[#111110]">{row.old}</span>
+              <span className="text-right tabular-nums text-[#111110]">{row.next}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {(oldR.deductionLines.length > 0 || newR.deductionLines.length > 0) ? (
+        <details className="mt-2 rounded-lg bg-[#FCFCFF] px-3 py-2 text-xs">
+          <summary className="cursor-pointer font-medium text-[#534AB7]">Deduction detail</summary>
+          {oldR.deductionLines.length > 0 ? (
+            <div className="mt-2 border-t border-[#F2F1F8] pt-2">
+              <p className="mb-1 font-semibold text-[#111110]">Old regime</p>
+              <ul className="space-y-1">
+                {oldR.deductionLines.map((d) => (
+                  <li key={`old-${d.label}`} className="flex justify-between gap-2">
+                    <span className="text-[#7A7871]">{d.label}</span>
+                    <span className="tabular-nums">{rupees(d.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {newR.deductionLines.length > 0 ? (
+            <div className="mt-2 border-t border-[#F2F1F8] pt-2">
+              <p className="mb-1 font-semibold text-[#111110]">New regime</p>
+              <ul className="space-y-1">
+                {newR.deductionLines.map((d) => (
+                  <li key={`new-${d.label}`} className="flex justify-between gap-2">
+                    <span className="text-[#7A7871]">{d.label}</span>
+                    <span className="tabular-nums">{rupees(d.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -167,6 +252,9 @@ export function TaxRegimeCalculator() {
 
   const [basicMonthly, setBasicMonthly] = useState(0);
   const [specialAllowanceMonthly, setSpecialAllowanceMonthly] = useState(0);
+  const [mealVoucherMonthly, setMealVoucherMonthly] = useState(0);
+  const [mealVoucherWorkDaysPerMonth, setMealVoucherWorkDaysPerMonth] = useState(22);
+  const [mealVoucherUse200Cap, setMealVoucherUse200Cap] = useState(true);
 
   const [secHRA, setSecHRA] = useState(false);
   const [hraMonthly, setHraMonthly] = useState(0);
@@ -232,7 +320,6 @@ export function TaxRegimeCalculator() {
 
   const [secDividend, setSecDividend] = useState(false);
   const [divIndian, setDivIndian] = useState(0);
-  const [divMF, setDivMF] = useState(0);
   const [divForeign, setDivForeign] = useState(0);
 
   const [secCG, setSecCG] = useState(false);
@@ -327,6 +414,9 @@ export function TaxRegimeCalculator() {
       setAge(g("age", 18));
       setBasicMonthly(g("basicMonthly", 0));
       setSpecialAllowanceMonthly(g("specialAllowanceMonthly", g("allowancesMonthly", 0)));
+      setMealVoucherMonthly(g("mealVoucherMonthly", 0));
+      setMealVoucherWorkDaysPerMonth(g("mealVoucherWorkDaysPerMonth", 22));
+      setMealVoucherUse200Cap(g("mealVoucherUse200Cap", true));
       setSecHRA(g("secHRA", g("hasHRA", false)));
       setHraMonthly(g("hraMonthly", 0));
       setRentPaidMonthly(g("rentPaidMonthly", 0));
@@ -381,7 +471,6 @@ export function TaxRegimeCalculator() {
       setBondsInterest(g("bondsInterest", 0));
       setSecDividend(g("secDividend", false));
       setDivIndian(g("divIndian", 0));
-      setDivMF(g("divMF", 0));
       setDivForeign(g("divForeign", 0));
       setSecCG(g("secCG", false));
       setCgEquityStcgExtra(g("cgEquityStcgExtra", g("otherStcg", 0)));
@@ -445,6 +534,9 @@ export function TaxRegimeCalculator() {
         age,
         basicMonthly,
         specialAllowanceMonthly,
+        mealVoucherMonthly,
+        mealVoucherWorkDaysPerMonth,
+        mealVoucherUse200Cap,
         secHRA,
         hraMonthly,
         rentPaidMonthly,
@@ -499,7 +591,6 @@ export function TaxRegimeCalculator() {
         bondsInterest,
         secDividend,
         divIndian,
-        divMF,
         divForeign,
         secCG,
         cgEquityStcgExtra,
@@ -558,6 +649,9 @@ export function TaxRegimeCalculator() {
     age,
     basicMonthly,
     specialAllowanceMonthly,
+    mealVoucherMonthly,
+    mealVoucherWorkDaysPerMonth,
+    mealVoucherUse200Cap,
     secHRA,
     hraMonthly,
     rentPaidMonthly,
@@ -612,7 +706,6 @@ export function TaxRegimeCalculator() {
     bondsInterest,
     secDividend,
     divIndian,
-    divMF,
     divForeign,
     secCG,
     cgEquityStcgExtra,
@@ -720,7 +813,7 @@ export function TaxRegimeCalculator() {
     const interestTotal =
       secInterest ? savingsInterest + fdInterest + postOfficeInterest + bondsInterest : 0;
 
-    const dividendTotal = secDividend ? divIndian + divMF + divForeign : 0;
+    const dividendTotal = secDividend ? divIndian + divForeign : 0;
 
     const slabExtrasOther =
       (secCG ? cgDebtStcg + cgDebtLtcg + cgPropStcg : 0) +
@@ -813,7 +906,6 @@ export function TaxRegimeCalculator() {
     bondsInterest,
     secDividend,
     divIndian,
-    divMF,
     divForeign,
     secCG,
     cgEquityStcgExtra,
@@ -841,6 +933,15 @@ export function TaxRegimeCalculator() {
     c80Elss + c80Ppf + c80Lic + c80Epf + c80Tuition + c80Principal,
   );
 
+  const mealVoucherAnnualExemption = useMemo(() => {
+    const monthly = Math.max(0, mealVoucherMonthly);
+    if (monthly <= 0) return 0;
+    const days = Math.max(0, mealVoucherWorkDaysPerMonth);
+    const capPerMeal = mealVoucherUse200Cap ? 200 : 50;
+    const monthlyCap = capPerMeal * days;
+    return Math.max(0, Math.min(monthly, monthlyCap) * 12);
+  }, [mealVoucherMonthly, mealVoucherWorkDaysPerMonth, mealVoucherUse200Cap]);
+
   const comparisonInputs = useMemo<ComparisonInputs>(() => {
     const inputs: ComparisonInputs = {
       age,
@@ -849,6 +950,7 @@ export function TaxRegimeCalculator() {
       basicMonthly,
       hraMonthly: secHRA ? hraMonthly : 0,
       allowancesMonthly: specialAllowanceMonthly,
+      mealVoucherExemptionAnnual: mealVoucherAnnualExemption,
       hraSalaryBaseAnnualOverride,
       rsuVestingAnnual: derived.rsuVestingAnnual,
       rsuSaleStcg: derived.rsuSaleStcg,
@@ -904,6 +1006,7 @@ export function TaxRegimeCalculator() {
     secHRA,
     hraMonthly,
     specialAllowanceMonthly,
+    mealVoucherAnnualExemption,
     hraSalaryBaseAnnualOverride,
     derived,
     freelanceIncome,
@@ -943,7 +1046,17 @@ export function TaxRegimeCalculator() {
 
   const { old: oldR, new: newR } = useMemo(() => compareRegimes(comparisonInputs), [comparisonInputs]);
 
-  const missedAlerts = useMemo(() => buildMissedDeductionAlerts(comparisonInputs), [comparisonInputs]);
+  const winner =
+    oldR.totalTax < newR.totalTax ? "old" : newR.totalTax < oldR.totalTax ? "new" : "tie";
+
+  const missedAlerts = useMemo(
+    () =>
+      buildMissedDeductionAlerts(comparisonInputs, {
+        // Keep recommendations genuine: avoid "invest in deductions" nudges when new regime already wins.
+        encourageDeductionInvestment: winner !== "new",
+      }),
+    [comparisonInputs, winner],
+  );
 
   const ggPreview = useMemo(() => getDeduction80GGComputed(comparisonInputs), [comparisonInputs]);
 
@@ -972,8 +1085,6 @@ export function TaxRegimeCalculator() {
     [comparisonInputs],
   );
 
-  const winner =
-    oldR.totalTax < newR.totalTax ? "old" : newR.totalTax < oldR.totalTax ? "new" : "tie";
   const saveAmount = Math.abs(oldR.totalTax - newR.totalTax);
 
   const oldMonthly = (oldR.grossForSurcharge - oldR.totalTax) / 12;
@@ -997,6 +1108,62 @@ export function TaxRegimeCalculator() {
     if (nri) out.push("NRIs: validate residency and DTAA — this model is domestic illustrative.");
     return out.slice(0, 4);
   }, [winner, saveAmount, nri]);
+
+  const itrSuggestion = useMemo(() => {
+    const equityGains = sumEquityStcg(comparisonInputs) + sumEquityLtcg(comparisonInputs);
+    const hasCapitalGains =
+      equityGains > 0 || cgDebtStcg > 0 || cgDebtLtcg > 0 || cgPropStcg > 0 || cgPropLtcg > 0;
+    const hasBusinessOrProfession =
+      secBusiness ||
+      derived.businessProfit > 0 ||
+      freelanceIncome > 0 ||
+      employment === "business_owner" ||
+      employment === "freelancer";
+    const hasForeignComplexity = nri || divForeign > 0;
+    const hasLottery = lotteryIncome > 0;
+    const hasAgriComplexity = agriculturalIncome > 5_000;
+
+    if (hasBusinessOrProfession) {
+      const presumptiveLikely =
+        secBusiness && (bizMode === "44ad" || bizMode === "44ada") && derived.businessProfit > 0;
+      return {
+        form: presumptiveLikely ? "ITR-4 (Sugam) likely" : "ITR-3 likely",
+        why: presumptiveLikely
+          ? "Business/profession entered with presumptive mode (44AD/44ADA)."
+          : "Business/professional income entered.",
+        note: "Confirm turnover/eligibility conditions before filing.",
+      };
+    }
+
+    if (!hasCapitalGains && !hasForeignComplexity && !hasLottery && !hasAgriComplexity) {
+      return {
+        form: "ITR-1 (Sahaj) likely",
+        why: "No business/profession and no complex income flags detected.",
+        note: "Use ITR-1 only if all statutory conditions are satisfied.",
+      };
+    }
+
+    return {
+      form: "ITR-2 likely",
+      why: "Capital gains / foreign-linked / other non-business complexities detected.",
+      note: "Recheck with your CA if any business-profession income exists.",
+    };
+  }, [
+    comparisonInputs,
+    cgDebtStcg,
+    cgDebtLtcg,
+    cgPropStcg,
+    cgPropLtcg,
+    secBusiness,
+    derived.businessProfit,
+    freelanceIncome,
+    employment,
+    nri,
+    divForeign,
+    lotteryIncome,
+    agriculturalIncome,
+    bizMode,
+  ]);
 
   const pill =
     "rounded-full px-3 py-2 text-sm font-semibold transition sm:px-4";
@@ -1026,7 +1193,7 @@ export function TaxRegimeCalculator() {
     setSecHRA(hraMonthly > 0 || rentPaidMonthly > 0);
     setSec80GG(!(hraMonthly > 0 || rentPaidMonthly > 0) && rentPaidNoHra > 0);
     setSecInterest(savingsInterest > 0 || fdInterest > 0 || postOfficeInterest > 0 || bondsInterest > 0);
-    setSecDividend(divIndian > 0 || divMF > 0 || divForeign > 0);
+    setSecDividend(divIndian > 0 || divForeign > 0);
     setSecLTA(ltaAnnualRecv > 0 || ltaTravelCost > 0);
     setSecRSU(rsuUnits > 0 || rsuUnitsSold > 0);
     setSecLeave(leaveReceived > 0 || leaveDays > 0);
@@ -1072,6 +1239,7 @@ export function TaxRegimeCalculator() {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+    unlockPageScroll();
     setPersonalCAOpen(false);
     setPersonalCAStep(0);
   };
@@ -1088,23 +1256,59 @@ export function TaxRegimeCalculator() {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
     const synth = window.speechSynthesis;
-    synth.resume?.();
-    void synth.getVoices();
+    let cancelled = false;
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    let spoke = false;
 
-    synth.cancel();
-    const utter = new SpeechSynthesisUtterance(PERSONAL_CA_STEP1_WELCOME_TTS);
-    utter.rate = 0.94;
-    utter.pitch = 1.06;
-    const voice = pickPersonalCAFemaleVoice(synth);
-    if (voice) {
-      utter.voice = voice;
-      utter.lang = voice.lang || "en-IN";
+    const speakWelcome = () => {
+      if (cancelled || spoke) return;
+      spoke = true;
+      if (fallbackTimer !== undefined) {
+        window.clearTimeout(fallbackTimer);
+        fallbackTimer = undefined;
+      }
+      synth.resume?.();
+      synth.cancel();
+
+      const utter = new SpeechSynthesisUtterance(PERSONAL_CA_STEP1_WELCOME_TTS);
+      utter.rate = 0.94;
+      utter.pitch = 1.06;
+      const voice = pickPersonalCAFemaleVoice(synth);
+      if (voice) {
+        utter.voice = voice;
+        utter.lang = voice.lang || "en-IN";
+      } else {
+        utter.lang = "en-IN";
+        utter.pitch = 1.12;
+      }
+      synth.speak(utter);
+    };
+
+    // Chrome/Chromium often returns getVoices() = [] until voiceschanged fires once.
+    // Speaking immediately then produces no audio; toggling mute re-runs after voices load.
+    void synth.getVoices();
+    const handleVoicesChanged = () => {
+      if (cancelled) return;
+      synth.removeEventListener("voiceschanged", handleVoicesChanged);
+      speakWelcome();
+    };
+
+    if (synth.getVoices().length > 0) {
+      speakWelcome();
     } else {
-      utter.lang = "en-IN";
-      utter.pitch = 1.12;
+      synth.addEventListener("voiceschanged", handleVoicesChanged);
+      fallbackTimer = window.setTimeout(() => {
+        synth.removeEventListener("voiceschanged", handleVoicesChanged);
+        speakWelcome();
+      }, 700);
     }
-    synth.speak(utter);
-    return () => synth.cancel();
+
+    return () => {
+      cancelled = true;
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+      synth.removeEventListener("voiceschanged", handleVoicesChanged);
+      synth.cancel();
+    };
   }, [personalCAOpen, personalCAStep, speechMuted]);
 
   useEffect(() => {
@@ -1113,7 +1317,15 @@ export function TaxRegimeCalculator() {
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
+      // Safety unlock in case any close path skipped restore.
+      if (!personalCAOpen) unlockPageScroll();
     };
+  }, [personalCAOpen]);
+
+  useEffect(() => {
+    if (personalCAOpen) return;
+    unlockPageScroll();
+    return () => unlockPageScroll();
   }, [personalCAOpen]);
 
   const learnTaxLinks = [
@@ -1268,6 +1480,7 @@ export function TaxRegimeCalculator() {
       <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
         <span className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">{title}</span>
         <TaxTeachTooltip content={teach} ariaLabel={`About ${title}`} />
+        <span className="ml-auto text-sm text-[#7A7871] transition-transform group-open:rotate-180">⌄</span>
       </summary>
     );
   }
@@ -1320,7 +1533,7 @@ export function TaxRegimeCalculator() {
       </p>
 
       <div className="min-w-0 space-y-6">
-          <details open className="rounded-xl border border-[#F0EFF8] bg-white p-4">
+          <details className="group rounded-xl border border-[#F0EFF8] bg-white p-4">
             {sectionSummary("Step 1 · Profile & person type", TEACH.sections.profile)}
             {sectionBlurb("Age and employment shape slab brackets; flags tune deduction caps (80D, 80TTB) and hints.")}
             <div className="mt-4 space-y-4">
@@ -1396,7 +1609,7 @@ export function TaxRegimeCalculator() {
             </div>
           </details>
 
-          <details open className="rounded-xl border border-[#F0EFF8] bg-white p-4">
+          <details className="group rounded-xl border border-[#F0EFF8] bg-white p-4">
             {sectionSummary("Step 2 · Core salary income", TEACH.sections.income)}
             {sectionBlurb(
               "Enter recurring payslip salary only here — turn on Step 3 cards for HRA, bonuses-in-kind, or side income.",
@@ -1435,6 +1648,36 @@ export function TaxRegimeCalculator() {
                 max={500000000}
                 onChange={(e) => setFreelanceIncome(parseMoneyInput(e.target.value) ?? 0)}
               />
+              <Mt
+                key={`${inputEpoch}-meal-voucher`}
+                id="tax-meal-voucher-m"
+                label="Meal card / coupon received (monthly)"
+                teach={TEACH.income.allowancesMonthly}
+                optional
+                defaultValue={mealVoucherMonthly ? formatIndian(mealVoucherMonthly) : ""}
+                max={200000}
+                onChange={(e) => setMealVoucherMonthly(parseMoneyInput(e.target.value) ?? 0)}
+              />
+              <NumberInput
+                label="Eligible meal days per month"
+                value={mealVoucherWorkDaysPerMonth}
+                onChange={setMealVoucherWorkDaysPerMonth}
+                min={0}
+                max={31}
+                step={1}
+              />
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
+                <input
+                  type="checkbox"
+                  checked={mealVoucherUse200Cap}
+                  onChange={(e) => setMealVoucherUse200Cap(e.target.checked)}
+                  className="accent-[#534AB7]"
+                />
+                Use revised cap ₹200/meal (turn off for older ₹50/meal rule)
+              </label>
+              <div className="rounded-lg border border-[#EEEDFE] bg-[#FAFAFE] px-3 py-2 text-xs text-[#5F5E5A]">
+                Meal voucher exemption modelled yearly ≈ ₹{Math.round(mealVoucherAnnualExemption).toLocaleString("en-IN")}
+              </div>
               <div className="rounded-lg border border-[#EEEDFE] bg-[#FAFAFE] px-3 py-2 text-xs text-[#5F5E5A]">
                 Core annual (Basic + Special only) ≈ ₹
                 {Math.round((basicMonthly + specialAllowanceMonthly) * 12).toLocaleString("en-IN")}
@@ -1442,8 +1685,8 @@ export function TaxRegimeCalculator() {
             </div>
           </details>
 
-          <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Step 3 · Additional income</p>
+          <details className="group rounded-xl border border-[#F0EFF8] bg-white p-4">
+            {sectionSummary("Step 3 · Additional income", TEACH.sections.income)}
             {sectionBlurb(
               "Enable each strip only when it applies — unused toggles stay closed so the worksheet stays readable.",
             )}
@@ -2023,16 +2266,6 @@ export function TaxRegimeCalculator() {
                 onChange={(e) => setDivIndian(parseMoneyInput(e.target.value) ?? 0)}
               />
               <Mt
-                key={`${inputEpoch}-div-mf`}
-                id="tax-div-mf"
-                label="Mutual funds"
-                teach={TEACH.income.dividendIncome}
-                optional
-                defaultValue={divMF ? formatIndian(divMF) : ""}
-                max={500000000}
-                onChange={(e) => setDivMF(parseMoneyInput(e.target.value) ?? 0)}
-              />
-              <Mt
                 key={`${inputEpoch}-div-fr`}
                 id="tax-div-fr"
                 label="Foreign companies"
@@ -2203,12 +2436,10 @@ export function TaxRegimeCalculator() {
                 onChange={(e) => setOtherMiscIncome(parseMoneyInput(e.target.value) ?? 0)}
               />
             </ToggleSection>
-          </div>
+          </details>
 
-          <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">
-              Step 4 · Deductions (old regime)
-            </p>
+          <details className="group rounded-xl border border-[#F0EFF8] bg-white p-4">
+            {sectionSummary("Step 4 · Deductions (old regime)", TEACH.sections.deductions)}
             {sectionBlurb(
               "Turn these on only when comparing old regime savings — Chapter VI-A (except employer NPS) largely disappears under new.",
             )}
@@ -2279,7 +2510,7 @@ export function TaxRegimeCalculator() {
                 </span>
               </div>
             </ToggleSection>
-          </div>
+          </details>
 
           {(derived.leaveExemptRec > 0 || derived.gratuityExemptRec > 0 || derived.ltaExemptRec > 0) ? (
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-[#5F5E5A]">
@@ -2290,33 +2521,18 @@ export function TaxRegimeCalculator() {
             </div>
           ) : null}
 
-          <div className="rounded-xl border border-[#F0EFF8] bg-white p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Step 5 · Results</p>
+          <details open className="group rounded-xl border border-[#F0EFF8] bg-white p-4">
+            {sectionSummary("Step 5 · Results", TEACH.sections.deductions)}
             {sectionBlurb(
               "Side-by-side slab math with surcharge & cess flags — exportable PDF mirrors these rounded totals.",
             )}
-            <div className="overflow-hidden rounded-xl border border-[#E8E6F0] bg-white">
-              {/* Phone: at-a-glance tax comparison + swipeable full breakdowns */}
-              <div className="grid grid-cols-2 gap-px border-b border-[#E8E6F0] bg-[#E8E6F0] md:hidden">
-                <div className="bg-[#F7F6FE] px-2 py-3 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#534AB7]">Old regime</p>
-                  <p className="mt-1 text-base font-bold tabular-nums text-[#111110]">{rupees(oldR.totalTax)}</p>
-                  <p className="mt-0.5 text-[10px] text-[#7A7871]">Total tax</p>
-                </div>
-                <div className="bg-[#F7F6FE] px-2 py-3 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#534AB7]">New regime</p>
-                  <p className="mt-1 text-base font-bold tabular-nums text-[#111110]">{rupees(newR.totalTax)}</p>
-                  <p className="mt-0.5 text-[10px] text-[#7A7871]">Total tax</p>
-                </div>
-              </div>
-              <p className="px-3 pt-2 text-center text-[10px] text-[#9B9A94] md:hidden">
-                Swipe sideways for full slab breakdown per regime.
-              </p>
+            <div className="overflow-hidden bg-white md:rounded-xl md:border md:border-[#E8E6F0]">
+              {mobileComparisonTable(oldR, newR)}
               <div className="hidden border-b border-[#E8E6F0] bg-[#F7F6FE] px-4 py-3 text-sm font-semibold text-[#111110] md:grid md:grid-cols-2">
                 <div className="border-r border-[#E8E6F0] pr-4">Old regime</div>
                 <div className="pl-4">New regime</div>
               </div>
-              <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:gap-4 md:overflow-visible md:p-4 md:pb-4 md:pt-4">
+              <div className="hidden snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:gap-4 md:overflow-visible md:p-4 md:pb-4 md:pt-4">
                 <div className="w-[min(88vw,340px)] shrink-0 snap-center md:w-auto md:min-w-0 md:shrink">
                   <p className="mb-2 hidden text-xs font-semibold text-[#534AB7] md:block">Old regime — detail</p>
                   {regimeColumn(oldR, "Total deductions", true)}
@@ -2377,6 +2593,13 @@ export function TaxRegimeCalculator() {
               </ul>
             </Insight>
 
+            <div className="mt-4 rounded-xl border border-[#E8E6F0] bg-[#FAFAFE] px-4 py-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">Suggested ITR form</p>
+              <p className="mt-1 font-semibold text-[#111110]">{itrSuggestion.form}</p>
+              <p className="mt-1 text-[#5F5E5A]">{itrSuggestion.why}</p>
+              <p className="mt-1 text-xs text-[#7A7871]">{itrSuggestion.note}</p>
+            </div>
+
             {learnedToday.length > 0 ? (
               <div className="mt-4 rounded-xl border border-[#EEEDFE] bg-[#FAFAFE] px-4 py-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-[#534AB7]">What you learned today</p>
@@ -2422,7 +2645,7 @@ export function TaxRegimeCalculator() {
                 </details>
               </div>
             </section>
-          </div>
+          </details>
         </div>
         </>
       ) : null}
@@ -2510,7 +2733,7 @@ export function TaxRegimeCalculator() {
                       {[
                         ["salary", "Latest salary slips + Form 16 (if available)"],
                         ["interest", "Savings, FD/RD, post office and bond interest totals"],
-                        ["dividends", "Dividend totals (Indian stocks, mutual funds, foreign)"],
+                        ["dividends", "Dividend totals (Indian and foreign companies)"],
                         ["investments", "Tax-saving proof: PF, PPF, ELSS, LIC, tuition, home principal, NPS"],
                         ["rentLoan", "Rent paid, HRA details, and home-loan interest/principal details"],
                         ["gains", "Capital gains summary (equity/debt/property, STCG/LTCG)"],
@@ -2569,6 +2792,12 @@ export function TaxRegimeCalculator() {
                       <p className="text-sm font-medium text-[#111110]">Let us capture your core income first.</p>
                       <Mt id="ca-basic" label="Monthly basic salary" teach={TEACH.income.basicMonthly} defaultValue={basicMonthly ? formatIndian(basicMonthly) : ""} onChange={(e) => setBasicMonthly(parseMoneyInput(e.target.value) ?? 0)} />
                       <Mt id="ca-special" label="Monthly special allowance" teach={TEACH.income.allowancesMonthly} optional defaultValue={specialAllowanceMonthly ? formatIndian(specialAllowanceMonthly) : ""} onChange={(e) => setSpecialAllowanceMonthly(parseMoneyInput(e.target.value) ?? 0)} />
+                      <Mt id="ca-meal-voucher" label="Meal card/coupon (monthly)" teach={TEACH.income.allowancesMonthly} optional defaultValue={mealVoucherMonthly ? formatIndian(mealVoucherMonthly) : ""} onChange={(e) => setMealVoucherMonthly(parseMoneyInput(e.target.value) ?? 0)} />
+                      <NumberInput label="Eligible meal days/month" value={mealVoucherWorkDaysPerMonth} onChange={setMealVoucherWorkDaysPerMonth} min={0} max={31} step={1} />
+                      <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
+                        <input type="checkbox" checked={mealVoucherUse200Cap} onChange={(e) => setMealVoucherUse200Cap(e.target.checked)} className="accent-[#534AB7]" />
+                        Use revised cap ₹200/meal (off = ₹50/meal)
+                      </label>
                       <Mt id="ca-free" label="Freelance/professional income (annual)" teach={TEACH.income.freelanceIncome} optional defaultValue={freelanceIncome ? formatIndian(freelanceIncome) : ""} onChange={(e) => setFreelanceIncome(parseMoneyInput(e.target.value) ?? 0)} />
                     </div>
                   ) : null}
@@ -2609,7 +2838,6 @@ export function TaxRegimeCalculator() {
                       <Mt id="ca-po-int" label="Post office interest" teach={TEACH.income.interestIncome} optional defaultValue={postOfficeInterest ? formatIndian(postOfficeInterest) : ""} onChange={(e) => setPostOfficeInterest(parseMoneyInput(e.target.value) ?? 0)} />
                       <Mt id="ca-bond-int" label="Bond/debenture interest" teach={TEACH.income.interestIncome} optional defaultValue={bondsInterest ? formatIndian(bondsInterest) : ""} onChange={(e) => setBondsInterest(parseMoneyInput(e.target.value) ?? 0)} />
                       <Mt id="ca-div-ind" label="Dividend from Indian companies" teach={TEACH.income.dividendIncome} optional defaultValue={divIndian ? formatIndian(divIndian) : ""} onChange={(e) => setDivIndian(parseMoneyInput(e.target.value) ?? 0)} />
-                      <Mt id="ca-div-mf" label="Dividend from mutual funds" teach={TEACH.income.dividendIncome} optional defaultValue={divMF ? formatIndian(divMF) : ""} onChange={(e) => setDivMF(parseMoneyInput(e.target.value) ?? 0)} />
                       <Mt id="ca-div-foreign" label="Dividend from foreign companies" teach={TEACH.income.dividendIncome} optional defaultValue={divForeign ? formatIndian(divForeign) : ""} onChange={(e) => setDivForeign(parseMoneyInput(e.target.value) ?? 0)} />
                     </div>
                   ) : null}

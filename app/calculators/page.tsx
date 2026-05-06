@@ -209,14 +209,34 @@ export default async function CalculatorsPage({ searchParams }: PageProps) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      {
-        "@type": "SoftwareApplication",
-        name: active.title === "SIP" ? "SIP Calculator India" : `${active.title} Calculator`,
-        description: seo.description,
-        url: pageUrl,
-        applicationCategory: "FinanceApplication",
-        operatingSystem: "Web",
-      },
+      active.id === "tax-regime"
+        ? {
+            "@type": "WebApplication",
+            name: "Finkoin Tax Regime Calculator 2026",
+            description: "Free calculator to compare old and new tax regime for FY 2025-26",
+            url: pageUrl,
+            applicationCategory: "FinanceApplication",
+            operatingSystem: "Web",
+            offers: {
+              "@type": "Offer",
+              price: "0",
+              priceCurrency: "INR",
+            },
+            featureList: [
+              "Old vs New tax regime comparison",
+              "All deductions: 80C, HRA, NPS, home loan",
+              "Works for salaried, freelancer, retired",
+              "FY 2025-26 slabs",
+            ],
+          }
+        : {
+            "@type": "SoftwareApplication",
+            name: active.title === "SIP" ? "SIP Calculator India" : `${active.title} Calculator`,
+            description: seo.description,
+            url: pageUrl,
+            applicationCategory: "FinanceApplication",
+            operatingSystem: "Web",
+          },
       {
         "@type": "FAQPage",
         mainEntity: seo.faq.map((f) => ({

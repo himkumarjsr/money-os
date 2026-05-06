@@ -26,6 +26,7 @@ export type ComparisonInputs = {
   basicMonthly: number;
   hraMonthly: number;
   allowancesMonthly: number;
+  mealVoucherExemptionAnnual: number;
   /** When >0, used as salary base for HRA 10% test instead of Basic×12 */
   hraSalaryBaseAnnualOverride: number;
 
@@ -106,9 +107,9 @@ export type RegimeBreakdown = {
 };
 
 export function salaryAnnualFromMonthly(i: ComparisonInputs): number {
-  return (
+  const grossSalary =
     (Math.max(0, i.basicMonthly) + Math.max(0, i.hraMonthly) + Math.max(0, i.allowancesMonthly)) * 12
-  );
+  return Math.max(0, grossSalary - Math.max(0, i.mealVoucherExemptionAnnual));
 }
 
 export function hraSalaryBaseAnnual(i: ComparisonInputs): number {

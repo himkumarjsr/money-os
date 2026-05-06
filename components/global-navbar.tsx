@@ -1,5 +1,6 @@
 "use client";
 
+import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { fadeIn } from "@/lib/animations";
 import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, m } from "framer-motion";
@@ -29,6 +30,7 @@ export function GlobalNavbar() {
   const user = useAuthStore((s) => s.user);
   const subscriptionTier = useAuthStore((s) => s.user?.subscriptionTier ?? "free");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -164,6 +166,14 @@ export function GlobalNavbar() {
             >
               View Plans
             </Link>
+
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen(true)}
+              className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 md:inline-flex"
+            >
+              Feedback
+            </button>
 
             {!isLoggedIn ? (
               <Link
@@ -392,6 +402,16 @@ export function GlobalNavbar() {
                   {item.label}
                 </Link>
               ))}
+              <button
+                type="button"
+                className="text-left text-2xl font-semibold text-slate-900"
+                onClick={() => {
+                  setMobileOpen(false);
+                  setFeedbackOpen(true);
+                }}
+              >
+                Feedback
+              </button>
             </nav>
             <p className="absolute bottom-8 text-xs text-slate-400">
               Finkoin is educational and does not provide investment advice.
@@ -588,6 +608,8 @@ export function GlobalNavbar() {
           </div>
         </div>
       </nav>
+
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} source="navbar" />
     </>
   );
 }

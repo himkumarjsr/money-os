@@ -2,7 +2,6 @@
 
 import { ButtonLink } from "@/components/ui/button";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 const INTERVAL_MS = 3000;
@@ -153,13 +152,6 @@ export default function HomeHeroCarousel() {
                 <span className="relative z-10 inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-xl border border-slate-300 bg-white/90 px-8 text-sm font-semibold text-slate-500 sm:w-auto">
                   Coming soon
                 </span>
-              ) : "href" in slide && slide.key === "tracker" ? (
-                <Link
-                  href={slide.href}
-                  className="relative z-10 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-8 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/30 sm:w-auto"
-                >
-                  {slide.cta}
-                </Link>
               ) : "href" in slide ? (
                 <ButtonLink
                   href={slide.href}

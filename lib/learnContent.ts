@@ -18,6 +18,26 @@ export type LearnArticle = {
 
 export const learnArticles: LearnArticle[] = [
   {
+    id: "know-taxation-in-india-old-vs-new-slabs-interest-rates",
+    title: "Know taxation in India — slabs, interest, and ITR basics",
+    subtitle:
+      "Old vs new regime slabs, 87A, surcharge/cess, interest under 234A/234B/234C, and which ITR is usually applicable.",
+    category: "Tax",
+    readTime: 11,
+    content: [
+      "Indian personal taxation starts with income heads (salary, house property, capital gains, business/profession, and other sources), then applies exemptions/deductions as allowed, and finally computes tax with cess and surcharge where applicable.",
+      "Old vs new regime is the biggest choice for salaried taxpayers. Old regime allows wider deduction stacking (for eligible users) while new regime usually offers cleaner slabs and simpler compliance. The right answer is arithmetic, not opinion.",
+      "Illustrative old-regime slab structure (non-senior): 0% up to ₹2.5 lakh, 5% from ₹2.5–5 lakh, 20% from ₹5–10 lakh, and 30% above ₹10 lakh. Senior/super-senior basic exemption differs by age band.",
+      "Illustrative new-regime slab structure (FY 2025-26 model in our calculator): 0% up to ₹4 lakh, then 5%/10%/15%/20%/25%, and 30% on the top slab. Always compare after rebate and cess, not only slab lines.",
+      "Section 87A is a rebate, not an investment. In simple terms, if taxable income stays within notified thresholds, slab tax can reduce sharply or become zero subject to rules for that year/regime.",
+      "Cess is currently applied at 4% on tax plus surcharge. Surcharge applies at higher total income thresholds; effective tax can change materially once surcharge bands trigger.",
+      "Interest under income-tax law is different from slab tax: 234A (delay in filing return), 234B (shortfall in advance tax), and 234C (deferment of advance-tax installments). These are generally computed at 1% per month under applicable conditions.",
+      "ITR form selection matters: ITR-1 is for simpler eligible profiles, ITR-2 is common when capital gains/foreign complexity exists without business income, ITR-3 is for business/professional income, and ITR-4 is for eligible presumptive cases.",
+      "Keep filing data ready: Form 16, AIS/26AS, rent and loan proofs, capital gain statements, and bank interest certificates. Most notices happen due to mismatch, not because tax planning was impossible.",
+      "Tax rules change with Finance Acts. Use this article as an orientation, then verify current-year limits/conditions before filing.",
+    ],
+  },
+  {
     id: "what-is-compound-interest-and-why-it-changes-everything",
     title: "What is compound interest and why it changes everything",
     subtitle:

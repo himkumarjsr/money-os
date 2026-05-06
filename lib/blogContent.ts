@@ -14,6 +14,98 @@ export type BlogArticle = {
 export const BLOG_ARTICLES: BlogArticle[] = [
   oldVsNewTaxRoi2026 as BlogArticle,
   {
+    slug: "know-taxation-in-india",
+    title: "Know Taxation in India: Old vs New Slabs, Interest & ITR Forms",
+    description:
+      "Beginner-friendly India taxation guide: old vs new tax regime slabs, Section 87A, cess/surcharge, 234A/234B/234C interest, and ITR form selection.",
+    keywords: [
+      "know taxation in India",
+      "old vs new tax regime slabs India",
+      "234A 234B 234C interest",
+      "which ITR form to file India",
+    ],
+    publishedAt: "2026-05-06",
+    category: "tax",
+    body: `If you are confused by tax language, start here. This page gives you a practical map of Indian personal taxation.
+
+## 1) Tax regime choice: old vs new
+
+- **Old regime**: wider deduction usage (for eligible users), useful when your deductible stack is strong.
+- **New regime**: cleaner slabs and simpler filing for many salaried users.
+- The right choice is always your **final tax payable**, not social media rules.
+
+## 2) Slab-wise tax rates (quick view)
+
+### Old regime (illustrative non-senior slab structure)
+- Up to ₹2.5L: 0%
+- ₹2.5L–₹5L: 5%
+- ₹5L–₹10L: 20%
+- Above ₹10L: 30%
+
+### New regime (illustrative FY 2025-26 model)
+- Up to ₹4L: 0%
+- ₹4L–₹8L: 5%
+- ₹8L–₹12L: 10%
+- ₹12L–₹16L: 15%
+- ₹16L–₹20L: 20%
+- ₹20L–₹24L: 25%
+- Above ₹24L: 30%
+
+> Always compare after rebate, surcharge, and cess.
+
+## 3) Section 87A in one line
+
+87A is a **rebate on tax**, not an investment section like 80C.
+It can reduce slab tax significantly if taxable income is within notified limits.
+
+## 4) Cess and surcharge
+
+- Health and education cess is generally **4%** on tax + surcharge.
+- Surcharge applies only beyond higher income thresholds.
+- Effective tax can jump when surcharge bands trigger.
+
+## 5) Interest under income-tax (not FD/loan interest)
+
+These are filing/compliance interests, commonly at **1% per month** under applicable conditions:
+
+- **234A**: delay in filing return
+- **234B**: shortfall in advance tax
+- **234C**: deferment of advance-tax installments
+
+## 6) Which ITR form is usually used?
+
+- **ITR-1**: simple eligible salaried/pension profiles
+- **ITR-2**: capital gains/foreign complexity without business income
+- **ITR-3**: business or professional income
+- **ITR-4**: eligible presumptive business/profession cases
+
+Always validate final eligibility for your year before filing.
+
+## 7) Practical checklist before filing
+
+- Form 16
+- AIS and 26AS reconciliation
+- Interest certificates
+- Capital gains statement
+- Rent / loan / deduction proofs
+
+Need a practical comparison with your numbers? Use the [Tax Regime Calculator](/calculators/tax-regime-2026).`,
+    faq: [
+      {
+        q: "Is new regime always better up to ₹15–20 lakh?",
+        a: "Often yes for many salaried users, but not always. Strong HRA/home-loan/deduction stacks can still make old regime better. Compare both using actual data.",
+      },
+      {
+        q: "Is 87A the same as 80C?",
+        a: "No. 87A is a rebate on computed tax. 80C is a deduction section that can reduce taxable income in eligible cases.",
+      },
+      {
+        q: "Can wrong ITR form create notices?",
+        a: "Yes. Wrong form selection and AIS mismatch are common reasons for post-filing issues. Validate form eligibility before submit.",
+      },
+    ],
+  },
+  {
     slug: "old-vs-new-tax-regime-2026",
     title: "Old vs New Tax Regime 2026: Which Saves More Money?",
     description:
