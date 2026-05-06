@@ -22,6 +22,7 @@ const centerNavItems = [
 export function GlobalNavbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const currentPath = pathname ?? "";
   const fkBalance = useGamificationStore((s) => s.fkBalance);
   const badges = useGamificationStore((s) => s.badges.length);
   const streakDays = useGamificationStore((s) => s.streakDays);
@@ -429,8 +430,8 @@ export function GlobalNavbar() {
             <Link
               href="/"
               scroll
-              aria-current={pathname === "/" ? "page" : undefined}
-              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${pathname === "/" ? "text-[#534AB7]" : "text-slate-600"}`}
+              aria-current={currentPath === "/" ? "page" : undefined}
+              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${currentPath === "/" ? "text-[#534AB7]" : "text-slate-600"}`}
             >
               <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -442,9 +443,9 @@ export function GlobalNavbar() {
                   />
                 </svg>
               </span>
-              <span className={`text-[11px] leading-none ${pathname === "/" ? "font-semibold" : "font-medium"}`}>Home</span>
+              <span className={`text-[11px] leading-none ${currentPath === "/" ? "font-semibold" : "font-medium"}`}>Home</span>
               <span
-                className={`h-1 w-1 shrink-0 rounded-full ${pathname === "/" ? "bg-[#534AB7]" : "bg-transparent"}`}
+                className={`h-1 w-1 shrink-0 rounded-full ${currentPath === "/" ? "bg-[#534AB7]" : "bg-transparent"}`}
                 aria-hidden
               />
             </Link>
@@ -453,10 +454,10 @@ export function GlobalNavbar() {
               href="/analyse"
               scroll
               aria-current={
-                pathname === "/analyse" || pathname.startsWith("/analyse/") ? "page" : undefined
+                currentPath === "/analyse" || currentPath.startsWith("/analyse/") ? "page" : undefined
               }
               className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                pathname === "/analyse" || pathname.startsWith("/analyse/") ? "text-[#534AB7]" : "text-slate-600"
+                currentPath === "/analyse" || currentPath.startsWith("/analyse/") ? "text-[#534AB7]" : "text-slate-600"
               }`}
             >
               <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
@@ -472,14 +473,14 @@ export function GlobalNavbar() {
               </span>
               <span
                 className={`text-[11px] leading-none ${
-                  pathname === "/analyse" || pathname.startsWith("/analyse/") ? "font-semibold" : "font-medium"
+                  currentPath === "/analyse" || currentPath.startsWith("/analyse/") ? "font-semibold" : "font-medium"
                 }`}
               >
                 Report
               </span>
               <span
                 className={`h-1 w-1 shrink-0 rounded-full ${
-                  pathname === "/analyse" || pathname.startsWith("/analyse/") ? "bg-[#534AB7]" : "bg-transparent"
+                  currentPath === "/analyse" || currentPath.startsWith("/analyse/") ? "bg-[#534AB7]" : "bg-transparent"
                 }`}
                 aria-hidden
               />
@@ -489,7 +490,7 @@ export function GlobalNavbar() {
               href="/tracker"
               scroll
               aria-current={
-                pathname === "/tracker" || pathname.startsWith("/tracker/") ? "page" : undefined
+                currentPath === "/tracker" || currentPath.startsWith("/tracker/") ? "page" : undefined
               }
               className="relative flex w-full min-h-[64px] flex-col items-center justify-end gap-0.5 pb-1 pt-2 outline-none"
             >
@@ -500,14 +501,14 @@ export function GlobalNavbar() {
               </span>
               <span
                 className={`text-[11px] leading-none ${
-                  pathname === "/tracker" || pathname.startsWith("/tracker/") ? "font-semibold text-[#534AB7]" : "font-medium text-slate-600"
+                  currentPath === "/tracker" || currentPath.startsWith("/tracker/") ? "font-semibold text-[#534AB7]" : "font-medium text-slate-600"
                 }`}
               >
                 Track
               </span>
               <span
                 className={`h-1 w-1 shrink-0 rounded-full ${
-                  pathname === "/tracker" || pathname.startsWith("/tracker/") ? "bg-[#534AB7]" : "bg-transparent"
+                  currentPath === "/tracker" || currentPath.startsWith("/tracker/") ? "bg-[#534AB7]" : "bg-transparent"
                 }`}
                 aria-hidden
               />
@@ -517,14 +518,14 @@ export function GlobalNavbar() {
               href="/calculators"
               scroll
               aria-current={
-                pathname === "/calculators" ||
-                pathname === "/calculator" ||
-                pathname.startsWith("/calculators/")
+                currentPath === "/calculators" ||
+                currentPath === "/calculator" ||
+                currentPath.startsWith("/calculators/")
                   ? "page"
                   : undefined
               }
               className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                pathname === "/calculators" || pathname === "/calculator" || pathname.startsWith("/calculators/")
+                currentPath === "/calculators" || currentPath === "/calculator" || currentPath.startsWith("/calculators/")
                   ? "text-[#534AB7]"
                   : "text-slate-600"
               }`}
@@ -537,7 +538,7 @@ export function GlobalNavbar() {
               </span>
               <span
                 className={`text-[11px] leading-none ${
-                  pathname === "/calculators" || pathname === "/calculator" || pathname.startsWith("/calculators/")
+                  currentPath === "/calculators" || currentPath === "/calculator" || currentPath.startsWith("/calculators/")
                     ? "font-semibold"
                     : "font-medium"
                 }`}
@@ -546,7 +547,7 @@ export function GlobalNavbar() {
               </span>
               <span
                 className={`h-1 w-1 shrink-0 rounded-full ${
-                  pathname === "/calculators" || pathname === "/calculator" || pathname.startsWith("/calculators/")
+                  currentPath === "/calculators" || currentPath === "/calculator" || currentPath.startsWith("/calculators/")
                     ? "bg-[#534AB7]"
                     : "bg-transparent"
                 }`}
@@ -558,10 +559,10 @@ export function GlobalNavbar() {
               href="/profile"
               scroll
               aria-current={
-                pathname === "/profile" || pathname.startsWith("/profile/") ? "page" : undefined
+                currentPath === "/profile" || currentPath.startsWith("/profile/") ? "page" : undefined
               }
               className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                pathname === "/profile" || pathname.startsWith("/profile/") ? "text-[#534AB7]" : "text-slate-600"
+                currentPath === "/profile" || currentPath.startsWith("/profile/") ? "text-[#534AB7]" : "text-slate-600"
               }`}
             >
               <span className="relative inline-flex h-7 w-7 items-center justify-center">
@@ -593,14 +594,14 @@ export function GlobalNavbar() {
               </span>
               <span
                 className={`text-[11px] leading-none ${
-                  pathname === "/profile" || pathname.startsWith("/profile/") ? "font-semibold" : "font-medium"
+                  currentPath === "/profile" || currentPath.startsWith("/profile/") ? "font-semibold" : "font-medium"
                 }`}
               >
                 Profile
               </span>
               <span
                 className={`h-1 w-1 shrink-0 rounded-full ${
-                  pathname === "/profile" || pathname.startsWith("/profile/") ? "bg-[#534AB7]" : "bg-transparent"
+                  currentPath === "/profile" || currentPath.startsWith("/profile/") ? "bg-[#534AB7]" : "bg-transparent"
                 }`}
                 aria-hidden
               />

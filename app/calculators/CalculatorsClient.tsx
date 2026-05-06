@@ -53,7 +53,7 @@ export default function CalculatorsClient({
         router.replace(`/calculators?calc=${encodeURIComponent(nextCalcId)}`, { scroll: false });
         return;
       }
-      const next = new URLSearchParams(searchParams.toString());
+      const next = new URLSearchParams(searchParams?.toString() ?? "");
       next.set("calc", nextCalcId);
       router.replace(`${pathname}?${next.toString()}`, { scroll: false });
     },
@@ -66,7 +66,7 @@ export default function CalculatorsClient({
       router.replace(urlBaseForTaxCanonical, { scroll: false });
       return;
     }
-    const currentCalc = searchParams.get("calc");
+    const currentCalc = searchParams?.get("calc");
     if (currentCalc === calcId) return;
     updateCalcInUrl(calcId);
   }, [calcId, pathname, router, searchParams, updateCalcInUrl, urlBaseForTaxCanonical]);

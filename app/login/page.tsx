@@ -9,14 +9,14 @@ import { Suspense, useEffect, useState } from "react";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/analyse";
+  const redirectTo = searchParams?.get("redirect") || "/analyse";
 
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const initAuth = useAuthStore((s) => s.initAuth);
 
   const [mode, setMode] = useState<"login" | "signup" | "reset">(() => {
-    const m = searchParams.get("mode");
+    const m = searchParams?.get("mode");
     if (m === "signup") return "signup";
     if (m === "reset") return "reset";
     return "login";

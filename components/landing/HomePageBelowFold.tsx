@@ -84,7 +84,7 @@ export default function HomePageBelowFold() {
             Start here
           </p>
           <p className="mx-auto mt-2 max-w-xl text-center text-lg font-semibold text-slate-900 sm:text-xl">
-            Top picks on Finkoin — score, tax, portfolio, and tracking
+            Top picks on Finkoin — advisor, tax, portfolio, and tracking
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Link
@@ -94,12 +94,12 @@ export default function HomePageBelowFold() {
               <span className="text-2xl" aria-hidden>
                 ◉
               </span>
-              <span className="mt-3 text-lg font-bold text-slate-900">Check your score</span>
+              <span className="mt-3 text-lg font-bold text-slate-900">Meet your finance advisor</span>
               <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
-                Your financial freedom score in minutes — emergency fund, insurance, debt, and investing gaps.
+                Start your financial independence journey with interactive guidance — not just form filling.
               </span>
               <span className="mt-4 text-sm font-semibold text-indigo-700 group-hover:underline">
-                Check my score →
+                Start guided checkup →
               </span>
             </Link>
             <Link

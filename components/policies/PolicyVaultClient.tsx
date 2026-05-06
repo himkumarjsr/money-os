@@ -159,11 +159,11 @@ export default function PolicyVaultClient() {
   }, [reload, authUserId, hasInitialized]);
 
   useEffect(() => {
-    const add = searchParams.get("add");
+    const add = searchParams?.get("add");
     if (!add || !hasInitialized || !isLoggedIn) return;
-    const cover = Number(searchParams.get("cover")) || 0;
-    const premium = Number(searchParams.get("premium")) || 0;
-    const freq = (searchParams.get("freq") === "yearly" ? "yearly" : "monthly") as PremiumFrequency;
+    const cover = Number(searchParams?.get("cover")) || 0;
+    const premium = Number(searchParams?.get("premium")) || 0;
+    const freq = (searchParams?.get("freq") === "yearly" ? "yearly" : "monthly") as PremiumFrequency;
     if (add === "term") {
       setForm((f) => ({
         ...f,

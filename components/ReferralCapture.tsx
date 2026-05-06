@@ -10,7 +10,7 @@ export function ReferralCapture() {
 
   useEffect(() => {
     try {
-      const ref = searchParams.get("ref")?.trim();
+      const ref = searchParams?.get("ref")?.trim();
       if (ref) {
         localStorage.setItem(
           STORAGE_KEY,

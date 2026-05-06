@@ -39,10 +39,10 @@ type Slide =
 const SLIDES: Slide[] = [
   {
     key: "score",
-    title: "Check your Financial Freedom Score",
-    subtitle: "Free. 5 minutes. No PAN. No Aadhaar.",
+    title: "Start your financial freedom journey with Finkoin",
+    subtitle: "Meet your personal finance advisor. Interactive, step-by-step guidance in minutes.",
     href: "/analyse",
-    cta: "Check my score",
+    cta: "Meet your advisor",
   },
   {
     key: "tax",
@@ -103,7 +103,7 @@ export default function HomeHeroCarousel() {
 
   return (
     <div
-      className="mx-auto w-full max-w-4xl"
+      className="mx-auto w-full max-w-4xl rounded-3xl border border-indigo-100/70 bg-white/70 px-4 py-5 backdrop-blur-sm sm:px-6 sm:py-7"
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured Finkoin tools"
@@ -114,7 +114,7 @@ export default function HomeHeroCarousel() {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) setPaused(false);
       }}
     >
-      <div className="relative min-h-[260px] sm:min-h-[240px] md:min-h-[220px]">
+      <div className="relative min-h-[280px] sm:min-h-[250px] md:min-h-[230px]">
         <AnimatePresence mode="wait" initial={false}>
           <m.div
             key={slide.key}
@@ -122,7 +122,7 @@ export default function HomeHeroCarousel() {
             animate={reduceMotion ? false : fade.animate}
             exit={reduceMotion ? undefined : fade.exit}
             transition={{ duration: reduceMotion ? 0 : 0.38, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="absolute inset-x-0 top-0 flex flex-col items-center text-center"
+            className="absolute inset-x-0 top-0 flex flex-col items-center px-1 text-center sm:px-2"
           >
             <div className="relative inline-flex max-w-full flex-col items-center">
               {"isNew" in slide && slide.isNew ? (
@@ -135,10 +135,10 @@ export default function HomeHeroCarousel() {
                   Coming soon
                 </span>
               ) : null}
-              <h1 className="text-balance text-4xl font-bold leading-[1.04] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+              <h1 className="text-balance text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
                 {slide.title}
               </h1>
-              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:mt-6 sm:text-xl sm:leading-relaxed">
+              <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-slate-600 sm:mt-6 sm:text-xl sm:leading-relaxed">
                 {slide.subtitle}
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function HomeHeroCarousel() {
       </div>
 
       <div
-        className="mt-8 flex flex-wrap items-center justify-center gap-2"
+        className="mt-7 flex flex-wrap items-center justify-center gap-2"
         role="tablist"
         aria-label="Choose hero slide"
       >
@@ -180,7 +180,7 @@ export default function HomeHeroCarousel() {
             aria-selected={i === index}
             aria-label={
               s.key === "score"
-                ? `Financial freedom score${i === index ? ", current slide" : ""}`
+                ? `Personal finance advisor${i === index ? ", current slide" : ""}`
                 : s.key === "tax"
                   ? `Tax regime calculator${i === index ? ", current slide" : ""}`
                   : s.key === "portfolio"
