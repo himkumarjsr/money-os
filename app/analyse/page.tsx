@@ -4,7 +4,7 @@ import ConsentModal from "@/components/analyse/ConsentModal";
 import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-form";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Per-user consent (v2). Anonymous `finkoin_analyse_consent_v1` is no longer read or written here. */
 function analyseConsentStorageKey(userId: string) {
@@ -19,13 +19,17 @@ export default function AnalysePage() {
 
   const [consentChecked, setConsentChecked] = useState(false);
   const [hasConsent, setHasConsent] = useState(false);
+  const redirectedToLoginRef = useRef(false);
 
   useEffect(() => {
     if (!hasInitialized) return;
     if (!isLoggedIn || !user?.id) {
+      if (redirectedToLoginRef.current) return;
+      redirectedToLoginRef.current = true;
       router.replace("/login?redirect=/analyse&mode=signup");
       return;
     }
+    redirectedToLoginRef.current = false;
 
     try {
       const accepted =

@@ -2,7 +2,7 @@
 
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { useAuthStore } from "@/store/authStore";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Runs persisted auth hydration + Supabase init in the background.
@@ -10,7 +10,13 @@ import { useEffect } from "react";
  * a spinner, destroying LCP (hero never appeared in HTML until JS finished).
  */
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
+  const initStartedRef = useRef(false);
+
   useEffect(() => {
+    // Guard against StrictMode double-invocation in development.
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
+
     let cancelled = false;
 
     const init = async () => {

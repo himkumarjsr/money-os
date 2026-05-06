@@ -1257,7 +1257,7 @@ export function TaxRegimeCalculator() {
 
     const synth = window.speechSynthesis;
     let cancelled = false;
-    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    let fallbackTimer: ReturnType<typeof window.setTimeout> | undefined;
     let spoke = false;
 
     const speakWelcome = () => {
