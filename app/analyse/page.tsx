@@ -2,6 +2,7 @@
 
 import ConsentModal from "@/components/analyse/ConsentModal";
 import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-form";
+import { getSupabase, isConfigured } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -31,15 +32,54 @@ export default function AnalysePage() {
     }
     redirectedToLoginRef.current = false;
 
+    let cancelled = false;
+    const uid = user.id;
+
     try {
-      const accepted =
+      const cached =
         typeof window !== "undefined" &&
-        window.localStorage.getItem(analyseConsentStorageKey(user.id)) === "true";
-      setHasConsent(accepted);
+        window.localStorage.getItem(analyseConsentStorageKey(uid)) === "true";
+      if (cached) {
+        setHasConsent(true);
+        setConsentChecked(true);
+        return;
+      }
     } catch {
       setHasConsent(false);
     }
-    setConsentChecked(true);
+
+    if (!isConfigured) {
+      setConsentChecked(true);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const supabase = getSupabase();
+        const { data } = await supabase
+          .from("users")
+          .select("data_consent_given")
+          .eq("id", uid)
+          .maybeSingle();
+        if (cancelled) return;
+        if (data?.data_consent_given) {
+          try {
+            window.localStorage.setItem(analyseConsentStorageKey(uid), "true");
+          } catch {
+            /* ignore */
+          }
+          setHasConsent(true);
+        }
+      } catch {
+        if (!cancelled) setHasConsent(false);
+      } finally {
+        if (!cancelled) setConsentChecked(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [hasInitialized, isLoggedIn, user?.id, router]);
 
   const handleAccept = () => {
@@ -51,6 +91,25 @@ export default function AnalysePage() {
       /* ignore */
     }
     setHasConsent(true);
+
+    if (!isConfigured) return;
+
+    void (async () => {
+      try {
+        const supabase = getSupabase();
+        const { error } = await supabase
+          .from("users")
+          .update({
+            data_consent_given: true,
+            data_consent_at: new Date().toISOString(),
+            data_consent_version: "v2",
+          })
+          .eq("id", uid);
+        if (error) console.warn("users data_consent update:", error.message);
+      } catch (e) {
+        console.warn("users data_consent update:", e);
+      }
+    })();
   };
 
   const handleDecline = () => {
