@@ -1,6 +1,7 @@
 "use client";
 
 import { ButtonLink } from "@/components/ui/button";
+import { trackCta, trackEvent } from "@/lib/gtag";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 
@@ -98,6 +99,14 @@ export default function HomeHeroCarousel() {
 
   const goTo = (i: number) => {
     if (i === index || i < 0 || i >= SLIDES.length) return;
+    const prevSlide = SLIDES[index];
+    const nextSlide = SLIDES[i];
+    trackEvent("carousel_select", {
+      carousel_id: "home_hero",
+      slide_from: prevSlide.key,
+      slide_to: nextSlide.key,
+      slide_index: i,
+    });
     setIndex(i);
   };
 
@@ -158,6 +167,14 @@ export default function HomeHeroCarousel() {
                   variant="primary"
                   size="lg"
                   className="relative z-10 w-full bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-xl hover:shadow-indigo-500/35 active:scale-[0.99] sm:w-auto"
+                  onClick={() =>
+                    trackCta({
+                      cta_name: slide.cta,
+                      cta_location: "home_hero_carousel",
+                      slide_key: slide.key,
+                      href: slide.href,
+                    })
+                  }
                 >
                   {slide.cta}
                 </ButtonLink>

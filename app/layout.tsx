@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import AppInitializer from "@/components/AppInitializer";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { MotionLazyProvider } from "@/components/MotionLazyProvider";
 import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
@@ -247,6 +248,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans min-h-dvh flex flex-col bg-white antialiased">
+        <GoogleAnalytics />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}

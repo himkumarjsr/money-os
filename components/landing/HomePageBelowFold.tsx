@@ -1,7 +1,9 @@
 "use client";
 
 import FeatureCardsCarousel from "@/components/landing/FeatureCardsCarousel";
+import { TrackImpression } from "@/components/TrackImpression";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
+import { trackCta } from "@/lib/gtag";
 import { m, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import { useRef } from "react";
@@ -78,6 +80,7 @@ const pricing = [
 export default function HomePageBelowFold() {
   return (
     <>
+      <TrackImpression component_id="home_top_picks" threshold={0.18}>
       <section className="relative z-10 border-b border-indigo-100/80 bg-white/55 px-4 py-12 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85">
@@ -90,6 +93,13 @@ export default function HomePageBelowFold() {
             <Link
               href="/analyse"
               className="group flex flex-col rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-white to-indigo-50/90 p-6 shadow-md shadow-indigo-500/10 transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-lg"
+              onClick={() =>
+                trackCta({
+                  cta_name: "Meet your finance advisor",
+                  cta_location: "home_top_picks",
+                  href: "/analyse",
+                })
+              }
             >
               <span className="text-2xl" aria-hidden>
                 ◉
@@ -105,6 +115,13 @@ export default function HomePageBelowFold() {
             <Link
               href="/calculators/tax-regime-2026"
               className="group flex flex-col rounded-2xl border border-violet-200/80 bg-gradient-to-br from-white to-violet-50/90 p-6 shadow-md shadow-violet-500/10 transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-lg"
+              onClick={() =>
+                trackCta({
+                  cta_name: "Tax regime card",
+                  cta_location: "home_top_picks",
+                  href: "/calculators/tax-regime-2026",
+                })
+              }
             >
               <span className="text-2xl" aria-hidden>
                 🧾
@@ -136,6 +153,13 @@ export default function HomePageBelowFold() {
             <Link
               href="/tracker"
               className="relative group flex flex-col rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/90 p-6 shadow-md shadow-emerald-500/10 transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-lg"
+              onClick={() =>
+                trackCta({
+                  cta_name: "Expense tracker card",
+                  cta_location: "home_top_picks",
+                  href: "/tracker",
+                })
+              }
             >
               <span className="absolute right-4 top-4 rounded-full bg-emerald-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                 NEW
@@ -154,8 +178,12 @@ export default function HomePageBelowFold() {
           </div>
         </div>
       </section>
+      </TrackImpression>
 
-      <StorySection className="z-20 border-b border-indigo-100/60 bg-gradient-to-b from-white/80 via-indigo-50/30 to-violet-50/40">
+      <StorySection
+        impressionId="home_features_what_you_get"
+        className="z-20 border-b border-indigo-100/60 bg-gradient-to-b from-white/80 via-indigo-50/30 to-violet-50/40"
+      >
         <div
           className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-px max-w-3xl bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"
           aria-hidden
@@ -175,7 +203,7 @@ export default function HomePageBelowFold() {
         </div>
       </StorySection>
 
-      <StorySection className="z-30 border-b border-indigo-100/50 bg-white/55 backdrop-blur-[2px]">
+      <StorySection impressionId="home_testimonials" className="z-30 border-b border-indigo-100/50 bg-white/55 backdrop-blur-[2px]">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <AnimateOnScroll variant="fadeUp" aboveFold>
             <h2 className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85 sm:text-sm">
@@ -206,7 +234,7 @@ export default function HomePageBelowFold() {
         </div>
       </StorySection>
 
-      <StorySection className="z-40 border-b border-indigo-100/60 bg-gradient-to-b from-violet-50/50 via-white to-indigo-50/40">
+      <StorySection impressionId="home_pricing" className="z-40 border-b border-indigo-100/60 bg-gradient-to-b from-violet-50/50 via-white to-indigo-50/40">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <AnimateOnScroll variant="fadeUp" aboveFold>
             <h2 className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85 sm:text-sm">
@@ -246,6 +274,14 @@ export default function HomePageBelowFold() {
                 <p className="mt-4 flex-1 text-sm leading-relaxed text-slate-600">{tier.description}</p>
                 <Link
                   href={tier.cta.href}
+                  onClick={() =>
+                    trackCta({
+                      cta_name: tier.cta.label,
+                      cta_location: "home_pricing",
+                      href: tier.cta.href,
+                      tier: tier.name,
+                    })
+                  }
                   className={`relative mt-6 inline-flex min-h-11 items-center justify-center rounded-xl text-center text-sm font-semibold no-underline transition duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.99] ${
                     tier.cta.highlight
                       ? "bg-[#534AB7] text-white shadow-md shadow-indigo-500/25 hover:bg-[#44399a] hover:shadow-indigo-500/35"
@@ -266,9 +302,11 @@ export default function HomePageBelowFold() {
 function StorySection({
   children,
   className,
+  impressionId,
 }: {
   children: React.ReactNode;
   className?: string;
+  impressionId: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({
@@ -281,13 +319,15 @@ function StorySection({
   const opacity = useTransform(scrollYProgress, [0, 0.12, 0.88, 1], [0.55, 1, 1, 0.75]);
 
   return (
-    <section ref={ref} className="relative min-h-[102vh] snap-start scroll-mt-24">
-      <m.div
-        style={{ scale, rotate, y, opacity }}
-        className={`sticky top-20 mx-auto overflow-hidden rounded-[2rem] shadow-[0_24px_80px_rgba(61,44,140,0.12)] ${className ?? ""}`}
-      >
-        {children}
-      </m.div>
-    </section>
+    <TrackImpression component_id={impressionId} threshold={0.14}>
+      <section ref={ref} className="relative min-h-[102vh] snap-start scroll-mt-24">
+        <m.div
+          style={{ scale, rotate, y, opacity }}
+          className={`sticky top-20 mx-auto overflow-hidden rounded-[2rem] shadow-[0_24px_80px_rgba(61,44,140,0.12)] ${className ?? ""}`}
+        >
+          {children}
+        </m.div>
+      </section>
+    </TrackImpression>
   );
 }

@@ -5,7 +5,7 @@ At the start of any new Cursor conversation paste:
 "Read FINKOIN_SYSTEM.md first. 
 Use it as complete context for all changes.
 Do not break existing functionality.
-Check section 27 before making any change."
+Check sections 27 (critical paths) and 29 (analytics) before making relevant changes."
 
 This file is auto-generated from the codebase.
 Update it after every significant change by running
@@ -41,9 +41,10 @@ the documentation generation prompt again.
 26. Quick Reference Card
 27. What Not to Touch
 28. Progressive Web App (PWA)
+29. Analytics & GA4 (product telemetry)
 
 # FINKOIN SYSTEM DOCUMENTATION
-Last updated: 2026-05-03
+Last updated: 2026-05-07
 Generated from: actual codebase
 
 ---
@@ -107,6 +108,7 @@ The core value proposition is: collect profile + money data once, run determinis
 | NEXT_PUBLIC_RAZORPAY_KEY_ID | Yes (client payment UI) | Client-side Razorpay key for checkout | Razorpay dashboard |
 | NEXT_PUBLIC_FINKOIN_AGENT_CODE | Optional | Agent code used in policy transfer links | Internal config |
 | NEXT_PUBLIC_SITE_URL | Recommended | Metadata/sitemap/robots canonical URL | Deployment URL |
+| NEXT_PUBLIC_GA_MEASUREMENT_ID | Optional | GA4 Measurement ID (`G-xxxxxxxxxx`). When set, loads gtag + enriched events; omit to disable analytics scripts | Google Analytics → Admin → Data streams → Web |
 | NEXT_PUBLIC_DEBUG_AI | Optional | AI debug logging in client service | Internal config |
 | NEXT_PUBLIC_AI_TIMEOUT_MS | Optional | Client-side AI timeout override | Internal config |
 
@@ -140,19 +142,20 @@ Complete inventory with one-line purpose per file:
 | `scripts/generate-icons.mjs` | Resize logo (or fallback) into manifest icon set + optional screenshot |
 | `scripts/generate-splashes.mjs` | Generate iOS splash PNGs |
 | `public/assets/brand/finkoin-icon-1024.svg` | Brand icon used in metadata |
-| `app/layout.tsx` | Root layout + global wrappers/navbar |
+| `app/layout.tsx` | Root layout + global wrappers/navbar + mounts **`GoogleAnalytics`** when GA env is set |
+| `pages/_document.tsx` | Minimal Pages Router **`Document`** so **`next-pwa`** build can resolve `/_document` (App Router project compatibility) |
 | `app/page.tsx` | Landing page |
 | `app/globals.css` | Global CSS styles |
 | `app/robots.ts` | Robots metadata endpoint |
 | `app/sitemap.ts` | Sitemap metadata endpoint |
-| `app/analyse/page.tsx` | Analyse route wrapper for onboarding form |
+| `app/analyse/page.tsx` | **`ConsentModal`** gate → **`AnalyseOnboardingForm`**; consent cached per user in **`localStorage`** (`finkoin_analyse_consent_v2_<userId>`); on cache miss reads **`users.data_consent_given`**; on accept **`UPDATE users`** sets **`data_consent_given`**, **`data_consent_at`**, **`data_consent_version`** (`v2`) |
 | `app/analyse/result/page.tsx` | Analysis result/paywall flow |
 | `app/analyse/fixplan/page.tsx` | Full AI fix-plan page with cache/access gating |
 | `app/login/page.tsx` | Email login/signup + Google OAuth entry |
 | `app/auth/callback/page.tsx` | OAuth / email-link callback (PKCE code exchange) |
 | `app/auth/reset-password/page.tsx` | Request password reset email |
 | `app/auth/update-password/page.tsx` | Set new password after recovery link |
-| `components/AppInitializer.tsx` | Client gate: Zustand persist rehydrate then `initAuth()` before app shell |
+| `components/AppInitializer.tsx` | Client gate: Zustand persist rehydrate then **`initAuth()`** before app shell; **`initStartedRef`** avoids double auth init under React Strict Mode (dev) |
 | `app/optimizer/page.tsx` | Optimizer page |
 | `app/insurance/page.tsx` | Insurance marketplace placeholder/comparison entry |
 | `app/policies/page.tsx` | Policy vault page wrapper |
@@ -166,9 +169,10 @@ Complete inventory with one-line purpose per file:
 | `app/leaderboard/page.tsx` | Leaderboard page |
 | `app/learn/page.tsx` | Learn hub listing page |
 | `app/learn/[id]/page.tsx` | Individual article page |
-| `app/calculators/page.tsx` | Calculators index page |
+| `app/calculators/page.tsx` | Calculators hub + **conditional JSON-LD** (**`WebApplication`** when **`tax-regime`** active) |
 | `app/calculators/layout.tsx` | Calculators layout wrapper |
-| `app/calculators/CalculatorsClient.tsx` | Client calculator index rendering |
+| `app/calculators/CalculatorsClient.tsx` | Client calculator index rendering; **`trackToolOpen`** on active calculator change |
+| `app/calculators/tax-regime-2026/page.tsx` | Dedicated tax regime landing with **`WebApplication`** JSON-LD + metadata |
 | `app/calculators/calculator-config.ts` | Calculator metadata config |
 | `app/calculators/[id]/page.tsx` | Dynamic calculator page |
 | `app/plans/page.tsx` | Subscription plans page (contains TODO Razorpay note) |
@@ -183,7 +187,10 @@ Complete inventory with one-line purpose per file:
 | `app/api/razorpay/checkout-config/route.ts` | Razorpay Key ID for Standard Checkout (server → frontend) |
 | `app/api/razorpay/create-order/route.ts` | Razorpay order API route |
 | `app/api/razorpay/verify-payment/route.ts` | Razorpay payment signature verification + pro tier |
-| `components/global-navbar.tsx` | Main header/navbar + profile dropdown (backdrop, scroll lock) |
+| `components/global-navbar.tsx` | Main header/navbar + profile dropdown (backdrop, scroll lock); **`data-track-nav-zone`** + delegated **`nav_click`** analytics |
+| `components/GoogleAnalytics.tsx` | GA4 scripts + SPA **`page_path`** via **`gtag('config')`**, **`user_properties`**, merges **`getAnalyticsContext()`**, logged-in **`user_id`** |
+| `components/AnalyticsBehavior.tsx` | Per-route scroll-depth milestones (25/50/75/90%) → **`scroll_depth`** event |
+| `components/TrackImpression.tsx` | **`IntersectionObserver`** wrapper → **`element_impression`** once per **`component_id`** |
 | `components/auth/ProtectedGate.tsx` | Client gate: wait **`hasInitialized`** then enforce **`isLoggedIn`** |
 | `components/ReferralCapture.tsx` | Captures **`?ref=`** into **`sessionStorage`** for post-login attribution |
 | `lib/referralRewards.ts` | Applies pending referral + FK bumps after successful **`/auth/callback`** |
@@ -205,7 +212,7 @@ Complete inventory with one-line purpose per file:
 | `components/learn/learn-hub.tsx` | Learn hub UI |
 | `components/learn/article-tracker.tsx` | Tracks article reads and rewards |
 | `components/learn/article-share.tsx` | Article share helper |
-| `components/learn/share-button.tsx` | Share button UI |
+| `components/learn/share-button.tsx` | Share / clipboard UI + **`share`** GA events (native / clipboard / fallback) |
 | `components/landing/Footer.tsx` | Landing footer |
 | `components/landing/FeatureCardsCarousel.tsx` | Landing feature carousel |
 | `components/ui/button.tsx` | Button primitives |
@@ -235,11 +242,11 @@ Complete inventory with one-line purpose per file:
 | `components/calculators/NSCCalculator.tsx` | NSC calculator |
 | `components/calculators/SWPCalculator.tsx` | SWP calculator |
 | `components/calculators/EmergencyFundCalculator.tsx` | Emergency fund calculator |
-| `components/calculators/TaxRegimeCalculator.tsx` | Old vs new regime comparison UI (toggles, autosave `finkoin_tax_calculator`, live summary) |
-| `components/calculators/ToggleSection.tsx` | Expand/collapse income/deduction section shell with pill toggle |
+| `components/calculators/TaxRegimeCalculator.tsx` | Old vs new regime UI: **`TAX_CALC_SCHEMA_VERSION`** autosave **`finkoin_tax_calculator`**, meal voucher exemption (₹50 vs ₹200 cap toggle), **`<details>`** steps + mobile 3-col comparison table, suggested **ITR** from inputs, removed MF-dividend field; Personal CA scroll-unlock; conditional missed-deduction nudges when old regime can win |
+| `components/calculators/ToggleSection.tsx` | Section on/off + separate chevron expand/collapse for inner fields |
 | `lib/taxCalculatorHelpers.ts` | Illustrative gratuity / leave / LTA / rental / business / pension / RSU helpers for tax UI |
-| `lib/taxRegimeComparisonFY2026.ts` | Pure tax comparison helpers (slabs, HRA exemption, 80GG illustrative, surcharge, cess, 87A model) |
-| `lib/taxMissedDeductionAlerts.ts` | Plain-language “missed deduction” nudges for tax regime calculator |
+| `lib/taxRegimeComparisonFY2026.ts` | Pure tax comparison (**ComparisonInputs** incl. **`mealVoucherExemptionAnnual`** subtracted from salary), slabs, HRA, 80GG illustrative, surcharge, cess, 87A model |
+| `lib/taxMissedDeductionAlerts.ts` | Missed-deduction strings; **`encourageDeductionInvestment`** flag suppresses 80C/HRA-style nudges when new regime already wins |
 | `components/calculators/compound-interest-calculator.tsx` | Compound interest calculator |
 | `components/calculators/spending-trend-chart.tsx` | Spending chart component |
 | `lib/analyse-form-schema.ts` | Form schema, normalization, shared model types |
@@ -276,7 +283,12 @@ Complete inventory with one-line purpose per file:
 | `lib/animations.ts` | Animation variants |
 | `lib/cn.ts` | Classname utility |
 | `lib/expense-bucket-recommendations.ts` | Bucket recommendation text |
-| `lib/learnContent.ts` | Learn article content metadata |
+| `lib/learnContent.ts` | Learn article content metadata (incl. India taxation / slabs / ITR primer article) |
+| `lib/blogContent.ts` | Blog article bodies + SEO slugs (incl. **`know-taxation-in-india`**) |
+| `lib/seo.ts` | **`SITE_URL`** normalization (no trailing slash), canonical helpers |
+| `lib/analyticsContext.ts` | Client context for every GA hit: **`app_surface`** (PWA vs browser), **`device_category`**, timezone, language, viewport, optional **`connection_type`** |
+| `lib/gtag.ts` | **`trackEvent`** / **`trackCta`** / **`trackShare`** / **`trackImpression`** / **`trackScrollDepth`** / **`trackToolOpen`** / **`trackNavClick`** — all merge **`getAnalyticsContext()`** |
+| `types/gtag.d.ts` | **`window.gtag`** / **`window.dataLayer`** typings |
 | `lib/knowledgeBase/index.ts` | Local KB entrypoint |
 | `lib/knowledgeBase/entries.ts` | Local KB entries |
 | `lib/knowledgeBase/retriever.ts` | Local KB retrieval logic |
@@ -315,6 +327,9 @@ Purpose: App-level user profile extending Supabase auth user.
 | fk_balance | integer | FK token balance |
 | created_at | timestamptz | Created time |
 | updated_at | timestamptz | Updated time |
+| data_consent_given | boolean | User accepted analyse/financial data processing consent |
+| data_consent_at | timestamptz | When consent was recorded |
+| data_consent_version | text | Consent copy/version marker (e.g. **`v2`** from **`/analyse`**) |
 
 RLS: `users_own` (auth.uid() == id)  
 Trigger: populated by `handle_new_user()` on signup.
@@ -882,6 +897,8 @@ Configure in **Supabase Dashboard → Authentication**: JWT expiry (e.g. **3600s
 ## 14. PAGE FLOWS
 
 ### `/analyse` (7-step form)
+**Gate:** `components/analyse/ConsentModal.tsx` must be accepted once per user: **`localStorage`** fast path + **`users`** row fallback + **`UPDATE`** on agree (see **`app/analyse/page.tsx`**). **`redirectedToLoginRef`** avoids duplicate login redirects under Strict Mode.
+
 Current runtime uses `components/forms/analyse-onboarding-form.tsx`:
 - step 1: profile/life stage
 - step 2: income
@@ -1619,6 +1636,7 @@ Important implementation note:
 
 ### Emergency numbers to know
 - Supabase URL: `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`)
+- GA4 Measurement ID (optional): `.env.local` / Vercel (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
 - Groq key: `.env.local` (`GROQ_API_KEY`)
 - Cache key name: `'finkoin_ai_cache'`
 - Financial store key: `'finkoin-financial'` (scoped per-user in localStorage)
@@ -1641,6 +1659,16 @@ Important implementation note:
 ---
 
 ## CHANGE LOG
+
+### 2026-05-07
+
+- **Google Analytics 4:** Optional **`NEXT_PUBLIC_GA_MEASUREMENT_ID`**. **`components/GoogleAnalytics.tsx`** loads gtag (`send_page_view: false`), sends SPA **`page_path`** + enriched **`gtag('config')`** on route/auth changes, sets **`user_id`** when logged in, refreshes **`user_properties`** (**`app_surface`**, **`device_category`**, **`timezone`**, **`language`**). **`lib/analyticsContext.ts`** adds **`app_surface`** (**`pwa`** vs **`browser`** via display-mode / iOS standalone), viewport, referrer hostname, optional **`connection_type`**. **`lib/gtag.ts`** merges context into **every** event. **`AnalyticsBehavior`**: **`scroll_depth`** at 25/50/75/90% (sessionStorage per path). **`TrackImpression`**: viewport **`element_impression`** for home sections. **Instrumented:** hero **`cta_click`** + **`carousel_select`**; home below-fold **`cta_click`**; **`nav_click`** (delegated, zones: **`header_bar`**, **`mobile_sheet`**, **`bottom_nav`**, **`profile_menu`**); **`CalculatorsClient`** **`tool_open`**; **`FeedbackModal`** **`feedback_open`** / **`feedback_submit`**; **`share`** from **`ShareButton`**, **`/refer`** + **`/profile`** copy/WhatsApp; **`profile`** / **`refer`** pages call **`trackShare`**. **`types/gtag.d.ts`** for **`window.gtag`**. Register custom dimensions in GA4 Admin as needed.
+- **Marketing / landing:** Homepage hero repositioned as **financial advisor** journey ( **`HomeHeroCarousel`**, **`HomePageBelowFold`** “Meet your finance advisor” card); carousel container padding / **`min-h`** tuned for mobile.
+- **Tax regime calculator:** Meal voucher **Rule 3** exemption inputs (monthly benefit × working days × **₹50 vs ₹200** per-meal cap toggle); persisted in autosave schema; salary net of **`mealVoucherExemptionAnnual`**. **`<details>`** steps for additional income / deductions / results; **Step 5 Results** default-open on mobile; mobile **Category | Old | New** table (desktop dual-panel unchanged). **ITR-1/2/3/4** suggestion block from filled data. Removed Indian MF dividend line item; dividends use Indian + foreign only. **`buildMissedDeductionAlerts`** respects **`encourageDeductionInvestment`** when new regime wins so users aren’t pushed into irrelevant 80C tips. Personal CA flow: **`unlockPageScroll`** / effects fix body scroll lock. Minor results chrome (softer borders).
+- **SEO & structured data:** **`lib/seo.ts`** / **`app/sitemap.ts`** strip trailing slash from base URL (fixes **`//`** in OG/canonical URLs). **`app/calculators/page.tsx`** emits tax-specific **`WebApplication`** JSON-LD when **`tax-regime`** is active (aligned with **`/calculators/tax-regime-2026`**). Learn **`know-taxation-in-india-old-vs-new-slabs-interest-rates`** + blog **`know-taxation-in-india`** educational content.
+- **Auth / stability:** **`AppInitializer`** single-flight **`initStartedRef`** for **`initAuth`**. **`app/analyse/page.tsx`** **`redirectedToLoginRef`** for login redirect. Defensive optional chaining: **`useSearchParams`** / **`usePathname`** nullability in **`CalculatorsClient`**, **`login`**, **`PolicyVaultClient`**, **`ReferralCapture`**, **`global-navbar`** (**`currentPath`**).
+- **PWA build:** **`pages/_document.tsx`** minimal **`Document`** for **`next-pwa`** compatibility with App Router builds.
+- **Analyse consent persistence:** Consent stored on **`public.users`** (**`data_consent_given`**, **`data_consent_at`**, **`data_consent_version`**) with **`localStorage`** cache **`finkoin_analyse_consent_v2_<userId>`** to avoid repeated DB reads.
 
 ### 2026-05-03
 
@@ -1756,7 +1784,7 @@ Important implementation note:
 - Debt display now surfaces lender names in result-page loan breakdown, fix-plan debt table, and PDF debt table using `displayName`/`lenderName` fallbacks.
 - No DB schema changes were needed; lender-name fields persist via existing `jsonb` profile/snapshot columns.
 - Added `components/analyse/ConsentModal.tsx` and gated `/analyse` so users must accept data consent before the onboarding form renders.
-- Consent acceptance now persists in localStorage (`finkoin_analyse_consent_v1`); returning users with prior acceptance skip the modal automatically.
+- *(Superseded 2026-05-07)* Consent now uses per-user **`localStorage`** **`finkoin_analyse_consent_v2_<userId>`** plus **`users.data_consent_*`** fields — see **§14 `/analyse`** and **§29**.
 
 ### 2026-04-25
 
@@ -1835,6 +1863,30 @@ Finkoin is installable as a PWA on **Android (Chrome)** and **iOS (Safari)**. Th
 
 ---
 
+## 29. ANALYTICS & GA4 (PRODUCT TELEMETRY)
+
+**Toggle:** Set **`NEXT_PUBLIC_GA_MEASUREMENT_ID`** (e.g. `G-xxxxxxxxxx`) in **`.env.local`** / Vercel. If unset, **`GoogleAnalytics`** renders nothing.
+
+**Stack:**
+
+| Piece | Role |
+|-------|------|
+| **`components/GoogleAnalytics.tsx`** | Loads **`gtag.js`**, disables automatic page views, fires **`gtag('config', …)`** on **`pathname`**, **`searchParams`**, and auth (**`user_id`** when logged in). Sets **`user_properties`**. |
+| **`lib/analyticsContext.ts`** | **`getAppSurface()`** (PWA standalone vs browser tab), **`getDeviceCategory()`**, **`timezone`**, **`language`**, **`viewport_*`**, **`referrer_hostname`**, optional **`connection_type`**. |
+| **`lib/gtag.ts`** | **`trackEvent`** merges **`getAnalyticsContext()`** into every hit. Helpers: **`trackCta`**, **`trackShare`**, **`trackImpression`**, **`trackScrollDepth`**, **`trackToolOpen`**, **`trackNavClick`**. |
+| **`components/AnalyticsBehavior.tsx`** | **`scroll_depth`** milestones per route (session-scoped). |
+| **`components/TrackImpression.tsx`** | **`element_impression`** once per **`component_id`**. |
+
+**Custom events (non-exhaustive):** `cta_click`, `carousel_select`, `element_impression`, `scroll_depth`, `nav_click`, `tool_open`, `share`, `feedback_open`, `feedback_submit`, plus standard enriched **`page_view`** via config.
+
+**Geo / device:** City/country appear in GA4 **Geo** dimensions from Google’s collection pipeline (IP-based). The app does **not** send GPS coordinates.
+
+**Privacy:** Disclose GA + **`user_id`** in **`/legal/privacy`** as applicable; consider consent banners for jurisdictions that require opt-in before analytics.
+
+**Operators:** Register important event parameters as **Custom dimensions** in GA4 Admin → Data display → Custom definitions.
+
+---
+
 # What Is Stored Where — Complete Map
 
 TABLE: users
@@ -1851,8 +1903,11 @@ TABLE: users
     referred_by → who referred them
     pan_verified → KYC status
     is_admin → admin flag
-  When saved: On signup, on profile update
-  Read by: authStore.initAuth()
+    data_consent_given → accepted analyse/data-processing consent
+    data_consent_at → consent timestamp
+    data_consent_version → consent policy version string (e.g. v2)
+  When saved: On signup, on profile update; consent fields on **`/analyse`** accept
+  Read by: authStore.initAuth(); **`/analyse`** reads **`data_consent_given`** when local cache missing
 
 TABLE: gamification
   What: FK tokens and engagement
@@ -2097,7 +2152,9 @@ LAYER 5: Data Encryption
 
 **Metadata:** Per-route `metadata` / `generateMetadata` on landing (`app/page.tsx`), analyse layout, calculators hub + tax landing, tracker layout, learn, about, blog index & articles, result layout, calculator `[id]` layout. Uses `metadataBase` from `NEXT_PUBLIC_SITE_URL` and absolute titles where the root `title.template` would duplicate the brand.
 
-**Structured data (JSON-LD):** Root `app/layout.tsx` — WebApplication (head), `@graph` in body with Organization (logo `icons/icon-512x512.png`, `hello@finkoin.com`, sameAs Twitter/LinkedIn) and WebSite (`SearchAction` → `/learn?q={search_term_string}`). Homepage FAQPage; calculators hub SoftwareApplication + FAQPage; tax landing `WebApplication` + FAQPage (FY 2025-26 FAQ); blog articles `Article` schema.
+**Structured data (JSON-LD):** Root `app/layout.tsx` — WebApplication (head), `@graph` in body with Organization (logo `icons/icon-512x512.png`, `hello@finkoin.com`, sameAs Twitter/LinkedIn) and WebSite (`SearchAction` → `/learn?q={search_term_string}`). Homepage FAQPage; calculators hub uses **tax-specific `WebApplication`** JSON-LD when the active calc is **`tax-regime`** (otherwise generic **`SoftwareApplication`**); dedicated **`/calculators/tax-regime-2026`** page includes full tax **`WebApplication`** + FAQPage; blog articles `Article` schema.
+
+**URL normalization:** `lib/seo.ts` **`SITE_URL`** and `app/sitemap.ts` **`baseUrl`** trim trailing slashes so composed OG/metadata URLs avoid **`//`** paths.
 
 **OG images:** `public/og/home.png`, `tax-calculator.png`, `analyse.png`, and `public/og/blog/<slug>.png` — generated via `npm run og:placeholders` (`scripts/generate-og-placeholders.mjs`, Sharp). Replace with designed 1200×630 assets when ready.
 
@@ -2106,4 +2163,6 @@ LAYER 5: Data Encryption
 **Performance / headers:** `next.config.mjs` — `images.formats` (AVIF/WebP), `minimumCacheTTL`, `experimental.optimizePackageImports` (`recharts`, `framer-motion`), security/cache headers on `/:path*`, `/icons/*`, `/fonts/*`.
 
 **Changelog — 2026-05-04:** Full SEO pass: blog as real routes with `lib/blogContent.ts`, dedicated tax calculator URL, expanded sitemap/robots, JSON-LD and OG placeholders, metadata on key marketing routes.
+
+**Changelog — 2026-05-07:** Trailing-slash normalization; calculators hub conditional **`WebApplication`** for tax tool; India taxation education articles in Learn + Blog (see **§CHANGE LOG 2026-05-07**). **GA4** instrumentation documented in **§29**.
 

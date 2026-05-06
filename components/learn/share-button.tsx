@@ -1,28 +1,48 @@
 "use client";
 
+import { trackShare } from "@/lib/gtag";
+
 type ShareButtonProps = {
   title: string;
   url: string;
+  /** For GA4: learn_article, referral_link, etc. */
+  contentType?: string;
+  contentId?: string;
 };
 
-export function ShareButton({ title, url }: ShareButtonProps) {
+export function ShareButton({ title, url, contentType = "page", contentId }: ShareButtonProps) {
   return (
     <button
       type="button"
       className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
       onClick={async () => {
+        const base = { content_type: contentType, content_id: contentId };
+
         try {
           if (typeof navigator !== "undefined" && navigator.share) {
-            await navigator.share({ title, url });
-            return;
+            try {
+              await navigator.share({ title, url });
+              trackShare({ method: "native_share", ...base, outcome: "completed" });
+              return;
+            } catch (e: unknown) {
+              const name = e instanceof DOMException ? e.name : "";
+              if (name === "AbortError") {
+                trackShare({ method: "native_share", ...base, outcome: "cancelled" });
+                return;
+              }
+              trackShare({ method: "native_share", ...base, outcome: "failed" });
+            }
           }
         } catch {
-          /* user cancelled or share failed */
+          trackShare({ method: "native_share", ...base, outcome: "failed" });
         }
+
         try {
           await navigator.clipboard.writeText(url);
+          trackShare({ method: "clipboard", ...base, outcome: "completed" });
           alert("Link copied to clipboard");
         } catch {
+          trackShare({ method: "fallback_prompt", ...base, outcome: "failed" });
           prompt("Copy this link:", url);
         }
       }}

@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import { trackShare } from "@/lib/gtag";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
@@ -68,6 +69,12 @@ export default function ReferPage() {
             onClick={async () => {
               if (!referralUrl) return;
               await navigator.clipboard.writeText(referralUrl);
+              trackShare({
+                method: "clipboard",
+                content_type: "referral_link",
+                content_id: "refer_page",
+                outcome: "completed",
+              });
               setCopied(true);
               setTimeout(() => setCopied(false), 2500);
             }}
@@ -93,6 +100,14 @@ export default function ReferPage() {
           target="_blank"
           rel="noreferrer"
           className="mt-3 flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-[#25D366] text-base font-bold text-white no-underline"
+          onClick={() =>
+            trackShare({
+              method: "whatsapp",
+              content_type: "referral_link",
+              content_id: "refer_page",
+              outcome: "completed",
+            })
+          }
         >
           <span aria-hidden>📱</span>
           Share on WhatsApp

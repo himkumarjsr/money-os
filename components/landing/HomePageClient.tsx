@@ -1,6 +1,7 @@
 "use client";
 
 import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
+import { TrackImpression } from "@/components/TrackImpression";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
 import { m, useScroll, useSpring, useTransform } from "framer-motion";
 import dynamic from "next/dynamic";
@@ -42,6 +43,7 @@ export default function HomePageClient() {
         style={{ y: orbRightY }}
       />
       <main className="snap-y snap-mandatory">
+        <TrackImpression component_id="home_hero_section" threshold={0.2}>
         <section className="relative z-10 overflow-hidden border-b border-indigo-100/80 px-4 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 lg:px-8">
           <m.div
             aria-hidden
@@ -107,6 +109,7 @@ export default function HomePageClient() {
             </div>
           </m.div>
         </section>
+        </TrackImpression>
 
         <HomePageBelowFold />
       </main>

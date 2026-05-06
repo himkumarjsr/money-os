@@ -16,5 +16,7 @@ export function ArticleShare({
     setUrl(`${window.location.origin}${path}`);
   }, [path]);
 
-  return <ShareButton title={title} url={url || path} />;
+  return (
+    <ShareButton title={title} url={url || path} contentType="learn_article" contentId={path} />
+  );
 }

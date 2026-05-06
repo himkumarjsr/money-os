@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { m } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { trackToolOpen } from "@/lib/gtag";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, type Cat } from "./calculator-config";
 
@@ -59,6 +60,14 @@ export default function CalculatorsClient({
     },
     [pathname, router, searchParams, urlBaseForTaxCanonical],
   );
+
+  useEffect(() => {
+    trackToolOpen({
+      tool_category: "calculator",
+      tool_id: activeItem.id,
+      tool_name: activeItem.title,
+    });
+  }, [activeItem.id, activeItem.title]);
 
   useEffect(() => {
     if (urlBaseForTaxCanonical && calcId === "tax-regime") {

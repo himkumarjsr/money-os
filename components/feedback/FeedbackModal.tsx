@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
+import { trackEvent } from "@/lib/gtag";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -27,6 +28,11 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
     setError(null);
     setDone(false);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    trackEvent("feedback_open", { feedback_source: source });
+  }, [open, source]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,6 +68,7 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
         return;
       }
       setDone(true);
+      trackEvent("feedback_submit", { feedback_source: source, rating });
     } catch {
       setError("Network error. Try again.");
     } finally {

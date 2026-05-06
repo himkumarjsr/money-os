@@ -2,6 +2,7 @@
 
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { fadeIn } from "@/lib/animations";
+import { trackNavClick } from "@/lib/gtag";
 import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, m } from "framer-motion";
 import Link from "next/link";
@@ -36,6 +37,32 @@ export function GlobalNavbar() {
   const [scrolled, setScrolled] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const profileButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const zoneEl = t.closest("[data-track-nav-zone]");
+      if (!zoneEl) return;
+      const zone = zoneEl.getAttribute("data-track-nav-zone") ?? "unknown";
+
+      const internal = t.closest("[data-internal-href]");
+      if (internal && zoneEl.contains(internal)) {
+        const href = internal.getAttribute("data-internal-href");
+        if (href) trackNavClick(href, zone);
+        return;
+      }
+
+      const a = t.closest("a[href]");
+      if (a && zoneEl.contains(a)) {
+        const href = a.getAttribute("href") ?? "";
+        if (!href || href.startsWith("#")) return;
+        trackNavClick(href, zone);
+      }
+    };
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -93,6 +120,7 @@ export function GlobalNavbar() {
   return (
     <>
       <m.header
+        data-track-nav-zone="header_bar"
         variants={fadeIn}
         initial={false}
         animate={{ opacity: 1, y: 0 }}
@@ -243,6 +271,7 @@ export function GlobalNavbar() {
             />
             <m.div
               key="profile-panel"
+              data-track-nav-zone="profile_menu"
               ref={profileMenuRef}
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -303,6 +332,7 @@ export function GlobalNavbar() {
                 <button
                   key={href}
                   type="button"
+                  data-internal-href={href}
                   className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50"
                   onClick={() => {
                     setProfileOpen(false);
@@ -362,6 +392,7 @@ export function GlobalNavbar() {
       <AnimatePresence>
         {mobileOpen ? (
           <m.div
+            data-track-nav-zone="mobile_sheet"
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
@@ -423,6 +454,7 @@ export function GlobalNavbar() {
 
       <nav
         aria-label="Mobile quick navigation"
+        data-track-nav-zone="bottom_nav"
         className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#E8E6F0] bg-white pb-[calc(env(safe-area-inset-bottom)+10px)] pt-1 shadow-[0_-4px_24px_rgba(30,30,60,0.06)] md:hidden"
       >
         <div className="relative mx-auto max-w-md px-1">

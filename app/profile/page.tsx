@@ -4,6 +4,7 @@ import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { analyseFinances } from "@/lib/financialEngine";
 import { formatIndian } from "@/lib/formatters";
 import { verifyPAN } from "@/lib/kycVerification";
+import { trackShare } from "@/lib/gtag";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -76,6 +77,12 @@ export default function ProfilePage() {
 
   const copyReferralLink = async () => {
     await navigator.clipboard.writeText(referralLink);
+    trackShare({
+      method: "clipboard",
+      content_type: "referral_link",
+      content_id: "profile_page",
+      outcome: "completed",
+    });
     setReferralCopied(true);
     window.setTimeout(() => setReferralCopied(false), 2500);
   };
@@ -214,6 +221,14 @@ export default function ProfilePage() {
             href={`https://wa.me/?text=${encodeURIComponent(`I use Finkoin to manage my finances. Get your free AI financial health check: ${referralLink}`)}`}
             target="_blank"
             rel="noreferrer"
+            onClick={() =>
+              trackShare({
+                method: "whatsapp",
+                content_type: "referral_link",
+                content_id: "profile_page",
+                outcome: "completed",
+              })
+            }
           >
             Share on WhatsApp
           </a>
