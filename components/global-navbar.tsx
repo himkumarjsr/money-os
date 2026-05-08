@@ -198,13 +198,13 @@ export function GlobalNavbar() {
               View Plans
             </Link>
 
-            <button
+            {/* <button
               type="button"
               onClick={() => setFeedbackOpen(true)}
               className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 md:inline-flex"
             >
               Feedback
-            </button>
+            </button> */}
 
             {isLoggedIn ? <NotificationBell /> : null}
 
