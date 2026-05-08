@@ -9,6 +9,7 @@ import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
+import NotificationConsent from "@/components/notifications/NotificationConsent";
 import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
@@ -265,6 +266,7 @@ export default function RootLayout({
               {children}
             </main>
             <Footer />
+            <NotificationConsent />
             <ReferralSuccessToast />
             <Toast />
           </AppInitializer>

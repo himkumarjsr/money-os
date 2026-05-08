@@ -10,8 +10,6 @@ import { useRouter } from "next/navigation";
 import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 const APP_VERSION = "1.0.0";
-const LS_NOTIFICATION_PREFIX = "finkoin_settings_notif_";
-
 export default function SettingsPage() {
   return (
     <ProtectedGate>
@@ -37,30 +35,43 @@ function SettingsInner() {
 
   const [resetSent, setResetSent] = useState(false);
 
-  const [emailSummary, setEmailSummary] = useState(false);
-  const [weeklyTips, setWeeklyTips] = useState(false);
-  const [productUpdates, setProductUpdates] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState({
+    morning_tips: false,
+    weekly_summary: false,
+    payment_alerts: true,
+  });
+  const [notifSavingKey, setNotifSavingKey] = useState<string | null>(null);
 
   useEffect(() => {
     setName(user?.name ?? "");
   }, [user?.name]);
 
   useEffect(() => {
-    try {
-      setEmailSummary(localStorage.getItem(`${LS_NOTIFICATION_PREFIX}email_summary`) === "1");
-      setWeeklyTips(localStorage.getItem(`${LS_NOTIFICATION_PREFIX}weekly_tips`) === "1");
-      setProductUpdates(localStorage.getItem(`${LS_NOTIFICATION_PREFIX}product_updates`) === "1");
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    const loadPrefs = async () => {
+      if (!user?.id) return;
+      const supabase = getSupabase();
+      const { data } = await supabase.from("notification_preferences").select("*").eq("user_id", user.id).maybeSingle();
+      if (!data) return;
+      setNotifPrefs({
+        morning_tips: Boolean(data.morning_tips),
+        weekly_summary: Boolean(data.weekly_summary),
+        payment_alerts: Boolean(data.payment_alerts),
+      });
+    };
+    void loadPrefs();
+  }, [user?.id]);
 
-  const persistNotif = (key: string, val: boolean) => {
-    try {
-      localStorage.setItem(`${LS_NOTIFICATION_PREFIX}${key}`, val ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
+  const updatePref = async (key: "morning_tips" | "weekly_summary" | "payment_alerts", value: boolean) => {
+    if (!user?.id) return;
+    setNotifSavingKey(key);
+    const supabase = getSupabase();
+    await supabase.from("notification_preferences").upsert({
+      user_id: user.id,
+      [key]: value,
+      updated_at: new Date().toISOString(),
+    });
+    setNotifPrefs((prev) => ({ ...prev, [key]: value }));
+    setNotifSavingKey(null);
   };
 
   const initials = useMemo(() => (user?.name?.trim()?.charAt(0) || "U").toUpperCase(), [user?.name]);
@@ -209,30 +220,24 @@ function SettingsInner() {
 
       <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">Notifications</h2>
-        <p className="mt-2 text-xs text-[#9B9A94]">Stored on this device only until email infra ships.</p>
+        <p className="mt-2 text-xs text-[#9B9A94]">Saved to your account and synced across devices.</p>
         <ToggleRow
-          label="Email me my financial summary"
-          checked={emailSummary}
-          onChange={(v) => {
-            setEmailSummary(v);
-            persistNotif("email_summary", v);
-          }}
+          label="Daily morning tips"
+          checked={notifPrefs.morning_tips}
+          onChange={(v) => void updatePref("morning_tips", v)}
+          disabled={notifSavingKey === "morning_tips"}
         />
         <ToggleRow
-          label="Weekly tips and insights"
-          checked={weeklyTips}
-          onChange={(v) => {
-            setWeeklyTips(v);
-            persistNotif("weekly_tips", v);
-          }}
+          label="Weekly summary"
+          checked={notifPrefs.weekly_summary}
+          onChange={(v) => void updatePref("weekly_summary", v)}
+          disabled={notifSavingKey === "weekly_summary"}
         />
         <ToggleRow
-          label="Product updates"
-          checked={productUpdates}
-          onChange={(v) => {
-            setProductUpdates(v);
-            persistNotif("product_updates", v);
-          }}
+          label="Payment alerts"
+          checked={notifPrefs.payment_alerts}
+          onChange={(v) => void updatePref("payment_alerts", v)}
+          disabled={notifSavingKey === "payment_alerts"}
         />
       </section>
 
@@ -286,15 +291,23 @@ function ToggleRow({
   label,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 border-t border-[#F0EFF8] pt-4 first:border-t-0 first:pt-0">
       <span className="text-sm text-[#111110]">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(ev) => onChange(ev.target.checked)} className="h-5 w-5 accent-[#534AB7]" />
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(ev) => onChange(ev.target.checked)}
+        className="h-5 w-5 accent-[#534AB7]"
+      />
     </label>
   );
 }
