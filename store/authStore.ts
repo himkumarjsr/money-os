@@ -124,8 +124,13 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           useGamificationStore.setState({
             fkBalance: 0,
+            totalEarned: 0,
             badges: [],
             streakDays: 0,
+            lastLoginDate: null,
+            rank: null,
+            percentile: null,
+            lastFetched: null,
             earnedActions: [],
             toastMessage: null,
           });
@@ -258,8 +263,10 @@ export const useAuthStore = create<AuthState>()(
 
           useGamificationStore.setState({
             fkBalance: fkBal,
+            totalEarned: Number(gamData?.total_earned ?? fkBal),
             streakDays: Number(gamData?.streak_days ?? 0),
             badges: Array.isArray(gamData?.badges) ? (gamData.badges as string[]) : [],
+            lastFetched: null,
           });
 
           set({

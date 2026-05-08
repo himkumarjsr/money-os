@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FeedbackFormButton from "@/components/FeedbackFormButton";
 
 const linkClassName =
   "group inline-flex items-center text-sm text-white/75 transition-all duration-300 hover:-translate-y-0.5 hover:text-white";
@@ -182,6 +183,10 @@ export default function Footer() {
           <p>Bank-level security 🔒</p>
           <p>No spam • No credit card required</p>
         </section>
+
+        <div className="mt-6 flex justify-center">
+          <FeedbackFormButton />
+        </div>
 
         <div className="mt-8 border-t border-white/15 pt-6 text-center text-xs text-white/60">
           <p>© 2026 Finkoin. All rights reserved. Made with ❤️ in India 🇮🇳</p>

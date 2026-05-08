@@ -1,6 +1,7 @@
 "use client";
 
 import NotificationBell from "@/components/NotificationBell";
+import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { fadeIn } from "@/lib/animations";
 import { trackNavClick } from "@/lib/gtag";
@@ -197,13 +198,13 @@ export function GlobalNavbar() {
               View Plans
             </Link>
 
-            <button
+            {/* <button
               type="button"
               onClick={() => setFeedbackOpen(true)}
               className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 md:inline-flex"
             >
               Feedback
-            </button>
+            </button> */}
 
             {isLoggedIn ? <NotificationBell /> : null}
 
@@ -349,6 +350,11 @@ export function GlobalNavbar() {
                 </button>
               ))}
             </nav>
+
+            <div className="my-3 border-t border-[#F0EFF8]" />
+            <div className="px-1">
+              <FeedbackFormButton />
+            </div>
 
             <div className="my-3 border-t border-[#F0EFF8]" />
             <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 text-[11px] text-slate-600">

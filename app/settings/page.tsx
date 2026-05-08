@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -342,6 +343,9 @@ function SettingsInner() {
             </strong>
           </li>
         </ul>
+        <div className="mt-4">
+          <FeedbackFormButton />
+        </div>
       </section>
     </main>
   );

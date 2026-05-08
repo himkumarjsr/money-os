@@ -1678,6 +1678,16 @@ Important implementation note:
 
 ## CHANGE LOG
 
+### 2026-05-08
+
+- **Feedback + FK rewards:** Added inline result-page feedback capture (`components/FeedbackWidget.tsx`) storing to `feedback` with optional message/context/score snapshot. On success, awards `+50 FK` via `gamificationStore.addFK(...)` and logs `fk_transactions` reason `feedback_submitted`.
+- **Gamification store revamp:** `store/gamificationStore.ts` now includes server-backed methods `fetchGamification` (5-min cache), `addFK`, `updateLoginStreak`, and realtime subscription helpers (`subscribeToRealtime`). Store keeps compatibility methods (`earnTokens`, `awardBadge`, `markEarnedAction`, toast APIs) and persists key balance/rank/streak fields.
+- **Realtime sync:** `components/AppInitializer.tsx` now initializes gamification after auth, updates login streak on login day, and subscribes/unsubscribes realtime row sync for `gamification`.
+- **Testimonials (24h cache):** Added `components/Testimonials.tsx` reading approved featured feedback (`is_approved=true`, `is_featured=true`, `rating>=4`) with `localStorage` TTL cache (`finkoin_testimonials`, 24h). Integrated into landing experience.
+- **Leaderboard (5-min cache + realtime invalidation):** Replaced `/leaderboard` UI with cached `leaderboard_view` fetch (`finkoin_leaderboard`, 5 minutes) plus realtime invalidation on `gamification` updates and manual refresh.
+- **Feedback form link surface:** Added reusable `components/FeedbackFormButton.tsx` and integrated it into profile panel (`global-navbar`), settings page, and footer.
+- **Schema/features documented:** This release assumes `feedback`, `gamification`, `fk_transactions`, and `leaderboard_view` already exist with realtime enabled on `gamification` and `feedback`.
+
 ### 2026-05-07
 
 - **Google Analytics 4:** Optional **`NEXT_PUBLIC_GA_MEASUREMENT_ID`**. **`components/GoogleAnalytics.tsx`** loads gtag (`send_page_view: false`), sends SPA **`page_path`** + enriched **`gtag('config')`** on route/auth changes, sets **`user_id`** when logged in, refreshes **`user_properties`** (**`app_surface`**, **`device_category`**, **`timezone`**, **`language`**). **`lib/analyticsContext.ts`** adds **`app_surface`** (**`pwa`** vs **`browser`** via display-mode / iOS standalone), viewport, referrer hostname, optional **`connection_type`**. **`lib/gtag.ts`** merges context into **every** event. **`AnalyticsBehavior`**: **`scroll_depth`** at 25/50/75/90% (sessionStorage per path). **`TrackImpression`**: viewport **`element_impression`** for home sections. **Instrumented:** hero **`cta_click`** + **`carousel_select`**; home below-fold **`cta_click`**; **`nav_click`** (delegated, zones: **`header_bar`**, **`mobile_sheet`**, **`bottom_nav`**, **`profile_menu`**); **`CalculatorsClient`** **`tool_open`**; **`FeedbackModal`** **`feedback_open`** / **`feedback_submit`**; **`share`** from **`ShareButton`**, **`/refer`** + **`/profile`** copy/WhatsApp; **`profile`** / **`refer`** pages call **`trackShare`**. **`types/gtag.d.ts`** for **`window.gtag`**. Register custom dimensions in GA4 Admin as needed.
@@ -2185,4 +2195,40 @@ LAYER 5: Data Encryption
 **Changelog — 2026-05-04:** Full SEO pass: blog as real routes with `lib/blogContent.ts`, dedicated tax calculator URL, expanded sitemap/robots, JSON-LD and OG placeholders, metadata on key marketing routes.
 
 **Changelog — 2026-05-07:** Trailing-slash normalization; calculators hub conditional **`WebApplication`** for tax tool; India taxation education articles in Learn + Blog (see **§CHANGE LOG 2026-05-07**). **GA4** instrumentation documented in **§29**.
+
+
+
+-- 1. Find user ID
+SELECT id FROM auth.users
+WHERE email = 'himkumarjsr@gmail.com';
+
+-- 2. Deliver one tip (replace YOUR_ID)
+INSERT INTO public.user_notifications
+  (user_id, tip_id, title, content,
+   emoji, category, is_read, shown_as_popup)
+SELECT 'YOUR_ID', out_tip_id, out_title,
+  out_content, out_emoji, out_category,
+  false, false
+FROM get_next_tip_for_user('YOUR_ID');
+
+-- 3. Check your notifications inbox
+SELECT title, emoji, is_read, 
+  shown_as_popup, created_at
+FROM public.user_notifications
+WHERE user_id = 'YOUR_ID'
+ORDER BY created_at DESC;
+
+-- 4. Reset for retesting
+UPDATE public.user_notifications
+SET shown_as_popup = false, is_read = false
+WHERE user_id = 'YOUR_ID';
+
+-- 5. Clear tip history (reset no-repeat)
+DELETE FROM public.user_tip_history
+WHERE user_id = 'YOUR_ID';
+
+-- 6. Delete all notifications (fresh start)
+DELETE FROM public.user_notifications
+WHERE user_id = 'YOUR_ID';
+
 
