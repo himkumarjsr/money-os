@@ -22,11 +22,15 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
 ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "notif_pref_own" ON public.notification_preferences;
+DROP POLICY IF EXISTS "notif_own" ON public.notification_preferences;
+DROP POLICY IF EXISTS "Users can manage own notification preferences" ON public.notification_preferences;
 
 CREATE POLICY "notif_pref_own"
   ON public.notification_preferences
   FOR ALL
-  USING (auth.uid() = user_id);
+  TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE TABLE IF NOT EXISTS public.finance_tips (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
