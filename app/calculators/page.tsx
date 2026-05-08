@@ -147,13 +147,13 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         url: `${siteUrl}/calculators`,
         siteName: "Finkoin",
         type: "website",
-        images: [{ url: `${siteUrl}/og/home.png`, width: 1200, height: 630, alt: "Finkoin calculators" }],
+        images: [{ url: `${siteUrl}/og/og-home.png`, width: 1200, height: 630, alt: "Finkoin calculators" }],
       },
       twitter: {
         card: "summary_large_image",
         title: "Free Financial Calculators for India 2026 | Finkoin",
         description: seo.description,
-        images: [`${siteUrl}/og/home.png`],
+        images: [`${siteUrl}/og/og-home.png`],
       },
     };
   }
@@ -172,7 +172,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         type: "website",
         images: [
           {
-            url: `${siteUrl}/og/tax-calculator.png`,
+            url: `${siteUrl}/og/og-tax-calculator.png`,
             width: 1200,
             height: 630,
             alt: "Finkoin tax regime calculator",
@@ -183,7 +183,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         card: "summary_large_image",
         title: "Tax Regime Calculator 2026 — Old vs New | Finkoin",
         description: "Free. Compare old and new tax regime. All deductions included.",
-        images: [`${siteUrl}/og/tax-calculator.png`],
+        images: [`${siteUrl}/og/og-tax-calculator.png`],
       },
     };
   }
@@ -192,7 +192,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     ...generatePageMeta(seo.title, seo.description, seo.keywords, {
       titleMode: "absolute",
       canonicalPath: `/calculators?calc=${encodeURIComponent(calcParam)}`,
-      openGraphImagePath: "/og/home.png",
+      openGraphImagePath: "/og/og-home.png",
     }),
   };
 }

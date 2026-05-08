@@ -23,13 +23,13 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/tracker`,
     siteName: "Finkoin",
     type: "website",
-    images: [{ url: `${SITE_URL}/og/home.png`, width: 1200, height: 630, alt: "Finkoin expense tracker" }],
+    images: [{ url: `${SITE_URL}/og/og-home.png`, width: 1200, height: 630, alt: "Finkoin expense tracker" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Monthly Expense Tracker India — Free | Finkoin",
     description: "Track monthly expenses by category. See where your money goes.",
-    images: [`${SITE_URL}/og/home.png`],
+    images: [`${SITE_URL}/og/og-home.png`],
   },
 };
 

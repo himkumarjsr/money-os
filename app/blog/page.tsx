@@ -25,14 +25,14 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/blog`,
     siteName: "Finkoin",
     type: "website",
-    images: [{ url: `${SITE_URL}/og/home.png`, width: 1200, height: 630, alt: "Finkoin blog" }],
+    images: [{ url: `${SITE_URL}/og/og-home.png`, width: 1200, height: 630, alt: "Finkoin blog" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Personal Finance Blog India — Tips, Guides, Calculators | Finkoin",
     description:
       "Free personal finance guides for India. Tax saving, insurance planning, investment advice, expense tracking.",
-    images: [`${SITE_URL}/og/home.png`],
+    images: [`${SITE_URL}/og/og-home.png`],
   },
 };
 

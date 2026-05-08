@@ -18,14 +18,14 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/about`,
     siteName: "Finkoin",
     type: "website",
-    images: [{ url: `${SITE_URL}/og/home.png`, width: 1200, height: 630, alt: "About Finkoin" }],
+    images: [{ url: `${SITE_URL}/og/og-home.png`, width: 1200, height: 630, alt: "About Finkoin" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "About Finkoin — Financial Health Platform for India",
     description:
       "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
-    images: [`${SITE_URL}/og/home.png`],
+    images: [`${SITE_URL}/og/og-home.png`],
   },
 };
 

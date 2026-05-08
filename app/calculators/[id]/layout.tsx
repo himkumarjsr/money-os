@@ -14,7 +14,7 @@ export function generateMetadata({ params }: LayoutProps): Metadata {
     "financial calculators India",
   ], {
     canonicalPath: `/calculators/${params.id}`,
-    openGraphImagePath: "/og/home.png",
+    openGraphImagePath: "/og/og-home.png",
   });
 }
 

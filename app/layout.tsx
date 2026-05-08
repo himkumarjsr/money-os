@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://finkoin.com/og/home.png",
+        url: "https://finkoin.com/og/og-home.png",
         width: 1200,
         height: 630,
       },
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     title: "Finkoin - AI Personal Finance Advisor for India",
     description:
       "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
-    images: [`${siteUrl}/og/home.png`],
+    images: [`${siteUrl}/og/og-home.png`],
   },
   appleWebApp: {
     capable: true,

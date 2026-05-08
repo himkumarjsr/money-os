@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://finkoin.com/og/tax-calculator.png",
+        url: "https://finkoin.com/og/og-tax-calculator.png",
         width: 1200,
         height: 630,
         alt: "Finkoin Tax Regime Calculator 2026",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Tax Regime Calculator 2026 — Old vs New | Finkoin",
     description: "Free. Compare old and new tax regime. All deductions included.",
-    images: [`${SITE_URL}/og/tax-calculator.png`],
+    images: [`${SITE_URL}/og/og-tax-calculator.png`],
   },
 };
 

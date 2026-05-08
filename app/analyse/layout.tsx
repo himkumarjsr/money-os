@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://finkoin.com/og/analyse.png",
+        url: "https://finkoin.com/og/og-analyse.png",
         width: 1200,
         height: 630,
         alt: "Finkoin Financial Health Score",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     title: "Financial Health Check — Know Your Score Free | Finkoin",
     description:
       "Get your personalised financial health score out of 100. Free. 5 minutes.",
-    images: [`${SITE_URL}/og/analyse.png`],
+    images: [`${SITE_URL}/og/og-analyse.png`],
   },
 };
 

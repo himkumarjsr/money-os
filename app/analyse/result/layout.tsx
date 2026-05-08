@@ -8,7 +8,7 @@ export const metadata: Metadata = generatePageMeta(
   {
     titleMode: "absolute",
     canonicalPath: "/analyse/result",
-    openGraphImagePath: "/og/analyse.png",
+    openGraphImagePath: "/og/og-analyse.png",
   },
 );
 

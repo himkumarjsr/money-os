@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://finkoin.com/og/home.png",
+        url: "https://finkoin.com/og/og-home.png",
         width: 1200,
         height: 630,
         alt: "Finkoin Financial Health Check",
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Finkoin — Free Financial Health Check for India",
     description: "See how close you are to achieving financial independence in 5 minutes. Free. No PAN. No Aadhaar.",
-    images: [`${SITE_URL}/og/home.png`],
+    images: [`${SITE_URL}/og/og-home.png`],
   },
   alternates: {
     canonical: "/",

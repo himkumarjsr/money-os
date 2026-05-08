@@ -36,7 +36,7 @@ export function generatePageMeta(
   options?: PageMetaOptions,
 ) {
   const canonicalPath = options?.canonicalPath ?? "/";
-  const ogImagePath = options?.openGraphImagePath ?? "/og/home.png";
+  const ogImagePath = options?.openGraphImagePath ?? "/og/og-home.png";
   const titleField =
     options?.titleMode === "absolute" ? { absolute: title } : `${title} | ${SEO_CONFIG.siteName}`;
 
