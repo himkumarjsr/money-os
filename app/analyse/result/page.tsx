@@ -2,6 +2,7 @@
 
 import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
 import { PaywallModal } from "@/components/analyse/paywall-modal";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
@@ -26,6 +27,7 @@ export default function AnalyseResultPage() {
   } = useFinancialStore();
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(true);
   const toggleRow = (key: string) => {
     setExpandedRows((prev) => (prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key]));
   };
@@ -808,6 +810,12 @@ export default function AnalyseResultPage() {
             <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">Educational only</p>
           </div>
         </section>
+
+        {showFeedback ? (
+          <div style={{ padding: "0 16px 16px" }}>
+            <FeedbackWidget pageContext="result_page" onClose={() => setShowFeedback(false)} />
+          </div>
+        ) : null}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="text-xl font-semibold text-slate-900">Keep going</h2>

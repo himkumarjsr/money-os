@@ -1,6 +1,7 @@
 "use client";
 
 import FeatureCardsCarousel from "@/components/landing/FeatureCardsCarousel";
+import Testimonials from "@/components/Testimonials";
 import { TrackImpression } from "@/components/TrackImpression";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
 import { trackCta } from "@/lib/gtag";
@@ -32,23 +33,6 @@ const features = [
   {
     title: "Pay Insurance with Finkoins",
     body: "Use earned Finkoins to reduce your insurance payment burden.",
-  },
-] as const;
-
-const testimonials = [
-  {
-    quote:
-      "The health check spelled out what I was ignoring — overspending on UPI and no emergency fund. The fix list felt doable.",
-    name: "Ananya Krishnan",
-    city: "Bengaluru",
-    role: "Product designer",
-  },
-  {
-    quote:
-      "I use the SIP and EMI calculators before every decision. Finally one place that doesn’t push random products on me.",
-    name: "Rohit Verma",
-    city: "Pune",
-    role: "IT consultant",
   },
 ] as const;
 
@@ -204,34 +188,7 @@ export default function HomePageBelowFold() {
       </StorySection>
 
       <StorySection impressionId="home_testimonials" className="z-30 border-b border-indigo-100/50 bg-white/55 backdrop-blur-[2px]">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <AnimateOnScroll variant="fadeUp" aboveFold>
-            <h2 className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/85 sm:text-sm">
-              Loved by Indians building better money habits
-            </h2>
-          </AnimateOnScroll>
-          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-            {testimonials.map((t, index) => (
-              <AnimateOnScroll
-                key={t.name}
-                variant="fadeUp"
-                delay={index * 0.08}
-                aboveFold
-                className="flex flex-col rounded-2xl border border-white/60 bg-white/70 p-6 shadow-lg shadow-indigo-500/[0.06] backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/12 sm:p-7"
-              >
-                <p className="flex-1 text-sm leading-relaxed text-slate-700 sm:text-[0.9375rem]">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-                <div className="mt-5 border-t border-slate-100 pt-5">
-                  <p className="font-semibold text-slate-900">{t.name}</p>
-                  <p className="mt-0.5 text-sm text-slate-500">
-                    {t.role} · {t.city}
-                  </p>
-                </div>
-              </AnimateOnScroll>
-            ))}
-          </div>
-        </div>
+        <Testimonials />
       </StorySection>
 
       <StorySection impressionId="home_pricing" className="z-40 border-b border-indigo-100/60 bg-gradient-to-b from-violet-50/50 via-white to-indigo-50/40">

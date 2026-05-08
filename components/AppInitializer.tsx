@@ -2,6 +2,7 @@
 
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { useAuthStore } from "@/store/authStore";
+import { useGamificationStore } from "@/store/gamificationStore";
 import { useEffect, useRef } from "react";
 
 /**
@@ -11,6 +12,10 @@ import { useEffect, useRef } from "react";
  */
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
   const initStartedRef = useRef(false);
+  const gamificationUnsubRef = useRef<(() => void) | null>(null);
+  const userId = useAuthStore((s) => s.user?.id);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
 
   useEffect(() => {
     // Guard against StrictMode double-invocation in development.
@@ -46,6 +51,34 @@ export default function AppInitializer({ children }: { children: React.ReactNode
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasInitialized) return;
+
+    if (!isLoggedIn || !userId) {
+      if (gamificationUnsubRef.current) {
+        gamificationUnsubRef.current();
+        gamificationUnsubRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+    const initGamification = async () => {
+      const { fetchGamification, updateLoginStreak, subscribeToRealtime } = useGamificationStore.getState();
+      await fetchGamification(userId);
+      await updateLoginStreak(userId);
+      if (cancelled) return;
+      if (gamificationUnsubRef.current) gamificationUnsubRef.current();
+      gamificationUnsubRef.current = subscribeToRealtime(userId);
+    };
+
+    void initGamification();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasInitialized, isLoggedIn, userId]);
 
   return (
     <>
