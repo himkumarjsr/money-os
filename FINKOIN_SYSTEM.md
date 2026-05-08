@@ -1688,6 +1688,7 @@ Important implementation note:
 - **PWA build:** **`pages/_document.tsx`** minimal **`Document`** for **`next-pwa`** compatibility with App Router builds.
 - **Analyse consent persistence:** Consent stored on **`public.users`** (**`data_consent_given`**, **`data_consent_at`**, **`data_consent_version`**) with **`localStorage`** cache **`finkoin_analyse_consent_v2_<userId>`** to avoid repeated DB reads.
 - **Secrets & env hygiene:** **`.env.example`** expanded as a safe template (removed any committed real IDs); documents **`NEXT_PUBLIC_`** vs server-only keys; **`npm run check:secrets`** (`scripts/check-server-secrets-scope.mjs`) enforces server secrets only in **`app/api/**`** and **`lib/supabaseServer.ts`**. **§3.1–§3.2** document checklist + tax-module client/server recommendation (tax stays client-side; payment + Groq stay server-side).
+- **Feedback:** Either **(A)** **`NEXT_PUBLIC_FEEDBACK_GOOGLE_FORM_URL`** set → modal opens **Google Form** in a new tab only — **no** Finkoin DB or **`/api/feedback`**; enable **email notifications** in Google Forms → Settings → Responses. **(B)** URL unset → **6-step** in-app wizard + **`POST /api/feedback`** → **`app_feedback`** (`answers` jsonb, **`007_app_feedback_answers.sql`**). Optional **`mirrorFeedbackToGoogleForm`** (`lib/googleFeedbackForm.ts`) only applies to mode **B**.
 
 ### 2026-05-03
 

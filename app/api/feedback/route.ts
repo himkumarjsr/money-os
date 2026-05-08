@@ -1,11 +1,15 @@
+import { mirrorFeedbackToGoogleForm } from "@/lib/googleFeedbackForm";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const bodySchema = z.object({
   rating: z.number().int().min(1).max(5),
-  message: z.string().max(8000).optional().default(""),
   context: z.string().max(160).optional(),
+  area: z.string().max(80),
+  highlights: z.string().max(4000).optional().default(""),
+  improvements: z.string().max(4000).optional().default(""),
+  recommend: z.enum(["yes", "maybe", "no"]),
 });
 
 export async function POST(req: Request) {
@@ -37,19 +41,47 @@ export async function POST(req: Request) {
     );
   }
 
-  const { rating, message, context } = parsed.data;
+  const { rating, context, area, highlights, improvements, recommend } = parsed.data;
+
+  const hl = highlights.trim();
+  const im = improvements.trim();
+  const parts: string[] = [];
+  parts.push(`Area: ${area}`);
+  if (hl) parts.push(`What worked:\n${hl}`);
+  if (im) parts.push(`To improve:\n${im}`);
+  parts.push(`Recommend: ${recommend}`);
+  const message = parts.join("\n\n---\n\n");
+
+  const answers = {
+    area,
+    highlights: hl,
+    improvements: im,
+    recommend,
+  };
 
   const { error } = await supabase.from("app_feedback").insert({
     user_id: user.id,
     rating,
-    message: message.trim(),
+    message,
     context: context?.trim() || null,
+    recommend,
+    answers,
   });
 
   if (error) {
     console.error("app_feedback insert:", error);
     return NextResponse.json({ error: "INSERT_FAILED" }, { status: 500 });
   }
+
+  void mirrorFeedbackToGoogleForm({
+    rating,
+    area,
+    highlights: hl,
+    improvements: im,
+    recommend,
+    context: context?.trim() || "",
+    userId: user.id,
+  });
 
   return NextResponse.json({ ok: true });
 }

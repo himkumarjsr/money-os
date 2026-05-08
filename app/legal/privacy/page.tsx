@@ -263,8 +263,12 @@ export default function PrivacyPage() {
           </li>
         </ul>
         <p>
-          <strong>We do not use:</strong> advertising cookies, cross-site tracking cookies, social media tracking
-          pixels, or Google Analytics.
+          <strong>We do not use:</strong> advertising cookies, cross-site tracking cookies, or social media tracking
+          pixels.
+        </p>
+        <p>
+          We use Google Analytics to understand how users use Finkoin. This collects anonymous usage data including
+          pages visited, time spent, and general location. No personal financial data is shared with Google Analytics.
         </p>
       </LegalSection>
 

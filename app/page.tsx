@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: `${SITE_URL}/og/home.png`,
+        url: "https://finkoin.com/og/home.png",
         width: 1200,
         height: 630,
         alt: "Finkoin Financial Health Check",

@@ -4,6 +4,7 @@ import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
+import { Analytics } from "@/lib/analytics";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import { useAuthStore } from "@/store/authStore";
@@ -727,6 +728,10 @@ function TrackerContent() {
             setEditingExpense(null);
           }}
           onSaved={() => {
+            if (!editingExpense) {
+              const trackedBucket = defaultBucket || "unknown";
+              Analytics.trackerExpenseAdded(trackedBucket);
+            }
             setShowAddModal(false);
             setDefaultBucket("");
             setEditingExpense(null);

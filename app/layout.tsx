@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Suspense } from "react";
 import AppInitializer from "@/components/AppInitializer";
-import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { MotionLazyProvider } from "@/components/MotionLazyProvider";
 import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
@@ -64,10 +64,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: `${siteUrl}/og/home.png`,
+        url: "https://finkoin.com/og/home.png",
         width: 1200,
         height: 630,
-        alt: "Finkoin",
       },
     ],
   },
@@ -248,7 +247,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans min-h-dvh flex flex-col bg-white antialiased">
-        <GoogleAnalytics />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
@@ -272,6 +270,7 @@ export default function RootLayout({
           </AppInitializer>
         </MotionLazyProvider>
       </body>
+      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!} />
     </html>
   );
 }

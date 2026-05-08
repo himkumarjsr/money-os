@@ -2,6 +2,7 @@
 
 import ConsentModal from "@/components/analyse/ConsentModal";
 import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-form";
+import { Analytics } from "@/lib/analytics";
 import { getSupabase, isConfigured } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -21,6 +22,7 @@ export default function AnalysePage() {
   const [consentChecked, setConsentChecked] = useState(false);
   const [hasConsent, setHasConsent] = useState(false);
   const redirectedToLoginRef = useRef(false);
+  const formStartTrackedRef = useRef(false);
 
   useEffect(() => {
     if (!hasInitialized) return;
@@ -81,6 +83,12 @@ export default function AnalysePage() {
       cancelled = true;
     };
   }, [hasInitialized, isLoggedIn, user?.id, router]);
+
+  useEffect(() => {
+    if (!hasConsent || formStartTrackedRef.current) return;
+    Analytics.formStarted();
+    formStartTrackedRef.current = true;
+  }, [hasConsent]);
 
   const handleAccept = () => {
     const uid = useAuthStore.getState().user?.id;

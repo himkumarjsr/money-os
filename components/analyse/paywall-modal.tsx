@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
+import { Analytics } from "@/lib/analytics";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -137,6 +138,7 @@ export function PaywallModal({
     }
 
     setRzpLoading(true);
+    Analytics.paymentStarted(99);
     try {
       const cfgRes = await fetch("/api/razorpay/checkout-config");
       const cfgJson = (await cfgRes.json()) as { keyId?: string; error?: string };
@@ -222,6 +224,7 @@ export function PaywallModal({
             }
 
             setSubscription("pro");
+            Analytics.paymentCompleted(99);
             setRzpLoading(false);
             onClose();
             router.push(navigateAfterUnlock);

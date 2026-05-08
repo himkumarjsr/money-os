@@ -35,10 +35,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: `${SITE_URL}/og/tax-calculator.png`,
+        url: "https://finkoin.com/og/tax-calculator.png",
         width: 1200,
         height: 630,
-        alt: "Finkoin tax regime calculator",
+        alt: "Finkoin Tax Regime Calculator 2026",
       },
     ],
   },

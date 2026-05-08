@@ -4,6 +4,7 @@ import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
+import { Analytics } from "@/lib/analytics";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { supabase } from "@/lib/supabase";
 import { analyseFinances, monthlyTotalIncome } from "@/lib/financialEngine";
@@ -67,6 +68,18 @@ export default function AnalyseResultPage() {
       overallScore: stableResult.overallScore,
     });
   }, [lastSubmission, result]);
+
+  const reportScore = result?.overallScore ?? 0;
+
+  useEffect(() => {
+    if (!hasHydrated || !result || !lastSubmission || !priorityPlan) return;
+    Analytics.reportViewed(reportScore);
+  }, [hasHydrated, result, lastSubmission, priorityPlan, reportScore]);
+
+  useEffect(() => {
+    if (!showPaymentModal) return;
+    Analytics.paywallViewed();
+  }, [showPaymentModal]);
 
   if (!hasHydrated) {
     return (
@@ -159,6 +172,7 @@ export default function AnalyseResultPage() {
   const profile = lastSubmission;
   const analysis = useMemo(() => result ?? analyseFinances(lastSubmission), [lastSubmission, result]);
   const score = result?.overallScore ?? analysis?.overallScore ?? 0;
+
   const scoreBadgeTone =
     score < 40 ? "bg-[#FDEDED] text-[#991B1B]" : score < 70 ? "bg-[#FFF4E5] text-[#92400E]" : "bg-[#DCFCE7] text-[#166534]";
   const scoreLabel = score < 40 ? "Critical" : score < 70 ? "Warning" : "Good";

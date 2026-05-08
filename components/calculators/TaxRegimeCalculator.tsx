@@ -3,6 +3,7 @@
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import MoneyInput from "@/components/ui/MoneyInput";
 import NumberInput from "@/components/ui/NumberInput";
+import { Analytics } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { parseMoneyInput } from "@/lib/analyse-form-schema";
 import {
@@ -371,6 +372,7 @@ export function TaxRegimeCalculator() {
 
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [personalCAOpen, setPersonalCAOpen] = useState(true);
+  const [hasTrackedUsage, setHasTrackedUsage] = useState(false);
   const [personalCAStep, setPersonalCAStep] = useState(0);
   const [speechMuted, setSpeechMuted] = useState(false);
   const [caChecklist, setCaChecklist] = useState({
@@ -382,6 +384,12 @@ export function TaxRegimeCalculator() {
     rentLoan: false,
     gains: false,
   });
+
+  useEffect(() => {
+    if (hasTrackedUsage) return;
+    Analytics.taxCalculatorUsed();
+    setHasTrackedUsage(true);
+  }, [hasTrackedUsage]);
 
   useEffect(() => {
     try {
