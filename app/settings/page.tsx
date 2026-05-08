@@ -41,27 +41,69 @@ function SettingsInner() {
     payment_alerts: true,
   });
   const [notifSavingKey, setNotifSavingKey] = useState<string | null>(null);
+  const [emailConsent, setEmailConsent] = useState(false);
+  const [loadingPref, setLoadingPref] = useState(true);
+  const [savingPref, setSavingPref] = useState(false);
 
   useEffect(() => {
     setName(user?.name ?? "");
   }, [user?.name]);
 
   useEffect(() => {
-    const loadPrefs = async () => {
-      if (!user?.id) return;
+    const load = async () => {
+      if (!user?.id) {
+        setLoadingPref(false);
+        return;
+      }
+      setLoadingPref(true);
       const supabase = getSupabase();
       const { data } = await supabase.from("notification_preferences").select("*").eq("user_id", user.id).maybeSingle();
-      if (!data) return;
-      setNotifPrefs({
-        morning_tips: Boolean(data.morning_tips),
-        weekly_summary: Boolean(data.weekly_summary),
-        payment_alerts: Boolean(data.payment_alerts),
-      });
+      if (data) {
+        setEmailConsent(Boolean(data.email_consent));
+        setNotifPrefs({
+          morning_tips: Boolean(data.morning_tips),
+          weekly_summary: Boolean(data.weekly_summary),
+          payment_alerts: Boolean(data.payment_alerts),
+        });
+      } else {
+        setEmailConsent(false);
+        setNotifPrefs({ morning_tips: false, weekly_summary: false, payment_alerts: true });
+      }
+      setLoadingPref(false);
     };
-    void loadPrefs();
+    void load();
   }, [user?.id]);
 
-  const updatePref = async (key: "morning_tips" | "weekly_summary" | "payment_alerts", value: boolean) => {
+  const toggleEmailConsent = async () => {
+    if (!user?.id || savingPref || loadingPref) return;
+    const newValue = !emailConsent;
+    setEmailConsent(newValue);
+    setSavingPref(true);
+    const supabase = getSupabase();
+    const { error } = await supabase.from("notification_preferences").upsert(
+      {
+        user_id: user.id,
+        email_consent: newValue,
+        morning_tips: newValue,
+        weekly_summary: newValue,
+        updated_at: new Date().toISOString(),
+        email_consent_at: newValue ? new Date().toISOString() : null,
+        declined_at: !newValue ? new Date().toISOString() : null,
+      },
+      { onConflict: "user_id" },
+    );
+    if (error) {
+      console.error(error);
+      setEmailConsent(!newValue);
+      setSavingPref(false);
+      return;
+    }
+    setNotifPrefs((prev) => ({ ...prev, morning_tips: newValue, weekly_summary: newValue }));
+    setSavingPref(false);
+    localStorage.setItem("finkoin_notif_consent", newValue ? "accepted" : "declined");
+  };
+
+  const updatePref = async (key: "payment_alerts", value: boolean) => {
     if (!user?.id) return;
     setNotifSavingKey(key);
     const supabase = getSupabase();
@@ -221,18 +263,36 @@ function SettingsInner() {
       <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">Notifications</h2>
         <p className="mt-2 text-xs text-[#9B9A94]">Saved to your account and synced across devices.</p>
-        <ToggleRow
-          label="Daily morning tips"
-          checked={notifPrefs.morning_tips}
-          onChange={(v) => void updatePref("morning_tips", v)}
-          disabled={notifSavingKey === "morning_tips"}
-        />
-        <ToggleRow
-          label="Weekly summary"
-          checked={notifPrefs.weekly_summary}
-          onChange={(v) => void updatePref("weekly_summary", v)}
-          disabled={notifSavingKey === "weekly_summary"}
-        />
+
+        <div className="mt-6 overflow-hidden rounded-2xl border border-[#E8E6F0] bg-white">
+          <div className="flex items-center justify-between gap-4 border-b border-[#F7F7F4] px-4 py-[14px]">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-[#111110]">Daily finance tips</div>
+              <div className="mt-0.5 text-xs text-[#9B9A94]">One tip every morning at 8:30 AM</div>
+            </div>
+            <button
+              type="button"
+              aria-label={emailConsent ? "Turn off daily finance tips" : "Turn on daily finance tips"}
+              disabled={loadingPref || savingPref}
+              onClick={() => void toggleEmailConsent()}
+              className="relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-50"
+              style={{ background: emailConsent ? "#534AB7" : "#E8E6F0" }}
+            >
+              <span
+                className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-sm transition-[left] duration-200"
+                style={{ left: emailConsent ? 23 : 3 }}
+              />
+            </button>
+          </div>
+          <div className="bg-[#F7F7F4] px-4 py-[14px]">
+            <p className="text-[11px] leading-relaxed text-[#9B9A94]">
+              {emailConsent
+                ? `✓ Subscribed — tips sent to ${user?.email ?? "your email"}`
+                : "Not subscribed — toggle to receive daily tips"}
+            </p>
+          </div>
+        </div>
+
         <ToggleRow
           label="Payment alerts"
           checked={notifPrefs.payment_alerts}

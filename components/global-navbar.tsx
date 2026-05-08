@@ -1,5 +1,6 @@
 "use client";
 
+import NotificationBell from "@/components/NotificationBell";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { fadeIn } from "@/lib/animations";
 import { trackNavClick } from "@/lib/gtag";
@@ -203,6 +204,8 @@ export function GlobalNavbar() {
             >
               Feedback
             </button>
+
+            {isLoggedIn ? <NotificationBell /> : null}
 
             {!isLoggedIn ? (
               <Link

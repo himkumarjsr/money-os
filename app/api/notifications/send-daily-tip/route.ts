@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (tipError) throw tipError;
-    if (!tip) return NextResponse.json({ message: "No tip for today" });
+
+    const tipTitle = tip?.title ?? "Daily Finance Tip";
+    const tipContent =
+      tip?.content ??
+      "Track your expenses today and align your spending with your monthly goals.";
 
     const { data: subscribers, error: subscribersError } = await supabaseAdmin
       .from("notification_preferences")
@@ -49,22 +53,46 @@ export async function POST(req: NextRequest) {
     if (subscribersError) throw subscribersError;
     if (!subscribers?.length) return NextResponse.json({ message: "No subscribers" });
 
-    const userIds = subscribers.map((s) => s.user_id);
-    const { data: users, error: usersError } = await supabaseAdmin
+    const userIds = Array.from(new Set(subscribers.map((s) => s.user_id)));
+
+    const { data: profileRows, error: usersError } = await supabaseAdmin
       .from("users")
       .select("id, email, name")
       .in("id", userIds);
 
     if (usersError) throw usersError;
-    if (!users?.length) return NextResponse.json({ message: "No subscribers with email" });
+
+    const emailByUserId = new Map<string, string>();
+    for (const row of profileRows ?? []) {
+      const em = typeof row.email === "string" ? row.email.trim() : "";
+      if (em.includes("@")) emailByUserId.set(row.id, em);
+    }
+
+    for (const uid of userIds) {
+      if (emailByUserId.has(uid)) continue;
+      try {
+        const { data: authData, error: authLookupErr } = await supabaseAdmin.auth.admin.getUserById(uid);
+        if (authLookupErr) {
+          console.warn("send-daily-tip: auth lookup failed", uid, authLookupErr.message);
+          continue;
+        }
+        const em = authData.user?.email?.trim();
+        if (em && em.includes("@")) emailByUserId.set(uid, em);
+      } catch (e) {
+        console.warn("send-daily-tip: getUserById threw", uid, e);
+      }
+    }
+
+    if (emailByUserId.size === 0) {
+      return NextResponse.json({ message: "No subscribers with resolvable email" });
+    }
 
     let sent = 0;
-    for (const user of users) {
-      if (!user.email) continue;
+    for (const email of Array.from(emailByUserId.values())) {
       await resend.emails.send({
         from: `Finkoin Tips <${process.env.EMAIL_FROM}>`,
-        to: user.email,
-        subject: `💰 ${tip.title}`,
+        to: email,
+        subject: `💰 ${tipTitle}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -73,8 +101,8 @@ export async function POST(req: NextRequest) {
               <div style="font-size:40px;margin-bottom:8px;">FK</div>
               <div style="color:rgba(255,255,255,0.8);font-size:14px;">Your daily finance tip</div>
             </div>
-            <h2 style="font-size:22px;font-weight:800;color:#111110;margin-bottom:12px;">${tip.title}</h2>
-            <p style="font-size:16px;color:#5F5E5A;line-height:1.7;margin-bottom:24px;">${tip.content}</p>
+            <h2 style="font-size:22px;font-weight:800;color:#111110;margin-bottom:12px;">${tipTitle}</h2>
+            <p style="font-size:16px;color:#5F5E5A;line-height:1.7;margin-bottom:24px;">${tipContent}</p>
             <a href="https://finkoin.com/analyse" style="display:block;background:#534AB7;color:white;text-decoration:none;padding:14px;border-radius:10px;text-align:center;font-weight:700;font-size:15px;margin-bottom:24px;">
               Check my financial health →
             </a>
@@ -93,7 +121,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       sent,
-      tip: tip.title,
+      tip: tipTitle,
     });
   } catch (err: any) {
     console.error("Send tip error:", err);

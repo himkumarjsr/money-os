@@ -9,7 +9,7 @@ import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
-import NotificationConsent from "@/components/notifications/NotificationConsent";
+import MorningTipPopup from "@/components/MorningTipPopup";
 import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
@@ -265,8 +265,8 @@ export default function RootLayout({
             <main id="main-content" className="relative flex min-h-0 flex-1 flex-col">
               {children}
             </main>
+            <MorningTipPopup />
             <Footer />
-            <NotificationConsent />
             <ReferralSuccessToast />
             <Toast />
           </AppInitializer>
