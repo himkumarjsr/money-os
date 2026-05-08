@@ -203,6 +203,7 @@ export default function HomePageBelowFold() {
         </div>
       </StorySection>
 
+<<<<<<< Updated upstream
       <StorySection impressionId="home_testimonials" className="z-30 border-b border-indigo-100/50 bg-white/55 backdrop-blur-[2px]">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <AnimateOnScroll variant="fadeUp" aboveFold>
@@ -233,6 +234,11 @@ export default function HomePageBelowFold() {
           </div>
         </div>
       </StorySection>
+=======
+      {/* <StorySection impressionId="home_testimonials" className="z-30 border-b border-indigo-100/50 bg-white/55 backdrop-blur-[2px]">
+        <Testimonials />
+      </StorySection> */}
+>>>>>>> Stashed changes
 
       <StorySection impressionId="home_pricing" className="z-40 border-b border-indigo-100/60 bg-gradient-to-b from-violet-50/50 via-white to-indigo-50/40">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
