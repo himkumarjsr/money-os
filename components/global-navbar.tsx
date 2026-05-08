@@ -1,6 +1,7 @@
 "use client";
 
 import NotificationBell from "@/components/NotificationBell";
+import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { fadeIn } from "@/lib/animations";
 import { trackNavClick } from "@/lib/gtag";
@@ -349,6 +350,11 @@ export function GlobalNavbar() {
                 </button>
               ))}
             </nav>
+
+            <div className="my-3 border-t border-[#F0EFF8]" />
+            <div className="px-1">
+              <FeedbackFormButton />
+            </div>
 
             <div className="my-3 border-t border-[#F0EFF8]" />
             <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-1 text-[11px] text-slate-600">
