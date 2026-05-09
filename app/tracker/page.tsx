@@ -109,8 +109,8 @@ function TrackerContent() {
   const [editingExpense, setEditingExpense] = useState<TrackerTransaction | null>(null);
   const [transactions, setTransactions] = useState<TrackerTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedBucket, setExpandedBucket] = useState<string | null>("needs");
-  const [expandedIncome, setExpandedIncome] = useState(true);
+  const [expandedBucket, setExpandedBucket] = useState<string | null>("");
+  const [expandedIncome, setExpandedIncome] = useState(false);
   const [defaultBucket, setDefaultBucket] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -382,7 +382,7 @@ function TrackerContent() {
                 <div style={{ fontSize: 16, fontWeight: 800, color: "#111110" }}>
                   ₹{monthlyIncome.toLocaleString("en-IN")}
                 </div>
-                <span style={{ fontSize: 14, color: "#111110", transform: expandedIncome ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+                <span style={{ fontSize: 14, color: "#111110", transform: !expandedIncome ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
               </div>
             </div>
           </button>
@@ -552,7 +552,7 @@ function TrackerContent() {
                           color: "#111110",
                           opacity: 0.75,
                           transition: "transform 0.2s",
-                          transform: isExpanded ? "rotate(180deg)" : "none",
+                          transform: !isExpanded ? "rotate(180deg)" : "none",
                         }}
                       >
                         ▼
@@ -570,6 +570,30 @@ function TrackerContent() {
                 </div>
                 {isExpanded ? (
                   <div style={{ borderTop: "1px solid #F0EFF8" }}>
+                    <div style={{ padding: "12px 16px" }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDefaultBucket(bucketKey);
+                          setEditingExpense(null);
+                          setShowAddModal(true);
+                        }}
+                        style={{
+                          width: "100%",
+                          height: 40,
+                          borderRadius: 10,
+                          background: `${cat.color}15`,
+                          border: `1px dashed ${cat.color}`,
+                          color: cat.color,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        + Add expense · {cat.label}
+                      </button>
+                    </div>
                     {Object.keys(bySubcategory).length > 0 ? (
                       Object.entries(bySubcategory).map(([subId, txns]) => {
                         const subTotal = txns.reduce((a, t) => a + Number(t.amount), 0);
@@ -674,30 +698,6 @@ function TrackerContent() {
                         No {cat.label.toLowerCase()} expenses this month
                       </div>
                     )}
-                    <div style={{ padding: "12px 16px" }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDefaultBucket(bucketKey);
-                          setEditingExpense(null);
-                          setShowAddModal(true);
-                        }}
-                        style={{
-                          width: "100%",
-                          height: 40,
-                          borderRadius: 10,
-                          background: `${cat.color}15`,
-                          border: `1px dashed ${cat.color}`,
-                          color: cat.color,
-                          fontSize: 13,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        + Add expense · {cat.label}
-                      </button>
-                    </div>
                   </div>
                 ) : null}
               </div>
