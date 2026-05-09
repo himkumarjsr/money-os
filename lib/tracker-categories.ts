@@ -18,7 +18,7 @@ export const TRACKER_CATEGORIES = {
       { id: "medicine", label: "Medicine", emoji: "💊" },
       { id: "doctor", label: "Doctor / hospital", emoji: "🏥" },
       { id: "domestic_help", label: "Maid / cook / driver", emoji: "🧹" },
-      { id: "transport_essential", label: "Transport to work", emoji: "🚌" },
+      { id: "transport_essential", label: "Transport to work / fuel", emoji: "🚌" },
     ],
   },
   wants: {
