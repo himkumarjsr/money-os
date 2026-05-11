@@ -1,5 +1,6 @@
 "use client";
 
+import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useEffect, useRef, useState } from "react";
@@ -16,11 +17,29 @@ export default function NotificationBell() {
 
     void fetchNotifications(user.id);
 
-    const interval = setInterval(() => {
-      void fetchNotifications(user.id);
-    }, 5 * 60 * 1000);
+    const supabase = getSupabase();
+    const sub = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("Realtime: new notification", payload);
+          void fetchNotifications(user.id);
+        },
+      )
+      .subscribe((status) => {
+        console.log("Realtime subscription status:", status);
+      });
 
-    return () => clearInterval(interval);
+    return () => {
+      void supabase.removeChannel(sub);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- zustand actions stable; avoid refetch loop
   }, [isLoggedIn, user?.id]);
 

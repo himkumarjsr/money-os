@@ -1,6 +1,5 @@
 "use client";
 
-import { getSupabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 
 interface Testimonial {
@@ -39,24 +38,13 @@ export default function Testimonials() {
       }
 
       try {
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from("feedback")
-          .select("*")
-          .eq("is_approved", true)
-          .eq("is_featured", true)
-          .gte("rating", 4)
-          .order("created_at", { ascending: false })
-          .limit(6);
-        if (error) {
-          console.error("Testimonials fetch error:", error);
-          return;
-        }
-        const result = (data ?? []) as Testimonial[];
+        const res = await fetch("/api/feedback", { method: "GET", cache: "no-store" });
+        const json = (await res.json()) as { testimonials?: Testimonial[] };
+        const result = Array.isArray(json.testimonials) ? json.testimonials : [];
         setTestimonials(result);
         localStorage.setItem(CACHE_KEY, JSON.stringify({ data: result, fetchedAt: Date.now() }));
       } catch (err) {
-        console.error("Testimonials fetch error:", err);
+        console.error("Testimonials error:", err);
       } finally {
         setLoading(false);
       }

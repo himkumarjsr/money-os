@@ -1,5 +1,10 @@
 import { ArticleShare } from "@/components/learn/article-share";
 import { ArticleTracker } from "@/components/learn/article-tracker";
+import CompoundInterestGuide from "@/components/learn/CompoundInterestGuide";
+import EmergencyFundGuide from "@/components/learn/EmergencyFundGuide";
+import TermInsuranceVsEndowmentGuide from "@/components/learn/TermInsuranceVsEndowmentGuide";
+import IncomeTaxGuideFY2526 from "@/components/learn/tax/IncomeTaxGuideFY2526";
+import OldVsNewRegimeGuideFY2526 from "@/components/learn/tax/OldVsNewRegimeGuideFY2526";
 import {
   learnArticleById,
   learnArticles,
@@ -9,6 +14,7 @@ import { cn } from "@/lib/cn";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { SITE_URL } from "@/lib/seo";
 
 const badgeColors: Record<LearnCategory, string> = {
   Basics: "bg-slate-100 text-slate-800 ring-slate-200",
@@ -35,6 +41,117 @@ export async function generateMetadata({
     return {
       title: "Article not found | Finkoin Learn",
       robots: { index: false, follow: false },
+    };
+  }
+
+  // Custom SEO metadata for our two tax cornerstone guides.
+  if (article.id === "know-taxation-in-india-old-vs-new-slabs-interest-rates") {
+    const seoTitle =
+      "Complete Guide to Indian Income Tax FY 2025-26 (AY 2026-27) – ITR, Tax Slabs, Old vs New Regime, Deductions & Filing Explained";
+    const description =
+      "Beginner-friendly Indian income tax guide for FY 2025-26 (AY 2026-27): FY vs AY, ITR forms (ITR-1 to ITR-7), tax slabs, 87A rebate, cess/surcharge, TDS (Form 16/AIS/26AS), and old vs new regime explained with examples.";
+
+    return {
+      title: { absolute: seoTitle },
+      description,
+      alternates: { canonical: `/learn/${article.id}` },
+      keywords: [
+        "Indian income tax guide",
+        "FY 2025-26 tax slab",
+        "AY 2026-27 meaning",
+        "ITR filing India",
+        "old tax regime vs new tax regime",
+        "what is ITR1",
+        "income tax deductions India",
+        "section 80C explained",
+        "how to file income tax return",
+        "best tax regime India",
+        "income tax for salaried employees",
+        "Indian taxation basics",
+      ],
+      openGraph: {
+        title: seoTitle,
+        description,
+        type: "article",
+        url: `${SITE_URL}/learn/${article.id}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: seoTitle,
+        description,
+      },
+    };
+  }
+
+  if (article.id === "old-vs-new-tax-regime-which-saves-you-more-money") {
+    const seoTitle =
+      "Old vs New Tax Regime FY 2025-26 (AY 2026-27) — Which Saves More? Slabs, Deductions, 87A & Examples";
+    const description =
+      "A simple, practical old vs new tax regime guide for FY 2025-26: what deductions matter (80C, 80D, HRA, home loan 24(b), NPS), how to decide, proof checklist, and when each regime usually wins.";
+
+    return {
+      title: { absolute: seoTitle },
+      description,
+      alternates: { canonical: `/learn/${article.id}` },
+      keywords: [
+        "old tax regime vs new tax regime",
+        "best tax regime India",
+        "FY 2025-26 tax slab",
+        "income tax for salaried employees",
+        "section 80C explained",
+        "section 80D explained",
+        "HRA exemption",
+        "home loan interest 24(b)",
+        "87A rebate",
+      ],
+      openGraph: {
+        title: seoTitle,
+        description,
+        type: "article",
+        url: `${SITE_URL}/learn/${article.id}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: seoTitle,
+        description,
+      },
+    };
+  }
+
+  if (article.id === "emergency-fund-how-much-where-to-keep-it") {
+    const seoTitle =
+      "Emergency Fund India 2026 — How Much (Up to 12 Months), Where to Keep, Examples by Life Stage | Finkoin";
+    const description =
+      "Emergency fund guide for India: why it matters first, how to count essential monthly expenses, life-stage targets from bachelor to married with two kids and dependent parents (max 12 months), rupee example, liquid funds vs sweep FD, and how to rebuild after use.";
+
+    return {
+      title: { absolute: seoTitle },
+      description,
+      alternates: { canonical: `/learn/${article.id}` },
+      keywords: [
+        "emergency fund India",
+        "how much emergency fund",
+        "12 months emergency savings",
+        "emergency fund for salaried India",
+        "liquid mutual fund emergency fund",
+        "sweep FD emergency fund",
+        "bachelor emergency fund months",
+        "married couple emergency fund India",
+        "emergency fund with children India",
+        "where to keep emergency money India",
+        "financial cushion India",
+      ],
+      openGraph: {
+        title: seoTitle,
+        description,
+        type: "article",
+        url: `${SITE_URL}/learn/${article.id}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: seoTitle,
+        description,
+      },
     };
   }
 
@@ -76,14 +193,11 @@ export default function LearnArticlePage({ params }: PageProps) {
     .slice(0, 3);
 
   return (
-    <div className="min-h-dvh bg-white text-slate-900">
+    <div className="min-h-dvh min-w-0 bg-white text-slate-900">
       <ArticleTracker articleId={article.id} />
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6 sm:px-6">
-          <Link
-            href="/learn"
-            className="text-sm font-medium text-[#534AB7] hover:underline"
-          >
+        <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-3 px-4 py-6 sm:px-6">
+          <Link href="/learn" className="text-sm font-semibold text-[#534AB7] hover:underline">
             ← All articles
           </Link>
           <div className="flex flex-wrap items-center gap-3">
@@ -107,12 +221,177 @@ export default function LearnArticlePage({ params }: PageProps) {
         </div>
       </header>
 
-      <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="space-y-6 text-[18px] leading-[1.8] text-slate-800">
-          {article.content.map((para, i) => (
-            <p key={i}>{para}</p>
-          ))}
-        </div>
+      <article className="mx-auto w-full min-w-0 max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        {article.id === "know-taxation-in-india-old-vs-new-slabs-interest-rates" ? (
+          <>
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "BreadcrumbList",
+                  itemListElement: [
+                    { "@type": "ListItem", position: 1, name: "Learn", item: `${SITE_URL}/learn` },
+                    { "@type": "ListItem", position: 2, name: article.title, item: `${SITE_URL}/learn/${article.id}` },
+                  ],
+                }),
+              }}
+            />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "Article",
+                  headline:
+                    "Complete Guide to Indian Income Tax FY 2025-26 (AY 2026-27) – ITR, Tax Slabs, Old vs New Regime, Deductions & Filing Explained",
+                  description: article.subtitle,
+                  mainEntityOfPage: `${SITE_URL}/learn/${article.id}`,
+                  author: { "@type": "Organization", name: "Finkoin" },
+                  publisher: { "@type": "Organization", name: "Finkoin" },
+                }),
+              }}
+            />
+            <IncomeTaxGuideFY2526 />
+          </>
+        ) : article.id === "old-vs-new-tax-regime-which-saves-you-more-money" ? (
+          <>
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "BreadcrumbList",
+                  itemListElement: [
+                    { "@type": "ListItem", position: 1, name: "Learn", item: `${SITE_URL}/learn` },
+                    { "@type": "ListItem", position: 2, name: article.title, item: `${SITE_URL}/learn/${article.id}` },
+                  ],
+                }),
+              }}
+            />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "Article",
+                  headline:
+                    "Old vs New Tax Regime FY 2025-26 (AY 2026-27) — Which Saves More? Slabs, Deductions, 87A & Examples",
+                  description: article.subtitle,
+                  mainEntityOfPage: `${SITE_URL}/learn/${article.id}`,
+                  author: { "@type": "Organization", name: "Finkoin" },
+                  publisher: { "@type": "Organization", name: "Finkoin" },
+                }),
+              }}
+            />
+            <OldVsNewRegimeGuideFY2526 />
+          </>
+        ) : article.id === "what-is-compound-interest-and-why-it-changes-everything" ? (
+          <div className="w-full min-w-0 space-y-8">
+            <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+              {article.content.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+            <CompoundInterestGuide />
+          </div>
+        ) : article.id === "term-insurance-vs-endowment-why-most-indians-buy-wrong" ? (
+          <div className="w-full min-w-0 space-y-8">
+            <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+              {article.content.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+            <TermInsuranceVsEndowmentGuide />
+          </div>
+        ) : article.id === "emergency-fund-how-much-where-to-keep-it" ? (
+          <>
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "BreadcrumbList",
+                  itemListElement: [
+                    { "@type": "ListItem", position: 1, name: "Learn", item: `${SITE_URL}/learn` },
+                    { "@type": "ListItem", position: 2, name: article.title, item: `${SITE_URL}/learn/${article.id}` },
+                  ],
+                }),
+              }}
+            />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "Article",
+                  headline: "Emergency Fund India — How Much (Up to 12 Months), Where to Keep, Life-Stage Examples",
+                  description: article.subtitle,
+                  mainEntityOfPage: `${SITE_URL}/learn/${article.id}`,
+                  author: { "@type": "Organization", name: "Finkoin" },
+                  publisher: { "@type": "Organization", name: "Finkoin" },
+                }),
+              }}
+            />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "FAQPage",
+                  mainEntity: [
+                    {
+                      "@type": "Question",
+                      name: "How much emergency fund should I have in India?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Count one month as essential expenses only (rent or EMI, groceries, fees, insurance, minimum loan payments). Many people start with a few months and build toward a higher target; Finkoin’s Learn guide caps the planning target at up to 12 months of those essentials, with higher months typical when you have children or dependents.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "Is 12 months of expenses enough for an emergency fund?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Twelve months of essential expenses is a strong ceiling for a cash-only emergency bucket. Beyond that, extra safety usually comes from insurance (term, health) and diversified long-term investments rather than indefinitely increasing idle cash.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "Where should I keep my emergency fund in India?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Use instruments you can access in about one to two business days with stable value: liquid mutual funds, sweep fixed deposits linked to savings, or a separate savings account you do not use for daily spending. Avoid equity and long lock-in deposits for this bucket.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "Should a bachelor build an emergency fund?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Yes. Even with lower fixed costs, a small buffer (for example a few months of essentials) prevents a first job loss or medical bill from turning into debt; you can increase the target as rent, EMIs, or family responsibilities grow.",
+                      },
+                    },
+                  ],
+                }),
+              }}
+            />
+            <div className="w-full min-w-0 space-y-8">
+              <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+                {article.content.map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+              </div>
+              <EmergencyFundGuide />
+            </div>
+          </>
+        ) : (
+          <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 text-[18px] leading-[1.8] text-slate-800">
+            {article.content.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        )}
 
         {related.length > 0 ? (
           <section className="mt-16 border-t border-slate-200 pt-12">

@@ -125,9 +125,13 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   getTodayUnshownPopup: () => {
-    const today = new Date().toISOString().split("T")[0];
+    const { notifications } = get();
+    const unshown = notifications.filter((n) => !n.shown_as_popup);
+    if (unshown.length === 0) return null;
     return (
-      get().notifications.find((n) => !n.shown_as_popup && n.created_at.startsWith(today)) ?? null
+      [...unshown].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      )[0] ?? null
     );
   },
 }));

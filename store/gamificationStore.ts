@@ -16,7 +16,7 @@ interface GamificationState {
   earnedActions: string[];
   toastMessage: string | null;
   fetchGamification: (userId: string) => Promise<void>;
-  addFK: (userId: string, amount: number, reason: string, referenceId?: string) => Promise<void>;
+  addFK: (userId: string, amount: number, reason: string, referenceId?: string) => Promise<boolean>;
   subscribeToRealtime: (userId: string) => () => void;
   updateLoginStreak: (userId: string) => Promise<void>;
   earnTokens: (amount: number, label: string) => void;
@@ -146,12 +146,14 @@ export const useGamificationStore = create<GamificationState>()(
           }
 
           set({ lastFetched: null });
+          return true;
         } catch (err) {
           console.error("addFK error:", err);
           set((state) => ({
             fkBalance: state.fkBalance - amount,
             totalEarned: state.totalEarned - amount,
           }));
+          return false;
         }
       },
       subscribeToRealtime: (userId) => {
@@ -191,15 +193,33 @@ export const useGamificationStore = create<GamificationState>()(
         };
       },
       updateLoginStreak: async (userId) => {
-        const { lastLoginDate } = get();
         const today = new Date().toISOString().split("T")[0];
-        if (lastLoginDate === today) return;
-
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-        const isConsecutive = lastLoginDate === yesterday;
-        const newStreak = isConsecutive ? get().streakDays + 1 : 1;
-
         const supabase = getSupabase();
+
+        const { data: gRow, error: readErr } = await supabase
+          .from("gamification")
+          .select("last_login_date, streak_days")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (readErr) {
+          console.error("updateLoginStreak read error:", readErr);
+          return;
+        }
+
+        if (gRow?.last_login_date === today) {
+          set({
+            streakDays: Number(gRow.streak_days ?? 0),
+            lastLoginDate: today,
+            lastFetched: null,
+          });
+          return;
+        }
+
+        const last = gRow?.last_login_date ?? null;
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+        const isConsecutive = last === yesterday;
+        const newStreak = isConsecutive ? Number(gRow?.streak_days ?? 0) + 1 : 1;
+
         const { error } = await supabase.from("gamification").upsert(
           {
             user_id: userId,
@@ -220,7 +240,17 @@ export const useGamificationStore = create<GamificationState>()(
           lastFetched: null,
         });
 
-        await get().addFK(userId, 10, "daily_login_streak", today);
+        const { data: alreadyAwarded } = await supabase
+          .from("fk_transactions")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("reason", "daily_login")
+          .eq("reference_id", today)
+          .maybeSingle();
+
+        if (alreadyAwarded) return;
+
+        await get().addFK(userId, 5, "daily_login", today);
       },
       earnTokens: (amount) =>
         set((s) => ({

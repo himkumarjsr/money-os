@@ -1,10 +1,8 @@
 "use client";
 
-import { getSupabase } from "@/lib/supabase";
+import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
-import { useGamificationStore } from "@/store/gamificationStore";
-import { useMemo, useState } from "react";
 
 interface FeedbackWidgetProps {
   pageContext: string;
@@ -13,7 +11,6 @@ interface FeedbackWidgetProps {
 
 export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetProps) {
   const { user, isLoggedIn } = useAuthStore();
-  const { addFK } = useGamificationStore();
   const result = useFinancialStore((s) => s.result);
 
   const [rating, setRating] = useState(0);
@@ -23,18 +20,9 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
-  const feedbackKey = useMemo(
-    () => `finkoin_feedback_${pageContext}_${user?.id?.substring(0, 8) ?? "guest"}`,
-    [pageContext, user?.id],
-  );
-
-  if (typeof window !== "undefined" && localStorage.getItem(feedbackKey)) {
-    return null;
-  }
-
   const handleSubmit = async () => {
     if (rating === 0) {
-      setError("Please select a rating");
+      setError("Please select a star rating");
       return;
     }
 
@@ -42,32 +30,41 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
     setError("");
 
     try {
-      const supabase = getSupabase();
-      const { error: dbError } = await supabase.from("feedback").insert({
-        user_id: user?.id ?? null,
+      const payload = {
+        user_id: user?.id || null,
         rating,
         message: message.trim() || null,
         page_context: pageContext,
         score_at_time: result?.overallScore ?? null,
-        is_approved: false,
-        is_featured: false,
+      };
+
+      console.log("FeedbackWidget: submitting", payload);
+
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      if (dbError) {
-        setError(dbError.message);
+      const data = (await res.json()) as { error?: string; success?: boolean };
+
+      console.log("FeedbackWidget: response", res.status, data);
+
+      if (!res.ok) {
+        setError(data.error || `Error ${res.status}`);
         setSaving(false);
         return;
       }
 
-      if (isLoggedIn && user?.id) {
-        await addFK(user.id, 50, "feedback_submitted", pageContext);
-      }
+      const key = `finkoin_feedback_${pageContext}`;
+      localStorage.setItem(key, "1");
 
-      localStorage.setItem(feedbackKey, "1");
       setSaving(false);
       setDone(true);
+
       setTimeout(() => onClose?.(), 2000);
     } catch (err: unknown) {
+      console.error("FeedbackWidget error:", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSaving(false);
     }
@@ -75,40 +72,35 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
 
   if (done) {
     return (
-      <div
-        style={{
-          background: "white",
-          borderRadius: 16,
-          padding: "20px",
-          textAlign: "center",
-          border: "1px solid #E8E6F0",
-        }}
-      >
+      <div style={{ padding: "24px", textAlign: "center" }}>
         <div
           style={{
-            width: 48,
-            height: 48,
-            background: "#EEEDFE",
+            width: 52,
+            height: 52,
             borderRadius: "50%",
+            background: "#EEEDFE",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 12px",
-            fontSize: 22,
           }}
         >
-          ✓
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2.5" strokeLinecap="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#111110", marginBottom: 4 }}>Thank you for your feedback!</div>
-        <div style={{ fontSize: 12, color: "#534AB7", fontWeight: 600 }}>+50 FK tokens added</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#111110", marginBottom: 4 }}>Thanks for your feedback!</div>
+        {isLoggedIn && (
+          <div style={{ fontSize: 13, color: "#534AB7", fontWeight: 600 }}>+50 FK tokens added</div>
+        )}
       </div>
     );
   }
 
   return (
-    <div style={{ background: "white", borderRadius: 16, padding: "20px", border: "1px solid #E8E6F0" }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "#111110", marginBottom: 4 }}>How was your Finkoin experience?</div>
-      <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 14 }}>Takes 20 seconds · Earn 50 FK tokens</div>
+    <div style={{ padding: "20px" }}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#111110", marginBottom: 4 }}>Was this helpful?</div>
+      <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 16 }}>Rate your experience · Earn 50 FK tokens</div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         {[1, 2, 3, 4, 5].map((star) => (
@@ -129,9 +121,21 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
               alignItems: "center",
               justifyContent: "center",
               transition: "all 0.15s",
+              flexShrink: 0,
             }}
           >
-            <span style={{ color: "#534AB7", fontSize: 18 }}>★</span>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill={(hovered || rating) >= star ? "#534AB7" : "none"}
+              stroke="#534AB7"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
           </button>
         ))}
       </div>
@@ -139,10 +143,10 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
       <textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Tell us what you found most useful or what can be improved..."
+        placeholder="What did you find most useful? What can we improve?"
         style={{
           width: "100%",
-          height: 70,
+          height: 72,
           borderRadius: 10,
           border: "1.5px solid #E8E6F0",
           padding: "10px 12px",
@@ -154,18 +158,22 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
           background: "white",
           boxSizing: "border-box",
         }}
+        onFocus={(e) => {
+          e.target.style.borderColor = "#534AB7";
+        }}
+        onBlur={(e) => {
+          e.target.style.borderColor = "#E8E6F0";
+        }}
       />
 
       {error ? (
-        <div style={{ fontSize: 12, color: "#E24B4A", marginTop: 6 }}>
-          {error}
-        </div>
+        <div style={{ fontSize: 12, color: "#E24B4A", marginTop: 6, marginBottom: 4 }}>{error}</div>
       ) : null}
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => onClose?.()}
           style={{
             flex: 1,
             height: 44,
@@ -175,6 +183,7 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
             fontSize: 13,
             color: "#9B9A94",
             cursor: "pointer",
+            fontFamily: "inherit",
           }}
         >
           Skip
@@ -193,9 +202,10 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
             fontWeight: 700,
             color: "white",
             cursor: saving ? "not-allowed" : "pointer",
+            fontFamily: "inherit",
           }}
         >
-          {saving ? "Saving..." : "Submit and earn 50 FK"}
+          {saving ? "Saving..." : "Submit · Earn 50 FK"}
         </button>
       </div>
     </div>

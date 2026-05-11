@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
@@ -704,6 +705,9 @@ function TrackerContent() {
             );
           })}
           <SuggestionBox transactions={transactions} bucketTotals={bucketTotals} totalSpent={totalSpent} />
+          <div style={{ marginTop: 16 }}>
+            <FeedbackWidget pageContext="tracker" />
+          </div>
         </>
       )}
 

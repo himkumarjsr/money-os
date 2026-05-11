@@ -18,7 +18,6 @@ export default function PortfolioPage() {
   const tier = useAuthStore((s) => s.user?.subscriptionTier ?? "free");
   const setLastAnalysis = usePortfolioStore((s) => s.setLastAnalysis);
   const lastAnalysis = usePortfolioStore((s) => s.lastAnalysis);
-  const earnTokens = useGamificationStore((s) => s.earnTokens);
   const awardBadge = useGamificationStore((s) => s.awardBadge);
   const hasEarnedAction = useGamificationStore((s) => s.hasEarnedAction);
   const markEarnedAction = useGamificationStore((s) => s.markEarnedAction);
@@ -79,7 +78,6 @@ export default function PortfolioPage() {
               const xirr = Number(((currentValue / totalInvested - 1) * 100).toFixed(2));
               setLastAnalysis({ totalInvested, currentValue, xirr, funds });
               if (!hasEarnedAction("portfolio-analysis")) {
-                earnTokens(100, "MF portfolio analysed");
                 awardBadge("portfolio-pro");
                 markEarnedAction("portfolio-analysis");
               }
