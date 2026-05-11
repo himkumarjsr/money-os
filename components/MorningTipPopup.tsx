@@ -6,15 +6,25 @@ import { useNotificationStore } from "@/store/notificationStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-/** YYYY-MM-DD in Asia/Kolkata (popup + localStorage dedupe aligned with cron window). */
-function istDateKeyPrefix(): string {
-  const ymd = new Intl.DateTimeFormat("en-CA", {
+/** IST calendar date for localStorage (en-CA avoids UTC midnight mismatch). */
+function tipPopupStorageKey(): string {
+  const istDate =
+    new Date()
+      .toLocaleString("en-CA", {
+        timeZone: "Asia/Kolkata",
+      })
+      .split(",")[0]
+      ?.trim() ?? "";
+  return `finkoin_tip_popup_${istDate}`;
+}
+
+function getIstHour(): number {
+  const hourPart = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  return `finkoin_tip_popup_${ymd}`;
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(new Date()).find((p) => p.type === "hour")?.value;
+  return parseInt(hourPart ?? "0", 10);
 }
 
 export default function MorningTipPopup() {
@@ -29,16 +39,14 @@ export default function MorningTipPopup() {
     if (!hasInitialized) return;
     if (!isLoggedIn || !user?.id) return;
 
-    const istHourStr = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Kolkata",
-      hour: "numeric",
-      hour12: false,
-    }).format(new Date());
-    const hour = parseInt(istHourStr, 10);
-    if (hour < 6 || hour >= 23) return;
+    // Show popup 6 AM–11 PM IST (tips may arrive mid-day; user opens app later).
+    const istHour = getIstHour();
+    if (istHour < 6 || istHour >= 23) return;
 
-    const todayKey = istDateKeyPrefix();
-    if (typeof window !== "undefined" && localStorage.getItem(todayKey)) return;
+    if (typeof window === "undefined") return;
+
+    const todayKey = tipPopupStorageKey();
+    if (localStorage.getItem(todayKey)) return;
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -46,8 +54,9 @@ export default function MorningTipPopup() {
     const init = async () => {
       await fetchNotifications(user.id);
       if (cancelled) return;
+
       const todayTip = getTodayUnshownPopup();
-      if (todayTip) {
+      if (todayTip && !cancelled) {
         timer = setTimeout(() => {
           if (!cancelled) {
             setTip(todayTip);
@@ -69,7 +78,7 @@ export default function MorningTipPopup() {
   const handleClose = async () => {
     if (tip?.id) {
       await markPopupShown(tip.id);
-      localStorage.setItem(istDateKeyPrefix(), "1");
+      localStorage.setItem(tipPopupStorageKey(), "1");
     }
     setVisible(false);
   };

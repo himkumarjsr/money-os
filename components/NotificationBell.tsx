@@ -28,11 +28,14 @@ export default function NotificationBell() {
           table: "user_notifications",
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
+        (payload) => {
+          console.log("Realtime: new notification", payload);
           void fetchNotifications(user.id);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Realtime subscription status:", status);
+      });
 
     return () => {
       void supabase.removeChannel(sub);
