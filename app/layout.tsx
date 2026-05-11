@@ -35,14 +35,24 @@ const inter = Inter({
 
 const siteUrl = SITE_URL;
 
+const brandKeywords = [
+  "Finkoin",
+  "Finkoin app",
+  "Finkoin financial health",
+  "finkoin.com",
+] as const;
+
+const defaultTitle = "Finkoin — Free Financial Health Check for India";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: SEO_CONFIG.defaultTitle,
+    default: defaultTitle,
     template: "%s | Finkoin",
   },
+  applicationName: "Finkoin",
   description: SEO_CONFIG.defaultDescription,
-  keywords: SEO_CONFIG.defaultKeywords,
+  keywords: [...brandKeywords, ...SEO_CONFIG.defaultKeywords],
   alternates: {
     canonical: "/",
   },
@@ -58,7 +68,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Finkoin - AI Personal Finance Advisor for India",
+    title: defaultTitle,
     description:
       "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
     url: siteUrl,
@@ -74,7 +84,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Finkoin - AI Personal Finance Advisor for India",
+    title: defaultTitle,
     description:
       "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
     images: [`${siteUrl}/og/og-home.png`],
@@ -127,7 +137,6 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
     "apple-mobile-web-app-title": "Finkoin",
-    "application-name": "Finkoin",
     "msapplication-TileColor": "#534AB7",
     "msapplication-tap-highlight": "no",
     "format-detection": "telephone=no",
@@ -170,23 +179,31 @@ export default function RootLayout({
       {
         "@type": "Organization",
         name: "Finkoin",
+        alternateName: "Finkoin",
         url: siteUrl,
-        logo: {
-          "@type": "ImageObject",
-          url: `${siteUrl}/icons/icon-512x512.png`,
-          width: 512,
-          height: 512,
+        logo: `${siteUrl}/icons/icon-512x512.png`,
+        description:
+          "Finkoin is India's free financial health check platform. Know your financial health score in 5 minutes.",
+        foundingDate: "2026",
+        foundingLocation: {
+          "@type": "Place",
+          name: "India",
         },
         contactPoint: {
           "@type": "ContactPoint",
           email: "hello@finkoin.com",
           contactType: "customer service",
         },
-        sameAs: ["https://twitter.com/finkoin", "https://linkedin.com/company/finkoin"],
+        sameAs: [
+          "https://twitter.com/finkoin",
+          "https://linkedin.com/company/finkoin",
+          "https://instagram.com/finkoin",
+        ],
       },
       {
         "@type": "WebSite",
         name: "Finkoin",
+        alternateName: "Finkoin",
         url: siteUrl,
         description: "Free financial health check for India",
         potentialAction: {
@@ -200,6 +217,7 @@ export default function RootLayout({
         publisher: {
           "@type": "Organization",
           name: "Finkoin",
+          url: siteUrl,
         },
       },
     ],
