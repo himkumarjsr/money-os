@@ -166,7 +166,7 @@ export default function OptimizerPage() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6">
+    <main className="mx-auto max-w-6xl space-y-10 px-4 py-10 text-slate-900 sm:px-6">
       <button
         onClick={() => router.push("/analyse/result")}
         style={{

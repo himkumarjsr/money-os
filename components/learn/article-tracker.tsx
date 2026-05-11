@@ -1,20 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useGamificationStore } from "@/store/gamificationStore";
-
+/** Reserved for future read analytics; FK rewards removed (daily FK budget is login-only). */
 export function ArticleTracker({ articleId }: { articleId: string }) {
-  const earnTokens = useGamificationStore((s) => s.earnTokens);
-  const hasEarnedAction = useGamificationStore((s) => s.hasEarnedAction);
-  const markEarnedAction = useGamificationStore((s) => s.markEarnedAction);
-
-  useEffect(() => {
-    const key = `article:${articleId}`;
-    if (hasEarnedAction(key)) return;
-    earnTokens(10, "Read finance article");
-    markEarnedAction(key);
-  }, [articleId, earnTokens, hasEarnedAction, markEarnedAction]);
-
+  void articleId;
   return null;
 }
-

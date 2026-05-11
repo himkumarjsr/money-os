@@ -4,7 +4,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface FeedbackWidgetProps {
   pageContext: string;
@@ -22,13 +22,25 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [rewardFailed, setRewardFailed] = useState(false);
 
   const feedbackKey = useMemo(
-    () => `finkoin_feedback_${pageContext}_${user?.id?.substring(0, 8) ?? "guest"}`,
+    () => `finkoin_feedback_${pageContext}_${user?.id ?? "guest"}`,
     [pageContext, user?.id],
   );
 
-  if (typeof window !== "undefined" && localStorage.getItem(feedbackKey)) {
+  useEffect(() => {
+    setMounted(true);
+    try {
+      setAlreadySubmitted(!!localStorage.getItem(feedbackKey));
+    } catch {
+      setAlreadySubmitted(false);
+    }
+  }, [feedbackKey]);
+
+  if (!mounted || alreadySubmitted) {
     return null;
   }
 
@@ -37,20 +49,24 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
       setError("Please select a rating");
       return;
     }
+    if (!user?.id) {
+      setError("Please sign in to submit feedback.");
+      return;
+    }
 
     setSaving(true);
     setError("");
 
     try {
       const supabase = getSupabase();
-      const { error: dbError } = await supabase.from("feedback").insert({
-        user_id: user?.id ?? null,
+      const answers =
+        result?.overallScore != null ? { score_at_time: result.overallScore } : {};
+      const { error: dbError } = await supabase.from("app_feedback").insert({
+        user_id: user.id,
         rating,
-        message: message.trim() || null,
-        page_context: pageContext,
-        score_at_time: result?.overallScore ?? null,
-        is_approved: false,
-        is_featured: false,
+        message: message.trim() || "",
+        context: pageContext,
+        answers,
       });
 
       if (dbError) {
@@ -59,14 +75,16 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
         return;
       }
 
+      let fkOk = true;
       if (isLoggedIn && user?.id) {
-        await addFK(user.id, 50, "feedback_submitted", pageContext);
+        fkOk = await addFK(user.id, 50, "feedback_submitted", pageContext);
       }
+      setRewardFailed(!fkOk);
 
       localStorage.setItem(feedbackKey, "1");
       setSaving(false);
       setDone(true);
-      setTimeout(() => onClose?.(), 2000);
+      setTimeout(() => onClose?.(), fkOk ? 2000 : 4000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSaving(false);
@@ -100,7 +118,13 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
           ✓
         </div>
         <div style={{ fontSize: 15, fontWeight: 700, color: "#111110", marginBottom: 4 }}>Thank you for your feedback!</div>
-        <div style={{ fontSize: 12, color: "#534AB7", fontWeight: 600 }}>+50 FK tokens added</div>
+        {rewardFailed ? (
+          <div style={{ fontSize: 12, color: "#BA7517", fontWeight: 600, marginTop: 4 }}>
+            We saved your feedback but could not add FK tokens (check login / rewards permissions).
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: "#534AB7", fontWeight: 600 }}>+50 FK tokens added</div>
+        )}
       </div>
     );
   }
@@ -118,6 +142,9 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
             onClick={() => setRating(star)}
             onMouseEnter={() => setHovered(star)}
             onMouseLeave={() => setHovered(0)}
+            onPointerDown={() => setHovered(star)}
+            onPointerUp={() => setHovered(0)}
+            onPointerCancel={() => setHovered(0)}
             style={{
               width: 44,
               height: 44,
@@ -125,6 +152,8 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
               background: (hovered || rating) >= star ? "#EEEDFE" : "#F7F7F4",
               border: `1.5px solid ${(hovered || rating) >= star ? "#534AB7" : "#E8E6F0"}`,
               cursor: "pointer",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

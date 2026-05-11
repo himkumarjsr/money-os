@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 
-export async function POST(req: NextRequest) {
+function authorizeCron(req: NextRequest): boolean {
   const authHeader = req.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  return !!(process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`);
+}
 
-  try {
+async function runSendDailyTip() {
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ error: "Missing RESEND_API_KEY" }, { status: 500 });
     }
@@ -123,8 +122,30 @@ export async function POST(req: NextRequest) {
       sent,
       tip: tipTitle,
     });
-  } catch (err: any) {
+}
+
+export async function GET(req: NextRequest) {
+  if (!authorizeCron(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    return await runSendDailyTip();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Send tip error:", err);
-    return NextResponse.json({ error: err?.message ?? "Unknown error" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  if (!authorizeCron(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    return await runSendDailyTip();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("Send tip error:", err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -6,6 +6,17 @@ import { useNotificationStore } from "@/store/notificationStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+/** YYYY-MM-DD in Asia/Kolkata (popup + localStorage dedupe aligned with cron window). */
+function istDateKeyPrefix(): string {
+  const ymd = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return `finkoin_tip_popup_${ymd}`;
+}
+
 export default function MorningTipPopup() {
   const router = useRouter();
   const { user, isLoggedIn, hasInitialized } = useAuthStore();
@@ -18,10 +29,15 @@ export default function MorningTipPopup() {
     if (!hasInitialized) return;
     if (!isLoggedIn || !user?.id) return;
 
-    const hour = new Date().getHours();
-    if (hour < 6 || hour >= 11) return;
+    const istHourStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date());
+    const hour = parseInt(istHourStr, 10);
+    if (hour < 6 || hour >= 23) return;
 
-    const todayKey = `finkoin_tip_popup_${new Date().toISOString().split("T")[0]}`;
+    const todayKey = istDateKeyPrefix();
     if (typeof window !== "undefined" && localStorage.getItem(todayKey)) return;
 
     let cancelled = false;
@@ -53,8 +69,7 @@ export default function MorningTipPopup() {
   const handleClose = async () => {
     if (tip?.id) {
       await markPopupShown(tip.id);
-      const todayKey = `finkoin_tip_popup_${new Date().toISOString().split("T")[0]}`;
-      localStorage.setItem(todayKey, "1");
+      localStorage.setItem(istDateKeyPrefix(), "1");
     }
     setVisible(false);
   };

@@ -24,19 +24,21 @@
   --ring-primary: rgba(83, 74, 183, 0.35);
 }
 
+/* Keep light UI tokens when OS prefers dark — avoids washed-out body text on white surfaces (esp. iOS Safari). */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-surface: #13111a;
-    --color-surface-alt: #1c1926;
-    --color-muted: #9d96b0;
-    --color-border: #2f2a40;
-    --color-text: #f2f0f7;
-    --ring-primary: rgba(139, 131, 220, 0.45);
+    --color-surface: #ffffff;
+    --color-surface-alt: #f4f3f8;
+    --color-muted: #6b6680;
+    --color-border: #e2dff0;
+    --color-text: #1a1824;
+    --ring-primary: rgba(83, 74, 183, 0.35);
   }
 }
 
 @layer base {
   html {
+    color-scheme: light;
     @apply antialiased;
     -webkit-tap-highlight-color: transparent;
     scrollbar-width: none;
