@@ -9,6 +9,7 @@ import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
+import FeedbackPopupManager from "@/components/FeedbackPopupManager";
 import MorningTipPopup from "@/components/MorningTipPopup";
 import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
@@ -266,6 +267,7 @@ export default function RootLayout({
               {children}
             </main>
             <MorningTipPopup />
+            <FeedbackPopupManager />
             <Footer />
             <ReferralSuccessToast />
             <Toast />

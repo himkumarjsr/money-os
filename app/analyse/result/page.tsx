@@ -813,7 +813,7 @@ export default function AnalyseResultPage() {
 
         {showFeedback ? (
           <div style={{ padding: "0 16px 16px" }}>
-            <FeedbackWidget pageContext="result_page" onClose={() => setShowFeedback(false)} />
+            <FeedbackWidget pageContext="analyse" onClose={() => setShowFeedback(false)} />
           </div>
         ) : null}
 

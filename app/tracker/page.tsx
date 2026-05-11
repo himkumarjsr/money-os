@@ -706,7 +706,7 @@ function TrackerContent() {
           })}
           <SuggestionBox transactions={transactions} bucketTotals={bucketTotals} totalSpent={totalSpent} />
           <div style={{ marginTop: 16 }}>
-            <FeedbackWidget pageContext="tracker_page" />
+            <FeedbackWidget pageContext="tracker" />
           </div>
         </>
       )}

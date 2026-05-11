@@ -38,6 +38,7 @@ const FEEDBACK_GOOGLE_FORM_URL = (process.env.NEXT_PUBLIC_FEEDBACK_GOOGLE_FORM_U
 
 export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModalProps) {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const user = useAuthStore((s) => s.user);
   const [step, setStep] = useState(0);
   const [rating, setRating] = useState(0);
   const [area, setArea] = useState<(typeof AREAS)[number]["id"] | "">("");
@@ -108,29 +109,30 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
   };
 
   const submit = useCallback(async () => {
-    if (!isLoggedIn || rating < 1 || !area || !recommend) return;
+    if (!isLoggedIn || rating < 1 || !area || !recommend || !user?.id) return;
     setSubmitting(true);
     setError(null);
     try {
+      const hl = highlights.trim();
+      const im = improvements.trim();
+      const messageParts = [`Area: ${areaLabel}`, hl && `What worked:\n${hl}`, im && `To improve:\n${im}`, `Recommend: ${recommend}`];
+      const message = messageParts.filter(Boolean).join("\n\n");
+      const page_context = `wizard_${source}_${area}`;
+
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
+          user_id: user.id,
           rating,
-          area,
-          highlights: highlights.trim(),
-          improvements: improvements.trim(),
-          recommend,
-          context: source,
+          message,
+          page_context,
+          score_at_time: null,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!res.ok) {
-        if (res.status === 401) {
-          setError("Please sign in to send feedback.");
-          return;
-        }
         setError(data.message ?? data.error ?? "Could not save feedback. Try again.");
         return;
       }
@@ -141,7 +143,7 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
     } finally {
       setSubmitting(false);
     }
-  }, [area, highlights, improvements, isLoggedIn, rating, recommend, source]);
+  }, [area, areaLabel, highlights, improvements, isLoggedIn, rating, recommend, source, user?.id]);
 
   if (!open) return null;
 

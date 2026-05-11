@@ -38,15 +38,13 @@ export default function Testimonials() {
       }
 
       try {
-        const res = await fetch("/api/testimonials", { method: "GET", cache: "no-store" });
+        const res = await fetch("/api/feedback", { method: "GET", cache: "no-store" });
         const json = (await res.json()) as { testimonials?: Testimonial[] };
         const result = Array.isArray(json.testimonials) ? json.testimonials : [];
         setTestimonials(result);
-        if (result.length > 0) {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ data: result, fetchedAt: Date.now() }));
-        }
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: result, fetchedAt: Date.now() }));
       } catch (err) {
-        console.error("Testimonials fetch error:", err);
+        console.error("Testimonials error:", err);
       } finally {
         setLoading(false);
       }
