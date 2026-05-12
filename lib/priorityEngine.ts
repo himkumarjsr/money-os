@@ -378,7 +378,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       rank: rank++,
       id: "term_insurance",
       title: termHave === 0
-        ? "Buy term insurance"
+        ? "Close term cover gap"
         : "Increase term cover",
       category: "insurance",
       urgency: termHave === 0
@@ -398,13 +398,13 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       instrument: "HDFC Click2Protect or Max Life Smart Secure — pure term only",
       actionThisWeek:
         termStartMonth > 1
-          ? `From month ${termStartMonth}, buy top-up term plan. Budget ₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${(termGap / 10000000).toFixed(1)} crore cover.`
+          ? `From month ${termStartMonth}, plan a top-up term policy. Budget ₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${(termGap / 10000000).toFixed(1)} crore cover.`
           : `Compare 3 term insurance quotes online. Budget ₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${(termGap / 10000000).toFixed(1)} crore cover.`,
       whyThisMatters: termHave === 0
         ? "Your family has zero income if you pass away. All EMIs continue with no salary."
         : `Gap of ₹${(termGap / 10000000).toFixed(1)} crore leaves family underprotected.`,
       icon: "🛡️",
-      canBuyFromFinkoin: true,
+      canBuyFromFinkoin: false,
       finkoinProductType: "term",
       startMonth: termStartMonth,
     });
@@ -433,7 +433,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       rank: rank++,
       id: "health_insurance",
       title: healthHave === 0
-        ? "Buy health insurance"
+        ? "Close health cover gap"
         : "Increase health cover",
       category: "insurance",
       urgency: healthHave === 0
@@ -451,10 +451,10 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusAfterThis: Math.max(0, runningSurplus - healthPremiumEst),
       monthsToComplete: 1,
       instrument: "HDFC ERGO Optima or Niva Bupa ReAssure — family floater",
-      actionThisWeek: `Get ₹${(healthNeeded / 100000).toFixed(0)} lakh health cover. Compare on Policybazaar or Finkoin insurance.`,
+      actionThisWeek: `Get ₹${(healthNeeded / 100000).toFixed(0)} lakh health cover. Compare quotes on IRDAI-registered insurer or aggregator sites, or through a licensed advisor.`,
       whyThisMatters: "One hospitalisation in metro costs ₹2-5 lakh. Without cover your savings get wiped.",
       icon: "🏥",
-      canBuyFromFinkoin: true,
+      canBuyFromFinkoin: false,
       finkoinProductType: "health",
     });
     runningSurplus = Math.max(0, runningSurplus - healthPremiumEst);

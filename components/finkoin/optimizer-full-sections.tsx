@@ -479,8 +479,8 @@ export function OptimizerTwelveMonthPhasesSection({
           detail: `${fmt(salaryTopUp)}/month auto-debit. Time needed: 20 minutes`,
         },
         {
-          title: "Get term insurance quotes",
-          detail: "Compare 3 plans online — HDFC, Max Life, Tata AIA. Time needed: 30 minutes",
+          title: "Compare term cover (get quotes)",
+          detail: "Compare at least 3 pure-term plans from licensed insurers. Time needed: 30 minutes",
         },
         {
           title: "Pay this year premium from salary",
@@ -490,19 +490,19 @@ export function OptimizerTwelveMonthPhasesSection({
       results: [
         showMis ? "MIS running ✓" : "",
         "RD running ✓",
-        "Insurance quoted ✓",
+        "Term cover compared ✓",
       ].filter(Boolean),
     },
     {
       phaseLabel: "Phase 2",
       phaseTitle: "Month 2-3 — Protection",
-      phaseSub: "Complete your insurance",
+      phaseSub: "Complete your protection layer",
       phaseColor: "#BA7517",
       phaseColorLight: "#FEF9E8",
       phaseIcon: "🛡️",
       checklist: [
         {
-          title: "Buy term insurance",
+          title: "Put term cover in place",
           detail: `Decision deadline: Month 2. Premium per month: ~${fmt(termPremium)}`,
         },
         {
@@ -518,7 +518,7 @@ export function OptimizerTwelveMonthPhasesSection({
           detail: "Check bank statement",
         },
       ],
-      results: ["All insurance in place ✓", "Premium fund building ✓"],
+      results: ["Protection layer in place ✓", "Premium fund building ✓"],
     },
     {
       phaseLabel: "Phase 3",
@@ -690,9 +690,9 @@ export function TermInsuranceGapCard({
             fontWeight: 600,
             cursor: "pointer",
           }}
-          onClick={() => router.push("/insurance?type=term")}
+          onClick={() => router.push("/learn/term-insurance-vs-endowment-why-most-indians-buy-wrong")}
         >
-          Compare term insurance plans →
+          Term cover guide (educational) →
         </button>
       </div>
     </div>

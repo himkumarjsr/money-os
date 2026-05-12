@@ -287,7 +287,7 @@ export function PaywallModal({
         </div>
 
         <p className="mt-3 text-xs font-medium leading-relaxed text-[#454442]">
-          Finkoin Keys (FK) are for rewards on Finkoin — use them for discounts when you buy insurance here. They do not reduce this unlock price.
+          Finkoin Keys (FK) are rewards for activity on Finkoin. They do not reduce this unlock price and are not tied to buying any product here.
         </p>
 
         <div className="mt-4 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
