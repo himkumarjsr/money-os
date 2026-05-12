@@ -31,8 +31,8 @@ const features = [
     body: "Stay in control with one monthly view of income, spends, and goals.",
   },
   {
-    title: "Pay Insurance with Finkoins",
-    body: "Use earned Finkoins to reduce your insurance payment burden.",
+    title: "Earn Finkoin Keys",
+    body: "Collect FK for consistent use of Finkoin tools — redeem on partner perks when we offer them.",
   },
 ] as const;
 

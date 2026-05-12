@@ -332,7 +332,7 @@ export default function AnalyseResultPage() {
       id: "term",
       title:
         termStatus === "missing"
-          ? "Buy term insurance"
+          ? "Term life cover"
           : termStatus === "partial"
             ? "Term cover"
             : "Term insurance",
@@ -351,12 +351,11 @@ export default function AnalyseResultPage() {
           : termStatus === "complete"
             ? "Cover is adequate"
             : "You have no term insurance",
-      actionLabel: termStatus === "missing" ? "Buy from Finkoin →" : undefined,
       icon: "🛡️",
     },
     {
       id: "health",
-      title: (profile?.healthInsuranceSumInsured || 0) > 0 ? "Health insurance" : "Buy health insurance",
+      title: (profile?.healthInsuranceSumInsured || 0) > 0 ? "Health insurance" : "Health cover",
       current: profile?.healthInsuranceSumInsured || 0,
       target: profile?.lifeStage === "bachelor" ? 500000 : 1000000,
       formatCurrent: (v: number) => (v === 0 ? "None" : `₹${(v / 100000).toFixed(0)} lakh`),
@@ -765,10 +764,13 @@ export default function AnalyseResultPage() {
               {(safetyItems.find((i: any) => i.id === "term") as any).infoText}
             </p>
           ) : null}
-          {(safetyItems.find((i: any) => i.id === "term") as any)?.actionLabel ? (
-            <button className="mt-2 rounded-lg bg-[#534AB7] px-3 py-2 text-xs font-semibold text-white">
-              {(safetyItems.find((i: any) => i.id === "term") as any).actionLabel}
-            </button>
+          {termStatus === "missing" ? (
+            <Link
+              href="/learn/term-insurance-vs-endowment-why-most-indians-buy-wrong"
+              className="mt-2 inline-flex rounded-lg bg-[#534AB7] px-3 py-2 text-xs font-semibold text-white hover:opacity-95"
+            >
+              Why term cover matters (educational) →
+            </Link>
           ) : null}
           <p className="mt-3 text-sm font-semibold text-[#454442]">{completeCount} of 5 in place</p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ECEAF5]"><div className="h-full bg-[#534AB7]" style={{ width: `${(completeCount / 5) * 100}%` }} /></div>
@@ -789,7 +791,7 @@ export default function AnalyseResultPage() {
             <p className="text-lg font-semibold">Your complete financial roadmap</p>
             <p className="text-sm font-medium text-[#454442]">₹99 one-time · Yours forever</p>
             <p className="mt-2 text-sm text-[#534AB7]">
-              Pay ₹99 · Earn Finkoin Keys (FK) for activity — redeem them as discounts on insurance from Finkoin, not on this unlock.
+              Pay ₹99 · Earn Finkoin Keys (FK) for activity on Finkoin — use them on partner perks where available. FK do not reduce this unlock price.
             </p>
             {priorityPlan?.surplusBreakdown ? (
               <div className="mt-3 rounded-lg border border-[#E8E6F0] bg-[#FAFAFE] p-3 text-xs text-[#5F5E5A]">
@@ -804,7 +806,7 @@ export default function AnalyseResultPage() {
                 </div>
               </div>
             ) : null}
-            <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance from Finkoin</li></ul>
+            <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]"><li>✓ Complete priority plan</li><li>✓ Debt clearance strategy</li><li>✓ 12-month action plan</li><li>✓ PDF download</li><li>✓ Insurance gap checklist (educational)</li></ul>
             <button onClick={() => void handleUnlockClick()} className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white">Get my complete financial plan →</button>
             <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">{ctaCopy.subText}</p>
             <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">Educational only</p>

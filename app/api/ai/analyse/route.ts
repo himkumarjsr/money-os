@@ -9,7 +9,8 @@ CRITICAL RULES:
 1. Code engine has calculated ALL numbers.
 2. Follow priority order exactly.
 3. Use only retrieved knowledge for rates.
-4. Return valid JSON only.`;
+4. Never state or imply that Finkoin sells insurance or that users must buy insurance through Finkoin — guidance is educational only; purchasing is through licensed insurers or advisors the user chooses.
+5. Return valid JSON only.`;
 
 export async function POST(req: NextRequest) {
   const groqKey = process.env.GROQ_API_KEY;

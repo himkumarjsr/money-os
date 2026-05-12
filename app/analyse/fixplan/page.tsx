@@ -5,6 +5,7 @@ import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -370,12 +371,21 @@ export default function FixPlanPage() {
             <p className="mt-2 rounded-xl bg-[#E7F6F4] p-3 text-sm">
               <strong>This week:</strong> {p.actionThisWeek}
             </p>
-            {p.canBuyFromFinkoin ? (
-              <button className="mt-3 rounded-lg bg-[#534AB7] px-3 py-2 text-sm font-semibold text-white">
+            {(p.id === "term_insurance" || p.id === "health_insurance") ? (
+              <Link
+                href={
+                  p.id === "term_insurance"
+                    ? "/learn/term-insurance-vs-endowment-why-most-indians-buy-wrong"
+                    : "/learn/what-is-health-insurance-floater"
+                }
+                className="mt-3 inline-flex rounded-lg border border-[#534AB7]/30 bg-[#F7F6FE] px-3 py-2 text-sm font-semibold text-[#534AB7] hover:bg-[#EEEDFE]"
+              >
                 {p.id === "term_insurance" && p.status === "partial"
-                  ? "Compare top-up term plans →"
-                  : "Buy from Finkoin →"}
-              </button>
+                  ? "How term top-ups work (educational) →"
+                  : p.id === "term_insurance"
+                    ? "Term cover guide (educational) →"
+                    : "Health cover guide (educational) →"}
+              </Link>
             ) : null}
           </section>
         ))}

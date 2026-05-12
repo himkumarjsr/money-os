@@ -661,7 +661,6 @@ export default function PolicyVaultClient() {
                   </li>
                   <li>Submit at nearest branch OR upload on insurer portal.</li>
                   <li>Processing usually takes 30–60 days.</li>
-                  <li>Finkoin earns trail commission on renewal — at no extra cost to you.</li>
                 </ol>
               </>
             ) : isHealthCategory(transferFor.policyType) ? (
