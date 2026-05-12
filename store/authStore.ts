@@ -25,6 +25,7 @@ type UsersRow = {
   is_admin?: boolean | null;
   referral_code?: string | null;
   referred_by?: string | null;
+  referral_reward_given?: boolean | null;
   fk_balance?: number | null;
   pan_verified?: boolean | null;
   pan_last4?: string | null;
@@ -218,7 +219,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const tier = mapSubscriptionTier(row?.subscription_tier ?? "free");
-          const fkBal = Number(gamData?.fk_balance ?? row?.fk_balance ?? 50);
+          const fkBal = Number(gamData?.fk_balance ?? 50);
 
           const referral =
             typeof row?.referral_code === "string" && row.referral_code.length > 0
@@ -239,6 +240,14 @@ export const useAuthStore = create<AuthState>()(
             typeof row?.avatar_url === "string" && row.avatar_url.length > 0 ? row.avatar_url : null;
           const metaAvatar = typeof meta.avatar_url === "string" && meta.avatar_url.length > 0 ? meta.avatar_url : null;
 
+          useGamificationStore.setState({
+            fkBalance: fkBal,
+            totalEarned: Number(gamData?.total_earned ?? fkBal),
+            streakDays: Number(gamData?.streak_days ?? 0),
+            badges: Array.isArray(gamData?.badges) ? (gamData.badges as string[]) : [],
+            lastFetched: null,
+          });
+
           const nextUser: User = {
             id: userId,
             name:
@@ -258,16 +267,8 @@ export const useAuthStore = create<AuthState>()(
             referralCode: referral,
             referredBy: row?.referred_by ?? null,
             isAdmin: Boolean(row?.is_admin),
-            fkBalance: fkBal,
+            fkBalance: useGamificationStore.getState().fkBalance,
           };
-
-          useGamificationStore.setState({
-            fkBalance: fkBal,
-            totalEarned: Number(gamData?.total_earned ?? fkBal),
-            streakDays: Number(gamData?.streak_days ?? 0),
-            badges: Array.isArray(gamData?.badges) ? (gamData.badges as string[]) : [],
-            lastFetched: null,
-          });
 
           set({
             user: nextUser,

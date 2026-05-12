@@ -1,13 +1,17 @@
 "use client";
 
+import { getCachedPlan, hashProfile, setCachedPlan } from "@/lib/cache";
 import { downloadOptimizerPDF } from "@/lib/generatePDF";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
+import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const fixPlanInFlight = new Map<string, Promise<void>>();
 
 const LOADING_MESSAGES = [
   "Reading your profile...",
@@ -19,6 +23,8 @@ const LOADING_MESSAGES = [
 
 export default function FixPlanPage() {
   const router = useRouter();
+  const hasLoadedRef = useRef(false);
+  const lastLoadKeyRef = useRef<string | null>(null);
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
@@ -41,10 +47,19 @@ export default function FixPlanPage() {
     return () => clearInterval(id);
   }, []);
 
-  const loadFixPlan = async (forceRefresh = false) => {
-    if (!profile || !result) return;
-    const { hashProfile, getCachedPlan, setCachedPlan } = await import("@/lib/cache");
-    const currentHash = hashProfile(profile);
+  const loadFixPlan = useCallback(
+    async (forceRefresh = false) => {
+      if (!profile || !result) return;
+      const currentHash = hashProfile(profile);
+      const flowKey = `${currentHash}:${forceRefresh ? "f" : "n"}`;
+      if (!forceRefresh) {
+        const pending = fixPlanInFlight.get(flowKey);
+        if (pending) {
+          await pending;
+          return;
+        }
+      }
+      const run = (async () => {
     const cached = !forceRefresh ? getCachedPlan(currentHash) : null;
     if (cached) {
       console.log("Using cached AI plan ✓");
@@ -149,12 +164,21 @@ export default function FixPlanPage() {
     } finally {
       setAiLoading(false);
     }
-  };
+      })();
+      if (!forceRefresh) fixPlanInFlight.set(flowKey, run);
+      try {
+        await run;
+      } finally {
+        if (!forceRefresh) fixPlanInFlight.delete(flowKey);
+      }
+    },
+    [profile, result, user?.id],
+  );
 
   useEffect(() => {
     if (!hasInitialized) return;
     if (!isLoggedIn) {
-      router.replace("/login?redirect=/analyse/fixplan");
+      router.replace(loginHrefPreserveRef("/login?redirect=/analyse/fixplan"));
       return;
     }
     let mounted = true;
@@ -175,12 +199,20 @@ export default function FixPlanPage() {
           return;
         }
       }
+      if (!profile || !result) return;
+      const loadKey = `${hashProfile(profile)}:${String((result as any)?.overallScore ?? "")}`;
+      if (lastLoadKeyRef.current !== loadKey) {
+        lastLoadKeyRef.current = loadKey;
+        hasLoadedRef.current = false;
+      }
+      if (hasLoadedRef.current) return;
+      hasLoadedRef.current = true;
       if (mounted) void loadFixPlan();
     })();
     return () => {
       mounted = false;
     };
-  }, [hasInitialized, isLoggedIn, user?.subscriptionTier, user?.isAdmin, router]);
+  }, [hasInitialized, isLoggedIn, user?.subscriptionTier, user?.isAdmin, router, profile, result, loadFixPlan]);
 
   useEffect(() => {
     if (aiPlan?.isFallback) {
@@ -189,7 +221,7 @@ export default function FixPlanPage() {
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [aiPlan?.isFallback]);
+  }, [aiPlan?.isFallback, loadFixPlan]);
 
   const lastSubmission = profile;
   const aiData = aiPlan;
@@ -218,48 +250,81 @@ export default function FixPlanPage() {
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      await downloadOptimizerPDF(
-        lastSubmission,
-        result,
-        aiData?.priorityPlan,
-        aiData?.explanations,
+      const pp = aiData?.priorityPlan;
+      const expl = aiData?.explanations;
+      const pri = [...(pp?.priorities || [])].sort((a: any, b: any) => (a.rank || 0) - (b.rank || 0));
+      const phase1Tasks = pri
+        .filter((p: any) => p.rank === 1)
+        .map((p: any) => `${p.title}: ${p.actionThisWeek || p.description || p.whyThisMatters || ""}`.trim());
+      const phase2Tasks = pri
+        .filter((p: any) => p.rank === 2 || p.rank === 3)
+        .map((p: any) => `${p.title}${p.actionThisWeek ? ` — ${p.actionThisWeek}` : ""}`);
+      const phase3Tasks = pri.filter((p: any) => (p.rank || 0) > 3).map((p: any) => p.title);
+      const emerg = pri.find((p: any) => p.id === "emergency_fund");
+      const term = pri.find((p: any) => p.id === "term_insurance");
+      const health = pri.find((p: any) => p.id === "health_insurance");
+      const keySnapshot = [
+        `Monthly surplus: ₹${Math.round(pp?.monthlySurplus || 0).toLocaleString("en-IN")}`,
+        ...(pp?.debts?.length
+          ? (pp.debts as any[]).map(
+              (d) =>
+                `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")} @ ${d.rate}% · EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo · extra ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo · ~${d.monthsToClearWithExtra || 0} mo to clear`,
+            )
+          : ["Debt: none in engine plan"]),
+        emerg && Number(emerg.gap || 0) > 0
+          ? `Emergency fund gap: ₹${Number(emerg.gap || 0).toLocaleString("en-IN")}`
+          : null,
+        term && Number(term.gap || 0) > 0
+          ? `Term cover gap: ₹${Number(term.gap || 0).toLocaleString("en-IN")}`
+          : null,
+        health && Number(health.gap || 0) > 0
+          ? `Health cover gap: ₹${Number(health.gap || 0).toLocaleString("en-IN")}`
+          : null,
+      ].filter(Boolean) as string[];
+
+      const phases = [
         {
-          phases: [
-            {
-              phase: 1,
-              title: "Month 1 — Foundation",
-              subtitle: "Start your financial base",
-              color: [226, 75, 74],
-              tasks: ["Set up emergency fund autopilot", "Collect term/health insurance quotes", "Track monthly bucket usage"],
-              outcomes: ["Safety baseline created"],
-            },
-            {
-              phase: 2,
-              title: "Month 2-3 — Protection",
-              subtitle: "Close insurance and debt gaps",
-              color: [186, 117, 23],
-              tasks: ["Buy or top-up insurance", "Start debt acceleration", "Protect medical liquidity"],
-              outcomes: ["Protection layer active"],
-            },
-            {
-              phase: 3,
-              title: "Month 4-9 — Build Wealth",
-              subtitle: "Shift towards growth",
-              color: [29, 158, 117],
-              tasks: ["Increase SIP consistency", "Review spending drift monthly", "Grow emergency fund to target"],
-              outcomes: ["Wealth engine running"],
-            },
-            {
-              phase: 4,
-              title: "Month 10-12 — Year End Review",
-              subtitle: "Consolidate and upgrade",
-              color: [83, 74, 183],
-              tasks: ["Review yearly score progress", "Increase SIP by salary growth", "Re-run full analysis"],
-              outcomes: ["Year 2 plan locked"],
-            },
-          ],
+          phase: 1,
+          title: "Phase 1 — Immediate (This Week)",
+          subtitle: "Highest-ranked actions",
+          color: [226, 75, 74] as [number, number, number],
+          tasks: phase1Tasks.length > 0 ? phase1Tasks : ["Complete your financial review"],
+          outcomes: [`Address top risk: ${pri[0]?.title || "safety and liquidity"}`],
         },
-      );
+        {
+          phase: 2,
+          title: "Phase 2 — Short term (1–3 months)",
+          subtitle: "Protection and foundation",
+          color: [186, 117, 23] as [number, number, number],
+          tasks: phase2Tasks.length > 0 ? phase2Tasks : ["Build financial foundation"],
+          outcomes: [typeof expl?.in12Months === "string" ? expl.in12Months.slice(0, 160) : "Improved financial health"],
+        },
+        {
+          phase: 3,
+          title: "Phase 3 — Medium term (3–12 months)",
+          subtitle: "Wealth and consistency",
+          color: [29, 158, 117] as [number, number, number],
+          tasks: phase3Tasks.length > 0 ? phase3Tasks : ["Grow wealth systematically"],
+          outcomes: ["Financial independence on track"],
+        },
+        {
+          phase: 4,
+          title: "Phase 4 — Year end",
+          subtitle: "Review and upgrade",
+          color: [83, 74, 183] as [number, number, number],
+          tasks: [
+            "80C / tax-saving check — use actual salary and 80C numbers next run",
+            "Re-analyse on Finkoin with updated balances",
+            "Review insurance covers vs income",
+          ],
+          outcomes: ["Year 1 complete", "Year 2 plan ready"],
+        },
+      ];
+
+      await downloadOptimizerPDF(lastSubmission, result, aiData?.priorityPlan, aiData?.explanations, {
+        phases,
+        keySnapshot,
+      });
     } catch (err) {
       console.error("PDF error:", err);
     } finally {
@@ -452,19 +517,155 @@ export default function FixPlanPage() {
         {aiPlan.priorityPlan?.debts?.length > 0 ? (
           <section className="rounded-2xl bg-white p-4 shadow-sm">
             <h3 className="text-lg font-semibold">Debt strategy</h3>
-            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full min-w-[700px] text-left text-sm">
-                <thead className="bg-slate-50 text-xs text-slate-600">
-                  <tr><th className="px-3 py-2">Debt</th><th className="px-3 py-2">Outstanding</th><th className="px-3 py-2">EMI</th><th className="px-3 py-2">Extra/mo</th><th className="px-3 py-2">Months</th><th className="px-3 py-2">Rank</th></tr>
-                </thead>
-                <tbody>
-                  {aiPlan.priorityPlan.debts.map((d: any) => (
-                    <tr key={d.type} className="border-t border-slate-100"><td className="px-3 py-2">{d.type}</td><td className="px-3 py-2">₹{d.outstanding?.toLocaleString("en-IN")}</td><td className="px-3 py-2">₹{d.emi?.toLocaleString("en-IN")}</td><td className="px-3 py-2">₹{d.extraEMIRecommended?.toLocaleString("en-IN")}</td><td className="px-3 py-2">{d.monthsToClearWithExtra}</td><td className="px-3 py-2">{d.priorityRank}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-3 text-sm italic text-[#7A7871]">{aiPlan.explanations?.debtStrategy || "Clear high-interest debt first, then roll freed EMI into the next debt."}</p>
+            {(() => {
+              const debts = aiPlan.priorityPlan.debts as any[];
+              return (
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: 14,
+                    border: "1px solid #E8E6F0",
+                    overflow: "hidden",
+                    marginTop: 12,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#534AB7",
+                      padding: "12px 16px",
+                      color: "white",
+                      fontSize: 13,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Debt Payoff Strategy (Avalanche Method)
+                  </div>
+                  {debts.map((debt: any, i: number) => {
+                    const extraPayment = Number(debt.extraEMIRecommended || 0);
+                    const rateM = (Number(debt.rate || debt.interestRate || 12) / 100) / 12;
+                    const outstanding = Number(debt.outstanding || debt.balance || 0);
+                    const currentEMI = Number(debt.emi || debt.monthlyEMI || 0);
+                    const totalPayment = currentEMI + extraPayment;
+                    let monthsNow =
+                      extraPayment > 0 && totalPayment > 0 && rateM > 0 && outstanding > 0
+                        ? Math.ceil(
+                            -Math.log(1 - (rateM * outstanding) / totalPayment) / Math.log(1 + rateM),
+                          )
+                        : Number(debt.monthsToClearWithExtra || 0);
+                    if (!Number.isFinite(monthsNow) || monthsNow < 0 || monthsNow > 600) {
+                      monthsNow = Number(debt.monthsToClearWithExtra || 0);
+                    }
+                    let monthsOriginal =
+                      currentEMI > 0 && rateM > 0 && outstanding > 0
+                        ? Math.ceil(
+                            -Math.log(1 - (rateM * outstanding) / currentEMI) / Math.log(1 + rateM),
+                          )
+                        : 0;
+                    if (!Number.isFinite(monthsOriginal) || monthsOriginal < 0 || monthsOriginal > 600) {
+                      monthsOriginal = 0;
+                    }
+                    const monthsSaved = Math.max(0, monthsOriginal - monthsNow);
+                    const interestSaved = Math.round(
+                      extraPayment > 0
+                        ? Math.max(0, Number(debt.extraEMIRecommended || 0)) *
+                            Math.max(0, Number(debt.monthsToClearWithExtra || 0)) *
+                            0.35
+                        : 0,
+                    );
+                    const label = debt.displayName || debt.label || debt.name || debt.type;
+                    return (
+                      <div
+                        key={`${debt.type}-${i}`}
+                        style={{
+                          padding: "14px 16px",
+                          borderBottom: i < debts.length - 1 ? "1px solid #F7F7F4" : "none",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: 10,
+                          }}
+                        >
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#111110" }}>{label}</div>
+                          <div
+                            style={{
+                              background: "#FCEBEB",
+                              color: "#E24B4A",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "3px 8px",
+                              borderRadius: 20,
+                            }}
+                          >
+                            {debt.rate || debt.interestRate || 0}% interest
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
+                            gap: 8,
+                          }}
+                        >
+                          {(
+                            [
+                              ["Outstanding", `₹${outstanding.toLocaleString("en-IN")}`],
+                              ["Current EMI", `₹${currentEMI.toLocaleString("en-IN")}/mo`],
+                              [
+                                "Extra payment",
+                                extraPayment > 0
+                                  ? `₹${extraPayment.toLocaleString("en-IN")}/mo`
+                                  : "After P1 cleared",
+                              ],
+                            ] as const
+                          ).map(([lbl, value]) => (
+                            <div
+                              key={lbl}
+                              style={{
+                                background: "#F7F7F4",
+                                borderRadius: 8,
+                                padding: "8px 10px",
+                                textAlign: "center",
+                              }}
+                            >
+                              <div style={{ fontSize: 10, color: "#9B9A94", marginBottom: 3 }}>{lbl}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: "#111110" }}>{value}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {extraPayment > 0 ? (
+                          <div
+                            style={{
+                              background: "#E1F5EE",
+                              borderRadius: 8,
+                              padding: "8px 12px",
+                              marginTop: 10,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <span style={{ fontSize: 12, color: "#1D5C3A" }}>
+                              Clear in {monthsNow || debt.monthsToClearWithExtra || 0} months
+                              {monthsSaved > 0 ? ` (save ${monthsSaved} months vs EMI-only)` : ""}
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#1D9E75" }}>
+                              Save ₹{interestSaved.toLocaleString("en-IN")} (est.)
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+            <p className="mt-1 text-sm italic text-[#7A7871]">
+              {aiPlan.explanations?.debtStrategy || "Clear high-interest debt first, then roll freed EMI into the next debt."}
+            </p>
           </section>
         ) : null}
 

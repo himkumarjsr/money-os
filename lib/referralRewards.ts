@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { useAuthStore } from "@/store/authStore";
+import { useGamificationStore } from "@/store/gamificationStore";
 
 /** Same key everywhere for pending `?ref=` attribution. */
 export const REFERRAL_PENDING_STORAGE_KEY = "finkoin_pending_ref";
@@ -12,28 +13,54 @@ export const FINKOIN_REFERRAL_SUCCESS_KEY = "finkoin_referral_success";
 
 const referralApplyLocks = new Set<string>();
 
-export function consumePendingReferralCode(): string | null {
+/** Append current page `?ref=` to a `/login...` href so referral survives client navigations. */
+export function loginHrefPreserveRef(href: string): string {
+  if (typeof window === "undefined") return href;
+  const ref = new URLSearchParams(window.location.search).get("ref")?.trim();
+  if (!ref) return href;
+  try {
+    const u = new URL(href, window.location.origin);
+    if (!u.searchParams.get("ref")) {
+      u.searchParams.set("ref", ref);
+    }
+    return `${u.pathname}${u.search}`;
+  } catch {
+    const sep = href.includes("?") ? "&" : "?";
+    return `${href}${sep}ref=${encodeURIComponent(ref)}`;
+  }
+}
+
+/**
+ * Read pending referral code without removing it (safe if signup fails before apply succeeds).
+ */
+export function peekPendingReferralCode(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const stored = localStorage.getItem("finkoin_pending_ref");
-    if (!stored) return null;
+    const stored = localStorage.getItem(REFERRAL_PENDING_STORAGE_KEY);
+    console.log("consumeReferral: stored =", stored);
+
+    if (!stored) {
+      console.log("consumeReferral: nothing in localStorage");
+      return null;
+    }
 
     let code: string | null = null;
 
     try {
       const parsed = JSON.parse(stored) as { code?: string; expires?: string };
+      console.log("consumeReferral: parsed =", parsed);
+
       if (parsed.expires && new Date(parsed.expires) < new Date()) {
-        localStorage.removeItem("finkoin_pending_ref");
-        console.log("Referral: code expired");
+        console.log("consumeReferral: expired");
+        localStorage.removeItem(REFERRAL_PENDING_STORAGE_KEY);
         return null;
       }
-      code = parsed.code || null;
+
+      code = parsed.code?.trim() || null;
     } catch {
-      code = stored;
+      code = stored.trim() || null;
     }
 
-    localStorage.removeItem("finkoin_pending_ref");
-    console.log("Referral: consumed code =", code);
     return code;
   } catch (err) {
     console.error("consumeReferral error:", err);
@@ -41,64 +68,171 @@ export function consumePendingReferralCode(): string | null {
   }
 }
 
+export function consumePendingReferralCode(): string | null {
+  const code = peekPendingReferralCode();
+  if (code) {
+    try {
+      localStorage.removeItem(REFERRAL_PENDING_STORAGE_KEY);
+      console.log("consumeReferral: consumed =", code);
+    } catch {
+      /* ignore */
+    }
+  }
+  return code;
+}
+
+export function clearPendingReferralStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(REFERRAL_PENDING_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearPendingAfterSuccess(): void {
+  clearPendingReferralStorage();
+}
+
 /**
  * Links new user to referrer from localStorage (`finkoin_pending_ref`) and grants FK bonuses.
- * Inserts `public.referrals` when RLS allows. Best-effort on failures.
+ * Uses `referrals` columns: referrer_id, referred_id, signed_up_at, tokens_awarded.
  */
 export async function applyPendingReferralRewards(supabase: SupabaseClient, newUserId: string): Promise<void> {
-  console.log("applyPendingReferralRewards called:", newUserId);
+  console.log("applyReferral: called for", newUserId);
 
   if (referralApplyLocks.has(newUserId)) return;
   referralApplyLocks.add(newUserId);
 
   try {
-    const { data: selfPre } = await supabase.from("users").select("id, referred_by").eq("id", newUserId).maybeSingle();
-    if (selfPre?.referred_by) {
-      console.log("Referral already processed (referred_by set)");
-      return;
-    }
-
-    const code = consumePendingReferralCode();
-    console.log("pending referral code:", code);
+    const code = peekPendingReferralCode();
+    console.log("applyReferral: code =", code);
 
     if (!code) {
-      console.log("No pending referral code");
+      console.log("applyReferral: no code, skipping");
       return;
     }
 
-    const { data: referrer } = await supabase.from("users").select("id").eq("referral_code", code).maybeSingle();
-    console.log("applyPendingReferralRewards: referrer found", referrer?.id);
+    const { data: referrer, error: findErr } = await supabase
+      .from("users")
+      .select("id, name")
+      .eq("referral_code", code.toUpperCase())
+      .maybeSingle();
 
-    if (!referrer?.id || referrer.id === newUserId) return;
+    console.log("applyReferral: referrer =", referrer, findErr);
 
-    await supabase.from("users").update({ referred_by: referrer.id }).eq("id", newUserId);
+    if (findErr || !referrer?.id) {
+      console.log("applyReferral: referrer not found");
+      return;
+    }
 
-    const bump = async (userId: string, amount: number) => {
+    if (referrer.id === newUserId) {
+      console.log("applyReferral: self referral, skip");
+      return;
+    }
+
+    const { data: existing, error: existingErr } = await supabase
+      .from("referrals")
+      .select("id")
+      .eq("referred_id", newUserId)
+      .maybeSingle();
+
+    if (existingErr) {
+      console.warn("applyReferral: existing check error", existingErr);
+    }
+
+    if (existing) {
+      console.log("applyReferral: already processed");
+      clearPendingAfterSuccess();
+      return;
+    }
+
+    const { error: insertErr } = await supabase.from("referrals").insert({
+      referrer_id: referrer.id,
+      referred_id: newUserId,
+      signed_up_at: new Date().toISOString(),
+      tokens_awarded: false,
+    });
+
+    if (insertErr) {
+      console.error("applyReferral: insert error", insertErr);
+      return;
+    }
+
+    console.log("applyReferral: referral recorded");
+    clearPendingAfterSuccess();
+
+    const bumpGamification = async (userId: string, delta: number) => {
       const { data: row } = await supabase
         .from("gamification")
-        .select("fk_balance, total_earned")
+        .select("fk_balance, total_earned, streak_days, badges")
         .eq("user_id", userId)
         .maybeSingle();
-      if (!row) return;
-      await supabase
-        .from("gamification")
-        .update({
-          fk_balance: Number(row.fk_balance ?? 0) + amount,
-          total_earned: Number(row.total_earned ?? 0) + amount,
-        })
-        .eq("user_id", userId);
+
+      const fk = (Number(row?.fk_balance) || 0) + delta;
+      const total = (Number(row?.total_earned) || 0) + delta;
+
+      const { error: upErr } = await supabase.from("gamification").upsert(
+        {
+          user_id: userId,
+          fk_balance: fk,
+          total_earned: total,
+          streak_days: Number(row?.streak_days ?? 0),
+          badges: Array.isArray(row?.badges) ? row.badges : [],
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+      if (upErr) {
+        throw upErr;
+      }
     };
 
-    await bump(referrer.id, 200);
-    await bump(newUserId, 100);
+    await bumpGamification(referrer.id, 200);
+    await bumpGamification(newUserId, 100);
 
-    console.log("Referral: FK awarded");
+    const { error: userUpFullErr } = await supabase
+      .from("users")
+      .update({
+        referred_by: referrer.id,
+        referral_reward_given: true,
+      })
+      .eq("id", newUserId);
 
-    const { error: refErr } = await supabase.from("referrals").insert({
-      referrer_user_id: referrer.id,
-      referred_user_id: newUserId,
-    });
-    if (refErr) console.warn("referrals insert:", refErr.message);
+    if (userUpFullErr) {
+      console.warn("applyReferral: users update with referral_reward_given failed, retrying referred_by only", userUpFullErr);
+      await supabase.from("users").update({ referred_by: referrer.id }).eq("id", newUserId);
+    }
+
+    const { error: tokErr } = await supabase
+      .from("referrals")
+      .update({ tokens_awarded: true })
+      .eq("referred_id", newUserId);
+
+    if (tokErr) {
+      console.error("applyReferral: tokens_awarded update error", tokErr);
+    }
+
+    const { error: txnErr } = await supabase.from("fk_transactions").insert([
+      {
+        user_id: referrer.id,
+        amount: 200,
+        reason: "referral_reward_referrer",
+        reference_id: newUserId,
+      },
+      {
+        user_id: newUserId,
+        amount: 100,
+        reason: "referral_reward_new_user",
+        reference_id: referrer.id,
+      },
+    ]);
+
+    if (txnErr) {
+      console.error("applyReferral: fk_transactions insert error", txnErr);
+    }
+
+    console.log("applyReferral: SUCCESS", "referrer +200 FK,", "new user +100 FK");
 
     try {
       localStorage.setItem(
@@ -112,9 +246,11 @@ export async function applyPendingReferralRewards(supabase: SupabaseClient, newU
       /* ignore */
     }
 
+    useGamificationStore.setState({ lastFetched: null });
+    await useGamificationStore.getState().fetchGamification(newUserId);
     await useAuthStore.getState().refreshUser();
-  } catch (e) {
-    console.warn("applyPendingReferralRewards:", e);
+  } catch (err) {
+    console.error("applyReferral: ERROR", err);
   } finally {
     referralApplyLocks.delete(newUserId);
   }

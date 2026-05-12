@@ -3,6 +3,7 @@
 import ConsentModal from "@/components/analyse/ConsentModal";
 import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-form";
 import { Analytics } from "@/lib/analytics";
+import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { getSupabase, isConfigured } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -29,7 +30,7 @@ export default function AnalysePage() {
     if (!isLoggedIn || !user?.id) {
       if (redirectedToLoginRef.current) return;
       redirectedToLoginRef.current = true;
-      router.replace("/login?redirect=/analyse&mode=signup");
+      router.replace(loginHrefPreserveRef("/login?redirect=/analyse&mode=signup"));
       return;
     }
     redirectedToLoginRef.current = false;

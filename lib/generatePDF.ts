@@ -570,7 +570,20 @@ export async function downloadOptimizerPDF(
 
   newPage();
   addHeading("12-MONTH ACTION PLAN");
-  const phases = buildPhases();
+  if (Array.isArray(optimizerData?.keySnapshot) && optimizerData.keySnapshot.length > 0) {
+    addText("Your numbers at a glance:", 11, DARK, true);
+    y += 2;
+    optimizerData.keySnapshot.forEach((line: string) => {
+      if (y > H - 14) newPage();
+      addText(line, 9, GREY);
+      y += 5;
+    });
+    y += 6;
+  }
+  const phases =
+    Array.isArray(optimizerData?.phases) && optimizerData.phases.length > 0
+      ? optimizerData.phases
+      : buildPhases();
   phases.forEach((phase: any) => {
     if (y > H - 60) newPage();
     const phaseColor: readonly [number, number, number] = Array.isArray(phase.color) && phase.color.length === 3

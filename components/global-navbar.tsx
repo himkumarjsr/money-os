@@ -4,6 +4,7 @@ import NotificationBell from "@/components/NotificationBell";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { fadeIn } from "@/lib/animations";
+import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { trackNavClick } from "@/lib/gtag";
 import { useAuthStore } from "@/store/authStore";
 import { AnimatePresence, m } from "framer-motion";
@@ -184,7 +185,7 @@ export function GlobalNavbar() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {isLoggedIn && fkBalance > 0 ? (
+            {isLoggedIn ? (
               <span className="hidden rounded-full bg-[#EEEDFE] px-3 py-1 text-xs font-semibold text-[#3C3489] md:inline-flex">
                 🪙 {fkBalance} FK
               </span>
@@ -210,7 +211,7 @@ export function GlobalNavbar() {
 
             {!isLoggedIn ? (
               <Link
-                href="/login"
+                href={loginHrefPreserveRef("/login")}
                 scroll
                 className="hidden rounded-xl border border-[#E8E6F0] bg-white px-3.5 py-2 text-sm font-semibold text-[#534AB7] shadow-sm transition-colors hover:border-[#534AB7]/40 md:inline-flex"
               >
@@ -224,7 +225,7 @@ export function GlobalNavbar() {
               onClick={() => {
                 if (!hasInitialized) return;
                 if (!isLoggedIn) {
-                  router.push("/login");
+                  router.push(loginHrefPreserveRef("/login"));
                   return;
                 }
                 setProfileOpen((v) => !v);
@@ -424,7 +425,7 @@ export function GlobalNavbar() {
             <nav className="mt-8 flex flex-col gap-5">
               {!isLoggedIn ? (
                 <Link
-                  href="/login"
+                  href={loginHrefPreserveRef("/login")}
                   scroll
                   className="text-2xl font-semibold text-[#534AB7]"
                   onClick={() => setMobileOpen(false)}

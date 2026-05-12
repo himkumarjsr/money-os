@@ -27,6 +27,7 @@ import {
   startOfLocalDay,
   updateUserPolicy,
 } from "@/lib/userPolicies";
+import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -319,7 +320,7 @@ export default function PolicyVaultClient() {
             className="shrink-0 self-start bg-[#534AB7] text-white hover:opacity-95"
             onClick={() => {
               if (!isLoggedIn) {
-                router.push("/login?redirect=/policies");
+                router.push(loginHrefPreserveRef("/login?redirect=/policies"));
                 return;
               }
               openNew();
@@ -346,7 +347,7 @@ export default function PolicyVaultClient() {
               Save policies to Supabase, get renewal reminders, and sync across devices.
             </p>
             <Link
-              href="/login?redirect=/policies"
+              href={loginHrefPreserveRef("/login?redirect=/policies")}
               className="rounded-xl bg-[#534AB7] px-8 py-3 text-[15px] font-semibold text-white no-underline"
             >
               Sign in →

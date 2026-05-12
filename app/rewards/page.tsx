@@ -37,7 +37,7 @@ export default function RewardsPage() {
     };
   }, [user?.id]);
 
-  const fk = Number(gam?.fk_balance ?? user?.fkBalance ?? 0);
+  const fk = Number(gam?.fk_balance ?? 0);
   const earned = Number(gam?.total_earned ?? 0);
   const streak = Number(gam?.streak_days ?? 0);
   const badges = Array.isArray(gam?.badges) ? (gam!.badges as string[]) : [];
