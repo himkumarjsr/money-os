@@ -184,7 +184,7 @@ export function GlobalNavbar() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {isLoggedIn && fkBalance > 0 ? (
+            {isLoggedIn ? (
               <span className="hidden rounded-full bg-[#EEEDFE] px-3 py-1 text-xs font-semibold text-[#3C3489] md:inline-flex">
                 🪙 {fkBalance} FK
               </span>

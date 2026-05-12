@@ -58,14 +58,20 @@ export const useGamificationStore = create<GamificationState>()(
           }
 
           if (data) {
+            const fk = Number(data.fk_balance ?? 0);
             set({
-              fkBalance: Number(data.fk_balance ?? 0),
+              fkBalance: fk,
               totalEarned: Number(data.total_earned ?? 0),
               streakDays: Number(data.streak_days ?? 0),
               lastLoginDate: (data.last_login_date as string | null) ?? null,
               badges: Array.isArray(data.badges) ? (data.badges as string[]) : [],
               lastFetched: new Date().toISOString(),
             });
+            try {
+              await supabase.from("users").update({ fk_balance: fk }).eq("id", userId);
+            } catch {
+              /* ignore legacy users.fk_balance sync */
+            }
           } else {
             const { error: insertError } = await supabase.from("gamification").insert({
               user_id: userId,
@@ -78,6 +84,19 @@ export const useGamificationStore = create<GamificationState>()(
               console.error("fetchGamification insert error:", insertError);
               return;
             }
+            set({
+              fkBalance: 0,
+              totalEarned: 0,
+              streakDays: 0,
+              lastLoginDate: null,
+              badges: [],
+              lastFetched: new Date().toISOString(),
+            });
+            try {
+              await supabase.from("users").update({ fk_balance: 0 }).eq("id", userId);
+            } catch {
+              /* ignore */
+            }
           }
 
           const { data: rankData, error: rankError } = await supabase
@@ -87,10 +106,7 @@ export const useGamificationStore = create<GamificationState>()(
             .maybeSingle();
           if (rankError) {
             console.error("fetchGamification rank error:", rankError);
-            return;
-          }
-
-          if (rankData) {
+          } else if (rankData) {
             set({
               rank: Number(rankData.rank ?? 0) || null,
               percentile: Number(rankData.percentile ?? 0) || null,
@@ -133,6 +149,12 @@ export const useGamificationStore = create<GamificationState>()(
           );
           if (upsertError) {
             throw upsertError;
+          }
+
+          try {
+            await supabase.from("users").update({ fk_balance: newBalance }).eq("id", userId);
+          } catch {
+            /* ignore legacy users.fk_balance sync */
           }
 
           const { error: txnError } = await supabase.from("fk_transactions").insert({
