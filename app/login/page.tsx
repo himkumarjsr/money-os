@@ -42,15 +42,20 @@ function LoginContent() {
       const ref = params.get("ref")?.trim();
 
       if (ref) {
+        const normalized = ref.toUpperCase().trim();
+        console.log("Login page: ref in URL =", normalized);
         localStorage.setItem(
           REFERRAL_PENDING_STORAGE_KEY,
           JSON.stringify({
-            code: ref,
+            code: normalized,
             savedAt: new Date().toISOString(),
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           }),
         );
-        console.log("Login: captured ref", ref);
+        console.log("Login page: saved ref to localStorage");
+      } else {
+        const existing = localStorage.getItem(REFERRAL_PENDING_STORAGE_KEY);
+        console.log("Login page: existing ref =", existing);
       }
     } catch {
       /* ignore */
@@ -129,12 +134,23 @@ function LoginContent() {
       await initAuth();
 
       if (data.session?.user?.id) {
-        try {
-          const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
-          await applyPendingReferralRewards(getSupabase(), data.session.user.id);
-          console.log("Referral: processed after email signup");
-        } catch (e) {
-          console.warn("Referral signup error:", e);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const supabaseClient = getSupabase();
+        const {
+          data: { session: freshSession },
+        } = await supabaseClient.auth.getSession();
+        console.log("Login signup: session =", !!freshSession);
+        console.log("Login signup: checking referral");
+        const stored = localStorage.getItem(REFERRAL_PENDING_STORAGE_KEY);
+        console.log("Login signup: localStorage ref =", stored);
+        if (freshSession?.user) {
+          try {
+            const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
+            await applyPendingReferralRewards(supabaseClient, freshSession.user.id);
+            console.log("Login signup: referral done");
+          } catch (err) {
+            console.error("Login signup referral:", err);
+          }
         }
       }
 

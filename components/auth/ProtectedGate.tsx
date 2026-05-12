@@ -1,5 +1,6 @@
 "use client";
 
+import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { useAuthStore } from "@/store/authStore";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef } from "react";
@@ -18,7 +19,7 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
     if (hasInitialized && !isLoggedIn && !redirected.current) {
       redirected.current = true;
       const redirect = pathname || "/";
-      router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
+      router.replace(loginHrefPreserveRef(`/login?redirect=${encodeURIComponent(redirect)}`));
     }
   }, [hasInitialized, isLoggedIn, router, pathname]);
 

@@ -13,6 +13,23 @@ export const FINKOIN_REFERRAL_SUCCESS_KEY = "finkoin_referral_success";
 
 const referralApplyLocks = new Set<string>();
 
+/** Append current page `?ref=` to a `/login...` href so referral survives client navigations. */
+export function loginHrefPreserveRef(href: string): string {
+  if (typeof window === "undefined") return href;
+  const ref = new URLSearchParams(window.location.search).get("ref")?.trim();
+  if (!ref) return href;
+  try {
+    const u = new URL(href, window.location.origin);
+    if (!u.searchParams.get("ref")) {
+      u.searchParams.set("ref", ref);
+    }
+    return `${u.pathname}${u.search}`;
+  } catch {
+    const sep = href.includes("?") ? "&" : "?";
+    return `${href}${sep}ref=${encodeURIComponent(ref)}`;
+  }
+}
+
 /**
  * Read pending referral code without removing it (safe if signup fails before apply succeeds).
  */

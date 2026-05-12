@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/cn";
 import { trackEvent } from "@/lib/gtag";
+import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -406,7 +407,9 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
                 Close
               </button>
               <Link
-                href={`/login?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`}
+                href={loginHrefPreserveRef(
+                  `/login?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`,
+                )}
                 className="flex flex-1 items-center justify-center rounded-xl bg-[#534AB7] py-3 text-sm font-semibold text-white"
                 onClick={onClose}
               >

@@ -3,6 +3,7 @@
 import { getCachedPlan, hashProfile, setCachedPlan } from "@/lib/cache";
 import { downloadOptimizerPDF } from "@/lib/generatePDF";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
+import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -177,7 +178,7 @@ export default function FixPlanPage() {
   useEffect(() => {
     if (!hasInitialized) return;
     if (!isLoggedIn) {
-      router.replace("/login?redirect=/analyse/fixplan");
+      router.replace(loginHrefPreserveRef("/login?redirect=/analyse/fixplan"));
       return;
     }
     let mounted = true;
