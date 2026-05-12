@@ -546,18 +546,24 @@ export default function FixPlanPage() {
                     const outstanding = Number(debt.outstanding || debt.balance || 0);
                     const currentEMI = Number(debt.emi || debt.monthlyEMI || 0);
                     const totalPayment = currentEMI + extraPayment;
-                    const monthsNow =
+                    let monthsNow =
                       extraPayment > 0 && totalPayment > 0 && rateM > 0 && outstanding > 0
                         ? Math.ceil(
                             -Math.log(1 - (rateM * outstanding) / totalPayment) / Math.log(1 + rateM),
                           )
                         : Number(debt.monthsToClearWithExtra || 0);
-                    const monthsOriginal =
+                    if (!Number.isFinite(monthsNow) || monthsNow < 0 || monthsNow > 600) {
+                      monthsNow = Number(debt.monthsToClearWithExtra || 0);
+                    }
+                    let monthsOriginal =
                       currentEMI > 0 && rateM > 0 && outstanding > 0
                         ? Math.ceil(
                             -Math.log(1 - (rateM * outstanding) / currentEMI) / Math.log(1 + rateM),
                           )
                         : 0;
+                    if (!Number.isFinite(monthsOriginal) || monthsOriginal < 0 || monthsOriginal > 600) {
+                      monthsOriginal = 0;
+                    }
                     const monthsSaved = Math.max(0, monthsOriginal - monthsNow);
                     const interestSaved = Math.round(
                       extraPayment > 0
