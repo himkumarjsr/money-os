@@ -28,6 +28,7 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
   emergency: dyn(() =>
     import("./EmergencyFundCalculator").then((m) => ({ default: m.EmergencyFundCalculator })),
   ),
+  fire: dyn(() => import("./FIRECalculator").then((m) => ({ default: m.FIRECalculator }))),
   emi: dyn(() => import("./EMICalculator").then((m) => ({ default: m.EMICalculator }))),
   home: dyn(() => import("./HomeLoanCalculator").then((m) => ({ default: m.HomeLoanCalculator }))),
   car: dyn(() => import("./CarLoanCalculator").then((m) => ({ default: m.CarLoanCalculator }))),
