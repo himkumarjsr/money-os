@@ -2,6 +2,7 @@ import { ArticleShare } from "@/components/learn/article-share";
 import { ArticleTracker } from "@/components/learn/article-tracker";
 import CompoundInterestGuide from "@/components/learn/CompoundInterestGuide";
 import EmergencyFundGuide from "@/components/learn/EmergencyFundGuide";
+import IndexFundGuide from "@/components/learn/IndexFundGuide";
 import TermInsuranceVsEndowmentGuide from "@/components/learn/TermInsuranceVsEndowmentGuide";
 import IncomeTaxGuideFY2526 from "@/components/learn/tax/IncomeTaxGuideFY2526";
 import OldVsNewRegimeGuideFY2526 from "@/components/learn/tax/OldVsNewRegimeGuideFY2526";
@@ -303,6 +304,15 @@ export default function LearnArticlePage({ params }: PageProps) {
               ))}
             </div>
             <TermInsuranceVsEndowmentGuide />
+          </div>
+        ) : article.id === "what-is-an-index-fund-and-why-it-beats-most-mutual-funds" ? (
+          <div className="w-full min-w-0 space-y-8">
+            <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+              {article.content.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+            <IndexFundGuide />
           </div>
         ) : article.id === "emergency-fund-how-much-where-to-keep-it" ? (
           <>

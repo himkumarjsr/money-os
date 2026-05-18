@@ -68,17 +68,14 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "what-is-an-index-fund-and-why-it-beats-most-mutual-funds",
-    title: "What is an index fund and why it beats most mutual funds",
+    title: "What Is an Index Fund and Why It Beats Most Mutual Funds",
     subtitle:
-      "Owning the market cheaply is a surprisingly strong strategy — most active managers underperform after fees.",
+      "SPIVA data, expense ratios, and a ₹7.5 lakh fee example — why copying Nifty 50 often beats stock-picking after costs.",
     category: "Investment",
-    readTime: 6,
+    readTime: 8,
     content: [
-      "An index mutual fund or ETF tries to replicate a benchmark like Nifty 50 or Sensex by holding the same stocks in nearly the same weights. It does not attempt to pick winners; it owns the whole slice of the market the index represents.",
-      "Because turnover is low and there is no star fund-manager salary embedded, expense ratios are usually tiny — sometimes a fraction of active funds. In investing, costs are one of the few things you control directly, and they compound against you just returns compound for you.",
-      "Studies globally and in India repeatedly show that after fees, a minority of active funds beat their benchmark consistently over long periods. Identifying those few in advance is hard for retail investors, who often chase last year’s chart-topper and arrive late to the cycle.",
-      "Index funds do not eliminate risk: if the market falls 30%, your fund falls with it. They remove stock-picking risk but keep market risk. That is why asset allocation — mixing equity index funds with debt and emergency cash — still matters for goals with fixed dates.",
-      "A practical path: use broad equity index funds for long horizons (7+ years), add mid/small-cap index exposure only if you accept higher volatility, and pair with liquid or short-duration debt for stability. Rebalance once or twice a year instead of reacting to headlines.",
+      "An index fund copies a benchmark like Nifty 50 at very low cost. Below: a cricket-team analogy, how indices work, the chai-stall fee example, SPIVA India numbers, where active funds still compete, taxes, myths, and a practical core–satellite approach.",
+      "Last updated: May 2026. Educational only — not investment advice.",
     ],
   },
   {
