@@ -11,6 +11,8 @@ import {
   learnArticles,
   type LearnCategory,
 } from "@/lib/learnContent";
+import { getRichLearnArticle } from "@/lib/learnRichArticles";
+import { LearnRichArticleRenderer } from "@/components/learn/LearnRichArticleRenderer";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -42,6 +44,27 @@ export async function generateMetadata({
     return {
       title: "Article not found | Finkoin Learn",
       robots: { index: false, follow: false },
+    };
+  }
+
+  const richLearn = getRichLearnArticle(article.id);
+  if (richLearn) {
+    return {
+      title: { absolute: richLearn.seoTitle },
+      description: richLearn.seoDescription,
+      alternates: { canonical: `/learn/${article.id}` },
+      keywords: [...richLearn.tags, "India", "personal finance", "Finkoin"],
+      openGraph: {
+        title: richLearn.seoTitle,
+        description: richLearn.seoDescription,
+        type: "article",
+        url: `${SITE_URL}/learn/${article.id}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: richLearn.seoTitle,
+        description: richLearn.seoDescription,
+      },
     };
   }
 
@@ -188,6 +211,8 @@ export async function generateMetadata({
 export default function LearnArticlePage({ params }: PageProps) {
   const article = learnArticleById[params.id];
   if (!article) notFound();
+
+  const richLearn = getRichLearnArticle(article.id);
 
   const related = learnArticles
     .filter((a) => a.category === article.category && a.id !== article.id)
@@ -395,6 +420,8 @@ export default function LearnArticlePage({ params }: PageProps) {
               <EmergencyFundGuide />
             </div>
           </>
+        ) : richLearn ? (
+          <LearnRichArticleRenderer rich={richLearn} />
         ) : (
           <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 text-[18px] leading-[1.8] text-slate-800">
             {article.content.map((para, i) => (
@@ -403,7 +430,7 @@ export default function LearnArticlePage({ params }: PageProps) {
           </div>
         )}
 
-        {related.length > 0 ? (
+        {!richLearn && related.length > 0 ? (
           <section className="mt-16 border-t border-slate-200 pt-12">
             <h2 className="text-xl font-semibold text-slate-900">
               Related articles
