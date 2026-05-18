@@ -2,6 +2,7 @@ import { ArticleShare } from "@/components/learn/article-share";
 import { ArticleTracker } from "@/components/learn/article-tracker";
 import CompoundInterestGuide from "@/components/learn/CompoundInterestGuide";
 import EmergencyFundGuide from "@/components/learn/EmergencyFundGuide";
+import IndexFundGuide from "@/components/learn/IndexFundGuide";
 import TermInsuranceVsEndowmentGuide from "@/components/learn/TermInsuranceVsEndowmentGuide";
 import IncomeTaxGuideFY2526 from "@/components/learn/tax/IncomeTaxGuideFY2526";
 import OldVsNewRegimeGuideFY2526 from "@/components/learn/tax/OldVsNewRegimeGuideFY2526";
@@ -10,6 +11,8 @@ import {
   learnArticles,
   type LearnCategory,
 } from "@/lib/learnContent";
+import { getRichLearnArticle } from "@/lib/learnRichArticles";
+import { LearnRichArticleRenderer } from "@/components/learn/LearnRichArticleRenderer";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -41,6 +44,27 @@ export async function generateMetadata({
     return {
       title: "Article not found | Finkoin Learn",
       robots: { index: false, follow: false },
+    };
+  }
+
+  const richLearn = getRichLearnArticle(article.id);
+  if (richLearn) {
+    return {
+      title: { absolute: richLearn.seoTitle },
+      description: richLearn.seoDescription,
+      alternates: { canonical: `/learn/${article.id}` },
+      keywords: [...richLearn.tags, "India", "personal finance", "Finkoin"],
+      openGraph: {
+        title: richLearn.seoTitle,
+        description: richLearn.seoDescription,
+        type: "article",
+        url: `${SITE_URL}/learn/${article.id}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: richLearn.seoTitle,
+        description: richLearn.seoDescription,
+      },
     };
   }
 
@@ -188,6 +212,8 @@ export default function LearnArticlePage({ params }: PageProps) {
   const article = learnArticleById[params.id];
   if (!article) notFound();
 
+  const richLearn = getRichLearnArticle(article.id);
+
   const related = learnArticles
     .filter((a) => a.category === article.category && a.id !== article.id)
     .slice(0, 3);
@@ -304,6 +330,15 @@ export default function LearnArticlePage({ params }: PageProps) {
             </div>
             <TermInsuranceVsEndowmentGuide />
           </div>
+        ) : article.id === "what-is-an-index-fund-and-why-it-beats-most-mutual-funds" ? (
+          <div className="w-full min-w-0 space-y-8">
+            <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+              {article.content.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+            <IndexFundGuide />
+          </div>
         ) : article.id === "emergency-fund-how-much-where-to-keep-it" ? (
           <>
             <script
@@ -385,6 +420,8 @@ export default function LearnArticlePage({ params }: PageProps) {
               <EmergencyFundGuide />
             </div>
           </>
+        ) : richLearn ? (
+          <LearnRichArticleRenderer rich={richLearn} />
         ) : (
           <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 text-[18px] leading-[1.8] text-slate-800">
             {article.content.map((para, i) => (
@@ -393,7 +430,7 @@ export default function LearnArticlePage({ params }: PageProps) {
           </div>
         )}
 
-        {related.length > 0 ? (
+        {!richLearn && related.length > 0 ? (
           <section className="mt-16 border-t border-slate-200 pt-12">
             <h2 className="text-xl font-semibold text-slate-900">
               Related articles
