@@ -17,8 +17,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Article not found | Finkoin" };
   }
   const ogPath = `/og/blog/${article.slug}.png`;
+  const pageTitle = article.metaTitle ?? `${article.title} | Finkoin`;
   return {
-    title: `${article.title} | Finkoin`,
+    title: article.metaTitle ? { absolute: article.metaTitle } : pageTitle,
     description: article.description,
     keywords: article.keywords,
     authors: [{ name: "Himanshu Kumar" }],
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical: `/blog/${article.slug}`,
     },
     openGraph: {
-      title: article.title,
+      title: article.metaTitle ?? article.title,
       description: article.description,
       type: "article",
       publishedTime: article.publishedAt,
@@ -37,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: article.title,
+      title: article.metaTitle ?? article.title,
       description: article.description,
       images: [`${SITE_URL}${ogPath}`],
     },
@@ -106,6 +107,7 @@ export default function BlogArticlePage({ params }: Props) {
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{article.title}</h1>
         <p className="mt-2 text-sm text-slate-500">
           By Himanshu Kumar · {article.publishedAt}
+          {article.readTimeMinutes ? ` · ${article.readTimeMinutes} min read` : null}
         </p>
         <div className="prose-slate mt-8 max-w-none">{renderBlogBody(article.body)}</div>
 

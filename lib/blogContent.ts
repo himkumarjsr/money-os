@@ -1,3 +1,4 @@
+import fireNumberIndia from "./data/blog-fire-number-india";
 import oldVsNewTaxRoi2026 from "./data/blog-old-vs-new-tax-roi-2026";
 
 export type BlogArticle = {
@@ -9,9 +10,14 @@ export type BlogArticle = {
   category: string;
   body: string;
   faq?: { q: string; a: string }[];
+  /** Optional absolute SEO title (≤60 chars). Falls back to `${title} | Finkoin`. */
+  metaTitle?: string;
+  /** Optional read time shown on article page. */
+  readTimeMinutes?: number;
 };
 
 export const BLOG_ARTICLES: BlogArticle[] = [
+  fireNumberIndia as BlogArticle,
   oldVsNewTaxRoi2026 as BlogArticle,
   {
     slug: "know-taxation-in-india",
