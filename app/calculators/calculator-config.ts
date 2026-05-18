@@ -19,6 +19,19 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
       { id: "ppf", title: "PPF", blurb: "15-year Public Provident Fund" },
       { id: "nsc", title: "NSC", blurb: "5-year National Savings Certificate" },
       { id: "emergency", title: "Emergency fund", blurb: "Target vs gap by life stage" },
+      {
+        id: "fire",
+        title: "FIRE number",
+        blurb: "Financial independence target — 25× expenses + loans",
+        icon: "🔥",
+        keywords: [
+          "FIRE number calculator India",
+          "financial independence calculator",
+          "retire early India",
+          "4 percent rule India",
+          "how much to retire India",
+        ],
+      },
     ],
   },
   {

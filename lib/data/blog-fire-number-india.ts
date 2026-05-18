@@ -253,7 +253,7 @@ Fill this in:
 5. **Total FIRE target** = ₹___  
 6. Current investment corpus: ₹___  
 7. **Gap** = step 5 − step 6 = ₹___  
-8. Monthly SIP to close gap: use the [free calculators](/calculators) on Finkoin
+8. Monthly SIP to close gap: use the [FIRE number calculator](/calculators?calc=fire) on Finkoin
 
 ### Example
 
