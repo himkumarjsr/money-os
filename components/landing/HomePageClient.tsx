@@ -69,7 +69,7 @@ export default function HomePageClient() {
                 Finkoin · Money OS for India
               </p>
             </AnimateOnScroll>
-            <div className="mt-4 sm:mt-5">
+            <div className="sm:mt-5">
               <HomeHeroCarousel />
             </div>
             <div className="mt-3 flex flex-col items-center gap-4 sm:mt-3">

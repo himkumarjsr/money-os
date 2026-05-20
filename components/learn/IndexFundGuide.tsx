@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Card({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
-    </div>
+    <section id={id} className={id ? "scroll-mt-24" : undefined}>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+        <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
+      </div>
+    </section>
   );
 }
 
@@ -51,7 +53,7 @@ export default function IndexFundGuide() {
       </p>
       <p className="text-xs text-slate-500">Last updated: May 2026</p>
 
-      <Card title="The cricket team analogy">
+      <Card id="cricket-analogy" title="The cricket team analogy">
         <p className="mb-4">
           Imagine you want to bet on Indian cricket. You have two choices:
         </p>
@@ -76,7 +78,7 @@ export default function IndexFundGuide() {
         </StatHighlight>
       </Card>
 
-      <Card title="What is an index?">
+      <Card id="what-is-index" title="What is an index?">
         <p className="mb-4">
           An index is just a <strong className="font-semibold text-slate-900">list</strong>.{" "}
           <strong className="font-semibold text-slate-900">Nifty 50</strong> = the top 50 companies on the National Stock
@@ -119,7 +121,7 @@ export default function IndexFundGuide() {
         </div>
       </Card>
 
-      <Card title="What is an index fund?">
+      <Card id="what-is-index-fund" title="What is an index fund?">
         <p className="mb-4">
           An index fund <strong className="font-semibold text-slate-900">copies the index</strong> — same stocks, same
           proportions. No fund manager picking names; the fund’s job is to track the benchmark as closely as costs allow.
@@ -143,7 +145,7 @@ export default function IndexFundGuide() {
         <p className="mt-4 text-slate-600">No research team. No stock-picking mandate. Just copy.</p>
       </Card>
 
-      <Card title="The chai stall example — fees compound">
+      <Card id="fee-example" title="The chai stall example — fees compound">
         <p className="mb-4">
           <strong className="font-semibold text-slate-900">Rohan</strong> and{" "}
           <strong className="font-semibold text-slate-900">Priya</strong> each invest{" "}
@@ -171,7 +173,7 @@ export default function IndexFundGuide() {
         </StatHighlight>
       </Card>
 
-      <Card title="SPIVA — the shocking data">
+      <Card id="spiva" title="SPIVA — the shocking data">
         <p className="mb-4">
           This is not theory. <strong className="font-semibold text-slate-900">SPIVA India Year-End 2024</strong> is among
           the most cited studies on active vs passive performance in India.
@@ -198,7 +200,7 @@ export default function IndexFundGuide() {
         </p>
       </Card>
 
-      <Card title="Expense ratio — the silent killer">
+      <Card id="expense-ratio" title="Expense ratio — the silent killer">
         <p className="mb-4">
           Every mutual fund charges an annual <strong className="font-semibold text-slate-900">expense ratio</strong>. You
           never write a separate cheque; it is deducted from NAV and quietly reduces your compounding.
@@ -258,7 +260,7 @@ export default function IndexFundGuide() {
         </div>
       </Card>
 
-      <Card title="Where active funds still win">
+      <Card id="active-wins" title="Where active funds still win">
         <p className="mb-4">
           Index funds are not perfect for every pocket of the market. SPIVA India{" "}
           <strong className="font-semibold text-slate-900">Mid-Year 2025</strong>: in mid and small cap, only{" "}
@@ -281,7 +283,7 @@ export default function IndexFundGuide() {
         </ul>
       </Card>
 
-      <Card title="How to start">
+      <Card id="how-to-start" title="How to start">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             Minimum: many index funds allow SIP from about{" "}
@@ -305,7 +307,7 @@ export default function IndexFundGuide() {
         </ul>
       </Card>
 
-      <Card title="Taxes on index funds">
+      <Card id="taxes" title="Taxes on index funds">
         <p className="mb-3">Index funds are taxed like other equity mutual funds (rules as commonly understood in 2026):</p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
@@ -324,7 +326,7 @@ export default function IndexFundGuide() {
         <p className="mt-4 text-slate-600">For long goals, holding beyond one year avoids unnecessary STCG and lets compounding run.</p>
       </Card>
 
-      <Card title="Common myths busted">
+      <Card id="myths" title="Common myths busted">
         <ul className="space-y-4">
           <li>
             <strong className="font-semibold text-slate-900">Myth 1: “Index funds only give average returns.”</strong>

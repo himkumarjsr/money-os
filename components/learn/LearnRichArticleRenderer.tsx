@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { RichArticle, RichBlock, RichSection } from "@/lib/learnRichArticles";
+import { getLearnArticleFaqs, tocWithFaq } from "@/lib/learnArticleFaqs";
+import { LearnArticleLayout } from "@/components/learn/LearnArticleLayout";
+import LearnFaqAccordion from "@/components/learn/LearnFaqAccordion";
 
 function Block({ block }: { block: RichBlock }) {
   if (block.kind === "p") {
@@ -71,86 +74,82 @@ function SectionBlock({ section }: { section: RichSection }) {
   );
 }
 
-export function LearnRichArticleRenderer({ rich }: { rich: RichArticle }) {
+export function LearnRichArticleRenderer({ rich, articleId }: { rich: RichArticle; articleId: string }) {
+  const faqs = getLearnArticleFaqs(articleId);
+  const toc = tocWithFaq([{ id: "intro", label: "Introduction" }, ...rich.toc]);
+
   return (
-    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-10 pb-8 text-slate-900">
-      <div className="space-y-3 border-b border-slate-200 pb-6">
-        <p className="text-sm text-slate-500">Last updated: May 2026</p>
-        <div className="flex flex-wrap gap-2">
-          {rich.tags.map((t) => (
-            <span
-              key={t}
-              className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {rich.intro.map((text, i) => (
-          <p key={i} className="text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
-            {text}
-          </p>
-        ))}
-      </div>
-
-      <nav
-        aria-label="Table of contents"
-        className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5"
-      >
-        <p className="text-sm font-semibold text-slate-900">On this page</p>
-        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-[#534AB7]">
-          {rich.toc.map((item) => (
-            <li key={item.id}>
-              <a href={`#${item.id}`} className="hover:underline">
-                {item.label}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-
-      <div className="space-y-12">
-        {rich.sections.map((s) => (
-          <SectionBlock key={s.id} section={s} />
-        ))}
-      </div>
-
-      {rich.finkoinTip ? (
-        <div className="rounded-xl border border-[#534AB7]/30 bg-[#F7F6FE] p-4 text-sm text-[#3C3489] sm:text-base">
-          <p className="font-semibold text-[#534AB7]">Finkoin tip</p>
-          <p className="mt-2 leading-relaxed">{rich.finkoinTip}</p>
-          <Link href={rich.finkoinTipHref ?? "/analyse"} className="mt-3 inline-block font-semibold hover:underline">
-            Try it on Finkoin →
-          </Link>
-        </div>
-      ) : null}
-
-      <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-950 sm:text-sm">
-        <strong className="font-semibold">Educational only.</strong> Not personalised financial, tax, or investment
-        advice. Finkoin is not a SEBI-registered investment advisor. Verify rates, rules, and product terms with your
-        bank, insurer, or a qualified professional before acting.
-      </div>
-
-      <section aria-labelledby="rich-related" className="border-t border-slate-200 pt-10">
-        <h2 id="rich-related" className="text-lg font-semibold text-slate-900">
-          Related articles
-        </h2>
-        <ul className="mt-4 space-y-3">
-          {rich.related.map((r) => (
-            <li key={r.id}>
-              <Link
-                href={`/learn/${r.id}`}
-                className="block rounded-xl border border-slate-200 bg-slate-50/80 p-4 font-semibold text-[#534AB7] transition hover:border-[#534AB7]/40 hover:underline"
+    <LearnArticleLayout
+      toc={toc}
+      asideNote={
+        <>
+          Last updated: <strong>May 2026</strong>
+        </>
+      }
+    >
+      <div className="min-w-0 space-y-12 pb-8 text-slate-900">
+        <div id="intro" className="scroll-mt-24 space-y-3 border-b border-slate-200 pb-6">
+          <div className="flex flex-wrap gap-2">
+            {rich.tags.map((t) => (
+              <span
+                key={t}
+                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200"
               >
-                {r.title} →
-              </Link>
-            </li>
+                {t}
+              </span>
+            ))}
+          </div>
+          <div className="space-y-4">
+            {rich.intro.map((text, i) => (
+              <p key={i} className="text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+                {text}
+              </p>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-12">
+          {rich.sections.map((s) => (
+            <SectionBlock key={s.id} section={s} />
           ))}
-        </ul>
-      </section>
-    </div>
+        </div>
+
+        {rich.finkoinTip ? (
+          <div className="rounded-xl border border-[#534AB7]/30 bg-[#F7F6FE] p-4 text-sm text-[#3C3489] sm:text-base">
+            <p className="font-semibold text-[#534AB7]">Finkoin tip</p>
+            <p className="mt-2 leading-relaxed">{rich.finkoinTip}</p>
+            <Link href={rich.finkoinTipHref ?? "/analyse"} className="mt-3 inline-block font-semibold hover:underline">
+              Try it on Finkoin →
+            </Link>
+          </div>
+        ) : null}
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-950 sm:text-sm">
+          <strong className="font-semibold">Educational only.</strong> Not personalised financial, tax, or investment
+          advice. Finkoin is not a SEBI-registered investment advisor. Verify rates, rules, and product terms with your
+          bank, insurer, or a qualified professional before acting.
+        </div>
+
+        <LearnFaqAccordion faqs={faqs} />
+
+        <section aria-labelledby="rich-related" className="border-t border-slate-200 pt-10">
+          <h2 id="rich-related" className="text-lg font-semibold text-slate-900">
+            Related articles
+          </h2>
+          <ul className="mt-4 space-y-3">
+            {rich.related.map((r) => (
+              <li key={r.id}>
+                <Link
+                  href={`/learn/${r.id}`}
+                  className="block rounded-xl border border-slate-200 bg-slate-50/80 p-4 font-semibold text-[#534AB7] transition hover:border-[#534AB7]/40 hover:underline"
+                >
+                  {r.title} →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </LearnArticleLayout>
   );
 }

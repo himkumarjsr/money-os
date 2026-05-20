@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import TaxFaqAccordion, { type TaxFaq } from "@/components/learn/tax/TaxFaqAccordion";
+import { LearnArticleLayout } from "@/components/learn/LearnArticleLayout";
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -33,23 +34,10 @@ export default function OldVsNewRegimeGuideFY2526() {
   ];
 
   return (
-    <div className="grid min-w-0 gap-10 lg:grid-cols-[280px_1fr]">
-      <aside className="hidden lg:block">
-        <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-sm font-semibold text-slate-900">On this page</div>
-          <nav className="mt-3 space-y-2 text-sm" aria-label="Table of contents">
-            {toc.map((t) => (
-              <a key={t.id} href={`#${t.id}`} className="block rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-50 hover:text-[#534AB7]">
-                {t.label}
-              </a>
-            ))}
-          </nav>
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-            Use the calculator for the exact number.
-          </div>
-        </div>
-      </aside>
-
+    <LearnArticleLayout
+      toc={toc}
+      asideNote="Use the calculator for the exact number."
+    >
       <div className="min-w-0 space-y-12">
         <Section id="how-to-decide" title="How to decide (2-minute method)">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -146,7 +134,7 @@ export default function OldVsNewRegimeGuideFY2526() {
 
         <TaxFaqAccordion faqs={FAQS} />
       </div>
-    </div>
+    </LearnArticleLayout>
   );
 }
 

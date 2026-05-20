@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Card({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
-    </div>
+    <section id={id} className={id ? "scroll-mt-24" : undefined}>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+        <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
+      </div>
+    </section>
   );
 }
 
@@ -19,7 +21,7 @@ export default function CompoundInterestGuide() {
         <em>and</em> on gains already added — that is the snowball.
       </p>
 
-      <Card title="The formula (lump sum, easy version)">
+      <Card id="formula" title="The formula (lump sum, easy version)">
         <p className="mb-4">
           If you put one amount today and leave it to grow at the <em>same</em> yearly rate, a clean approximation is:
         </p>
@@ -48,7 +50,7 @@ export default function CompoundInterestGuide() {
         </p>
       </Card>
 
-      <Card title="Tiny example with real numbers">
+      <Card id="example" title="Tiny example with real numbers">
         <p className="mb-4">
           You invest <strong className="font-semibold text-slate-900">₹10,000</strong> once. Return{" "}
           <strong className="font-semibold text-slate-900">10% per year</strong> (just for maths — not a promise).
@@ -91,7 +93,7 @@ export default function CompoundInterestGuide() {
         </p>
       </Card>
 
-      <Card title="How this helps with mutual funds (MFs) — simple picture">
+      <Card id="mutual-funds" title="How this helps with mutual funds (MFs) — simple picture">
         <ul className="list-disc space-y-3 pl-5">
           <li>
             In a mutual fund, your money buys <strong className="font-semibold text-slate-900">units</strong>. When the
@@ -123,14 +125,14 @@ export default function CompoundInterestGuide() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card title="Rule of 72 (quick mental maths)">
+        <Card id="rule-72" title="Rule of 72 (quick mental maths)">
           <p>
             About how many years to <em>roughly</em> double money at a steady yearly rate? Divide{" "}
             <strong className="font-semibold text-slate-900">72</strong> by the rate in percent. Example: at ~8% a year,
             72 ÷ 8 ≈ <strong className="font-semibold text-slate-900">9 years</strong> to double. It is an estimate, not exact.
           </p>
         </Card>
-        <Card title="Three habits that protect compounding">
+        <Card id="habits" title="Three habits that protect compounding">
           <ul className="list-disc space-y-2 pl-5">
             <li>Start as early as you can, even small.</li>
             <li>Avoid stopping SIPs every time the market dips (unless your goal or cash situation really changed).</li>
