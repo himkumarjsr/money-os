@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import TaxFaqAccordion, { type TaxFaq } from "@/components/learn/tax/TaxFaqAccordion";
 import TaxRegimeToggle from "@/components/learn/tax/TaxRegimeToggle";
+import { LearnArticleLayout } from "@/components/learn/LearnArticleLayout";
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -91,23 +92,14 @@ export default function IncomeTaxGuideFY2526() {
   ];
 
   return (
-    <div className="grid min-w-0 gap-10 lg:grid-cols-[280px_1fr]">
-      <aside className="hidden lg:block">
-        <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-sm font-semibold text-slate-900">On this page</div>
-          <nav className="mt-3 space-y-2 text-sm" aria-label="Table of contents">
-            {toc.map((t) => (
-              <a key={t.id} href={`#${t.id}`} className="block rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-50 hover:text-[#534AB7]">
-                {t.label}
-              </a>
-            ))}
-          </nav>
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-            Updated for <strong>FY 2025-26 (AY 2026-27)</strong>.
-          </div>
-        </div>
-      </aside>
-
+    <LearnArticleLayout
+      toc={toc}
+      asideNote={
+        <>
+          Updated for <strong>FY 2025-26 (AY 2026-27)</strong>.
+        </>
+      }
+    >
       <div className="min-w-0 space-y-12">
         <Section
           id="hero"
@@ -588,7 +580,7 @@ export default function IncomeTaxGuideFY2526() {
           </Link>
         </section>
       </div>
-    </div>
+    </LearnArticleLayout>
   );
 }
 

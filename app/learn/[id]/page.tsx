@@ -13,6 +13,7 @@ import {
 } from "@/lib/learnContent";
 import { getRichLearnArticle } from "@/lib/learnRichArticles";
 import { LearnRichArticleRenderer } from "@/components/learn/LearnRichArticleRenderer";
+import { LearnPlainArticle, LearnSimpleArticle } from "@/components/learn/LearnSimpleArticle";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -313,32 +314,75 @@ export default function LearnArticlePage({ params }: PageProps) {
             <OldVsNewRegimeGuideFY2526 />
           </>
         ) : article.id === "what-is-compound-interest-and-why-it-changes-everything" ? (
-          <div className="w-full min-w-0 space-y-8">
-            <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+          <LearnSimpleArticle
+            article={article}
+            toc={[
+              { id: "intro", label: "Start here" },
+              { id: "formula", label: "The formula" },
+              { id: "example", label: "Worked example" },
+              { id: "mutual-funds", label: "Mutual funds" },
+              { id: "rule-72", label: "Rule of 72" },
+              { id: "habits", label: "Protect compounding" },
+            ]}
+          >
+            <section
+              id="intro"
+              className="scroll-mt-24 space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]"
+            >
               {article.content.map((para, i) => (
                 <p key={i}>{para}</p>
               ))}
-            </div>
+            </section>
             <CompoundInterestGuide />
-          </div>
+          </LearnSimpleArticle>
         ) : article.id === "term-insurance-vs-endowment-why-most-indians-buy-wrong" ? (
-          <div className="w-full min-w-0 space-y-8">
-            <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+          <LearnSimpleArticle
+            article={article}
+            toc={[
+              { id: "intro", label: "Start here" },
+              { id: "why-matters", label: "Why this matters" },
+              { id: "example", label: "Illustrative example" },
+              { id: "buying-wrong", label: "Buying wrong" },
+              { id: "premium-discipline", label: "Premium discipline" },
+            ]}
+          >
+            <section
+              id="intro"
+              className="scroll-mt-24 space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]"
+            >
               {article.content.map((para, i) => (
                 <p key={i}>{para}</p>
               ))}
-            </div>
+            </section>
             <TermInsuranceVsEndowmentGuide />
-          </div>
+          </LearnSimpleArticle>
         ) : article.id === "what-is-an-index-fund-and-why-it-beats-most-mutual-funds" ? (
-          <div className="w-full min-w-0 space-y-8">
-            <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+          <LearnSimpleArticle
+            article={article}
+            toc={[
+              { id: "intro", label: "Start here" },
+              { id: "cricket-analogy", label: "Cricket analogy" },
+              { id: "what-is-index", label: "What is an index?" },
+              { id: "what-is-index-fund", label: "Index funds" },
+              { id: "fee-example", label: "Fee example" },
+              { id: "spiva", label: "SPIVA data" },
+              { id: "expense-ratio", label: "Expense ratio" },
+              { id: "active-wins", label: "Active funds" },
+              { id: "how-to-start", label: "How to start" },
+              { id: "taxes", label: "Taxes" },
+              { id: "myths", label: "Myths busted" },
+            ]}
+          >
+            <section
+              id="intro"
+              className="scroll-mt-24 space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]"
+            >
               {article.content.map((para, i) => (
                 <p key={i}>{para}</p>
               ))}
-            </div>
+            </section>
             <IndexFundGuide />
-          </div>
+          </LearnSimpleArticle>
         ) : article.id === "emergency-fund-how-much-where-to-keep-it" ? (
           <>
             <script
@@ -411,23 +455,39 @@ export default function LearnArticlePage({ params }: PageProps) {
                 }),
               }}
             />
-            <div className="w-full min-w-0 space-y-8">
-              <div className="space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+            <LearnSimpleArticle
+              article={article}
+              asideNote={
+                <>
+                  Target: up to <strong>12 months</strong> of essential expenses.
+                </>
+              }
+              toc={[
+                { id: "intro", label: "Start here" },
+                { id: "why-first", label: "Why first" },
+                { id: "one-month", label: "Count one month" },
+                { id: "life-stages", label: "Life stages" },
+                { id: "rupee-example", label: "Rupee example" },
+                { id: "where-to-keep", label: "Where to keep" },
+                { id: "home-loan", label: "Home loan EMIs" },
+                { id: "build-rebuild", label: "Build & rebuild" },
+              ]}
+            >
+              <section
+                id="intro"
+                className="scroll-mt-24 space-y-4 text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]"
+              >
                 {article.content.map((para, i) => (
                   <p key={i}>{para}</p>
                 ))}
-              </div>
+              </section>
               <EmergencyFundGuide />
-            </div>
+            </LearnSimpleArticle>
           </>
         ) : richLearn ? (
-          <LearnRichArticleRenderer rich={richLearn} />
+          <LearnRichArticleRenderer rich={richLearn} articleId={article.id} />
         ) : (
-          <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 text-[18px] leading-[1.8] text-slate-800">
-            {article.content.map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
-          </div>
+          <LearnPlainArticle article={article} />
         )}
 
         {!richLearn && related.length > 0 ? (

@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Card({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
-    </div>
+    <section id={id} className={id ? "scroll-mt-24" : undefined}>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+        <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
+      </div>
+    </section>
   );
 }
 
@@ -21,7 +23,7 @@ export default function TermInsuranceVsEndowmentGuide() {
         cover amount.
       </p>
 
-      <Card title="Why this matters — money for obligations, then survival">
+      <Card id="why-matters" title="Why this matters — money for obligations, then survival">
         <p className="mb-4">
           If the main earner dies early, the family still faces the same world:{" "}
           <strong className="font-semibold text-slate-900">loan EMIs</strong>,{" "}
@@ -57,7 +59,7 @@ export default function TermInsuranceVsEndowmentGuide() {
         </p>
       </Card>
 
-      <Card title="Illustrative example (numbers are not advice)">
+      <Card id="example" title="Illustrative example (numbers are not advice)">
         <p className="mb-4">
           Imagine a sole earner wants the family to be able to: clear a large home loan, keep education on track, hold
           liquidity for shocks, and then still have years of living costs. A <strong className="font-semibold text-slate-900">needs-based</strong>{" "}
@@ -106,7 +108,7 @@ export default function TermInsuranceVsEndowmentGuide() {
         </p>
       </Card>
 
-      <Card title="Buying wrong — what to avoid">
+      <Card id="buying-wrong" title="Buying wrong — what to avoid">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong className="font-semibold text-slate-900">Endowment / money-back as “main protection”:</strong> the
@@ -130,7 +132,7 @@ export default function TermInsuranceVsEndowmentGuide() {
         </p>
       </Card>
 
-      <Card title="Do not buy so much cover that the premium breaks you">
+      <Card id="premium-discipline" title="Do not buy so much cover that the premium breaks you">
         <p className="mb-4">
           The <strong className="font-semibold text-slate-900">right</strong> term plan is one your family can rely on
           for <strong className="font-semibold text-slate-900">the full term</strong>. That means you must be able to pay

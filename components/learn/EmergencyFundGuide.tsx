@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Card({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
-    </div>
+    <section id={id} className={id ? "scroll-mt-24" : undefined}>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+        <div className="mt-3 text-sm leading-relaxed text-slate-700">{children}</div>
+      </div>
+    </section>
   );
 }
 
@@ -39,7 +41,7 @@ export default function EmergencyFundGuide() {
         recommend planning around; many people start lower and increase as life gets heavier.
       </p>
 
-      <Card title="Why an emergency fund is the first money habit">
+      <Card id="why-first" title="Why an emergency fund is the first money habit">
         <p className="mb-4">
           Job loss, health shocks, urgent travel, or a broken laptop should not force you to sell long-term investments in
           a bad market or swipe a credit card at 30–40% APR. Emergency cash is{" "}
@@ -52,7 +54,7 @@ export default function EmergencyFundGuide() {
         </p>
       </Card>
 
-      <Card title="What “one month” means (count essentials only)">
+      <Card id="one-month" title="What “one month” means (count essentials only)">
         <p className="mb-3">Add up monthly costs you would still pay in a crisis:</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>Rent or home loan EMI, utilities, groceries, school fees, insurance premiums, minimum loan payments</li>
@@ -64,7 +66,7 @@ export default function EmergencyFundGuide() {
         </p>
       </Card>
 
-      <section aria-labelledby="life-stages-heading">
+      <section id="life-stages" className="scroll-mt-24" aria-labelledby="life-stages-heading">
         <h2 id="life-stages-heading" className="text-lg font-semibold text-slate-900">
           How many months? Stories by life stage (all cap at 12 months)
         </h2>
@@ -124,7 +126,7 @@ export default function EmergencyFundGuide() {
         </p>
       </section>
 
-      <Card title="One rupee example (easy maths)">
+      <Card id="rupee-example" title="One rupee example (easy maths)">
         <p className="mb-4">
           Suppose your <strong className="font-semibold text-slate-900">essential</strong> spend is{" "}
           <strong className="font-semibold text-slate-900">₹45,000/month</strong> (rent, food, fees, EMIs you must keep).
@@ -145,7 +147,7 @@ export default function EmergencyFundGuide() {
         </p>
       </Card>
 
-      <Card title="Where to keep it (India-friendly)">
+      <Card id="where-to-keep" title="Where to keep it (India-friendly)">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong className="font-semibold text-slate-900">Liquid mutual funds</strong> or{" "}
@@ -167,7 +169,7 @@ export default function EmergencyFundGuide() {
         </p>
       </Card>
 
-      <Card title="Home loan? Keep EMIs liquid">
+      <Card id="home-loan" title="Home loan? Keep EMIs liquid">
         <p>
           Keep at least <strong className="font-semibold text-slate-900">three home loan EMIs</strong> in absolutely
           liquid form even if you prepay aggressively — banks do not pause EMIs because your net worth is in property or
@@ -175,7 +177,7 @@ export default function EmergencyFundGuide() {
         </p>
       </Card>
 
-      <Card title="Build and rebuild">
+      <Card id="build-rebuild" title="Build and rebuild">
         <ul className="list-disc space-y-2 pl-5">
           <li>Automate a fixed transfer every month until you hit your stage target (up to the 12-month cap).</li>
           <li>After any withdrawal (medical, job gap), <strong className="font-semibold text-slate-900">refill</strong>{" "}
