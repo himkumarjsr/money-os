@@ -280,7 +280,33 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (err) {
           console.error("refreshUser error:", err);
-          // Do not clear persisted user here — visibility/tab sync may retry; avoid logout on transient errors.
+          try {
+            const supabase = getSupabase();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            if (!session?.user) {
+              set({
+                user: null,
+                isLoggedIn: false,
+                userId: null,
+                subscriptionTier: "free",
+                isLoading: false,
+                hasInitialized: true,
+              });
+              return;
+            }
+          } catch {
+            set({
+              user: null,
+              isLoggedIn: false,
+              userId: null,
+              subscriptionTier: "free",
+              isLoading: false,
+              hasInitialized: true,
+            });
+            return;
+          }
           set({ isLoading: false, hasInitialized: true });
         }
       },

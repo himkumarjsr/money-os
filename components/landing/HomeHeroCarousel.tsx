@@ -40,8 +40,9 @@ type Slide =
 const SLIDES: Slide[] = [
   {
     key: "score",
-    title: "Start your financial freedom journey with Finkoin",
-    subtitle: "Meet your personal finance advisor. Interactive, step-by-step guidance in minutes.",
+    title: "Start your financial freedom journey",
+    subtitle:
+      "Meet your Finkoin advisor—interactive, step-by-step guidance on emergency fund, insurance, and your fix plan in minutes.",
     href: "/analyse",
     cta: "Meet your advisor",
   },
@@ -144,9 +145,9 @@ export default function HomeHeroCarousel() {
                   Coming soon
                 </span>
               ) : null}
-              <h1 className="text-balance text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+              <h2 className="text-balance text-2xl font-bold leading-[1.08] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
                 {slide.title}
-              </h1>
+              </h2>
               <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-slate-600 sm:mt-6 sm:text-xl sm:leading-relaxed">
                 {slide.subtitle}
               </p>

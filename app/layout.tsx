@@ -173,56 +173,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const siteJsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        name: "Finkoin",
-        alternateName: "Finkoin",
-        url: siteUrl,
-        logo: `${siteUrl}/icons/icon-512x512.png`,
-        description:
-          "Finkoin is India's free financial health check platform. Know your financial health score in 5 minutes.",
-        foundingDate: "2026",
-        foundingLocation: {
-          "@type": "Place",
-          name: "India",
-        },
-        contactPoint: {
-          "@type": "ContactPoint",
-          email: "hello@finkoin.com",
-          contactType: "customer service",
-        },
-        sameAs: [
-          "https://twitter.com/finkoin",
-          "https://linkedin.com/company/finkoin",
-          "https://instagram.com/finkoin",
-        ],
-      },
-      {
-        "@type": "WebSite",
-        name: "Finkoin",
-        alternateName: "Finkoin",
-        url: siteUrl,
-        description: "Free financial health check for India",
-        potentialAction: {
-          "@type": "SearchAction",
-          target: {
-            "@type": "EntryPoint",
-            urlTemplate: `${siteUrl}/learn?q={search_term_string}`,
-          },
-          "query-input": "required name=search_term_string",
-        },
-        publisher: {
-          "@type": "Organization",
-          name: "Finkoin",
-          url: siteUrl,
-        },
-      },
-    ],
-  };
-
   return (
     <html lang="en" className={inter.variable}>
       <head>
@@ -240,6 +190,56 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Finkoin" />
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="manifest" href="/manifest.json" fetchPriority="low" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "@id": "https://www.finkoin.com/#website",
+                  url: "https://www.finkoin.com",
+                  name: "Finkoin",
+                  alternateName: ["Finkoin App", "Finkoin Finance"],
+                  description: "India's free financial health check platform",
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: {
+                      "@type": "EntryPoint",
+                      urlTemplate: "https://www.finkoin.com/search?q={search_term_string}",
+                    },
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+                {
+                  "@type": "Organization",
+                  "@id": "https://www.finkoin.com/#organization",
+                  name: "Finkoin",
+                  alternateName: "Finkoin",
+                  url: "https://www.finkoin.com",
+                  logo: {
+                    "@type": "ImageObject",
+                    url: "https://www.finkoin.com/icons/icon-512x512.png",
+                    width: 512,
+                    height: 512,
+                  },
+                  description:
+                    "Finkoin is India's free financial health check platform. Know your financial health score in 5 minutes. No PAN. No Aadhaar.",
+                  foundingDate: "2026",
+                  foundingLocation: "India",
+                  areaServed: "IN",
+                  email: "hello@finkoin.com",
+                  sameAs: [
+                    "https://www.instagram.com/finkoin",
+                    "https://twitter.com/finkoin",
+                    "https://linkedin.com/company/finkoin",
+                  ],
+                },
+              ],
+            }),
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -267,10 +267,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans min-h-dvh flex flex-col bg-white antialiased">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
-        />
         <MotionLazyProvider>
           <Suspense fallback={null}>
             <ReferralCapture />
