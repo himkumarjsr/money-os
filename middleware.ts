@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   });
 
   const protectedPaths = [
-    "/tracker",
+    // /tracker uses client ProtectedGate + Supabase session recovery (avoids stale UI vs cookie mismatch)
     "/analyse/fixplan",
     "/profile",
     "/policies",

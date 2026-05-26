@@ -32,6 +32,8 @@ export function GlobalNavbar() {
   const streakDays = useGamificationStore((s) => s.streakDays);
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  /** Avoid showing logged-in chrome until Supabase session is verified (prevents stale persist). */
+  const showAsLoggedIn = hasInitialized && isLoggedIn;
   const user = useAuthStore((s) => s.user);
   const subscriptionTier = useAuthStore((s) => s.user?.subscriptionTier ?? "free");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -135,8 +137,8 @@ export function GlobalNavbar() {
         }`}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/" scroll className="flex items-center gap-2.5">
-            <svg width="34" height="34" viewBox="0 0 64 64">
+          <Link href="/" scroll className="flex items-center gap-2.5" aria-label="Finkoin home">
+            <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="Finkoin logo">
               <rect width="64" height="64" rx="14" fill="#534AB7" />
               <circle
                 cx="32"
@@ -185,7 +187,7 @@ export function GlobalNavbar() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {isLoggedIn ? (
+            {showAsLoggedIn ? (
               <span className="hidden rounded-full bg-[#EEEDFE] px-3 py-1 text-xs font-semibold text-[#3C3489] md:inline-flex">
                 🪙 {fkBalance} FK
               </span>
@@ -207,9 +209,9 @@ export function GlobalNavbar() {
               Feedback
             </button> */}
 
-            {isLoggedIn ? <NotificationBell /> : null}
+            {showAsLoggedIn ? <NotificationBell /> : null}
 
-            {!isLoggedIn ? (
+            {!showAsLoggedIn ? (
               <Link
                 href={loginHrefPreserveRef("/login")}
                 scroll
@@ -224,7 +226,7 @@ export function GlobalNavbar() {
               type="button"
               onClick={() => {
                 if (!hasInitialized) return;
-                if (!isLoggedIn) {
+                if (!showAsLoggedIn) {
                   router.push(loginHrefPreserveRef("/login"));
                   return;
                 }
@@ -233,7 +235,7 @@ export function GlobalNavbar() {
               className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-[#E8E6F0] bg-[#F4F2FC] transition-transform duration-300 hover:scale-105"
               aria-label="Profile"
             >
-              {!isLoggedIn ? (
+              {!showAsLoggedIn ? (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="8" r="4" stroke="#534AB7" strokeWidth="2" />
                   <path d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" />
@@ -261,7 +263,7 @@ export function GlobalNavbar() {
       </m.header>
 
       <AnimatePresence>
-        {profileOpen && isLoggedIn ? (
+        {profileOpen && showAsLoggedIn ? (
           <>
             <m.button
               key="profile-backdrop"
@@ -411,7 +413,7 @@ export function GlobalNavbar() {
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-900">
-                {isLoggedIn ? (fkBalance > 0 ? `🪙 ${fkBalance} FK earned` : "🪙 0 FK earned") : "Menu"}
+                {showAsLoggedIn ? (fkBalance > 0 ? `🪙 ${fkBalance} FK earned` : "🪙 0 FK earned") : "Menu"}
               </p>
               <button
                 type="button"
@@ -423,7 +425,7 @@ export function GlobalNavbar() {
               </button>
             </div>
             <nav className="mt-8 flex flex-col gap-5">
-              {!isLoggedIn ? (
+              {!showAsLoggedIn ? (
                 <Link
                   href={loginHrefPreserveRef("/login")}
                   scroll
@@ -608,7 +610,7 @@ export function GlobalNavbar() {
               }`}
             >
               <span className="relative inline-flex h-7 w-7 items-center justify-center">
-                {!isLoggedIn ? (
+                {!showAsLoggedIn ? (
                   <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-[#E8E6F0] bg-[#F4F2FC]">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <circle cx="12" cy="8" r="4" stroke="#534AB7" strokeWidth="1.5" />
@@ -628,7 +630,7 @@ export function GlobalNavbar() {
                     {avatarLetter}
                   </span>
                 )}
-                {isLoggedIn ? (
+                {showAsLoggedIn ? (
                   <span className="absolute -right-1 -top-0.5 min-h-[16px] min-w-[16px] rounded bg-[#534AB7] px-1 text-[9px] font-bold leading-[14px] text-white">
                     {fkBalance > 999 ? "999+" : fkBalance}
                   </span>

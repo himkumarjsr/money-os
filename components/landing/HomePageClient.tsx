@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
 import { TrackImpression } from "@/components/TrackImpression";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
@@ -16,7 +17,7 @@ const HomePageBelowFold = dynamic(() => import("./HomePageBelowFold"), {
   ),
 });
 
-export default function HomePageClient() {
+export default function HomePageClient({ children }: { children: ReactNode }) {
   const { scrollY, scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.2 });
   const heroScale = useTransform(scrollY, [0, 420], [1, 0.9]);
@@ -64,12 +65,8 @@ export default function HomePageClient() {
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           />
           <m.div style={{ scale: heroScale, opacity: heroOpacity, y: heroY }} className="relative mx-auto max-w-4xl text-center">
-            <AnimateOnScroll variant="fadeUp" delay={0} aboveFold>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600/90 sm:text-sm">
-                Finkoin · Money OS for India
-              </p>
-            </AnimateOnScroll>
-            <div className="sm:mt-5">
+            {children}
+            <div className="mt-6 sm:mt-8">
               <HomeHeroCarousel />
             </div>
             <div className="mt-3 flex flex-col items-center gap-4 sm:mt-3">

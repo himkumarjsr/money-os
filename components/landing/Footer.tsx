@@ -129,7 +129,7 @@ export default function Footer() {
         <div className="mt-10 grid gap-10 lg:grid-cols-12">
           <section className="lg:col-span-4">
             <Link href="/" scroll className="inline-flex items-center gap-2.5" aria-label="Finkoin home">
-              <svg width="40" height="40" viewBox="0 0 64 64" aria-hidden>
+              <svg width="40" height="40" viewBox="0 0 64 64" role="img" aria-label="Finkoin logo">
                 <rect width="64" height="64" rx="14" fill="#534AB7" />
                 <circle cx="32" cy="32" r="18" fill="none" stroke="#EEEDFE" strokeWidth="2" opacity="0.4" />
                 <text x="32" y="39" textAnchor="middle" fontFamily="system-ui, sans-serif" fontWeight="800" fontSize="20" fill="#FFFFFF">

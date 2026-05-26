@@ -46,18 +46,12 @@ export const metadata: Metadata = {
     absolute: "Finkoin — Free Financial Health Check for India",
   },
   description:
-    "See how close you are to achieving financial independence in 5 minutes. Check emergency fund, insurance gap, loans, and investments. Free. No PAN. No Aadhaar. Built for India.",
-  keywords: [
-    "financial health check India",
-    "personal finance app India free",
-    "financial health score",
-    "emergency fund calculator India",
-    "term insurance calculator India",
-    "net worth calculator India",
-  ],
+    "Finkoin helps Indians check their financial health score in 5 minutes. Emergency fund, insurance gap, net worth, fix plan. Free. No PAN. No Aadhaar.",
+  keywords: ["Finkoin", "finkoin.com", "Finkoin app", "financial health check India"],
   openGraph: {
-    title: "Finkoin — Free Financial Health Check for India",
-    description: "See how close you are to achieving financial independence in 5 minutes. Free. No PAN. No Aadhaar.",
+    title: "Finkoin — Free Financial Health Check",
+    description:
+      "Finkoin helps Indians check their financial health score in 5 minutes. Emergency fund, insurance gap, net worth, fix plan. Free. No PAN. No Aadhaar.",
     url: SITE_URL,
     siteName: "Finkoin",
     type: "website",
@@ -66,14 +60,15 @@ export const metadata: Metadata = {
         url: "https://finkoin.com/og/og-home.png",
         width: 1200,
         height: 630,
-        alt: "Finkoin Financial Health Check",
+        alt: "Finkoin — Free Financial Health Check for India",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Finkoin — Free Financial Health Check for India",
-    description: "See how close you are to achieving financial independence in 5 minutes. Free. No PAN. No Aadhaar.",
+    title: "Finkoin — Free Financial Health Check",
+    description:
+      "Finkoin helps Indians check their financial health score in 5 minutes. Emergency fund, insurance gap, net worth, fix plan. Free. No PAN. No Aadhaar.",
     images: [`${SITE_URL}/og/og-home.png`],
   },
   alternates: {
@@ -85,7 +80,15 @@ export default function HomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homeFaqJsonLd) }} />
-      <HomePageClient />
+      <HomePageClient>
+        <h1 className="mx-auto max-w-4xl text-balance text-center text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+          Finkoin — Free Financial Health Check for India
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-pretty text-center text-sm leading-relaxed text-slate-600 sm:text-base sm:leading-relaxed">
+          Finkoin helps Indians check their financial health score in 5 minutes—emergency fund, insurance gap, net
+          worth, and a clear fix plan. Free. No PAN. No Aadhaar.
+        </p>
+      </HomePageClient>
     </>
   );
 }
