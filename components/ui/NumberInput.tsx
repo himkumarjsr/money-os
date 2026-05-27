@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface NumberInputProps {
   label?: string;
@@ -28,6 +28,7 @@ export default function NumberInput({
   disabled = false,
 }: NumberInputProps) {
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -76,12 +77,21 @@ export default function NumberInput({
           transition: "border-color 0.15s ease, box-shadow 0.15s ease",
           cursor: disabled ? "not-allowed" : "text",
         }}
+        onClick={() => {
+          if (disabled || !inputRef.current) return;
+          inputRef.current.focus();
+          inputRef.current.select();
+        }}
       >
         <input
+          ref={inputRef}
           type="number"
           value={value === 0 ? "" : value}
           onChange={handleChange}
-          onFocus={() => setFocused(true)}
+          onFocus={(e) => {
+            setFocused(true);
+            e.currentTarget.select();
+          }}
           onBlur={() => setFocused(false)}
           placeholder={placeholder}
           min={min}
@@ -90,10 +100,12 @@ export default function NumberInput({
           disabled={disabled}
           style={{
             flex: 1,
+            minWidth: 0,
             border: "none",
             outline: "none",
             background: "transparent",
-            fontSize: 16,
+            fontSize: 18,
+            lineHeight: 1.3,
             fontWeight: value > 0 ? 600 : 400,
             color: value > 0 ? "#111110" : "#9B9A94",
             fontFamily: "inherit",
