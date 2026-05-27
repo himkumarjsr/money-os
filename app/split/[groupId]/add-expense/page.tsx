@@ -44,12 +44,14 @@ function AddSplitExpenseInner() {
   const router = useRouter();
 
   const user = useAuthStore((s) => s.user);
-  const createdBy = user?.id ?? "";
+  const userId = useAuthStore((s) => s.userId);
+  const createdBy = user?.id ?? userId ?? "";
 
   const activeGroup = useSplitStore((s) => s.activeGroup);
   const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
   const addExpense = useSplitStore((s) => s.addExpense);
-  const loading = useSplitStore((s) => s.loading);
+  const storeLoading = useSplitStore((s) => s.loading);
+  const [detailReady, setDetailReady] = useState(false);
 
   const members = (activeGroup?.members ?? []) as SplitGroupMember[];
 
@@ -68,7 +70,8 @@ function AddSplitExpenseInner() {
 
   useEffect(() => {
     if (!groupId) return;
-    void fetchGroupDetail(groupId);
+    setDetailReady(false);
+    void fetchGroupDetail(groupId).finally(() => setDetailReady(true));
   }, [fetchGroupDetail, groupId]);
 
   useEffect(() => {
@@ -109,11 +112,26 @@ function AddSplitExpenseInner() {
 
   const handleSubmit = async () => {
     if (!groupId) return;
-    if (!createdBy) return;
-    if (!title.trim()) return;
-    if (!paidByEmail) return;
-    if (!Number.isFinite(amountRaw) || amountRaw <= 0) return;
-    if (includedMembers.length === 0) return;
+    if (!createdBy) {
+      window.alert("Sign in again to add expenses.");
+      return;
+    }
+    if (!title.trim()) {
+      window.alert("Enter a description.");
+      return;
+    }
+    if (!paidByEmail) {
+      window.alert("Choose who paid.");
+      return;
+    }
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      window.alert("Enter a valid amount.");
+      return;
+    }
+    if (includedMembers.length === 0) {
+      window.alert("Select at least one member to split with.");
+      return;
+    }
 
     setBusy(true);
     const res = await addExpense({
@@ -154,6 +172,15 @@ function AddSplitExpenseInner() {
         <div className="mt-5 rounded-3xl border border-[#E8E6F0] bg-white p-6 shadow-sm">
           <div className="text-lg font-extrabold text-[#111110]">New expense</div>
           <div className="mt-1 text-sm text-[#9B9A94]">Split among selected members.</div>
+
+          {!detailReady && storeLoading ? (
+            <p className="mt-4 text-sm text-[#9B9A94]">Loading group members…</p>
+          ) : null}
+          {detailReady && members.length === 0 ? (
+            <p className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]">
+              No members found for this group. Invite someone from the group page, then try again.
+            </p>
+          ) : null}
 
           <div className="mt-6">
             <MoneyInput
@@ -332,7 +359,7 @@ function AddSplitExpenseInner() {
 
           <button
             type="button"
-            disabled={busy || loading || !groupId || !createdBy}
+            disabled={busy || !detailReady || !groupId || !createdBy || members.length === 0}
             onClick={() => void handleSubmit()}
             className="mt-6 w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50"
           >

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 
 export async function POST(req: NextRequest) {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       { onConflict: "group_id,email" },
     );
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+    const siteUrl = getPublicSiteUrl();
     const inviteUrl = `${siteUrl}/split/join?token=${invite.token}`;
 
     const emailHtml = `
@@ -76,22 +77,46 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
-    if (process.env.RESEND_API_KEY) {
-      const { Resend } = await import("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
+    let emailSent = false;
+    let emailError: string | null = null;
 
-      await resend.emails.send({
-        from: "FK Split <split@finkoin.com>",
-        to: email,
-        subject: `${invitedByName} added you to "${safeGroupName}" on Finkoin Split`,
-        html: emailHtml,
-      });
+    const resendKey = process.env.RESEND_API_KEY?.trim();
+    const emailFrom = process.env.EMAIL_FROM?.trim();
+
+    if (!resendKey) {
+      emailError = "Email is not configured (missing RESEND_API_KEY). Share the invite link manually.";
+    } else if (!emailFrom) {
+      emailError = "Email is not configured (missing EMAIL_FROM). Share the invite link manually.";
+    } else {
+      try {
+        const { Resend } = await import("resend");
+        const resend = new Resend(resendKey);
+        const { error: sendErr } = await resend.emails.send({
+          from: `FK Split <${emailFrom}>`,
+          to: email,
+          subject: `${invitedByName} added you to "${safeGroupName}" on Finkoin Split`,
+          html: emailHtml,
+        });
+        if (sendErr) {
+          emailError = sendErr.message;
+        } else {
+          emailSent = true;
+        }
+      } catch (sendErr: unknown) {
+        emailError = sendErr instanceof Error ? sendErr.message : "Could not send invite email";
+      }
     }
 
-    return NextResponse.json({ success: true, inviteUrl, token: invite.token });
-  } catch (err: any) {
+    return NextResponse.json({
+      success: true,
+      inviteUrl,
+      token: invite.token,
+      emailSent,
+      emailError,
+    });
+  } catch (err: unknown) {
     console.error("Split invite error:", err);
-    return NextResponse.json({ error: err?.message ?? "Internal error" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

@@ -119,7 +119,7 @@ type SplitStore = {
     invitedEmail: string;
     invitedByName: string;
     invitedById: string;
-  }) => Promise<{ inviteUrl?: string; error?: string }>;
+  }) => Promise<{ inviteUrl?: string; emailSent?: boolean; emailError?: string; error?: string }>;
   addExpense: (input: AddExpenseInput) => Promise<{ error?: string }>;
   settleUp: (input: {
     groupId: string;
@@ -135,74 +135,6 @@ const CACHE_TTL = 2 * 60 * 1000;
 
 function round2(n: number) {
   return Math.round(n * 100) / 100;
-}
-
-function computeShares(input: AddExpenseInput) {
-  const members = input.includedMembers;
-  if (!members.length) return { shares: [], error: "Select at least 1 member to split among." };
-
-  const total = round2(Math.max(0, input.amount));
-  if (!Number.isFinite(total) || total <= 0) return { shares: [], error: "Enter a valid amount." };
-
-  if (input.splitType === "equal") {
-    const per = round2(total / members.length);
-    // Adjust last share to ensure exact sum = total (avoid rounding drift).
-    const shares = members.map((m, idx) => ({
-      user_id: m.user_id ?? null,
-      email: m.email.toLowerCase(),
-      display_name: m.display_name,
-      share_amount: idx === members.length - 1 ? round2(total - per * (members.length - 1)) : per,
-      share_percentage: null as number | null,
-      is_settled: false,
-    }));
-    return { shares, error: null as string | null };
-  }
-
-  if (input.splitType === "exact") {
-    const exact = input.exactAmounts ?? {};
-    const shares = members.map((m) => {
-      const v = Number(exact[m.email.toLowerCase()] ?? exact[m.email] ?? 0);
-      return {
-        user_id: m.user_id ?? null,
-        email: m.email.toLowerCase(),
-        display_name: m.display_name,
-        share_amount: round2(Math.max(0, v)),
-        share_percentage: null as number | null,
-        is_settled: false,
-      };
-    });
-    const sum = round2(shares.reduce((s, x) => s + x.share_amount, 0));
-    if (sum !== total) {
-      return { shares: [], error: `Exact split must total ₹${total.toFixed(2)} (currently ₹${sum.toFixed(2)}).` };
-    }
-    return { shares, error: null as string | null };
-  }
-
-  if (input.splitType === "percentage") {
-    const pctMap = input.percentages ?? {};
-    const pcts = members.map((m) => Number(pctMap[m.email.toLowerCase()] ?? pctMap[m.email] ?? 0));
-    const pctSum = round2(pcts.reduce((s, x) => s + x, 0));
-    if (pctSum !== 100) {
-      return { shares: [], error: `Percentages must add to 100 (currently ${pctSum}).` };
-    }
-    const shares = members.map((m, idx) => {
-      const pct = Number(pcts[idx] ?? 0);
-      const amt = idx === members.length - 1
-        ? round2(total - members.slice(0, -1).reduce((s, mm, ii) => s + round2(total * (Number(pcts[ii] ?? 0) / 100)), 0))
-        : round2(total * (pct / 100));
-      return {
-        user_id: m.user_id ?? null,
-        email: m.email.toLowerCase(),
-        display_name: m.display_name,
-        share_amount: amt,
-        share_percentage: pct,
-        is_settled: false,
-      };
-    });
-    return { shares, error: null as string | null };
-  }
-
-  return { shares: [], error: "Unsupported split type." };
 }
 
 function inferMyNetBalance(myEmail: string, balances: SplitBalanceEdge[]) {
@@ -275,9 +207,13 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     set({ loading: true });
     try {
       const supabase = getSupabase();
-      const [groupRes, membersRes, expensesRes, balancesRes] = await Promise.all([
+      const [groupRes, membersRes, expensesRes] = await Promise.all([
         supabase.from("split_groups").select("*").eq("id", groupId).single(),
-        supabase.from("split_group_members").select("*").eq("group_id", groupId).eq("status", "active"),
+        supabase
+          .from("split_group_members")
+          .select("*")
+          .eq("group_id", groupId)
+          .in("status", ["active", "pending"]),
         supabase
           .from("split_expenses")
           .select(`*, shares:split_expense_shares(*)`)
@@ -285,26 +221,33 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
           .order("expense_date", { ascending: false })
           .order("created_at", { ascending: false })
           .limit(100),
-        supabase.rpc("get_split_balances", { p_group_id: groupId }),
       ]);
 
       if (groupRes.error) throw groupRes.error;
       if (membersRes.error) throw membersRes.error;
       if (expensesRes.error) throw expensesRes.error;
-      if (balancesRes.error) {
-        // Non-fatal: still show group + expenses.
-        console.warn("get_split_balances RPC error:", balancesRes.error);
-      }
 
       const group = groupRes.data as SplitGroup;
       const members = (membersRes.data as SplitGroupMember[]) ?? [];
       const expenses = (expensesRes.data as SplitExpense[]) ?? [];
-      const balances = ((balancesRes.data as unknown) as SplitBalanceEdge[]) ?? [];
+
+      let balancesData: SplitBalanceEdge[] = [];
+      try {
+        const { data: balances, error } = await supabase.rpc("get_split_balances", { p_group_id: groupId });
+        if (error) {
+          console.warn("Balances RPC error:", error);
+        } else {
+          balancesData = ((balances as unknown) as SplitBalanceEdge[]) ?? [];
+        }
+      } catch (err) {
+        console.warn("Balances RPC error:", err);
+        balancesData = [];
+      }
 
       set({
         activeGroup: { ...group, members },
         expenses,
-        balances,
+        balances: balancesData,
         loading: false,
       });
     } catch (err) {
@@ -349,9 +292,19 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      const json = (await res.json()) as { success?: boolean; inviteUrl?: string; error?: string };
+      const json = (await res.json()) as {
+        success?: boolean;
+        inviteUrl?: string;
+        emailSent?: boolean;
+        emailError?: string;
+        error?: string;
+      };
       if (!res.ok) return { error: json.error ?? "Invite failed" };
-      return { inviteUrl: json.inviteUrl };
+      return {
+        inviteUrl: json.inviteUrl,
+        emailSent: json.emailSent,
+        emailError: json.emailError,
+      };
     } catch (err) {
       console.error("inviteMember error:", err);
       return { error: "Invite failed" };
@@ -360,52 +313,37 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   addExpense: async (input) => {
     try {
-      const { shares, error: shareErr } = computeShares(input);
-      if (shareErr) return { error: shareErr };
-
-      const supabase = getSupabase();
-
-      const { data: newExpense, error } = await supabase
-        .from("split_expenses")
-        .insert({
-          group_id: input.groupId,
+      const res = await fetch("/api/split/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          groupId: input.groupId,
           title: input.title,
           amount: input.amount,
-          currency: "INR",
           category: input.category,
-          paid_by_user_id: input.paidByUserId ?? null,
-          paid_by_email: input.paidByEmail.toLowerCase(),
-          paid_by_name: input.paidByName,
-          split_type: input.splitType,
-          expense_date: input.expenseDate,
-          notes: input.notes ?? null,
-          is_settlement: false,
-          created_by: input.createdBy,
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      if (error) throw error;
+          paidByEmail: input.paidByEmail,
+          paidByName: input.paidByName,
+          paidByUserId: input.paidByUserId,
+          splitType: input.splitType,
+          expenseDate: input.expenseDate,
+          notes: input.notes,
+          includedMembers: input.includedMembers,
+          exactAmounts: input.exactAmounts,
+          percentages: input.percentages,
+        }),
+      });
 
-      const sharesWithExpense = shares.map((s) => ({
-        ...s,
-        expense_id: newExpense.id,
-        group_id: input.groupId,
-      }));
-
-      const { error: shareInsertErr } = await supabase.from("split_expense_shares").insert(sharesWithExpense);
-      if (shareInsertErr) throw shareInsertErr;
-
-      await supabase.from("split_groups").update({ updated_at: new Date().toISOString() }).eq("id", input.groupId);
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) return { error: json.error ?? "Could not add expense" };
 
       set({ lastFetched: {} });
-      // Refresh group detail to pick up RPC balances + new expense shares.
       await get().fetchGroupDetail(input.groupId);
 
       return {};
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("addExpense error:", err);
-      return { error: err?.message ?? "Could not add expense" };
+      return { error: err instanceof Error ? err.message : "Could not add expense" };
     }
   },
 

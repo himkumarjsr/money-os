@@ -23,6 +23,7 @@ function SplitGroupInner() {
   const router = useRouter();
 
   const user = useAuthStore((s) => s.user);
+  const userId = useAuthStore((s) => s.userId);
   const myEmail = (user?.email ?? "").toLowerCase();
 
   const loading = useSplitStore((s) => s.loading);
@@ -32,6 +33,12 @@ function SplitGroupInner() {
   const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
   const inviteMember = useSplitStore((s) => s.inviteMember);
   const settleUp = useSplitStore((s) => s.settleUp);
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviteMsg, setInviteMsg] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
 
   useEffect(() => {
     if (!groupId) return;
@@ -69,31 +76,61 @@ function SplitGroupInner() {
     return { youOwe, youAreOwed };
   }, [balances, myEmail]);
 
-  const handleInvite = async () => {
-    if (!groupId || !group?.name || !user?.id) return;
-    const invitedEmail = window.prompt("Invite by email");
-    if (!invitedEmail) return;
+  const openInviteModal = () => {
+    setInviteEmail("");
+    setInviteLink("");
+    setInviteMsg("");
+    setInviteOpen(true);
+  };
+
+  const handleSendInvite = async () => {
+    const actorId = user?.id ?? userId;
+    const email = inviteEmail.trim();
+    if (!groupId || !group?.name || !actorId) return;
+    if (!email) {
+      setInviteMsg("Enter an email address.");
+      return;
+    }
+
+    setInviteBusy(true);
+    setInviteLink("");
+    setInviteMsg("");
+
     const res = await inviteMember({
       groupId,
       groupName: group.name,
-      invitedEmail,
-      invitedByName: user.name || user.email?.split("@")[0] || "Finkoin user",
-      invitedById: user.id,
+      invitedEmail: email,
+      invitedByName: user?.name || user?.email?.split("@")[0] || "Finkoin user",
+      invitedById: actorId,
     });
+    setInviteBusy(false);
+
     if (res.error) {
-      window.alert(res.error);
+      setInviteMsg(res.error);
       return;
     }
-    if (res.inviteUrl) {
-      window.alert(`Invite created.\n\nLink: ${res.inviteUrl}`);
+
+    if (res.emailSent) {
+      setInviteMsg(`Invite sent to ${email} ✓`);
+      setInviteEmail("");
+      setInviteLink("");
+    } else if (res.inviteUrl) {
+      setInviteLink(res.inviteUrl);
+      setInviteMsg(
+        res.emailError
+          ? `${res.emailError} Share this link manually:`
+          : "Email not configured. Share this link manually:",
+      );
     } else {
-      window.alert("Invite created.");
+      setInviteMsg("Invite created.");
     }
+
     void fetchGroupDetail(groupId);
   };
 
   const handleSettle = async () => {
-    if (!groupId || !user?.id || !myEmail) return;
+    const actorId = user?.id ?? userId;
+    if (!groupId || !actorId || !myEmail) return;
     const toEmail = window.prompt("Settle up to (email)");
     if (!toEmail) return;
     const amountRaw = window.prompt("Amount (₹)");
@@ -102,7 +139,7 @@ function SplitGroupInner() {
       window.alert("Enter a valid amount.");
       return;
     }
-    const res = await settleUp({ groupId, toEmail, amount, userId: user.id, userEmail: myEmail });
+    const res = await settleUp({ groupId, toEmail, amount, userId: actorId, userEmail: myEmail });
     if (res.error) window.alert(res.error);
   };
 
@@ -126,14 +163,14 @@ function SplitGroupInner() {
                 <div className="min-w-0">
                   <h1 className="truncate text-xl font-extrabold">{group?.name || "Group"}</h1>
                   <div className="mt-0.5 text-xs text-white/80">
-                    {(group?.members?.length ?? 0) || "—"} members · INR
+                    {group?.members?.length ?? 0} members · INR
                   </div>
                 </div>
               </div>
             </div>
             <button
               type="button"
-              onClick={() => void handleInvite()}
+              onClick={openInviteModal}
               className="shrink-0 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20"
             >
               Invite
@@ -237,6 +274,109 @@ function SplitGroupInner() {
           </div>
         </section>
       </div>
+
+      {inviteOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          onClick={() => setInviteOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invite-member-title"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div id="invite-member-title" className="text-base font-extrabold text-[#111110]">
+                  Invite member
+                </div>
+                <div className="mt-1 text-xs text-[#9B9A94]">They can join via email or invite link.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInviteOpen(false)}
+                className="rounded-xl bg-[#F7F7F4] px-3 py-2 text-sm font-bold text-[#111110]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <label className="text-xs font-semibold text-[#5F5E5A]">Email</label>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="friend@example.com"
+                className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-sm outline-none focus:border-[#534AB7]"
+              />
+            </div>
+
+            {inviteMsg ? (
+              <p className="mt-3 text-sm font-medium text-[#5F5E5A]">{inviteMsg}</p>
+            ) : null}
+
+            {inviteLink ? (
+              <div
+                style={{
+                  background: "#F7F7F4",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  marginTop: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    fontSize: 11,
+                    color: "#534AB7",
+                    wordBreak: "break-all",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {inviteLink}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(inviteLink);
+                    setInviteMsg("Link copied!");
+                    setInviteLink("");
+                  }}
+                  style={{
+                    background: "#534AB7",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  Copy
+                </button>
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={inviteBusy || !inviteEmail.trim()}
+              onClick={() => void handleSendInvite()}
+              className="mt-5 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50"
+            >
+              {inviteBusy ? "Sending…" : "Send invite"}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#E8E6F0] bg-white pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-4px_24px_rgba(30,30,60,0.06)]">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 sm:px-6">
