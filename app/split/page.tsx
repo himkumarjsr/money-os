@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { useAuthStore } from "@/store/authStore";
-import { getMyBalanceFromEdges, useSplitStore } from "@/store/splitStore";
-import { formatIndian } from "@/lib/formatters";
+import { useSplitStore } from "@/store/splitStore";
 
 export default function SplitHomePage() {
   return (
@@ -16,10 +16,10 @@ export default function SplitHomePage() {
 }
 
 function SplitHomeInner() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const email = (user?.email ?? "").toLowerCase();
   const name = user?.name ?? user?.email?.split("@")[0] ?? "You";
-  const userId = user?.id ?? "";
 
   const groups = useSplitStore((s) => s.groups);
   const loading = useSplitStore((s) => s.loading);
@@ -31,6 +31,7 @@ function SplitHomeInner() {
   const [gEmoji, setGEmoji] = useState("👥");
   const [gType, setGType] = useState("general");
   const [busy, setBusy] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   useEffect(() => {
     if (!email) return;
@@ -45,23 +46,37 @@ function SplitHomeInner() {
     };
   }, [groups.length]);
 
+  const openCreateModal = () => {
+    setCreateError("");
+    setCreateOpen(true);
+  };
+
   const handleCreate = async () => {
-    if (!gName.trim() || !userId || !email) return;
+    if (!gName.trim() || !email || !user?.id) {
+      setCreateError("Please enter a group name.");
+      return;
+    }
     setBusy(true);
-    const id = await createGroup({
+    setCreateError("");
+    const { groupId, error } = await createGroup({
       name: gName.trim(),
       emoji: gEmoji.trim() || "👥",
       type: gType,
-      userId,
+      userId: user.id,
       userEmail: email,
       userName: name,
     });
     setBusy(false);
-    if (id) {
+    if (error) {
+      setCreateError(error);
+      return;
+    }
+    if (groupId) {
       setCreateOpen(false);
       setGName("");
-      // go to group
-      window.location.href = `/split/${id}`;
+      router.push(`/split/${groupId}`);
+    } else {
+      setCreateError("Could not create group. Please try again.");
     }
   };
 
@@ -77,7 +92,7 @@ function SplitHomeInner() {
             </div>
             <button
               type="button"
-              onClick={() => setCreateOpen(true)}
+              onClick={openCreateModal}
               className="shrink-0 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20"
             >
               + New group
@@ -117,7 +132,7 @@ function SplitHomeInner() {
               <div className="mt-2 text-sm text-[#9B9A94]">Create a group for a trip, flat, office, or event.</div>
               <button
                 type="button"
-                onClick={() => setCreateOpen(true)}
+                onClick={openCreateModal}
                 className="mt-5 rounded-xl bg-[#534AB7] px-5 py-3 text-sm font-bold text-white"
               >
                 Create your first group
@@ -147,11 +162,23 @@ function SplitHomeInner() {
       </div>
 
       {createOpen ? (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          onClick={() => setCreateOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-group-title"
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-base font-extrabold text-[#111110]">Create a group</div>
+                <div id="create-group-title" className="text-base font-extrabold text-[#111110]">
+                  Create a group
+                </div>
                 <div className="mt-1 text-xs text-[#9B9A94]">You’ll be added as admin.</div>
               </div>
               <button
@@ -198,6 +225,10 @@ function SplitHomeInner() {
                   </select>
                 </div>
               </div>
+
+              {createError ? (
+                <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{createError}</p>
+              ) : null}
 
               <button
                 type="button"

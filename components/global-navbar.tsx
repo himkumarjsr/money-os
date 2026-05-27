@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 const centerNavItems = [
   { href: "/analyse", label: "Analyse" },
   { href: "/tracker", label: "Tracker" },
+  { href: "/split", label: "FK Split" },
   { href: "/calculators", label: "Calculators" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/optimizer", label: "Optimizer" },
@@ -327,6 +328,7 @@ export function GlobalNavbar() {
               {[
                 ["👤", "My Profile", "/profile"],
                 ["📒", "Expense Tracker", "/tracker"],
+                ["👥", "FK Split", "/split"],
                 ["📊", "My Analysis", "/analyse/result"],
                 ["🛡️", "My Policies", "/policies"],
                 ["🎯", "My Goals", "/goals"],

@@ -32,6 +32,7 @@ const columns = [
     heading: "Product",
     links: [
       { label: "Financial Health Check", href: "/analyse" },
+      { label: "FK Split", href: "/split" },
       { label: "Tax Calculator", href: "/calculators/tax-regime-2026" },
       { label: "SIP Calculator", href: "/calculators/sip" },
       { label: "Portfolio Analysis", href: "/portfolio" },

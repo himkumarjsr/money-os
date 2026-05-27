@@ -112,7 +112,7 @@ type SplitStore = {
 
   fetchGroups: (userEmail: string) => Promise<void>;
   fetchGroupDetail: (groupId: string) => Promise<void>;
-  createGroup: (input: CreateGroupInput) => Promise<string | null>;
+  createGroup: (input: CreateGroupInput) => Promise<{ groupId: string | null; error?: string }>;
   inviteMember: (input: {
     groupId: string;
     groupName: string;
@@ -315,35 +315,30 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   createGroup: async (input) => {
     try {
-      const supabase = getSupabase();
-      const { data: group, error } = await supabase
-        .from("split_groups")
-        .insert({
+      const res = await fetch("/api/split/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: input.name,
           emoji: input.emoji,
-          group_type: input.type,
-          created_by: input.userId,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      if (!group?.id) return null;
-
-      await supabase.from("split_group_members").insert({
-        group_id: group.id,
-        user_id: input.userId,
-        email: input.userEmail.toLowerCase(),
-        display_name: input.userName,
-        role: "admin",
-        status: "active",
-        joined_at: new Date().toISOString(),
+          type: input.type,
+          displayName: input.userName,
+        }),
       });
 
+      const json = (await res.json()) as { groupId?: string; error?: string };
+      if (!res.ok) {
+        return { groupId: null, error: json.error ?? "Could not create group" };
+      }
+
       set({ lastFetched: {} });
-      return group.id as string;
+      return { groupId: json.groupId ?? null };
     } catch (err) {
       console.error("createGroup error:", err);
-      return null;
+      return {
+        groupId: null,
+        error: err instanceof Error ? err.message : "Could not create group",
+      };
     }
   },
 
