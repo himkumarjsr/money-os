@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function sipMaturity(monthly: number, annualPct: number, years: number) {
   const n = Math.max(1, Math.round(years * 12));
@@ -86,7 +86,7 @@ export function SIPCalculator() {
         unitType="money"
         value={monthly}
         min={500}
-        max={100_000}
+        max={CALCULATOR_MONEY_MAX}
         step={500}
         onChange={setMonthly}
         format={(val) => formatCurrency(val, "en-IN", "INR")}

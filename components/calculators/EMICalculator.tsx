@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() =>
@@ -144,7 +144,7 @@ export function EMICalculator() {
         unitType="money"
         value={loan}
         min={1_00_000}
-        max={2_00_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={50_000}
         onChange={setLoan}
         format={(v) => formatCurrency(v, "en-IN", "INR")}

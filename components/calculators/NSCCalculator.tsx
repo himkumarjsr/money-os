@@ -2,7 +2,7 @@
 
 import { formatCurrency } from "@/lib/finance";
 import { useCallback, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() =>
@@ -30,7 +30,7 @@ export function NSCCalculator() {
         unitType="money"
         value={principal}
         min={1_000}
-        max={10_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={5_000}
         onChange={setPrincipal}
         format={(v) => formatCurrency(v, "en-IN", "INR")}

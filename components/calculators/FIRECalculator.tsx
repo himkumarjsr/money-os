@@ -4,7 +4,7 @@ import { computeFireNumbers } from "@/lib/fireCalculator";
 import { formatCurrency } from "@/lib/finance";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -82,7 +82,7 @@ export function FIRECalculator() {
         unitType="money"
         value={expensesExEmi}
         min={15_000}
-        max={5_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={1_000}
         onChange={setExpensesExEmi}
         format={(v) => fmt(v)}
@@ -92,7 +92,7 @@ export function FIRECalculator() {
         unitType="money"
         value={monthlyEmi}
         min={0}
-        max={2_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={1_000}
         onChange={setMonthlyEmi}
         format={(v) => fmt(v)}
@@ -102,7 +102,7 @@ export function FIRECalculator() {
         unitType="money"
         value={debtOutstanding}
         min={0}
-        max={2_00_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={50_000}
         onChange={setDebtOutstanding}
         format={(v) => fmt(v)}
@@ -113,7 +113,7 @@ export function FIRECalculator() {
         unitType="money"
         value={corpus}
         min={0}
-        max={5_00_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={50_000}
         onChange={setCorpus}
         format={(v) => fmt(v)}
@@ -123,7 +123,7 @@ export function FIRECalculator() {
         unitType="money"
         value={monthlySip}
         min={0}
-        max={5_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={1_000}
         onChange={setMonthlySip}
         format={(v) => fmt(v)}

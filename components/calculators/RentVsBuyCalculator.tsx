@@ -2,7 +2,7 @@
 
 import { formatCurrency } from "@/lib/finance";
 import { useCallback, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() =>
@@ -50,7 +50,7 @@ export function RentVsBuyCalculator() {
         unitType="money"
         value={value}
         min={30_00_000}
-        max={5_00_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={10_00_000}
         onChange={setValue}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
@@ -60,7 +60,7 @@ export function RentVsBuyCalculator() {
         unitType="money"
         value={rent}
         min={8_000}
-        max={2_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={1_000}
         onChange={setRent}
         format={(v) => formatCurrency(v, "en-IN", "INR")}

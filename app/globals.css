@@ -72,6 +72,15 @@
     }
   }
 
+  @media (min-width: 768px) {
+    input[type="number"],
+    input[type="text"],
+    input[type="email"],
+    select {
+      font-size: 15px !important;
+    }
+  }
+
   /* iOS Safari: native date/month picks readable text on white/light backgrounds */
   input[type="date"],
   input[type="datetime-local"],

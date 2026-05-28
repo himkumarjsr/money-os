@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() =>
@@ -133,7 +133,7 @@ export function HomeLoanCalculator() {
         unitType="money"
         value={value}
         min={10_00_000}
-        max={5_00_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={5_00_000}
         onChange={setValue}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
@@ -173,7 +173,7 @@ export function HomeLoanCalculator() {
         unitType="money"
         value={income}
         min={25_000}
-        max={10_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={5_000}
         onChange={setIncome}
         format={(v) => formatCurrency(v, "en-IN", "INR")}

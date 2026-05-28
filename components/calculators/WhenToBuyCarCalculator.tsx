@@ -2,7 +2,7 @@
 
 import { formatCurrency } from "@/lib/finance";
 import { useCallback, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() =>
@@ -37,7 +37,7 @@ export function WhenToBuyCarCalculator() {
         unitType="money"
         value={income}
         min={30_000}
-        max={5_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={5_000}
         onChange={setIncome}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
@@ -47,7 +47,7 @@ export function WhenToBuyCarCalculator() {
         unitType="money"
         value={car}
         min={4_00_000}
-        max={45_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={50_000}
         onChange={setCar}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
@@ -57,7 +57,7 @@ export function WhenToBuyCarCalculator() {
         unitType="money"
         value={save}
         min={5_000}
-        max={1_50_000}
+        max={CALCULATOR_MONEY_MAX}
         step={1_000}
         onChange={setSave}
         format={(v) => formatCurrency(v, "en-IN", "INR")}

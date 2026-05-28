@@ -4,7 +4,11 @@ import { cn } from "@/lib/cn";
 import { formatIndian, formatInWords, formatSliderLabel, parseIndianInput } from "@/lib/formatters";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+/** Max digits for calculator money inputs (10 digits). */
+export const CALCULATOR_MONEY_MAX = 9_999_999_999;
+
 export type InsightTone = "good" | "warn" | "bad";
+
 const insightStyles: Record<InsightTone, string> = {
   good: "border-emerald-200 bg-emerald-50 text-emerald-900",
   warn: "border-amber-200 bg-amber-50 text-amber-900",
@@ -63,7 +67,11 @@ export function SliderField({
           ? "months"
           : "money");
 
-  const leftUnit = detectedType === "money" ? "₹" : "";
+  const isMoney = detectedType === "money";
+  const inputMax = isMoney ? CALCULATOR_MONEY_MAX : max;
+  const sliderMax = Math.max(max, min, Math.min(value, inputMax));
+
+  const leftUnit = isMoney ? "₹" : "";
   const rightUnit =
     detectedType === "percent"
       ? "%"
@@ -71,30 +79,31 @@ export function SliderField({
         ? "yrs"
         : detectedType === "months"
           ? "mo"
-            : detectedType === "number"
-              ? ""
-          : suffix ?? "";
-  const effectiveMax = Math.max(max, min, value);
+          : detectedType === "number"
+            ? ""
+            : suffix ?? "";
 
+  const [focused, setFocused] = useState(false);
   const [displayValue, setDisplayValue] = useState(() =>
-    Number.isFinite(value) ? formatIndian(Math.min(Math.max(value, min), effectiveMax)) : "0",
+    Number.isFinite(value) ? formatIndian(Math.min(Math.max(value, min), inputMax)) : "0",
   );
 
   useEffect(() => {
-    setDisplayValue(formatIndian(Math.min(Math.max(value, min), effectiveMax)));
-  }, [effectiveMax, min, value]);
+    setDisplayValue(formatIndian(Math.min(Math.max(value, min), inputMax)));
+  }, [inputMax, min, value]);
 
   const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayValue(e.target.value);
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setFocused(false);
     const parsed = parseIndianInput(e.target.value);
     if (parsed === null) {
       setDisplayValue(formatIndian(value));
       return;
     }
-    const clamped = Math.min(effectiveMax, Math.max(min, parsed));
+    const clamped = Math.min(inputMax, Math.max(min, parsed));
     onChange(clamped);
     setDisplayValue(formatIndian(clamped));
   };
@@ -104,59 +113,64 @@ export function SliderField({
     [detectedType, value],
   );
 
+  const sliderValue = Math.min(Math.max(value, min), sliderMax);
+
   return (
-    <div className="mb-6">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <label className="text-sm font-medium text-[#5F5E5A]">{label}</label>
-        <div
-          className="flex min-w-[155px] items-center gap-1 rounded-lg border border-[#E8E6F8] bg-[#F4F2FC] px-3 py-1.5 sm:min-w-[170px]"
-          onClick={(e) => {
-            const target = e.currentTarget.querySelector("input");
-            if (!(target instanceof HTMLInputElement)) return;
-            target.focus();
-            target.select();
+    <div className="mb-4 flex flex-col gap-1.5">
+      <label className="text-[13px] font-semibold text-[#5F5E5A]">{label}</label>
+
+      <div
+        role="presentation"
+        className={cn(
+          "flex w-full min-h-[52px] cursor-text items-center gap-2 rounded-xl border bg-white px-4 py-3 transition-[border-color] box-border",
+          focused ? "border-[#534AB7]" : "border-[#E8E6F0]",
+        )}
+        style={{ borderWidth: focused ? 1.5 : 1.5 }}
+        onClick={(e) => {
+          const target = e.currentTarget.querySelector("input");
+          if (!(target instanceof HTMLInputElement)) return;
+          target.focus();
+          target.select();
+        }}
+      >
+        {leftUnit ? (
+          <span className="shrink-0 select-none text-[15px] font-semibold text-[#9B9A94]">{leftUnit}</span>
+        ) : null}
+        <input
+          type="text"
+          inputMode="numeric"
+          value={displayValue}
+          onChange={handleManualInput}
+          onBlur={handleBlur}
+          onFocus={(e) => {
+            setFocused(true);
+            e.currentTarget.select();
           }}
-        >
-          {leftUnit ? (
-            <span className="shrink-0 text-[13px] font-semibold text-[#534AB7]">
-              {leftUnit}
-            </span>
-          ) : null}
-          <input
-            type="text"
-            inputMode="numeric"
-            value={displayValue}
-            onChange={handleManualInput}
-            onBlur={handleBlur}
-            onFocus={(e) => e.currentTarget.select()}
+          className="min-w-0 flex-1 border-none bg-transparent text-base font-semibold text-[#111110] outline-none"
+          style={{ fontSize: 16 }}
+        />
+        {rightUnit ? (
+          <span
             className={cn(
-              "w-full min-w-0 border-none bg-transparent text-right text-base font-semibold text-[#111110] outline-none",
+              "shrink-0 select-none text-[13px]",
+              detectedType === "percent" ? "font-semibold text-[#534AB7]" : "font-medium text-[#888780]",
             )}
-          />
-          {rightUnit ? (
-            <span
-              className={cn(
-                "text-[13px]",
-                detectedType === "percent"
-                  ? "font-semibold text-[#534AB7]"
-                  : "font-medium text-[#888780]",
-              )}
-            >
-              {rightUnit}
-            </span>
-          ) : null}
-        </div>
+          >
+            {rightUnit}
+          </span>
+        ) : null}
       </div>
+
       <input
         type="range"
         min={min}
-        max={effectiveMax}
+        max={sliderMax}
         step={step}
-        value={Math.min(Math.max(value, min), effectiveMax)}
-        onChange={(e) => onChange(Math.min(effectiveMax, Math.max(min, Number(e.target.value))))}
+        value={sliderValue}
+        onChange={(e) => onChange(Math.min(inputMax, Math.max(min, Number(e.target.value))))}
         className="h-2 w-full cursor-pointer accent-[#534AB7]"
       />
-      <div className="mt-1.5 text-right text-xs text-[#9B9A94]">{words}</div>
+      <div className="text-right text-xs text-[#9B9A94]">{words}</div>
     </div>
   );
 }
@@ -185,12 +199,8 @@ export function ResultStat({
 
   return (
     <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
-        {display}
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{display}</p>
       {words ? <p className="mt-1 text-xs text-[#9B9A94]">{words}</p> : null}
     </div>
   );

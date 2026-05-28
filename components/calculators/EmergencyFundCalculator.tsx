@@ -3,7 +3,7 @@
 import type { LifeStage } from "@/lib/analyse-form-schema";
 import { formatCurrency } from "@/lib/finance";
 import { useCallback, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 const MONTHS: Record<LifeStage, number> = {
   bachelor: 3,
@@ -52,7 +52,7 @@ export function EmergencyFundCalculator() {
         unitType="money"
         value={expenses}
         min={15_000}
-        max={3_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={1_000}
         onChange={setExpenses}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
@@ -78,7 +78,7 @@ export function EmergencyFundCalculator() {
         unitType="money"
         value={current}
         min={0}
-        max={50_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={25_000}
         onChange={setCurrent}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
@@ -88,7 +88,7 @@ export function EmergencyFundCalculator() {
         unitType="money"
         value={saveMonthly}
         min={1_000}
-        max={2_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={1_000}
         onChange={setSaveMonthly}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
