@@ -9,8 +9,8 @@ function useClamped(initial: number, min: number, max: number) {
     Math.min(max, Math.max(min, initial)),
   );
   const set = useCallback(
-    (nv: number) => setV(Math.min(max, Math.max(min, nv))),
-    [min, max],
+    (nv: number) => setV(Math.max(min, nv)),
+    [min],
   );
   return [v, set] as const;
 }

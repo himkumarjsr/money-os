@@ -75,14 +75,15 @@ export function SliderField({
             : detectedType === "number"
               ? ""
           : suffix ?? "";
+  const effectiveMax = Math.max(max, min, value);
 
   const [displayValue, setDisplayValue] = useState(() =>
-    Number.isFinite(value) ? formatIndian(value) : "0",
+    Number.isFinite(value) ? formatIndian(Math.min(Math.max(value, min), effectiveMax)) : "0",
   );
 
   useEffect(() => {
-    setDisplayValue(formatIndian(value));
-  }, [value]);
+    setDisplayValue(formatIndian(Math.min(Math.max(value, min), effectiveMax)));
+  }, [effectiveMax, min, value]);
 
   const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayValue(e.target.value);
@@ -94,7 +95,7 @@ export function SliderField({
       setDisplayValue(formatIndian(value));
       return;
     }
-    const clamped = Math.min(max, Math.max(min, parsed));
+    const clamped = Math.min(effectiveMax, Math.max(min, parsed));
     onChange(clamped);
     setDisplayValue(formatIndian(clamped));
   };
@@ -108,7 +109,15 @@ export function SliderField({
     <div className="mb-6">
       <div className="mb-2 flex items-center justify-between gap-2">
         <label className="text-sm font-medium text-[#5F5E5A]">{label}</label>
-        <div className="flex min-w-[120px] items-center gap-1 rounded-lg border border-[#E8E6F8] bg-[#F4F2FC] px-2.5 py-1">
+        <div
+          className="flex min-w-[155px] items-center gap-1 rounded-lg border border-[#E8E6F8] bg-[#F4F2FC] px-3 py-1.5 sm:min-w-[170px]"
+          onClick={(e) => {
+            const target = e.currentTarget.querySelector("input");
+            if (!(target instanceof HTMLInputElement)) return;
+            target.focus();
+            target.select();
+          }}
+        >
           {leftUnit ? (
             <span className="shrink-0 text-[13px] font-semibold text-[#534AB7]">
               {leftUnit}
@@ -120,9 +129,9 @@ export function SliderField({
             value={displayValue}
             onChange={handleManualInput}
             onBlur={handleBlur}
+            onFocus={(e) => e.currentTarget.select()}
             className={cn(
-              "border-none bg-transparent text-right text-sm font-semibold text-[#111110] outline-none",
-              detectedType === "money" ? "w-[80px]" : "w-[40px]",
+              "w-full min-w-0 border-none bg-transparent text-right text-base font-semibold text-[#111110] outline-none",
             )}
           />
           {rightUnit ? (
@@ -142,10 +151,10 @@ export function SliderField({
       <input
         type="range"
         min={min}
-        max={max}
+        max={effectiveMax}
         step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        value={Math.min(Math.max(value, min), effectiveMax)}
+        onChange={(e) => onChange(Math.min(effectiveMax, Math.max(min, Number(e.target.value))))}
         className="h-2 w-full cursor-pointer accent-[#534AB7]"
       />
       <div className="mt-1.5 text-right text-xs text-[#9B9A94]">{words}</div>

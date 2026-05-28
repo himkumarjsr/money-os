@@ -57,7 +57,8 @@ describe("financialEngine", () => {
     const profile = baseProfile({});
 
     expect(monthlyTotalIncome(profile)).toBe(100_000);
-    expect(monthlySavingsContributions(profile)).toBe(20_000);
+    // Savings contributions include SIP + EPF (and other investment contributions when present).
+    expect(monthlySavingsContributions(profile)).toBe(30_000);
     expect(monthlyInsuranceTotal(profile)).toBe(1_000);
     expect(housingAndEmiTotal(profile)).toBe(25_000);
     expect(monthlyTotalExpenses(profile)).toBeGreaterThan(25_000);
@@ -104,7 +105,8 @@ describe("financialEngine", () => {
       }),
     );
 
-    expect(result.scores.savingsRate).toBeCloseTo(18.46, 1);
+    // Savings rate counts SIP + EPF contributions.
+    expect(result.scores.savingsRate).toBeCloseTo(26.15, 1);
     expect(result.issues.some((issue) => issue.code === "investment_on_track")).toBe(true);
     expect(result.issues.some((issue) => issue.code === "emergency_fund_ok")).toBe(true);
     expect(result.planSteps).toHaveLength(7);

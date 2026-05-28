@@ -159,6 +159,27 @@ export default function HomePageBelowFold() {
                 Start tracking →
               </span>
             </Link>
+
+            <Link
+              href="/split"
+              className="group flex flex-col rounded-2xl border border-violet-200/80 bg-gradient-to-br from-white to-violet-50/90 p-6 shadow-md shadow-violet-500/10 transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-lg"
+              onClick={() =>
+                trackCta({
+                  cta_name: "FK Split card",
+                  cta_location: "home_top_picks",
+                  href: "/split",
+                })
+              }
+            >
+              <span className="text-2xl" aria-hidden>
+                👥
+              </span>
+              <span className="mt-3 text-lg font-bold text-slate-900">FK Split</span>
+              <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
+                Split bills, track shared expenses, and settle up — ₹ first. No ads.
+              </span>
+              <span className="mt-4 text-sm font-semibold text-violet-700 group-hover:underline">Open FK Split →</span>
+            </Link>
           </div>
         </div>
       </section>

@@ -7,8 +7,8 @@ export async function createSupabaseServerClient() {
   const cookieStore = cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim(),
+    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim(),
     {
       cookies: {
         getAll() {
@@ -30,8 +30,8 @@ let adminSingleton: SupabaseClient | null = null;
 
 /** Service role client — server-only; never import from client bundles. */
 export function getSupabaseAdmin(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
   if (!url || !key) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL are required for admin operations");
   }

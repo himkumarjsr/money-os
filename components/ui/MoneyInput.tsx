@@ -41,7 +41,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
     hint,
     placeholder = "0",
     min = 0,
-    max = 1000000000,
+    max = 10000000,
     onChange,
     onBlur,
     onFocus,
@@ -50,7 +50,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
   ref,
 ) {
   const minValue = Number(min ?? 0);
-  const maxValue = Number(max ?? 1000000000);
+  const maxValue = Math.min(Number(max ?? 10000000), 10000000);
 
   const innerRef = useRef<HTMLInputElement | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -100,6 +100,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
     setIsFocused(true);
     const parsed = handleMoneyInput(e.currentTarget.value, minValue, maxValue);
     e.currentTarget.value = parsed !== null && parsed > 0 ? String(parsed) : "";
+    e.currentTarget.select();
     onFocus?.(e);
   };
 
@@ -140,6 +141,11 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
             ? "border-[1.5px] border-[#534AB7] bg-[#FAFAFE]"
             : "border border-[#E8E6F0] bg-white"
         }`}
+        onClick={() => {
+          if (!innerRef.current || nativeInputProps.disabled) return;
+          innerRef.current.focus();
+          innerRef.current.select();
+        }}
       >
         <span className="shrink-0 text-base font-semibold text-[#534AB7]">₹</span>
         <input
@@ -148,7 +154,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className="min-w-0 flex-1 border-0 bg-transparent text-[16px] font-semibold leading-snug text-[#111110] outline-none placeholder:text-slate-400"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[18px] font-semibold leading-snug text-[#111110] outline-none placeholder:text-slate-400"
           placeholder={placeholder}
           onChange={handleChange}
           onFocus={handleFocus}

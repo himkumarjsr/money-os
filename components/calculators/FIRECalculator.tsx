@@ -8,7 +8,7 @@ import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
-  const set = useCallback((nv: number) => setV(Math.min(max, Math.max(min, nv))), [min, max]);
+  const set = useCallback((nv: number) => setV(Math.max(min, nv)), [min]);
   return [v, set] as const;
 }
 
