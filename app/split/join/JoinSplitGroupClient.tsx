@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { saveSplitInviteToken } from "@/lib/splitAuthRedirect";
 import { useAuthStore } from "@/store/authStore";
+import { useSplitStore } from "@/store/splitStore";
 import { getSupabase } from "@/lib/supabase";
 
 type JoinStatus = "loading" | "success" | "error";
@@ -26,10 +28,12 @@ export default function JoinSplitGroupClient() {
 
     const process = async () => {
       if (!isLoggedIn) {
-        localStorage.setItem("finkoin_split_join_token", token);
-        router.push(
-          `/login?redirect=${encodeURIComponent(`/split/join?token=${encodeURIComponent(token)}`)}`,
-        );
+        saveSplitInviteToken(token);
+        const currentUrl =
+          typeof window !== "undefined"
+            ? window.location.pathname + window.location.search
+            : `/split/join?token=${encodeURIComponent(token)}`;
+        router.push(`/login?next=${encodeURIComponent(currentUrl)}`);
         return;
       }
 
@@ -97,6 +101,10 @@ export default function JoinSplitGroupClient() {
           .from("split_invitations")
           .update({ status: "accepted" })
           .eq("id", invite.id);
+
+        if (user?.id && userEmail) {
+          await useSplitStore.getState().fetchGroups(user.id, userEmail, true);
+        }
 
         setStatus("success");
         setTimeout(() => router.push(`/split/${invite.group_id}`), 1500);

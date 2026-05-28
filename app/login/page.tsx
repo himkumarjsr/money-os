@@ -1,5 +1,6 @@
 "use client";
 
+import { resolvePostLoginPath } from "@/lib/splitAuthRedirect";
 import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -9,7 +10,16 @@ import { Suspense, useEffect, useState } from "react";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get("redirect") || "/analyse";
+  const redirectFromUrl = (() => {
+    const next = searchParams?.get("next") || searchParams?.get("redirect");
+    if (!next) return null;
+    try {
+      const decoded = decodeURIComponent(next);
+      return decoded.startsWith("/") ? decoded : null;
+    } catch {
+      return null;
+    }
+  })();
 
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
@@ -32,9 +42,11 @@ function LoginContent() {
 
   useEffect(() => {
     if (hasInitialized && isLoggedIn) {
-      router.push(redirectTo.startsWith("/") ? redirectTo : "/analyse");
+      router.push(
+        redirectFromUrl ?? resolvePostLoginPath(window.location.search),
+      );
     }
-  }, [hasInitialized, isLoggedIn, router, redirectTo]);
+  }, [hasInitialized, isLoggedIn, redirectFromUrl, router]);
 
   useEffect(() => {
     try {
@@ -49,7 +61,9 @@ function LoginContent() {
           JSON.stringify({
             code: normalized,
             savedAt: new Date().toISOString(),
-            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            expires: new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000,
+            ).toISOString(),
           }),
         );
         console.log("Login page: saved ref to localStorage");
@@ -74,9 +88,12 @@ function LoginContent() {
     if (mode === "reset") {
       setSubmitting(true);
       const supabase = getSupabase();
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
-      });
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+        },
+      );
       setSubmitting(false);
       if (resetErr) {
         setError(resetErr.message);
@@ -145,8 +162,12 @@ function LoginContent() {
         console.log("Login signup: localStorage ref =", stored);
         if (freshSession?.user) {
           try {
-            const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
-            await applyPendingReferralRewards(supabaseClient, freshSession.user.id);
+            const { applyPendingReferralRewards } =
+              await import("@/lib/referralRewards");
+            await applyPendingReferralRewards(
+              supabaseClient,
+              freshSession.user.id,
+            );
             console.log("Login signup: referral done");
           } catch (err) {
             console.error("Login signup referral:", err);
@@ -154,7 +175,7 @@ function LoginContent() {
         }
       }
 
-      router.push(redirectTo.startsWith("/") ? redirectTo : "/analyse");
+      router.push(resolvePostLoginPath(window.location.search));
       return;
     }
 
@@ -167,20 +188,23 @@ function LoginContent() {
 
     if (signInErr) {
       setError(
-        signInErr.message.includes("Invalid") ? "Wrong email or password. Try again." : signInErr.message,
+        signInErr.message.includes("Invalid")
+          ? "Wrong email or password. Try again."
+          : signInErr.message,
       );
       return;
     }
 
     if (data.user) {
       await initAuth();
-      router.push(redirectTo.startsWith("/") ? redirectTo : "/analyse");
+      router.push(resolvePostLoginPath(window.location.search));
     }
   };
 
   const handleGoogleLogin = async () => {
     const supabase = getSupabase();
-    const safeNext = redirectTo.startsWith("/") ? redirectTo : "/analyse";
+    const safeNext =
+      redirectFromUrl ?? resolvePostLoginPath(window.location.search);
     const { error: oauthErr } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -239,7 +263,9 @@ function LoginContent() {
           >
             FK
           </div>
-          <span style={{ fontSize: 22, fontWeight: 800, color: "#534AB7" }}>Finkoin</span>
+          <span style={{ fontSize: 22, fontWeight: 800, color: "#534AB7" }}>
+            Finkoin
+          </span>
         </div>
 
         {mode !== "reset" ? (
@@ -275,7 +301,8 @@ function LoginContent() {
                   fontSize: 14,
                   cursor: "pointer",
                   transition: "all 0.15s",
-                  boxShadow: mode === tab.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                  boxShadow:
+                    mode === tab.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
                 }}
               >
                 {tab.label}
@@ -306,8 +333,12 @@ function LoginContent() {
           }}
         >
           {mode === "login" ? "Log in to see your financial plan." : null}
-          {mode === "signup" ? "Join Indians taking control of finances." : null}
-          {mode === "reset" ? "Enter your email to receive a reset link." : null}
+          {mode === "signup"
+            ? "Join Indians taking control of finances."
+            : null}
+          {mode === "reset"
+            ? "Enter your email to receive a reset link."
+            : null}
         </p>
 
         {mode === "signup" ? (
@@ -408,8 +439,12 @@ function LoginContent() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === "signup" ? "Min 6 characters" : "Your password"}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                placeholder={
+                  mode === "signup" ? "Min 6 characters" : "Your password"
+                }
+                autoComplete={
+                  mode === "signup" ? "new-password" : "current-password"
+                }
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void handleSubmit();
                 }}
@@ -574,7 +609,9 @@ function LoginContent() {
               }}
             >
               <div style={{ flex: 1, height: 1, background: "#E8E6F0" }} />
-              <span style={{ fontSize: 12, color: "#9B9A94", flexShrink: 0 }}>or continue with</span>
+              <span style={{ fontSize: 12, color: "#9B9A94", flexShrink: 0 }}>
+                or continue with
+              </span>
               <div style={{ flex: 1, height: 1, background: "#E8E6F0" }} />
             </div>
 
@@ -638,11 +675,21 @@ function LoginContent() {
             }}
           >
             By signing up you agree to our{" "}
-            <a href="/legal/terms" target="_blank" rel="noreferrer" style={{ color: "#534AB7" }}>
+            <a
+              href="/legal/terms"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "#534AB7" }}
+            >
               Terms
             </a>{" "}
             and{" "}
-            <a href="/legal/privacy" target="_blank" rel="noreferrer" style={{ color: "#534AB7" }}>
+            <a
+              href="/legal/privacy"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "#534AB7" }}
+            >
               Privacy Policy
             </a>
             .
@@ -663,7 +710,9 @@ function LoginContent() {
           <span style={{ fontSize: 12 }} aria-hidden>
             🔐
           </span>
-          <span style={{ fontSize: 11, color: "#9B9A94" }}>256-bit encrypted · Secured by Supabase</span>
+          <span style={{ fontSize: 11, color: "#9B9A94" }}>
+            256-bit encrypted · Secured by Supabase
+          </span>
         </div>
       </div>
     </div>

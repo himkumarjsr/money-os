@@ -112,7 +112,11 @@ type SplitStore = {
   loading: boolean;
   lastFetched: Record<string, number>;
 
-  fetchGroups: (userEmail: string) => Promise<void>;
+  fetchGroups: (
+    userId: string,
+    userEmail: string,
+    forceRefresh?: boolean,
+  ) => Promise<void>;
   fetchGroupDetail: (groupId: string) => Promise<void>;
   createGroup: (
     input: CreateGroupInput,
@@ -173,14 +177,19 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   clearActive: () => set({ activeGroup: null, expenses: [], balances: [] }),
 
-  fetchGroups: async (userEmail) => {
+  fetchGroups: async (userId, userEmail, forceRefresh = false) => {
     const email = (userEmail ?? "").toLowerCase().trim();
-    if (!email) return;
+    if (!userId || !email) return;
 
     const { lastFetched } = get();
-    const cacheKey = `split_groups_${email}`;
-    if (lastFetched[cacheKey] && Date.now() - lastFetched[cacheKey] < CACHE_TTL)
+    const cacheKey = `groups_${userId}`;
+    if (
+      !forceRefresh &&
+      lastFetched[cacheKey] &&
+      Date.now() - lastFetched[cacheKey] < CACHE_TTL
+    ) {
       return;
+    }
 
     set({ loading: true });
     try {
@@ -223,7 +232,13 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   fetchGroupDetail: async (groupId) => {
     if (!groupId) return;
-    set({ loading: true });
+    const prev = get().activeGroup;
+    set({
+      loading: true,
+      ...(prev?.id !== groupId
+        ? { activeGroup: null, expenses: [], balances: [] }
+        : {}),
+    });
     try {
       const supabase = getSupabase();
       const [groupRes, membersRes, expensesRes] = await Promise.all([

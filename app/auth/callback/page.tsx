@@ -1,6 +1,7 @@
 "use client";
 
 import { applyPendingReferralRewards } from "@/lib/referralRewards";
+import { resolvePostLoginPath } from "@/lib/splitAuthRedirect";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -19,8 +20,11 @@ function AuthCallbackContent() {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("code");
         const type = params.get("type");
-        const nextRaw = params.get("next") || "/analyse";
-        const next = nextRaw.startsWith("/") ? nextRaw : "/analyse";
+        const nextParam = params.get("next");
+        const next =
+          nextParam && nextParam.startsWith("/")
+            ? nextParam
+            : resolvePostLoginPath("");
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
