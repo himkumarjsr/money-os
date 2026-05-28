@@ -42,7 +42,9 @@ function LeaderboardContent() {
             setEntries(data.top ?? []);
             setUserEntry(data.me ?? null);
             setLoading(false);
-            setLastFetched(new Date(fetchedAt ?? Date.now()).toLocaleTimeString());
+            setLastFetched(
+              new Date(fetchedAt ?? Date.now()).toLocaleTimeString(),
+            );
             return;
           }
         }
@@ -54,7 +56,10 @@ function LeaderboardContent() {
     setLoading(true);
     try {
       const supabase = getSupabase();
-      const { data: top, error: topError } = await supabase.from("leaderboard_view").select("*").limit(50);
+      const { data: top, error: topError } = await supabase
+        .from("leaderboard_view")
+        .select("*")
+        .limit(50);
       if (topError) throw topError;
 
       let me: LeaderboardEntry | null = null;
@@ -73,7 +78,10 @@ function LeaderboardContent() {
       setUserEntry(me);
 
       const now = Date.now();
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ data: { top: topData, me }, fetchedAt: now }));
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ data: { top: topData, me }, fetchedAt: now }),
+      );
       setLastFetched(new Date(now).toLocaleTimeString());
     } catch (err) {
       console.error("Leaderboard fetch error:", err);
@@ -105,7 +113,6 @@ function LeaderboardContent() {
     return () => {
       void supabase.removeChannel(sub);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- realtime subscription should bind to current user id
   }, [user?.id]);
 
   const getInitials = (name: string) =>
@@ -123,15 +130,33 @@ function LeaderboardContent() {
     return "#9B9A94";
   };
 
-  const me = userEntry ?? (rank ? { rank, percentile: percentile ?? 0, fk_balance: fkBalance } : null);
+  const me =
+    userEntry ??
+    (rank
+      ? { rank, percentile: percentile ?? 0, fk_balance: fkBalance }
+      : null);
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 80px" }}>
       <div
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+        }}
       >
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111110", margin: 0 }}>FK Leaderboard</h1>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: "#111110",
+              margin: 0,
+            }}
+          >
+            FK Leaderboard
+          </h1>
           <p style={{ fontSize: 12, color: "#9B9A94", margin: "4px 0 0" }}>
             {lastFetched ? `Updated ${lastFetched}` : "Live rankings"}
           </p>
@@ -184,17 +209,32 @@ function LeaderboardContent() {
             {getInitials(user?.name || "You")}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>You · Rank #{me.rank}</div>
-            <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>Top {me.percentile}% of all users</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>
+              You · Rank #{me.rank}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
+              Top {me.percentile}% of all users
+            </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 20, fontWeight: 800 }}>{me.fk_balance} FK</div>
-            <div style={{ fontSize: 11, opacity: 0.7 }}>{userEntry?.streak_days ?? 0} day streak</div>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>
+              {me.fk_balance} FK
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.7 }}>
+              {userEntry?.streak_days ?? 0} day streak
+            </div>
           </div>
         </div>
       ) : null}
 
-      <div style={{ background: "white", borderRadius: 16, border: "1px solid #E8E6F0", overflow: "hidden" }}>
+      <div
+        style={{
+          background: "white",
+          borderRadius: 16,
+          border: "1px solid #E8E6F0",
+          overflow: "hidden",
+        }}
+      >
         <div
           style={{
             padding: "12px 16px",
@@ -219,7 +259,16 @@ function LeaderboardContent() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "32px", textAlign: "center", color: "#9B9A94", fontSize: 14 }}>Loading...</div>
+          <div
+            style={{
+              padding: "32px",
+              textAlign: "center",
+              color: "#9B9A94",
+              fontSize: 14,
+            }}
+          >
+            Loading...
+          </div>
         ) : (
           entries.map((entry, i) => {
             const isMe = entry.user_id === user?.id;
@@ -228,7 +277,8 @@ function LeaderboardContent() {
                 key={entry.user_id}
                 style={{
                   padding: "13px 16px",
-                  borderBottom: i < entries.length - 1 ? "1px solid #F7F7F4" : "none",
+                  borderBottom:
+                    i < entries.length - 1 ? "1px solid #F7F7F4" : "none",
                   display: "flex",
                   alignItems: "center",
                   gap: 12,
@@ -268,7 +318,12 @@ function LeaderboardContent() {
                     <img
                       src={entry.avatar_url}
                       alt="avatar"
-                      style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
                     />
                   ) : (
                     getInitials(entry.name || "U")
@@ -276,22 +331,50 @@ function LeaderboardContent() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: isMe ? 700 : 500, color: isMe ? "#534AB7" : "#111110" }}>
-                    {isMe ? `You · ${entry.name || "User"}` : entry.name || "User"}
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: isMe ? 700 : 500,
+                      color: isMe ? "#534AB7" : "#111110",
+                    }}
+                  >
+                    {isMe
+                      ? `You · ${entry.name || "User"}`
+                      : entry.name || "User"}
                   </div>
                   {entry.streak_days > 0 ? (
-                    <div style={{ fontSize: 11, color: "#9B9A94", marginTop: 1 }}>{entry.streak_days} day streak</div>
+                    <div
+                      style={{ fontSize: 11, color: "#9B9A94", marginTop: 1 }}
+                    >
+                      {entry.streak_days} day streak
+                    </div>
                   ) : null}
                 </div>
 
-                <div style={{ fontSize: 14, fontWeight: 700, color: isMe ? "#534AB7" : "#111110" }}>{entry.fk_balance} FK</div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: isMe ? "#534AB7" : "#111110",
+                  }}
+                >
+                  {entry.fk_balance} FK
+                </div>
               </div>
             );
           })
         )}
       </div>
 
-      <div style={{ background: "white", borderRadius: 16, border: "1px solid #E8E6F0", padding: "16px", marginTop: 16 }}>
+      <div
+        style={{
+          background: "white",
+          borderRadius: 16,
+          border: "1px solid #E8E6F0",
+          padding: "16px",
+          marginTop: 16,
+        }}
+      >
         <div
           style={{
             fontSize: 11,
@@ -323,7 +406,9 @@ function LeaderboardContent() {
             }}
           >
             <span style={{ fontSize: 13, color: "#5F5E5A" }}>{action}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#534AB7" }}>{reward}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#534AB7" }}>
+              {reward}
+            </span>
           </div>
         ))}
       </div>

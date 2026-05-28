@@ -23,14 +23,17 @@ function getIstHour(): number {
     timeZone: "Asia/Kolkata",
     hour: "numeric",
     hour12: false,
-  }).formatToParts(new Date()).find((p) => p.type === "hour")?.value;
+  })
+    .formatToParts(new Date())
+    .find((p) => p.type === "hour")?.value;
   return parseInt(hourPart ?? "0", 10);
 }
 
 export default function MorningTipPopup() {
   const router = useRouter();
   const { user, isLoggedIn, hasInitialized } = useAuthStore();
-  const { fetchNotifications, getTodayUnshownPopup, markPopupShown } = useNotificationStore();
+  const { fetchNotifications, getTodayUnshownPopup, markPopupShown } =
+    useNotificationStore();
 
   const [tip, setTip] = useState<Notification | null>(null);
   const [visible, setVisible] = useState(false);
@@ -72,7 +75,6 @@ export default function MorningTipPopup() {
       cancelled = true;
       if (timer !== undefined) clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount gate + stable store actions
   }, [hasInitialized, isLoggedIn, user?.id]);
 
   const handleClose = async () => {
@@ -159,7 +161,14 @@ export default function MorningTipPopup() {
           ✕
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
           <div
             style={{
               width: 46,

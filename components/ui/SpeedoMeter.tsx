@@ -2,7 +2,10 @@
 
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/finance";
-import type { SpeedoMeterCaps, SpeedoMeterProps } from "@/lib/speedo-meter-buckets";
+import type {
+  SpeedoMeterCaps,
+  SpeedoMeterProps,
+} from "@/lib/speedo-meter-buckets";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type { SpeedoMeterProps } from "@/lib/speedo-meter-buckets";
@@ -10,7 +13,10 @@ export type { SpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 const INVEST_FLOOR_PCT = 20;
 const INVEST_WARN_PCT = 17;
 
-function resolveCaps(hasHomeLoan: boolean, caps?: SpeedoMeterCaps): SpeedoMeterCaps {
+function resolveCaps(
+  hasHomeLoan: boolean,
+  caps?: SpeedoMeterCaps,
+): SpeedoMeterCaps {
   return {
     needs: caps?.needs ?? (hasHomeLoan ? 0.3 : 0.2),
     wants: caps?.wants ?? 0.05,
@@ -53,7 +59,12 @@ function rf(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 
-export function polarToXY(angleDeg: number, radius: number, cx: number, cy: number) {
+export function polarToXY(
+  angleDeg: number,
+  radius: number,
+  cx: number,
+  cy: number,
+) {
   const rad = (angleDeg * Math.PI) / 180;
   return {
     x: cx + radius * Math.cos(rad),
@@ -104,7 +115,12 @@ export function annularSectorPath(
   ].join(" ");
 }
 
-export function needlePath(angleDeg: number, cx: number, cy: number, outerRadius: number): string {
+export function needlePath(
+  angleDeg: number,
+  cx: number,
+  cy: number,
+  outerRadius: number,
+): string {
   const tip = polarToXY(angleDeg, outerRadius, cx, cy);
   const hub = polarToXY(angleDeg, outerRadius * 0.22, cx, cy);
   const rad = (angleDeg * Math.PI) / 180;
@@ -143,11 +159,26 @@ function chipLabelInvest(st: Status): string {
   return "Low";
 }
 
-type AnimFracs = { needs: number; wants: number; loans: number; investment: number };
+type AnimFracs = {
+  needs: number;
+  wants: number;
+  loans: number;
+  investment: number;
+};
 
 function useAnimatedFracs(targets: AnimFracs, durationMs = 600): AnimFracs {
-  const [out, setOut] = useState<AnimFracs>({ needs: 0, wants: 0, loans: 0, investment: 0 });
-  const fromRef = useRef<AnimFracs>({ needs: 0, wants: 0, loans: 0, investment: 0 });
+  const [out, setOut] = useState<AnimFracs>({
+    needs: 0,
+    wants: 0,
+    loans: 0,
+    investment: 0,
+  });
+  const fromRef = useRef<AnimFracs>({
+    needs: 0,
+    wants: 0,
+    loans: 0,
+    investment: 0,
+  });
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -162,7 +193,8 @@ function useAnimatedFracs(targets: AnimFracs, durationMs = 600): AnimFracs {
         needs: from.needs + (targets.needs - from.needs) * ease,
         wants: from.wants + (targets.wants - from.wants) * ease,
         loans: from.loans + (targets.loans - from.loans) * ease,
-        investment: from.investment + (targets.investment - from.investment) * ease,
+        investment:
+          from.investment + (targets.investment - from.investment) * ease,
       });
       if (t < 1) {
         rafRef.current = requestAnimationFrame(tick);
@@ -178,7 +210,12 @@ function useAnimatedFracs(targets: AnimFracs, durationMs = 600): AnimFracs {
   return out;
 }
 
-function needleTargetFrac(amount: number, income: number, capFraction: number, rangeMultiplier: number) {
+function needleTargetFrac(
+  amount: number,
+  income: number,
+  capFraction: number,
+  rangeMultiplier: number,
+) {
   const maxScaleFrac = capFraction * rangeMultiplier;
   if (income <= 0 || maxScaleFrac <= 0) return 0;
   return Math.min(1, amount / income / maxScaleFrac);
@@ -210,7 +247,9 @@ function GaugeSvg({
   const capAngle = 180 - (capFraction / maxScaleFrac) * 180;
 
   const status: Status =
-    kind === "spend" ? spendStatus(actualPct, capFraction * 100) : investStatus(actualPct);
+    kind === "spend"
+      ? spendStatus(actualPct, capFraction * 100)
+      : investStatus(actualPct);
   const needleCol = statusColor(status);
 
   const progStroke = compact ? 6 : 7;
@@ -234,7 +273,9 @@ function GaugeSvg({
 
   const progressEndAngle = 180 - needleFrac * 180;
   const progressPath =
-    needleFrac > 0.001 ? describeArc(CX, CY, R_PROGRESS, 180, progressEndAngle) : "";
+    needleFrac > 0.001
+      ? describeArc(CX, CY, R_PROGRESS, 180, progressEndAngle)
+      : "";
 
   return (
     <div className="flex flex-col items-center">
@@ -288,7 +329,14 @@ function GaugeSvg({
           fill={needleCol}
           className="transition-colors duration-300"
         />
-        <circle cx={CX} cy={CY} r={compact ? 3.5 : 4} fill="#fff" stroke={needleCol} strokeWidth={1.5} />
+        <circle
+          cx={CX}
+          cy={CY}
+          r={compact ? 3.5 : 4}
+          fill="#fff"
+          stroke={needleCol}
+          strokeWidth={1.5}
+        />
 
         <text
           x={CX}
@@ -325,7 +373,10 @@ function GaugeColumn({
 }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
-      <p className="text-center text-[0.7rem] font-bold uppercase tracking-wide" style={{ color: labelColor }}>
+      <p
+        className="text-center text-[0.7rem] font-bold uppercase tracking-wide"
+        style={{ color: labelColor }}
+      >
         {title}
       </p>
       {children}
@@ -334,7 +385,14 @@ function GaugeColumn({
           {formatCurrency(amount, "en-IN", "INR", 0)}
         </p>
       ) : null}
-      <span className={cn("rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold", chipClass)}>{chipText}</span>
+      <span
+        className={cn(
+          "rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold",
+          chipClass,
+        )}
+      >
+        {chipText}
+      </span>
     </div>
   );
 }
@@ -348,11 +406,21 @@ function GaugesBlock({
   compact: boolean;
   anim: AnimFracs;
 }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
-  const { needs: needsCap, wants: wantsCap, loans: loansCap, investment: investCap } = resolveCaps(
-    hasHomeLoan,
+  const {
+    income,
+    needs,
+    wants,
+    loans,
+    investment,
+    hasHomeLoan = false,
     caps,
-  );
+  } = props;
+  const {
+    needs: needsCap,
+    wants: wantsCap,
+    loans: loansCap,
+    investment: investCap,
+  } = resolveCaps(hasHomeLoan, caps);
 
   const pct = {
     needs: income > 0 ? (needs / income) * 100 : 0,
@@ -451,8 +519,20 @@ function GaugesBlock({
 }
 
 function ChipsRow({ props }: { props: SpeedoMeterProps }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
-  const { needs: needsCap, wants: wantsCap, loans: loansCap } = resolveCaps(hasHomeLoan, caps);
+  const {
+    income,
+    needs,
+    wants,
+    loans,
+    investment,
+    hasHomeLoan = false,
+    caps,
+  } = props;
+  const {
+    needs: needsCap,
+    wants: wantsCap,
+    loans: loansCap,
+  } = resolveCaps(hasHomeLoan, caps);
   const pct = {
     n: income > 0 ? (needs / income) * 100 : 0,
     w: income > 0 ? (wants / income) * 100 : 0,
@@ -466,25 +546,61 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
 
   return (
     <div className="mt-4 flex flex-wrap justify-center gap-2">
-      <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", CHIP[stN])}>
-        Needs {income > 0 ? `${pct.n.toFixed(0)}%` : "—"} · {chipLabelSpend(stN)}
+      <span
+        className={cn(
+          "rounded-full px-3 py-1 text-xs font-semibold",
+          CHIP[stN],
+        )}
+      >
+        Needs {income > 0 ? `${pct.n.toFixed(0)}%` : "—"} ·{" "}
+        {chipLabelSpend(stN)}
       </span>
-      <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", CHIP[stW])}>
-        Wants {income > 0 ? `${pct.w.toFixed(0)}%` : "—"} · {chipLabelSpend(stW)}
+      <span
+        className={cn(
+          "rounded-full px-3 py-1 text-xs font-semibold",
+          CHIP[stW],
+        )}
+      >
+        Wants {income > 0 ? `${pct.w.toFixed(0)}%` : "—"} ·{" "}
+        {chipLabelSpend(stW)}
       </span>
-      <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", CHIP[stL])}>
-        Loans {income > 0 ? `${pct.l.toFixed(0)}%` : "—"} · {chipLabelSpend(stL)}
+      <span
+        className={cn(
+          "rounded-full px-3 py-1 text-xs font-semibold",
+          CHIP[stL],
+        )}
+      >
+        Loans {income > 0 ? `${pct.l.toFixed(0)}%` : "—"} ·{" "}
+        {chipLabelSpend(stL)}
       </span>
-      <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", CHIP[stI])}>
-        Investment {income > 0 ? `${pct.i.toFixed(0)}%` : "—"} · {chipLabelInvest(stI)}
+      <span
+        className={cn(
+          "rounded-full px-3 py-1 text-xs font-semibold",
+          CHIP[stI],
+        )}
+      >
+        Investment {income > 0 ? `${pct.i.toFixed(0)}%` : "—"} ·{" "}
+        {chipLabelInvest(stI)}
       </span>
     </div>
   );
 }
 
 function InsightBlock({ props }: { props: SpeedoMeterProps }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
-  const { needs: needsCap, wants: wantsCap, loans: loansCap } = resolveCaps(hasHomeLoan, caps);
+  const {
+    income,
+    needs,
+    wants,
+    loans,
+    investment,
+    hasHomeLoan = false,
+    caps,
+  } = props;
+  const {
+    needs: needsCap,
+    wants: wantsCap,
+    loans: loansCap,
+  } = resolveCaps(hasHomeLoan, caps);
   const needsCapPct = Math.round(needsCap * 100);
   const wantsCapPct = Math.round(wantsCap * 100);
   const loansCapPct = Math.round(loansCap * 100);
@@ -503,7 +619,9 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
     );
   }
   if (spendStatus(pct.w, wantsCapPct) !== "good") {
-    issues.push(`Wants are over the ${wantsCapPct}% cap — ease discretionary spend.`);
+    issues.push(
+      `Wants are over the ${wantsCapPct}% cap — ease discretionary spend.`,
+    );
   }
   if (spendStatus(pct.l, loansCapPct) !== "good") {
     issues.push(`Loan outflows exceed the ${loansCapPct}% safety guide.`);
@@ -523,7 +641,9 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
   return (
     <div className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-700">
       {issues.length === 0 ? (
-        <p className="text-center font-medium text-[#085041]">All gauges in the green.</p>
+        <p className="text-center font-medium text-[#085041]">
+          All gauges in the green.
+        </p>
       ) : (
         <ul className="list-disc space-y-1 pl-5">
           {issues.map((line, idx) => (
@@ -548,46 +668,144 @@ export default function SpeedoMeter({
   singleTone?: "red" | "amber" | "green";
 }) {
   if (singleScore != null) {
-    const score = Math.max(0, Math.min(100, Number(singleScore) || 0));
-    const toneColor = singleTone === "red" ? COLORS.red : singleTone === "amber" ? COLORS.amber : COLORS.green;
-    const angle = -180 + (score / 100) * 180;
-    const rad = (angle * Math.PI) / 180;
-    const x2 = 70 + Math.cos(rad) * 43;
-    const y2 = 70 + Math.sin(rad) * 43;
     return (
-      <section className={cn("rounded-3xl border border-slate-200 bg-white p-3 shadow-sm", className)}>
-        {title ? <h2 className="mb-2 text-sm font-semibold text-slate-900">{title}</h2> : null}
-        <svg viewBox="0 0 140 90" className="mx-auto h-[120px] w-[180px]" aria-hidden>
-          <path d="M 15 70 A 55 55 0 0 1 59 17" stroke={COLORS.zoneRed} strokeWidth="12" fill="none" strokeLinecap="round" />
-          <path d="M 59 17 A 55 55 0 0 1 107 31" stroke={COLORS.zoneAmber} strokeWidth="12" fill="none" strokeLinecap="round" />
-          <path d="M 107 31 A 55 55 0 0 1 125 70" stroke={COLORS.zoneGreen} strokeWidth="12" fill="none" strokeLinecap="round" />
-          <line x1="70" y1="70" x2={x2} y2={y2} stroke={toneColor} strokeWidth="4" strokeLinecap="round" />
-          <circle cx="70" cy="70" r="5" fill={toneColor} />
-          <text x="70" y="56" textAnchor="middle" className="fill-slate-900 text-[20px] font-bold">
-            {Math.round(score)}
-          </text>
-          <text x="70" y="68" textAnchor="middle" className="fill-slate-700 text-[10px] font-semibold">
-            /100
-          </text>
-        </svg>
-      </section>
+      <SpeedoMeterSingle
+        title={title}
+        className={className}
+        singleScore={singleScore}
+        singleTone={singleTone}
+      />
     );
   }
+  return <SpeedoMeterMulti title={title} className={className} {...props} />;
+}
 
-  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
+function SpeedoMeterSingle({
+  title,
+  className,
+  singleScore,
+  singleTone,
+}: {
+  title: string;
+  className?: string;
+  singleScore: number;
+  singleTone?: "red" | "amber" | "green";
+}) {
+  const score = Math.max(0, Math.min(100, Number(singleScore) || 0));
+  const toneColor =
+    singleTone === "red"
+      ? COLORS.red
+      : singleTone === "amber"
+        ? COLORS.amber
+        : COLORS.green;
+  const angle = -180 + (score / 100) * 180;
+  const rad = (angle * Math.PI) / 180;
+  const x2 = 70 + Math.cos(rad) * 43;
+  const y2 = 70 + Math.sin(rad) * 43;
+  return (
+    <section
+      className={cn(
+        "rounded-3xl border border-slate-200 bg-white p-3 shadow-sm",
+        className,
+      )}
+    >
+      {title ? (
+        <h2 className="mb-2 text-sm font-semibold text-slate-900">{title}</h2>
+      ) : null}
+      <svg
+        viewBox="0 0 140 90"
+        className="mx-auto h-[120px] w-[180px]"
+        aria-hidden
+      >
+        <path
+          d="M 15 70 A 55 55 0 0 1 59 17"
+          stroke={COLORS.zoneRed}
+          strokeWidth="12"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 59 17 A 55 55 0 0 1 107 31"
+          stroke={COLORS.zoneAmber}
+          strokeWidth="12"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 107 31 A 55 55 0 0 1 125 70"
+          stroke={COLORS.zoneGreen}
+          strokeWidth="12"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <line
+          x1="70"
+          y1="70"
+          x2={x2}
+          y2={y2}
+          stroke={toneColor}
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <circle cx="70" cy="70" r="5" fill={toneColor} />
+        <text
+          x="70"
+          y="56"
+          textAnchor="middle"
+          className="fill-slate-900 text-[20px] font-bold"
+        >
+          {Math.round(score)}
+        </text>
+        <text
+          x="70"
+          y="68"
+          textAnchor="middle"
+          className="fill-slate-700 text-[10px] font-semibold"
+        >
+          /100
+        </text>
+      </svg>
+    </section>
+  );
+}
+
+function SpeedoMeterMulti({
+  title,
+  className,
+  ...props
+}: SpeedoMeterProps & { title: string; className?: string }) {
+  const {
+    income,
+    needs,
+    wants,
+    loans,
+    investment,
+    hasHomeLoan = false,
+    caps,
+  } = props;
   const targets = useMemo(() => {
     const c = resolveCaps(hasHomeLoan, caps);
     return {
       needs: needleTargetFrac(needs, income, c.needs, SPEND_RANGE_MULT),
       wants: needleTargetFrac(wants, income, c.wants, SPEND_RANGE_MULT),
       loans: needleTargetFrac(loans, income, c.loans, SPEND_RANGE_MULT),
-      investment: needleTargetFrac(investment, income, c.investment, INVEST_RANGE_MULT),
+      investment: needleTargetFrac(
+        investment,
+        income,
+        c.investment,
+        INVEST_RANGE_MULT,
+      ),
     };
   }, [income, needs, wants, loans, investment, hasHomeLoan, caps]);
   const anim = useAnimatedFracs(targets);
 
   return (
-    <section className={cn("rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6", className)}>
+    <section
+      className={cn(
+        "rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6",
+        className,
+      )}
+    >
       <h2 className="mb-4 text-lg font-semibold text-slate-900">{title}</h2>
       <GaugesBlock props={props} compact={false} anim={anim} />
       <ChipsRow props={props} />
@@ -599,15 +817,31 @@ export default function SpeedoMeter({
   );
 }
 
-export function SpeedoMeterCompact({ className, ...props }: SpeedoMeterProps & { className?: string }) {
-  const { income, needs, wants, loans, investment, hasHomeLoan = false, caps } = props;
+export function SpeedoMeterCompact({
+  className,
+  ...props
+}: SpeedoMeterProps & { className?: string }) {
+  const {
+    income,
+    needs,
+    wants,
+    loans,
+    investment,
+    hasHomeLoan = false,
+    caps,
+  } = props;
   const targets = useMemo(() => {
     const c = resolveCaps(hasHomeLoan, caps);
     return {
       needs: needleTargetFrac(needs, income, c.needs, SPEND_RANGE_MULT),
       wants: needleTargetFrac(wants, income, c.wants, SPEND_RANGE_MULT),
       loans: needleTargetFrac(loans, income, c.loans, SPEND_RANGE_MULT),
-      investment: needleTargetFrac(investment, income, c.investment, INVEST_RANGE_MULT),
+      investment: needleTargetFrac(
+        investment,
+        income,
+        c.investment,
+        INVEST_RANGE_MULT,
+      ),
     };
   }, [income, needs, wants, loans, investment, hasHomeLoan, caps]);
   const anim = useAnimatedFracs(targets);

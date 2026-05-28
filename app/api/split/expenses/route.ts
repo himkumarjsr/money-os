@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { computeSplitShares } from "@/lib/splitShares";
-import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabaseServer";
+import {
+  createSupabaseServerClient,
+  getSupabaseAdmin,
+} from "@/lib/supabaseServer";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +28,11 @@ export async function POST(req: NextRequest) {
       splitType?: "equal" | "exact" | "percentage";
       expenseDate?: string;
       notes?: string;
-      includedMembers?: Array<{ email: string; display_name: string; user_id?: string | null }>;
+      includedMembers?: Array<{
+        email: string;
+        display_name: string;
+        user_id?: string | null;
+      }>;
       exactAmounts?: Record<string, number>;
       percentages?: Record<string, number>;
     };
@@ -38,15 +45,24 @@ export async function POST(req: NextRequest) {
     const paidByEmail = body.paidByEmail?.toLowerCase().trim();
 
     if (!groupId || !title || !paidByEmail || !splitType || !expenseDate) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
     if (!Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ error: "Enter a valid amount" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Enter a valid amount" },
+        { status: 400 },
+      );
     }
 
     const userEmail = (user.email ?? "").toLowerCase().trim();
     if (!userEmail) {
-      return NextResponse.json({ error: "Account email is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Account email is required" },
+        { status: 400 },
+      );
     }
 
     const admin = getSupabaseAdmin();
@@ -61,7 +77,10 @@ export async function POST(req: NextRequest) {
 
     if (memErr) throw memErr;
     if (!membership) {
-      return NextResponse.json({ error: "You are not a member of this group" }, { status: 403 });
+      return NextResponse.json(
+        { error: "You are not a member of this group" },
+        { status: 403 },
+      );
     }
 
     const includedMembers = body.includedMembers ?? [];
@@ -86,7 +105,8 @@ export async function POST(req: NextRequest) {
         category: body.category?.trim() || "general",
         paid_by_user_id: body.paidByUserId ?? null,
         paid_by_email: paidByEmail,
-        paid_by_name: body.paidByName?.trim() || paidByEmail.split("@")[0] || "Member",
+        paid_by_name:
+          body.paidByName?.trim() || paidByEmail.split("@")[0] || "Member",
         split_type: splitType,
         expense_date: expenseDate,
         notes: body.notes?.trim() || null,
@@ -105,15 +125,27 @@ export async function POST(req: NextRequest) {
       group_id: groupId,
     }));
 
-    const { error: shareInsertErr } = await admin.from("split_expense_shares").insert(sharesWithExpense);
+    const { error: shareInsertErr } = await admin
+      .from("split_expense_shares")
+      .insert(sharesWithExpense);
     if (shareInsertErr) throw shareInsertErr;
 
-    await admin.from("split_groups").update({ updated_at: new Date().toISOString() }).eq("id", groupId);
+    await admin
+      .from("split_groups")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", groupId);
 
-    return NextResponse.json({ success: true, expenseId: newExpense.id });
+    return NextResponse.json({
+      success: true,
+      expense: {
+        ...newExpense,
+        shares: sharesWithExpense,
+      },
+    });
   } catch (err: unknown) {
     console.error("Add split expense error:", err);
-    const message = err instanceof Error ? err.message : "Could not add expense";
+    const message =
+      err instanceof Error ? err.message : "Could not add expense";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
