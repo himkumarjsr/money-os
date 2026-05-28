@@ -27,49 +27,79 @@ export default function JoinSplitGroupClient() {
     const process = async () => {
       if (!isLoggedIn) {
         localStorage.setItem("finkoin_split_join_token", token);
-        router.push(`/login?redirect=${encodeURIComponent(`/split/join?token=${encodeURIComponent(token)}`)}`);
+        router.push(
+          `/login?redirect=${encodeURIComponent(`/split/join?token=${encodeURIComponent(token)}`)}`,
+        );
         return;
       }
 
       try {
         const supabase = getSupabase();
 
+        // Step 1: Get invitation
         const { data: invite, error } = await supabase
           .from("split_invitations")
           .select("*")
           .eq("token", token)
-          .eq("status", "pending")
           .single();
 
         if (error || !invite) {
           setStatus("error");
-          setMessage("Invite not found or expired");
+          setMessage("Invite not found");
           return;
         }
 
+        // Step 2: Check not expired
         if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
           setStatus("error");
           setMessage("This invite has expired");
           return;
         }
 
+        // Step 3: Check status
+        if (invite.status === "accepted") {
+          router.push(`/split/${invite.group_id}`);
+          return;
+        }
+        if (invite.status !== "pending") {
+          setStatus("error");
+          setMessage("Invalid invite");
+          return;
+        }
+
+        // Step 4: Verify email matches
+        const userEmail = (user?.email ?? "").toLowerCase();
+        const invitedEmail = String(invite.invited_email ?? "").toLowerCase();
+        if (!userEmail || !invitedEmail || userEmail !== invitedEmail) {
+          setStatus("error");
+          setMessage(
+            `This invite was sent to ${invite.invited_email}. Please log in with that email.`,
+          );
+          return;
+        }
+
         setGroupName(invite.group_name ?? "group");
 
-        await supabase.from("split_invitations").update({ status: "accepted" }).eq("id", invite.id);
-
+        // Step 5: Update member FIRST
         await supabase
           .from("split_group_members")
           .update({
             user_id: user!.id,
-            display_name: user!.name || user!.email?.split("@")[0] || "Member",
+            display_name: user!.name || userEmail.split("@")[0] || "Member",
             status: "active",
             joined_at: new Date().toISOString(),
           })
           .eq("group_id", invite.group_id)
-          .eq("email", (user!.email ?? "").toLowerCase());
+          .eq("email", invitedEmail);
+
+        // Step 6: Mark invite accepted
+        await supabase
+          .from("split_invitations")
+          .update({ status: "accepted" })
+          .eq("id", invite.id);
 
         setStatus("success");
-        setTimeout(() => router.push(`/split/${invite.group_id}`), 1200);
+        setTimeout(() => router.push(`/split/${invite.group_id}`), 1500);
       } catch (err: unknown) {
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Could not join group");
@@ -87,7 +117,9 @@ export default function JoinSplitGroupClient() {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#EEEDFE] text-2xl">
               ⏳
             </div>
-            <div className="text-lg font-bold text-[#111110]">Joining group…</div>
+            <div className="text-lg font-bold text-[#111110]">
+              Joining group…
+            </div>
             <div className="mt-2 text-sm text-[#9B9A94]">Please wait.</div>
           </>
         ) : null}
@@ -97,15 +129,21 @@ export default function JoinSplitGroupClient() {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#E1F5EE] text-2xl">
               ✓
             </div>
-            <div className="text-lg font-bold text-[#111110]">Joined “{groupName}”</div>
-            <div className="mt-2 text-sm text-[#9B9A94]">Taking you to the group…</div>
+            <div className="text-lg font-bold text-[#111110]">
+              Joined “{groupName}”
+            </div>
+            <div className="mt-2 text-sm text-[#9B9A94]">
+              Taking you to the group…
+            </div>
           </>
         ) : null}
 
         {status === "error" ? (
           <>
             <div className="mb-4 text-4xl">❌</div>
-            <div className="text-base font-bold text-[#111110]">Could not join group</div>
+            <div className="text-base font-bold text-[#111110]">
+              Could not join group
+            </div>
             <div className="mt-2 text-sm text-[#9B9A94]">{message}</div>
             <button
               type="button"
