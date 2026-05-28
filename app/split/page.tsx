@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { Analytics } from "@/lib/analytics";
+import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 
@@ -19,6 +20,8 @@ export default function SplitHomePage() {
 function SplitHomeInner() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const userId = user?.id ?? "";
   const email = (user?.email ?? "").toLowerCase();
   const name = user?.name ?? user?.email?.split("@")[0] ?? "You";
 
@@ -38,9 +41,54 @@ function SplitHomeInner() {
   const [createError, setCreateError] = useState("");
 
   useEffect(() => {
-    if (!email) return;
-    void fetchGroups(email);
-  }, [email, fetchGroups]);
+    if (!isLoggedIn || !userId || !email) return;
+
+    void fetchGroups(userId, email, false);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void fetchGroups(userId, email, true);
+      }
+    };
+
+    const handleFocus = () => {
+      void fetchGroups(userId, email, true);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [email, fetchGroups, isLoggedIn, userId]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !userId || !email) return;
+
+    const supabase = getSupabase();
+
+    const channel = supabase
+      .channel(`my_groups:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "split_group_members",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          void fetchGroups(userId, email, true);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [email, fetchGroups, isLoggedIn, userId]);
 
   const headerStats = useMemo(() => {
     // Lightweight placeholder: balances are computed per-group page via RPC.

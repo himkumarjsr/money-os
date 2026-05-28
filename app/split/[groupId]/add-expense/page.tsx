@@ -45,7 +45,7 @@ function AddSplitExpenseInner() {
 
   const user = useAuthStore((s) => s.user);
   const userId = useAuthStore((s) => s.userId);
-  const createdBy = user?.id ?? userId ?? "";
+  const createdBy = userId ?? user?.id ?? "";
 
   const activeGroup = useSplitStore((s) => s.activeGroup);
   const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
@@ -53,7 +53,11 @@ function AddSplitExpenseInner() {
   const storeLoading = useSplitStore((s) => s.loading);
   const [detailReady, setDetailReady] = useState(false);
 
-  const members = (activeGroup?.members ?? []) as SplitGroupMember[];
+  const groupLoaded = detailReady && activeGroup?.id === groupId;
+  const members = (
+    groupLoaded ? (activeGroup?.members ?? []) : []
+  ) as SplitGroupMember[];
+  const splittableMembers = members.filter((m) => m.status === "active");
 
   const [amountRaw, setAmountRaw] = useState<number>(0);
   const [title, setTitle] = useState("");
@@ -77,34 +81,34 @@ function AddSplitExpenseInner() {
   }, [fetchGroupDetail, groupId]);
 
   useEffect(() => {
-    if (!members.length) return;
+    if (!splittableMembers.length) return;
     const init: Record<string, boolean> = {};
-    for (const m of members) init[m.email.toLowerCase()] = true;
+    for (const m of splittableMembers) init[m.email.toLowerCase()] = true;
     setIncludedEmails(init);
 
     // default paid-by: me, else first member
     const me = (user?.email ?? "").toLowerCase();
     const defaultPaid =
-      members.find((m) => m.email.toLowerCase() === me)?.email ??
-      members[0]?.email ??
+      splittableMembers.find((m) => m.email.toLowerCase() === me)?.email ??
+      splittableMembers[0]?.email ??
       "";
     setPaidByEmail(defaultPaid);
-  }, [members, user?.email]);
+  }, [splittableMembers, user?.email]);
 
   const includedMembers = useMemo(() => {
-    return members
+    return splittableMembers
       .filter((m) => includedEmails[m.email.toLowerCase()])
       .map((m) => ({
         email: m.email,
         display_name: m.display_name,
         user_id: m.user_id,
       }));
-  }, [includedEmails, members]);
+  }, [includedEmails, splittableMembers]);
 
   const paidBy = useMemo(() => {
     const e = paidByEmail.toLowerCase();
-    return members.find((m) => m.email.toLowerCase() === e) ?? null;
-  }, [members, paidByEmail]);
+    return splittableMembers.find((m) => m.email.toLowerCase() === e) ?? null;
+  }, [splittableMembers, paidByEmail]);
 
   const exactSum = useMemo(() => {
     return includedMembers.reduce(
@@ -211,12 +215,12 @@ function AddSplitExpenseInner() {
             Split among selected members.
           </div>
 
-          {!detailReady && storeLoading ? (
+          {!groupLoaded || storeLoading ? (
             <p className="mt-4 text-sm text-[#9B9A94]">
               Loading group members…
             </p>
           ) : null}
-          {detailReady && members.length === 0 ? (
+          {groupLoaded && splittableMembers.length === 0 ? (
             <p className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]">
               No members found for this group. Invite someone from the group
               page, then try again.
@@ -320,7 +324,7 @@ function AddSplitExpenseInner() {
                 onChange={(e) => setPaidByEmail(e.target.value)}
                 className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] bg-white px-3 text-base outline-none focus:border-[#534AB7]"
               >
-                {members.map((m) => (
+                {splittableMembers.map((m) => (
                   <option key={m.email} value={m.email}>
                     {m.display_name} ({m.email})
                   </option>
@@ -360,7 +364,7 @@ function AddSplitExpenseInner() {
               Split among
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
-              {members.map((m) => {
+              {splittableMembers.map((m) => {
                 const on = Boolean(includedEmails[m.email.toLowerCase()]);
                 return (
                   <button
@@ -511,10 +515,11 @@ function AddSplitExpenseInner() {
             type="button"
             disabled={
               busy ||
-              !detailReady ||
+              !groupLoaded ||
               !groupId ||
               !createdBy ||
-              members.length === 0
+              splittableMembers.length === 0 ||
+              includedMembers.length === 0
             }
             onClick={() => void handleSubmit()}
             className="mt-6 w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50 min-h-[44px]"
