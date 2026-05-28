@@ -137,6 +137,11 @@ type SplitStore = {
     userId: string;
     userEmail: string;
   }) => Promise<{ error?: string }>;
+  deleteGroup: (groupId: string) => Promise<{ error?: string }>;
+  deleteExpense: (
+    groupId: string,
+    expenseId: string,
+  ) => Promise<{ error?: string }>;
   clearActive: () => void;
 };
 
@@ -398,6 +403,53 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       console.error("settleUp error:", err);
       return {
         error: err instanceof Error ? err.message : "Could not settle up",
+      };
+    }
+  },
+
+  deleteGroup: async (groupId) => {
+    try {
+      const res = await fetch(`/api/split/groups/${groupId}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) return { error: json.error ?? "Could not delete group" };
+
+      set((state) => ({
+        groups: state.groups.filter((g) => g.id !== groupId),
+        activeGroup:
+          state.activeGroup?.id === groupId ? null : state.activeGroup,
+        expenses: state.activeGroup?.id === groupId ? [] : state.expenses,
+        balances: state.activeGroup?.id === groupId ? [] : state.balances,
+        lastFetched: {},
+      }));
+      return {};
+    } catch (err: unknown) {
+      console.error("deleteGroup error:", err);
+      return {
+        error: err instanceof Error ? err.message : "Could not delete group",
+      };
+    }
+  },
+
+  deleteExpense: async (groupId, expenseId) => {
+    try {
+      const res = await fetch(`/api/split/expenses/${expenseId}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) return { error: json.error ?? "Could not delete expense" };
+
+      set((state) => ({
+        expenses: state.expenses.filter((e) => e.id !== expenseId),
+        lastFetched: {},
+      }));
+      await get().fetchGroupDetail(groupId);
+      return {};
+    } catch (err: unknown) {
+      console.error("deleteExpense error:", err);
+      return {
+        error: err instanceof Error ? err.message : "Could not delete expense",
       };
     }
   },

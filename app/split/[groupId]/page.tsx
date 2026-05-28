@@ -34,6 +34,8 @@ function SplitGroupInner() {
   const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
   const inviteMember = useSplitStore((s) => s.inviteMember);
   const settleUp = useSplitStore((s) => s.settleUp);
+  const deleteExpense = useSplitStore((s) => s.deleteExpense);
+  const deleteGroup = useSplitStore((s) => s.deleteGroup);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -170,6 +172,32 @@ function SplitGroupInner() {
     if (res.error) window.alert(res.error);
   };
 
+  const canManageGroup = Boolean(
+    group?.created_by && user?.id && group.created_by === user.id,
+  );
+
+  const handleDeleteExpense = async (expenseId: string, title: string) => {
+    if (!groupId) return;
+    const ok = window.confirm(`Delete expense "${title}"?`);
+    if (!ok) return;
+    const res = await deleteExpense(groupId, expenseId);
+    if (res.error) window.alert(res.error);
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!groupId || !group?.name) return;
+    const ok = window.confirm(
+      `Delete "${group.name}"?\n\nThis will remove all expenses, invites and balances in this group.`,
+    );
+    if (!ok) return;
+    const res = await deleteGroup(groupId);
+    if (res.error) {
+      window.alert(res.error);
+      return;
+    }
+    router.push("/split");
+  };
+
   const tone = myNet > 0 ? "owed" : myNet < 0 ? "owe" : "settled";
   const netLabel =
     tone === "owed"
@@ -206,13 +234,24 @@ function SplitGroupInner() {
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={openInviteModal}
-              className="shrink-0 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20"
-            >
-              Invite
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {canManageGroup ? (
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteGroup()}
+                  className="rounded-2xl bg-white/10 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/20 hover:bg-white/15"
+                >
+                  Delete
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={openInviteModal}
+                className="rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20"
+              >
+                Invite
+              </button>
+            </div>
           </div>
 
           <div className="mt-5 grid grid-cols-3 gap-3">
@@ -312,6 +351,9 @@ function SplitGroupInner() {
               const myShare = (e.shares ?? [])
                 .filter((s) => s.email?.toLowerCase() === myEmail)
                 .reduce((sum, s) => sum + Number(s.share_amount ?? 0), 0);
+              const canDeleteExpense = Boolean(
+                user?.id && (e.created_by === user.id || canManageGroup),
+              );
               return (
                 <div
                   key={e.id}
@@ -343,6 +385,17 @@ function SplitGroupInner() {
                       <div className="mt-1 text-[11px] font-semibold text-[#9B9A94] uppercase tracking-wide">
                         {e.category || "general"}
                       </div>
+                      {canDeleteExpense ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void handleDeleteExpense(e.id, e.title)
+                          }
+                          className="mt-2 rounded-md border border-[#F5D0D0] px-2 py-1 text-[11px] font-bold text-[#C0392B] hover:bg-[#FFF4F4]"
+                        >
+                          Delete
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
