@@ -5,7 +5,6 @@ import { formatIndian, formatInWords, formatSliderLabel, parseIndianInput } from
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type InsightTone = "good" | "warn" | "bad";
-
 const insightStyles: Record<InsightTone, string> = {
   good: "border-emerald-200 bg-emerald-50 text-emerald-900",
   warn: "border-amber-200 bg-amber-50 text-amber-900",
