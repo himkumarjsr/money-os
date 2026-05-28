@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 import { Suspense } from "react";
 import AppInitializer from "@/components/AppInitializer";
 import { MotionLazyProvider } from "@/components/MotionLazyProvider";
@@ -11,7 +12,6 @@ import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import FeedbackPopupManager from "@/components/FeedbackPopupManager";
 import MorningTipPopup from "@/components/MorningTipPopup";
-import ClarityScript from "@/components/ClarityScript";
 import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
@@ -302,6 +302,27 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans min-h-dvh flex flex-col bg-white antialiased">
+        <Script
+          id="microsoft-clarity"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){
+          (c[a].q=c[a].q||[])
+            .push(arguments)};
+        t=l.createElement(r);
+        t.async=1;
+        t.src=
+          "https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];
+        y.parentNode.insertBefore(t,y);
+      })(window, document, 
+        "clarity", "script", 
+        "wy7rqfej1z");
+    `,
+          }}
+        />
         <MotionLazyProvider>
           <Suspense fallback={null}>
             <ReferralCapture />
@@ -325,7 +346,6 @@ export default function RootLayout({
             <Toast />
           </AppInitializer>
         </MotionLazyProvider>
-        <ClarityScript />
       </body>
       <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!} />
     </html>
