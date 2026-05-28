@@ -1,5 +1,6 @@
 "use client";
 
+import { CALCULATOR_MONEY_MAX } from "@/components/calculators/calculator-ui";
 import { formatIndian, formatInWords, handleMoneyInput } from "@/lib/formatters";
 import {
   forwardRef,
@@ -41,7 +42,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
     hint,
     placeholder = "0",
     min = 0,
-    max = 10000000,
+    max = CALCULATOR_MONEY_MAX,
     onChange,
     onBlur,
     onFocus,
@@ -50,7 +51,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
   ref,
 ) {
   const minValue = Number(min ?? 0);
-  const maxValue = Math.min(Number(max ?? 10000000), 10000000);
+  const maxValue = Math.min(Number(max ?? CALCULATOR_MONEY_MAX), CALCULATOR_MONEY_MAX);
 
   const innerRef = useRef<HTMLInputElement | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -136,10 +137,10 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
       </div>
 
       <div
-        className={`flex items-center gap-2 rounded-[10px] px-3.5 py-2.5 transition-[border-color,background-color] ${
+        className={`flex w-full min-h-[52px] cursor-text items-center gap-2 rounded-xl px-4 py-3 transition-[border-color,background-color] box-border ${
           isFocused
             ? "border-[1.5px] border-[#534AB7] bg-[#FAFAFE]"
-            : "border border-[#E8E6F0] bg-white"
+            : "border-[1.5px] border-[#E8E6F0] bg-white"
         }`}
         onClick={() => {
           if (!innerRef.current || nativeInputProps.disabled) return;
@@ -147,14 +148,15 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function MoneyI
           innerRef.current.select();
         }}
       >
-        <span className="shrink-0 text-base font-semibold text-[#534AB7]">₹</span>
+        <span className="shrink-0 select-none text-[15px] font-semibold text-[#9B9A94]">₹</span>
         <input
           ref={setRefs}
           id={id}
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className="min-w-0 flex-1 border-0 bg-transparent text-[18px] font-semibold leading-snug text-[#111110] outline-none placeholder:text-slate-400"
+          className="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold leading-snug text-[#111110] outline-none placeholder:text-slate-400"
+          style={{ fontSize: 16 }}
           placeholder={placeholder}
           onChange={handleChange}
           onFocus={handleFocus}

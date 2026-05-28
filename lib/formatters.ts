@@ -120,7 +120,7 @@ export function parseIndianInput(rawInput: string): number | null {
 export function handleMoneyInput(
   raw: string,
   min: number = 0,
-  max: number = 1000000000,
+  max: number = 9_999_999_999,
 ): number | null {
   let cleaned = raw.replace(/,/g, "").trim();
   cleaned = cleaned.replace(/₹/g, "").trim();

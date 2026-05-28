@@ -2,7 +2,7 @@
 
 import { formatCurrency } from "@/lib/finance";
 import { useCallback, useState } from "react";
-import { Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() =>
@@ -54,7 +54,7 @@ export function RentVsOwnCarCalculator() {
         unitType="money"
         value={cabPerKm}
         min={6}
-        max={25}
+        max={CALCULATOR_MONEY_MAX}
         step={0.5}
         onChange={setCabPerKm}
         format={(v) => `₹${v}/km`}
@@ -64,7 +64,7 @@ export function RentVsOwnCarCalculator() {
         unitType="money"
         value={price}
         min={3_00_000}
-        max={40_00_000}
+        max={CALCULATOR_MONEY_MAX}
         step={50_000}
         onChange={setPrice}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
