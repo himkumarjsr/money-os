@@ -1,0 +1,44 @@
+# .github/workflows/deploy-uat.yml
+# Runs when code is pushed to main branch
+# Vercel handles actual deploy
+# This just notifies and validates
+
+name: Deploy to UAT
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify-deploy:
+    name: UAT Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build validation
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITE_URL: https://uat.finkoin.com
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Build passed"
+          echo "🚀 Deploying to uat.finkoin.com"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "By: ${{ github.actor }}"
+          echo "Time: $(date)"

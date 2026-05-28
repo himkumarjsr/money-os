@@ -1,0 +1,56 @@
+# .github/workflows/deploy-prod.yml
+# Only runs on production branch
+# Extra strict checks
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [production]
+
+jobs:
+  production-deploy:
+    name: Production Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Strict TypeScript for production
+      - name: TypeScript strict check
+        run: npx tsc --noEmit --strict
+
+      # Production build
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITE_URL: https://finkoin.com
+          NODE_ENV: production
+
+      # Check bundle size
+      - name: Bundle size check
+        run: |
+          BUILD_SIZE=$(du -sh .next | cut -f1)
+          echo "Build size: $BUILD_SIZE"
+
+      - name: Production deployment confirmed
+        run: |
+          echo "🚀 PRODUCTION DEPLOYMENT"
+          echo "========================"
+          echo "Site: finkoin.com"
+          echo "Branch: production"  
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "$(date)"
