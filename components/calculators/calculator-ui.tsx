@@ -54,7 +54,6 @@ export function SliderField({
   suffix,
   unitType,
 }: SliderFieldProps) {
-  const ONE_CRORE = 1_00_00_000;
   const detectedType: "money" | "percent" | "years" | "months" | "number" =
     unitType ??
     (/interest|rate|return|%/i.test(label)
@@ -76,7 +75,7 @@ export function SliderField({
             : detectedType === "number"
               ? ""
           : suffix ?? "";
-  const effectiveMax = detectedType === "money" ? Math.min(max, ONE_CRORE) : max;
+  const effectiveMax = Math.max(max, min, value);
 
   const [displayValue, setDisplayValue] = useState(() =>
     Number.isFinite(value) ? formatIndian(Math.min(Math.max(value, min), effectiveMax)) : "0",
