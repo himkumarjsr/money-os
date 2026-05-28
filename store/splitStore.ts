@@ -137,7 +137,7 @@ type SplitStore = {
     userId: string;
     userEmail: string;
   }) => Promise<{ error?: string }>;
-  deleteGroup: (groupId: string) => Promise<{ error?: string }>;
+  deleteGroup: (groupId: string) => Promise<boolean>;
   deleteExpense: (
     groupId: string,
     expenseId: string,
@@ -409,11 +409,14 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   deleteGroup: async (groupId) => {
     try {
-      const res = await fetch(`/api/split/groups/${groupId}`, {
+      const res = await fetch(`/api/split/groups?groupId=${groupId}`, {
         method: "DELETE",
       });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) return { error: json.error ?? "Could not delete group" };
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        console.error("deleteGroup error:", data.error);
+        return false;
+      }
 
       set((state) => ({
         groups: state.groups.filter((g) => g.id !== groupId),
@@ -423,12 +426,10 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         balances: state.activeGroup?.id === groupId ? [] : state.balances,
         lastFetched: {},
       }));
-      return {};
-    } catch (err: unknown) {
-      console.error("deleteGroup error:", err);
-      return {
-        error: err instanceof Error ? err.message : "Could not delete group",
-      };
+      return true;
+    } catch (err) {
+      console.error("deleteGroup:", err);
+      return false;
     }
   },
 

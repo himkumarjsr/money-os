@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { getSupabase } from "@/lib/supabase";
+import { Analytics } from "@/lib/analytics";
 import { formatIndian } from "@/lib/formatters";
 import { useAuthStore } from "@/store/authStore";
 import { getMyBalanceFromEdges, useSplitStore } from "@/store/splitStore";
@@ -42,6 +43,8 @@ function SplitGroupInner() {
   const [inviteLink, setInviteLink] = useState("");
   const [inviteMsg, setInviteMsg] = useState("");
   const [inviteBusy, setInviteBusy] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!groupId) return;
@@ -134,6 +137,7 @@ function SplitGroupInner() {
     }
 
     if (res.emailSent) {
+      Analytics.splitInviteSent();
       setInviteMsg(`Invite sent to ${email} ✓`);
       setInviteEmail("");
       setInviteLink("");
@@ -172,9 +176,7 @@ function SplitGroupInner() {
     if (res.error) window.alert(res.error);
   };
 
-  const canManageGroup = Boolean(
-    group?.created_by && user?.id && group.created_by === user.id,
-  );
+  const isCreator = group?.created_by === user?.id;
 
   const handleDeleteExpense = async (expenseId: string, title: string) => {
     if (!groupId) return;
@@ -186,15 +188,14 @@ function SplitGroupInner() {
 
   const handleDeleteGroup = async () => {
     if (!groupId || !group?.name) return;
-    const ok = window.confirm(
-      `Delete "${group.name}"?\n\nThis will remove all expenses, invites and balances in this group.`,
-    );
-    if (!ok) return;
-    const res = await deleteGroup(groupId);
-    if (res.error) {
-      window.alert(res.error);
+    setDeleting(true);
+    const ok = await deleteGroup(groupId);
+    setDeleting(false);
+    if (!ok) {
+      window.alert("Could not delete group.");
       return;
     }
+    setShowDeleteConfirm(false);
     router.push("/split");
   };
 
@@ -209,7 +210,7 @@ function SplitGroupInner() {
     tone === "owed" ? "#1D9E75" : tone === "owe" ? "#E24B4A" : "#9B9A94";
 
   return (
-    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-28 sm:px-6">
+    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[90px] sm:px-6">
       <div className="mx-auto max-w-3xl">
         <div className="rounded-3xl bg-[#534AB7] px-6 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-start justify-between gap-4">
@@ -235,19 +236,19 @@ function SplitGroupInner() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {canManageGroup ? (
+              {isCreator ? (
                 <button
                   type="button"
-                  onClick={() => void handleDeleteGroup()}
-                  className="rounded-2xl bg-white/10 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/20 hover:bg-white/15"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex h-[44px] w-[44px] items-center justify-center rounded-xl bg-white/15 text-lg font-bold text-white ring-1 ring-white/20 hover:bg-white/15"
                 >
-                  Delete
+                  ...
                 </button>
               ) : null}
               <button
                 type="button"
                 onClick={openInviteModal}
-                className="rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20"
+                className="rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20 min-h-[44px]"
               >
                 Invite
               </button>
@@ -315,7 +316,7 @@ function SplitGroupInner() {
             {balances.map((b, idx) => (
               <div
                 key={`${b.from_email}-${b.to_email}-${idx}`}
-                className="rounded-2xl border border-[#E8E6F0] bg-white p-5"
+                className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -352,12 +353,12 @@ function SplitGroupInner() {
                 .filter((s) => s.email?.toLowerCase() === myEmail)
                 .reduce((sum, s) => sum + Number(s.share_amount ?? 0), 0);
               const canDeleteExpense = Boolean(
-                user?.id && (e.created_by === user.id || canManageGroup),
+                user?.id && (e.created_by === user.id || isCreator),
               );
               return (
                 <div
                   key={e.id}
-                  className="rounded-2xl border border-[#E8E6F0] bg-white p-5"
+                  className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
@@ -383,7 +384,21 @@ function SplitGroupInner() {
                         ₹{formatIndian(Math.round(Number(e.amount ?? 0)))}
                       </div>
                       <div className="mt-1 text-[11px] font-semibold text-[#9B9A94] uppercase tracking-wide">
-                        {e.category || "general"}
+                        {e.category === "food"
+                          ? "🍽️ food"
+                          : e.category === "transport"
+                            ? "🚕 transport"
+                            : e.category === "accommodation"
+                              ? "🏨 accommodation"
+                              : e.category === "entertainment"
+                                ? "🎉 entertainment"
+                                : e.category === "shopping"
+                                  ? "🛒 shopping"
+                                  : e.category === "utilities"
+                                    ? "⚡ utilities"
+                                    : e.category === "medical"
+                                      ? "💊 medical"
+                                      : e.category || "📦 general"}
                       </div>
                       {canDeleteExpense ? (
                         <button
@@ -391,7 +406,7 @@ function SplitGroupInner() {
                           onClick={() =>
                             void handleDeleteExpense(e.id, e.title)
                           }
-                          className="mt-2 rounded-md border border-[#F5D0D0] px-2 py-1 text-[11px] font-bold text-[#C0392B] hover:bg-[#FFF4F4]"
+                          className="mt-2 rounded-md border border-[#F5D0D0] px-2 py-1 text-[11px] font-bold text-[#C0392B] hover:bg-[#FFF4F4] min-h-[44px] min-w-[44px]"
                         >
                           Delete
                         </button>
@@ -407,12 +422,12 @@ function SplitGroupInner() {
 
       {inviteOpen ? (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40"
           onClick={() => setInviteOpen(false)}
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+            className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-[calc(env(safe-area-inset-bottom)+24px)] shadow-xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -448,7 +463,7 @@ function SplitGroupInner() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="friend@example.com"
-                className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-sm outline-none focus:border-[#534AB7]"
+                className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
               />
             </div>
 
@@ -509,12 +524,51 @@ function SplitGroupInner() {
               type="button"
               disabled={inviteBusy || !inviteEmail.trim()}
               onClick={() => void handleSendInvite()}
-              className="mt-5 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50"
+              className="mt-5 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50 min-h-[44px]"
             >
               {inviteBusy ? "Sending…" : "Send invite"}
             </button>
           </div>
         </div>
+      ) : null}
+
+      {showDeleteConfirm ? (
+        <>
+          <div
+            onClick={() => setShowDeleteConfirm(false)}
+            className="fixed inset-0 z-[990] bg-black/50"
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto w-full max-w-[480px] rounded-t-[20px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+40px)] pt-6">
+            <div className="mx-auto mb-5 h-1 w-10 rounded bg-[#E8E6F0]" />
+            <div className="mb-5 text-center">
+              <div className="mb-3 text-[44px]">🗑️</div>
+              <div className="mb-2 text-[18px] font-extrabold text-[#111110]">
+                {`Delete "${group?.name}"?`}
+              </div>
+              <div className="text-sm leading-6 text-[#9B9A94]">
+                This will remove the group for all members. Expense history will
+                be saved but the group will be closed. This cannot be undone.
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => void handleDeleteGroup()}
+                disabled={deleting}
+                className="h-[50px] w-full rounded-[13px] border-none bg-[#E24B4A] text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#9B9A94]"
+              >
+                {deleting ? "Deleting..." : "Yes, delete group"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="h-[50px] w-full rounded-[13px] border-none bg-[#F7F7F4] text-[15px] font-semibold text-[#5F5E5A]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
       ) : null}
 
       <div className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#E8E6F0] bg-white pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-4px_24px_rgba(30,30,60,0.06)]">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import { Analytics } from "@/lib/analytics";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 
@@ -76,6 +77,7 @@ function SplitHomeInner() {
       return;
     }
     if (groupId) {
+      Analytics.splitGroupCreated();
       const inviteEmail = inviteEmailOnCreate.trim().toLowerCase();
       if (inviteEmail && inviteEmail !== email) {
         const inviteRes = await inviteMember({
@@ -109,15 +111,15 @@ function SplitHomeInner() {
       `Delete "${groupName}"?\n\nThis will remove all expenses, invites and balances in this group.`,
     );
     if (!ok) return;
-    const res = await deleteGroup(groupId);
-    if (res.error) {
-      window.alert(res.error);
+    const okDelete = await deleteGroup(groupId);
+    if (!okDelete) {
+      window.alert("Could not delete group.");
       return;
     }
   };
 
   return (
-    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-24 sm:px-6">
+    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[90px] sm:px-6">
       <div className="mx-auto max-w-3xl">
         <div className="rounded-3xl bg-[#534AB7] px-6 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-start justify-between gap-4">
@@ -135,7 +137,7 @@ function SplitHomeInner() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="shrink-0 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20"
+              className="shrink-0 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20 min-h-[44px]"
             >
               + New group
             </button>
@@ -189,7 +191,7 @@ function SplitHomeInner() {
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="mt-5 rounded-xl bg-[#534AB7] px-5 py-3 text-sm font-bold text-white"
+                className="mt-5 rounded-xl bg-[#534AB7] px-5 py-3 text-sm font-bold text-white min-h-[44px]"
               >
                 Create your first group
               </button>
@@ -200,14 +202,14 @@ function SplitHomeInner() {
             groups.map((g) => (
               <div
                 key={g.id}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E6F0] bg-white px-4 py-4 shadow-sm"
+                className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E6F0] bg-white px-4 py-4 shadow-sm min-h-[72px]"
               >
                 <button
                   type="button"
                   onClick={() => router.push(`/split/${g.id}`)}
-                  className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-4 text-left min-h-[44px]"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EEEDFE] text-xl">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#EEEDFE] text-2xl">
                     {g.emoji || "💰"}
                   </div>
                   <div className="min-w-0">
@@ -224,7 +226,7 @@ function SplitHomeInner() {
                   <button
                     type="button"
                     onClick={() => void handleDeleteGroup(g.id, g.name)}
-                    className="rounded-lg border border-[#F5D0D0] px-2.5 py-1.5 text-xs font-bold text-[#C0392B] hover:bg-[#FFF4F4]"
+                    className="rounded-lg border border-[#F5D0D0] px-2.5 py-1.5 text-xs font-bold text-[#C0392B] hover:bg-[#FFF4F4] min-h-[44px] min-w-[44px]"
                     title="Delete group"
                   >
                     Delete
@@ -232,7 +234,7 @@ function SplitHomeInner() {
                   <button
                     type="button"
                     onClick={() => router.push(`/split/${g.id}`)}
-                    className="text-sm font-bold text-slate-400"
+                    className="text-sm font-bold text-slate-400 min-h-[44px] min-w-[44px]"
                     aria-label={`Open ${g.name}`}
                   >
                     →
@@ -245,12 +247,12 @@ function SplitHomeInner() {
 
       {createOpen ? (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40"
           onClick={() => setCreateOpen(false)}
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+            className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-[calc(env(safe-area-inset-bottom)+24px)] shadow-xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -286,7 +288,7 @@ function SplitHomeInner() {
                   value={gName}
                   onChange={(e) => setGName(e.target.value)}
                   placeholder="Test Trip"
-                  className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-sm outline-none focus:border-[#534AB7]"
+                  className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -298,7 +300,7 @@ function SplitHomeInner() {
                     value={gEmoji}
                     onChange={(e) => setGEmoji(e.target.value)}
                     placeholder="🏖️"
-                    className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-sm outline-none focus:border-[#534AB7]"
+                    className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
                   />
                 </div>
                 <div>
@@ -308,7 +310,7 @@ function SplitHomeInner() {
                   <select
                     value={gType}
                     onChange={(e) => setGType(e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] bg-white px-3 text-sm outline-none focus:border-[#534AB7]"
+                    className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] bg-white px-3 text-base outline-none focus:border-[#534AB7]"
                   >
                     <option value="general">General</option>
                     <option value="trip">Trip</option>
@@ -328,7 +330,7 @@ function SplitHomeInner() {
                   value={inviteEmailOnCreate}
                   onChange={(e) => setInviteEmailOnCreate(e.target.value)}
                   placeholder="friend@example.com"
-                  className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-sm outline-none focus:border-[#534AB7]"
+                  className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
                 />
               </div>
 
@@ -342,7 +344,7 @@ function SplitHomeInner() {
                 type="button"
                 disabled={busy || !gName.trim()}
                 onClick={() => void handleCreate()}
-                className="mt-2 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50"
+                className="mt-2 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50 min-h-[44px]"
               >
                 {busy ? "Creating…" : "Create group"}
               </button>

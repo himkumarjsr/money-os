@@ -11,6 +11,7 @@ import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import FeedbackPopupManager from "@/components/FeedbackPopupManager";
 import MorningTipPopup from "@/components/MorningTipPopup";
+import ClarityScript from "@/components/ClarityScript";
 import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
@@ -18,7 +19,9 @@ import { SEO_CONFIG, SITE_URL } from "@/lib/seo";
 
 const RenewalReminderBanner = dynamic(
   () =>
-    import("@/components/RenewalReminderBanner").then((m) => ({ default: m.RenewalReminderBanner })),
+    import("@/components/RenewalReminderBanner").then((m) => ({
+      default: m.RenewalReminderBanner,
+    })),
   { ssr: false },
 );
 import { Toast } from "@/components/ui/Toast";
@@ -30,7 +33,13 @@ const inter = Inter({
   display: "swap",
   preload: true,
   adjustFontFallback: true,
-  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+  fallback: [
+    "system-ui",
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "sans-serif",
+  ],
 });
 
 const siteUrl = SITE_URL;
@@ -96,39 +105,48 @@ export const metadata: Metadata = {
     startupImage: [
       {
         url: "/splash/apple-splash-2048-2732.png",
-        media: "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)",
+        media:
+          "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)",
       },
       {
         url: "/splash/apple-splash-1668-2388.png",
-        media: "(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)",
+        media:
+          "(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)",
       },
       {
         url: "/splash/apple-splash-1536-2048.png",
-        media: "(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)",
+        media:
+          "(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)",
       },
       {
         url: "/splash/apple-splash-1125-2436.png",
-        media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)",
+        media:
+          "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)",
       },
       {
         url: "/splash/apple-splash-1242-2688.png",
-        media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)",
+        media:
+          "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)",
       },
       {
         url: "/splash/apple-splash-828-1792.png",
-        media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)",
+        media:
+          "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)",
       },
       {
         url: "/splash/apple-splash-1242-2208.png",
-        media: "(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)",
+        media:
+          "(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)",
       },
       {
         url: "/splash/apple-splash-750-1334.png",
-        media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)",
+        media:
+          "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)",
       },
       {
         url: "/splash/apple-splash-640-1136.png",
-        media: "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)",
+        media:
+          "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)",
       },
     ],
   },
@@ -177,16 +195,31 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
+        <link
+          rel="apple-touch-icon"
+          sizes="152x152"
+          href="/icons/icon-152x152.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/icons/icon-192x192.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="167x167"
+          href="/icons/icon-192x192.png"
+        />
         <meta name="theme-color" content="#534AB7" />
         <meta
           name="google-site-verification"
           content="INyXjW5d4nLIwegnwnH_DAKX81o3a_cYup7iq_Jt-6U"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <meta name="apple-mobile-web-app-title" content="Finkoin" />
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="manifest" href="/manifest.json" fetchPriority="low" />
@@ -207,7 +240,8 @@ export default function RootLayout({
                     "@type": "SearchAction",
                     target: {
                       "@type": "EntryPoint",
-                      urlTemplate: "https://www.finkoin.com/search?q={search_term_string}",
+                      urlTemplate:
+                        "https://www.finkoin.com/search?q={search_term_string}",
                     },
                     "query-input": "required name=search_term_string",
                   },
@@ -248,7 +282,8 @@ export default function RootLayout({
               "@type": "WebApplication",
               name: "Finkoin",
               url: siteUrl,
-              description: "Personal financial health check and wealth planning for India",
+              description:
+                "Personal financial health check and wealth planning for India",
               applicationCategory: "FinanceApplication",
               operatingSystem: "Web",
               offers: {
@@ -277,7 +312,10 @@ export default function RootLayout({
             <FinancialStoreAuthSync />
             <GlobalNavbar />
             <RenewalReminderBanner />
-            <main id="main-content" className="relative flex min-h-0 flex-1 flex-col">
+            <main
+              id="main-content"
+              className="relative flex min-h-0 flex-1 flex-col"
+            >
               {children}
             </main>
             <MorningTipPopup />
@@ -287,6 +325,7 @@ export default function RootLayout({
             <Toast />
           </AppInitializer>
         </MotionLazyProvider>
+        <ClarityScript />
       </body>
       <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!} />
     </html>

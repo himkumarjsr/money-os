@@ -86,6 +86,7 @@ export default function AnalyseResultPage() {
   useEffect(() => {
     if (!hasHydrated || !result || !lastSubmission || !priorityPlan) return;
     Analytics.reportViewed(reportScore);
+    Analytics.healthCheckCompleted(reportScore);
   }, [hasHydrated, result, lastSubmission, priorityPlan, reportScore]);
 
   useEffect(() => {

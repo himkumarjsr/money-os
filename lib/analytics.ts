@@ -1,63 +1,52 @@
-export const trackEvent = (eventName: string, parameters?: Record<string, any>) => {
-  if (typeof window === "undefined") return;
-  if (!window.gtag) return;
-
-  window.gtag("event", eventName, {
-    ...parameters,
-    timestamp: new Date().toISOString(),
-  });
-};
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+    clarity?: (...args: any[]) => void;
+  }
+}
 
 export const Analytics = {
-  formStarted: () =>
-    trackEvent("form_started", {
-      feature: "financial_health",
-    }),
+  event: (eventName: string, params?: Record<string, any>) => {
+    if (typeof window !== "undefined" && window.gtag) {
+      window.gtag("event", eventName, params);
+    }
+    if (typeof window !== "undefined" && window.clarity) {
+      window.clarity("event", eventName);
+    }
+  },
 
-  formCompleted: (score: number) =>
-    trackEvent("form_completed", {
-      feature: "financial_health",
-      score_range: score < 40 ? "poor" : score < 70 ? "average" : "good",
-    }),
+  healthCheckStarted: () => Analytics.event("health_check_started"),
+  healthCheckCompleted: (score: number) =>
+    Analytics.event("health_check_completed", { score }),
+  fixPlanViewed: () => Analytics.event("fix_plan_viewed"),
+  fixPlanPurchased: () => Analytics.event("fix_plan_purchased"),
+  calculatorUsed: (type: string) =>
+    Analytics.event("calculator_used", { calculator_type: type }),
+  splitGroupCreated: () => Analytics.event("split_group_created"),
+  splitExpenseAdded: () => Analytics.event("split_expense_added"),
+  splitInviteSent: () => Analytics.event("split_invite_sent"),
+  referralLinkCopied: () => Analytics.event("referral_link_copied"),
+  feedbackSubmitted: (rating: number) =>
+    Analytics.event("feedback_submitted", { rating }),
+  loginCompleted: (method: string) =>
+    Analytics.event("login_completed", { method }),
 
-  paywallViewed: () => trackEvent("paywall_viewed"),
-
+  // backward compatibility wrappers
+  formStarted: () => Analytics.healthCheckStarted(),
+  formCompleted: (score: number) => Analytics.healthCheckCompleted(score),
+  paywallViewed: () => Analytics.event("paywall_viewed"),
   paymentStarted: (amount: number) =>
-    trackEvent("payment_started", {
-      value: amount,
-      currency: "INR",
-    }),
-
+    Analytics.event("payment_started", { value: amount, currency: "INR" }),
   paymentCompleted: (amount: number) =>
-    trackEvent("purchase", {
+    Analytics.event("purchase", {
       value: amount,
       currency: "INR",
-      items: [
-        {
-          item_name: "fix_plan",
-          price: amount,
-        },
-      ],
+      items: [{ item_name: "fix_plan", price: amount }],
     }),
-
-  taxCalculatorUsed: () => trackEvent("tax_calculator_used"),
-
+  taxCalculatorUsed: () => Analytics.event("tax_calculator_used"),
   trackerExpenseAdded: (bucket: string) =>
-    trackEvent("expense_added", {
-      bucket,
-    }),
-
-  reportViewed: (score: number) =>
-    trackEvent("report_viewed", {
-      score,
-    }),
-
-  fixPlanViewed: () => trackEvent("fix_plan_viewed"),
-
-  referralLinkCopied: () => trackEvent("referral_link_copied"),
-
+    Analytics.event("expense_added", { bucket }),
+  reportViewed: (score: number) => Analytics.event("report_viewed", { score }),
   scoreShared: (platform: string) =>
-    trackEvent("score_shared", {
-      platform,
-    }),
+    Analytics.event("score_shared", { platform }),
 };
