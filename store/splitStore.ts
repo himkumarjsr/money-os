@@ -96,7 +96,9 @@ type AddExpenseInput = {
   splitType: SplitType;
   expenseDate: string; // YYYY-MM-DD
   notes?: string;
-  includedMembers: Array<Pick<SplitGroupMember, "email" | "display_name" | "user_id">>;
+  includedMembers: Array<
+    Pick<SplitGroupMember, "email" | "display_name" | "user_id">
+  >;
   exactAmounts?: Record<string, number>; // email -> amount
   percentages?: Record<string, number>; // email -> pct
   createdBy: string;
@@ -112,14 +114,21 @@ type SplitStore = {
 
   fetchGroups: (userEmail: string) => Promise<void>;
   fetchGroupDetail: (groupId: string) => Promise<void>;
-  createGroup: (input: CreateGroupInput) => Promise<{ groupId: string | null; error?: string }>;
+  createGroup: (
+    input: CreateGroupInput,
+  ) => Promise<{ groupId: string | null; error?: string }>;
   inviteMember: (input: {
     groupId: string;
     groupName: string;
     invitedEmail: string;
     invitedByName: string;
     invitedById: string;
-  }) => Promise<{ inviteUrl?: string; emailSent?: boolean; emailError?: string; error?: string }>;
+  }) => Promise<{
+    inviteUrl?: string;
+    emailSent?: boolean;
+    emailError?: string;
+    error?: string;
+  }>;
   addExpense: (input: AddExpenseInput) => Promise<{ error?: string }>;
   settleUp: (input: {
     groupId: string;
@@ -128,6 +137,11 @@ type SplitStore = {
     userId: string;
     userEmail: string;
   }) => Promise<{ error?: string }>;
+  deleteGroup: (groupId: string) => Promise<boolean>;
+  deleteExpense: (
+    groupId: string,
+    expenseId: string,
+  ) => Promise<{ error?: string }>;
   clearActive: () => void;
 };
 
@@ -165,7 +179,8 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
     const { lastFetched } = get();
     const cacheKey = `split_groups_${email}`;
-    if (lastFetched[cacheKey] && Date.now() - lastFetched[cacheKey] < CACHE_TTL) return;
+    if (lastFetched[cacheKey] && Date.now() - lastFetched[cacheKey] < CACHE_TTL)
+      return;
 
     set({ loading: true });
     try {
@@ -178,7 +193,11 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       if (memErr) throw memErr;
 
       if (!memberships?.length) {
-        set({ groups: [], loading: false, lastFetched: { ...lastFetched, [cacheKey]: Date.now() } });
+        set({
+          groups: [],
+          loading: false,
+          lastFetched: { ...lastFetched, [cacheKey]: Date.now() },
+        });
         return;
       }
 
@@ -233,11 +252,14 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
       let balancesData: SplitBalanceEdge[] = [];
       try {
-        const { data: balances, error } = await supabase.rpc("get_split_balances", { p_group_id: groupId });
+        const { data: balances, error } = await supabase.rpc(
+          "get_split_balances",
+          { p_group_id: groupId },
+        );
         if (error) {
           console.warn("Balances RPC error:", error);
         } else {
-          balancesData = ((balances as unknown) as SplitBalanceEdge[]) ?? [];
+          balancesData = (balances as unknown as SplitBalanceEdge[]) ?? [];
         }
       } catch (err) {
         console.warn("Balances RPC error:", err);
@@ -334,51 +356,109 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         }),
       });
 
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as {
+        expense?: SplitExpense;
+        error?: string;
+      };
       if (!res.ok) return { error: json.error ?? "Could not add expense" };
 
-      set({ lastFetched: {} });
+      if (json.expense?.id) {
+        set((state) => ({
+          expenses: [json.expense as SplitExpense, ...state.expenses],
+          lastFetched: {},
+        }));
+      } else {
+        set({ lastFetched: {} });
+      }
       await get().fetchGroupDetail(input.groupId);
 
       return {};
     } catch (err: unknown) {
       console.error("addExpense error:", err);
-      return { error: err instanceof Error ? err.message : "Could not add expense" };
+      return {
+        error: err instanceof Error ? err.message : "Could not add expense",
+      };
     }
   },
 
   settleUp: async (input) => {
     try {
-      const supabase = getSupabase();
-      const { error } = await supabase.from("split_settlements").insert({
-        group_id: input.groupId,
-        from_user_id: input.userId,
-        from_email: input.userEmail.toLowerCase(),
-        to_email: input.toEmail.toLowerCase(),
-        amount: input.amount,
-        status: "completed",
-        completed_at: new Date().toISOString(),
+      const res = await fetch("/api/split/settle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupId: input.groupId,
+          toEmail: input.toEmail,
+          amount: input.amount,
+          paymentMethod: "other",
+        }),
       });
-      if (error) throw error;
-
-      await supabase
-        .from("split_expense_shares")
-        .update({ is_settled: true, settled_at: new Date().toISOString() })
-        .eq("group_id", input.groupId)
-        .eq("email", input.userEmail.toLowerCase());
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) return { error: json.error ?? "Could not settle up" };
 
       set({ lastFetched: {} });
       await get().fetchGroupDetail(input.groupId);
-
       return {};
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("settleUp error:", err);
-      return { error: err?.message ?? "Could not settle up" };
+      return {
+        error: err instanceof Error ? err.message : "Could not settle up",
+      };
+    }
+  },
+
+  deleteGroup: async (groupId) => {
+    try {
+      const res = await fetch(`/api/split/groups?groupId=${groupId}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        console.error("deleteGroup error:", data.error);
+        return false;
+      }
+
+      set((state) => ({
+        groups: state.groups.filter((g) => g.id !== groupId),
+        activeGroup:
+          state.activeGroup?.id === groupId ? null : state.activeGroup,
+        expenses: state.activeGroup?.id === groupId ? [] : state.expenses,
+        balances: state.activeGroup?.id === groupId ? [] : state.balances,
+        lastFetched: {},
+      }));
+      return true;
+    } catch (err) {
+      console.error("deleteGroup:", err);
+      return false;
+    }
+  },
+
+  deleteExpense: async (groupId, expenseId) => {
+    try {
+      const res = await fetch(`/api/split/expenses/${expenseId}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) return { error: json.error ?? "Could not delete expense" };
+
+      set((state) => ({
+        expenses: state.expenses.filter((e) => e.id !== expenseId),
+        lastFetched: {},
+      }));
+      await get().fetchGroupDetail(groupId);
+      return {};
+    } catch (err: unknown) {
+      console.error("deleteExpense error:", err);
+      return {
+        error: err instanceof Error ? err.message : "Could not delete expense",
+      };
     }
   },
 }));
 
-export function getMyBalanceFromEdges(myEmail: string, edges: SplitBalanceEdge[]) {
+export function getMyBalanceFromEdges(
+  myEmail: string,
+  edges: SplitBalanceEdge[],
+) {
   return inferMyNetBalance(myEmail, edges);
 }
-

@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🚀 Running pre-push checks..."
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "Branch: $BRANCH"
+
+# Full TypeScript check before push
+echo "Checking TypeScript..."
+npx tsc --noEmit
+
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript errors found"
+  echo "Fix errors before pushing"
+  exit 1
+fi
+
+# Build check only for production branch
+if [ "$BRANCH" = "production" ]; then
+  echo "🏭 Production branch detected"
+  echo "Running full build check..."
+  
+  npm run build
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Build failed"
+    echo "Fix build errors before pushing"
+    exit 1
+  fi
+  
+  echo "✅ Production build passed"
+fi
+
+echo "✅ Pre-push checks passed"

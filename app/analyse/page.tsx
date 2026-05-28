@@ -30,7 +30,9 @@ export default function AnalysePage() {
     if (!isLoggedIn || !user?.id) {
       if (redirectedToLoginRef.current) return;
       redirectedToLoginRef.current = true;
-      router.replace(loginHrefPreserveRef("/login?redirect=/analyse&mode=signup"));
+      router.replace(
+        loginHrefPreserveRef("/login?redirect=/analyse&mode=signup"),
+      );
       return;
     }
     redirectedToLoginRef.current = false;
@@ -87,7 +89,7 @@ export default function AnalysePage() {
 
   useEffect(() => {
     if (!hasConsent || formStartTrackedRef.current) return;
-    Analytics.formStarted();
+    Analytics.healthCheckStarted();
     formStartTrackedRef.current = true;
   }, [hasConsent]);
 
@@ -136,7 +138,10 @@ export default function AnalysePage() {
   if (!isLoggedIn || !user?.id) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-white px-4 text-slate-600">
-        <div className="h-9 w-9 animate-spin rounded-full border-2 border-[#534AB7] border-t-transparent" aria-hidden />
+        <div
+          className="h-9 w-9 animate-spin rounded-full border-2 border-[#534AB7] border-t-transparent"
+          aria-hidden
+        />
         <p className="text-sm">Opening sign up…</p>
       </div>
     );
@@ -153,7 +158,9 @@ export default function AnalysePage() {
   return (
     <div className="min-h-dvh bg-white text-slate-900">
       {hasConsent ? <AnalyseOnboardingForm /> : null}
-      {!hasConsent ? <ConsentModal onAccept={handleAccept} onDecline={handleDecline} /> : null}
+      {!hasConsent ? (
+        <ConsentModal onAccept={handleAccept} onDecline={handleDecline} />
+      ) : null}
     </div>
   );
 }

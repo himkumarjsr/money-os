@@ -13,6 +13,7 @@ the documentation generation prompt again.
 ---
 
 ## TABLE OF CONTENTS
+
 1. Product Overview
 2. Tech Stack
 3. Environment Variables
@@ -44,6 +45,7 @@ the documentation generation prompt again.
 29. Analytics & GA4 (product telemetry)
 
 # FINKOIN SYSTEM DOCUMENTATION
+
 Last updated: 2026-05-07
 Generated from: actual codebase
 
@@ -59,58 +61,58 @@ The core value proposition is: collect profile + money data once, run determinis
 
 ## 2. TECH STACK
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| @hookform/resolvers | ^3.9.1 | Zod integration with react-hook-form |
-| @supabase/supabase-js | ^2.103.0 | Supabase auth + database client |
-| @supabase/ssr | ^0.10.2 | Cookie-aligned browser/server Supabase clients + middleware session refresh |
-| clsx | ^2.1.1 | Conditional class names |
-| framer-motion | ^11.18.2 | Animations/transitions |
-| groq-sdk | ^1.1.2 | Groq API client for AI route |
-| jspdf | ^4.2.1 | Client-side PDF report generation |
-| next | ^14.2.35 | Framework (App Router) |
-| react | ^18.3.1 | UI library |
-| react-dom | ^18.3.1 | DOM renderer |
-| react-hook-form | ^7.53.2 | Form state/validation flow |
-| recharts | ^2.13.3 | Chart rendering |
-| xlsx | ^0.18.5 | Excel export utilities |
-| zod | ^3.23.8 | Schema validation/types |
-| zustand | ^5.0.1 | Client state stores |
-| @eslint/eslintrc | ^3.2.0 | ESLint config helpers |
-| @types/node | ^20 | TS Node types |
-| @types/react | ^18 | TS React types |
-| @types/react-dom | ^18 | TS React DOM types |
-| eslint | ^9.21.0 | Linting |
-| eslint-config-next | ^15.2.4 | Next lint rules |
-| postcss | ^8 | CSS processing |
-| tailwindcss | ^3.4.1 | Utility CSS |
-| typescript | ^5 | Type checking |
-| vitest | ^4.1.2 | Unit tests |
-| next-pwa | (see package.json) | Service worker + Workbox; installable PWA in production builds |
-| sharp | (dev) | Generates `public/icons/` and `public/splash/` assets via `scripts/generate-icons.mjs` and `scripts/generate-splashes.mjs` |
+| Package               | Version            | Purpose                                                                                                                    |
+| --------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| @hookform/resolvers   | ^3.9.1             | Zod integration with react-hook-form                                                                                       |
+| @supabase/supabase-js | ^2.103.0           | Supabase auth + database client                                                                                            |
+| @supabase/ssr         | ^0.10.2            | Cookie-aligned browser/server Supabase clients + middleware session refresh                                                |
+| clsx                  | ^2.1.1             | Conditional class names                                                                                                    |
+| framer-motion         | ^11.18.2           | Animations/transitions                                                                                                     |
+| groq-sdk              | ^1.1.2             | Groq API client for AI route                                                                                               |
+| jspdf                 | ^4.2.1             | Client-side PDF report generation                                                                                          |
+| next                  | ^14.2.35           | Framework (App Router)                                                                                                     |
+| react                 | ^18.3.1            | UI library                                                                                                                 |
+| react-dom             | ^18.3.1            | DOM renderer                                                                                                               |
+| react-hook-form       | ^7.53.2            | Form state/validation flow                                                                                                 |
+| recharts              | ^2.13.3            | Chart rendering                                                                                                            |
+| xlsx                  | ^0.18.5            | Excel export utilities                                                                                                     |
+| zod                   | ^3.23.8            | Schema validation/types                                                                                                    |
+| zustand               | ^5.0.1             | Client state stores                                                                                                        |
+| @eslint/eslintrc      | ^3.2.0             | ESLint config helpers                                                                                                      |
+| @types/node           | ^20                | TS Node types                                                                                                              |
+| @types/react          | ^18                | TS React types                                                                                                             |
+| @types/react-dom      | ^18                | TS React DOM types                                                                                                         |
+| eslint                | ^9.21.0            | Linting                                                                                                                    |
+| eslint-config-next    | ^15.2.4            | Next lint rules                                                                                                            |
+| postcss               | ^8                 | CSS processing                                                                                                             |
+| tailwindcss           | ^3.4.1             | Utility CSS                                                                                                                |
+| typescript            | ^5                 | Type checking                                                                                                              |
+| vitest                | ^4.1.2             | Unit tests                                                                                                                 |
+| next-pwa              | (see package.json) | Service worker + Workbox; installable PWA in production builds                                                             |
+| sharp                 | (dev)              | Generates `public/icons/` and `public/splash/` assets via `scripts/generate-icons.mjs` and `scripts/generate-splashes.mjs` |
 
 ---
 
 ## 3. ENVIRONMENT VARIABLES
 
-| Variable | Required | Purpose | Where to get |
-|----------|----------|---------|--------------|
-| NEXT_PUBLIC_SUPABASE_URL | Yes | Public Supabase URL for browser + server clients | Supabase project settings |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Yes | Public anon key for browser auth/db calls | Supabase project settings |
-| SUPABASE_SERVICE_ROLE_KEY | Yes (server features) | Server/admin Supabase operations (`supabaseServer`) | Supabase project settings |
-| GROQ_API_KEY | Yes (AI plan) | Groq API key used by `/api/ai/analyse` | Groq console |
-| NEXT_PUBLIC_APP_URL | Recommended | App URL used in UI/runtime references | Deployment URL |
-| NEXT_PUBLIC_APP_NAME | Optional | Branding name string | Internal config |
-| NEXT_PUBLIC_SKIP_PAYMENT | Optional | Payment bypass for dev/test access logic | Internal config |
-| NEXT_PUBLIC_ADMIN_EMAIL | Optional | Admin email marker | Internal config |
-| RAZORPAY_KEY_ID | Yes (Razorpay API route) | Razorpay order creation ID | Razorpay dashboard |
-| RAZORPAY_KEY_SECRET | Yes (Razorpay API route) | Razorpay order creation secret | Razorpay dashboard |
-| NEXT_PUBLIC_RAZORPAY_KEY_ID | Yes (client payment UI) | Client-side Razorpay key for checkout | Razorpay dashboard |
-| NEXT_PUBLIC_FINKOIN_AGENT_CODE | Optional | Agent code used in policy transfer links | Internal config |
-| NEXT_PUBLIC_SITE_URL | Recommended | Metadata/sitemap/robots canonical URL | Deployment URL |
-| NEXT_PUBLIC_GA_MEASUREMENT_ID | Optional | GA4 Measurement ID (`G-xxxxxxxxxx`). When set, loads gtag + enriched events; omit to disable analytics scripts | Google Analytics → Admin → Data streams → Web |
-| NEXT_PUBLIC_DEBUG_AI | Optional | AI debug logging in client service | Internal config |
-| NEXT_PUBLIC_AI_TIMEOUT_MS | Optional | Client-side AI timeout override | Internal config |
+| Variable                       | Required                 | Purpose                                                                                                        | Where to get                                  |
+| ------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| NEXT_PUBLIC_SUPABASE_URL       | Yes                      | Public Supabase URL for browser + server clients                                                               | Supabase project settings                     |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY  | Yes                      | Public anon key for browser auth/db calls                                                                      | Supabase project settings                     |
+| SUPABASE_SERVICE_ROLE_KEY      | Yes (server features)    | Server/admin Supabase operations (`supabaseServer`)                                                            | Supabase project settings                     |
+| GROQ_API_KEY                   | Yes (AI plan)            | Groq API key used by `/api/ai/analyse`                                                                         | Groq console                                  |
+| NEXT_PUBLIC_APP_URL            | Recommended              | App URL used in UI/runtime references                                                                          | Deployment URL                                |
+| NEXT_PUBLIC_APP_NAME           | Optional                 | Branding name string                                                                                           | Internal config                               |
+| NEXT_PUBLIC_SKIP_PAYMENT       | Optional                 | Payment bypass for dev/test access logic                                                                       | Internal config                               |
+| NEXT_PUBLIC_ADMIN_EMAIL        | Optional                 | Admin email marker                                                                                             | Internal config                               |
+| RAZORPAY_KEY_ID                | Yes (Razorpay API route) | Razorpay order creation ID                                                                                     | Razorpay dashboard                            |
+| RAZORPAY_KEY_SECRET            | Yes (Razorpay API route) | Razorpay order creation secret                                                                                 | Razorpay dashboard                            |
+| NEXT_PUBLIC_RAZORPAY_KEY_ID    | Yes (client payment UI)  | Client-side Razorpay key for checkout                                                                          | Razorpay dashboard                            |
+| NEXT_PUBLIC_FINKOIN_AGENT_CODE | Optional                 | Agent code used in policy transfer links                                                                       | Internal config                               |
+| NEXT_PUBLIC_SITE_URL           | Recommended              | Metadata/sitemap/robots canonical URL                                                                          | Deployment URL                                |
+| NEXT_PUBLIC_GA_MEASUREMENT_ID  | Optional                 | GA4 Measurement ID (`G-xxxxxxxxxx`). When set, loads gtag + enriched events; omit to disable analytics scripts | Google Analytics → Admin → Data streams → Web |
+| NEXT_PUBLIC_DEBUG_AI           | Optional                 | AI debug logging in client service                                                                             | Internal config                               |
+| NEXT_PUBLIC_AI_TIMEOUT_MS      | Optional                 | Client-side AI timeout override                                                                                | Internal config                               |
 
 ### 3.1 Secret hygiene (what you should do)
 
@@ -131,243 +133,246 @@ The core value proposition is: collect profile + money data once, run determinis
 
 Complete inventory with one-line purpose per file:
 
-| Path | Purpose |
-|---|---|
-| `README.md` | Project overview, setup, and known constraints |
-| `package.json` | Scripts and dependency manifest |
-| `package-lock.json` | NPM lockfile |
-| `scripts/check-server-secrets-scope.mjs` | CI/dev guard: server env vars only in API / `supabaseServer` (`npm run check:secrets`) |
-| `.gitignore` | Git ignore rules |
-| `next-env.d.ts` | Next.js TypeScript ambient types |
-| `next.config.mjs` | Next runtime/build configuration |
-| `tsconfig.json` | TypeScript compiler settings |
-| `tailwind.config.ts` | Tailwind theme/content setup |
-| `postcss.config.mjs` | PostCSS plugin setup |
-| `eslint.config.mjs` | ESLint configuration |
-| `vitest.config.ts` | Vitest configuration |
-| `middleware.ts` | Supabase session refresh + protected-route gate |
-| `FINKOIN_SYSTEM.md` | This documentation file |
-| `.expo/settings.json` | Local editor/tooling settings |
-| `public/logo.png` | Public logo asset |
-| `public/manifest.json` | Web app manifest (name, icons, shortcuts, display) for PWA install |
-| `public/icons/` | PWA / Apple touch icons (`icon-{size}x{size}.png`), generated from logo |
-| `public/splash/` | Apple launch images (`apple-splash-*.png`), generated |
-| `public/screenshots/` | Manifest store screenshots (e.g. `home.png`) |
-| `scripts/generate-icons.mjs` | Resize logo (or fallback) into manifest icon set + optional screenshot |
-| `scripts/generate-splashes.mjs` | Generate iOS splash PNGs |
-| `public/assets/brand/finkoin-icon-1024.svg` | Brand icon used in metadata |
-| `app/layout.tsx` | Root layout + global wrappers/navbar + mounts **`GoogleAnalytics`** when GA env is set |
-| `pages/_document.tsx` | Minimal Pages Router **`Document`** so **`next-pwa`** build can resolve `/_document` (App Router project compatibility) |
-| `app/page.tsx` | Landing page |
-| `app/globals.css` | Global CSS styles |
-| `app/robots.ts` | Robots metadata endpoint |
-| `app/sitemap.ts` | Sitemap metadata endpoint |
-| `app/analyse/page.tsx` | **`ConsentModal`** gate → **`AnalyseOnboardingForm`**; consent cached per user in **`localStorage`** (`finkoin_analyse_consent_v2_<userId>`); on cache miss reads **`users.data_consent_given`**; on accept **`UPDATE users`** sets **`data_consent_given`**, **`data_consent_at`**, **`data_consent_version`** (`v2`) |
-| `app/analyse/result/page.tsx` | Analysis result/paywall flow |
-| `app/analyse/fixplan/page.tsx` | Full AI fix-plan page with cache/access gating |
-| `app/login/page.tsx` | Email login/signup + Google OAuth entry |
-| `app/auth/callback/page.tsx` | OAuth / email-link callback (PKCE code exchange) |
-| `app/auth/reset-password/page.tsx` | Request password reset email |
-| `app/auth/update-password/page.tsx` | Set new password after recovery link |
-| `components/AppInitializer.tsx` | Client gate: Zustand persist rehydrate then **`initAuth()`** before app shell; **`initStartedRef`** avoids double auth init under React Strict Mode (dev) |
-| `app/optimizer/page.tsx` | Optimizer page |
-| `app/insurance/page.tsx` | Insurance marketplace placeholder/comparison entry |
-| `app/policies/page.tsx` | Policy vault page wrapper |
-| `app/profile/page.tsx` | User profile page |
-| `app/portfolio/page.tsx` | Portfolio analysis page |
-| `app/investments/page.tsx` | Investments placeholder page |
-| `app/goals/page.tsx` | Goals placeholder page |
-| `app/kyc/page.tsx` | KYC status page |
-| `app/refer/page.tsx` | Referral page |
-| `app/rewards/page.tsx` | Rewards page |
-| `app/leaderboard/page.tsx` | Leaderboard page |
-| `app/learn/page.tsx` | Learn hub listing page |
-| `app/learn/[id]/page.tsx` | Individual article page |
-| `app/calculators/page.tsx` | Calculators hub + **conditional JSON-LD** (**`WebApplication`** when **`tax-regime`** active) |
-| `app/calculators/layout.tsx` | Calculators layout wrapper |
-| `app/calculators/CalculatorsClient.tsx` | Client calculator index rendering; **`trackToolOpen`** on active calculator change |
-| `app/calculators/tax-regime-2026/page.tsx` | Dedicated tax regime landing with **`WebApplication`** JSON-LD + metadata |
-| `app/calculators/calculator-config.ts` | Calculator metadata config |
-| `app/calculators/[id]/page.tsx` | Dynamic calculator page |
-| `app/plans/page.tsx` | Subscription plans page (contains TODO Razorpay note) |
-| `app/pricing/page.tsx` | Pricing placeholder page |
-| `app/privacy/page.tsx` | Redirects to `/legal/privacy` |
-| `app/terms/page.tsx` | Redirects to `/legal/terms` |
-| `app/legal/privacy/page.tsx` | Privacy Policy (India / DPDP 2023–aligned content) |
-| `app/legal/terms/page.tsx` | Terms of Service |
-| `app/legal/refund/page.tsx` | Refund Policy (Razorpay / digital goods) |
-| `app/legal/disclaimer/page.tsx` | Legal disclaimer page |
-| `app/api/ai/analyse/route.ts` | AI analysis API route |
-| `app/api/razorpay/checkout-config/route.ts` | Razorpay Key ID for Standard Checkout (server → frontend) |
-| `app/api/razorpay/create-order/route.ts` | Razorpay order API route |
-| `app/api/razorpay/verify-payment/route.ts` | Razorpay payment signature verification + pro tier |
-| `components/global-navbar.tsx` | Main header/navbar + profile dropdown (backdrop, scroll lock); **`data-track-nav-zone`** + delegated **`nav_click`** analytics |
-| `components/GoogleAnalytics.tsx` | GA4 scripts + SPA **`page_path`** via **`gtag('config')`**, **`user_properties`**, merges **`getAnalyticsContext()`**, logged-in **`user_id`** |
-| `components/AnalyticsBehavior.tsx` | Per-route scroll-depth milestones (25/50/75/90%) → **`scroll_depth`** event |
-| `components/TrackImpression.tsx` | **`IntersectionObserver`** wrapper → **`element_impression`** once per **`component_id`** |
-| `components/auth/ProtectedGate.tsx` | Client gate: wait **`hasInitialized`** then enforce **`isLoggedIn`** |
-| `components/ReferralCapture.tsx` | Captures **`?ref=`** into **`sessionStorage`** for post-login attribution |
-| `lib/referralRewards.ts` | Applies pending referral + FK bumps after successful **`/auth/callback`** |
-| `components/AuthSessionSync.tsx` | Sync Supabase session into auth store |
-| `components/FinancialStoreAuthSync.tsx` | Rehydrate financial store on auth user switch |
-| `components/ScrollToTopOnRouteChange.tsx` | Scroll reset on route change |
-| `components/RenewalReminderBanner.tsx` | Renewal reminder banner |
-| `components/analyse/analyse-result-error-boundary.tsx` | Result page error boundary |
-| `components/analyse/paywall-modal.tsx` | Unlock confirmation modal for fix-plan access |
-| `components/forms/analyse-onboarding-form.tsx` | Core 7-step intake form logic/UI |
-| `components/forms/onboarding-wizard.tsx` | Onboarding wizard component |
-| `components/forms/onboarding-step-basics.tsx` | Onboarding basics step |
-| `components/forms/onboarding-step-goals.tsx` | Onboarding goals step |
-| `components/forms/onboarding-step-complete.tsx` | Onboarding completion step |
-| `components/finkoin/finkoin-ai-plan-view.tsx` | Render AI plan sections |
-| `components/finkoin/optimizer-full-sections.tsx` | Full optimizer section components |
-| `components/finkoin/MonthlyAllocationPieChart.tsx` | Monthly allocation pie chart |
-| `components/policies/PolicyVaultClient.tsx` | Policy CRUD, renewal, transfer workflows |
-| `components/learn/learn-hub.tsx` | Learn hub UI |
-| `components/learn/article-tracker.tsx` | Tracks article reads and rewards |
-| `components/learn/article-share.tsx` | Article share helper |
-| `components/learn/share-button.tsx` | Share / clipboard UI + **`share`** GA events (native / clipboard / fallback) |
-| `components/landing/Footer.tsx` | Landing footer |
-| `components/landing/FeatureCardsCarousel.tsx` | Landing feature carousel |
-| `components/ui/button.tsx` | Button primitives |
-| `components/ui/MoneyInput.tsx` | Currency input with Indian formatting |
-| `components/ui/NumberInput.tsx` | Reusable number input matching MoneyInput style with optional suffix |
-| `components/ui/SpeedoMeter.tsx` | Multi-gauge speedometer component |
-| `components/ui/BottomSheet.tsx` | Bottom sheet UI |
-| `components/ui/Toast.tsx` | Toast UI |
-| `components/ui/LoginSheet.tsx` | Login bottom sheet (optional; primary auth is **`/login`**) |
-| `components/ui/brand-logo.tsx` | Brand logo UI |
-| `components/ui/ScrollSection.tsx` | Scroll section wrapper |
-| `components/ui/AnimateOnScroll.tsx` | Scroll animation wrapper |
-| `components/ui/SectionToggle.tsx` | Toggleable section wrapper |
-| `components/ui/ChipSelector.tsx` | Chip selector UI |
-| `components/ui/GoalCard.tsx` | Goal card UI |
-| `components/calculators/calculator-ui.tsx` | Shared calculator UI primitives |
-| `components/calculators/lazy-calculators.tsx` | Lazy-loaded calculator map |
-| `components/calculators/SIPCalculator.tsx` | SIP calculator |
-| `components/calculators/EMICalculator.tsx` | EMI calculator |
-| `components/calculators/HomeLoanCalculator.tsx` | Home loan calculator |
-| `components/calculators/CarLoanCalculator.tsx` | Car loan calculator |
-| `components/calculators/RentVsBuyCalculator.tsx` | Rent vs buy calculator |
-| `components/calculators/RentVsOwnCarCalculator.tsx` | Rent vs own car calculator |
-| `components/calculators/WhenToBuyCarCalculator.tsx` | Car purchase timing calculator |
-| `components/calculators/PostOfficeCalculator.tsx` | Post-office scheme calculator |
-| `components/calculators/PPFCalculator.tsx` | PPF calculator |
-| `components/calculators/NSCCalculator.tsx` | NSC calculator |
-| `components/calculators/SWPCalculator.tsx` | SWP calculator |
-| `components/calculators/EmergencyFundCalculator.tsx` | Emergency fund calculator |
-| `components/calculators/TaxRegimeCalculator.tsx` | Old vs new regime UI: **`TAX_CALC_SCHEMA_VERSION`** autosave **`finkoin_tax_calculator`**, meal voucher exemption (₹50 vs ₹200 cap toggle), **`<details>`** steps + mobile 3-col comparison table, suggested **ITR** from inputs, removed MF-dividend field; Personal CA scroll-unlock; conditional missed-deduction nudges when old regime can win |
-| `components/calculators/ToggleSection.tsx` | Section on/off + separate chevron expand/collapse for inner fields |
-| `lib/taxCalculatorHelpers.ts` | Illustrative gratuity / leave / LTA / rental / business / pension / RSU helpers for tax UI |
-| `lib/taxRegimeComparisonFY2026.ts` | Pure tax comparison (**ComparisonInputs** incl. **`mealVoucherExemptionAnnual`** subtracted from salary), slabs, HRA, 80GG illustrative, surcharge, cess, 87A model |
-| `lib/taxMissedDeductionAlerts.ts` | Missed-deduction strings; **`encourageDeductionInvestment`** flag suppresses 80C/HRA-style nudges when new regime already wins |
-| `components/calculators/compound-interest-calculator.tsx` | Compound interest calculator |
-| `components/calculators/spending-trend-chart.tsx` | Spending chart component |
-| `lib/analyse-form-schema.ts` | Form schema, normalization, shared model types |
-| `lib/analyse-form-schema.test.ts` | Schema/unit tests |
-| `lib/financialEngine.ts` | Deterministic analysis engine |
-| `lib/financialEngine.test.ts` | Financial engine tests |
-| `lib/priorityEngine.ts` | Priority-plan engine for fix plan |
-| `lib/universal-buckets.ts` | Bucket caps/actuals/status logic |
-| `lib/bucket-breakdown.ts` | Breakdown helpers for bucket display |
-| `lib/speedo-meter-buckets.ts` | Speedometer input-builder helpers |
-| `lib/financialOptimizer.ts` | Optimizer logic |
-| `lib/optimizer-format.ts` | Optimizer formatting helpers |
-| `lib/finkoinAiPlan.ts` | AI plan type schema/validation helpers |
-| `lib/aiService.ts` | Client AI orchestration |
-| `lib/aiProviderMessages.ts` | AI/provider message helpers |
-| `lib/cache.ts` | Profile hash + local/supabase AI cache |
-| `lib/generatePDF.ts` | Multi-page optimizer/fix-plan PDF report generator |
-| `lib/payment.ts` | Access check + FK redemption logic |
-| `lib/auth.ts` | Auth helper methods |
-| `lib/supabase.ts` | Browser `createBrowserClient` singleton (`getSupabase`) + lazy `supabase` proxy |
-| `lib/supabaseClient.ts` | Re-exports browser helpers |
-| `lib/supabaseServer.ts` | `createSupabaseServerClient()` (cookies) + lazy service-role admin proxy |
-| `lib/userAnalyseSnapshot.ts` | Snapshot fetch/upsert helpers |
-| `lib/userPolicies.ts` | Policy types and Supabase operations |
-| `lib/kycVerification.ts` | PAN verification mock logic |
-| `lib/finance.ts` | Financial formatting/math helpers |
-| `lib/formatters.ts` | Indian number/string format helpers |
-| `lib/formatINR.ts` | INR formatting helper |
-| `lib/exportExcel.ts` | Export utilities |
-| `lib/netWorth.ts` | Net-worth computation helpers |
-| `lib/subscriptionBypass.ts` | Subscription bypass checks |
-| `lib/analysisSnapshotValidation.ts` | Validation for persisted analysis snapshots |
-| `lib/amortisation.ts` | Loan amortisation helpers |
-| `lib/animations.ts` | Animation variants |
-| `lib/cn.ts` | Classname utility |
-| `lib/expense-bucket-recommendations.ts` | Bucket recommendation text |
-| `lib/learnContent.ts` | Learn article content metadata (incl. India taxation / slabs / ITR primer article) |
-| `lib/blogContent.ts` | Blog article bodies + SEO slugs (incl. **`know-taxation-in-india`**) |
-| `lib/seo.ts` | **`SITE_URL`** normalization (no trailing slash), canonical helpers |
-| `lib/analyticsContext.ts` | Client context for every GA hit: **`app_surface`** (PWA vs browser), **`device_category`**, timezone, language, viewport, optional **`connection_type`** |
-| `lib/gtag.ts` | **`trackEvent`** / **`trackCta`** / **`trackShare`** / **`trackImpression`** / **`trackScrollDepth`** / **`trackToolOpen`** / **`trackNavClick`** — all merge **`getAnalyticsContext()`** |
-| `types/gtag.d.ts` | **`window.gtag`** / **`window.dataLayer`** typings |
-| `lib/knowledgeBase/index.ts` | Local KB entrypoint |
-| `lib/knowledgeBase/entries.ts` | Local KB entries |
-| `lib/knowledgeBase/retriever.ts` | Local KB retrieval logic |
-| `lib/rag/retriever.ts` | Supabase RAG retrieval logic |
-| `store/authStore.ts` | Auth Zustand store |
-| `store/financialStore.ts` | Financial Zustand store |
-| `store/gamificationStore.ts` | Gamification Zustand store |
-| `store/portfolioStore.ts` | Portfolio Zustand store |
-| `store/use-app-store.ts` | App onboarding store |
-| `store/use-financial-store.ts` | Legacy financial store alias/compat |
-| `supabase/migrations/001_initial.sql` | Initial DB schema/migrations |
-| `supabase/migrations/002_user_analyse_snapshots.sql` | Snapshot table migration |
-| `supabase/migrations/003_user_policies.sql` | User policy schema migration |
-| `supabase/migrations/003_complete_setup.sql` | Complete setup + RAG + policies |
-| `supabase/migrations/004_user_policies_add_status.sql` | Adds policy status column |
-| `supabase/migrations/005_fix_snapshots.sql` | Creates snapshots/analysis tables + RLS |
+| Path                                                      | Purpose                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                                               | Project overview, setup, and known constraints                                                                                                                                                                                                                                                                                                      |
+| `package.json`                                            | Scripts and dependency manifest                                                                                                                                                                                                                                                                                                                     |
+| `package-lock.json`                                       | NPM lockfile                                                                                                                                                                                                                                                                                                                                        |
+| `scripts/check-server-secrets-scope.mjs`                  | CI/dev guard: server env vars only in API / `supabaseServer` (`npm run check:secrets`)                                                                                                                                                                                                                                                              |
+| `.gitignore`                                              | Git ignore rules                                                                                                                                                                                                                                                                                                                                    |
+| `next-env.d.ts`                                           | Next.js TypeScript ambient types                                                                                                                                                                                                                                                                                                                    |
+| `next.config.mjs`                                         | Next runtime/build configuration                                                                                                                                                                                                                                                                                                                    |
+| `tsconfig.json`                                           | TypeScript compiler settings                                                                                                                                                                                                                                                                                                                        |
+| `tailwind.config.ts`                                      | Tailwind theme/content setup                                                                                                                                                                                                                                                                                                                        |
+| `postcss.config.mjs`                                      | PostCSS plugin setup                                                                                                                                                                                                                                                                                                                                |
+| `eslint.config.mjs`                                       | ESLint configuration                                                                                                                                                                                                                                                                                                                                |
+| `vitest.config.ts`                                        | Vitest configuration                                                                                                                                                                                                                                                                                                                                |
+| `middleware.ts`                                           | Supabase session refresh + protected-route gate                                                                                                                                                                                                                                                                                                     |
+| `FINKOIN_SYSTEM.md`                                       | This documentation file                                                                                                                                                                                                                                                                                                                             |
+| `.expo/settings.json`                                     | Local editor/tooling settings                                                                                                                                                                                                                                                                                                                       |
+| `public/logo.png`                                         | Public logo asset                                                                                                                                                                                                                                                                                                                                   |
+| `public/manifest.json`                                    | Web app manifest (name, icons, shortcuts, display) for PWA install                                                                                                                                                                                                                                                                                  |
+| `public/icons/`                                           | PWA / Apple touch icons (`icon-{size}x{size}.png`), generated from logo                                                                                                                                                                                                                                                                             |
+| `public/splash/`                                          | Apple launch images (`apple-splash-*.png`), generated                                                                                                                                                                                                                                                                                               |
+| `public/screenshots/`                                     | Manifest store screenshots (e.g. `home.png`)                                                                                                                                                                                                                                                                                                        |
+| `scripts/generate-icons.mjs`                              | Resize logo (or fallback) into manifest icon set + optional screenshot                                                                                                                                                                                                                                                                              |
+| `scripts/generate-splashes.mjs`                           | Generate iOS splash PNGs                                                                                                                                                                                                                                                                                                                            |
+| `public/assets/brand/finkoin-icon-1024.svg`               | Brand icon used in metadata                                                                                                                                                                                                                                                                                                                         |
+| `app/layout.tsx`                                          | Root layout + global wrappers/navbar + mounts **`GoogleAnalytics`** when GA env is set                                                                                                                                                                                                                                                              |
+| `pages/_document.tsx`                                     | Minimal Pages Router **`Document`** so **`next-pwa`** build can resolve `/_document` (App Router project compatibility)                                                                                                                                                                                                                             |
+| `app/page.tsx`                                            | Landing page                                                                                                                                                                                                                                                                                                                                        |
+| `app/globals.css`                                         | Global CSS styles                                                                                                                                                                                                                                                                                                                                   |
+| `app/robots.ts`                                           | Robots metadata endpoint                                                                                                                                                                                                                                                                                                                            |
+| `app/sitemap.ts`                                          | Sitemap metadata endpoint                                                                                                                                                                                                                                                                                                                           |
+| `app/analyse/page.tsx`                                    | **`ConsentModal`** gate → **`AnalyseOnboardingForm`**; consent cached per user in **`localStorage`** (`finkoin_analyse_consent_v2_<userId>`); on cache miss reads **`users.data_consent_given`**; on accept **`UPDATE users`** sets **`data_consent_given`**, **`data_consent_at`**, **`data_consent_version`** (`v2`)                              |
+| `app/analyse/result/page.tsx`                             | Analysis result/paywall flow                                                                                                                                                                                                                                                                                                                        |
+| `app/analyse/fixplan/page.tsx`                            | Full AI fix-plan page with cache/access gating                                                                                                                                                                                                                                                                                                      |
+| `app/login/page.tsx`                                      | Email login/signup + Google OAuth entry                                                                                                                                                                                                                                                                                                             |
+| `app/auth/callback/page.tsx`                              | OAuth / email-link callback (PKCE code exchange)                                                                                                                                                                                                                                                                                                    |
+| `app/auth/reset-password/page.tsx`                        | Request password reset email                                                                                                                                                                                                                                                                                                                        |
+| `app/auth/update-password/page.tsx`                       | Set new password after recovery link                                                                                                                                                                                                                                                                                                                |
+| `components/AppInitializer.tsx`                           | Client gate: Zustand persist rehydrate then **`initAuth()`** before app shell; **`initStartedRef`** avoids double auth init under React Strict Mode (dev)                                                                                                                                                                                           |
+| `app/optimizer/page.tsx`                                  | Optimizer page                                                                                                                                                                                                                                                                                                                                      |
+| `app/insurance/page.tsx`                                  | Insurance marketplace placeholder/comparison entry                                                                                                                                                                                                                                                                                                  |
+| `app/policies/page.tsx`                                   | Policy vault page wrapper                                                                                                                                                                                                                                                                                                                           |
+| `app/profile/page.tsx`                                    | User profile page                                                                                                                                                                                                                                                                                                                                   |
+| `app/portfolio/page.tsx`                                  | Portfolio analysis page                                                                                                                                                                                                                                                                                                                             |
+| `app/investments/page.tsx`                                | Investments placeholder page                                                                                                                                                                                                                                                                                                                        |
+| `app/goals/page.tsx`                                      | Goals placeholder page                                                                                                                                                                                                                                                                                                                              |
+| `app/kyc/page.tsx`                                        | KYC status page                                                                                                                                                                                                                                                                                                                                     |
+| `app/refer/page.tsx`                                      | Referral page                                                                                                                                                                                                                                                                                                                                       |
+| `app/rewards/page.tsx`                                    | Rewards page                                                                                                                                                                                                                                                                                                                                        |
+| `app/leaderboard/page.tsx`                                | Leaderboard page                                                                                                                                                                                                                                                                                                                                    |
+| `app/learn/page.tsx`                                      | Learn hub listing page                                                                                                                                                                                                                                                                                                                              |
+| `app/learn/[id]/page.tsx`                                 | Individual article page                                                                                                                                                                                                                                                                                                                             |
+| `app/calculators/page.tsx`                                | Calculators hub + **conditional JSON-LD** (**`WebApplication`** when **`tax-regime`** active)                                                                                                                                                                                                                                                       |
+| `app/calculators/layout.tsx`                              | Calculators layout wrapper                                                                                                                                                                                                                                                                                                                          |
+| `app/calculators/CalculatorsClient.tsx`                   | Client calculator index rendering; **`trackToolOpen`** on active calculator change                                                                                                                                                                                                                                                                  |
+| `app/calculators/tax-regime-2026/page.tsx`                | Dedicated tax regime landing with **`WebApplication`** JSON-LD + metadata                                                                                                                                                                                                                                                                           |
+| `app/calculators/calculator-config.ts`                    | Calculator metadata config                                                                                                                                                                                                                                                                                                                          |
+| `app/calculators/[id]/page.tsx`                           | Dynamic calculator page                                                                                                                                                                                                                                                                                                                             |
+| `app/plans/page.tsx`                                      | Subscription plans page (contains TODO Razorpay note)                                                                                                                                                                                                                                                                                               |
+| `app/pricing/page.tsx`                                    | Pricing placeholder page                                                                                                                                                                                                                                                                                                                            |
+| `app/privacy/page.tsx`                                    | Redirects to `/legal/privacy`                                                                                                                                                                                                                                                                                                                       |
+| `app/terms/page.tsx`                                      | Redirects to `/legal/terms`                                                                                                                                                                                                                                                                                                                         |
+| `app/legal/privacy/page.tsx`                              | Privacy Policy (India / DPDP 2023–aligned content)                                                                                                                                                                                                                                                                                                  |
+| `app/legal/terms/page.tsx`                                | Terms of Service                                                                                                                                                                                                                                                                                                                                    |
+| `app/legal/refund/page.tsx`                               | Refund Policy (Razorpay / digital goods)                                                                                                                                                                                                                                                                                                            |
+| `app/legal/disclaimer/page.tsx`                           | Legal disclaimer page                                                                                                                                                                                                                                                                                                                               |
+| `app/api/ai/analyse/route.ts`                             | AI analysis API route                                                                                                                                                                                                                                                                                                                               |
+| `app/api/razorpay/checkout-config/route.ts`               | Razorpay Key ID for Standard Checkout (server → frontend)                                                                                                                                                                                                                                                                                           |
+| `app/api/razorpay/create-order/route.ts`                  | Razorpay order API route                                                                                                                                                                                                                                                                                                                            |
+| `app/api/razorpay/verify-payment/route.ts`                | Razorpay payment signature verification + pro tier                                                                                                                                                                                                                                                                                                  |
+| `components/global-navbar.tsx`                            | Main header/navbar + profile dropdown (backdrop, scroll lock); **`data-track-nav-zone`** + delegated **`nav_click`** analytics                                                                                                                                                                                                                      |
+| `components/GoogleAnalytics.tsx`                          | GA4 scripts + SPA **`page_path`** via **`gtag('config')`**, **`user_properties`**, merges **`getAnalyticsContext()`**, logged-in **`user_id`**                                                                                                                                                                                                      |
+| `components/AnalyticsBehavior.tsx`                        | Per-route scroll-depth milestones (25/50/75/90%) → **`scroll_depth`** event                                                                                                                                                                                                                                                                         |
+| `components/TrackImpression.tsx`                          | **`IntersectionObserver`** wrapper → **`element_impression`** once per **`component_id`**                                                                                                                                                                                                                                                           |
+| `components/auth/ProtectedGate.tsx`                       | Client gate: wait **`hasInitialized`** then enforce **`isLoggedIn`**                                                                                                                                                                                                                                                                                |
+| `components/ReferralCapture.tsx`                          | Captures **`?ref=`** into **`sessionStorage`** for post-login attribution                                                                                                                                                                                                                                                                           |
+| `lib/referralRewards.ts`                                  | Applies pending referral + FK bumps after successful **`/auth/callback`**                                                                                                                                                                                                                                                                           |
+| `components/AuthSessionSync.tsx`                          | Sync Supabase session into auth store                                                                                                                                                                                                                                                                                                               |
+| `components/FinancialStoreAuthSync.tsx`                   | Rehydrate financial store on auth user switch                                                                                                                                                                                                                                                                                                       |
+| `components/ScrollToTopOnRouteChange.tsx`                 | Scroll reset on route change                                                                                                                                                                                                                                                                                                                        |
+| `components/RenewalReminderBanner.tsx`                    | Renewal reminder banner                                                                                                                                                                                                                                                                                                                             |
+| `components/analyse/analyse-result-error-boundary.tsx`    | Result page error boundary                                                                                                                                                                                                                                                                                                                          |
+| `components/analyse/paywall-modal.tsx`                    | Unlock confirmation modal for fix-plan access                                                                                                                                                                                                                                                                                                       |
+| `components/forms/analyse-onboarding-form.tsx`            | Core 7-step intake form logic/UI                                                                                                                                                                                                                                                                                                                    |
+| `components/forms/onboarding-wizard.tsx`                  | Onboarding wizard component                                                                                                                                                                                                                                                                                                                         |
+| `components/forms/onboarding-step-basics.tsx`             | Onboarding basics step                                                                                                                                                                                                                                                                                                                              |
+| `components/forms/onboarding-step-goals.tsx`              | Onboarding goals step                                                                                                                                                                                                                                                                                                                               |
+| `components/forms/onboarding-step-complete.tsx`           | Onboarding completion step                                                                                                                                                                                                                                                                                                                          |
+| `components/finkoin/finkoin-ai-plan-view.tsx`             | Render AI plan sections                                                                                                                                                                                                                                                                                                                             |
+| `components/finkoin/optimizer-full-sections.tsx`          | Full optimizer section components                                                                                                                                                                                                                                                                                                                   |
+| `components/finkoin/MonthlyAllocationPieChart.tsx`        | Monthly allocation pie chart                                                                                                                                                                                                                                                                                                                        |
+| `components/policies/PolicyVaultClient.tsx`               | Policy CRUD, renewal, transfer workflows                                                                                                                                                                                                                                                                                                            |
+| `components/learn/learn-hub.tsx`                          | Learn hub UI                                                                                                                                                                                                                                                                                                                                        |
+| `components/learn/article-tracker.tsx`                    | Tracks article reads and rewards                                                                                                                                                                                                                                                                                                                    |
+| `components/learn/article-share.tsx`                      | Article share helper                                                                                                                                                                                                                                                                                                                                |
+| `components/learn/share-button.tsx`                       | Share / clipboard UI + **`share`** GA events (native / clipboard / fallback)                                                                                                                                                                                                                                                                        |
+| `components/landing/Footer.tsx`                           | Landing footer                                                                                                                                                                                                                                                                                                                                      |
+| `components/landing/FeatureCardsCarousel.tsx`             | Landing feature carousel                                                                                                                                                                                                                                                                                                                            |
+| `components/ui/button.tsx`                                | Button primitives                                                                                                                                                                                                                                                                                                                                   |
+| `components/ui/MoneyInput.tsx`                            | Currency input with Indian formatting                                                                                                                                                                                                                                                                                                               |
+| `components/ui/NumberInput.tsx`                           | Reusable number input matching MoneyInput style with optional suffix                                                                                                                                                                                                                                                                                |
+| `components/ui/SpeedoMeter.tsx`                           | Multi-gauge speedometer component                                                                                                                                                                                                                                                                                                                   |
+| `components/ui/BottomSheet.tsx`                           | Bottom sheet UI                                                                                                                                                                                                                                                                                                                                     |
+| `components/ui/Toast.tsx`                                 | Toast UI                                                                                                                                                                                                                                                                                                                                            |
+| `components/ui/LoginSheet.tsx`                            | Login bottom sheet (optional; primary auth is **`/login`**)                                                                                                                                                                                                                                                                                         |
+| `components/ui/brand-logo.tsx`                            | Brand logo UI                                                                                                                                                                                                                                                                                                                                       |
+| `components/ui/ScrollSection.tsx`                         | Scroll section wrapper                                                                                                                                                                                                                                                                                                                              |
+| `components/ui/AnimateOnScroll.tsx`                       | Scroll animation wrapper                                                                                                                                                                                                                                                                                                                            |
+| `components/ui/SectionToggle.tsx`                         | Toggleable section wrapper                                                                                                                                                                                                                                                                                                                          |
+| `components/ui/ChipSelector.tsx`                          | Chip selector UI                                                                                                                                                                                                                                                                                                                                    |
+| `components/ui/GoalCard.tsx`                              | Goal card UI                                                                                                                                                                                                                                                                                                                                        |
+| `components/calculators/calculator-ui.tsx`                | Shared calculator UI primitives                                                                                                                                                                                                                                                                                                                     |
+| `components/calculators/lazy-calculators.tsx`             | Lazy-loaded calculator map                                                                                                                                                                                                                                                                                                                          |
+| `components/calculators/SIPCalculator.tsx`                | SIP calculator                                                                                                                                                                                                                                                                                                                                      |
+| `components/calculators/EMICalculator.tsx`                | EMI calculator                                                                                                                                                                                                                                                                                                                                      |
+| `components/calculators/HomeLoanCalculator.tsx`           | Home loan calculator                                                                                                                                                                                                                                                                                                                                |
+| `components/calculators/CarLoanCalculator.tsx`            | Car loan calculator                                                                                                                                                                                                                                                                                                                                 |
+| `components/calculators/RentVsBuyCalculator.tsx`          | Rent vs buy calculator                                                                                                                                                                                                                                                                                                                              |
+| `components/calculators/RentVsOwnCarCalculator.tsx`       | Rent vs own car calculator                                                                                                                                                                                                                                                                                                                          |
+| `components/calculators/WhenToBuyCarCalculator.tsx`       | Car purchase timing calculator                                                                                                                                                                                                                                                                                                                      |
+| `components/calculators/PostOfficeCalculator.tsx`         | Post-office scheme calculator                                                                                                                                                                                                                                                                                                                       |
+| `components/calculators/PPFCalculator.tsx`                | PPF calculator                                                                                                                                                                                                                                                                                                                                      |
+| `components/calculators/NSCCalculator.tsx`                | NSC calculator                                                                                                                                                                                                                                                                                                                                      |
+| `components/calculators/SWPCalculator.tsx`                | SWP calculator                                                                                                                                                                                                                                                                                                                                      |
+| `components/calculators/EmergencyFundCalculator.tsx`      | Emergency fund calculator                                                                                                                                                                                                                                                                                                                           |
+| `components/calculators/TaxRegimeCalculator.tsx`          | Old vs new regime UI: **`TAX_CALC_SCHEMA_VERSION`** autosave **`finkoin_tax_calculator`**, meal voucher exemption (₹50 vs ₹200 cap toggle), **`<details>`** steps + mobile 3-col comparison table, suggested **ITR** from inputs, removed MF-dividend field; Personal CA scroll-unlock; conditional missed-deduction nudges when old regime can win |
+| `components/calculators/ToggleSection.tsx`                | Section on/off + separate chevron expand/collapse for inner fields                                                                                                                                                                                                                                                                                  |
+| `lib/taxCalculatorHelpers.ts`                             | Illustrative gratuity / leave / LTA / rental / business / pension / RSU helpers for tax UI                                                                                                                                                                                                                                                          |
+| `lib/taxRegimeComparisonFY2026.ts`                        | Pure tax comparison (**ComparisonInputs** incl. **`mealVoucherExemptionAnnual`** subtracted from salary), slabs, HRA, 80GG illustrative, surcharge, cess, 87A model                                                                                                                                                                                 |
+| `lib/taxMissedDeductionAlerts.ts`                         | Missed-deduction strings; **`encourageDeductionInvestment`** flag suppresses 80C/HRA-style nudges when new regime already wins                                                                                                                                                                                                                      |
+| `components/calculators/compound-interest-calculator.tsx` | Compound interest calculator                                                                                                                                                                                                                                                                                                                        |
+| `components/calculators/spending-trend-chart.tsx`         | Spending chart component                                                                                                                                                                                                                                                                                                                            |
+| `lib/analyse-form-schema.ts`                              | Form schema, normalization, shared model types                                                                                                                                                                                                                                                                                                      |
+| `lib/analyse-form-schema.test.ts`                         | Schema/unit tests                                                                                                                                                                                                                                                                                                                                   |
+| `lib/financialEngine.ts`                                  | Deterministic analysis engine                                                                                                                                                                                                                                                                                                                       |
+| `lib/financialEngine.test.ts`                             | Financial engine tests                                                                                                                                                                                                                                                                                                                              |
+| `lib/priorityEngine.ts`                                   | Priority-plan engine for fix plan                                                                                                                                                                                                                                                                                                                   |
+| `lib/universal-buckets.ts`                                | Bucket caps/actuals/status logic                                                                                                                                                                                                                                                                                                                    |
+| `lib/bucket-breakdown.ts`                                 | Breakdown helpers for bucket display                                                                                                                                                                                                                                                                                                                |
+| `lib/speedo-meter-buckets.ts`                             | Speedometer input-builder helpers                                                                                                                                                                                                                                                                                                                   |
+| `lib/financialOptimizer.ts`                               | Optimizer logic                                                                                                                                                                                                                                                                                                                                     |
+| `lib/optimizer-format.ts`                                 | Optimizer formatting helpers                                                                                                                                                                                                                                                                                                                        |
+| `lib/finkoinAiPlan.ts`                                    | AI plan type schema/validation helpers                                                                                                                                                                                                                                                                                                              |
+| `lib/aiService.ts`                                        | Client AI orchestration                                                                                                                                                                                                                                                                                                                             |
+| `lib/aiProviderMessages.ts`                               | AI/provider message helpers                                                                                                                                                                                                                                                                                                                         |
+| `lib/cache.ts`                                            | Profile hash + local/supabase AI cache                                                                                                                                                                                                                                                                                                              |
+| `lib/generatePDF.ts`                                      | Multi-page optimizer/fix-plan PDF report generator                                                                                                                                                                                                                                                                                                  |
+| `lib/payment.ts`                                          | Access check + FK redemption logic                                                                                                                                                                                                                                                                                                                  |
+| `lib/auth.ts`                                             | Auth helper methods                                                                                                                                                                                                                                                                                                                                 |
+| `lib/supabase.ts`                                         | Browser `createBrowserClient` singleton (`getSupabase`) + lazy `supabase` proxy                                                                                                                                                                                                                                                                     |
+| `lib/supabaseClient.ts`                                   | Re-exports browser helpers                                                                                                                                                                                                                                                                                                                          |
+| `lib/supabaseServer.ts`                                   | `createSupabaseServerClient()` (cookies) + lazy service-role admin proxy                                                                                                                                                                                                                                                                            |
+| `lib/userAnalyseSnapshot.ts`                              | Snapshot fetch/upsert helpers                                                                                                                                                                                                                                                                                                                       |
+| `lib/userPolicies.ts`                                     | Policy types and Supabase operations                                                                                                                                                                                                                                                                                                                |
+| `lib/kycVerification.ts`                                  | PAN verification mock logic                                                                                                                                                                                                                                                                                                                         |
+| `lib/finance.ts`                                          | Financial formatting/math helpers                                                                                                                                                                                                                                                                                                                   |
+| `lib/formatters.ts`                                       | Indian number/string format helpers                                                                                                                                                                                                                                                                                                                 |
+| `lib/formatINR.ts`                                        | INR formatting helper                                                                                                                                                                                                                                                                                                                               |
+| `lib/exportExcel.ts`                                      | Export utilities                                                                                                                                                                                                                                                                                                                                    |
+| `lib/netWorth.ts`                                         | Net-worth computation helpers                                                                                                                                                                                                                                                                                                                       |
+| `lib/subscriptionBypass.ts`                               | Subscription bypass checks                                                                                                                                                                                                                                                                                                                          |
+| `lib/analysisSnapshotValidation.ts`                       | Validation for persisted analysis snapshots                                                                                                                                                                                                                                                                                                         |
+| `lib/amortisation.ts`                                     | Loan amortisation helpers                                                                                                                                                                                                                                                                                                                           |
+| `lib/animations.ts`                                       | Animation variants                                                                                                                                                                                                                                                                                                                                  |
+| `lib/cn.ts`                                               | Classname utility                                                                                                                                                                                                                                                                                                                                   |
+| `lib/expense-bucket-recommendations.ts`                   | Bucket recommendation text                                                                                                                                                                                                                                                                                                                          |
+| `lib/learnContent.ts`                                     | Learn article content metadata (incl. India taxation / slabs / ITR primer article)                                                                                                                                                                                                                                                                  |
+| `lib/blogContent.ts`                                      | Blog article bodies + SEO slugs (incl. **`know-taxation-in-india`**)                                                                                                                                                                                                                                                                                |
+| `lib/seo.ts`                                              | **`SITE_URL`** normalization (no trailing slash), canonical helpers                                                                                                                                                                                                                                                                                 |
+| `lib/analyticsContext.ts`                                 | Client context for every GA hit: **`app_surface`** (PWA vs browser), **`device_category`**, timezone, language, viewport, optional **`connection_type`**                                                                                                                                                                                            |
+| `lib/gtag.ts`                                             | **`trackEvent`** / **`trackCta`** / **`trackShare`** / **`trackImpression`** / **`trackScrollDepth`** / **`trackToolOpen`** / **`trackNavClick`** — all merge **`getAnalyticsContext()`**                                                                                                                                                           |
+| `types/gtag.d.ts`                                         | **`window.gtag`** / **`window.dataLayer`** typings                                                                                                                                                                                                                                                                                                  |
+| `lib/knowledgeBase/index.ts`                              | Local KB entrypoint                                                                                                                                                                                                                                                                                                                                 |
+| `lib/knowledgeBase/entries.ts`                            | Local KB entries                                                                                                                                                                                                                                                                                                                                    |
+| `lib/knowledgeBase/retriever.ts`                          | Local KB retrieval logic                                                                                                                                                                                                                                                                                                                            |
+| `lib/rag/retriever.ts`                                    | Supabase RAG retrieval logic                                                                                                                                                                                                                                                                                                                        |
+| `store/authStore.ts`                                      | Auth Zustand store                                                                                                                                                                                                                                                                                                                                  |
+| `store/financialStore.ts`                                 | Financial Zustand store                                                                                                                                                                                                                                                                                                                             |
+| `store/gamificationStore.ts`                              | Gamification Zustand store                                                                                                                                                                                                                                                                                                                          |
+| `store/portfolioStore.ts`                                 | Portfolio Zustand store                                                                                                                                                                                                                                                                                                                             |
+| `store/use-app-store.ts`                                  | App onboarding store                                                                                                                                                                                                                                                                                                                                |
+| `store/use-financial-store.ts`                            | Legacy financial store alias/compat                                                                                                                                                                                                                                                                                                                 |
+| `supabase/migrations/001_initial.sql`                     | Initial DB schema/migrations                                                                                                                                                                                                                                                                                                                        |
+| `supabase/migrations/002_user_analyse_snapshots.sql`      | Snapshot table migration                                                                                                                                                                                                                                                                                                                            |
+| `supabase/migrations/003_user_policies.sql`               | User policy schema migration                                                                                                                                                                                                                                                                                                                        |
+| `supabase/migrations/003_complete_setup.sql`              | Complete setup + RAG + policies                                                                                                                                                                                                                                                                                                                     |
+| `supabase/migrations/004_user_policies_add_status.sql`    | Adds policy status column                                                                                                                                                                                                                                                                                                                           |
+| `supabase/migrations/005_fix_snapshots.sql`               | Creates snapshots/analysis tables + RLS                                                                                                                                                                                                                                                                                                             |
 
 ---
 
 ## 5. DATABASE SCHEMA
 
 ### Table: users
+
 Purpose: App-level user profile extending Supabase auth user.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK, references `auth.users(id)` |
-| name | text | Display name |
-| phone | text | Phone number |
-| email | text | Email |
-| is_admin | boolean | Admin flag |
-| referral_code | text | Unique referral code |
-| referred_by | text | Referrer code |
-| subscription_tier | text | free/pro/promax |
-| subscription_expiry | timestamptz | Subscription end |
-| fk_balance | integer | FK token balance |
-| created_at | timestamptz | Created time |
-| updated_at | timestamptz | Updated time |
-| data_consent_given | boolean | User accepted analyse/financial data processing consent |
-| data_consent_at | timestamptz | When consent was recorded |
-| data_consent_version | text | Consent copy/version marker (e.g. **`v2`** from **`/analyse`**) |
+| Column               | Type        | Description                                                     |
+| -------------------- | ----------- | --------------------------------------------------------------- |
+| id                   | uuid        | PK, references `auth.users(id)`                                 |
+| name                 | text        | Display name                                                    |
+| phone                | text        | Phone number                                                    |
+| email                | text        | Email                                                           |
+| is_admin             | boolean     | Admin flag                                                      |
+| referral_code        | text        | Unique referral code                                            |
+| referred_by          | text        | Referrer code                                                   |
+| subscription_tier    | text        | free/pro/promax                                                 |
+| subscription_expiry  | timestamptz | Subscription end                                                |
+| fk_balance           | integer     | FK token balance                                                |
+| created_at           | timestamptz | Created time                                                    |
+| updated_at           | timestamptz | Updated time                                                    |
+| data_consent_given   | boolean     | User accepted analyse/financial data processing consent         |
+| data_consent_at      | timestamptz | When consent was recorded                                       |
+| data_consent_version | text        | Consent copy/version marker (e.g. **`v2`** from **`/analyse`**) |
 
 RLS: `users_own` (auth.uid() == id)  
 Trigger: populated by `handle_new_user()` on signup.
 
 Trigger details (`handle_new_user()`):
+
 - Creates `users`, `gamification`, and `user_stats` rows for each new auth signup.
 - Seeds initial FK balance at `50`.
 
 ### Table: user_analysis
+
 Purpose: Stores submitted profile, deterministic analysis output, and cached AI plan.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK |
-| user_id | uuid | Unique per user, references auth.users |
-| profile_hash | text | Hash for cache invalidation |
-| profile | jsonb | Full profile payload |
-| analysis_result | jsonb | Engine output |
-| ai_fix_plan | jsonb | AI plan payload |
-| projection | jsonb | Optional projection |
-| ai_generated_at | timestamptz | Last AI generation time |
-| last_step_completed | integer | Intake completion marker |
-| updated_at | timestamptz | Updated time |
-| created_at | timestamptz | Created time |
+| Column              | Type        | Description                            |
+| ------------------- | ----------- | -------------------------------------- |
+| id                  | uuid        | PK                                     |
+| user_id             | uuid        | Unique per user, references auth.users |
+| profile_hash        | text        | Hash for cache invalidation            |
+| profile             | jsonb       | Full profile payload                   |
+| analysis_result     | jsonb       | Engine output                          |
+| ai_fix_plan         | jsonb       | AI plan payload                        |
+| projection          | jsonb       | Optional projection                    |
+| ai_generated_at     | timestamptz | Last AI generation time                |
+| last_step_completed | integer     | Intake completion marker               |
+| updated_at          | timestamptz | Updated time                           |
+| created_at          | timestamptz | Created time                           |
 
 RLS: `analysis_own` (auth.uid() == user_id)  
 Trigger: none.
@@ -375,100 +380,108 @@ Trigger: none.
 Note: `profile`/`analysis_result`/`ai_fix_plan` are `jsonb`, so new fields like `unifiedLoans[]` and mapped `additionalObligations[]` persist without column changes.
 
 ### Table: user_analyse_snapshots
+
 Purpose: Persisted analyse snapshots from client for restore/hydration.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| user_id | uuid | PK, references auth.users |
-| payload | jsonb | Snapshot blob |
-| updated_at | timestamptz | Updated timestamp |
+| Column     | Type        | Description               |
+| ---------- | ----------- | ------------------------- |
+| user_id    | uuid        | PK, references auth.users |
+| payload    | jsonb       | Snapshot blob             |
+| updated_at | timestamptz | Updated timestamp         |
 
 RLS: own-row policies (from migrations).
 
 Note: `payload` is `jsonb` and stores the full snapshot blob; loan schema changes are backward compatible without table column changes.
 
 ### Table: user_policies
+
 Purpose: Policy vault (health/term/car/bike/life/etc), renewals, transfer status.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK |
-| user_id | uuid | Owner |
-| policy_type | text | Type |
-| policy_name | text | Product/provider |
-| insurer | text | Insurer name |
-| premium_amount | numeric | Premium |
-| premium_frequency | text | monthly/yearly |
-| cover_amount | numeric | Sum insured/assured |
-| renewal_date | date | Renewal date |
-| status | text | active/lapsed/renewed/transferred |
-| ... | ... | Additional transfer/metadata columns per migrations |
+| Column            | Type    | Description                                         |
+| ----------------- | ------- | --------------------------------------------------- |
+| id                | uuid    | PK                                                  |
+| user_id           | uuid    | Owner                                               |
+| policy_type       | text    | Type                                                |
+| policy_name       | text    | Product/provider                                    |
+| insurer           | text    | Insurer name                                        |
+| premium_amount    | numeric | Premium                                             |
+| premium_frequency | text    | monthly/yearly                                      |
+| cover_amount      | numeric | Sum insured/assured                                 |
+| renewal_date      | date    | Renewal date                                        |
+| status            | text    | active/lapsed/renewed/transferred                   |
+| ...               | ...     | Additional transfer/metadata columns per migrations |
 
 RLS: own-row access policies.
 
 ### Table: finkoin_knowledge
+
 Purpose: RAG knowledge base rows used by keyword retrieval.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK |
-| category | text | High-level category |
-| subcategory | text | Subcategory |
-| title | text | Rule title |
-| content | text | Rule content |
-| keywords | text[] | Search keywords |
-| applies_when | text | Applicability condition |
-| priority_context | text[] | Priority tags |
-| embedding | vector(384) | Embedding column |
-| is_active | boolean | Active flag |
-| last_updated | date | Last update date |
-| source | text | Source note |
-| created_at | timestamptz | Created time |
+| Column           | Type        | Description             |
+| ---------------- | ----------- | ----------------------- |
+| id               | uuid        | PK                      |
+| category         | text        | High-level category     |
+| subcategory      | text        | Subcategory             |
+| title            | text        | Rule title              |
+| content          | text        | Rule content            |
+| keywords         | text[]      | Search keywords         |
+| applies_when     | text        | Applicability condition |
+| priority_context | text[]      | Priority tags           |
+| embedding        | vector(384) | Embedding column        |
+| is_active        | boolean     | Active flag             |
+| last_updated     | date        | Last update date        |
+| source           | text        | Source note             |
+| created_at       | timestamptz | Created time            |
 
 RLS: `knowledge_read` (public select true).
 
 ### Table: gamification
+
 Purpose: FK balances, badges, streak tracking.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| user_id | uuid | PK, owner |
-| fk_balance | integer | FK tokens |
-| badges | jsonb | Badge list |
-| streak_days | integer | Login streak |
-| last_login | date | Last login |
-| total_earned | integer | Aggregate earned tokens |
-| created_at | timestamptz | Created time |
+| Column       | Type        | Description             |
+| ------------ | ----------- | ----------------------- |
+| user_id      | uuid        | PK, owner               |
+| fk_balance   | integer     | FK tokens               |
+| badges       | jsonb       | Badge list              |
+| streak_days  | integer     | Login streak            |
+| last_login   | date        | Last login              |
+| total_earned | integer     | Aggregate earned tokens |
+| created_at   | timestamptz | Created time            |
 
 RLS: `gamification_own`.
 
 ### Table: financial_profiles
+
 Purpose: Legacy profile table.
 
 Status:
+
 - Legacy table — deprecated.
 - Use `user_analysis` instead.
 - Will be dropped after verification.
 
 ### Table: insurance_clicks
+
 Purpose: Insurance click and revenue tracking.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK |
-| user_id | uuid | User |
-| insurance_type | text | Type clicked |
-| insurer_name | text | Insurer |
-| recommended_cover | numeric | Recommended cover |
-| monthly_premium | numeric | Premium |
-| user_age | integer | Age at click |
-| city | text | City |
-| fk_tokens_used | integer | FK spent |
-| clicked_at | timestamptz | Click timestamp |
+| Column            | Type        | Description       |
+| ----------------- | ----------- | ----------------- |
+| id                | uuid        | PK                |
+| user_id           | uuid        | User              |
+| insurance_type    | text        | Type clicked      |
+| insurer_name      | text        | Insurer           |
+| recommended_cover | numeric     | Recommended cover |
+| monthly_premium   | numeric     | Premium           |
+| user_age          | integer     | Age at click      |
+| city              | text        | City              |
+| fk_tokens_used    | integer     | FK spent          |
+| clicked_at        | timestamptz | Click timestamp   |
 
 RLS: `clicks_own` insert check (auth.uid() == user_id).
 
 ### Extra tables from initial schema
+
 - `referrals`: referral tracking.
 - `user_stats`: per-user stats/metrics.
 
@@ -477,70 +490,75 @@ RLS: `clicks_own` insert check (auth.uid() == user_id).
 ## 6. DATA MODELS
 
 ### FinancialProfile
+
 Location: `lib/analyse-form-schema.ts`
 
 Core fields include life stage, demographics, income, loan obligations, monthly expenses, insurance cover/premium fields, assets, savings, investment contributions, and goals.
 
-| Field | Type | Description | Default |
-|-------|------|-------------|---------|
-| lifeStage | `"bachelor" \| "married" \| "kids" \| "senior"` | User life stage | `"bachelor"` |
-| selfAge | number | User age | 0 |
-| cityTier | `"metro" \| "tier2" \| "tier3"` | City category | `"metro"` |
-| monthlySalary | number | Main monthly take-home salary | 0 |
-| spouseIncome | number? | Spouse monthly income | 0 |
-| otherIncome | number? | Other monthly income | 0 |
-| homeLoanEMI/carLoanEMI/bikeEMI/personalLoanEMI/... | number? | Loan EMIs | 0 |
-| vegetables/grocery/electricity/... | number | Expense subfields | 0 |
-| hasHealthInsurance/hasTermInsurance | boolean | Insurance toggles | false |
-| healthInsuranceSumInsured/termInsuranceSumAssured | number? | Cover values | 0 |
-| *PremiumInput/*PremiumFrequency/*PremiumMonthly | number/text | Premium input + normalized monthly | varies |
-| savingsAccountBalance/fdValue/liquidMFValue | number | Liquid assets | 0 |
-| mfValue/ppfBalance/npsBalance/epfBalance | number? | Investments and retirement balances | 0 |
-| monthlySIP/monthlyRD/monthlyPPFContribution/... | number | Ongoing investments | 0 |
-| primaryGoal | string | Goal key | `"grow_wealth"` |
+| Field                                              | Type                                            | Description                         | Default         |
+| -------------------------------------------------- | ----------------------------------------------- | ----------------------------------- | --------------- |
+| lifeStage                                          | `"bachelor" \| "married" \| "kids" \| "senior"` | User life stage                     | `"bachelor"`    |
+| selfAge                                            | number                                          | User age                            | 0               |
+| cityTier                                           | `"metro" \| "tier2" \| "tier3"`                 | City category                       | `"metro"`       |
+| monthlySalary                                      | number                                          | Main monthly take-home salary       | 0               |
+| spouseIncome                                       | number?                                         | Spouse monthly income               | 0               |
+| otherIncome                                        | number?                                         | Other monthly income                | 0               |
+| homeLoanEMI/carLoanEMI/bikeEMI/personalLoanEMI/... | number?                                         | Loan EMIs                           | 0               |
+| vegetables/grocery/electricity/...                 | number                                          | Expense subfields                   | 0               |
+| hasHealthInsurance/hasTermInsurance                | boolean                                         | Insurance toggles                   | false           |
+| healthInsuranceSumInsured/termInsuranceSumAssured  | number?                                         | Cover values                        | 0               |
+| *PremiumInput/*PremiumFrequency/\*PremiumMonthly   | number/text                                     | Premium input + normalized monthly  | varies          |
+| savingsAccountBalance/fdValue/liquidMFValue        | number                                          | Liquid assets                       | 0               |
+| mfValue/ppfBalance/npsBalance/epfBalance           | number?                                         | Investments and retirement balances | 0               |
+| monthlySIP/monthlyRD/monthlyPPFContribution/...    | number                                          | Ongoing investments                 | 0               |
+| primaryGoal                                        | string                                          | Goal key                            | `"grow_wealth"` |
 
 ### AnalysisResult
+
 Location: `lib/financialEngine.ts`
 
-| Field | Type | Description |
-|---|---|---|
-| overallScore | number | Computed health score from issue severities |
-| criticalIssueCount | number | Count of critical issues |
-| warningIssueCount | number | Count of warning issues |
-| scores | object | savingsRate, debtRatio, untrackedCash, emergencyFundGap |
-| flags | AnalysisFlag[] | Highlight flags |
-| issues | AnalysisIssue[] | Detailed issues with severities |
-| teaser | string | Headline message |
-| planSteps | string[] | Action steps |
-| securityChecklist | SecurityItem[] | Safety checklist rows |
+| Field              | Type            | Description                                             |
+| ------------------ | --------------- | ------------------------------------------------------- |
+| overallScore       | number          | Computed health score from issue severities             |
+| criticalIssueCount | number          | Count of critical issues                                |
+| warningIssueCount  | number          | Count of warning issues                                 |
+| scores             | object          | savingsRate, debtRatio, untrackedCash, emergencyFundGap |
+| flags              | AnalysisFlag[]  | Highlight flags                                         |
+| issues             | AnalysisIssue[] | Detailed issues with severities                         |
+| teaser             | string          | Headline message                                        |
+| planSteps          | string[]        | Action steps                                            |
+| securityChecklist  | SecurityItem[]  | Safety checklist rows                                   |
 
 ### PriorityPlan
+
 Location: `lib/priorityEngine.ts`
 
-| Field | Type | Description |
-|---|---|---|
-| priorities | PriorityItem[] | Ranked items |
-| debts | DebtItem[] | Debt list |
-| goals | GoalItem[] | Goal list |
-| monthlyIncome | number | Calculated total income |
-| monthlySurplus | number | Calculated surplus |
-| allocationPlan | array | Suggested monthly allocation |
-| scoreToday | number | Current score |
-| scoreAfter12Months | number | Projected score |
-| topAction | string | Immediate top action |
+| Field              | Type           | Description                  |
+| ------------------ | -------------- | ---------------------------- |
+| priorities         | PriorityItem[] | Ranked items                 |
+| debts              | DebtItem[]     | Debt list                    |
+| goals              | GoalItem[]     | Goal list                    |
+| monthlyIncome      | number         | Calculated total income      |
+| monthlySurplus     | number         | Calculated surplus           |
+| allocationPlan     | array          | Suggested monthly allocation |
+| scoreToday         | number         | Current score                |
+| scoreAfter12Months | number         | Projected score              |
+| topAction          | string         | Immediate top action         |
 
 ### User
+
 Location: `store/authStore.ts`
 
-| Field | Type | Description |
-|---|---|---|
-| id | string | Auth user ID |
-| name/email/phone | string \| null | Basic identity |
-| subscriptionTier | free/pro/promax | Plan tier |
-| isAdmin | boolean? | Admin marker |
-| fkBalance | number? | FK token balance |
+| Field            | Type            | Description      |
+| ---------------- | --------------- | ---------------- |
+| id               | string          | Auth user ID     |
+| name/email/phone | string \| null  | Basic identity   |
+| subscriptionTier | free/pro/promax | Plan tier        |
+| isAdmin          | boolean?        | Admin marker     |
+| fkBalance        | number?         | FK token balance |
 
 ### Other key interfaces/types
+
 - `AnalyseFormValues`, `LifeStage`, `CityTier`, `PrimaryGoal`, `PremiumFrequency` (`lib/analyse-form-schema.ts`)
 - `SecurityItem`, `AnalysisIssue`, `RealEmergencyFundBreakdown` (`lib/financialEngine.ts`)
 - `PriorityItem`, `DebtItem`, `GoalItem` (`lib/priorityEngine.ts`)
@@ -553,10 +571,12 @@ Location: `store/authStore.ts`
 ## 7. ZUSTAND STORES
 
 ### financialStore
+
 File: `store/financialStore.ts`  
 Persisted: Yes (`finkoin-financial`, user-scoped localStorage key per auth user)
 
 State:
+
 - `analysis`: draft form values
 - `profile`: mirrored draft values
 - `lastSubmission`: normalized profile submitted
@@ -566,6 +586,7 @@ State:
 - `hasHydrated`: hydration flag
 
 Actions:
+
 - `setAnalysis(patch)`
 - `setFullAnalysis(data)`
 - `updateProfile(patch)`
@@ -578,6 +599,7 @@ Actions:
 - `resetAll()`
 
 ### authStore
+
 File: `store/authStore.ts`  
 Persisted: Yes (`finkoin-auth`) — partializes **`user`** and **`isLoggedIn` only** (not `subscriptionTier`, `userId`, `isLoading`, or `hasInitialized`; tier stays on `user` and is refetched after `initAuth`)
 
@@ -585,6 +607,7 @@ State: `user`, `isLoggedIn`, `isLoading`, `hasInitialized`, `subscriptionTier`, 
 Actions: `setUser`, `updateUser`, `setLoading`, `setSubscription`, `logout` (async: Supabase sign-out + clears persist + financial/AI cache keys), `initAuth`, `refreshUser`, `signInWithEmail`, `signUpWithEmail`
 
 ### gamificationStore
+
 File: `store/gamificationStore.ts`  
 Persisted: Yes (`finkoin-gamification`)
 
@@ -592,11 +615,13 @@ State: FK balance, badges, streak, earnedActions, toast
 Actions: `earnTokens`, `awardBadge`, `hasEarnedAction`, `markEarnedAction`, `clearToast`
 
 ### portfolioStore
+
 File: `store/portfolioStore.ts`  
 Persisted: No  
 State/action: `lastAnalysis`, `setLastAnalysis`
 
 ### use-app-store
+
 File: `store/use-app-store.ts`  
 Persisted: No  
 State/action: onboarding step tracking
@@ -608,6 +633,7 @@ State/action: onboarding step tracking
 From `lib/financialEngine.ts` + `lib/universal-buckets.ts`:
 
 ### Bucket Caps
+
 - Base caps:
   - needs: 20% (or 30% if home loan present)
   - wants: 5%
@@ -616,15 +642,18 @@ From `lib/financialEngine.ts` + `lib/universal-buckets.ts`:
   - investment: 30% (or 20% if home loan present)
 
 ### Monthly bucket actuals (`getUniversalBucketActuals`)
+
 - **Insurance (“security”) bucket:** Sum of **insurance premiums** converted to monthly (health, term, motor/other policies). **Not** EPF / PF / NPS / SSY — those are monthly contributions counted under **investment**.
 - **Investment bucket:** `monthlySIP` + `monthlyRD` + `monthlyNPSContribution` + `monthlyPPFContribution` + `monthlyEPFContribution` + `ssy`.
 
 ### Status Rules
+
 - `good`: actual <= cap
-- `warning`: actual <= cap * 1.15
-- `critical`: actual > cap * 1.15
+- `warning`: actual <= cap \* 1.15
+- `critical`: actual > cap \* 1.15
 
 ### Emergency Fund Weighted Corpus
+
 - savings account counted at 100%
 - liquid MF counted at 95%
 - FD counted at 70%
@@ -632,25 +661,29 @@ From `lib/financialEngine.ts` + `lib/universal-buckets.ts`:
 - legacy emergency fund field counted at 100%
 
 ### Emergency Target Windows
+
 - bachelor: 3-6 months
 - married: 6-12 months
 - kids: 9-12 months
 
 ### Term Insurance Formula (`calculateTermNeeded`)
-1. annual income = monthly total income * 12  
-2. base = annual income * 10  
-3. liabilities = homeLoanOutstanding + carLoanOutstanding  
-4. existing assets = mf + indianStocks + ppf + epf + fd  
-5. dependent buffer = dependentCount * 20,00,000  
-6. age multiplier: <30 => 1.2, <40 => 1.0, <50 => 0.8, >=50 => 0.6  
-7. term needed = max(50,00,000, (base + liabilities + dependentBuffer - existingAssets) * ageMultiplier)  
+
+1. annual income = monthly total income \* 12
+2. base = annual income \* 10
+3. liabilities = homeLoanOutstanding + carLoanOutstanding
+4. existing assets = mf + indianStocks + ppf + epf + fd
+5. dependent buffer = dependentCount \* 20,00,000
+6. age multiplier: <30 => 1.2, <40 => 1.0, <50 => 0.8, >=50 => 0.6
+7. term needed = max(50,00,000, (base + liabilities + dependentBuffer - existingAssets) \* ageMultiplier)
 8. rounded up to nearest 10,00,000
 
 ### Insurance Floor Rules
+
 - insurance guideline = 5% of income
 - critical floor = 2% of income
 
 ### Security Checklist Logic
+
 - emergency fund adequacy
 - medical insurance adequacy
 - medical emergency corpus
@@ -669,6 +702,7 @@ From `lib/financialEngine.ts` + `lib/universal-buckets.ts`:
 From `lib/priorityEngine.ts`:
 
 ### Priority Order (current implemented)
+
 1. `emergency_fund`
 2. `medical_fund`
 3. `term_insurance` (when gap > 0)
@@ -676,6 +710,7 @@ From `lib/priorityEngine.ts`:
 5. `ssy_girl_age_*` (per eligible girl child under 10)
 
 Current `buildPriorityPlan` implementation returns:
+
 - priorities: emergency + medical + conditional insurance/SSY priorities
 - debts: ranked debt list including additional obligations
 - goals: generated goal plan list (house/car/FIRE paths)
@@ -683,6 +718,7 @@ Current `buildPriorityPlan` implementation returns:
 - `additionalObligations[]` includes non-primary `unifiedLoans[]` rows after normalization, so debt ranking includes PF/OD/other loans that are not the first personal/car/bike mapping.
 
 ### Emergency Fund Rule (implemented)
+
 - income from salary + spouse + other
 - emergency months matrix by stage/parents/kids/age
 - target = `needsActual * emergencyMonthsNeeded`
@@ -691,11 +727,13 @@ Current `buildPriorityPlan` implementation returns:
 - monthly recommendation: `min(surplus*0.4, gap/12)`
 
 ### Medical Fund Rule (implemented)
+
 - target fixed: ₹2,00,000
 - current = min(50% liquid MF, target)
 - monthly recommendation: `min(surplus*0.2, gap/6)`
 
 ### Implementation status
+
 - P3/P4/P5 suite: implemented
 - debt ranking output: implemented
 - goal planning output: implemented
@@ -710,10 +748,12 @@ Current `buildPriorityPlan` implementation returns:
 ## 10. API ROUTES
 
 ### POST `/api/ai/analyse`
+
 File: `app/api/ai/analyse/route.ts`  
 Auth required: No (expects profile+analysis payload)
 
 Request body:
+
 ```json
 {
   "profile": {},
@@ -722,6 +762,7 @@ Request body:
 ```
 
 What it does:
+
 1. Validates `GROQ_API_KEY`
 2. Builds `priorityPlan` via `buildPriorityPlan`
 3. Retrieves knowledge via `retrieveKnowledge` (RAG)
@@ -731,6 +772,7 @@ What it does:
 7. Returns plan + explanations + knowledge titles
 
 Response:
+
 ```json
 {
   "priorityPlan": {},
@@ -741,6 +783,7 @@ Response:
 ```
 
 ### GET `/api/razorpay/checkout-config`
+
 File: `app/api/razorpay/checkout-config/route.ts`  
 Auth required: No
 
@@ -749,6 +792,7 @@ Returns the Razorpay **Key ID** to the frontend (safe to expose). Never exposes 
 Reads `NEXT_PUBLIC_RAZORPAY_KEY_ID`, falls back to `RAZORPAY_KEY_ID`.
 
 Response (success):
+
 ```json
 {
   "keyId": "rzp_test_..."
@@ -760,6 +804,7 @@ Errors: **503** `{ "error": "Payments are not configured." }` when neither env K
 ---
 
 ### POST `/api/razorpay/create-order`
+
 File: `app/api/razorpay/create-order/route.ts`  
 Auth required: No
 
@@ -768,6 +813,7 @@ Creates a fixed **₹99** (9900 paise) INR order via Razorpay Orders API.
 Request body: none required.
 
 Response:
+
 ```json
 {
   "orderId": "order_...",
@@ -781,10 +827,12 @@ Errors: **503** if keys missing; **502** if Razorpay API fails (`error`, `detail
 ---
 
 ### POST `/api/razorpay/verify-payment`
+
 File: `app/api/razorpay/verify-payment/route.ts`  
 Auth required: Yes — `Authorization: Bearer <Supabase access_token>`
 
 Body:
+
 ```json
 {
   "razorpay_order_id": "",
@@ -797,6 +845,7 @@ Verifies **HMAC-SHA256** over `order_id|payment_id` using `RAZORPAY_KEY_SECRET` 
 On success: updates **`users.subscription_tier`** to **`pro`** for the authenticated user.
 
 Response:
+
 ```json
 {
   "ok": true
@@ -810,6 +859,7 @@ Errors: **401** without valid session; **400** missing fields or signature misma
 ## 11. RAG SYSTEM
 
 ### How it works
+
 1. Profile + analysis is sent to AI route
 2. `buildKeywords(profile, analysis)` extracts search keywords
 3. Supabase RPC `search_by_keywords(search_keywords, match_count)` executes
@@ -818,7 +868,9 @@ Errors: **401** without valid session; **400** missing fields or signature misma
 6. Context is sent to Groq for constrained explanation generation
 
 ### Knowledge categories
+
 Source categories used in DB rows include:
+
 - priority
 - goal
 - debt
@@ -826,12 +878,14 @@ Source categories used in DB rows include:
 - tax
 
 ### Adding new knowledge
+
 1. Insert row in `public.finkoin_knowledge`
 2. Fill `category`, `title`, `content`, `keywords[]`, and optional fields
 3. Ensure `is_active = true`
 4. No redeploy required
 
 ### Updating rates
+
 1. Update `content` in existing knowledge row
 2. Keep keywords relevant for retrieval
 3. Changes apply immediately
@@ -840,15 +894,16 @@ Source categories used in DB rows include:
 
 ## 12. CACHING STRATEGY
 
-| Data | Where | When saved | When cleared |
-|------|-------|-----------|--------------|
-| Form/profile draft | Zustand persisted localStorage | During form updates | reset/clear actions |
-| Tax regime calculator inputs | localStorage `finkoin_tax_calculator` | On any field/toggle change (TaxRegimeCalculator) | Reset button or manual clear |
-| Analysis result | Zustand + optional Supabase snapshot | On submit/runAnalysis | reset/clear |
-| AI fix plan | localStorage (`finkoin_ai_cache`) + optional `user_analysis.ai_fix_plan` | After AI call in fixplan page | hash change / expiry / clearCache |
-| Cross-device profile | user_analyse_snapshots (Supabase) | After every form submit (if logged in) | Never auto-cleared — user must reset |
+| Data                         | Where                                                                    | When saved                                       | When cleared                         |
+| ---------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ | ------------------------------------ |
+| Form/profile draft           | Zustand persisted localStorage                                           | During form updates                              | reset/clear actions                  |
+| Tax regime calculator inputs | localStorage `finkoin_tax_calculator`                                    | On any field/toggle change (TaxRegimeCalculator) | Reset button or manual clear         |
+| Analysis result              | Zustand + optional Supabase snapshot                                     | On submit/runAnalysis                            | reset/clear                          |
+| AI fix plan                  | localStorage (`finkoin_ai_cache`) + optional `user_analysis.ai_fix_plan` | After AI call in fixplan page                    | hash change / expiry / clearCache    |
+| Cross-device profile         | user_analyse_snapshots (Supabase)                                        | After every form submit (if logged in)           | Never auto-cleared — user must reset |
 
 ### Profile hash check
+
 - `hashProfile(profile)` creates deterministic hash from selected profile fields
 - `getCachedPlan(hash)` checks hash match and max age
 - match -> use cached AI plan (no API call)
@@ -882,6 +937,7 @@ Source categories used in DB rows include:
 10. **`LoginSheet`**: `components/ui/LoginSheet.tsx` remains optional/unwired from the global navbar.
 
 ### Sign up
+
 1. User opens **`/login`**, **Sign up** tab, submits name + email + password (or uses **`signUpWithEmail`** elsewhere).
 2. **`supabase.auth.signUp`** with **`emailRedirectTo`** → `{origin}/auth/callback`.
 3. If **no session** is returned (email confirmation required), UI prompts to verify email, then user logs in on the **Login** tab.
@@ -889,15 +945,18 @@ Source categories used in DB rows include:
 5. After session exists, **`initAuth()`** / **`refreshUser()`** loads profile and gamification.
 
 ### Sign in
+
 1. **`/login`** → **`signInWithPassword`** → **`initAuth()`** → redirect to **`?redirect=`** or **`/analyse`**.
 2. **`?redirect=`** preserves deep links after login.
 
 ### OAuth (Google)
+
 1. **`signInWithOAuth`** (`/login` or **`lib/auth`** **`signInWithGoogle`**) with **`redirectTo`** **`{origin}/auth/callback?next=<encoded-path>`** so deep links survive OAuth.
 2. **`/auth/callback`** (wrapped in **`Suspense`**): **`exchangeCodeForSession(code)`** when **`?code=`** present, then **`initAuth()`**, then redirect to **`next`** (default **`/analyse`**).
 3. **Supabase Dashboard → Authentication → URL configuration**: add **`Site URL`** and **Redirect URLs** that include **`/auth/callback`** (and variants with query strings if your project enforces exact redirect matching).
 
 ### Password reset
+
 1. **`/login`** → **Forgot password?** inline mode, or **`/auth/reset-password`**, calls **`resetPasswordForEmail`** with **`redirectTo`** **`{origin}/auth/callback?type=recovery`** so the magic link establishes a session via PKCE before **`/auth/update-password`**.
 2. **`/auth/callback`** with **`type=recovery`** → **`/auth/update-password`** after **`initAuth()`**.
 3. **`/auth/update-password`** → **`auth.updateUser({ password })`** when a recovery session exists.
@@ -911,9 +970,11 @@ Configure in **Supabase Dashboard → Authentication**: JWT expiry (e.g. **3600s
 ## 14. PAGE FLOWS
 
 ### `/analyse` (7-step form)
+
 **Gate:** `components/analyse/ConsentModal.tsx` must be accepted once per user: **`localStorage`** fast path + **`users`** row fallback + **`UPDATE`** on agree (see **`app/analyse/page.tsx`**). **`redirectedToLoginRef`** avoids duplicate login redirects under Strict Mode.
 
 Current runtime uses `components/forms/analyse-onboarding-form.tsx`:
+
 - step 1: profile/life stage
 - step 2: income
 - step 3: obligations/loans
@@ -923,6 +984,7 @@ Current runtime uses `components/forms/analyse-onboarding-form.tsx`:
 - step 7: goals
 
 On submit:
+
 1. Validate final schema
 2. Normalize form values
 3. Run deterministic analysis (`setFullAnalysis`)
@@ -931,12 +993,14 @@ On submit:
 6. Navigate to `/analyse/result`
 
 ### `/analyse/result`
+
 - Reads last submission + analysis
 - Displays expanded production sections (hero, net-worth summary, bucket table, gauges, safety-net, fix-plan preview)
 - Uses `components/analyse/paywall-modal.tsx` for unlock confirmation flow
 - FK token unlock path triggers redemption
 
 ### `/analyse/fixplan`
+
 - Calls `canAccessFixPlan`
 - If no access -> redirect result
 - Computes profile hash and checks local cache
@@ -946,6 +1010,7 @@ On submit:
 - Download button generates a multi-page PDF using `downloadOptimizerPDF()` in `lib/generatePDF.ts`
 
 ### `/optimizer`
+
 - Shows full AI plan view
 - Includes report export CTA wired to `downloadOptimizerPDF()`
 
@@ -954,12 +1019,14 @@ On submit:
 ## 15. GAMIFICATION
 
 ### FK Token earning events (implemented)
+
 - Calculator usage reward in calculators dynamic page
 - Learn article read reward in article tracker
 - Portfolio analysis reward in portfolio flow
 - Generic store action `earnTokens(amount, label)`
 
 ### FK Token spending (implemented)
+
 - Result unlock path:
   - 1000 FK -> free unlock path
   - 500 FK -> discounted unlock path
@@ -977,6 +1044,7 @@ Current status: **partially implemented**
 - `insurance_clicks` table exists for click/revenue tracking
 
 ### Commission tracking
+
 - Table supports click logging (`insurance_clicks`)
 - UI has renewal/transfer intent flows
 - Full production affiliate/insurer API integration is **NOT IMPLEMENTED YET**
@@ -986,15 +1054,18 @@ Current status: **partially implemented**
 ## 17. KNOWN ISSUES AND TODOS
 
 ### TODO/FIXME found
+
 - `app/plans/page.tsx`: `TODO: Replace with Razorpay later` (2 occurrences)
 
 ### Known placeholders / coming-soon pages
+
 - `app/goals/page.tsx`: coming soon
 - `app/pricing/page.tsx`: full plans coming soon
 - `lib/kycVerification.ts`: PAN verification is mock logic
 - `app/insurance/page.tsx`: full comparison engine not complete
 
 ### Legal pages (complete)
+
 - **`/legal/privacy`**: Full Privacy Policy (DPDP Act 2023 rights, grievance officer, processors: Supabase, Vercel, Groq, Razorpay).
 - **`/legal/terms`**: Full Terms of Service (educational-only / not SEBI-RIA disclaimer, payments, liability cap).
 - **`/legal/refund`**: Standalone Refund Policy for digital products (Razorpay-friendly).
@@ -1003,10 +1074,12 @@ Current status: **partially implemented**
 - Footer **Legal** column and profile menu link to Privacy, Terms, Refund, and Disclaimer.
 
 ### Hardcoded values needing future dynamic handling
+
 - Some paywall and token thresholds are hardcoded in result/fixplan/payment flow
 - Some insurance text/premium estimate strings are static
 
 ### Recently fixed
+
 - Moved to the CHANGE LOG section below to keep this section focused on active known issues only.
 - Personal loan outstanding entry is now explicitly surfaced in Step 3 (Loans/Obligations) between EMI and rate, with clarified helper copy for unknown-outstanding fallback.
 
@@ -1015,6 +1088,7 @@ Current status: **partially implemented**
 ## 18. HOW TO MAKE COMMON CHANGES
 
 ### Add a new form field
+
 1. Add field to `FinancialProfile` + defaults in `lib/analyse-form-schema.ts`
 2. Add UI in `components/forms/analyse-onboarding-form.tsx` at correct step
 3. Wire `react-hook-form` binding and validation schema
@@ -1022,23 +1096,27 @@ Current status: **partially implemented**
 5. Update engine logic if the field changes calculations
 
 ### Add a new financial rule
+
 1. Add deterministic rule in `lib/financialEngine.ts` or `lib/priorityEngine.ts`
 2. Update related types/interfaces
 3. Add tests in `lib/*.test.ts`
 4. Validate result rendering pages still handle new outputs
 
 ### Update an interest rate
+
 1. If AI/RAG rate: update `finkoin_knowledge` row in Supabase
 2. If deterministic code rate: update rule in `lib/financialEngine.ts`/`lib/priorityEngine.ts`
 3. Run `npx tsc --noEmit` and `npm run build`
 
 ### Add a new priority
+
 1. Extend `PriorityItem` usage in `lib/priorityEngine.ts`
 2. Add generation logic in `buildPriorityPlan`
 3. Ensure `/api/ai/analyse` prompt includes required fields
 4. Ensure `/analyse/fixplan` rendering handles new item
 
 ### Add a new insurance product
+
 1. Extend policy type mappings in `lib/userPolicies.ts`
 2. Update policy UI forms in `components/policies/PolicyVaultClient.tsx`
 3. If marketplace compare involved, add handling in `app/insurance/page.tsx`
@@ -1049,17 +1127,21 @@ Current status: **partially implemented**
 ## 19. DEPLOYMENT
 
 ### Environment setup
+
 1. Set all required env vars (Supabase, Groq, Razorpay)
 2. Ensure `NEXT_PUBLIC_SITE_URL` points to deployed domain
 3. Ensure Supabase RLS policies and migrations are applied
 
 ### Vercel settings
+
 - Add all env vars in project settings for Preview + Production
 - Build command: `next build`
 - Install command: `npm install`
 
 ### Supabase migrations
+
 Run SQL migration files in order:
+
 1. `001_initial.sql`
 2. `002_user_analyse_snapshots.sql`
 3. `003_user_policies.sql`
@@ -1072,11 +1154,13 @@ Run SQL migration files in order:
 ## 20. REVENUE MODEL
 
 ### How Finkoin makes money
+
 1. Paid fix plan unlock/paywall flow (UI + payment route scaffolding)
 2. Insurance referral/renewal/transfer commissions (policy vault + click tracking table)
 3. Subscription plans (`pro`, `promax`) via plans/pricing flows
 
 ### FK Token economics
+
 - FK is earned through engagement events (calculators, learning, portfolio actions)
 - FK can reduce/unlock fix plan cost
 - Current thresholds are implementation-defined in client flow (500/1000 levels)
@@ -1098,161 +1182,161 @@ Source of truth: `components/forms/analyse-onboarding-form.tsx` (UI), validated 
 
 ### Step 1 — Profile
 
-| Code field | Label shown in UI | Type | Required | Stored in `FinancialProfile` |
-|---|---|---|---|---|
-| `lifeStage` | Life stage | card select | Required | `lifeStage` |
-| `selfAge` | Your age | number input | Required | `selfAge` |
-| `spouseAge` | Spouse age | number input | Required for `married`/`kids`; hidden otherwise | `spouseAge` |
-| `numberOfKids` | Number of kids | number input | Required when `lifeStage = kids` | `numberOfKids` |
-| `kidsAges[i]` | Kid N age | number input | Required for each kid when `lifeStage = kids` | `kidsAges[]` |
-| `kidsGenders[i]` | Kid N gender | card/radio select | Required for each kid when `lifeStage = kids` | `kidsGenders[]` |
-| `cityTier` | City tier | select | Required | `cityTier` |
+| Code field       | Label shown in UI | Type              | Required                                        | Stored in `FinancialProfile` |
+| ---------------- | ----------------- | ----------------- | ----------------------------------------------- | ---------------------------- |
+| `lifeStage`      | Life stage        | card select       | Required                                        | `lifeStage`                  |
+| `selfAge`        | Your age          | number input      | Required                                        | `selfAge`                    |
+| `spouseAge`      | Spouse age        | number input      | Required for `married`/`kids`; hidden otherwise | `spouseAge`                  |
+| `numberOfKids`   | Number of kids    | number input      | Required when `lifeStage = kids`                | `numberOfKids`               |
+| `kidsAges[i]`    | Kid N age         | number input      | Required for each kid when `lifeStage = kids`   | `kidsAges[]`                 |
+| `kidsGenders[i]` | Kid N gender      | card/radio select | Required for each kid when `lifeStage = kids`   | `kidsGenders[]`              |
+| `cityTier`       | City tier         | select            | Required                                        | `cityTier`                   |
 
 ### Step 2 — Income
 
-| Code field | Label shown in UI | Type | Required | Stored in `FinancialProfile` |
-|---|---|---|---|---|
-| `monthlySalary` | Monthly take-home salary | `MoneyInput` | Required (>0) | `monthlySalary` |
-| `spouseIncome` | Spouse monthly income | `MoneyInput` | Optional (hidden for bachelor) | `spouseIncome` |
-| `otherIncome` | Other income — freelance, rental, business | `MoneyInput` | Optional | `otherIncome` |
+| Code field      | Label shown in UI                          | Type         | Required                       | Stored in `FinancialProfile` |
+| --------------- | ------------------------------------------ | ------------ | ------------------------------ | ---------------------------- |
+| `monthlySalary` | Monthly take-home salary                   | `MoneyInput` | Required (>0)                  | `monthlySalary`              |
+| `spouseIncome`  | Spouse monthly income                      | `MoneyInput` | Optional (hidden for bachelor) | `spouseIncome`               |
+| `otherIncome`   | Other income — freelance, rental, business | `MoneyInput` | Optional                       | `otherIncome`                |
 
 ### Step 3 — Loans/Obligations
 
-| Code field | Label shown in UI | Type | Required | Stored in `FinancialProfile` |
-|---|---|---|---|---|
-| `rentAmount` | Rent you pay monthly | `MoneyInput` | Optional | `rentAmount` |
-| `rentMaintenanceMonthly` | Rent flat maintenance (society / maintenance) | `MoneyInput` | Optional (shown only if rent > 0) | `rentMaintenanceMonthly` |
-| `homeLoanEMI` | Home loan EMI (if any) | `MoneyInput` | Optional | `homeLoanEMI` |
-| `secondPropertyEMI` | Second property loan EMI (if any) | `MoneyInput` | Optional | `secondPropertyEMI` |
-| `carLoanEMI` | Car loan EMI | `MoneyInput` | Optional | `carLoanEMI` |
-| `bikeEMI` | Two-wheeler loan EMI | `MoneyInput` | Optional | `bikeEMI` |
-| `personalLoanEMI` | Personal loan EMI | `MoneyInput` | Optional | `personalLoanEMI` |
-| `personalLoanOutstanding` | Personal loan outstanding (optional) | `MoneyInput` | Optional | `personalLoanOutstanding` |
-| `personalLoanRate` | Personal loan interest rate % | number input | Optional | `personalLoanRate` |
-| `personalLoanRemainingMonths` | Personal loan remaining months | number input | Optional | `personalLoanRemainingMonths` |
-| `homeLoanRate` | Home loan interest rate % | number input | Optional | `homeLoanRate` |
-| `homeLoanRemainingMonths` | Home loan remaining months | number input | Optional | `homeLoanRemainingMonths` |
-| `carLoanRate` | Car loan interest rate % | number input | Optional | `carLoanRate` |
-| `carLoanRemainingMonths` | Car loan remaining months | number input | Optional | `carLoanRemainingMonths` |
-| `bikeLoanRate` | Bike loan interest rate % | number input | Optional | `bikeLoanRate` |
-| `bikeLoanRemainingMonths` | Bike loan remaining months | number input | Optional | `bikeLoanRemainingMonths` |
-| `creditCardBillMonthly` | Credit card — typical monthly payment | `MoneyInput` | Optional | `creditCardBillMonthly` |
-| `unifiedLoans[i].loanType` | Loan type | select | Required per row | `unifiedLoans[].loanType` |
-| `unifiedLoans[i].lenderName` | Lender name | text input | Optional | `unifiedLoans[].lenderName` |
-| `unifiedLoans[i].monthlyEMI` | Monthly EMI | `MoneyInput` | Required per row | `unifiedLoans[].monthlyEMI` |
-| `unifiedLoans[i].outstandingAmount` | Outstanding amount | `MoneyInput` | Optional | `unifiedLoans[].outstandingAmount` |
-| `unifiedLoans[i].interestRate` | Interest rate % | number input | Optional | `unifiedLoans[].interestRate` |
-| `unifiedLoans[i].remainingMonths` | Remaining months | number input | Optional | `unifiedLoans[].remainingMonths` |
-| `unifiedLoans[i].odLimit` | OD limit | `MoneyInput` | Optional (OD rows only) | `unifiedLoans[].odLimit` |
-| `unifiedLoans[i].odUsed` | OD used | `MoneyInput` | Optional (OD rows only) | `unifiedLoans[].odUsed` |
-| `unifiedLoans[i].odInterestOnlyYears` | OD interest-only years | number input | Optional (OD rows only) | `unifiedLoans[].odInterestOnlyYears` |
-| `additionalObligations[i].type` | Obligation type | select | Required if row added | `additionalObligations[].type` |
-| `additionalObligations[i].lenderName` | Lender name | text input | Optional | `additionalObligations[].lenderName` |
-| `additionalObligations[i].monthlyAmount` | Monthly payment amount | `MoneyInput` | Required positive if row added | `additionalObligations[].monthlyAmount` |
-| `odLimit` | OD limit | `MoneyInput` | Optional (shown when obligation type = Overdraft) | `odLimit` |
-| `odUsed` | Amount currently used in OD | `MoneyInput` | Optional (shown when obligation type = Overdraft) | `odUsed` |
-| `odInterestRate` | OD interest rate % | number input | Optional (shown when obligation type = Overdraft) | `odInterestRate` |
-| `odInterestOnlyYears` | OD interest-only period (years) | number input | Optional (shown when obligation type = Overdraft) | `odInterestOnlyYears` |
-| `odEMIStartYear` | OD EMI start year | number input | Optional (shown when obligation type = Overdraft) | `odEMIStartYear` |
+| Code field                               | Label shown in UI                             | Type         | Required                                          | Stored in `FinancialProfile`            |
+| ---------------------------------------- | --------------------------------------------- | ------------ | ------------------------------------------------- | --------------------------------------- |
+| `rentAmount`                             | Rent you pay monthly                          | `MoneyInput` | Optional                                          | `rentAmount`                            |
+| `rentMaintenanceMonthly`                 | Rent flat maintenance (society / maintenance) | `MoneyInput` | Optional (shown only if rent > 0)                 | `rentMaintenanceMonthly`                |
+| `homeLoanEMI`                            | Home loan EMI (if any)                        | `MoneyInput` | Optional                                          | `homeLoanEMI`                           |
+| `secondPropertyEMI`                      | Second property loan EMI (if any)             | `MoneyInput` | Optional                                          | `secondPropertyEMI`                     |
+| `carLoanEMI`                             | Car loan EMI                                  | `MoneyInput` | Optional                                          | `carLoanEMI`                            |
+| `bikeEMI`                                | Two-wheeler loan EMI                          | `MoneyInput` | Optional                                          | `bikeEMI`                               |
+| `personalLoanEMI`                        | Personal loan EMI                             | `MoneyInput` | Optional                                          | `personalLoanEMI`                       |
+| `personalLoanOutstanding`                | Personal loan outstanding (optional)          | `MoneyInput` | Optional                                          | `personalLoanOutstanding`               |
+| `personalLoanRate`                       | Personal loan interest rate %                 | number input | Optional                                          | `personalLoanRate`                      |
+| `personalLoanRemainingMonths`            | Personal loan remaining months                | number input | Optional                                          | `personalLoanRemainingMonths`           |
+| `homeLoanRate`                           | Home loan interest rate %                     | number input | Optional                                          | `homeLoanRate`                          |
+| `homeLoanRemainingMonths`                | Home loan remaining months                    | number input | Optional                                          | `homeLoanRemainingMonths`               |
+| `carLoanRate`                            | Car loan interest rate %                      | number input | Optional                                          | `carLoanRate`                           |
+| `carLoanRemainingMonths`                 | Car loan remaining months                     | number input | Optional                                          | `carLoanRemainingMonths`                |
+| `bikeLoanRate`                           | Bike loan interest rate %                     | number input | Optional                                          | `bikeLoanRate`                          |
+| `bikeLoanRemainingMonths`                | Bike loan remaining months                    | number input | Optional                                          | `bikeLoanRemainingMonths`               |
+| `creditCardBillMonthly`                  | Credit card — typical monthly payment         | `MoneyInput` | Optional                                          | `creditCardBillMonthly`                 |
+| `unifiedLoans[i].loanType`               | Loan type                                     | select       | Required per row                                  | `unifiedLoans[].loanType`               |
+| `unifiedLoans[i].lenderName`             | Lender name                                   | text input   | Optional                                          | `unifiedLoans[].lenderName`             |
+| `unifiedLoans[i].monthlyEMI`             | Monthly EMI                                   | `MoneyInput` | Required per row                                  | `unifiedLoans[].monthlyEMI`             |
+| `unifiedLoans[i].outstandingAmount`      | Outstanding amount                            | `MoneyInput` | Optional                                          | `unifiedLoans[].outstandingAmount`      |
+| `unifiedLoans[i].interestRate`           | Interest rate %                               | number input | Optional                                          | `unifiedLoans[].interestRate`           |
+| `unifiedLoans[i].remainingMonths`        | Remaining months                              | number input | Optional                                          | `unifiedLoans[].remainingMonths`        |
+| `unifiedLoans[i].odLimit`                | OD limit                                      | `MoneyInput` | Optional (OD rows only)                           | `unifiedLoans[].odLimit`                |
+| `unifiedLoans[i].odUsed`                 | OD used                                       | `MoneyInput` | Optional (OD rows only)                           | `unifiedLoans[].odUsed`                 |
+| `unifiedLoans[i].odInterestOnlyYears`    | OD interest-only years                        | number input | Optional (OD rows only)                           | `unifiedLoans[].odInterestOnlyYears`    |
+| `additionalObligations[i].type`          | Obligation type                               | select       | Required if row added                             | `additionalObligations[].type`          |
+| `additionalObligations[i].lenderName`    | Lender name                                   | text input   | Optional                                          | `additionalObligations[].lenderName`    |
+| `additionalObligations[i].monthlyAmount` | Monthly payment amount                        | `MoneyInput` | Required positive if row added                    | `additionalObligations[].monthlyAmount` |
+| `odLimit`                                | OD limit                                      | `MoneyInput` | Optional (shown when obligation type = Overdraft) | `odLimit`                               |
+| `odUsed`                                 | Amount currently used in OD                   | `MoneyInput` | Optional (shown when obligation type = Overdraft) | `odUsed`                                |
+| `odInterestRate`                         | OD interest rate %                            | number input | Optional (shown when obligation type = Overdraft) | `odInterestRate`                        |
+| `odInterestOnlyYears`                    | OD interest-only period (years)               | number input | Optional (shown when obligation type = Overdraft) | `odInterestOnlyYears`                   |
+| `odEMIStartYear`                         | OD EMI start year                             | number input | Optional (shown when obligation type = Overdraft) | `odEMIStartYear`                        |
 
 Step 3 UI now uses a single `My Loans` field-array (`unifiedLoans`) for data entry. Legacy scalar loan fields and `additionalObligations` are still kept in schema/model for backward compatibility and downstream engine compatibility.
 
 ### Step 4 — Expenses
 
-| Code field | Label shown in UI | Type | Required | Stored in `FinancialProfile` |
-|---|---|---|---|---|
-| `foodTotal` | Food and daily essentials | `MoneyInput` | Optional | `foodTotal` |
-| `transportTotal` | Transport | `MoneyInput` | Optional | `transportTotal` |
-| `utilityTotal` | Utilities | `MoneyInput` | Optional | `utilityTotal` |
-| `domesticHelpTotal` | Domestic help | `MoneyInput` | Optional | `domesticHelpTotal` |
-| `lifestyleTotal` | Lifestyle and personal | `MoneyInput` | Optional | `lifestyleTotal` |
-| `kidsSchoolFees` | Kids school fees and tuition | `MoneyInput` | Optional (shown for `kids`) | `kidsSchoolFees` |
-| `kidsActivities` | Kids activities — sports, hobby classes | `MoneyInput` | Optional (shown for `kids`) | `kidsActivities` |
-| `parentsSupport` | Parents / in-laws support | `MoneyInput` | Optional | `parentsSupport` |
-| `parentsCity` | Where do your parents reside? | select | Optional (shown when parentsSupport > 0) | `parentsCity` |
-| `parentsHealthInsuranceSumInsured` | Sum insured (₹) | `MoneyInput` + toggle gate | Optional | `parentsHealthInsuranceSumInsured` |
-| `parentsEmergencyCash` | Liquid cash set aside specifically for parents medical needs (₹) | `MoneyInput` | Optional (shown when parentsSupport > 0) | `parentsEmergencyCash` |
+| Code field                         | Label shown in UI                                                | Type                       | Required                                 | Stored in `FinancialProfile`       |
+| ---------------------------------- | ---------------------------------------------------------------- | -------------------------- | ---------------------------------------- | ---------------------------------- |
+| `foodTotal`                        | Food and daily essentials                                        | `MoneyInput`               | Optional                                 | `foodTotal`                        |
+| `transportTotal`                   | Transport                                                        | `MoneyInput`               | Optional                                 | `transportTotal`                   |
+| `utilityTotal`                     | Utilities                                                        | `MoneyInput`               | Optional                                 | `utilityTotal`                     |
+| `domesticHelpTotal`                | Domestic help                                                    | `MoneyInput`               | Optional                                 | `domesticHelpTotal`                |
+| `lifestyleTotal`                   | Lifestyle and personal                                           | `MoneyInput`               | Optional                                 | `lifestyleTotal`                   |
+| `kidsSchoolFees`                   | Kids school fees and tuition                                     | `MoneyInput`               | Optional (shown for `kids`)              | `kidsSchoolFees`                   |
+| `kidsActivities`                   | Kids activities — sports, hobby classes                          | `MoneyInput`               | Optional (shown for `kids`)              | `kidsActivities`                   |
+| `parentsSupport`                   | Parents / in-laws support                                        | `MoneyInput`               | Optional                                 | `parentsSupport`                   |
+| `parentsCity`                      | Where do your parents reside?                                    | select                     | Optional (shown when parentsSupport > 0) | `parentsCity`                      |
+| `parentsHealthInsuranceSumInsured` | Sum insured (₹)                                                  | `MoneyInput` + toggle gate | Optional                                 | `parentsHealthInsuranceSumInsured` |
+| `parentsEmergencyCash`             | Liquid cash set aside specifically for parents medical needs (₹) | `MoneyInput`               | Optional (shown when parentsSupport > 0) | `parentsEmergencyCash`             |
 
 Legacy granular expense fields (`vegetables`, `grocery`, `medicine`, `fuel`, `cabMetro`, `electricity`, `internet`, `gas`, `water`, `houseHelpMonthly`, `cookHelpMonthly`, `entertainment`, `shopping`, `personalCare`) are kept in schema/normalizer for backward compatibility but are no longer primary UI inputs.
 
 ### Step 5 — Insurance
 
-| Code field | Label shown in UI | Type | Required | Stored in `FinancialProfile` |
-|---|---|---|---|---|
-| `hasHealthInsurance` | Do you have health insurance? | toggle | Optional | `hasHealthInsurance` |
-| `healthInsuranceSumInsured` | Sum insured | `MoneyInput` | Required if `hasHealthInsurance = true` | `healthInsuranceSumInsured` |
-| `healthInsurancePremiumInput` | Premium amount | `MoneyInput` | Required if `hasHealthInsurance = true` | `healthInsurancePremiumInput` |
-| `healthInsurancePremiumFrequency` | Monthly / Yearly | toggle | Optional | `healthInsurancePremiumFrequency` |
-| `hasTermInsurance` | Do you have term insurance? | toggle | Optional | `hasTermInsurance` |
-| `termInsuranceSumAssured` | Sum assured | `MoneyInput` | Required if `hasTermInsurance = true` | `termInsuranceSumAssured` |
-| `termInsurancePremiumInput` | Premium amount | `MoneyInput` | Required if `hasTermInsurance = true` | `termInsurancePremiumInput` |
-| `termInsurancePremiumFrequency` | Monthly / Yearly | toggle | Optional | `termInsurancePremiumFrequency` |
-| `termInsurancePremiumTillYear` | Premium paying till year | number input | Optional | `termInsurancePremiumTillYear` |
-| `carInsurancePremiumInput` | Car insurance premium | `MoneyInput` | Optional | `carInsurancePremiumInput` |
-| `carInsurancePremiumFrequency` | Monthly / Yearly | toggle | Optional | `carInsurancePremiumFrequency` |
-| `bikeInsurancePremiumInput` | Two-wheeler insurance premium | `MoneyInput` | Optional | `bikeInsurancePremiumInput` |
-| `bikeInsurancePremiumFrequency` | Monthly / Yearly | toggle | Optional | `bikeInsurancePremiumFrequency` |
-| `hasOtherInsurance` | Any other insurance premium? | toggle | Optional | `hasOtherInsurance` |
-| `otherInsurancePremiums[i].policyName` | Policy name | text input | Optional | `otherInsurancePremiums[].policyName` |
-| `otherInsurancePremiums[i].premiumAmount` | Premium amount | `MoneyInput` | Required per row when `hasOtherInsurance = true` | `otherInsurancePremiums[].premiumAmount` |
-| `otherInsurancePremiums[i].frequency` | Monthly / Yearly | toggle | Optional | `otherInsurancePremiums[].frequency` |
-| `lifeInsuranceMaturityAmount` | Maturity amount (if any) | `MoneyInput` | Optional (shown with other insurance section) | `lifeInsuranceMaturityAmount` |
-| `lifeInsuranceMaturityYear` | Maturity year (if any) | number input | Optional (shown with other insurance section) | `lifeInsuranceMaturityYear` |
+| Code field                                | Label shown in UI             | Type         | Required                                         | Stored in `FinancialProfile`             |
+| ----------------------------------------- | ----------------------------- | ------------ | ------------------------------------------------ | ---------------------------------------- |
+| `hasHealthInsurance`                      | Do you have health insurance? | toggle       | Optional                                         | `hasHealthInsurance`                     |
+| `healthInsuranceSumInsured`               | Sum insured                   | `MoneyInput` | Required if `hasHealthInsurance = true`          | `healthInsuranceSumInsured`              |
+| `healthInsurancePremiumInput`             | Premium amount                | `MoneyInput` | Required if `hasHealthInsurance = true`          | `healthInsurancePremiumInput`            |
+| `healthInsurancePremiumFrequency`         | Monthly / Yearly              | toggle       | Optional                                         | `healthInsurancePremiumFrequency`        |
+| `hasTermInsurance`                        | Do you have term insurance?   | toggle       | Optional                                         | `hasTermInsurance`                       |
+| `termInsuranceSumAssured`                 | Sum assured                   | `MoneyInput` | Required if `hasTermInsurance = true`            | `termInsuranceSumAssured`                |
+| `termInsurancePremiumInput`               | Premium amount                | `MoneyInput` | Required if `hasTermInsurance = true`            | `termInsurancePremiumInput`              |
+| `termInsurancePremiumFrequency`           | Monthly / Yearly              | toggle       | Optional                                         | `termInsurancePremiumFrequency`          |
+| `termInsurancePremiumTillYear`            | Premium paying till year      | number input | Optional                                         | `termInsurancePremiumTillYear`           |
+| `carInsurancePremiumInput`                | Car insurance premium         | `MoneyInput` | Optional                                         | `carInsurancePremiumInput`               |
+| `carInsurancePremiumFrequency`            | Monthly / Yearly              | toggle       | Optional                                         | `carInsurancePremiumFrequency`           |
+| `bikeInsurancePremiumInput`               | Two-wheeler insurance premium | `MoneyInput` | Optional                                         | `bikeInsurancePremiumInput`              |
+| `bikeInsurancePremiumFrequency`           | Monthly / Yearly              | toggle       | Optional                                         | `bikeInsurancePremiumFrequency`          |
+| `hasOtherInsurance`                       | Any other insurance premium?  | toggle       | Optional                                         | `hasOtherInsurance`                      |
+| `otherInsurancePremiums[i].policyName`    | Policy name                   | text input   | Optional                                         | `otherInsurancePremiums[].policyName`    |
+| `otherInsurancePremiums[i].premiumAmount` | Premium amount                | `MoneyInput` | Required per row when `hasOtherInsurance = true` | `otherInsurancePremiums[].premiumAmount` |
+| `otherInsurancePremiums[i].frequency`     | Monthly / Yearly              | toggle       | Optional                                         | `otherInsurancePremiums[].frequency`     |
+| `lifeInsuranceMaturityAmount`             | Maturity amount (if any)      | `MoneyInput` | Optional (shown with other insurance section)    | `lifeInsuranceMaturityAmount`            |
+| `lifeInsuranceMaturityYear`               | Maturity year (if any)        | number input | Optional (shown with other insurance section)    | `lifeInsuranceMaturityYear`              |
 
 ### Step 6 — Assets/Savings
 
-| Code field | Label shown in UI | Type | Required | Stored in `FinancialProfile` |
-|---|---|---|---|---|
-| `fdValue` | Fixed Deposit total value | `MoneyInput` | Optional | `fdValue` |
-| `fdRate` | FD interest rate % | number input | Optional | `fdRate` |
-| `fdTenureYears` | FD tenure in years | number input | Optional | `fdTenureYears` |
-| `fdMaturityYear` | FD maturity year | number input | Optional | `fdMaturityYear` |
-| `savingsAccountBalance` | Savings account (instantly available) | `MoneyInput` | Optional | `savingsAccountBalance` |
-| `liquidMFValue` | Liquid mutual funds | `MoneyInput` | Optional | `liquidMFValue` |
-| `otherLiquidSavings` | Other liquid savings | `MoneyInput` | Optional | `otherLiquidSavings` |
-| `bereavementFund` | Amount set aside (savings / FD you can break quickly) | `MoneyInput` | Optional | `bereavementFund` |
-| `totalEquityValue` | Total equity investments (MF + stocks + RSU/ESOP) | `MoneyInput` | Optional | `totalEquityValue` |
-| `ppfBalance` | PPF current balance | `MoneyInput` | Optional | `ppfBalance` |
-| `npsBalance` | NPS current balance | `MoneyInput` | Optional | `npsBalance` |
-| `epfBalance` | EPF / PF current balance | `MoneyInput` | Optional | `epfBalance` |
-| `ownsHome` | Do you own a home? | toggle | Optional | `ownsHome` |
-| `homeMarketValue` | Current market value | `MoneyInput` | Required if `ownsHome = true` | `homeMarketValue` |
-| `homeLoanOutstanding` | Outstanding home loan | `MoneyInput` | Required if `ownsHome = true` | `homeLoanOutstanding` |
-| `ownsCar` | Do you own a car? | toggle | Optional | `ownsCar` |
-| `carMarketValue` | Current market value | `MoneyInput` | Required if `ownsCar = true` | `carMarketValue` |
-| `carLoanOutstanding` | Outstanding car loan | `MoneyInput` | Required if `ownsCar = true` | `carLoanOutstanding` |
-| `goldValue` | Gold and jewellery estimated value | `MoneyInput` | Optional | `goldValue` |
-| `otherAssets` | Any other property or asset | `MoneyInput` | Optional | `otherAssets` |
-| `otherAssetLabel` | What is the other asset? | text input | Optional | `otherAssetLabel` |
-| `monthlySIP` | Monthly SIP amount currently running | `MoneyInput` | Optional | `monthlySIP` |
-| `monthlyRD` | Monthly RD amount currently running | `MoneyInput` | Optional | `monthlyRD` |
-| `monthlyPPFContribution` | Monthly PPF contribution | `MoneyInput` | Optional | `monthlyPPFContribution` |
-| `monthlyNPSContribution` | Monthly NPS contribution | `MoneyInput` | Optional | `monthlyNPSContribution` |
-| `monthlyEPFContribution` | Monthly EPF contribution — employee side only | `MoneyInput` | Optional | `monthlyEPFContribution` |
-| `ssy` | Monthly SSY deposit (girl child under 10) | `MoneyInput` | Optional (shown only when eligible girl child exists) | `ssy` |
-| `investsInNsc` | I hold NSC (National Savings Certificate) | checkbox toggle | Optional | `investsInNsc` |
-| `nscDepositAmount` | NSC amount (one-time / current holding) | `MoneyInput` | Optional (shown when NSC checked) | `nscDepositAmount` |
-| `nscMaturityYear` | NSC maturity year | number input | Optional (shown when NSC checked) | `nscMaturityYear` |
-| `customInvestments[i].label` | Custom investment name | text input | Optional (max 5 rows) | `customInvestments[].label` |
-| `customInvestments[i].currentValue` | Custom investment current value | `MoneyInput` | Optional (max 5 rows) | `customInvestments[].currentValue` |
-| `customInvestments[i].monthlyContribution` | Custom investment monthly contribution | `MoneyInput` | Optional (max 5 rows) | `customInvestments[].monthlyContribution` |
-| `customInvestments[i].type` | Custom investment type (equity/debt/real_estate/other) | select | Optional (max 5 rows) | `customInvestments[].type` |
+| Code field                                 | Label shown in UI                                      | Type            | Required                                              | Stored in `FinancialProfile`              |
+| ------------------------------------------ | ------------------------------------------------------ | --------------- | ----------------------------------------------------- | ----------------------------------------- |
+| `fdValue`                                  | Fixed Deposit total value                              | `MoneyInput`    | Optional                                              | `fdValue`                                 |
+| `fdRate`                                   | FD interest rate %                                     | number input    | Optional                                              | `fdRate`                                  |
+| `fdTenureYears`                            | FD tenure in years                                     | number input    | Optional                                              | `fdTenureYears`                           |
+| `fdMaturityYear`                           | FD maturity year                                       | number input    | Optional                                              | `fdMaturityYear`                          |
+| `savingsAccountBalance`                    | Savings account (instantly available)                  | `MoneyInput`    | Optional                                              | `savingsAccountBalance`                   |
+| `liquidMFValue`                            | Liquid mutual funds                                    | `MoneyInput`    | Optional                                              | `liquidMFValue`                           |
+| `otherLiquidSavings`                       | Other liquid savings                                   | `MoneyInput`    | Optional                                              | `otherLiquidSavings`                      |
+| `bereavementFund`                          | Amount set aside (savings / FD you can break quickly)  | `MoneyInput`    | Optional                                              | `bereavementFund`                         |
+| `totalEquityValue`                         | Total equity investments (MF + stocks + RSU/ESOP)      | `MoneyInput`    | Optional                                              | `totalEquityValue`                        |
+| `ppfBalance`                               | PPF current balance                                    | `MoneyInput`    | Optional                                              | `ppfBalance`                              |
+| `npsBalance`                               | NPS current balance                                    | `MoneyInput`    | Optional                                              | `npsBalance`                              |
+| `epfBalance`                               | EPF / PF current balance                               | `MoneyInput`    | Optional                                              | `epfBalance`                              |
+| `ownsHome`                                 | Do you own a home?                                     | toggle          | Optional                                              | `ownsHome`                                |
+| `homeMarketValue`                          | Current market value                                   | `MoneyInput`    | Required if `ownsHome = true`                         | `homeMarketValue`                         |
+| `homeLoanOutstanding`                      | Outstanding home loan                                  | `MoneyInput`    | Required if `ownsHome = true`                         | `homeLoanOutstanding`                     |
+| `ownsCar`                                  | Do you own a car?                                      | toggle          | Optional                                              | `ownsCar`                                 |
+| `carMarketValue`                           | Current market value                                   | `MoneyInput`    | Required if `ownsCar = true`                          | `carMarketValue`                          |
+| `carLoanOutstanding`                       | Outstanding car loan                                   | `MoneyInput`    | Required if `ownsCar = true`                          | `carLoanOutstanding`                      |
+| `goldValue`                                | Gold and jewellery estimated value                     | `MoneyInput`    | Optional                                              | `goldValue`                               |
+| `otherAssets`                              | Any other property or asset                            | `MoneyInput`    | Optional                                              | `otherAssets`                             |
+| `otherAssetLabel`                          | What is the other asset?                               | text input      | Optional                                              | `otherAssetLabel`                         |
+| `monthlySIP`                               | Monthly SIP amount currently running                   | `MoneyInput`    | Optional                                              | `monthlySIP`                              |
+| `monthlyRD`                                | Monthly RD amount currently running                    | `MoneyInput`    | Optional                                              | `monthlyRD`                               |
+| `monthlyPPFContribution`                   | Monthly PPF contribution                               | `MoneyInput`    | Optional                                              | `monthlyPPFContribution`                  |
+| `monthlyNPSContribution`                   | Monthly NPS contribution                               | `MoneyInput`    | Optional                                              | `monthlyNPSContribution`                  |
+| `monthlyEPFContribution`                   | Monthly EPF contribution — employee side only          | `MoneyInput`    | Optional                                              | `monthlyEPFContribution`                  |
+| `ssy`                                      | Monthly SSY deposit (girl child under 10)              | `MoneyInput`    | Optional (shown only when eligible girl child exists) | `ssy`                                     |
+| `investsInNsc`                             | I hold NSC (National Savings Certificate)              | checkbox toggle | Optional                                              | `investsInNsc`                            |
+| `nscDepositAmount`                         | NSC amount (one-time / current holding)                | `MoneyInput`    | Optional (shown when NSC checked)                     | `nscDepositAmount`                        |
+| `nscMaturityYear`                          | NSC maturity year                                      | number input    | Optional (shown when NSC checked)                     | `nscMaturityYear`                         |
+| `customInvestments[i].label`               | Custom investment name                                 | text input      | Optional (max 5 rows)                                 | `customInvestments[].label`               |
+| `customInvestments[i].currentValue`        | Custom investment current value                        | `MoneyInput`    | Optional (max 5 rows)                                 | `customInvestments[].currentValue`        |
+| `customInvestments[i].monthlyContribution` | Custom investment monthly contribution                 | `MoneyInput`    | Optional (max 5 rows)                                 | `customInvestments[].monthlyContribution` |
+| `customInvestments[i].type`                | Custom investment type (equity/debt/real_estate/other) | select          | Optional (max 5 rows)                                 | `customInvestments[].type`                |
 
 ### Step 7 — Goals
 
-| Code field | Label shown in UI | Type | Required | Stored in `FinancialProfile` |
-|---|---|---|---|---|
-| `primaryGoal` | Primary goal | card select | Required | `primaryGoal` |
-| `retirementTargetCorpus` | Retirement target corpus | `MoneyInput` | Optional | `retirementTargetCorpus` |
-| `retirementAge` | Target retirement age | number input | Optional | `retirementAge` |
-| `kidsEducationFundTarget` | Kids education fund target (₹ per child) | `MoneyInput` | Required for `lifeStage = kids` | `kidsEducationFundTarget` |
-| `kidsMarriageFundTarget` | Kids marriage fund target (₹ per child) | `MoneyInput` | Optional | `kidsMarriageFundTarget` |
-| `emergencyFundTarget` | Emergency fund target | `MoneyInput` | Optional | `emergencyFundTarget` |
-| `medicalEmergencyFund` | Medical emergency fund | `MoneyInput` | Optional | `medicalEmergencyFund` |
-| `homePurchaseTarget` | Home purchase target | `MoneyInput` | Optional (shown when user pays rent) | `homePurchaseTarget` |
-| `homePurchaseYear` | Target year | number input | Optional (shown when user pays rent) | `homePurchaseYear` |
-| `carPurchaseTarget` | Car purchase target | `MoneyInput` | Optional (shown when user does not own car) | `carPurchaseTarget` |
-| `carPurchaseYear` | Target year | number input | Optional (shown when user does not own car) | `carPurchaseYear` |
+| Code field                | Label shown in UI                        | Type         | Required                                    | Stored in `FinancialProfile` |
+| ------------------------- | ---------------------------------------- | ------------ | ------------------------------------------- | ---------------------------- |
+| `primaryGoal`             | Primary goal                             | card select  | Required                                    | `primaryGoal`                |
+| `retirementTargetCorpus`  | Retirement target corpus                 | `MoneyInput` | Optional                                    | `retirementTargetCorpus`     |
+| `retirementAge`           | Target retirement age                    | number input | Optional                                    | `retirementAge`              |
+| `kidsEducationFundTarget` | Kids education fund target (₹ per child) | `MoneyInput` | Required for `lifeStage = kids`             | `kidsEducationFundTarget`    |
+| `kidsMarriageFundTarget`  | Kids marriage fund target (₹ per child)  | `MoneyInput` | Optional                                    | `kidsMarriageFundTarget`     |
+| `emergencyFundTarget`     | Emergency fund target                    | `MoneyInput` | Optional                                    | `emergencyFundTarget`        |
+| `medicalEmergencyFund`    | Medical emergency fund                   | `MoneyInput` | Optional                                    | `medicalEmergencyFund`       |
+| `homePurchaseTarget`      | Home purchase target                     | `MoneyInput` | Optional (shown when user pays rent)        | `homePurchaseTarget`         |
+| `homePurchaseYear`        | Target year                              | number input | Optional (shown when user pays rent)        | `homePurchaseYear`           |
+| `carPurchaseTarget`       | Car purchase target                      | `MoneyInput` | Optional (shown when user does not own car) | `carPurchaseTarget`          |
+| `carPurchaseYear`         | Target year                              | number input | Optional (shown when user does not own car) | `carPurchaseYear`            |
 
 ---
 
@@ -1280,6 +1364,7 @@ Source: `lib/financialEngine.ts`, `lib/universal-buckets.ts`, `lib/priorityEngin
 - `lifestyleActual = lifestyleTotal > 0 ? lifestyleTotal : entertainment + shopping + personalCare`
 
 Usage in budget logic:
+
 - `needs` consumes food/transport/utility/domestic (+ housing, kids, parents support)
 - `wants` consumes lifestyle (+ its other existing components)
 
@@ -1303,6 +1388,7 @@ Usage in budget logic:
 7. `emergencyFundGap = max(0, emergencyFundTargetMax - realTotal)`
 
 Checklist status logic used in section output:
+
 - `critical` if `monthsCovered < 3`
 - `warning` if `3 <= monthsCovered < 6`
 - `ok` if `monthsCovered >= 6`
@@ -1321,10 +1407,12 @@ From `calculateTermNeeded(data)`:
 8. `dependentCount = (lifeStage != bachelor ? 1 : 0) + numberOfKids + (parentsSupport > 0 ? 1 : 0)`
 9. `dependentBuffer = dependentCount * 20,00,000`
 10. Age multiplier:
-   - `< 30` => `1.2`
-   - `30-39` => `1.0`
-   - `40-49` => `0.8`
-   - `>= 50` => `0.6`
+
+- `< 30` => `1.2`
+- `30-39` => `1.0`
+- `40-49` => `0.8`
+- `>= 50` => `0.6`
+
 11. `rawTermNeed = (base + liabilities + dependentBuffer - existingAssets) * ageMultiplier`
 12. `termNeeded = max(50,00,000, rawTermNeed)`
 13. Final output rounded up to nearest `10,00,000`:
@@ -1339,6 +1427,7 @@ From `calculateTermNeeded(data)`:
 ### Debt outstanding estimation (priority plan)
 
 Debt ranking in `buildPriorityPlan()` uses this order per debt:
+
 1. Use explicit outstanding field if provided (for example `personalLoanOutstanding`).
 2. Else if `rate > 0` and `remainingMonths > 0`, use amortisation present-value formula:
    - `calculateOutstanding(emi, annualRate, remainingMonths)`
@@ -1355,6 +1444,7 @@ Debt ranking in `buildPriorityPlan()` uses this order per debt:
 - `financialProfileToFormValues()` performs reverse mapping so older saved profiles render in the unified `My Loans` UI.
 
 Additional term rules in checklist:
+
 - Strong baseline marker at `>= 1,00,00,000` cover.
 - Adequacy floor: `max(50,00,000, termNeeded * 0.5)`.
 
@@ -1377,12 +1467,14 @@ Current implementation has two layers:
 ### Score calculation
 
 `analyseFinances` now computes a canonical score:
+
 - `criticalIssues = count(issue.severity === "critical")`
 - `warningIssues = count(issue.severity === "warning")`
 - `infoIssues = count(issue.severity === "info")`
 - `overallScore = clamp(0..100, 100 - criticalIssues*15 - warningIssues*7 - infoIssues*2)`
 
 Returned fields include:
+
 - `overallScore`
 - `criticalIssueCount`
 - `warningIssueCount`
@@ -1458,12 +1550,14 @@ Return ONLY JSON:
 ```
 
 Injected runtime variables:
+
 - `knowledgeContext` from `formatForPrompt(retrieveKnowledge(...))`
 - `priorityPlan` from `buildPriorityPlan(profile, analysis)`
 
 ### Output schema
 
 Route expects AI output parseable JSON object with these keys:
+
 - `greeting: string`
 - `overallSummary: string`
 - `priorityExplanations: object`
@@ -1478,8 +1572,8 @@ Route response shape on success:
 
 ```json
 {
-  "priorityPlan": { },
-  "explanations": { },
+  "priorityPlan": {},
+  "explanations": {},
   "knowledgeUsed": ["..."]
 }
 ```
@@ -1487,6 +1581,7 @@ Route response shape on success:
 ### Fallback behavior
 
 If AI parse or call fails:
+
 - Missing `GROQ_API_KEY` => `503` with `{ "error": "AI not configured" }`
 - Missing input payload => `400` with `{ "error": "Missing data" }`
 - Model/runtime failure with built `priorityPlan` => `200` with:
@@ -1503,6 +1598,7 @@ If AI parse or call fails:
 Sources: `lib/financialEngine.ts` and `lib/priorityEngine.ts`.
 
 Important implementation note:
+
 - `financialEngine.ts` uses life stages: `bachelor`, `married`, `kids`, `senior`.
 - `priorityEngine.ts` now normalizes stage strings via `normalizeStage()` and maps legacy `single -> bachelor`.
 
@@ -1523,7 +1619,7 @@ Important implementation note:
 
 - **Emergency fund months:**
   - In `financialEngine`: target band `6-12` months.
-  - In `priorityEngine`: 
+  - In `priorityEngine`:
     - `6` months when spouse income > 0 and no kids
     - `9` months when spouse income = 0 and no kids
 - **Additional vs single:**
@@ -1558,6 +1654,7 @@ Important implementation note:
 ### Form flow
 
 `components/forms/analyse-onboarding-form.tsx`
+
 - reads/writes: `store/financialStore.ts` (`setAnalysis`, `setFullAnalysis`, `setCurrentStep`, `setAiPlan`)
 - reads auth user from `store/authStore.ts`
 - uses components: `components/ui/MoneyInput.tsx`, local `ToggleButtons`, `RadioCards`, `PremiumField`, and `components/ui/button.tsx`
@@ -1574,6 +1671,7 @@ Important implementation note:
 ### Result flow
 
 `app/analyse/result/page.tsx`
+
 - reads from: `store/financialStore.ts` (`lastSubmission`, `result`), `store/authStore.ts` (`user`)
 - calculates priority/safety-net via `lib/priorityEngine.ts` and gauge props via `lib/speedo-meter-buckets.ts`
 - shows sections:
@@ -1591,6 +1689,7 @@ Important implementation note:
 ### Fix plan flow
 
 `app/analyse/fixplan/page.tsx`
+
 - reads from: `store/financialStore.ts` + `store/authStore.ts`
 - access gate: `canAccessFixPlan` from `lib/payment.ts`
 - cache path: `lib/cache.ts` (`hashProfile`, `getCachedPlan`, `setCachedPlan`)
@@ -1613,45 +1712,56 @@ Important implementation note:
 ## 26. QUICK REFERENCE CARD
 
 ### To change a form field label
+
 - File: `components/forms/analyse-onboarding-form.tsx`
 - How: find the corresponding `label` prop/text and update it.
 
 ### To change a financial rule number
+
 - File: `lib/financialEngine.ts` (and caps in `lib/universal-buckets.ts`)
 - How: update the constant/threshold and re-run checks.
 
 ### To add a new knowledge entry
+
 - Where: Supabase table `finkoin_knowledge`
 - Code changes: not required for basic content additions.
 
 ### To change AI behavior
+
 - File: `app/api/ai/analyse/route.ts`
 - Where: `FINKOIN_SYSTEM` prompt and user JSON template in `messages`.
 
 ### To change what is cached
+
 - File: `lib/cache.ts`
 - Where: `hashProfile()` + local cache payload keys (`CACHE_KEY = "finkoin_ai_cache"`).
 
 ### To change priority order
+
 - File: `lib/priorityEngine.ts`
 - Where: `buildPriorityPlan()` and priority `push` order.
 
 ### To verify env / secrets layout
+
 - Run `npm run check:secrets` (fails if service-role / Razorpay secret / Groq key are referenced outside allowed server files).
 
 ### To add a new page
+
 1. Create `app/[pagename]/page.tsx`
 2. Add route link in `components/global-navbar.tsx`
 
 ### To change subscription tiers
+
 - File: `lib/payment.ts` and `store/authStore.ts`
 - Where: `canAccessFixPlan()` checks and tier mapping logic.
 
 ### To add FK token reward
+
 - File: relevant page/component action
 - How: call `gamificationStore.earnTokens(amount, label)` in the event flow.
 
 ### Emergency numbers to know
+
 - Supabase URL: `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`)
 - GA4 Measurement ID (optional): `.env.local` / Vercel (`NEXT_PUBLIC_GA_MEASUREMENT_ID`)
 - Groq key: `.env.local` (`GROQ_API_KEY`)
@@ -1662,6 +1772,7 @@ Important implementation note:
 - Auth store key: `'finkoin-auth'`
 
 ### To check what is saved in Supabase
+
 - Table Editor in Supabase dashboard
 - user_analyse_snapshots -> form data
 - user_analysis -> structured profile + result
@@ -1669,6 +1780,7 @@ Important implementation note:
 - user_policies -> insurance vault
 
 ### To fix a broken user account
+
 - Check users table has their row
 - Check gamification row exists
 - If missing: INSERT manually with user_id
@@ -1677,6 +1789,16 @@ Important implementation note:
 ---
 
 ## CHANGE LOG
+
+### 2026-05-28
+
+- **Split delete group (soft delete):** Added `DELETE /api/split/groups?groupId=...` in `app/api/split/groups/route.ts`. Only creator can delete; action is a soft close (`is_active=false`) so history remains preserved.
+- **Split store delete flow:** `store/splitStore.ts` now exposes `deleteGroup(groupId): Promise<boolean>` and updates local list state after successful API delete.
+- **Split mobile UX pass:** Improved touch targets (`min 44px`), safe bottom padding (`pb-[90px]`), list row heights (`min 64/72px`), bottom-sheet style modals, and 16px input text sizing across split pages.
+- **Split add-expense amount UX:** Replaced standard amount input on add-expense page with a prominent calculator-style amount panel (large centered purple amount, per-person hint).
+- **Microsoft Clarity:** Added `components/ClarityScript.tsx` and mounted it in `app/layout.tsx` using `NEXT_PUBLIC_CLARITY_ID`.
+- **Analytics helper unification:** Expanded `lib/analytics.ts` to support both GA and Clarity custom events with new named helpers (`healthCheckStarted`, `healthCheckCompleted`, `splitGroupCreated`, `splitExpenseAdded`, etc.) while preserving compatibility wrappers.
+- **Analytics instrumentation updates:** Added/updated event hooks in analyse, fixplan, split, and calculators route pages.
 
 ### 2026-05-08
 
@@ -1697,7 +1819,7 @@ Important implementation note:
 - **Auth / stability:** **`AppInitializer`** single-flight **`initStartedRef`** for **`initAuth`**. **`app/analyse/page.tsx`** **`redirectedToLoginRef`** for login redirect. Defensive optional chaining: **`useSearchParams`** / **`usePathname`** nullability in **`CalculatorsClient`**, **`login`**, **`PolicyVaultClient`**, **`ReferralCapture`**, **`global-navbar`** (**`currentPath`**).
 - **PWA build:** **`pages/_document.tsx`** minimal **`Document`** for **`next-pwa`** compatibility with App Router builds.
 - **Analyse consent persistence:** Consent stored on **`public.users`** (**`data_consent_given`**, **`data_consent_at`**, **`data_consent_version`**) with **`localStorage`** cache **`finkoin_analyse_consent_v2_<userId>`** to avoid repeated DB reads.
-- **Secrets & env hygiene:** **`.env.example`** expanded as a safe template (removed any committed real IDs); documents **`NEXT_PUBLIC_`** vs server-only keys; **`npm run check:secrets`** (`scripts/check-server-secrets-scope.mjs`) enforces server secrets only in **`app/api/**`** and **`lib/supabaseServer.ts`**. **§3.1–§3.2** document checklist + tax-module client/server recommendation (tax stays client-side; payment + Groq stay server-side).
+- **Secrets & env hygiene:** **`.env.example`** expanded as a safe template (removed any committed real IDs); documents **`NEXT_PUBLIC_`** vs server-only keys; **`npm run check:secrets`** (`scripts/check-server-secrets-scope.mjs`) enforces server secrets only in **`app/api/**`** and **`lib/supabaseServer.ts`**. **§3.1–§3.2\*\* document checklist + tax-module client/server recommendation (tax stays client-side; payment + Groq stay server-side).
 - **Feedback:** Either **(A)** **`NEXT_PUBLIC_FEEDBACK_GOOGLE_FORM_URL`** set → modal opens **Google Form** in a new tab only — **no** Finkoin DB or **`/api/feedback`**; enable **email notifications** in Google Forms → Settings → Responses. **(B)** URL unset → **6-step** in-app wizard + **`POST /api/feedback`** → **`app_feedback`** (`answers` jsonb, **`007_app_feedback_answers.sql`**). Optional **`mirrorFeedbackToGoogleForm`** (`lib/googleFeedbackForm.ts`) only applies to mode **B**.
 
 ### 2026-05-03
@@ -1814,7 +1936,7 @@ Important implementation note:
 - Debt display now surfaces lender names in result-page loan breakdown, fix-plan debt table, and PDF debt table using `displayName`/`lenderName` fallbacks.
 - No DB schema changes were needed; lender-name fields persist via existing `jsonb` profile/snapshot columns.
 - Added `components/analyse/ConsentModal.tsx` and gated `/analyse` so users must accept data consent before the onboarding form renders.
-- *(Superseded 2026-05-07)* Consent now uses per-user **`localStorage`** **`finkoin_analyse_consent_v2_<userId>`** plus **`users.data_consent_*`** fields — see **§14 `/analyse`** and **§29**.
+- _(Superseded 2026-05-07)_ Consent now uses per-user **`localStorage`** **`finkoin_analyse_consent_v2_<userId>`** plus **`users.data_consent_*`** fields — see **§14 `/analyse`** and **§29**.
 
 ### 2026-04-25
 
@@ -1859,6 +1981,7 @@ Important implementation note:
 ### Coverage check for sections 7-23
 
 Core runtime files referenced in sections 7-23 include:
+
 - `store/financialStore.ts`
 - `store/authStore.ts`
 - `lib/analyse-form-schema.ts`
@@ -1878,16 +2001,16 @@ These are the files that directly drive form data, deterministic calculations, R
 
 Finkoin is installable as a PWA on **Android (Chrome)** and **iOS (Safari)**. The service worker and precache are active only in **production** builds (`next-pwa` sets `disable` when `NODE_ENV === 'development'`).
 
-| Item | Location / behavior |
-|------|---------------------|
-| Web manifest | `public/manifest.json` |
-| Icons | `public/icons/` (`icon-72x72.png` … `icon-512x512.png`; regenerate with `npm run pwa:icons`) |
-| Splash screens | `public/splash/` (`apple-splash-*.png`; regenerate with `npm run pwa:splashes`) |
-| Service worker | Auto-generated by **next-pwa** into `public/` at build time (`sw.js`, `workbox-*.js`); listed in `.gitignore` — do not commit |
-| Offline page | Route **`/offline`** (`app/offline/page.tsx`); used as **`fallbacks.document`** in Workbox |
-| Install prompt UI | `components/PWAInstallPrompt.tsx` (mounted from `AppInitializer`) |
-| **iOS** | Users install via **Safari → Share → Add to Home Screen** (no programmatic install API) |
-| **Android** | Chrome may fire **`beforeinstallprompt`**; the in-app banner uses the deferred prompt when available |
+| Item              | Location / behavior                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Web manifest      | `public/manifest.json`                                                                                                        |
+| Icons             | `public/icons/` (`icon-72x72.png` … `icon-512x512.png`; regenerate with `npm run pwa:icons`)                                  |
+| Splash screens    | `public/splash/` (`apple-splash-*.png`; regenerate with `npm run pwa:splashes`)                                               |
+| Service worker    | Auto-generated by **next-pwa** into `public/` at build time (`sw.js`, `workbox-*.js`); listed in `.gitignore` — do not commit |
+| Offline page      | Route **`/offline`** (`app/offline/page.tsx`); used as **`fallbacks.document`** in Workbox                                    |
+| Install prompt UI | `components/PWAInstallPrompt.tsx` (mounted from `AppInitializer`)                                                             |
+| **iOS**           | Users install via **Safari → Share → Add to Home Screen** (no programmatic install API)                                       |
+| **Android**       | Chrome may fire **`beforeinstallprompt`**; the in-app banner uses the deferred prompt when available                          |
 
 **Local PWA check:** run `npm run build` then `npm run start` (not `npm run dev`), open DevTools → Application → Service Workers / Manifest / Cache Storage.
 
@@ -1899,13 +2022,13 @@ Finkoin is installable as a PWA on **Android (Chrome)** and **iOS (Safari)**. Th
 
 **Stack:**
 
-| Piece | Role |
-|-------|------|
-| **`components/GoogleAnalytics.tsx`** | Loads **`gtag.js`**, disables automatic page views, fires **`gtag('config', …)`** on **`pathname`**, **`searchParams`**, and auth (**`user_id`** when logged in). Sets **`user_properties`**. |
-| **`lib/analyticsContext.ts`** | **`getAppSurface()`** (PWA standalone vs browser tab), **`getDeviceCategory()`**, **`timezone`**, **`language`**, **`viewport_*`**, **`referrer_hostname`**, optional **`connection_type`**. |
-| **`lib/gtag.ts`** | **`trackEvent`** merges **`getAnalyticsContext()`** into every hit. Helpers: **`trackCta`**, **`trackShare`**, **`trackImpression`**, **`trackScrollDepth`**, **`trackToolOpen`**, **`trackNavClick`**. |
-| **`components/AnalyticsBehavior.tsx`** | **`scroll_depth`** milestones per route (session-scoped). |
-| **`components/TrackImpression.tsx`** | **`element_impression`** once per **`component_id`**. |
+| Piece                                  | Role                                                                                                                                                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`components/GoogleAnalytics.tsx`**   | Loads **`gtag.js`**, disables automatic page views, fires **`gtag('config', …)`** on **`pathname`**, **`searchParams`**, and auth (**`user_id`** when logged in). Sets **`user_properties`**.           |
+| **`lib/analyticsContext.ts`**          | **`getAppSurface()`** (PWA standalone vs browser tab), **`getDeviceCategory()`**, **`timezone`**, **`language`**, **`viewport_*`**, **`referrer_hostname`**, optional **`connection_type`**.            |
+| **`lib/gtag.ts`**                      | **`trackEvent`** merges **`getAnalyticsContext()`** into every hit. Helpers: **`trackCta`**, **`trackShare`**, **`trackImpression`**, **`trackScrollDepth`**, **`trackToolOpen`**, **`trackNavClick`**. |
+| **`components/AnalyticsBehavior.tsx`** | **`scroll_depth`** milestones per route (session-scoped).                                                                                                                                               |
+| **`components/TrackImpression.tsx`**   | **`element_impression`** once per **`component_id`**.                                                                                                                                                   |
 
 **Custom events (non-exhaustive):** `cta_click`, `carousel_select`, `element_impression`, `scroll_depth`, `nav_click`, `tool_open`, `share`, `feedback_open`, `feedback_submit`, plus standard enriched **`page_view`** via config.
 
@@ -1920,152 +2043,151 @@ Finkoin is installable as a PWA on **Android (Chrome)** and **iOS (Safari)**. Th
 # What Is Stored Where — Complete Map
 
 TABLE: users
-  What: Basic user identity
-  Columns:
-    id → auth user ID
-    name → display name
-    email → email address
-    phone → phone number
-    fk_balance → FK token balance (mirror)
-    subscription_tier → free/pro/promax
-    subscription_expiry → when plan ends
-    referral_code → unique code to share
-    referred_by → who referred them
-    pan_verified → KYC status
-    is_admin → admin flag
-    data_consent_given → accepted analyse/data-processing consent
-    data_consent_at → consent timestamp
-    data_consent_version → consent policy version string (e.g. v2)
-  When saved: On signup, on profile update; consent fields on **`/analyse`** accept
-  Read by: authStore.initAuth(); **`/analyse`** reads **`data_consent_given`** when local cache missing
+What: Basic user identity
+Columns:
+id → auth user ID
+name → display name
+email → email address
+phone → phone number
+fk_balance → FK token balance (mirror)
+subscription_tier → free/pro/promax
+subscription_expiry → when plan ends
+referral_code → unique code to share
+referred_by → who referred them
+pan_verified → KYC status
+is_admin → admin flag
+data_consent_given → accepted analyse/data-processing consent
+data_consent_at → consent timestamp
+data_consent_version → consent policy version string (e.g. v2)
+When saved: On signup, on profile update; consent fields on **`/analyse`** accept
+Read by: authStore.initAuth(); **`/analyse`** reads **`data_consent_given`** when local cache missing
 
 TABLE: gamification
-  What: FK tokens and engagement
-  Columns:
-    user_id → owner
-    fk_balance → current FK tokens (PRIMARY)
-    total_earned → all time tokens earned
-    badges → JSON array of badges earned
-    streak_days → consecutive login days
-    last_login → last login date
-    weekly_tokens → tokens this week
-    created_at → when created
-  When saved: Every earn/spend event
-  Read by: gamificationStore, navbar FK display
+What: FK tokens and engagement
+Columns:
+user_id → owner
+fk_balance → current FK tokens (PRIMARY)
+total_earned → all time tokens earned
+badges → JSON array of badges earned
+streak_days → consecutive login days
+last_login → last login date
+weekly_tokens → tokens this week
+created_at → when created
+When saved: Every earn/spend event
+Read by: gamificationStore, navbar FK display
 
 TABLE: user_analyse_snapshots
-  What: Complete form state backup
-  Columns:
-    user_id → owner (primary key)
-    payload → entire financialStore state
-      Contains:
-        lastSubmission (normalized profile)
-        result (analysis output)
-        aiPlan (AI fix plan)
-        currentStep (form progress)
-    updated_at → last save time
-  When saved: After every form submit
-  Read by: On login if localStorage empty
-  Purpose: Cross-device sync, data recovery
+What: Complete form state backup
+Columns:
+user_id → owner (primary key)
+payload → entire financialStore state
+Contains:
+lastSubmission (normalized profile)
+result (analysis output)
+aiPlan (AI fix plan)
+currentStep (form progress)
+updated_at → last save time
+When saved: After every form submit
+Read by: On login if localStorage empty
+Purpose: Cross-device sync, data recovery
 
 TABLE: user_analysis
-  What: Structured profile + analysis
-  Columns:
-    user_id → owner (unique)
-    profile_hash → hash for AI cache check
-    profile → normalized financial profile
-      Contains ALL form fields:
-        income, loans, expenses
-        insurance, assets, goals
-        unifiedLoans[], additionalObligations[]
-    analysis_result → engine output
-      Contains:
-        overallScore, issues[]
-        securityChecklist[]
-        buckets, gauges data
-    ai_fix_plan → AI generated plan
-      Contains:
-        priorities[], debts[], goals[]
-        explanations, thisWeekAction
-    projection → score projection data
-    ai_generated_at → when AI plan was made
-    last_step_completed → form progress
-  When saved: After form submit + AI generation
-  Read by: Fix plan page, optimizer page
+What: Structured profile + analysis
+Columns:
+user_id → owner (unique)
+profile_hash → hash for AI cache check
+profile → normalized financial profile
+Contains ALL form fields:
+income, loans, expenses
+insurance, assets, goals
+unifiedLoans[], additionalObligations[]
+analysis_result → engine output
+Contains:
+overallScore, issues[]
+securityChecklist[]
+buckets, gauges data
+ai_fix_plan → AI generated plan
+Contains:
+priorities[], debts[], goals[]
+explanations, thisWeekAction
+projection → score projection data
+ai_generated_at → when AI plan was made
+last_step_completed → form progress
+When saved: After form submit + AI generation
+Read by: Fix plan page, optimizer page
 
 TABLE: user_policies
-  What: Insurance policy vault
-  Columns:
-    policy_type → health/term/car/bike/life
-    insurer_name → HDFC/LIC/etc
-    policy_number → policy ID
-    cover_amount → sum insured
-    premium_amount → premium paid
-    premium_frequency → monthly/yearly
-    renewal_date → next renewal
-    purchase_date → when bought
-    nominee_name → beneficiary
-    is_active → active or lapsed
-    transferred_to_finkoin → migration flag
-    notes → user notes
-  When saved: When user adds/edits policy
-  Read by: Policy vault page, renewal reminders
+What: Insurance policy vault
+Columns:
+policy_type → health/term/car/bike/life
+insurer_name → HDFC/LIC/etc
+policy_number → policy ID
+cover_amount → sum insured
+premium_amount → premium paid
+premium_frequency → monthly/yearly
+renewal_date → next renewal
+purchase_date → when bought
+nominee_name → beneficiary
+is_active → active or lapsed
+transferred_to_finkoin → migration flag
+notes → user notes
+When saved: When user adds/edits policy
+Read by: Policy vault page, renewal reminders
 
 TABLE: user_stats
-  What: Usage analytics per user
-  Columns:
-    total_analyses → how many times analysed
-    total_calculators_used → calculator usage
-    total_articles_read → learn section usage
-    total_insurance_clicks → insurance clicks
-    total_fix_plans_purchased → revenue metric
-    last_analysis_at → last analysis time
-    last_active_at → last app open
-  When saved: On each relevant action
-  Read by: Admin dashboard (future), leaderboard
+What: Usage analytics per user
+Columns:
+total_analyses → how many times analysed
+total_calculators_used → calculator usage
+total_articles_read → learn section usage
+total_insurance_clicks → insurance clicks
+total_fix_plans_purchased → revenue metric
+last_analysis_at → last analysis time
+last_active_at → last app open
+When saved: On each relevant action
+Read by: Admin dashboard (future), leaderboard
 
 TABLE: insurance_clicks
-  What: Revenue tracking for insurance
-  Columns:
-    insurance_type → term/health/car etc
-    insurer_name → which insurer clicked
-    recommended_cover → what we suggested
-    monthly_premium → estimated premium
-    user_age → age at click time
-    city → city tier
-    fk_tokens_used → FK spent on this
-    clicked_at → timestamp
-  When saved: When user clicks insurance CTA
-  Read by: Revenue reports (future)
+What: Revenue tracking for insurance
+Columns:
+insurance_type → term/health/car etc
+insurer_name → which insurer clicked
+recommended_cover → what we suggested
+monthly_premium → estimated premium
+user_age → age at click time
+city → city tier
+fk_tokens_used → FK spent on this
+clicked_at → timestamp
+When saved: When user clicks insurance CTA
+Read by: Revenue reports (future)
 
 TABLE: referrals
-  What: Referral tracking
-  Columns:
-    referrer_id → who shared
-    referred_id → who signed up
-    signed_up_at → when they joined
-    subscribed_at → when they paid
-    tokens_awarded → FK given or not
-  When saved: On signup with referral code
-  Read by: Referral page, FK award logic
+What: Referral tracking
+Columns:
+referrer_id → who shared
+referred_id → who signed up
+signed_up_at → when they joined
+subscribed_at → when they paid
+tokens_awarded → FK given or not
+When saved: On signup with referral code
+Read by: Referral page, FK award logic
 
 TABLE: finkoin_knowledge
-  What: RAG knowledge base for AI
-  Columns:
-    category → priority/debt/insurance/tax
-    title → rule title
-    content → detailed rule text
-    keywords → search terms
-    embedding → vector for similarity search
-    is_active → enabled or not
-  When saved: Manual updates only
-  Read by: AI route on every analysis call
-  Purpose: Grounds AI answers in correct rules
-
+What: RAG knowledge base for AI
+Columns:
+category → priority/debt/insurance/tax
+title → rule title
+content → detailed rule text
+keywords → search terms
+embedding → vector for similarity search
+is_active → enabled or not
+When saved: Manual updates only
+Read by: AI route on every analysis call
+Purpose: Grounds AI answers in correct rules
 
 ##Cache vs Supabase Priority
 
-  #DATA SOURCE PRIORITY ORDER:
+#DATA SOURCE PRIORITY ORDER:
 
 1. LOCALSTORAGE (fastest — instant)
    Used for: form state, result, AI plan
@@ -2081,96 +2203,94 @@ TABLE: finkoin_knowledge
    Used for: AI explanations only
    Called when: profile hash changed
    Cached after: stored in localStorage
-     + Supabase for 30 days
+   - Supabase for 30 days
 
 SPECIFIC FLOW:
 
 FK Balance:
-  Always from Supabase gamification table
-  Not cached in localStorage
-  Reason: Must be real-time accurate
-  (user spends FK → must reflect immediately)
+Always from Supabase gamification table
+Not cached in localStorage
+Reason: Must be real-time accurate
+(user spends FK → must reflect immediately)
 
 Financial Profile + Result:
-  First check localStorage (instant)
-  If empty → fetch from user_analyse_snapshots
-  Always save to both after submit
+First check localStorage (instant)
+If empty → fetch from user_analyse_snapshots
+Always save to both after submit
 
 AI Fix Plan:
-  First check localStorage cache
-  Check profile hash matches
-  If match and < 30 days → use cache
-  If no match → call Groq → cache result
+First check localStorage cache
+Check profile hash matches
+If match and < 30 days → use cache
+If no match → call Groq → cache result
 
 Subscription Tier:
-  From Supabase users table on login
-  Cached in authStore (memory only)
-  Re-fetched on every login
-
+From Supabase users table on login
+Cached in authStore (memory only)
+Re-fetched on every login
 
 ## What Happens When User Logs In
 
-  STEP 1: Supabase auth validates session
-  JWT token checked
-  If valid: proceed
-  If expired: redirect to login
+STEP 1: Supabase auth validates session
+JWT token checked
+If valid: proceed
+If expired: redirect to login
 
 STEP 2: authStore.initAuth() runs
-  Fetches users table:
-    name, email, subscription_tier
-    referral_code, pan_verified
-  Fetches gamification table:
-    fk_balance (PRIMARY source)
-    badges, streak_days
-  Sets user state in Zustand
+Fetches users table:
+name, email, subscription_tier
+referral_code, pan_verified
+Fetches gamification table:
+fk_balance (PRIMARY source)
+badges, streak_days
+Sets user state in Zustand
 
 STEP 3: FinancialStoreAuthSync runs
-  Checks localStorage for saved form data
-  If found AND belongs to this user:
-    Loads into financialStore
-    User sees their last result instantly
-  
-  If NOT found in localStorage:
-    Fetches user_analyse_snapshots from Supabase
-    Hydrates financialStore with saved data
-    User sees last result (may take ~500ms)
+Checks localStorage for saved form data
+If found AND belongs to this user:
+Loads into financialStore
+User sees their last result instantly
+
+If NOT found in localStorage:
+Fetches user_analyse_snapshots from Supabase
+Hydrates financialStore with saved data
+User sees last result (may take ~500ms)
 
 STEP 4: Page renders with all data
-  Navbar shows: correct FK balance
-  If on /analyse/result: shows last analysis
-  If on /analyse/fixplan: loads or fetches AI plan
-
+Navbar shows: correct FK balance
+If on /analyse/result: shows last analysis
+If on /analyse/fixplan: loads or fetches AI plan
 
 ## Security — How Data Is Protected
 
 LAYER 1: Supabase Auth
-  Every request needs valid JWT token
-  Token expires and auto-refreshes
-  No token = no data access
+Every request needs valid JWT token
+Token expires and auto-refreshes
+No token = no data access
 
 LAYER 2: Row Level Security (RLS)
-  Every table has RLS enabled
-  Policy: auth.uid() = user_id
-  User A CANNOT see User B's data
-  Even if they know the user_id
-  Enforced at database level
+Every table has RLS enabled
+Policy: auth.uid() = user_id
+User A CANNOT see User B's data
+Even if they know the user_id
+Enforced at database level
 
 LAYER 3: Service Role Key
-  Only used on server (Next.js API routes)
-  Never exposed to browser
-  Used for admin operations only
-  Stored in environment variables
+Only used on server (Next.js API routes)
+Never exposed to browser
+Used for admin operations only
+Stored in environment variables
 
 LAYER 4: Anon Key
-  Used in browser
-  Limited permissions
-  Can only do what RLS allows
-  Safe to expose (by design)
+Used in browser
+Limited permissions
+Can only do what RLS allows
+Safe to expose (by design)
 
 LAYER 5: Data Encryption
-  All data encrypted at rest (Supabase)
-  All connections use HTTPS/TLS
-  jsonb fields store JSON securely
+All data encrypted at rest (Supabase)
+All connections use HTTPS/TLS
+jsonb fields store JSON securely
 
 ---
 
@@ -2196,24 +2316,22 @@ LAYER 5: Data Encryption
 
 **Changelog — 2026-05-07:** Trailing-slash normalization; calculators hub conditional **`WebApplication`** for tax tool; India taxation education articles in Learn + Blog (see **§CHANGE LOG 2026-05-07**). **GA4** instrumentation documented in **§29**.
 
-
-
 -- 1. Find user ID
 SELECT id FROM auth.users
 WHERE email = 'himkumarjsr@gmail.com';
 
 -- 2. Deliver one tip (replace YOUR_ID)
 INSERT INTO public.user_notifications
-  (user_id, tip_id, title, content,
-   emoji, category, is_read, shown_as_popup)
+(user_id, tip_id, title, content,
+emoji, category, is_read, shown_as_popup)
 SELECT 'YOUR_ID', out_tip_id, out_title,
-  out_content, out_emoji, out_category,
-  false, false
+out_content, out_emoji, out_category,
+false, false
 FROM get_next_tip_for_user('YOUR_ID');
 
 -- 3. Check your notifications inbox
-SELECT title, emoji, is_read, 
-  shown_as_popup, created_at
+SELECT title, emoji, is_read,
+shown_as_popup, created_at
 FROM public.user_notifications
 WHERE user_id = 'YOUR_ID'
 ORDER BY created_at DESC;
@@ -2230,5 +2348,3 @@ WHERE user_id = 'YOUR_ID';
 -- 6. Delete all notifications (fresh start)
 DELETE FROM public.user_notifications
 WHERE user_id = 'YOUR_ID';
-
-
