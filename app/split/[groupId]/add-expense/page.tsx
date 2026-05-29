@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { Analytics } from "@/lib/analytics";
 import { useAuthStore } from "@/store/authStore";
@@ -45,6 +44,7 @@ function AddSplitExpenseInner() {
 
   const user = useAuthStore((s) => s.user);
   const userId = useAuthStore((s) => s.userId);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const createdBy = userId ?? user?.id ?? "";
 
   const activeGroup = useSplitStore((s) => s.activeGroup);
@@ -52,12 +52,19 @@ function AddSplitExpenseInner() {
   const addExpense = useSplitStore((s) => s.addExpense);
   const storeLoading = useSplitStore((s) => s.loading);
   const [detailReady, setDetailReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const groupLoaded = detailReady && activeGroup?.id === groupId;
   const members = (
     groupLoaded ? (activeGroup?.members ?? []) : []
   ) as SplitGroupMember[];
-  const splittableMembers = members.filter((m) => m.status === "active");
+  const splittableMembers = members.filter(
+    (m) => m.status?.toLowerCase() === "active",
+  );
+  const memberKey = splittableMembers
+    .map((m) => m.email.toLowerCase())
+    .sort()
+    .join("|");
 
   const [amountRaw, setAmountRaw] = useState<number>(0);
   const [title, setTitle] = useState("");
@@ -67,6 +74,7 @@ function AddSplitExpenseInner() {
   const [expenseDate, setExpenseDate] = useState(todayISODate());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const [includedEmails, setIncludedEmails] = useState<Record<string, boolean>>(
     {},
@@ -77,23 +85,41 @@ function AddSplitExpenseInner() {
   useEffect(() => {
     if (!groupId) return;
     setDetailReady(false);
-    void fetchGroupDetail(groupId).finally(() => setDetailReady(true));
+    setLoadError("");
+    void fetchGroupDetail(groupId)
+      .then(() => {
+        const loaded = useSplitStore.getState().activeGroup;
+        if (!loaded || loaded.id !== groupId) {
+          setLoadError("Could not load this group. Go back and try again.");
+        }
+      })
+      .catch(() => {
+        setLoadError("Could not load this group. Go back and try again.");
+      })
+      .finally(() => setDetailReady(true));
   }, [fetchGroupDetail, groupId]);
 
   useEffect(() => {
-    if (!splittableMembers.length) return;
+    if (!memberKey) return;
     const init: Record<string, boolean> = {};
     for (const m of splittableMembers) init[m.email.toLowerCase()] = true;
     setIncludedEmails(init);
 
-    // default paid-by: me, else first member
     const me = (user?.email ?? "").toLowerCase();
     const defaultPaid =
       splittableMembers.find((m) => m.email.toLowerCase() === me)?.email ??
       splittableMembers[0]?.email ??
       "";
     setPaidByEmail(defaultPaid);
-  }, [splittableMembers, user?.email]);
+  }, [memberKey, splittableMembers, user?.email]);
+
+  const handleBack = useCallback(() => {
+    if (groupId) {
+      router.push(`/split/${groupId}`);
+      return;
+    }
+    router.push("/split");
+  }, [groupId, router]);
 
   const includedMembers = useMemo(() => {
     return splittableMembers
@@ -130,25 +156,26 @@ function AddSplitExpenseInner() {
   };
 
   const handleSubmit = async () => {
+    setFormError("");
     if (!groupId) return;
-    if (!createdBy) {
-      window.alert("Sign in again to add expenses.");
+    if (!isLoggedIn || !createdBy) {
+      setFormError("Sign in again to add expenses.");
       return;
     }
     if (!title.trim()) {
-      window.alert("Enter a description.");
+      setFormError("Enter a description.");
       return;
     }
     if (!paidByEmail) {
-      window.alert("Choose who paid.");
+      setFormError("Choose who paid.");
       return;
     }
     if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-      window.alert("Enter a valid amount.");
+      setFormError("Enter a valid amount.");
       return;
     }
     if (includedMembers.length === 0) {
-      window.alert("Select at least one member to split with.");
+      setFormError("Select at least one member to split with.");
       return;
     }
     if (splitType === "exact") {
@@ -158,8 +185,20 @@ function AddSplitExpenseInner() {
       );
       const diff = Math.abs(total - Number(amountRaw || 0));
       if (diff > 0.01) {
-        window.alert(
+        setFormError(
           `Exact amounts must add up to ₹${formatIndian(Math.round(amountRaw))}. Current total: ₹${formatIndian(Math.round(total))}`,
+        );
+        return;
+      }
+    }
+    if (splitType === "percentage") {
+      const totalPct = includedMembers.reduce(
+        (s, m) => s + Number(pctMap[m.email.toLowerCase()] ?? 0),
+        0,
+      );
+      if (Math.abs(totalPct - 100) > 0.01) {
+        setFormError(
+          `Percentages must add up to 100%. Current total: ${totalPct}%`,
         );
         return;
       }
@@ -185,42 +224,55 @@ function AddSplitExpenseInner() {
     setBusy(false);
 
     if (res.error) {
-      window.alert(res.error);
+      setFormError(res.error);
       return;
     }
     Analytics.splitExpenseAdded();
     router.push(`/split/${groupId}`);
   };
 
+  const canSubmit =
+    !busy &&
+    groupLoaded &&
+    Boolean(groupId) &&
+    isLoggedIn &&
+    splittableMembers.length > 0 &&
+    includedMembers.length > 0;
+
   return (
-    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[90px] sm:px-6">
+    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-24 sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <div className="flex items-center justify-between">
-          <Link
-            href={`/split/${groupId}`}
-            className="text-sm font-bold text-[#534AB7]"
-          >
-            ← Back
-          </Link>
-          <div className="text-xs font-semibold text-[#9B9A94]">
-            Add expense
+        <div className="rounded-3xl bg-[#534AB7] px-6 py-5 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
+          <div className="flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="text-sm font-bold text-white/90 hover:text-white min-h-[44px] min-w-[44px] text-left"
+            >
+              ← Back
+            </button>
+            <div className="text-xs font-semibold text-white/75">
+              Add expense
+            </div>
+          </div>
+          <div className="mt-3 text-lg font-extrabold">New expense</div>
+          <div className="mt-0.5 text-sm text-white/80">
+            Split among selected members.
           </div>
         </div>
 
         <div className="mt-5 rounded-3xl border border-[#E8E6F0] bg-white p-6 shadow-sm">
-          <div className="text-lg font-extrabold text-[#111110]">
-            New expense
-          </div>
-          <div className="mt-1 text-sm text-[#9B9A94]">
-            Split among selected members.
-          </div>
-
           {!groupLoaded || storeLoading ? (
             <p className="mt-4 text-sm text-[#9B9A94]">
               Loading group members…
             </p>
           ) : null}
-          {groupLoaded && splittableMembers.length === 0 ? (
+          {loadError ? (
+            <p className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]">
+              {loadError}
+            </p>
+          ) : null}
+          {groupLoaded && !loadError && splittableMembers.length === 0 ? (
             <p className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]">
               No members found for this group. Invite someone from the group
               page, then try again.
@@ -511,16 +563,15 @@ function AddSplitExpenseInner() {
             </div>
           </div>
 
+          {formError ? (
+            <p className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]">
+              {formError}
+            </p>
+          ) : null}
+
           <button
             type="button"
-            disabled={
-              busy ||
-              !groupLoaded ||
-              !groupId ||
-              !createdBy ||
-              splittableMembers.length === 0 ||
-              includedMembers.length === 0
-            }
+            disabled={!canSubmit}
             onClick={() => void handleSubmit()}
             className="mt-6 w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50 min-h-[44px]"
           >
