@@ -210,7 +210,7 @@ function SplitGroupInner() {
     tone === "owed" ? "#1D9E75" : tone === "owe" ? "#E24B4A" : "#9B9A94";
 
   return (
-    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[90px] sm:px-6">
+    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-24 sm:px-6">
       <div className="mx-auto max-w-3xl">
         <div className="rounded-3xl bg-[#534AB7] px-6 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-start justify-between gap-4">
@@ -283,6 +283,25 @@ function SplitGroupInner() {
                 ₹{formatIndian(Math.round(Math.abs(myNet)))}
               </div>
             </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSettle()}
+              className="h-12 rounded-2xl border border-white/25 bg-white/15 text-sm font-extrabold text-white ring-1 ring-white/20 hover:bg-white/20 min-h-[44px]"
+            >
+              Settle up
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                groupId && router.push(`/split/${groupId}/add-expense`)
+              }
+              className="h-12 rounded-2xl bg-white text-sm font-extrabold text-[#534AB7] shadow-[0_10px_30px_rgba(0,0,0,0.12)] min-h-[44px]"
+            >
+              + Add expense
+            </button>
           </div>
         </div>
 
@@ -570,25 +589,6 @@ function SplitGroupInner() {
           </div>
         </>
       ) : null}
-
-      <div className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#E8E6F0] bg-white pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-4px_24px_rgba(30,30,60,0.06)]">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 sm:px-6">
-          <button
-            type="button"
-            onClick={() => void handleSettle()}
-            className="h-12 flex-1 rounded-2xl border border-[#E8E6F0] bg-[#F7F7F4] text-sm font-extrabold text-[#111110]"
-          >
-            Settle up
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(`/split/${groupId}/add-expense`)}
-            className="h-12 flex-1 rounded-2xl bg-[#534AB7] text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)]"
-          >
-            + Add expense
-          </button>
-        </div>
-      </div>
     </main>
   );
 }

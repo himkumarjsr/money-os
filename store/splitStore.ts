@@ -298,6 +298,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       const res = await fetch("/api/split/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           name: input.name,
           emoji: input.emoji,
@@ -327,6 +328,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       const res = await fetch("/api/split/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(input),
       });
       const json = (await res.json()) as {
@@ -401,6 +403,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       const res = await fetch("/api/split/settle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           groupId: input.groupId,
           toEmail: input.toEmail,
@@ -426,6 +429,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     try {
       const res = await fetch(`/api/split/groups?groupId=${groupId}`, {
         method: "DELETE",
+        credentials: "include",
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -452,6 +456,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     try {
       const res = await fetch(`/api/split/expenses/${expenseId}`, {
         method: "DELETE",
+        credentials: "include",
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) return { error: json.error ?? "Could not delete expense" };
