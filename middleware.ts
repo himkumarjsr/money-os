@@ -22,46 +22,25 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet, headers) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value),
+        );
         supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
-        Object.entries(headers).forEach(([key, value]) => supabaseResponse.headers.set(key, value));
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options),
+        );
+        Object.entries(headers).forEach(([key, value]) =>
+          supabaseResponse.headers.set(key, value),
+        );
       },
     },
   });
 
-  const protectedPaths = [
-    // /tracker uses client ProtectedGate + Supabase session recovery (avoids stale UI vs cookie mismatch)
-    "/analyse/fixplan",
-    "/profile",
-    "/policies",
-    "/rewards",
-    "/goals",
-    "/investments",
-    "/leaderboard",
-    "/refer",
-    "/settings",
-  ];
-  const isProtected = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path));
-
   // Validates JWT and refreshes session / rotates refresh cookie when needed.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (isProtected && !user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", `${request.nextUrl.pathname}${request.nextUrl.search}`);
-    const refParam = request.nextUrl.searchParams.get("ref");
-    if (refParam) {
-      loginUrl.searchParams.set("ref", refParam);
-    }
-    const redirectResponse = NextResponse.redirect(loginUrl);
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value);
-    });
-    return redirectResponse;
-  }
+  // Page auth is handled client-side (ProtectedGate + recoverAuthSession) so Zustand
+  // and Supabase session stay in sync — server-only cookie checks caused logged-in
+  // users to be sent to /login (e.g. mobile profile tab).
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }

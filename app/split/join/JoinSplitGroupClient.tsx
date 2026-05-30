@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { resolveAuthenticated } from "@/lib/authSession";
 import { saveSplitInviteToken } from "@/lib/splitAuthRedirect";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
@@ -27,7 +28,8 @@ export default function JoinSplitGroupClient() {
     }
 
     const process = async () => {
-      if (!isLoggedIn) {
+      const authenticated = await resolveAuthenticated();
+      if (!authenticated) {
         saveSplitInviteToken(token);
         const currentUrl =
           typeof window !== "undefined"

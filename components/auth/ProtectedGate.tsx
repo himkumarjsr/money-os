@@ -1,6 +1,6 @@
 "use client";
 
-import { recoverAuthSession } from "@/lib/authSession";
+import { resolveAuthenticated } from "@/lib/authSession";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { useAuthStore } from "@/store/authStore";
 import { usePathname, useRouter } from "next/navigation";
@@ -57,10 +57,10 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     void (async () => {
-      const recovered = await recoverAuthSession();
+      const authenticated = await resolveAuthenticated();
       if (cancelled) return;
 
-      if (recovered) {
+      if (authenticated) {
         redirected.current = false;
         setAccessGranted(true);
         return;
@@ -70,7 +70,11 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
       if (!redirected.current) {
         redirected.current = true;
         const redirect = pathname || "/";
-        router.replace(loginHrefPreserveRef(`/login?redirect=${encodeURIComponent(redirect)}`));
+        router.replace(
+          loginHrefPreserveRef(
+            `/login?redirect=${encodeURIComponent(redirect)}`,
+          ),
+        );
       }
     })();
 
@@ -85,10 +89,6 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
 
   if (!isLoggedIn && !accessGranted) {
     return <AuthSpinner />;
-  }
-
-  if (!isLoggedIn) {
-    return null;
   }
 
   return <>{children}</>;

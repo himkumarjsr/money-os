@@ -22,6 +22,14 @@ export async function hasSupabaseSession(): Promise<boolean> {
 }
 
 /**
+ * True when Zustand already has a logged-in user, or a live Supabase session can be recovered.
+ */
+export async function resolveAuthenticated(): Promise<boolean> {
+  if (useAuthStore.getState().isLoggedIn) return true;
+  return recoverAuthSession();
+}
+
+/**
  * Reconcile Zustand auth with Supabase. Returns true if the user should be treated as logged in.
  * Clears stale persisted login when there is no server session.
  */
