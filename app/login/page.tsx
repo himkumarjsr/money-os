@@ -1,11 +1,12 @@
 "use client";
 
+import { resolveAuthenticated } from "@/lib/authSession";
 import { resolvePostLoginPath } from "@/lib/splitAuthRedirect";
 import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 function LoginContent() {
   const router = useRouter();
@@ -40,12 +41,32 @@ function LoginContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const redirectedAway = useRef(false);
+
   useEffect(() => {
-    if (hasInitialized && isLoggedIn) {
-      router.push(
-        redirectFromUrl ?? resolvePostLoginPath(window.location.search),
-      );
+    if (!hasInitialized) return;
+
+    const destination =
+      redirectFromUrl ?? resolvePostLoginPath(window.location.search);
+
+    if (isLoggedIn) {
+      if (redirectedAway.current) return;
+      redirectedAway.current = true;
+      router.replace(destination);
+      return;
     }
+
+    let cancelled = false;
+    void (async () => {
+      const authenticated = await resolveAuthenticated();
+      if (cancelled || !authenticated || redirectedAway.current) return;
+      redirectedAway.current = true;
+      router.replace(destination);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [hasInitialized, isLoggedIn, redirectFromUrl, router]);
 
   useEffect(() => {

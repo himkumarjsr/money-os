@@ -5,6 +5,7 @@ import { downloadOptimizerPDF } from "@/lib/generatePDF";
 import { Analytics } from "@/lib/analytics";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
+import { resolveAuthenticated } from "@/lib/authSession";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -218,21 +219,29 @@ export default function FixPlanPage() {
 
   useEffect(() => {
     if (!hasInitialized) return;
-    if (!isLoggedIn) {
-      router.replace(loginHrefPreserveRef("/login?redirect=/analyse/fixplan"));
-      return;
-    }
-    let mounted = true;
-    (async () => {
+
+    let cancelled = false;
+
+    void (async () => {
+      const authenticated = await resolveAuthenticated();
+      if (cancelled) return;
+      if (!authenticated) {
+        router.replace(
+          loginHrefPreserveRef("/login?redirect=/analyse/fixplan"),
+        );
+        return;
+      }
+
       const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
 
       if (skipPayment) {
         console.log("fixplan: skip payment enabled");
       } else {
+        const currentUser = useAuthStore.getState().user;
         const hasAccess =
-          user?.subscriptionTier === "pro" ||
-          user?.subscriptionTier === "promax" ||
-          user?.isAdmin;
+          currentUser?.subscriptionTier === "pro" ||
+          currentUser?.subscriptionTier === "promax" ||
+          currentUser?.isAdmin;
 
         if (!hasAccess) {
           console.log("fixplan: no access, redirecting to result");
@@ -248,10 +257,11 @@ export default function FixPlanPage() {
       }
       if (hasLoadedRef.current) return;
       hasLoadedRef.current = true;
-      if (mounted) void loadFixPlan();
+      if (!cancelled) void loadFixPlan();
     })();
+
     return () => {
-      mounted = false;
+      cancelled = true;
     };
   }, [
     hasInitialized,
