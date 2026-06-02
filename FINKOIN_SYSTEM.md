@@ -46,7 +46,7 @@ the documentation generation prompt again.
 
 # FINKOIN SYSTEM DOCUMENTATION
 
-Last updated: 2026-05-07
+Last updated: 2026-06-02
 Generated from: actual codebase
 
 ---
@@ -111,6 +111,9 @@ The core value proposition is: collect profile + money data once, run determinis
 | NEXT_PUBLIC_FINKOIN_AGENT_CODE | Optional                 | Agent code used in policy transfer links                                                                       | Internal config                               |
 | NEXT_PUBLIC_SITE_URL           | Recommended              | Metadata/sitemap/robots canonical URL                                                                          | Deployment URL                                |
 | NEXT_PUBLIC_GA_MEASUREMENT_ID  | Optional                 | GA4 Measurement ID (`G-xxxxxxxxxx`). When set, loads gtag + enriched events; omit to disable analytics scripts | Google Analytics → Admin → Data streams → Web |
+| NEXT_PUBLIC_CLARITY_ID         | Optional                 | Microsoft Clarity project ID loaded by `components/ClarityScript.tsx`                                          | Clarity project settings                      |
+| RESEND_API_KEY                 | Optional (split invites) | Resend API key for sending split invite emails from `/api/split/invite`                                        | [Resend dashboard](https://resend.com)        |
+| EMAIL_FROM                     | Optional (split invites) | Sender email identity for split invite emails (used as `FK Split <...>`)                                       | Verified sender/domain in Resend              |
 | NEXT_PUBLIC_DEBUG_AI           | Optional                 | AI debug logging in client service                                                                             | Internal config                               |
 | NEXT_PUBLIC_AI_TIMEOUT_MS      | Optional                 | Client-side AI timeout override                                                                                | Internal config                               |
 
@@ -321,6 +324,35 @@ Complete inventory with one-line purpose per file:
 | `supabase/migrations/003_complete_setup.sql`              | Complete setup + RAG + policies                                                                                                                                                                                                                                                                                                                     |
 | `supabase/migrations/004_user_policies_add_status.sql`    | Adds policy status column                                                                                                                                                                                                                                                                                                                           |
 | `supabase/migrations/005_fix_snapshots.sql`               | Creates snapshots/analysis tables + RLS                                                                                                                                                                                                                                                                                                             |
+
+### 4.x Incremental inventory updates (2026-06-02)
+
+- `app/split/layout.tsx`: Split route metadata (SEO/open graph).
+- `app/split/page.tsx`: protected split home (groups list, create group modal, invite-on-create, soft delete, realtime refresh hooks).
+- `app/split/[groupId]/page.tsx`: protected group detail (balances, expenses, invite modal, settle-up, expense delete, creator delete actions).
+- `app/split/[groupId]/add-expense/page.tsx`: protected add-expense flow (equal/exact/percentage split UI, amount validation, category/date/notes).
+- `app/split/join/page.tsx`: suspense shell for invite-join page.
+- `app/split/join/JoinSplitGroupClient.tsx`: invite token auth handoff + join execution via server route + post-join redirect.
+- `app/api/split/groups/route.ts`: create group (POST), soft-delete group by creator (DELETE query param `groupId`).
+- `app/api/split/groups/[groupId]/route.ts`: hard-delete group and related rows for active admin users.
+- `app/api/split/invite/route.ts`: create invitation token, upsert pending member, compose invite URL, optional email delivery via Resend.
+- `app/api/split/join/route.ts`: server-authoritative invite acceptance (token validation, invited email match, member activation, invitation accept).
+- `app/api/split/expenses/route.ts`: create expense + computed shares + group timestamp bump.
+- `app/api/split/expenses/[expenseId]/route.ts`: delete expense + shares (creator or admin only).
+- `app/api/split/settle/route.ts`: record settlement and mark matching shares settled.
+- `store/splitStore.ts`: split state + actions (fetchGroups, fetchGroupDetail, create/invite/add/settle/delete, cache TTL, net-balance helper).
+- `store/notificationStore.ts`: fetch/mark notification state backed by `user_notifications`.
+- `components/NotificationBell.tsx`: realtime inbox dropdown with unread badge and mark-all-read behavior.
+- `components/MorningTipPopup.tsx`: once-per-day IST tip popup (6 AM–11 PM) using notification store + localStorage suppression key.
+- `components/FeedbackWidget.tsx`: lightweight feedback capture widget posting to `/api/feedback`.
+- `components/FeedbackPopupManager.tsx`: delayed page-context feedback popup manager on tracked routes.
+- `components/ClarityScript.tsx`: client-side Clarity bootstrap (guarded by `NEXT_PUBLIC_CLARITY_ID`).
+- `lib/analytics.ts`: GA + Clarity shared event helper methods with compatibility wrappers.
+- `.husky/pre-commit`: runs lint-staged plus non-blocking `console.log` warning scan.
+- `.husky/pre-push`: runs `tsc --noEmit`; additionally runs `npm run build` only on `production` branch.
+- `package.json`: lint-staged currently runs `eslint --fix` + `prettier --write` for TS/TSX; Prettier for JSON/MD/CSS.
+- `eslint.config.mjs`: stricter lint rules scoped to split paths (`app/split/**/*`, `app/api/split/**/*`, `store/splitStore.ts`).
+- `vercel.json`: daily cron for `/api/notifications/deliver-tip` at `0 3 * * *` UTC.
 
 ---
 
@@ -614,6 +646,39 @@ Persisted: Yes (`finkoin-gamification`)
 State: FK balance, badges, streak, earnedActions, toast  
 Actions: `earnTokens`, `awardBadge`, `hasEarnedAction`, `markEarnedAction`, `clearToast`
 
+### splitStore
+
+File: `store/splitStore.ts`  
+Persisted: No
+
+State:
+
+- `groups`, `activeGroup`, `expenses`, `balances`, `loading`, `lastFetched`
+
+Actions:
+
+- `fetchGroups(userId, userEmail, forceRefresh?)` (2-minute TTL cache keyed by user)
+- `fetchGroupDetail(groupId)` (group, members, expenses + shares, RPC `get_split_balances`)
+- `createGroup(...)`
+- `inviteMember(...)`
+- `addExpense(...)`
+- `settleUp(...)`
+- `deleteGroup(groupId)` (soft delete route)
+- `deleteExpense(groupId, expenseId)`
+- `clearActive()`
+
+Helper export:
+
+- `getMyBalanceFromEdges(myEmail, edges)`
+
+### notificationStore
+
+File: `store/notificationStore.ts`  
+Persisted: No
+
+State: `notifications`, `unreadCount`, `loading`  
+Actions: `fetchNotifications`, `markAllRead`, `markPopupShown`, `getTodayUnshownPopup`
+
 ### portfolioStore
 
 File: `store/portfolioStore.ts`  
@@ -856,6 +921,48 @@ Errors: **401** without valid session; **400** missing fields or signature misma
 
 ---
 
+### Split routes (`/api/split/*`)
+
+#### POST `/api/split/groups`
+
+Creates a split group for the authenticated user and inserts creator membership as `admin` in `split_group_members`.
+
+#### DELETE `/api/split/groups?groupId=<id>`
+
+Soft-deletes group by creator in `split_groups` (`is_active=false`) and updates `updated_at`.
+
+#### DELETE `/api/split/groups/[groupId]`
+
+Hard-delete route for active admins: removes `split_expense_shares`, `split_settlements`, `split_invitations`, `split_expenses`, `split_group_members`, and finally the `split_groups` row.
+
+#### POST `/api/split/invite`
+
+Creates invite token row in `split_invitations`, upserts pending member in `split_group_members`, returns `inviteUrl`, and optionally sends email via Resend (`RESEND_API_KEY`, `EMAIL_FROM`).
+
+#### POST `/api/split/join`
+
+Server-side invite acceptance:
+
+1. Authenticates current user (`createSupabaseServerClient`)
+2. Validates invite token and expiry from `split_invitations`
+3. Enforces invited email == logged-in email
+4. Activates corresponding member row in `split_group_members`
+5. Marks invitation `accepted` when pending
+
+#### POST `/api/split/expenses`
+
+Creates an expense in `split_expenses`, computes/validates shares via `computeSplitShares`, inserts `split_expense_shares`, then bumps `split_groups.updated_at`.
+
+#### DELETE `/api/split/expenses/[expenseId]`
+
+Allows expense deletion by creator or active group admin, deletes related rows from `split_expense_shares`, then deletes expense row.
+
+#### POST `/api/split/settle`
+
+Creates settlement row in `split_settlements` and marks matching unsettled shares as settled in `split_expense_shares`.
+
+---
+
 ## 11. RAG SYSTEM
 
 ### How it works
@@ -1013,6 +1120,43 @@ On submit:
 
 - Shows full AI plan view
 - Includes report export CTA wired to `downloadOptimizerPDF()`
+
+### `/split` ecosystem
+
+#### `/split`
+
+- Protected by `ProtectedGate`.
+- Group list fetched via `useSplitStore.fetchGroups`.
+- Create group modal supports optional immediate invite.
+- Refreshes on visibility/focus and realtime updates from `split_group_members`.
+
+#### `/split/[groupId]`
+
+- Loads group details via `fetchGroupDetail`.
+- Shows balances (`get_split_balances` RPC result), expenses, and invite/settle actions.
+- Realtime subscriptions:
+  - `split_expenses` INSERT
+  - `split_expense_shares` UPDATE
+- Creator can trigger delete group flow (soft delete route currently used in store).
+
+#### `/split/[groupId]/add-expense`
+
+- Expense creation flow supports split types `equal`, `exact`, `percentage`.
+- Validates exact sum equals amount and percentage sum equals 100.
+- Sends payload to `/api/split/expenses`.
+
+#### `/split/join?token=...`
+
+- Invite join client in `JoinSplitGroupClient`.
+- If unauthenticated: persists token + redirect path (`finkoin_split_token`, `finkoin_split_redirect`) then redirects to `/login`.
+- After auth: joins via `POST /api/split/join` and redirects to `/split/[groupId]` on success.
+
+### Notification and feedback surfaces
+
+- `components/NotificationBell.tsx` shows `user_notifications` inbox with realtime inserts and unread badge.
+- `components/MorningTipPopup.tsx` shows one unshown tip popup/day (IST key `finkoin_tip_popup_<date>`), and marks popup as shown via store.
+- `components/FeedbackPopupManager.tsx` triggers delayed feedback modal (120s) on tracked routes for logged-in users.
+- `components/FeedbackWidget.tsx` submits rating/message/context to `/api/feedback` and sets page-scope suppression key `finkoin_feedback_<context>`.
 
 ---
 
@@ -1790,6 +1934,14 @@ Important implementation note:
 
 ## CHANGE LOG
 
+### 2026-06-02
+
+- **Split invite acceptance hardened:** Added `POST /api/split/join` (`app/api/split/join/route.ts`) for server-authoritative invite acceptance against `split_invitations` + `split_group_members` with email-match enforcement and expiry/status checks.
+- **Join redirect reliability:** `app/split/join/JoinSplitGroupClient.tsx` now redirects unauthenticated users with persisted invite context and completes join via server API before navigating to `/split/[groupId]`.
+- **Split auth redirect helper expanded:** `lib/splitAuthRedirect.ts` now supports persisted redirect path (`FINKOIN_SPLIT_REDIRECT_KEY`) in addition to invite token fallback.
+- **Split docs synced to actual routes/state:** Documented all current files under `app/split/*`, `app/api/split/*`, and `store/splitStore.ts` including soft-delete route usage and hard-delete admin route existence.
+- **Notifications + feedback + telemetry docs updated:** Added accurate coverage for `store/notificationStore.ts`, `NotificationBell`, `MorningTipPopup`, `FeedbackWidget`, `FeedbackPopupManager`, `ClarityScript`, `lib/analytics.ts`, Husky hooks, lint-staged config, split-specific ESLint rules, and Vercel cron.
+
 ### 2026-05-28
 
 - **Split delete group (soft delete):** Added `DELETE /api/split/groups?groupId=...` in `app/api/split/groups/route.ts`. Only creator can delete; action is a soft close (`is_active=false`) so history remains preserved.
@@ -2025,8 +2177,10 @@ Finkoin is installable as a PWA on **Android (Chrome)** and **iOS (Safari)**. Th
 | Piece                                  | Role                                                                                                                                                                                                    |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`components/GoogleAnalytics.tsx`**   | Loads **`gtag.js`**, disables automatic page views, fires **`gtag('config', …)`** on **`pathname`**, **`searchParams`**, and auth (**`user_id`** when logged in). Sets **`user_properties`**.           |
+| **`components/ClarityScript.tsx`**     | Loads Microsoft Clarity script after interactive when **`NEXT_PUBLIC_CLARITY_ID`** is set.                                                                                                              |
 | **`lib/analyticsContext.ts`**          | **`getAppSurface()`** (PWA standalone vs browser tab), **`getDeviceCategory()`**, **`timezone`**, **`language`**, **`viewport_*`**, **`referrer_hostname`**, optional **`connection_type`**.            |
 | **`lib/gtag.ts`**                      | **`trackEvent`** merges **`getAnalyticsContext()`** into every hit. Helpers: **`trackCta`**, **`trackShare`**, **`trackImpression`**, **`trackScrollDepth`**, **`trackToolOpen`**, **`trackNavClick`**. |
+| **`lib/analytics.ts`**                 | App-level helper namespace used across pages (`Analytics.*`) that sends events to GA (`window.gtag`) and mirrors custom event names to Clarity (`window.clarity('event', ...)`) when available.         |
 | **`components/AnalyticsBehavior.tsx`** | **`scroll_depth`** milestones per route (session-scoped).                                                                                                                                               |
 | **`components/TrackImpression.tsx`**   | **`element_impression`** once per **`component_id`**.                                                                                                                                                   |
 

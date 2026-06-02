@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolveAuthenticated } from "@/lib/authSession";
-import { saveSplitInviteToken } from "@/lib/splitAuthRedirect";
+import {
+  saveSplitInviteRedirect,
+  saveSplitInviteToken,
+} from "@/lib/splitAuthRedirect";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
-import { getSupabase } from "@/lib/supabase";
 
 type JoinStatus = "loading" | "success" | "error";
 
@@ -35,81 +37,40 @@ export default function JoinSplitGroupClient() {
           typeof window !== "undefined"
             ? window.location.pathname + window.location.search
             : `/split/join?token=${encodeURIComponent(token)}`;
-        router.push(`/login?next=${encodeURIComponent(currentUrl)}`);
+        saveSplitInviteRedirect(currentUrl);
+        router.replace(`/login?next=${encodeURIComponent(currentUrl)}`);
         return;
       }
 
       try {
-        const supabase = getSupabase();
+        const response = await fetch("/api/split/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ token }),
+        });
+        const result = (await response.json()) as {
+          success?: boolean;
+          groupId?: string;
+          groupName?: string;
+          error?: string;
+        };
 
-        // Step 1: Get invitation
-        const { data: invite, error } = await supabase
-          .from("split_invitations")
-          .select("*")
-          .eq("token", token)
-          .single();
-
-        if (error || !invite) {
+        if (!response.ok || !result.success || !result.groupId) {
           setStatus("error");
-          setMessage("Invite not found");
+          setMessage(result.error ?? "Invite not found");
           return;
         }
 
-        // Step 2: Check not expired
-        if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-          setStatus("error");
-          setMessage("This invite has expired");
-          return;
-        }
-
-        // Step 3: Check status
-        if (invite.status === "accepted") {
-          router.push(`/split/${invite.group_id}`);
-          return;
-        }
-        if (invite.status !== "pending") {
-          setStatus("error");
-          setMessage("Invalid invite");
-          return;
-        }
-
-        // Step 4: Verify email matches
         const userEmail = (user?.email ?? "").toLowerCase();
-        const invitedEmail = String(invite.invited_email ?? "").toLowerCase();
-        if (!userEmail || !invitedEmail || userEmail !== invitedEmail) {
-          setStatus("error");
-          setMessage(
-            `This invite was sent to ${invite.invited_email}. Please log in with that email.`,
-          );
-          return;
-        }
-
-        setGroupName(invite.group_name ?? "group");
-
-        // Step 5: Update member FIRST
-        await supabase
-          .from("split_group_members")
-          .update({
-            user_id: user!.id,
-            display_name: user!.name || userEmail.split("@")[0] || "Member",
-            status: "active",
-            joined_at: new Date().toISOString(),
-          })
-          .eq("group_id", invite.group_id)
-          .eq("email", invitedEmail);
-
-        // Step 6: Mark invite accepted
-        await supabase
-          .from("split_invitations")
-          .update({ status: "accepted" })
-          .eq("id", invite.id);
+        setGroupName(result.groupName ?? "group");
 
         if (user?.id && userEmail) {
           await useSplitStore.getState().fetchGroups(user.id, userEmail, true);
         }
 
         setStatus("success");
-        setTimeout(() => router.push(`/split/${invite.group_id}`), 1500);
+        setTimeout(() => router.replace(`/split/${result.groupId}`), 1500);
       } catch (err: unknown) {
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Could not join group");
