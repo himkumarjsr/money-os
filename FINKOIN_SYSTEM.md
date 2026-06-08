@@ -43,6 +43,7 @@ the documentation generation prompt again.
 27. What Not to Touch
 28. Progressive Web App (PWA)
 29. Analytics & GA4 (product telemetry)
+30. Precise Flow Runbooks (line-by-line)
 
 # FINKOIN SYSTEM DOCUMENTATION
 
@@ -1941,6 +1942,7 @@ Important implementation note:
 - **Split auth redirect helper expanded:** `lib/splitAuthRedirect.ts` now supports persisted redirect path (`FINKOIN_SPLIT_REDIRECT_KEY`) in addition to invite token fallback.
 - **Split docs synced to actual routes/state:** Documented all current files under `app/split/*`, `app/api/split/*`, and `store/splitStore.ts` including soft-delete route usage and hard-delete admin route existence.
 - **Notifications + feedback + telemetry docs updated:** Added accurate coverage for `store/notificationStore.ts`, `NotificationBell`, `MorningTipPopup`, `FeedbackWidget`, `FeedbackPopupManager`, `ClarityScript`, `lib/analytics.ts`, Husky hooks, lint-staged config, split-specific ESLint rules, and Vercel cron.
+- **New precise flow runbooks:** Added section **30. PRECISE FLOW RUNBOOKS (LINE-BY-LINE)** with exact runtime sequences for split create/invite/join/add/settle/delete/listening, notifications, morning tip popup, feedback popup/submit, Clarity/analytics helpers, and Vercel cron trigger path.
 
 ### 2026-05-28
 
@@ -2191,6 +2193,280 @@ Finkoin is installable as a PWA on **Android (Chrome)** and **iOS (Safari)**. Th
 **Privacy:** Disclose GA + **`user_id`** in **`/legal/privacy`** as applicable; consider consent banners for jurisdictions that require opt-in before analytics.
 
 **Operators:** Register important event parameters as **Custom dimensions** in GA4 Admin → Data display → Custom definitions.
+
+---
+
+## 30. PRECISE FLOW RUNBOOKS (LINE-BY-LINE)
+
+This section documents runtime flow execution in exact sequence using current function/route names and real table names.
+
+### 30.1 Split invite join flow (`/split/join?token=...`)
+
+Client path (`app/split/join/JoinSplitGroupClient.tsx`):
+
+1. `useSearchParams()` reads `token`.
+2. Guard waits for `useAuthStore().hasInitialized`.
+3. If token missing -> `setStatus("error")` with "Invalid invite link".
+4. Calls `resolveAuthenticated()` from `lib/authSession.ts`.
+5. If unauthenticated:
+   - `saveSplitInviteToken(token)` (`localStorage: finkoin_split_token`)
+   - build `currentUrl = pathname + search`
+   - `saveSplitInviteRedirect(currentUrl)` (`localStorage: finkoin_split_redirect`)
+   - `router.replace("/login?next=<encoded currentUrl>")`
+6. If authenticated:
+   - `fetch("/api/split/join", { method: "POST", credentials: "include", body: { token } })`
+   - On non-200 or `success !== true` -> error state + API message.
+   - On success -> optional `useSplitStore.getState().fetchGroups(user.id, userEmail, true)`
+   - success UI shown -> delayed `router.replace("/split/<groupId>")`.
+
+Server path (`app/api/split/join/route.ts`):
+
+1. Parse body `{ token }`; reject if missing (`400`).
+2. Auth user from `createSupabaseServerClient().auth.getUser()`.
+3. Read invite row from `split_invitations` by `token`:
+   - `id, group_id, group_name, invited_email, status, expires_at`.
+4. Validate:
+   - invite exists (`404` otherwise)
+   - logged-in email equals `invited_email` (`403` otherwise)
+   - `expires_at` not in past (`400` otherwise)
+   - `status` in `pending|accepted` (`400` otherwise)
+5. Update `split_group_members` where `group_id + email`:
+   - set `user_id`, `display_name`, `status="active"`, `joined_at`.
+6. If invite status is `pending` -> update `split_invitations.status="accepted"`.
+7. Return `{ success: true, groupId, groupName }`.
+
+### 30.2 Split create group flow (`/split` -> create modal)
+
+Client path (`app/split/page.tsx`):
+
+1. `handleCreate()` validates `gName`, authenticated `user.id`, and email.
+2. Calls `useSplitStore.createGroup(...)`.
+3. On success -> `Analytics.splitGroupCreated()`.
+4. If optional invite email entered and not self:
+   - call `useSplitStore.inviteMember(...)`
+   - show alert if invite email fails / email not sent.
+5. Close modal and `router.push("/split/<groupId>")`.
+
+Store path (`store/splitStore.ts`):
+
+1. `createGroup` -> `POST /api/split/groups` with `{name, emoji, type, displayName}`.
+2. On success -> clears `lastFetched` cache map.
+3. `inviteMember` -> `POST /api/split/invite`.
+
+Server create path (`app/api/split/groups/route.ts`, `POST`):
+
+1. Authenticated user via `createSupabaseServerClient`.
+2. Validate required `name` and authenticated `email`.
+3. Insert group in `split_groups` with `created_by`.
+4. Insert creator member in `split_group_members` with:
+   - `role="admin"`, `status="active"`, `joined_at`.
+5. If member insert fails -> rollback by deleting inserted group row.
+6. Return `{ success: true, groupId }`.
+
+### 30.3 Split invite send flow
+
+Server path (`app/api/split/invite/route.ts`):
+
+1. Parse required body fields:
+   - `groupId`, `groupName`, `invitedEmail`, `invitedByName`, `invitedById`.
+2. Insert invitation row into `split_invitations` with:
+   - `status="pending"`
+   - `expires_at = now + 7 days`.
+3. Upsert pending member row in `split_group_members` (`onConflict: group_id,email`) with:
+   - `status="pending"`, `role="member"`.
+4. Build invite URL: `<siteUrl>/split/join?token=<invite.token>`.
+5. Email delivery branch:
+   - if `RESEND_API_KEY` missing -> `emailError`
+   - if `EMAIL_FROM` missing -> `emailError`
+   - else `resend.emails.send(...)` with invite HTML.
+6. Return payload with `inviteUrl`, `token`, `emailSent`, `emailError`.
+
+### 30.4 Split add-expense flow
+
+Client path (`app/split/[groupId]/add-expense/page.tsx`):
+
+1. On mount -> `fetchGroupDetail(groupId)`.
+2. Builds `includedMembers` from active members + chips.
+3. `handleSubmit()` validations:
+   - title present
+   - paidBy selected
+   - amount > 0
+   - at least one included member
+   - for `exact`: sum exact equals amount
+   - for `percentage`: sum equals 100.
+4. Calls `useSplitStore.addExpense(...)`.
+5. On success -> `Analytics.splitExpenseAdded()` then `router.push("/split/<groupId>")`.
+
+Store path:
+
+1. `addExpense` -> `POST /api/split/expenses`.
+2. Optimistically prepends `json.expense` if returned.
+3. Calls `fetchGroupDetail(groupId)` for canonical state.
+
+Server path (`app/api/split/expenses/route.ts`):
+
+1. Auth user via Supabase cookies.
+2. Validate required body + amount.
+3. Validate requester membership in `split_group_members` for `group_id + email`.
+4. Compute shares using `computeSplitShares(...)` (`lib/splitShares.ts`).
+5. Insert expense in `split_expenses`.
+6. Insert all shares into `split_expense_shares`.
+7. Update `split_groups.updated_at`.
+8. Return `expense` + `shares`.
+
+### 30.5 Split settle-up flow
+
+Client path (`app/split/[groupId]/page.tsx`):
+
+1. `handleSettle()` prompts for `toEmail` and `amount`.
+2. Calls `useSplitStore.settleUp({ groupId, toEmail, amount, ... })`.
+
+Store path:
+
+1. `settleUp` -> `POST /api/split/settle` with `groupId`, `toEmail`, `amount`, `paymentMethod`.
+2. On success -> invalidate cache + `fetchGroupDetail(groupId)`.
+
+Server path (`app/api/split/settle/route.ts`):
+
+1. Auth user from cookies.
+2. Validate `groupId`, `toEmail`, `amount`.
+3. Lookup receiver member in `split_group_members`.
+4. Insert settlement in `split_settlements` (`status="completed"`).
+5. Fetch expenses in group paid by `toEmail`.
+6. Mark matching unsettled shares for current user in `split_expense_shares`:
+   - `is_settled=true`, `settled_at=now`.
+7. Return settlement row.
+
+### 30.6 Split delete flows
+
+Group soft-delete (currently used by store):
+
+1. Client/store calls `DELETE /api/split/groups?groupId=<id>`.
+2. Server verifies authenticated user is group creator (`split_groups.created_by`).
+3. Updates `split_groups.is_active=false` and `updated_at`.
+
+Group hard-delete route (exists but not used by store call path):
+
+1. `DELETE /api/split/groups/[groupId]`.
+2. Verifies caller active admin in `split_group_members`.
+3. Deletes in order:
+   - `split_expense_shares` (by expense ids)
+   - `split_settlements`
+   - `split_invitations`
+   - `split_expenses`
+   - `split_group_members`
+   - `split_groups`.
+
+Expense delete:
+
+1. Client calls `useSplitStore.deleteExpense(groupId, expenseId)`.
+2. Store -> `DELETE /api/split/expenses/[expenseId]`.
+3. Server allows only expense creator or active group admin.
+4. Deletes `split_expense_shares` for expense, then `split_expenses` row.
+5. Updates `split_groups.updated_at`.
+
+### 30.7 Split read/list realtime flow
+
+`/split` list page:
+
+1. `fetchGroups(userId, email, forceRefresh)` checks 2-minute TTL cache.
+2. Reads active membership from `split_group_members` by `email`.
+3. Fetches groups from `split_groups` with `is_active=true`.
+4. Realtime channel `my_groups:<userId>` listens to `split_group_members` UPDATE and force-refreshes.
+5. Also refreshes on tab focus and visibility restoration.
+
+`/split/[groupId]` page:
+
+1. `fetchGroupDetail(groupId)` parallel fetches:
+   - group from `split_groups`
+   - members from `split_group_members` (`active|pending`)
+   - expenses (+ joined shares) from `split_expenses` / `split_expense_shares`.
+2. Calls RPC `get_split_balances(p_group_id)` for debt edges.
+3. Realtime channel listens:
+   - `split_expenses` INSERT
+   - `split_expense_shares` UPDATE
+     and refreshes details.
+
+### 30.8 Notification bell flow
+
+Source: `components/NotificationBell.tsx` + `store/notificationStore.ts`.
+
+1. On login, `fetchNotifications(user.id)`:
+   - query `user_notifications` ordered by `created_at desc`, `limit 20`.
+2. Store computes `unreadCount = !is_read` count.
+3. Realtime channel `notifications:<user.id>` listens `INSERT` on `user_notifications` and re-fetches.
+4. Opening bell:
+   - toggles panel state
+   - if opening and unread > 0 -> `markAllRead(user.id)`.
+5. `markAllRead` updates `user_notifications.is_read=true` for user.
+6. Dropdown renders each notification card with title/content/time.
+
+### 30.9 Morning tip popup flow
+
+Source: `components/MorningTipPopup.tsx`.
+
+1. Wait for auth (`hasInitialized`, `isLoggedIn`, `user.id`).
+2. Gate by IST hour: show logic only between 06:00 and 22:59.
+3. Check daily localStorage suppression key:
+   - `finkoin_tip_popup_<IST-date>`.
+4. Fetch notifications from store.
+5. Pick popup candidate via `getTodayUnshownPopup()`:
+   - first notification where `shown_as_popup=false` sorted by oldest `created_at`.
+6. Show popup after 3-second delay.
+7. On close:
+   - `markPopupShown(notification.id)` -> updates `user_notifications`:
+     - `shown_as_popup=true`
+     - `is_read=true`
+   - sets localStorage daily suppression key.
+8. "Learn more" closes then routes to `/learn`.
+
+### 30.10 Feedback popup + submit flow
+
+Popup manager (`components/FeedbackPopupManager.tsx`):
+
+1. Watches route via `usePathname()`.
+2. Tracks only prefixes:
+   - `/calculators`, `/tracker`, `/learn`, `/analyse`, `/portfolio`, `/optimizer`.
+3. Requires logged-in user.
+4. Uses per-context suppression key:
+   - `finkoin_feedback_<pageKey>`.
+5. If not suppressed, sets 120-second timer then opens modal.
+
+Widget submit (`components/FeedbackWidget.tsx`):
+
+1. Requires star `rating > 0`.
+2. Sends `POST /api/feedback` with:
+   - `user_id`, `rating`, `message`, `page_context`, `score_at_time`.
+3. On success:
+   - sets localStorage suppression key
+   - shows success state
+   - closes after 2 seconds.
+
+### 30.11 Clarity + Analytics helper flow
+
+Clarity script (`components/ClarityScript.tsx`):
+
+1. Reads `process.env.NEXT_PUBLIC_CLARITY_ID`.
+2. If unset -> returns `null`.
+3. If set -> injects Clarity bootstrap script with `strategy="afterInteractive"`.
+
+Analytics helper (`lib/analytics.ts`):
+
+1. `Analytics.event(name, params?)`:
+   - if `window.gtag` -> `gtag("event", name, params)`
+   - if `window.clarity` -> `clarity("event", name)`.
+2. Named wrappers call `Analytics.event(...)`:
+   - `healthCheckStarted`, `healthCheckCompleted`, `splitGroupCreated`, `splitExpenseAdded`, `splitInviteSent`, `feedbackSubmitted`, etc.
+3. Backward compatibility wrappers retained:
+   - `formStarted`, `formCompleted`, `paymentStarted`, `paymentCompleted`, etc.
+
+### 30.12 Cron notification trigger (deployment schedule)
+
+Source: `vercel.json`.
+
+1. Vercel cron runs path `/api/notifications/deliver-tip`.
+2. Schedule: `0 3 * * *` (UTC) = 08:30 IST daily.
+3. Intended downstream effect: daily insertion of rows in `user_notifications` for eligible users.
 
 ---
 

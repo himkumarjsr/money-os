@@ -12,19 +12,28 @@ function formatMonthYear(d: Date) {
   return d.toLocaleString("en-US", { month: "short", year: "numeric" });
 }
 
+function parseLoanStartDate(loanStartDate?: Date | string): Date {
+  if (!loanStartDate) return new Date();
+  if (typeof loanStartDate === "string") {
+    return new Date(`${loanStartDate}T12:00:00`);
+  }
+  return new Date(loanStartDate);
+}
+
 export function generateAmortisationTable(
   principal: number,
   annualRate: number,
   tenureMonths: number,
   emi: number,
+  loanStartDate?: Date | string,
 ): AmortisationRow[] {
   const n = Math.max(0, Math.round(tenureMonths));
   if (n === 0) return [];
 
   const monthlyRate = annualRate / 12 / 100;
-  const start = new Date();
+  const start = parseLoanStartDate(loanStartDate);
   start.setDate(1);
-  start.setMonth(start.getMonth() + 1); // current month + 1 (spec)
+  start.setMonth(start.getMonth() + 1); // first EMI is the month after loan start
 
   const rows: AmortisationRow[] = [];
   let openingBalance = principal;
@@ -67,4 +76,3 @@ export function calculateOutstanding(
   if (discountFactor <= 0) return e * n;
   return (e * discountFactor) / r;
 }
-
