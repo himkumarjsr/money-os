@@ -1,11 +1,24 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { formatIndian, formatInWords, formatSliderLabel, parseIndianInput } from "@/lib/formatters";
+import {
+  formatIndian,
+  formatInWords,
+  formatSliderLabel,
+  parseIndianInput,
+} from "@/lib/formatters";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 /** Max digits for calculator money inputs (10 digits). */
 export const CALCULATOR_MONEY_MAX = 9_999_999_999;
+
+export function todayInputValue() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export type InsightTone = "good" | "warn" | "bad";
 
@@ -81,11 +94,13 @@ export function SliderField({
           ? "mo"
           : detectedType === "number"
             ? ""
-            : suffix ?? "";
+            : (suffix ?? "");
 
   const [focused, setFocused] = useState(false);
   const [displayValue, setDisplayValue] = useState(() =>
-    Number.isFinite(value) ? formatIndian(Math.min(Math.max(value, min), inputMax)) : "0",
+    Number.isFinite(value)
+      ? formatIndian(Math.min(Math.max(value, min), inputMax))
+      : "0",
   );
 
   useEffect(() => {
@@ -117,7 +132,9 @@ export function SliderField({
 
   return (
     <div className="mb-4 flex flex-col gap-1.5">
-      <label className="text-[13px] font-semibold text-[#5F5E5A]">{label}</label>
+      <label className="text-[13px] font-semibold text-[#5F5E5A]">
+        {label}
+      </label>
 
       <div
         role="presentation"
@@ -134,7 +151,9 @@ export function SliderField({
         }}
       >
         {leftUnit ? (
-          <span className="shrink-0 select-none text-[15px] font-semibold text-[#9B9A94]">{leftUnit}</span>
+          <span className="shrink-0 select-none text-[15px] font-semibold text-[#9B9A94]">
+            {leftUnit}
+          </span>
         ) : null}
         <input
           type="text"
@@ -153,7 +172,9 @@ export function SliderField({
           <span
             className={cn(
               "shrink-0 select-none text-[13px]",
-              detectedType === "percent" ? "font-semibold text-[#534AB7]" : "font-medium text-[#888780]",
+              detectedType === "percent"
+                ? "font-semibold text-[#534AB7]"
+                : "font-medium text-[#888780]",
             )}
           >
             {rightUnit}
@@ -167,7 +188,9 @@ export function SliderField({
         max={sliderMax}
         step={step}
         value={sliderValue}
-        onChange={(e) => onChange(Math.min(inputMax, Math.max(min, Number(e.target.value))))}
+        onChange={(e) =>
+          onChange(Math.min(inputMax, Math.max(min, Number(e.target.value))))
+        }
         className="h-2 w-full cursor-pointer accent-[#534AB7]"
       />
       <div className="text-right text-xs text-[#9B9A94]">{words}</div>
@@ -175,13 +198,39 @@ export function SliderField({
   );
 }
 
-export function ResultStat({
+export function DateField({
   label,
   value,
+  onChange,
 }: {
   label: string;
   value: string;
+  onChange: (v: string) => void;
 }) {
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <div className="mb-4 flex flex-col gap-1.5">
+      <label className="text-[13px] font-semibold text-[#5F5E5A]">
+        {label}
+      </label>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className={cn(
+          "box-border min-h-[52px] w-full rounded-xl border bg-white px-4 py-3 text-base font-semibold text-[#111110] outline-none transition-[border-color]",
+          focused ? "border-[#534AB7]" : "border-[#E8E6F0]",
+        )}
+        style={{ borderWidth: 1.5 }}
+      />
+    </div>
+  );
+}
+
+export function ResultStat({ label, value }: { label: string; value: string }) {
   let display = value;
   let words = "";
   if (value.startsWith("₹")) {
@@ -190,7 +239,10 @@ export function ResultStat({
       const isMonthly = /monthly|\/month|emi/i.test(label);
       const rounded = isMonthly ? numeric : Math.round(numeric);
       const formatted = isMonthly
-        ? rounded.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        ? rounded.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
         : formatIndian(rounded);
       display = `₹${formatted}`;
       words = formatInWords(Math.floor(rounded));
@@ -199,8 +251,12 @@ export function ResultStat({
 
   return (
     <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{display}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
+        {display}
+      </p>
       {words ? <p className="mt-1 text-xs text-[#9B9A94]">{words}</p> : null}
     </div>
   );
