@@ -1,17 +1,18 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import ProfileAssets from "@/components/profile/ProfileAssets";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { analyseFinances } from "@/lib/financialEngine";
-import { formatIndian } from "@/lib/formatters";
 import { verifyPAN } from "@/lib/kycVerification";
 import { trackShare } from "@/lib/gtag";
 import { getSupabase } from "@/lib/supabase";
+import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { AppIcon } from "@/components/ui/AppIcon";
+import { useEffect, useMemo, useState } from "react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -20,12 +21,36 @@ export default function ProfilePage() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const result = useFinancialStore((s) => s.result);
   const submission = useFinancialStore((s) => s.lastSubmission);
+  const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
   const fkBalance = useGamificationStore((s) => s.fkBalance);
 
   const [pan, setPan] = useState("");
   const [panLoading, setPanLoading] = useState(false);
   const [panMessage, setPanMessage] = useState("");
   const [referralCopied, setReferralCopied] = useState(false);
+
+  // If local store is empty, pull the latest analysis snapshot from Supabase.
+  useEffect(() => {
+    if (!user?.id || submission) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await fetchUserAnalyseSnapshot(user.id);
+        if (cancelled || !snap?.lastSubmission) return;
+        const engineResult =
+          snap.result ?? analyseFinances(snap.lastSubmission);
+        hydrateFromSnapshot(snap.lastSubmission, engineResult, {
+          analysisPatch: snap.analysis ?? undefined,
+          aiPlan: snap.aiPlan,
+        });
+      } catch (e) {
+        console.warn("Profile assets sync failed:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, submission, hydrateFromSnapshot]);
 
   const referralLink = useMemo(() => {
     const code = user?.referralCode ?? "FINK0000";
@@ -40,19 +65,20 @@ export default function ProfilePage() {
     return result ?? analyseFinances(submission);
   }, [submission, result]);
 
-  const netWorthDisplay = analysisSnapshot?.netWorth;
-
   const healthScore = useMemo(() => {
-    if (!result) return null;
+    if (!analysisSnapshot) return null;
     return Math.max(
       0,
       100 -
-        result.issues.filter((i) => i.severity === "critical").length * 15 -
-        result.issues.filter((i) => i.severity === "warning").length * 7,
+        analysisSnapshot.issues.filter((i) => i.severity === "critical")
+          .length *
+          15 -
+        analysisSnapshot.issues.filter((i) => i.severity === "warning").length *
+          7,
     );
-  }, [result]);
+  }, [analysisSnapshot]);
 
-  const checklist = result?.securityChecklist ?? [];
+  const checklist = analysisSnapshot?.securityChecklist ?? [];
   const checklistCount = checklist.filter((i) => i.status === "ok").length;
 
   const doVerifyPan = async () => {
@@ -135,24 +161,11 @@ export default function ProfilePage() {
           </p>
         </section>
 
-        <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-3">
+        <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-2">
           <div>
             <p className="text-xs text-slate-500">Health score</p>
             <p className="text-xl font-bold text-slate-900">
               {healthScore ?? "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Net worth snapshot</p>
-            <p
-              className={`text-xl font-bold ${typeof netWorthDisplay === "number" && netWorthDisplay < 0 ? "text-red-600" : "text-slate-900"}`}
-            >
-              {typeof netWorthDisplay === "number"
-                ? `₹${formatIndian(Math.round(netWorthDisplay))}`
-                : "—"}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Same formula as your analysis report (assets − liabilities).
             </p>
           </div>
           <div>
@@ -163,6 +176,8 @@ export default function ProfilePage() {
             </p>
           </div>
         </section>
+
+        <ProfileAssets profile={submission} analysis={analysisSnapshot} />
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="text-lg font-semibold">Your financial checklist</h2>
