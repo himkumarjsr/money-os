@@ -1,5 +1,6 @@
 "use client";
 
+import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
 
 export default function MonthSummary({
@@ -27,17 +28,21 @@ export default function MonthSummary({
             <div key={key} className="mb-3 last:mb-0 sm:mb-[14px]">
               <div className="mb-1.5 flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
                 <div className="flex min-w-0 flex-1 items-center gap-2 text-[13px] sm:text-sm">
-                  <span className="shrink-0">{cat.emoji}</span>
-                  <span className="min-w-0 font-medium leading-snug text-[#111110]">{cat.label}</span>
+                  <span className="shrink-0">
+                    <TrackerIcon name={cat.icon} size={18} color={cat.color} />
+                  </span>
+                  <span className="min-w-0 font-medium leading-snug text-[#111110]">
+                    {cat.label}
+                  </span>
                   {cat.cap > 0 ? (
-                    <span className="shrink-0 text-[10px] font-semibold text-[#111110] sm:text-[11px] opacity-90">
+                    <span className="shrink-0 text-[10px] font-semibold text-[#111110] opacity-90 sm:text-[11px]">
                       ({cat.cap}% cap)
                     </span>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                   {isOverBudget ? (
-                    <span className="rounded px-1.5 py-0.5 text-[9px] font-bold leading-none text-[#991B1B] sm:text-[10px] bg-[#FDEDED]">
+                    <span className="rounded bg-[#FDEDED] px-1.5 py-0.5 text-[9px] font-bold leading-none text-[#991B1B] sm:text-[10px]">
                       OVER
                     </span>
                   ) : null}

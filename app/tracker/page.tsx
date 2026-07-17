@@ -4,7 +4,11 @@ import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
-import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
+import { TRACKER_CATEGORIES, findSubcategory } from "@/lib/tracker-categories";
+import {
+  TrackerIconBadge,
+  TrackerIcon,
+} from "@/components/tracker/TrackerIcons";
 import { Analytics } from "@/lib/analytics";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
@@ -50,12 +54,19 @@ function SuggestionBox({
   }
 
   if (!bucketTotals.investment || bucketTotals.investment === 0) {
-    suggestions.push(`📈 No investments tracked this month. Even ₹500 in a SIP is a great start.`);
+    suggestions.push(
+      `📈 No investments tracked this month. Even ₹500 in a SIP is a great start.`,
+    );
   }
 
-  const coffeeTransactions = transactions.filter((t) => t.subcategory === "coffee" || t.subcategory === "cigarettes");
+  const coffeeTransactions = transactions.filter(
+    (t) => t.subcategory === "coffee" || t.subcategory === "cigarettes",
+  );
   if (coffeeTransactions.length > 0) {
-    const coffeeTotal = coffeeTransactions.reduce((a, t) => a + Number(t.amount), 0);
+    const coffeeTotal = coffeeTransactions.reduce(
+      (a, t) => a + Number(t.amount),
+      0,
+    );
     suggestions.push(
       `☕ You spent ₹${coffeeTotal.toLocaleString("en-IN")} on tea/coffee and cigarettes. In a year this is ₹${(coffeeTotal * 12).toLocaleString("en-IN")} — enough for a term insurance premium.`,
     );
@@ -93,7 +104,8 @@ function SuggestionBox({
             lineHeight: 1.6,
             marginBottom: i < suggestions.length - 1 ? 12 : 0,
             paddingBottom: i < suggestions.length - 1 ? 12 : 0,
-            borderBottom: i < suggestions.length - 1 ? "1px solid #D4D2F5" : "none",
+            borderBottom:
+              i < suggestions.length - 1 ? "1px solid #D4D2F5" : "none",
           }}
         >
           {s}
@@ -107,7 +119,8 @@ function TrackerContent() {
   const user = useAuthStore((s) => s.user);
   const [hasConsent, setHasConsent] = useState<boolean | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<TrackerTransaction | null>(null);
+  const [editingExpense, setEditingExpense] =
+    useState<TrackerTransaction | null>(null);
   const [transactions, setTransactions] = useState<TrackerTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBucket, setExpandedBucket] = useState<string | null>("");
@@ -116,8 +129,20 @@ function TrackerContent() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
-  const currentMonth = new Date(selectedYear, selectedMonth, 1).toLocaleString("default", { month: "long" });
+  /** Hidden by default each session. Eye flips only the summary card 180°; bucket amounts reveal without flip. */
+  const [amountsVisible, setAmountsVisible] = useState(false);
+  const currentMonth = new Date(selectedYear, selectedMonth, 1).toLocaleString(
+    "en-IN",
+    { month: "long" },
+  );
   const currentYear = selectedYear;
+
+  const maskAmount = (n: number) =>
+    amountsVisible ? `₹${Math.abs(n).toLocaleString("en-IN")}` : "₹••••••";
+
+  const toggleAmountsVisible = () => {
+    setAmountsVisible((v) => !v);
+  };
   const fetchReqId = useRef(0);
 
   useEffect(() => {
@@ -135,7 +160,11 @@ function TrackerContent() {
       if (!user?.id) return;
       try {
         const supabase = getSupabase();
-        const { data } = await supabase.from("tracker_consent").select("consent_given").eq("user_id", user.id).maybeSingle();
+        const { data } = await supabase
+          .from("tracker_consent")
+          .select("consent_given")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
         if (data?.consent_given) {
           try {
@@ -155,35 +184,39 @@ function TrackerContent() {
     void checkDB();
   }, [user?.id]);
 
-  const fetchTransactions = useCallback(async () => {
-    if (!hasConsent) return;
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-    const myId = ++fetchReqId.current;
-    setLoading(true);
-    try {
-      const supabase = getSupabase();
-      const { data, error } = await supabase
-        .from("expense_transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("month", currentMonth)
-        .eq("year", currentYear)
-        .order("date", { ascending: false });
+  const fetchTransactions = useCallback(
+    async (opts?: { soft?: boolean }) => {
+      if (!hasConsent) return;
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+      const myId = ++fetchReqId.current;
+      const soft = opts?.soft === true;
+      if (!soft) setLoading(true);
+      try {
+        const supabase = getSupabase();
+        const { data, error } = await supabase
+          .from("expense_transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("month", currentMonth)
+          .eq("year", currentYear)
+          .order("date", { ascending: false });
 
-      if (fetchReqId.current !== myId) return;
-      if (error) console.warn("tracker fetch:", error.message);
-      setTransactions((data as TrackerTransaction[]) || []);
-    } catch (e) {
-      if (fetchReqId.current !== myId) return;
-      console.warn("tracker fetch failed", e);
-      setTransactions([]);
-    } finally {
-      if (fetchReqId.current === myId) setLoading(false);
-    }
-  }, [user?.id, hasConsent, currentMonth, currentYear]);
+        if (fetchReqId.current !== myId) return;
+        if (error) console.warn("tracker fetch:", error.message);
+        setTransactions((data as TrackerTransaction[]) || []);
+      } catch (e) {
+        if (fetchReqId.current !== myId) return;
+        console.warn("tracker fetch failed", e);
+        setTransactions([]);
+      } finally {
+        if (fetchReqId.current === myId) setLoading(false);
+      }
+    },
+    [user?.id, hasConsent, currentMonth, currentYear],
+  );
 
   useEffect(() => {
     if (hasConsent) void fetchTransactions();
@@ -192,11 +225,14 @@ function TrackerContent() {
   useEffect(() => {
     if (!hasConsent) return;
     const onVisible = () => {
-      if (document.visibilityState === "visible") void fetchTransactions();
+      if (document.visibilityState !== "visible") return;
+      // Soft refresh — full loading teardown breaks PWA "Add expense" taps after a few entries.
+      if (showAddModal) return;
+      void fetchTransactions({ soft: true });
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [hasConsent, fetchTransactions]);
+  }, [hasConsent, fetchTransactions, showAddModal]);
 
   useEffect(() => {
     if (!hasConsent || !user?.id) return;
@@ -217,8 +253,12 @@ function TrackerContent() {
       if (!window.confirm("Remove this entry?")) return;
       try {
         const supabase = getSupabase();
-        await supabase.from("expense_transactions").delete().eq("id", id).eq("user_id", user.id);
-        void fetchTransactions();
+        await supabase
+          .from("expense_transactions")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+        void fetchTransactions({ soft: true });
       } catch (e) {
         console.warn("tracker delete failed", e);
       }
@@ -254,9 +294,11 @@ function TrackerContent() {
     .filter((t) => t.bucket !== "income")
     .reduce((a, t) => a + Number(t.amount), 0);
   const remaining = displayIncome - totalSpent;
-  const spentPercent = displayIncome > 0 ? Math.min((totalSpent / displayIncome) * 100, 100) : 0;
+  const spentPercent =
+    displayIncome > 0 ? Math.min((totalSpent / displayIncome) * 100, 100) : 0;
   const now = new Date();
-  const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+  const isCurrentMonth =
+    selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
   const goToPrevMonth = () => {
     if (selectedMonth === 0) {
       setSelectedMonth(11);
@@ -267,7 +309,11 @@ function TrackerContent() {
   };
   const goToNextMonth = () => {
     const nowDate = new Date();
-    if (selectedYear === nowDate.getFullYear() && selectedMonth === nowDate.getMonth()) return;
+    if (
+      selectedYear === nowDate.getFullYear() &&
+      selectedMonth === nowDate.getMonth()
+    )
+      return;
     if (selectedMonth === 11) {
       setSelectedMonth(0);
       setSelectedYear((y) => y + 1);
@@ -277,56 +323,293 @@ function TrackerContent() {
   };
   const buckets = ["needs", "wants", "habits", "loans", "investment"] as const;
 
-  return (
+  const summaryCardInner = (visible: boolean) => (
     <div
       style={{
-        maxWidth: 600,
-        margin: "0 auto",
-        padding: "24px 16px 80px",
+        background: "linear-gradient(135deg, #534AB7 0%, #3C3489 100%)",
+        borderRadius: 20,
+        padding: "20px 16px",
+        color: "white",
+        width: "100%",
+        height: "100%",
+        boxSizing: "border-box",
       }}
     >
       <div
         style={{
-          background: "linear-gradient(135deg, #534AB7 0%, #3C3489 100%)",
-          borderRadius: 20,
-          padding: "24px",
-          marginBottom: 20,
-          color: "white",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+          gap: 8,
         }}
       >
+        <button
+          type="button"
+          onClick={goToPrevMonth}
+          style={{
+            background: "rgba(255,255,255,0.2)",
+            border: "none",
+            borderRadius: 8,
+            width: 36,
+            height: 36,
+            color: "white",
+            cursor: "pointer",
+            fontSize: 16,
+            flexShrink: 0,
+          }}
+        >
+          ←
+        </button>
+        <h2
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            margin: 0,
+            textAlign: "center",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {currentMonth} {currentYear}
+        </h2>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={toggleAmountsVisible}
+            aria-label={visible ? "Hide amounts" : "Show amounts"}
+            title={visible ? "Hide amounts" : "Show amounts"}
+            style={{
+              background: "rgba(255,255,255,0.2)",
+              border: "none",
+              borderRadius: 8,
+              width: 36,
+              height: 36,
+              color: "white",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+            }}
+          >
+            {visible ? (
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M3 3l18 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M10.6 10.6a2 2 0 002.8 2.8M9.9 5.1A10.5 10.5 0 0121 12c-.6 1.1-1.4 2.1-2.3 3M6.1 6.1C4.5 7.4 3.3 9.1 2.5 11c2.2 4.5 6.5 7 9.5 7 1.4 0 2.8-.4 4.1-1.1"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M2.5 12C4.7 7.5 8.5 5 12 5s7.3 2.5 9.5 7c-2.2 4.5-6 7-9.5 7s-7.3-2.5-9.5-7z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={goToNextMonth}
+            disabled={isCurrentMonth}
+            style={{
+              background: "rgba(255,255,255,0.2)",
+              border: "none",
+              borderRadius: 8,
+              width: 36,
+              height: 36,
+              color: "white",
+              cursor: isCurrentMonth ? "not-allowed" : "pointer",
+              fontSize: 16,
+              opacity: isCurrentMonth ? 0.5 : 1,
+            }}
+          >
+            →
+          </button>
+        </div>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
+            INCOME
+          </div>
+          <div
+            style={{
+              fontSize: "clamp(13px, 3.6vw, 18px)",
+              fontWeight: 800,
+              letterSpacing: visible ? "normal" : "0.06em",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {visible ? `₹${displayIncome.toLocaleString("en-IN")}` : "₹••••••"}
+          </div>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
+            SPENT
+          </div>
+          <div
+            style={{
+              fontSize: "clamp(13px, 3.6vw, 18px)",
+              fontWeight: 800,
+              color: totalSpent > displayIncome ? "#FFB3B3" : "white",
+              letterSpacing: visible ? "normal" : "0.06em",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {visible ? `₹${totalSpent.toLocaleString("en-IN")}` : "₹••••••"}
+          </div>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
+            LEFT
+          </div>
+          <div
+            style={{
+              fontSize: "clamp(13px, 3.6vw, 18px)",
+              fontWeight: 800,
+              color: remaining < 0 ? "#FFB3B3" : "#B3FFD9",
+              letterSpacing: visible ? "normal" : "0.06em",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {visible
+              ? `₹${Math.abs(remaining).toLocaleString("en-IN")}${remaining < 0 ? " over" : ""}`
+              : "₹••••••"}
+          </div>
+        </div>
+      </div>
+      <div>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16,
+            fontSize: 11,
+            opacity: 0.7,
+            marginBottom: 6,
           }}
         >
-          <button type="button" onClick={goToPrevMonth} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, color: "white", cursor: "pointer", fontSize: 16 }}>←</button>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{currentMonth} {currentYear}</h2>
-          <button type="button" onClick={goToNextMonth} disabled={isCurrentMonth} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, color: "white", cursor: isCurrentMonth ? "not-allowed" : "pointer", fontSize: 16, opacity: isCurrentMonth ? 0.5 : 1 }}>→</button>
+          <span>Budget used</span>
+          <span>{visible ? `${spentPercent.toFixed(0)}%` : "••%"}</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>INCOME</div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>₹{displayIncome.toLocaleString("en-IN")}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>SPENT</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: totalSpent > displayIncome ? "#FFB3B3" : "white" }}>₹{totalSpent.toLocaleString("en-IN")}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>LEFT</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: remaining < 0 ? "#FFB3B3" : "#B3FFD9" }}>₹{Math.abs(remaining).toLocaleString("en-IN")}{remaining < 0 ? " over" : ""}</div>
-          </div>
+        <div
+          style={{
+            height: 8,
+            background: "rgba(255,255,255,0.2)",
+            borderRadius: 4,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: visible ? `${spentPercent}%` : "0%",
+              background:
+                spentPercent > 90
+                  ? "#FF6B6B"
+                  : spentPercent > 70
+                    ? "#FFD93D"
+                    : "#6BCB77",
+              borderRadius: 4,
+              transition: "width 0.5s ease",
+            }}
+          />
         </div>
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.7, marginBottom: 6 }}>
-            <span>Budget used</span>
-            <span>{spentPercent.toFixed(0)}%</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="mx-auto box-border w-full max-w-[920px] px-4 pb-20 pt-6 sm:px-6">
+      {/* Only this summary card flips 180°; other sections just mask amounts. */}
+      <div
+        className="mb-5 w-full"
+        style={{
+          perspective: "1000px",
+          WebkitPerspective: "1000px",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            width: "100%",
+            transformStyle: "preserve-3d",
+            WebkitTransformStyle: "preserve-3d",
+            transition: "transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)",
+            transform: amountsVisible ? "rotateY(180deg)" : "rotateY(0deg)",
+            WebkitTransform: amountsVisible
+              ? "rotateY(180deg)"
+              : "rotateY(0deg)",
+          }}
+        >
+          <div
+            style={{
+              gridArea: "1 / 1",
+              width: "100%",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+              pointerEvents: amountsVisible ? "none" : "auto",
+            }}
+          >
+            {summaryCardInner(false)}
           </div>
-          <div style={{ height: 8, background: "rgba(255,255,255,0.2)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${spentPercent}%`, background: spentPercent > 90 ? "#FF6B6B" : spentPercent > 70 ? "#FFD93D" : "#6BCB77", borderRadius: 4, transition: "width 0.5s ease" }} />
+          <div
+            style={{
+              gridArea: "1 / 1",
+              width: "100%",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+              transform: "rotateY(180deg) translateZ(1px)",
+              WebkitTransform: "rotateY(180deg) translateZ(1px)",
+              pointerEvents: amountsVisible ? "auto" : "none",
+            }}
+          >
+            {summaryCardInner(true)}
           </div>
         </div>
       </div>
@@ -353,51 +636,79 @@ function TrackerContent() {
               textAlign: "left",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 10,
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    background: `${incomeCat.color}15`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 20,
-                  }}
-                >
-                  {incomeCat.emoji}
-                </div>
+                <TrackerIconBadge
+                  name={incomeCat.icon}
+                  color={incomeCat.color}
+                />
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#111110" }}>{incomeCat.label}</div>
-                  <div style={{ fontSize: 12, color: "#111110", opacity: 0.85 }}>
-                    {incomeTxns.length} {incomeTxns.length === 1 ? "entry" : "entries"}
+                  <div
+                    style={{ fontSize: 15, fontWeight: 700, color: "#111110" }}
+                  >
+                    {incomeCat.label}
+                  </div>
+                  <div
+                    style={{ fontSize: 12, color: "#111110", opacity: 0.85 }}
+                  >
+                    {incomeTxns.length}{" "}
+                    {incomeTxns.length === 1 ? "entry" : "entries"}
                     {monthlyIncome === 0 && profileMonthlyFromDb > 0
-                      ? ` · ₹${profileMonthlyFromDb.toLocaleString("en-IN")} from profile`
+                      ? ` · ${maskAmount(profileMonthlyFromDb)} from profile`
                       : ""}
                   </div>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: "#111110" }}>
-                  ₹{monthlyIncome.toLocaleString("en-IN")}
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: "#111110",
+                    letterSpacing: amountsVisible ? "normal" : "0.06em",
+                  }}
+                >
+                  {maskAmount(monthlyIncome)}
                 </div>
-                <span style={{ fontSize: 14, color: "#111110", transform: !expandedIncome ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+                <span
+                  style={{
+                    fontSize: 14,
+                    color: "#111110",
+                    transform: !expandedIncome ? "rotate(180deg)" : "none",
+                    transition: "transform 0.2s",
+                  }}
+                >
+                  ▼
+                </span>
               </div>
             </div>
           </button>
           {expandedIncome ? (
             <div style={{ borderTop: "1px solid #F0EFF8" }}>
               {incomeTxns.length > 0 ? (
-                <div style={{ padding: "8px 16px 12px", display: "grid", gap: 8 }}>
+                <div
+                  style={{ padding: "8px 16px 12px", display: "grid", gap: 8 }}
+                >
                   {incomeTxns.map((txn) => {
-                    const sub = incomeCat.subcategories.find((s) => s.id === (txn.subcategory ?? txn.category));
-                    const dateLabel = new Date(txn.date).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    });
+                    const sub = findSubcategory(
+                      "income",
+                      txn.subcategory ?? txn.category,
+                    );
+                    const dateLabel = new Date(txn.date).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      },
+                    );
                     return (
                       <div
                         key={txn.id}
@@ -412,14 +723,40 @@ function TrackerContent() {
                         }}
                       >
                         <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "#111110" }}>
-                            ₹{Number(txn.amount).toLocaleString("en-IN")}
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: "#111110",
+                              letterSpacing: amountsVisible
+                                ? "normal"
+                                : "0.06em",
+                            }}
+                          >
+                            {maskAmount(Number(txn.amount))}
                           </div>
-                          <div style={{ fontSize: 12, color: "#111110", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {sub?.label ?? txn.category} · {txn.description?.trim() || dateLabel}
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "#111110",
+                              fontWeight: 500,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {sub?.label ?? txn.category} ·{" "}
+                            {txn.description?.trim() || dateLabel}
                           </div>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            flexShrink: 0,
+                          }}
+                        >
                           <button
                             type="button"
                             aria-label="Edit income"
@@ -468,9 +805,16 @@ function TrackerContent() {
                   })}
                 </div>
               ) : (
-                <div style={{ padding: "16px", textAlign: "center", color: "#111110", fontSize: 13 }}>
+                <div
+                  style={{
+                    padding: "16px",
+                    textAlign: "center",
+                    color: "#111110",
+                    fontSize: 13,
+                  }}
+                >
                   {profileMonthlyFromDb > 0
-                    ? `No income logged yet. Your dashboard shows ₹${profileMonthlyFromDb.toLocaleString("en-IN")} from your profile — tap Add income to record it here.`
+                    ? `No income logged yet. Your dashboard shows ${maskAmount(profileMonthlyFromDb)} from your profile — tap Add income to record it here.`
                     : "No income logged this month. Tap Add income to get started."}
                 </div>
               )}
@@ -504,17 +848,35 @@ function TrackerContent() {
       ) : null}
 
       {loading ? (
-        <div style={{ padding: "32px", textAlign: "center", color: "#111110", fontSize: 14 }}>Loading...</div>
+        <div
+          style={{
+            padding: "32px",
+            textAlign: "center",
+            color: "#111110",
+            fontSize: 14,
+          }}
+        >
+          Loading...
+        </div>
       ) : (
         <>
           {buckets.map((bucketKey) => {
             const cat = TRACKER_CATEGORIES[bucketKey];
-            const bucketTxns = transactions.filter((t) => t.bucket === bucketKey);
-            const bucketTotal = bucketTxns.reduce((a, t) => a + Number(t.amount), 0);
+            const bucketTxns = transactions.filter(
+              (t) => t.bucket === bucketKey,
+            );
+            const bucketTotal = bucketTxns.reduce(
+              (a, t) => a + Number(t.amount),
+              0,
+            );
             const isExpanded = expandedBucket === bucketKey;
-            const budgetAmount = displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
+            const budgetAmount =
+              displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
             const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
-            const progressPercent = budgetAmount > 0 ? Math.min((bucketTotal / budgetAmount) * 100, 100) : 0;
+            const progressPercent =
+              budgetAmount > 0
+                ? Math.min((bucketTotal / budgetAmount) * 100, 100)
+                : 0;
             const bySubcategory = bucketTxns.reduce(
               (acc, t) => {
                 const key = t.subcategory || "other";
@@ -526,24 +888,87 @@ function TrackerContent() {
             );
 
             return (
-              <div key={bucketKey} style={{ background: "white", border: `1.5px solid ${isExpanded ? cat.color : overBudget ? "#FCEBEB" : "#E8E6F0"}`, borderRadius: 16, marginBottom: 10, overflow: "hidden", transition: "border-color 0.2s" }}>
-                <div onClick={() => setExpandedBucket(isExpanded ? null : bucketKey)} style={{ padding: "16px", cursor: "pointer", userSelect: "none" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${cat.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{cat.emoji}</div>
+              <div
+                key={bucketKey}
+                style={{
+                  background: "white",
+                  border: `1.5px solid ${isExpanded ? cat.color : overBudget ? "#FCEBEB" : "#E8E6F0"}`,
+                  borderRadius: 16,
+                  marginBottom: 10,
+                  overflow: "hidden",
+                  transition: "border-color 0.2s",
+                }}
+              >
+                <div
+                  onClick={() =>
+                    setExpandedBucket(isExpanded ? null : bucketKey)
+                  }
+                  style={{
+                    padding: "16px",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 10,
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <TrackerIconBadge name={cat.icon} color={cat.color} />
                       <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "#111110" }}>{cat.label}</div>
-                        <div style={{ fontSize: 12, color: "#111110", opacity: 0.88 }}>
-                          {bucketTxns.length} items{cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
+                        <div
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: "#111110",
+                          }}
+                        >
+                          {cat.label}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "#111110",
+                            opacity: 0.88,
+                          }}
+                        >
+                          {bucketTxns.length} items
+                          {cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 12 }}
+                    >
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: overBudget ? "#E24B4A" : "#111110" }}>₹{bucketTotal.toLocaleString("en-IN")}</div>
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 800,
+                            color: overBudget ? "#E24B4A" : "#111110",
+                            letterSpacing: amountsVisible ? "normal" : "0.06em",
+                          }}
+                        >
+                          {maskAmount(bucketTotal)}
+                        </div>
                         {budgetAmount > 0 ? (
-                          <div style={{ fontSize: 11, color: "#111110", opacity: 0.88 }}>
-                            of ₹{budgetAmount.toLocaleString("en-IN")}
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: "#111110",
+                              opacity: 0.88,
+                              letterSpacing: amountsVisible
+                                ? "normal"
+                                : "0.06em",
+                            }}
+                          >
+                            of {maskAmount(budgetAmount)}
                           </div>
                         ) : null}
                       </div>
@@ -562,10 +987,45 @@ function TrackerContent() {
                   </div>
                   {budgetAmount > 0 ? (
                     <div>
-                      <div style={{ height: 6, background: "#F7F7F4", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${progressPercent}%`, background: progressPercent >= 100 ? "#E24B4A" : progressPercent >= 80 ? "#BA7517" : cat.color, borderRadius: 3, transition: "width 0.5s ease" }} />
+                      <div
+                        style={{
+                          height: 6,
+                          background: "#F7F7F4",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: amountsVisible
+                              ? `${progressPercent}%`
+                              : "0%",
+                            background:
+                              progressPercent >= 100
+                                ? "#E24B4A"
+                                : progressPercent >= 80
+                                  ? "#BA7517"
+                                  : cat.color,
+                            borderRadius: 3,
+                            transition: "width 0.5s ease",
+                          }}
+                        />
                       </div>
-                      {overBudget ? <div style={{ fontSize: 11, color: "#E24B4A", marginTop: 4, fontWeight: 600 }}>⚠️ Over budget by ₹{(bucketTotal - budgetAmount).toLocaleString("en-IN")}</div> : null}
+                      {overBudget ? (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#E24B4A",
+                            marginTop: 4,
+                            fontWeight: 600,
+                            letterSpacing: amountsVisible ? "normal" : "0.06em",
+                          }}
+                        >
+                          ⚠️ Over budget by{" "}
+                          {maskAmount(bucketTotal - budgetAmount)}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -597,23 +1057,80 @@ function TrackerContent() {
                     </div>
                     {Object.keys(bySubcategory).length > 0 ? (
                       Object.entries(bySubcategory).map(([subId, txns]) => {
-                        const subTotal = txns.reduce((a, t) => a + Number(t.amount), 0);
-                        const sub = cat.subcategories.find((s) => s.id === subId);
+                        const subTotal = txns.reduce(
+                          (a, t) => a + Number(t.amount),
+                          0,
+                        );
+                        const sub = findSubcategory(bucketKey, subId);
                         return (
-                          <div key={subId} style={{ borderBottom: "1px solid #F7F7F4" }}>
-                            <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <span style={{ fontSize: 16 }}>{sub?.emoji || "💸"}</span>
+                          <div
+                            key={subId}
+                            style={{ borderBottom: "1px solid #F7F7F4" }}
+                          >
+                            <div
+                              style={{
+                                padding: "10px 16px",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 10,
+                                }}
+                              >
+                                <TrackerIcon
+                                  name={sub?.icon ?? "other"}
+                                  size={18}
+                                  color={cat.color}
+                                />
                                 <div>
-                                  <div style={{ fontSize: 14, color: "#111110", fontWeight: 500 }}>{sub?.label || subId}</div>
-                                  <div style={{ fontSize: 12, color: "#111110", opacity: 0.88 }}>
-                                    {txns.length} {txns.length === 1 ? "transaction" : "transactions"}
+                                  <div
+                                    style={{
+                                      fontSize: 14,
+                                      color: "#111110",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {sub?.label || subId}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 12,
+                                      color: "#111110",
+                                      opacity: 0.88,
+                                    }}
+                                  >
+                                    {txns.length}{" "}
+                                    {txns.length === 1
+                                      ? "transaction"
+                                      : "transactions"}
                                   </div>
                                 </div>
                               </div>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: "#111110" }}>₹{subTotal.toLocaleString("en-IN")}</div>
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  fontWeight: 700,
+                                  color: "#111110",
+                                  letterSpacing: amountsVisible
+                                    ? "normal"
+                                    : "0.06em",
+                                }}
+                              >
+                                {maskAmount(subTotal)}
+                              </div>
                             </div>
-                            <div style={{ padding: "0 16px 10px 42px", display: "grid", gap: 8 }}>
+                            <div
+                              style={{
+                                padding: "0 16px 10px 42px",
+                                display: "grid",
+                                gap: 8,
+                              }}
+                            >
                               {txns.map((txn) => (
                                 <div
                                   key={txn.id}
@@ -628,8 +1145,14 @@ function TrackerContent() {
                                   }}
                                 >
                                   <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div style={{ fontSize: 12, color: "#111110", fontWeight: 700 }}>
-                                      ₹{Number(txn.amount).toLocaleString("en-IN")}
+                                    <div
+                                      style={{
+                                        fontSize: 12,
+                                        color: "#111110",
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {maskAmount(Number(txn.amount))}
                                     </div>
                                     <div
                                       style={{
@@ -642,10 +1165,21 @@ function TrackerContent() {
                                         maxWidth: 220,
                                       }}
                                     >
-                                      {txn.description || new Date(txn.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                      {txn.description ||
+                                        new Date(txn.date).toLocaleDateString(
+                                          "en-IN",
+                                          { day: "numeric", month: "short" },
+                                        )}
                                     </div>
                                   </div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 2,
+                                      flexShrink: 0,
+                                    }}
+                                  >
                                     <button
                                       type="button"
                                       aria-label="Edit expense"
@@ -695,7 +1229,14 @@ function TrackerContent() {
                         );
                       })
                     ) : (
-                      <div style={{ padding: "20px 16px", textAlign: "center", color: "#111110", fontSize: 13 }}>
+                      <div
+                        style={{
+                          padding: "20px 16px",
+                          textAlign: "center",
+                          color: "#111110",
+                          fontSize: 13,
+                        }}
+                      >
                         No {cat.label.toLowerCase()} expenses this month
                       </div>
                     )}
@@ -704,7 +1245,13 @@ function TrackerContent() {
               </div>
             );
           })}
-          <SuggestionBox transactions={transactions} bucketTotals={bucketTotals} totalSpent={totalSpent} />
+          {amountsVisible ? (
+            <SuggestionBox
+              transactions={transactions}
+              bucketTotals={bucketTotals}
+              totalSpent={totalSpent}
+            />
+          ) : null}
           <div style={{ marginTop: 16 }}>
             <FeedbackWidget pageContext="tracker" />
           </div>
@@ -713,7 +1260,9 @@ function TrackerContent() {
 
       {showAddModal ? (
         <AddExpenseModal
-          defaultBucket={editingExpense ? editingExpense.bucket : defaultBucket || undefined}
+          defaultBucket={
+            editingExpense ? editingExpense.bucket : defaultBucket || undefined
+          }
           editExpense={
             editingExpense
               ? {
@@ -739,7 +1288,7 @@ function TrackerContent() {
             setShowAddModal(false);
             setDefaultBucket("");
             setEditingExpense(null);
-            void fetchTransactions();
+            void fetchTransactions({ soft: true });
           }}
         />
       ) : null}

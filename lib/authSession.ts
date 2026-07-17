@@ -34,6 +34,12 @@ export async function resolveAuthenticated(): Promise<boolean> {
  * Clears stale persisted login when there is no server session.
  */
 export async function recoverAuthSession(): Promise<boolean> {
+  if (useAuthStore.getState().isLoggedIn && useAuthStore.getState().user) {
+    // Soft verify — keep UI logged in if session briefly lags.
+    await useAuthStore.getState().refreshUser({ clearOnMissingSession: false });
+    if (useAuthStore.getState().isLoggedIn) return true;
+  }
+
   const hasSession = await hasSupabaseSession();
   if (!hasSession) {
     useAuthStore.setState({
@@ -47,6 +53,6 @@ export async function recoverAuthSession(): Promise<boolean> {
     return false;
   }
 
-  await useAuthStore.getState().refreshUser();
+  await useAuthStore.getState().refreshUser({ clearOnMissingSession: true });
   return useAuthStore.getState().isLoggedIn;
 }
