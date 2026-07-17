@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { BLOG_ARTICLES } from "@/lib/blogContent";
 
-const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://finkoin.com").replace(/\/+$/, "");
+const baseUrl = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.finkoin.com"
+).replace(/\/+$/, "");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

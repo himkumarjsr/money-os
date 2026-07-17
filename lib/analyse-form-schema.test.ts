@@ -69,7 +69,11 @@ describe("mergeAnalyseDraftWithProfile", () => {
         { type: "Overdraft (OD)", monthlyAmount: 12_850, lenderName: "SBI" },
       ],
       otherInsurancePremiums: [
-        { policyName: "LIC Jeevan", premiumAmount: 2_985, frequency: "monthly" },
+        {
+          policyName: "LIC Jeevan",
+          premiumAmount: 2_985,
+          frequency: "monthly",
+        },
         { policyName: "ULIP A", premiumAmount: 67_890, frequency: "yearly" },
       ],
     };
@@ -84,7 +88,9 @@ describe("mergeAnalyseDraftWithProfile", () => {
 
   it("fills lenderName from profile when draft row omits it (legacy lender key)", () => {
     const profile: Partial<AnalyseFormValues> = {
-      additionalObligations: [{ type: "PF Loan", lenderName: "HDFC PF", monthlyAmount: 5_000 }],
+      additionalObligations: [
+        { type: "PF Loan", lenderName: "HDFC PF", monthlyAmount: 5_000 },
+      ],
     };
 
     const draft: Partial<AnalyseFormValues> = {
@@ -93,6 +99,102 @@ describe("mergeAnalyseDraftWithProfile", () => {
 
     const merged = mergeAnalyseDraftWithProfile(profile, draft);
     expect(merged.additionalObligations?.[0]?.lenderName).toBe("HDFC PF");
+  });
+});
+
+describe("loan normalization", () => {
+  const baseLoanForm: Partial<AnalyseFormValues> = {
+    lifeStage: "bachelor",
+    selfAge: 30,
+    cityTier: "metro",
+    monthlySalary: 2_00_000,
+    vegetables: 0,
+    grocery: 0,
+    medicine: 0,
+    fuel: 0,
+    cabMetro: 0,
+    electricity: 0,
+    internet: 0,
+    gas: 0,
+    entertainment: 0,
+    shopping: 0,
+    hasHealthInsurance: false,
+    hasTermInsurance: false,
+    savingsAccountBalance: 0,
+    emergencyFundCurrent: 0,
+    ownsHome: false,
+    ownsCar: false,
+    monthlySIP: 0,
+    monthlyEPFContribution: 0,
+    primaryGoal: "grow_wealth",
+  };
+
+  it("does not double-count loans and preserves lender names from unifiedLoans", () => {
+    const normalized = normalizeAnalyseFormValues({
+      ...baseLoanForm,
+      unifiedLoans: [
+        {
+          loanType: "home_loan",
+          lenderName: "HDFC",
+          monthlyEMI: 28_000,
+          outstandingAmount: 0,
+        },
+        {
+          loanType: "personal_loan",
+          lenderName: "HDFC",
+          monthlyEMI: 66_172,
+          outstandingAmount: 0,
+        },
+        {
+          loanType: "personal_loan",
+          lenderName: "ICICI",
+          monthlyEMI: 42_055,
+          outstandingAmount: 0,
+        },
+        {
+          loanType: "overdraft",
+          lenderName: "BAJAJ FINANCE",
+          monthlyEMI: 12_850,
+          outstandingAmount: 0,
+        },
+      ],
+      // Stale legacy copies (no lender) that used to double-count in the report.
+      additionalObligations: [
+        { type: "Personal Loan", monthlyAmount: 42_055 },
+        { type: "Overdraft (OD)", monthlyAmount: 12_850 },
+      ],
+    });
+
+    // First-of-type home/personal map to scalar fields with their lender.
+    expect(normalized.homeLoanEMI).toBe(28_000);
+    expect(normalized.homeLoanLenderName).toBe("HDFC");
+    expect(normalized.personalLoanEMI).toBe(66_172);
+    expect(normalized.personalLoanLenderName).toBe("HDFC");
+
+    // Remaining loans become obligations exactly once, keeping their lender.
+    const obligations = normalized.additionalObligations ?? [];
+    expect(obligations).toHaveLength(2);
+    const icici = obligations.find((o) => o.lenderName === "ICICI");
+    const bajaj = obligations.find((o) => o.lenderName === "BAJAJ FINANCE");
+    expect(icici?.monthlyAmount).toBe(42_055);
+    expect(bajaj?.monthlyAmount).toBe(12_850);
+
+    // No stale no-lender duplicates survive.
+    expect(
+      obligations.filter((o) => !o.lenderName || o.lenderName.trim() === ""),
+    ).toHaveLength(0);
+  });
+
+  it("falls back to legacy additionalObligations when no unifiedLoans exist", () => {
+    const normalized = normalizeAnalyseFormValues({
+      ...baseLoanForm,
+      additionalObligations: [
+        { type: "PF Loan", lenderName: "EPFO", monthlyAmount: 5_000 },
+      ],
+    });
+
+    expect(normalized.additionalObligations).toHaveLength(1);
+    expect(normalized.additionalObligations?.[0]?.lenderName).toBe("EPFO");
   });
 });
 

@@ -3,6 +3,7 @@
 import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
@@ -586,9 +587,13 @@ export default function AnalyseResultPage() {
                 <div className="mb-1 text-xs font-semibold text-[#5F5E5A]">
                   Total income
                 </div>
-                <div className="break-words font-extrabold leading-tight text-[#111110] tabular-nums text-[length:clamp(14px,calc(8px + 4.2vw),22px)] sm:text-[22px]">
+                <PrivateAmount
+                  value={totalIncome}
+                  label="total income"
+                  valueClassName="break-words font-extrabold leading-tight text-[#111110] tabular-nums text-[length:clamp(14px,calc(8px + 4.2vw),22px)] sm:text-[22px]"
+                >
                   ₹{Math.round(totalIncome).toLocaleString("en-IN")}
-                </div>
+                </PrivateAmount>
                 <div className="mt-1 text-xs font-medium text-[#5F5E5A]">
                   per month
                 </div>
@@ -1052,9 +1057,9 @@ export default function AnalyseResultPage() {
                 <div className="mt-3 rounded-lg border border-[#E8E6F0] bg-[#FAFAFE] p-3 text-xs text-[#5F5E5A]">
                   <div className="flex items-center justify-between">
                     <span>Monthly Income</span>
-                    <span>
+                    <PrivateAmount value={totalIncome} label="monthly income">
                       ₹{Math.round(totalIncome).toLocaleString("en-IN")}
-                    </span>
+                    </PrivateAmount>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Less: Living expenses (Needs)</span>

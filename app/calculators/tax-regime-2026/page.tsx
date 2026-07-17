@@ -29,13 +29,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Tax Regime Calculator 2026 — Old vs New | Finkoin",
-    description: "Free. Compare old and new tax regime. All deductions included.",
+    description:
+      "Free. Compare old and new tax regime. All deductions included.",
     url: pageUrl,
     siteName: "Finkoin",
     type: "website",
     images: [
       {
-        url: "https://finkoin.com/og/og-tax-calculator.png",
+        url: `${SITE_URL}/og/og-tax-calculator.png`,
         width: 1200,
         height: 630,
         alt: "Finkoin Tax Regime Calculator 2026",
@@ -45,7 +46,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Tax Regime Calculator 2026 — Old vs New | Finkoin",
-    description: "Free. Compare old and new tax regime. All deductions included.",
+    description:
+      "Free. Compare old and new tax regime. All deductions included.",
     images: [`${SITE_URL}/og/og-tax-calculator.png`],
   },
 };
@@ -54,7 +56,8 @@ const webAppJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "Finkoin Tax Regime Calculator 2026",
-  description: "Free calculator to compare old and new tax regime for FY 2025-26",
+  description:
+    "Free calculator to compare old and new tax regime for FY 2025-26",
   url: pageUrl,
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",
@@ -113,8 +116,14 @@ const faqJsonLd = {
 export default function TaxRegime2026Page() {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <Suspense
         fallback={
           <div className="flex min-h-dvh items-center justify-center bg-white text-sm text-slate-600">
@@ -122,10 +131,15 @@ export default function TaxRegime2026Page() {
           </div>
         }
       >
-        <CalculatorsClient initialCalcId="tax-regime" urlBaseForTaxCanonical="/calculators/tax-regime-2026" />
+        <CalculatorsClient
+          initialCalcId="tax-regime"
+          urlBaseForTaxCanonical="/calculators/tax-regime-2026"
+        />
       </Suspense>
       <section className="mx-auto max-w-6xl border-t border-slate-200 px-4 py-8 sm:px-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Explore more</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Explore more
+        </h2>
         <ul className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-[#534AB7]">
           <li>
             <Link href="/analyse" className="hover:underline">
@@ -138,7 +152,10 @@ export default function TaxRegime2026Page() {
             </Link>
           </li>
           <li>
-            <Link href="/blog/80c-deductions-guide-2026" className="hover:underline">
+            <Link
+              href="/blog/80c-deductions-guide-2026"
+              className="hover:underline"
+            >
               80C deductions guide 2026
             </Link>
           </li>

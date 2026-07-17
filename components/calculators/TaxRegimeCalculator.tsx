@@ -3,6 +3,7 @@
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import MoneyInput from "@/components/ui/MoneyInput";
 import NumberInput from "@/components/ui/NumberInput";
+import PrivateAmount from "@/components/ui/PrivateAmount";
 import { Analytics } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { parseMoneyInput } from "@/lib/analyse-form-schema";
@@ -306,6 +307,17 @@ const EMPLOYMENT_OPTIONS: { id: EmploymentKind; label: string }[] = [
   { id: "pensioner", label: "Pensioner" },
 ];
 
+// The engine only needs a single primary classification (it drives ITR hints /
+// missed-deduction alerts, not the tax math). When a user picks several sources
+// we surface the one that unlocks the most guidance, in this priority order.
+const EMPLOYMENT_PRIORITY: EmploymentKind[] = [
+  "salaried",
+  "freelancer",
+  "business_owner",
+  "pensioner",
+  "retired",
+];
+
 function sectionBlurb(text: string) {
   return (
     <p className="mt-2 line-clamp-3 text-[11px] leading-snug text-[#7A7871] sm:line-clamp-none sm:text-xs sm:leading-relaxed">
@@ -336,7 +348,19 @@ export function TaxRegimeCalculator() {
   const [inputEpoch, setInputEpoch] = useState(0);
   const [savedAtDisplay, setSavedAtDisplay] = useState<string | null>(null);
 
-  const [employment, setEmployment] = useState<EmploymentKind>("salaried");
+  const [employments, setEmployments] = useState<EmploymentKind[]>([
+    "salaried",
+  ]);
+  const primaryEmployment: EmploymentKind =
+    EMPLOYMENT_PRIORITY.find((k) => employments.includes(k)) ?? "salaried";
+  const toggleEmployment = (id: EmploymentKind) =>
+    setEmployments((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((x) => x !== id);
+        return next.length > 0 ? next : prev; // keep at least one selected
+      }
+      return [...prev, id];
+    });
   const [widowed, setWidowed] = useState(false);
   const [disabledSelf, setDisabledSelf] = useState(false);
   const [nri, setNri] = useState(false);
@@ -519,7 +543,15 @@ export function TaxRegimeCalculator() {
       const g = <T,>(key: string, fallback: T): T =>
         d[key] !== undefined && d[key] !== null ? (d[key] as T) : fallback;
 
-      setEmployment(g("employment", "salaried"));
+      const storedEmployments = g<EmploymentKind[] | null>("employments", null);
+      const legacyEmployment = g<EmploymentKind | null>("employment", null);
+      setEmployments(
+        Array.isArray(storedEmployments) && storedEmployments.length > 0
+          ? storedEmployments
+          : legacyEmployment
+            ? [legacyEmployment]
+            : ["salaried"],
+      );
       setWidowed(g("widowed", false));
       setDisabledSelf(g("disabledSelf", false));
       setNri(g("nri", false));
@@ -646,7 +678,8 @@ export function TaxRegimeCalculator() {
     try {
       const dataToSave = {
         schemaVersion: TAX_CALC_SCHEMA_VERSION,
-        employment,
+        employments,
+        employment: primaryEmployment,
         widowed,
         disabledSelf,
         nri,
@@ -769,7 +802,8 @@ export function TaxRegimeCalculator() {
     }
   }, [
     storageReady,
-    employment,
+    employments,
+    primaryEmployment,
     widowed,
     disabledSelf,
     nri,
@@ -1104,7 +1138,7 @@ export function TaxRegimeCalculator() {
   const comparisonInputs = useMemo<ComparisonInputs>(() => {
     const inputs: ComparisonInputs = {
       age,
-      employment,
+      employment: primaryEmployment,
       flags: { widowed, disabledSelf, nri },
       basicMonthly,
       hraMonthly: secHRA ? hraMonthly : 0,
@@ -1159,7 +1193,7 @@ export function TaxRegimeCalculator() {
     return inputs;
   }, [
     age,
-    employment,
+    primaryEmployment,
     widowed,
     disabledSelf,
     nri,
@@ -1321,8 +1355,8 @@ export function TaxRegimeCalculator() {
       secBusiness ||
       derived.businessProfit > 0 ||
       freelanceIncome > 0 ||
-      employment === "business_owner" ||
-      employment === "freelancer";
+      employments.includes("business_owner") ||
+      employments.includes("freelancer");
     const hasForeignComplexity = nri || divForeign > 0;
     const hasLottery = lotteryIncome > 0;
     const hasAgriComplexity = agriculturalIncome > 5_000;
@@ -1404,7 +1438,7 @@ export function TaxRegimeCalculator() {
     secBusiness,
     derived.businessProfit,
     freelanceIncome,
-    employment,
+    employments,
     nri,
     divForeign,
     lotteryIncome,
@@ -1859,21 +1893,26 @@ export function TaxRegimeCalculator() {
               )}
               <div className="mt-4 space-y-4">
                 <div>
-                  <p className="mb-2 text-sm font-medium text-[#5F5E5A]">
+                  <p className="mb-1 text-sm font-medium text-[#5F5E5A]">
                     Work / income style
+                  </p>
+                  <p className="mb-2 text-xs text-[#9B9A94]">
+                    Pick all that apply — you can have more than one source of
+                    income.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {EMPLOYMENT_OPTIONS.map((opt) => (
                       <button
                         key={opt.id}
                         type="button"
+                        aria-pressed={employments.includes(opt.id)}
                         className={cn(
                           pill,
-                          employment === opt.id
+                          employments.includes(opt.id)
                             ? "bg-[#534AB7] text-white"
                             : "bg-slate-100 text-slate-700",
                         )}
-                        onClick={() => setEmployment(opt.id)}
+                        onClick={() => toggleEmployment(opt.id)}
                       >
                         {opt.label}
                       </button>
@@ -3593,17 +3632,25 @@ export function TaxRegimeCalculator() {
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                     Old — monthly take-home
                   </p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums">
+                  <PrivateAmount
+                    value={oldMonthly}
+                    label="old regime take-home"
+                    valueClassName="mt-1 text-lg font-semibold tabular-nums"
+                  >
                     {rupees(oldMonthly)}
-                  </p>
+                  </PrivateAmount>
                 </div>
                 <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                     New — monthly take-home
                   </p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums">
+                  <PrivateAmount
+                    value={newMonthly}
+                    label="new regime take-home"
+                    valueClassName="mt-1 text-lg font-semibold tabular-nums"
+                  >
                     {rupees(newMonthly)}
-                  </p>
+                  </PrivateAmount>
                 </div>
                 <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -3904,18 +3951,23 @@ export function TaxRegimeCalculator() {
                   <p className="text-sm font-medium text-[#111110]">
                     What best describes you?
                   </p>
+                  <p className="-mt-2 text-xs text-[#9B9A94]">
+                    Select one or more — many people have multiple sources of
+                    income.
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {EMPLOYMENT_OPTIONS.map((opt) => (
                       <button
                         key={`ca-${opt.id}`}
                         type="button"
+                        aria-pressed={employments.includes(opt.id)}
                         className={cn(
                           pill,
-                          employment === opt.id
+                          employments.includes(opt.id)
                             ? "bg-[#534AB7] text-white"
                             : "bg-slate-100 text-slate-700",
                         )}
-                        onClick={() => setEmployment(opt.id)}
+                        onClick={() => toggleEmployment(opt.id)}
                       >
                         {opt.label}
                       </button>

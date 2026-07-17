@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://finkoin.com/og/og-home.png",
+        url: `${siteUrl}/og/og-home.png`,
         width: 1200,
         height: 630,
       },
@@ -264,6 +264,21 @@ export default function RootLayout({
                   foundingLocation: "India",
                   areaServed: "IN",
                   email: "hello@finkoin.com",
+                  founder: {
+                    "@type": "Person",
+                    "@id": "https://www.finkoin.com/about#founder",
+                    name: "Himanshu Kumar",
+                    jobTitle: "Founder",
+                    worksFor: {
+                      "@id": "https://www.finkoin.com/#organization",
+                    },
+                    image:
+                      "https://www.finkoin.com/assets/founder-himanshu-kumar.png",
+                    url: "https://www.finkoin.com/about",
+                    sameAs: [
+                      "https://www.linkedin.com/in/himanshu-k-81b484140/",
+                    ],
+                  },
                   sameAs: [
                     "https://www.instagram.com/finkoin",
                     "https://twitter.com/finkoin",

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import MoneyInput from "@/components/ui/MoneyInput";
+import PrivateAmount from "@/components/ui/PrivateAmount";
 import NumberInput from "../ui/NumberInput";
 import {
   CITY_TIER_LABELS,
@@ -1549,14 +1550,20 @@ export function AnalyseOnboardingForm() {
                   <span className="text-sm font-medium text-[#3C3489]">
                     Total monthly income
                   </span>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-[#534AB7]">
-                      ₹{formatIndian(totalIncome)}
-                    </div>
-                    <div className="text-[11px] text-[#7F77DD]">
-                      {formatInWords(totalIncome)}
-                    </div>
-                  </div>
+                  <PrivateAmount
+                    value={totalIncome}
+                    label="total monthly income"
+                    align="flex-start"
+                  >
+                    <span className="text-right">
+                      <span className="block text-lg font-bold text-[#534AB7]">
+                        ₹{formatIndian(totalIncome)}
+                      </span>
+                      <span className="block text-[11px] text-[#7F77DD]">
+                        {formatInWords(totalIncome)}
+                      </span>
+                    </span>
+                  </PrivateAmount>
                 </div>
               </div>
             ) : null}

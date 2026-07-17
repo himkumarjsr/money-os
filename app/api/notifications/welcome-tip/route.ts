@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { createSupabaseServerClient, getSupabaseAdmin } from "@/lib/supabaseServer";
+import {
+  createSupabaseServerClient,
+  getSupabaseAdmin,
+} from "@/lib/supabaseServer";
 
 const DEFAULT_TITLE = "Daily Finance Tip";
 const DEFAULT_CONTENT =
@@ -9,13 +12,25 @@ const DEFAULT_CONTENT =
 export async function POST() {
   try {
     if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json({ error: "Missing RESEND_API_KEY" }, { status: 503 });
+      return NextResponse.json(
+        { error: "Missing RESEND_API_KEY" },
+        { status: 503 },
+      );
     }
     if (!process.env.EMAIL_FROM) {
-      return NextResponse.json({ error: "Missing EMAIL_FROM" }, { status: 503 });
+      return NextResponse.json(
+        { error: "Missing EMAIL_FROM" },
+        { status: 503 },
+      );
     }
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ error: "Missing Supabase env" }, { status: 503 });
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      return NextResponse.json(
+        { error: "Missing Supabase env" },
+        { status: 503 },
+      );
     }
 
     const supabase = await createSupabaseServerClient();
@@ -30,7 +45,10 @@ export async function POST() {
 
     const toEmail = user.email?.trim();
     if (!toEmail?.includes("@")) {
-      return NextResponse.json({ error: "NO_EMAIL_ON_ACCOUNT" }, { status: 400 });
+      return NextResponse.json(
+        { error: "NO_EMAIL_ON_ACCOUNT" },
+        { status: 400 },
+      );
     }
 
     const admin = getSupabaseAdmin();
@@ -80,7 +98,7 @@ export async function POST() {
             <p style="font-size:14px;color:#5F5E5A;line-height:1.6;margin-bottom:24px;">
               You'll also get a short tip by email each morning. Manage this anytime in Settings.
             </p>
-            <a href="https://finkoin.com/settings" style="display:block;background:#534AB7;color:white;text-decoration:none;padding:14px;border-radius:10px;text-align:center;font-weight:700;font-size:15px;margin-bottom:24px;">
+            <a href="https://www.finkoin.com/settings" style="display:block;background:#534AB7;color:white;text-decoration:none;padding:14px;border-radius:10px;text-align:center;font-weight:700;font-size:15px;margin-bottom:24px;">
               Notification settings →
             </a>
             <div style="border-top:1px solid #E8E6F0;padding-top:16px;font-size:11px;color:#9B9A94;text-align:center;">

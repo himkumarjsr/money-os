@@ -1769,25 +1769,39 @@ export function normalizeAnalyseFormValues(
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
-  const existingAdditionalKeys = new Set(
-    existingAdditionalObligations.map((row) =>
-      [
-        (row.type ?? "").toLowerCase().trim(),
-        (row.lenderName ?? "").toLowerCase().trim(),
-        Math.round(row.monthlyAmount ?? 0),
-      ].join("|"),
-    ),
-  );
-  const dedupedAdditionalFromUnified = additionalFromUnified.filter((row) => {
-    const key = [
+  const obligationDedupKey = (row: {
+    type?: string;
+    lenderName?: string;
+    monthlyAmount?: number;
+  }) =>
+    [
       (row.type ?? "").toLowerCase().trim(),
       (row.lenderName ?? "").toLowerCase().trim(),
       Math.round(row.monthlyAmount ?? 0),
     ].join("|");
-    if (existingAdditionalKeys.has(key)) return false;
-    existingAdditionalKeys.add(key);
-    return true;
-  });
+
+  // `unifiedLoans` is the source of truth for the loans UI and already contains
+  // every loan (including ones that historically lived in `additionalObligations`).
+  // When it's present we derive the extra obligations solely from it; merging the
+  // legacy `additionalObligations` too would double-count the same loans (they can
+  // slip past the dedup when type/lender strings differ slightly).
+  const selfDedupe = <
+    T extends { type?: string; lenderName?: string; monthlyAmount?: number },
+  >(
+    rows: T[],
+  ): T[] => {
+    const seen = new Set<string>();
+    return rows.filter((row) => {
+      const key = obligationDedupKey(row);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  const resolvedAdditionalObligations =
+    unifiedLoans.length > 0
+      ? selfDedupe(additionalFromUnified)
+      : existingAdditionalObligations;
   const foodTotal =
     (form.foodTotal ?? 0) > 0
       ? (form.foodTotal ?? 0)
@@ -1918,10 +1932,7 @@ export function normalizeAnalyseFormValues(
       firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths,
     bikeOutstanding: form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
-    additionalObligations: [
-      ...existingAdditionalObligations,
-      ...dedupedAdditionalFromUnified,
-    ],
+    additionalObligations: resolvedAdditionalObligations,
     odLimit: form.odLimit,
     odUsed: form.odUsed,
     odInterestRate: form.odInterestRate,

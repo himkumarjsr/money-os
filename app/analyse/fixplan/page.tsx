@@ -5,6 +5,7 @@ import { downloadOptimizerPDF } from "@/lib/generatePDF";
 import { Analytics } from "@/lib/analytics";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
+import PrivateAmount from "@/components/ui/PrivateAmount";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -516,12 +517,16 @@ export default function FixPlanPage() {
             <div className="mt-3 space-y-1 text-[#5F5E5A]">
               <div className="flex justify-between">
                 <span>Monthly income</span>
-                <span className="font-medium">
+                <PrivateAmount
+                  value={aiPlan.priorityPlan.surplusBreakdown.totalIncome || 0}
+                  label="monthly income"
+                  valueClassName="font-medium"
+                >
                   +₹
                   {Math.round(
                     aiPlan.priorityPlan.surplusBreakdown.totalIncome || 0,
                   ).toLocaleString("en-IN")}
-                </span>
+                </PrivateAmount>
               </div>
               <div className="flex justify-between text-[#8C3A3A]">
                 <span>Living expenses (needs)</span>
