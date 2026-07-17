@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface NumberInputProps {
   label?: string;
@@ -24,31 +24,43 @@ export default function NumberInput({
   suffix,
   min = 0,
   max,
-  step = 0.1,
+  step = 0.01,
   disabled = false,
 }: NumberInputProps) {
   const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState(value === 0 ? "" : String(value));
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    if (raw === "" || raw === ".") {
-      onChange(0);
-      return;
-    }
+  useEffect(() => {
+    if (focused) return;
+    setDraft(value === 0 ? "" : String(value));
+  }, [value, focused]);
+
+  const parseAndClamp = (raw: string): number => {
+    if (raw === "" || raw === ".") return 0;
     const parsed = parseFloat(raw);
-    if (!isNaN(parsed)) {
-      if (max !== undefined) {
-        onChange(Math.min(parsed, max));
-      } else {
-        onChange(parsed);
-      }
+    if (Number.isNaN(parsed)) return 0;
+    let next = parsed;
+    if (min !== undefined) next = Math.max(min, next);
+    if (max !== undefined) next = Math.min(max, next);
+    if (step > 0 && step < 1) {
+      const decimals = Math.min(6, (String(step).split(".")[1] || "").length);
+      next = Number(next.toFixed(decimals));
     }
+    return next;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/,/g, "");
+    if (raw !== "" && !/^\d*\.?\d*$/.test(raw)) return;
+    setDraft(raw);
+    if (raw === "" || raw === "." || raw.endsWith(".")) return;
+    onChange(parseAndClamp(raw));
   };
 
   return (
     <div style={{ width: "100%" }}>
-      {label && (
+      {label ? (
         <label
           style={{
             display: "block",
@@ -60,7 +72,7 @@ export default function NumberInput({
         >
           {label}
         </label>
-      )}
+      ) : null}
 
       <div
         style={{
@@ -85,18 +97,21 @@ export default function NumberInput({
       >
         <input
           ref={inputRef}
-          type="number"
-          value={value === 0 ? "" : value}
+          type="text"
+          inputMode="decimal"
+          value={draft}
           onChange={handleChange}
           onFocus={(e) => {
             setFocused(true);
             e.currentTarget.select();
           }}
-          onBlur={() => setFocused(false)}
+          onBlur={() => {
+            setFocused(false);
+            const next = parseAndClamp(draft);
+            onChange(next);
+            setDraft(next === 0 ? "" : String(next));
+          }}
           placeholder={placeholder}
-          min={min}
-          max={max}
-          step={step}
           disabled={disabled}
           style={{
             flex: 1,
@@ -106,15 +121,12 @@ export default function NumberInput({
             background: "transparent",
             fontSize: 18,
             lineHeight: 1.3,
-            fontWeight: value > 0 ? 600 : 400,
-            color: value > 0 ? "#111110" : "#9B9A94",
+            fontWeight: draft ? 600 : 400,
+            color: draft ? "#111110" : "#9B9A94",
             fontFamily: "inherit",
-            appearance: "textfield",
-            MozAppearance: "textfield",
-            WebkitAppearance: "none",
           }}
         />
-        {suffix && (
+        {suffix ? (
           <span
             style={{
               fontSize: 14,
@@ -125,10 +137,10 @@ export default function NumberInput({
           >
             {suffix}
           </span>
-        )}
+        ) : null}
       </div>
 
-      {helper && (
+      {helper ? (
         <p
           style={{
             fontSize: 12,
@@ -139,7 +151,7 @@ export default function NumberInput({
         >
           {helper}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

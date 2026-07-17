@@ -3,9 +3,16 @@
 import MoneyInput from "@/components/ui/MoneyInput";
 import { handleMoneyInput } from "@/lib/formatters";
 import { getSupabase } from "@/lib/supabase";
-import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
+import {
+  TRACKER_CATEGORIES,
+  pickerSubcategories,
+} from "@/lib/tracker-categories";
+import {
+  TrackerIcon,
+  TrackerIconBadge,
+} from "@/components/tracker/TrackerIcons";
 import { useAuthStore } from "@/store/authStore";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 interface AddExpenseModalProps {
   onClose: () => void;
@@ -38,20 +45,44 @@ const IOS_DATE_INPUT_STYLE: CSSProperties = {
   opacity: 1,
 };
 
-export default function AddExpenseModal({ onClose, onSaved, defaultDate, defaultBucket, editExpense }: AddExpenseModalProps) {
+export default function AddExpenseModal({
+  onClose,
+  onSaved,
+  defaultDate,
+  defaultBucket,
+  editExpense,
+}: AddExpenseModalProps) {
   const user = useAuthStore((s) => s.user);
   const today = new Date().toISOString().split("T")[0];
 
   const [date, setDate] = useState(editExpense?.date || defaultDate || today);
   const [amount, setAmount] = useState(editExpense?.amount || 0);
-  const [bucket, setBucket] = useState(editExpense?.bucket || defaultBucket || "");
-  const [subcategory, setSubcategory] = useState(editExpense?.subcategory || "");
-  const [description, setDescription] = useState(editExpense?.description || "");
-  const [paymentMethod, setPaymentMethod] = useState(editExpense?.payment_method || "upi");
+  const [bucket, setBucket] = useState(
+    editExpense?.bucket || defaultBucket || "",
+  );
+  const [subcategory, setSubcategory] = useState(
+    editExpense?.subcategory || "",
+  );
+  const [description, setDescription] = useState(
+    editExpense?.description || "",
+  );
+  const [paymentMethod, setPaymentMethod] = useState(
+    editExpense?.payment_method || "upi",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const selectedBucket = bucket ? TRACKER_CATEGORIES[bucket as keyof typeof TRACKER_CATEGORIES] : null;
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const selectedBucket = bucket
+    ? TRACKER_CATEGORIES[bucket as keyof typeof TRACKER_CATEGORIES]
+    : null;
   const isIncome = bucket === "income";
   const modalTitle = editExpense
     ? isIncome
@@ -60,7 +91,15 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
     : isIncome
       ? "Add income"
       : "Add expense";
-  const primaryCta = saving ? "Saving..." : editExpense ? (isIncome ? "Update income" : "Update expense") : isIncome ? "Save income" : "Save expense";
+  const primaryCta = saving
+    ? "Saving..."
+    : editExpense
+      ? isIncome
+        ? "Update income"
+        : "Update expense"
+      : isIncome
+        ? "Save income"
+        : "Save expense";
 
   const handleSave = async () => {
     if (!amount || !bucket || !subcategory) {
@@ -92,7 +131,11 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
     };
 
     const { error: dbError } = editExpense?.id
-      ? await supabase.from("expense_transactions").update(payload).eq("id", editExpense.id).eq("user_id", user.id)
+      ? await supabase
+          .from("expense_transactions")
+          .update(payload)
+          .eq("id", editExpense.id)
+          .eq("user_id", user.id)
       : await supabase.from("expense_transactions").insert(payload);
 
     setSaving(false);
@@ -208,26 +251,26 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
         </div>
 
         {!defaultBucket ? (
-        <div style={{ marginBottom: 16 }}>
-          <label
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: FIELD_LABEL_COLOR,
-              display: "block",
-              marginBottom: 8,
-            }}
-          >
-            Category
-          </label>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 8,
-            }}
-          >
-            {Object.entries(TRACKER_CATEGORIES).map(([key, cat]) => (
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: FIELD_LABEL_COLOR,
+                display: "block",
+                marginBottom: 8,
+              }}
+            >
+              Category
+            </label>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 8,
+              }}
+            >
+              {Object.entries(TRACKER_CATEGORIES).map(([key, cat]) => (
                 <button
                   key={key}
                   type="button"
@@ -247,29 +290,44 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
                     textAlign: "center",
                   }}
                 >
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>{cat.emoji}</div>
+                  <div
+                    style={{
+                      marginBottom: 6,
+                      display: "flex",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <TrackerIconBadge
+                      name={cat.icon}
+                      size={36}
+                      iconSize={18}
+                      color={cat.color}
+                    />
+                  </div>
                   {cat.label}
                 </button>
               ))}
+            </div>
           </div>
-        </div>
         ) : null}
 
         {selectedBucket ? (
           <div style={{ marginBottom: 16 }}>
             <label
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: FIELD_LABEL_COLOR,
-              display: "block",
-              marginBottom: 8,
-            }}
-          >
-            Type
-          </label>
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: FIELD_LABEL_COLOR,
+                display: "block",
+                marginBottom: 8,
+              }}
+            >
+              Type
+            </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {selectedBucket.subcategories.map((sub) => (
+              {pickerSubcategories(
+                bucket as keyof typeof TRACKER_CATEGORIES,
+              ).map((sub) => (
                 <button
                   key={sub.id}
                   type="button"
@@ -278,14 +336,26 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
                     padding: "8px 12px",
                     borderRadius: 8,
                     border: `1.5px solid ${subcategory === sub.id ? selectedBucket.color : "#E8E6F0"}`,
-                    background: subcategory === sub.id ? `${selectedBucket.color}15` : "white",
+                    background:
+                      subcategory === sub.id
+                        ? `${selectedBucket.color}15`
+                        : "white",
                     cursor: "pointer",
                     fontSize: 12,
-                    color: subcategory === sub.id ? selectedBucket.color : "#111110",
+                    color:
+                      subcategory === sub.id ? selectedBucket.color : "#111110",
                     fontWeight: subcategory === sub.id ? 700 : 400,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
-                  {sub.emoji} {sub.label}
+                  <TrackerIcon
+                    name={sub.icon}
+                    size={16}
+                    color={selectedBucket.color}
+                  />
+                  {sub.label}
                 </button>
               ))}
             </div>
@@ -318,46 +388,46 @@ export default function AddExpenseModal({ onClose, onSaved, defaultDate, default
         </div>
 
         {bucket !== "income" ? (
-        <div style={{ marginBottom: 20 }}>
-          <label
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: FIELD_LABEL_COLOR,
-              display: "block",
-              marginBottom: 8,
-            }}
-          >
-            Paid via
-          </label>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[
-              { id: "upi", label: "📱 UPI" },
-              { id: "cash", label: "💵 Cash" },
-              { id: "card", label: "💳 Card" },
-              { id: "netbanking", label: "🏦 Net banking" },
-              { id: "wallet", label: "👛 Wallet" },
-            ].map((pm) => (
-              <button
-                key={pm.id}
-                type="button"
-                onClick={() => setPaymentMethod(pm.id)}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: `1.5px solid ${paymentMethod === pm.id ? "#534AB7" : "#E8E6F0"}`,
-                  background: paymentMethod === pm.id ? "#EEEDFE" : "white",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  color: paymentMethod === pm.id ? "#534AB7" : "#111110",
-                  fontWeight: paymentMethod === pm.id ? 700 : 400,
-                }}
-              >
-                {pm.label}
-              </button>
-            ))}
+          <div style={{ marginBottom: 20 }}>
+            <label
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: FIELD_LABEL_COLOR,
+                display: "block",
+                marginBottom: 8,
+              }}
+            >
+              Paid via
+            </label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {[
+                { id: "upi", label: "📱 UPI" },
+                { id: "cash", label: "💵 Cash" },
+                { id: "card", label: "💳 Card" },
+                { id: "netbanking", label: "🏦 Net banking" },
+                { id: "wallet", label: "👛 Wallet" },
+              ].map((pm) => (
+                <button
+                  key={pm.id}
+                  type="button"
+                  onClick={() => setPaymentMethod(pm.id)}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: `1.5px solid ${paymentMethod === pm.id ? "#534AB7" : "#E8E6F0"}`,
+                    background: paymentMethod === pm.id ? "#EEEDFE" : "white",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    color: paymentMethod === pm.id ? "#534AB7" : "#111110",
+                    fontWeight: paymentMethod === pm.id ? 700 : 400,
+                  }}
+                >
+                  {pm.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
         ) : null}
 
         {error ? (

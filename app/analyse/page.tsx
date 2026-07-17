@@ -26,8 +26,13 @@ export default function AnalysePage() {
   const formStartTrackedRef = useRef(false);
 
   useEffect(() => {
-    if (!hasInitialized) return;
-    if (!isLoggedIn || !user?.id) {
+    // Wait for a definitive logged-out state before redirecting — if persist
+    // already has a user, stay on analyse while initAuth verifies.
+    if (isLoggedIn && user?.id) {
+      redirectedToLoginRef.current = false;
+    } else if (!hasInitialized) {
+      return;
+    } else if (!isLoggedIn || !user?.id) {
       if (redirectedToLoginRef.current) return;
       redirectedToLoginRef.current = true;
       router.replace(
@@ -35,7 +40,8 @@ export default function AnalysePage() {
       );
       return;
     }
-    redirectedToLoginRef.current = false;
+
+    if (!isLoggedIn || !user?.id) return;
 
     let cancelled = false;
     const uid = user.id;
@@ -127,15 +133,15 @@ export default function AnalysePage() {
     router.push("/");
   };
 
-  if (!hasInitialized) {
+  if (isLoggedIn && user?.id) {
+    // fall through — persisted session is enough to render
+  } else if (!hasInitialized) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
         <p className="text-sm">Loading…</p>
       </div>
     );
-  }
-
-  if (!isLoggedIn || !user?.id) {
+  } else if (!isLoggedIn || !user?.id) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-white px-4 text-slate-600">
         <div

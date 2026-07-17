@@ -39,6 +39,10 @@ export type ComparisonInputs = {
   leaveEncashmentTaxable: number;
   gratuityTaxable: number;
   ltaTaxable: number;
+  /** Taxable salary from previous employer(s) in the same FY (Form 16 Part B). */
+  previousEmployerSalaryAnnual: number;
+  /** Other taxable Full & Final amounts (notice pay, taxable bonus in F&F, etc.). */
+  ffSettlementOtherTaxable: number;
 
   businessProfit: number;
   freelanceIncome: number;
@@ -108,7 +112,10 @@ export type RegimeBreakdown = {
 
 export function salaryAnnualFromMonthly(i: ComparisonInputs): number {
   const grossSalary =
-    (Math.max(0, i.basicMonthly) + Math.max(0, i.hraMonthly) + Math.max(0, i.allowancesMonthly)) * 12
+    (Math.max(0, i.basicMonthly) +
+      Math.max(0, i.hraMonthly) +
+      Math.max(0, i.allowancesMonthly)) *
+    12;
   return Math.max(0, grossSalary - Math.max(0, i.mealVoucherExemptionAnnual));
 }
 
@@ -123,6 +130,8 @@ export function sumOrdinaryGross(i: ComparisonInputs): number {
   g += Math.max(0, i.leaveEncashmentTaxable);
   g += Math.max(0, i.gratuityTaxable);
   g += Math.max(0, i.ltaTaxable);
+  g += Math.max(0, i.previousEmployerSalaryAnnual);
+  g += Math.max(0, i.ffSettlementOtherTaxable);
   g += Math.max(0, i.businessProfit);
   g += Math.max(0, i.freelanceIncome);
   g += Math.max(0, i.pension);
@@ -146,7 +155,10 @@ export function sumEquityLtcg(i: ComparisonInputs): number {
 }
 
 /** Illustrative Budget-style equity: STCG 20%; LTCG 12.5% after ₹1.25L exemption (combined LTCG gains). */
-export function computeIllustrativeEquityCgTax(stcg: number, ltcg: number): number {
+export function computeIllustrativeEquityCgTax(
+  stcg: number,
+  ltcg: number,
+): number {
   const st = Math.max(0, stcg);
   const lt = Math.max(0, ltcg);
   const ltTaxable = Math.max(0, lt - 125_000);
@@ -169,7 +181,10 @@ export function computeScheduleRateTax(i: ComparisonInputs): number {
   return eq + plt + lot;
 }
 
-export function calculateSlabTax(income: number, slabs: { limit: number; rate: number }[]): number {
+export function calculateSlabTax(
+  income: number,
+  slabs: { limit: number; rate: number }[],
+): number {
   let tax = 0;
   let prev = 0;
   for (const slab of slabs) {
@@ -181,7 +196,11 @@ export function calculateSlabTax(income: number, slabs: { limit: number; rate: n
   return tax;
 }
 
-export function calculateTax(taxableIncome: number, regime: RegimeKind, age: number): number {
+export function calculateTax(
+  taxableIncome: number,
+  regime: RegimeKind,
+  age: number,
+): number {
   if (regime === "new") {
     const slabs = [
       { limit: 400_000, rate: 0 },
@@ -236,15 +255,23 @@ export function calculateHRAExemption(params: {
   rentPaidAnnual: number;
   isMetro: boolean;
 }): number {
-  const { hasHRA, salaryForHra, hraReceivedAnnual, rentPaidAnnual, isMetro } = params;
+  const { hasHRA, salaryForHra, hraReceivedAnnual, rentPaidAnnual, isMetro } =
+    params;
   if (!hasHRA || rentPaidAnnual <= 0 || salaryForHra <= 0) return 0;
   const rentExcess = Math.max(0, rentPaidAnnual - salaryForHra * 0.1);
   const basicPercent40 = salaryForHra * 0.4;
   const basicPercent50 = salaryForHra * 0.5;
-  return Math.min(hraReceivedAnnual, isMetro ? basicPercent50 : basicPercent40, rentExcess);
+  return Math.min(
+    hraReceivedAnnual,
+    isMetro ? basicPercent50 : basicPercent40,
+    rentExcess,
+  );
 }
 
-export function calculate80GGIllustrative(grossIncome: number, rentPaidNoHra: number): number {
+export function calculate80GGIllustrative(
+  grossIncome: number,
+  rentPaidNoHra: number,
+): number {
   if (rentPaidNoHra <= 0 || grossIncome <= 0) return 0;
   const a = Math.max(0, rentPaidNoHra - 0.1 * grossIncome);
   const b = 0.25 * grossIncome;
@@ -255,7 +282,10 @@ export function calculate80GGIllustrative(grossIncome: number, rentPaidNoHra: nu
 const NEW_STD = 75_000;
 const OLD_STD = 50_000;
 
-function capDeductionsOld(i: ComparisonInputs, ordinaryGross: number): {
+function capDeductionsOld(
+  i: ComparisonInputs,
+  ordinaryGross: number,
+): {
   lines: DeductionLine[];
   total: number;
 } {
@@ -269,13 +299,15 @@ function capDeductionsOld(i: ComparisonInputs, ordinaryGross: number): {
     rentPaidAnnual: i.hasHRA ? i.rentPaidAnnual : 0,
     isMetro: i.isMetro,
   });
-  if (hra > 0) lines.push({ label: "HRA exemption (illustrative)", amount: hra });
+  if (hra > 0)
+    lines.push({ label: "HRA exemption (illustrative)", amount: hra });
 
   const gg =
     !i.hasHRA && i.rentPaidNoHra > 0
       ? calculate80GGIllustrative(ordinaryGross, i.rentPaidNoHra)
       : 0;
-  if (gg > 0) lines.push({ label: "80GG (rent, no HRA — illustrative)", amount: gg });
+  if (gg > 0)
+    lines.push({ label: "80GG (rent, no HRA — illustrative)", amount: gg });
 
   const c80 = Math.min(Math.max(0, i.deductions80C), 150_000);
   if (c80 > 0) lines.push({ label: "80C (combined)", amount: c80 });
@@ -295,7 +327,8 @@ function capDeductionsOld(i: ComparisonInputs, ordinaryGross: number): {
   }
 
   const cdd = Math.min(Math.max(0, i.deduction80DD), 125_000);
-  if (cdd > 0) lines.push({ label: "80DD (dependent disability)", amount: cdd });
+  if (cdd > 0)
+    lines.push({ label: "80DD (dependent disability)", amount: cdd });
 
   const cddbCap = i.age >= 60 ? 100_000 : 40_000;
   const cddb = Math.min(Math.max(0, i.deduction80DDB), cddbCap);
@@ -305,10 +338,12 @@ function capDeductionsOld(i: ComparisonInputs, ordinaryGross: number): {
   if (ce > 0) lines.push({ label: "80E education loan interest", amount: ce });
 
   const cea = Math.min(Math.max(0, i.deduction80EEA), 150_000);
-  if (cea > 0) lines.push({ label: "80EEA affordable housing interest", amount: cea });
+  if (cea > 0)
+    lines.push({ label: "80EEA affordable housing interest", amount: cea });
 
   const cg = Math.max(0, i.deduction80G);
-  if (cg > 0) lines.push({ label: "80G donations (entered eligible)", amount: cg });
+  if (cg > 0)
+    lines.push({ label: "80G donations (entered eligible)", amount: cg });
 
   const ttaCap = i.age >= 60 ? 0 : 10_000;
   const ctta = Math.min(Math.max(0, i.deduction80TTA), ttaCap);
@@ -321,7 +356,8 @@ function capDeductionsOld(i: ComparisonInputs, ordinaryGross: number): {
   if (cu > 0) lines.push({ label: "80U self-disability", amount: cu });
 
   const crrb = Math.min(Math.max(0, i.deduction80RRB), 300_000);
-  if (crrb > 0) lines.push({ label: "80RRB royalty (illustrative cap)", amount: crrb });
+  if (crrb > 0)
+    lines.push({ label: "80RRB royalty (illustrative cap)", amount: crrb });
 
   const c24 = Math.min(Math.max(0, i.homeLoanInterest24b), 200_000);
   if (c24 > 0) lines.push({ label: "24(b) home loan interest", amount: c24 });
@@ -339,16 +375,25 @@ export function computeOldRegime(i: ComparisonInputs): RegimeBreakdown {
   const ltcg = sumEquityLtcg(i);
   const cgTax = computeScheduleRateTax(i);
   const grossForSurcharge =
-    ordinaryGross + stcg + ltcg + Math.max(0, i.propertyLtcgGains) + Math.max(0, i.lotteryGamblingIncome);
+    ordinaryGross +
+    stcg +
+    ltcg +
+    Math.max(0, i.propertyLtcgGains) +
+    Math.max(0, i.lotteryGamblingIncome);
 
   const { lines, total: totalDeductions } = capDeductionsOld(i, ordinaryGross);
   const taxableIncome = Math.max(0, ordinaryGross - totalDeductions);
   const slabTaxBeforeRebateRaw = calculateTax(taxableIncome, "old", i.age);
-  const slabTaxNetOfRebate = taxableIncome <= 500_000 ? 0 : slabTaxBeforeRebateRaw;
+  const slabTaxNetOfRebate =
+    taxableIncome <= 500_000 ? 0 : slabTaxBeforeRebateRaw;
   const rebate87A = taxableIncome <= 500_000 && slabTaxBeforeRebateRaw > 0;
 
   const taxBeforeSurcharge = slabTaxNetOfRebate + cgTax;
-  const { surcharge, cess, total } = addSurchargeAndCess(taxBeforeSurcharge, grossForSurcharge, "old");
+  const { surcharge, cess, total } = addSurchargeAndCess(
+    taxBeforeSurcharge,
+    grossForSurcharge,
+    "old",
+  );
 
   return {
     ordinaryGrossIncome: ordinaryGross,
@@ -377,16 +422,27 @@ export function computeNewRegime(i: ComparisonInputs): RegimeBreakdown {
   const ltcg = sumEquityLtcg(i);
   const cgTax = computeScheduleRateTax(i);
   const grossForSurcharge =
-    ordinaryGross + stcg + ltcg + Math.max(0, i.propertyLtcgGains) + Math.max(0, i.lotteryGamblingIncome);
+    ordinaryGross +
+    stcg +
+    ltcg +
+    Math.max(0, i.propertyLtcgGains) +
+    Math.max(0, i.lotteryGamblingIncome);
 
-  const lines: DeductionLine[] = [{ label: "Standard deduction (new regime)", amount: NEW_STD }];
+  const lines: DeductionLine[] = [
+    { label: "Standard deduction (new regime)", amount: NEW_STD },
+  ];
   const taxableIncome = Math.max(0, ordinaryGross - NEW_STD);
   const slabTaxBeforeRebateRaw = calculateTax(taxableIncome, "new", i.age);
-  const slabTaxNetOfRebate = taxableIncome <= 1_200_000 ? 0 : slabTaxBeforeRebateRaw;
+  const slabTaxNetOfRebate =
+    taxableIncome <= 1_200_000 ? 0 : slabTaxBeforeRebateRaw;
   const rebate87A = taxableIncome <= 1_200_000 && slabTaxBeforeRebateRaw > 0;
 
   const taxBeforeSurcharge = slabTaxNetOfRebate + cgTax;
-  const { surcharge, cess, total } = addSurchargeAndCess(taxBeforeSurcharge, grossForSurcharge, "new");
+  const { surcharge, cess, total } = addSurchargeAndCess(
+    taxBeforeSurcharge,
+    grossForSurcharge,
+    "new",
+  );
 
   return {
     ordinaryGrossIncome: ordinaryGross,
@@ -409,7 +465,10 @@ export function computeNewRegime(i: ComparisonInputs): RegimeBreakdown {
   };
 }
 
-export function compareRegimes(i: ComparisonInputs): { old: RegimeBreakdown; new: RegimeBreakdown } {
+export function compareRegimes(i: ComparisonInputs): {
+  old: RegimeBreakdown;
+  new: RegimeBreakdown;
+} {
   return { old: computeOldRegime(i), new: computeNewRegime(i) };
 }
 

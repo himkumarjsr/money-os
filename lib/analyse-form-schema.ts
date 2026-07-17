@@ -2,7 +2,10 @@ import { z } from "zod";
 
 /** Stable id for obligation / other-insurance field-array rows (persisted in profile + drafts). */
 export function newAnalyseRowId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `id_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
@@ -296,7 +299,8 @@ export interface FinancialProfile {
   carPurchaseYear?: number;
 }
 
-export type AdditionalObligation = FinancialProfile["additionalObligations"][number];
+export type AdditionalObligation =
+  FinancialProfile["additionalObligations"][number];
 
 export type AnalyseFormValues = Omit<FinancialProfile, "kidsAges"> & {
   kidsAges?: Array<number | undefined>;
@@ -341,10 +345,16 @@ const requiredPositiveMoney = (message: string) =>
       .positive(message),
   );
 
-const optionalWholeNumber = z.preprocess(
-  parseMoneyInput,
-  z.number().int("Enter a whole number").min(0, "Cannot be negative").optional(),
-);
+const optionalWholeNumber = z.preprocess((val) => {
+  const n = parseMoneyInput(val);
+  if (n === undefined) return undefined;
+  if (!Number.isFinite(n)) return undefined;
+  // Accept decimal entry (e.g. 12.5 months) without blocking Next.
+  return Math.round(n);
+}, z.number().int("Enter a whole number").min(0, "Cannot be negative").optional());
+
+/** Money / rate fields — decimals allowed. */
+const optionalDecimalNumber = optionalMoney;
 
 const optionalSpouseAge = z.preprocess(
   parseMoneyInput,
@@ -363,18 +373,48 @@ const additionalObligationSchema = z.object({
   loanTakenYear: optionalWholeNumber,
 });
 
+/** Drop empty/stale obligation rows that block Next with no visible UI. */
+function sanitizeAdditionalObligationsInput(val: unknown) {
+  if (!Array.isArray(val)) return [];
+  return val.filter((row) => {
+    if (!row || typeof row !== "object") return false;
+    const r = row as Record<string, unknown>;
+    const type = String(r.type ?? "").trim();
+    const amt = parseMoneyInput(r.monthlyAmount) ?? 0;
+    return type.length > 0 && amt > 0;
+  });
+}
+
 const unifiedLoanSchema = z.object({
   id: z.string().optional(),
   loanType: z.enum(UNIFIED_LOAN_TYPE_VALUES),
   lenderName: z.string().optional(),
   monthlyEMI: optionalMoney.default(0),
   outstandingAmount: optionalMoney,
-  interestRate: optionalMoney,
+  interestRate: optionalDecimalNumber,
   remainingMonths: optionalWholeNumber,
   odLimit: optionalMoney,
   odUsed: optionalMoney,
   odInterestOnlyYears: optionalWholeNumber,
 });
+
+/** Coerce legacy loanType labels so Next isn't blocked by invisible enum errors. */
+function sanitizeUnifiedLoansInput(val: unknown) {
+  if (!Array.isArray(val)) return [];
+  return val.map((row) => {
+    if (!row || typeof row !== "object") {
+      return { loanType: "other" as UnifiedLoanType, monthlyEMI: 0 };
+    }
+    const r = row as Record<string, unknown>;
+    const raw = String(r.loanType ?? "").trim();
+    const loanType = (UNIFIED_LOAN_TYPE_VALUES as readonly string[]).includes(
+      raw,
+    )
+      ? (raw as UnifiedLoanType)
+      : ("other" as UnifiedLoanType);
+    return { ...r, loanType };
+  });
+}
 
 const otherInsurancePremiumSchema = z.object({
   id: z.string().optional(),
@@ -393,176 +433,323 @@ const customInvestmentSchema = z.object({
 });
 
 const formShape = {
-    lifeStage: z.enum(LIFE_STAGE_VALUES, {
-      required_error: "Select your life stage",
-    }),
-    selfAge: z.preprocess(
-      parseMoneyInput,
-      z
-        .number({
-          required_error: "Enter your age",
-          invalid_type_error: "Enter your age",
-        })
-        .int("Enter a whole number")
-        .min(18, "Age must be between 18 and 80")
-        .max(80, "Age must be between 18 and 80"),
-    ),
-    spouseAge: optionalSpouseAge,
-    numberOfKids: z.preprocess(
-      parseMoneyInput,
-      z
-        .number()
-        .int("Enter a whole number")
-        .min(1, "At least 1 child")
-        .max(6, "Maximum 6 children")
-        .optional(),
-    ),
-    kidsAges: z.array(optionalWholeNumber).max(6).optional(),
-    kidsGenders: z.array(z.enum(KID_GENDER_VALUES)).max(6).optional(),
-    cityTier: z.enum(CITY_TIER_VALUES, {
-      required_error: "Select your city tier",
-    }),
+  lifeStage: z.enum(LIFE_STAGE_VALUES, {
+    required_error: "Select your life stage",
+  }),
+  selfAge: z.preprocess(
+    parseMoneyInput,
+    z
+      .number({
+        required_error: "Enter your age",
+        invalid_type_error: "Enter your age",
+      })
+      .int("Enter a whole number")
+      .min(18, "Age must be between 18 and 80")
+      .max(80, "Age must be between 18 and 80"),
+  ),
+  spouseAge: optionalSpouseAge,
+  numberOfKids: z.preprocess(
+    parseMoneyInput,
+    z
+      .number()
+      .int("Enter a whole number")
+      .min(1, "At least 1 child")
+      .max(6, "Maximum 6 children")
+      .optional(),
+  ),
+  kidsAges: z.array(optionalWholeNumber).max(6).optional(),
+  kidsGenders: z.array(z.enum(KID_GENDER_VALUES)).max(6).optional(),
+  cityTier: z.enum(CITY_TIER_VALUES, {
+    required_error: "Select your city tier",
+  }),
 
-    monthlySalary: requiredPositiveMoney("Enter your monthly take-home salary"),
-    spouseIncome: optionalMoney,
-    otherIncome: optionalMoney,
+  monthlySalary: requiredPositiveMoney("Enter your monthly take-home salary"),
+  spouseIncome: optionalMoney,
+  otherIncome: optionalMoney,
 
-    rentAmount: optionalMoney,
-    rentMaintenanceMonthly: optionalMoney,
-    homeLoanEMI: optionalMoney,
-    secondPropertyEMI: optionalMoney,
-    carLoanEMI: optionalMoney,
-    bikeEMI: optionalMoney,
-    personalLoanEMI: optionalMoney,
-    personalLoanOutstanding: optionalMoney,
-    personalLoanLenderName: z.string().optional(),
-    personalLoanRate: optionalMoney,
-    personalLoanRemainingMonths: optionalWholeNumber,
-    homeLoanLenderName: z.string().optional(),
-    homeLoanRate: optionalMoney,
-    homeLoanRemainingMonths: optionalWholeNumber,
-    carLoanLenderName: z.string().optional(),
-    carLoanRate: optionalMoney,
-    carLoanRemainingMonths: optionalWholeNumber,
-    bikeLoanLenderName: z.string().optional(),
-    bikeLoanRate: optionalMoney,
-    bikeLoanRemainingMonths: optionalWholeNumber,
-    bikeOutstanding: optionalMoney,
-    creditCardBillMonthly: optionalMoney,
-    additionalObligations: z.array(additionalObligationSchema).max(6),
-    unifiedLoans: z.array(unifiedLoanSchema).optional().default([]),
-    odLimit: optionalMoney,
-    odUsed: optionalMoney,
-    odInterestRate: optionalMoney,
-    odInterestOnlyYears: optionalWholeNumber,
-    odEMIStartYear: optionalWholeNumber,
+  rentAmount: optionalMoney,
+  rentMaintenanceMonthly: optionalMoney,
+  homeLoanEMI: optionalMoney,
+  secondPropertyEMI: optionalMoney,
+  carLoanEMI: optionalMoney,
+  bikeEMI: optionalMoney,
+  personalLoanEMI: optionalMoney,
+  personalLoanOutstanding: optionalMoney,
+  personalLoanLenderName: z.string().optional(),
+  personalLoanRate: optionalMoney,
+  personalLoanRemainingMonths: optionalWholeNumber,
+  homeLoanLenderName: z.string().optional(),
+  homeLoanRate: optionalMoney,
+  homeLoanRemainingMonths: optionalWholeNumber,
+  carLoanLenderName: z.string().optional(),
+  carLoanRate: optionalMoney,
+  carLoanRemainingMonths: optionalWholeNumber,
+  bikeLoanLenderName: z.string().optional(),
+  bikeLoanRate: optionalMoney,
+  bikeLoanRemainingMonths: optionalWholeNumber,
+  bikeOutstanding: optionalMoney,
+  creditCardBillMonthly: optionalMoney,
+  additionalObligations: z.preprocess(
+    sanitizeAdditionalObligationsInput,
+    z.array(additionalObligationSchema).max(6),
+  ),
+  unifiedLoans: z.preprocess(
+    sanitizeUnifiedLoansInput,
+    z.array(unifiedLoanSchema).optional().default([]),
+  ),
+  odLimit: optionalMoney,
+  odUsed: optionalMoney,
+  odInterestRate: optionalMoney,
+  odInterestOnlyYears: optionalWholeNumber,
+  odEMIStartYear: optionalWholeNumber,
 
-    vegetables: optionalMoney,
-    grocery: optionalMoney,
-    medicine: optionalMoney,
-    fuel: optionalMoney,
-    cabMetro: optionalMoney,
-    electricity: optionalMoney,
-    internet: optionalMoney,
-    gas: optionalMoney,
-    water: optionalMoney,
-    houseHelpMonthly: optionalMoney,
-    cookHelpMonthly: optionalMoney,
-    entertainment: optionalMoney,
-    shopping: optionalMoney,
-    personalCare: optionalMoney,
-    foodTotal: optionalMoney,
-    transportTotal: optionalMoney,
-    utilityTotal: optionalMoney,
-    domesticHelpTotal: optionalMoney,
-    lifestyleTotal: optionalMoney,
-    kidsSchoolFees: optionalMoney,
-    kidsActivities: optionalMoney,
-    parentsSupport: optionalMoney,
-    parentsHealthInsuranceSumInsured: optionalMoney,
-    parentsEmergencyCash: optionalMoney,
-    parentsCity: z.enum(CITY_TIER_VALUES).optional(),
+  vegetables: optionalMoney,
+  grocery: optionalMoney,
+  medicine: optionalMoney,
+  fuel: optionalMoney,
+  cabMetro: optionalMoney,
+  electricity: optionalMoney,
+  internet: optionalMoney,
+  gas: optionalMoney,
+  water: optionalMoney,
+  houseHelpMonthly: optionalMoney,
+  cookHelpMonthly: optionalMoney,
+  entertainment: optionalMoney,
+  shopping: optionalMoney,
+  personalCare: optionalMoney,
+  foodTotal: optionalMoney,
+  transportTotal: optionalMoney,
+  utilityTotal: optionalMoney,
+  domesticHelpTotal: optionalMoney,
+  lifestyleTotal: optionalMoney,
+  kidsSchoolFees: optionalMoney,
+  kidsActivities: optionalMoney,
+  parentsSupport: optionalMoney,
+  parentsHealthInsuranceSumInsured: optionalMoney,
+  parentsEmergencyCash: optionalMoney,
+  parentsCity: z.enum(CITY_TIER_VALUES).optional(),
 
-    hasHealthInsurance: z.boolean(),
-    healthInsuranceSumInsured: optionalMoney,
-    healthInsurancePremiumInput: optionalMoney,
-    healthInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
-    hasTermInsurance: z.boolean(),
-    termInsuranceSumAssured: optionalMoney,
-    termInsurancePremiumInput: optionalMoney,
-    termInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
-    termInsurancePremiumTillYear: optionalWholeNumber,
-    carInsurancePremiumInput: optionalMoney,
-    carInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
-    bikeInsurancePremiumInput: optionalMoney,
-    bikeInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
-    hasOtherInsurance: z.boolean().default(false),
-    otherInsurancePremiumInput: optionalMoney,
-    otherInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
-    otherInsurancePremiums: z.array(otherInsurancePremiumSchema).max(6).default([]),
-    lifeInsuranceMaturityAmount: optionalMoney,
-    lifeInsuranceMaturityYear: optionalWholeNumber,
+  hasHealthInsurance: z.boolean(),
+  healthInsuranceSumInsured: optionalMoney,
+  healthInsurancePremiumInput: optionalMoney,
+  healthInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  hasTermInsurance: z.boolean(),
+  termInsuranceSumAssured: optionalMoney,
+  termInsurancePremiumInput: optionalMoney,
+  termInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  termInsurancePremiumTillYear: optionalWholeNumber,
+  carInsurancePremiumInput: optionalMoney,
+  carInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  bikeInsurancePremiumInput: optionalMoney,
+  bikeInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  hasOtherInsurance: z.boolean().default(false),
+  otherInsurancePremiumInput: optionalMoney,
+  otherInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  otherInsurancePremiums: z
+    .array(otherInsurancePremiumSchema)
+    .max(6)
+    .default([]),
+  lifeInsuranceMaturityAmount: optionalMoney,
+  lifeInsuranceMaturityYear: optionalWholeNumber,
 
-    savingsAccountBalance: optionalMoney,
-    fdValue: optionalMoney,
-    fdRate: optionalMoney,
-    fdMaturityYear: optionalWholeNumber,
-    fdTenureYears: optionalWholeNumber,
-    liquidMFValue: optionalMoney,
-    emergencyFundCurrent: optionalMoney,
-    otherLiquidSavings: optionalMoney,
-    mfValue: optionalMoney,
-    indianStocksValue: optionalMoney,
-    usStocksValueINR: optionalMoney,
-    usMFValueINR: optionalMoney,
-    rsuValueINR: optionalMoney,
-    totalEquityValue: optionalMoney,
-    customInvestments: z.array(customInvestmentSchema).max(5).default([]),
-    ppfBalance: optionalMoney,
-    npsBalance: optionalMoney,
-    epfBalance: optionalMoney,
-    ownsHome: z.boolean(),
-    homeMarketValue: optionalMoney,
-    homeLoanOutstanding: optionalMoney,
-    ownsCar: z.boolean(),
-    carMarketValue: optionalMoney,
-    carLoanOutstanding: optionalMoney,
-    goldValue: optionalMoney,
-    otherAssets: optionalMoney,
-    otherAssetLabel: z.string().optional(),
-    monthlySIP: optionalMoney,
-    monthlyRD: optionalMoney,
-    monthlyPPFContribution: optionalMoney,
-    monthlyNPSContribution: optionalMoney,
-    monthlyEPFContribution: optionalMoney,
-    ssy: optionalMoney,
-    nscDepositAmount: optionalMoney,
-    nscMaturityYear: optionalWholeNumber,
-    investsInNsc: z.boolean().optional().default(false),
+  savingsAccountBalance: optionalMoney,
+  fdValue: optionalMoney,
+  fdRate: optionalMoney,
+  fdMaturityYear: optionalWholeNumber,
+  fdTenureYears: optionalWholeNumber,
+  liquidMFValue: optionalMoney,
+  emergencyFundCurrent: optionalMoney,
+  otherLiquidSavings: optionalMoney,
+  mfValue: optionalMoney,
+  indianStocksValue: optionalMoney,
+  usStocksValueINR: optionalMoney,
+  usMFValueINR: optionalMoney,
+  rsuValueINR: optionalMoney,
+  totalEquityValue: optionalMoney,
+  customInvestments: z.array(customInvestmentSchema).max(5).default([]),
+  ppfBalance: optionalMoney,
+  npsBalance: optionalMoney,
+  epfBalance: optionalMoney,
+  ownsHome: z.boolean(),
+  homeMarketValue: optionalMoney,
+  homeLoanOutstanding: optionalMoney,
+  ownsCar: z.boolean(),
+  carMarketValue: optionalMoney,
+  carLoanOutstanding: optionalMoney,
+  goldValue: optionalMoney,
+  otherAssets: optionalMoney,
+  otherAssetLabel: z.string().optional(),
+  monthlySIP: optionalMoney,
+  monthlyRD: optionalMoney,
+  monthlyPPFContribution: optionalMoney,
+  monthlyNPSContribution: optionalMoney,
+  monthlyEPFContribution: optionalMoney,
+  ssy: optionalMoney,
+  nscDepositAmount: optionalMoney,
+  nscMaturityYear: optionalWholeNumber,
+  investsInNsc: z.boolean().optional().default(false),
 
-    primaryGoal: z.string().min(1, "Choose a primary goal"),
-    retirementTargetCorpus: optionalMoney,
-    retirementAge: optionalWholeNumber,
-    kidsEducationFundTarget: optionalMoney,
-    kidsMarriageFundTarget: optionalMoney,
-    emergencyFundTarget: optionalMoney,
-    medicalEmergencyFund: optionalMoney,
-    bereavementFund: optionalMoney,
-    homePurchaseTarget: optionalMoney,
-    homePurchaseYear: optionalWholeNumber,
-    carPurchaseTarget: optionalMoney,
-    carPurchaseYear: optionalWholeNumber,
+  primaryGoal: z.string().min(1, "Choose a primary goal"),
+  retirementTargetCorpus: optionalMoney,
+  retirementAge: optionalWholeNumber,
+  kidsEducationFundTarget: optionalMoney,
+  kidsMarriageFundTarget: optionalMoney,
+  emergencyFundTarget: optionalMoney,
+  medicalEmergencyFund: optionalMoney,
+  bereavementFund: optionalMoney,
+  homePurchaseTarget: optionalMoney,
+  homePurchaseYear: optionalWholeNumber,
+  carPurchaseTarget: optionalMoney,
+  carPurchaseYear: optionalWholeNumber,
 
-    healthInsurancePremiumMonthly: optionalMoney,
-    termInsurancePremiumMonthly: optionalMoney,
-    carInsurancePremiumMonthly: optionalMoney,
-    bikeInsurancePremiumMonthly: optionalMoney,
-    otherInsurancePremiumMonthly: optionalMoney,
-  } satisfies z.ZodRawShape;
+  healthInsurancePremiumMonthly: optionalMoney,
+  termInsurancePremiumMonthly: optionalMoney,
+  carInsurancePremiumMonthly: optionalMoney,
+  bikeInsurancePremiumMonthly: optionalMoney,
+  otherInsurancePremiumMonthly: optionalMoney,
+} satisfies z.ZodRawShape;
 
 const baseFormSchema = z.object(formShape);
 
-const formSchema = baseFormSchema
+const formSchema = baseFormSchema.superRefine((data, ctx) => {
+  if (data.lifeStage === "kids") {
+    if (!data.numberOfKids) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["numberOfKids"],
+        message: "Enter number of kids",
+      });
+    }
+
+    const count = data.numberOfKids ?? 0;
+    for (let index = 0; index < count; index += 1) {
+      if (!data.kidsAges?.[index] && data.kidsAges?.[index] !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["kidsAges", index],
+          message: `Enter age for kid ${index + 1}`,
+        });
+      }
+      if (!data.kidsGenders?.[index]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["kidsGenders", index],
+          message: `Select gender for kid ${index + 1}`,
+        });
+      }
+    }
+  }
+
+  if (data.hasHealthInsurance) {
+    if (!data.healthInsuranceSumInsured) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["healthInsuranceSumInsured"],
+        message: "Enter health insurance sum insured",
+      });
+    }
+    if (!data.healthInsurancePremiumInput) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["healthInsurancePremiumInput"],
+        message: "Enter health insurance premium",
+      });
+    }
+  }
+
+  if (data.hasTermInsurance) {
+    if (!data.termInsuranceSumAssured) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["termInsuranceSumAssured"],
+        message: "Enter term insurance sum assured",
+      });
+    }
+    if (!data.termInsurancePremiumInput) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["termInsurancePremiumInput"],
+        message: "Enter term insurance premium",
+      });
+    }
+  }
+
+  if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
+    const validRows =
+      data.otherInsurancePremiums?.filter(
+        (row) => row.premiumAmount !== undefined,
+      ) ?? [];
+    if (validRows.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["otherInsurancePremiums"],
+        message: "Add at least one other insurance premium",
+      });
+    }
+    data.otherInsurancePremiums?.forEach((row, index) => {
+      if (row.premiumAmount === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["otherInsurancePremiums", index, "premiumAmount"],
+          message: "Enter premium amount",
+        });
+      }
+    });
+  }
+
+  if (data.ownsHome) {
+    if (!data.homeMarketValue && data.homeMarketValue !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["homeMarketValue"],
+        message: "Enter current home market value",
+      });
+    }
+    if (!data.homeLoanOutstanding && data.homeLoanOutstanding !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["homeLoanOutstanding"],
+        message: "Enter outstanding home loan",
+      });
+    }
+  }
+
+  if (data.ownsCar) {
+    if (!data.carMarketValue && data.carMarketValue !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["carMarketValue"],
+        message: "Enter current car market value",
+      });
+    }
+    if (!data.carLoanOutstanding && data.carLoanOutstanding !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["carLoanOutstanding"],
+        message: "Enter outstanding car loan",
+      });
+    }
+  }
+
+  if (data.lifeStage === "kids" && data.kidsEducationFundTarget === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["kidsEducationFundTarget"],
+      message: "Enter kids education fund target",
+    });
+  }
+});
+
+export const step1Schema = baseFormSchema
+  .pick({
+    lifeStage: true,
+    selfAge: true,
+    spouseAge: true,
+    numberOfKids: true,
+    kidsAges: true,
+    kidsGenders: true,
+    cityTier: true,
+  })
   .superRefine((data, ctx) => {
     if (data.lifeStage === "kids") {
       if (!data.numberOfKids) {
@@ -591,145 +778,7 @@ const formSchema = baseFormSchema
         }
       }
     }
-
-    if (data.hasHealthInsurance) {
-      if (!data.healthInsuranceSumInsured) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["healthInsuranceSumInsured"],
-          message: "Enter health insurance sum insured",
-        });
-      }
-      if (!data.healthInsurancePremiumInput) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["healthInsurancePremiumInput"],
-          message: "Enter health insurance premium",
-        });
-      }
-    }
-
-    if (data.hasTermInsurance) {
-      if (!data.termInsuranceSumAssured) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["termInsuranceSumAssured"],
-          message: "Enter term insurance sum assured",
-        });
-      }
-      if (!data.termInsurancePremiumInput) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["termInsurancePremiumInput"],
-          message: "Enter term insurance premium",
-        });
-      }
-    }
-
-    if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
-      const validRows =
-        data.otherInsurancePremiums?.filter((row) => row.premiumAmount !== undefined) ?? [];
-      if (validRows.length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["otherInsurancePremiums"],
-          message: "Add at least one other insurance premium",
-        });
-      }
-      data.otherInsurancePremiums?.forEach((row, index) => {
-        if (row.premiumAmount === undefined) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["otherInsurancePremiums", index, "premiumAmount"],
-            message: "Enter premium amount",
-          });
-        }
-      });
-    }
-
-    if (data.ownsHome) {
-      if (!data.homeMarketValue && data.homeMarketValue !== 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["homeMarketValue"],
-          message: "Enter current home market value",
-        });
-      }
-      if (
-        !data.homeLoanOutstanding &&
-        data.homeLoanOutstanding !== 0
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["homeLoanOutstanding"],
-          message: "Enter outstanding home loan",
-        });
-      }
-    }
-
-    if (data.ownsCar) {
-      if (!data.carMarketValue && data.carMarketValue !== 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["carMarketValue"],
-          message: "Enter current car market value",
-        });
-      }
-      if (!data.carLoanOutstanding && data.carLoanOutstanding !== 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["carLoanOutstanding"],
-          message: "Enter outstanding car loan",
-        });
-      }
-    }
-
-    if (data.lifeStage === "kids" && data.kidsEducationFundTarget === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["kidsEducationFundTarget"],
-        message: "Enter kids education fund target",
-      });
-    }
   });
-
-export const step1Schema = baseFormSchema.pick({
-  lifeStage: true,
-  selfAge: true,
-  spouseAge: true,
-  numberOfKids: true,
-  kidsAges: true,
-  kidsGenders: true,
-  cityTier: true,
-}).superRefine((data, ctx) => {
-  if (data.lifeStage === "kids") {
-    if (!data.numberOfKids) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["numberOfKids"],
-        message: "Enter number of kids",
-      });
-    }
-
-    const count = data.numberOfKids ?? 0;
-    for (let index = 0; index < count; index += 1) {
-      if (!data.kidsAges?.[index] && data.kidsAges?.[index] !== 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["kidsAges", index],
-          message: `Enter age for kid ${index + 1}`,
-        });
-      }
-      if (!data.kidsGenders?.[index]) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["kidsGenders", index],
-          message: `Select gender for kid ${index + 1}`,
-        });
-      }
-    }
-  }
-});
 
 export const step2Schema = baseFormSchema.pick({
   monthlySalary: true,
@@ -797,178 +846,189 @@ export const step4Schema = baseFormSchema.pick({
   parentsCity: true,
 });
 
-export const step5Schema = baseFormSchema.pick({
-  hasHealthInsurance: true,
-  healthInsuranceSumInsured: true,
-  healthInsurancePremiumInput: true,
-  healthInsurancePremiumFrequency: true,
-  hasTermInsurance: true,
-  termInsuranceSumAssured: true,
-  termInsurancePremiumInput: true,
-  termInsurancePremiumFrequency: true,
-  termInsurancePremiumTillYear: true,
-  carInsurancePremiumInput: true,
-  carInsurancePremiumFrequency: true,
-  bikeInsurancePremiumInput: true,
-  bikeInsurancePremiumFrequency: true,
-  hasOtherInsurance: true,
-  otherInsurancePremiumInput: true,
-  otherInsurancePremiumFrequency: true,
-  otherInsurancePremiums: true,
-  lifeInsuranceMaturityAmount: true,
-  lifeInsuranceMaturityYear: true,
-}).superRefine((data, ctx) => {
-  if (data.hasHealthInsurance) {
-    if (!data.healthInsuranceSumInsured) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["healthInsuranceSumInsured"],
-        message: "Enter health insurance sum insured",
-      });
-    }
-    if (!data.healthInsurancePremiumInput) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["healthInsurancePremiumInput"],
-        message: "Enter health insurance premium",
-      });
-    }
-  }
-
-  if (data.hasTermInsurance) {
-    if (!data.termInsuranceSumAssured) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["termInsuranceSumAssured"],
-        message: "Enter term insurance sum assured",
-      });
-    }
-    if (!data.termInsurancePremiumInput) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["termInsurancePremiumInput"],
-        message: "Enter term insurance premium",
-      });
-    }
-  }
-
-  if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
-    const validRows =
-      data.otherInsurancePremiums?.filter((row) => row.premiumAmount !== undefined) ?? [];
-    if (validRows.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["otherInsurancePremiums"],
-        message: "Add at least one other insurance premium",
-      });
-    }
-    data.otherInsurancePremiums?.forEach((row, index) => {
-      if (row.premiumAmount === undefined) {
+export const step5Schema = baseFormSchema
+  .pick({
+    hasHealthInsurance: true,
+    healthInsuranceSumInsured: true,
+    healthInsurancePremiumInput: true,
+    healthInsurancePremiumFrequency: true,
+    hasTermInsurance: true,
+    termInsuranceSumAssured: true,
+    termInsurancePremiumInput: true,
+    termInsurancePremiumFrequency: true,
+    termInsurancePremiumTillYear: true,
+    carInsurancePremiumInput: true,
+    carInsurancePremiumFrequency: true,
+    bikeInsurancePremiumInput: true,
+    bikeInsurancePremiumFrequency: true,
+    hasOtherInsurance: true,
+    otherInsurancePremiumInput: true,
+    otherInsurancePremiumFrequency: true,
+    otherInsurancePremiums: true,
+    lifeInsuranceMaturityAmount: true,
+    lifeInsuranceMaturityYear: true,
+  })
+  .superRefine((data, ctx) => {
+    if (data.hasHealthInsurance) {
+      if (!data.healthInsuranceSumInsured) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["otherInsurancePremiums", index, "premiumAmount"],
-          message: "Enter premium amount",
+          path: ["healthInsuranceSumInsured"],
+          message: "Enter health insurance sum insured",
         });
       }
-    });
-  }
-});
+      if (!data.healthInsurancePremiumInput) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["healthInsurancePremiumInput"],
+          message: "Enter health insurance premium",
+        });
+      }
+    }
 
-export const step6Schema = baseFormSchema.pick({
-  savingsAccountBalance: true,
-  fdValue: true,
-  fdRate: true,
-  fdMaturityYear: true,
-  fdTenureYears: true,
-  liquidMFValue: true,
-  otherLiquidSavings: true,
-  mfValue: true,
-  indianStocksValue: true,
-  usStocksValueINR: true,
-  usMFValueINR: true,
-  rsuValueINR: true,
-  totalEquityValue: true,
-  customInvestments: true,
-  ppfBalance: true,
-  npsBalance: true,
-  epfBalance: true,
-  ownsHome: true,
-  homeMarketValue: true,
-  homeLoanOutstanding: true,
-  ownsCar: true,
-  carMarketValue: true,
-  carLoanOutstanding: true,
-  goldValue: true,
-  otherAssets: true,
-  otherAssetLabel: true,
-  monthlySIP: true,
-  monthlyRD: true,
-  monthlyPPFContribution: true,
-  monthlyNPSContribution: true,
-  monthlyEPFContribution: true,
-  ssy: true,
-  nscDepositAmount: true,
-  nscMaturityYear: true,
-  investsInNsc: true,
-  bereavementFund: true,
-}).superRefine((data, ctx) => {
-  if (data.ownsHome) {
-    if (!data.homeMarketValue && data.homeMarketValue !== 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["homeMarketValue"],
-        message: "Enter current home market value",
-      });
+    if (data.hasTermInsurance) {
+      if (!data.termInsuranceSumAssured) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["termInsuranceSumAssured"],
+          message: "Enter term insurance sum assured",
+        });
+      }
+      if (!data.termInsurancePremiumInput) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["termInsurancePremiumInput"],
+          message: "Enter term insurance premium",
+        });
+      }
     }
-    if (!data.homeLoanOutstanding && data.homeLoanOutstanding !== 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["homeLoanOutstanding"],
-        message: "Enter outstanding home loan",
-      });
-    }
-  }
 
-  if (data.ownsCar) {
-    if (!data.carMarketValue && data.carMarketValue !== 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["carMarketValue"],
-        message: "Enter current car market value",
+    if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
+      const validRows =
+        data.otherInsurancePremiums?.filter(
+          (row) => row.premiumAmount !== undefined,
+        ) ?? [];
+      if (validRows.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["otherInsurancePremiums"],
+          message: "Add at least one other insurance premium",
+        });
+      }
+      data.otherInsurancePremiums?.forEach((row, index) => {
+        if (row.premiumAmount === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["otherInsurancePremiums", index, "premiumAmount"],
+            message: "Enter premium amount",
+          });
+        }
       });
     }
-    if (!data.carLoanOutstanding && data.carLoanOutstanding !== 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["carLoanOutstanding"],
-        message: "Enter outstanding car loan",
-      });
-    }
-  }
-});
+  });
 
-export const step7Schema = baseFormSchema.pick({
-  primaryGoal: true,
-  retirementTargetCorpus: true,
-  retirementAge: true,
-  kidsEducationFundTarget: true,
-  kidsMarriageFundTarget: true,
-  emergencyFundTarget: true,
-  medicalEmergencyFund: true,
-  homePurchaseTarget: true,
-  homePurchaseYear: true,
-  carPurchaseTarget: true,
-  carPurchaseYear: true,
-  lifeStage: true,
-}).superRefine((data, ctx) => {
-  if (data.lifeStage === "kids" && data.kidsEducationFundTarget === undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["kidsEducationFundTarget"],
-      message: "Enter kids education fund target",
-    });
-  }
-});
+export const step6Schema = baseFormSchema
+  .pick({
+    savingsAccountBalance: true,
+    fdValue: true,
+    fdRate: true,
+    fdMaturityYear: true,
+    fdTenureYears: true,
+    liquidMFValue: true,
+    otherLiquidSavings: true,
+    mfValue: true,
+    indianStocksValue: true,
+    usStocksValueINR: true,
+    usMFValueINR: true,
+    rsuValueINR: true,
+    totalEquityValue: true,
+    customInvestments: true,
+    ppfBalance: true,
+    npsBalance: true,
+    epfBalance: true,
+    ownsHome: true,
+    homeMarketValue: true,
+    homeLoanOutstanding: true,
+    ownsCar: true,
+    carMarketValue: true,
+    carLoanOutstanding: true,
+    goldValue: true,
+    otherAssets: true,
+    otherAssetLabel: true,
+    monthlySIP: true,
+    monthlyRD: true,
+    monthlyPPFContribution: true,
+    monthlyNPSContribution: true,
+    monthlyEPFContribution: true,
+    ssy: true,
+    nscDepositAmount: true,
+    nscMaturityYear: true,
+    investsInNsc: true,
+    bereavementFund: true,
+  })
+  .superRefine((data, ctx) => {
+    if (data.ownsHome) {
+      if (!data.homeMarketValue && data.homeMarketValue !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["homeMarketValue"],
+          message: "Enter current home market value",
+        });
+      }
+      if (!data.homeLoanOutstanding && data.homeLoanOutstanding !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["homeLoanOutstanding"],
+          message: "Enter outstanding home loan",
+        });
+      }
+    }
+
+    if (data.ownsCar) {
+      if (!data.carMarketValue && data.carMarketValue !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["carMarketValue"],
+          message: "Enter current car market value",
+        });
+      }
+      if (!data.carLoanOutstanding && data.carLoanOutstanding !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["carLoanOutstanding"],
+          message: "Enter outstanding car loan",
+        });
+      }
+    }
+  });
+
+export const step7Schema = baseFormSchema
+  .pick({
+    primaryGoal: true,
+    retirementTargetCorpus: true,
+    retirementAge: true,
+    kidsEducationFundTarget: true,
+    kidsMarriageFundTarget: true,
+    emergencyFundTarget: true,
+    medicalEmergencyFund: true,
+    homePurchaseTarget: true,
+    homePurchaseYear: true,
+    carPurchaseTarget: true,
+    carPurchaseYear: true,
+    lifeStage: true,
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.lifeStage === "kids" &&
+      data.kidsEducationFundTarget === undefined
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["kidsEducationFundTarget"],
+        message: "Enter kids education fund target",
+      });
+    }
+  });
 
 export const fullAnalyseSchema = formSchema;
 
@@ -1015,9 +1075,13 @@ export function lastSubmissionToFormPartial(
     if (profile.termInsuranceSumAssured != null) {
       partial.termInsuranceSumAssured = profile.termInsuranceSumAssured;
     }
-    if (profile.termInsurancePremiumInput != null && profile.termInsurancePremiumInput > 0) {
+    if (
+      profile.termInsurancePremiumInput != null &&
+      profile.termInsurancePremiumInput > 0
+    ) {
       partial.termInsurancePremiumInput = profile.termInsurancePremiumInput;
-      partial.termInsurancePremiumFrequency = profile.termInsurancePremiumFrequency ?? "monthly";
+      partial.termInsurancePremiumFrequency =
+        profile.termInsurancePremiumFrequency ?? "monthly";
     } else {
       const pm = profile.termInsurancePremiumMonthly;
       if (typeof pm === "number" && pm > 0) {
@@ -1050,12 +1114,14 @@ export function fillDraftGapsFromProfile(
   if (!profile) return draft;
   const next = { ...draft };
   const draftObl = next.additionalObligations ?? [];
-  if (draftObl.length === 0 && (profile.additionalObligations?.length ?? 0) > 0) {
+  if (
+    draftObl.length === 0 &&
+    (profile.additionalObligations?.length ?? 0) > 0
+  ) {
     next.additionalObligations = profile.additionalObligations.map((o) => ({
       id: o.id ?? newAnalyseRowId(),
       type: o.type,
-      lenderName:
-        o.lenderName ?? (o as { lender?: string }).lender ?? "",
+      lenderName: o.lenderName ?? (o as { lender?: string }).lender ?? "",
       monthlyAmount: o.monthlyAmount,
     }));
   }
@@ -1064,11 +1130,17 @@ export function fillDraftGapsFromProfile(
     profile.otherInsurancePremiums ??
     (
       profile as FinancialProfile & {
-        otherInsurancePolicies?: NonNullable<FinancialProfile["otherInsurancePremiums"]>;
+        otherInsurancePolicies?: NonNullable<
+          FinancialProfile["otherInsurancePremiums"]
+        >;
       }
     ).otherInsurancePolicies ??
     [];
-  if (profile.hasOtherInsurance && draftPol.length === 0 && profilePremiums.length > 0) {
+  if (
+    profile.hasOtherInsurance &&
+    draftPol.length === 0 &&
+    profilePremiums.length > 0
+  ) {
     next.hasOtherInsurance = true;
     next.otherInsurancePremiums = profilePremiums.map((p) => ({
       id: p.id ?? newAnalyseRowId(),
@@ -1081,7 +1153,10 @@ export function fillDraftGapsFromProfile(
   return next;
 }
 
-function preferNonEmptyString(a?: string | null, b?: string | null): string | undefined {
+function preferNonEmptyString(
+  a?: string | null,
+  b?: string | null,
+): string | undefined {
   const t = typeof a === "string" ? a.trim() : "";
   if (t) return t;
   const t2 = typeof b === "string" ? b.trim() : "";
@@ -1100,15 +1175,17 @@ function migrateLegacyAnalysePartial(
 
   const obl = out.additionalObligations;
   if (Array.isArray(obl)) {
-    out.additionalObligations = (obl as Record<string, unknown>[]).map((row) => ({
-      id: row.id,
-      type: row.type ?? "",
-      lenderName: (row.lenderName ?? row.lender ?? "") as string,
-      monthlyAmount: row.monthlyAmount ?? 0,
-      outstandingAmount: row.outstandingAmount ?? 0,
-      tenureMonths: row.tenureMonths ?? 0,
-      loanTakenYear: row.loanTakenYear ?? 0,
-    }));
+    out.additionalObligations = (obl as Record<string, unknown>[]).map(
+      (row) => ({
+        id: row.id,
+        type: row.type ?? "",
+        lenderName: (row.lenderName ?? row.lender ?? "") as string,
+        monthlyAmount: row.monthlyAmount ?? 0,
+        outstandingAmount: row.outstandingAmount ?? 0,
+        tenureMonths: row.tenureMonths ?? 0,
+        loanTakenYear: row.loanTakenYear ?? 0,
+      }),
+    );
   }
 
   const unified = out.unifiedLoans;
@@ -1127,8 +1204,12 @@ function migrateLegacyAnalysePartial(
     }));
   }
 
-  const legacyPrem = out.otherInsurancePolicies as Record<string, unknown>[] | undefined;
-  const newPrem = out.otherInsurancePremiums as Record<string, unknown>[] | undefined;
+  const legacyPrem = out.otherInsurancePolicies as
+    | Record<string, unknown>[]
+    | undefined;
+  const newPrem = out.otherInsurancePremiums as
+    | Record<string, unknown>[]
+    | undefined;
   const src = newPrem ?? legacyPrem;
   if (Array.isArray(src)) {
     out.otherInsurancePremiums = src.map((row) => ({
@@ -1185,7 +1266,9 @@ export function mergeAnalyseDraftWithProfile(
         id: d?.id ?? p?.id ?? newAnalyseRowId(),
         policyName: preferNonEmptyString(d?.policyName, p?.policyName),
         premiumAmount: d?.premiumAmount ?? p?.premiumAmount,
-        frequency: (d?.frequency ?? p?.frequency ?? "monthly") as PremiumFrequency,
+        frequency: (d?.frequency ??
+          p?.frequency ??
+          "monthly") as PremiumFrequency,
         maturityAmount: d?.maturityAmount ?? p?.maturityAmount ?? 0,
         maturityYear: d?.maturityYear ?? p?.maturityYear ?? 0,
       };
@@ -1209,7 +1292,8 @@ export function mergeAnalyseDraftWithProfile(
         remainingMonths: d?.remainingMonths ?? p?.remainingMonths ?? 0,
         odLimit: d?.odLimit ?? p?.odLimit ?? 0,
         odUsed: d?.odUsed ?? p?.odUsed ?? 0,
-        odInterestOnlyYears: d?.odInterestOnlyYears ?? p?.odInterestOnlyYears ?? 0,
+        odInterestOnlyYears:
+          d?.odInterestOnlyYears ?? p?.odInterestOnlyYears ?? 0,
       };
     });
   }
@@ -1222,9 +1306,11 @@ export function mergeAnalyseDraftWithProfile(
     if ((pSum > 0 || pPrem > 0) && mSum === 0 && mPrem === 0) {
       merged.hasHealthInsurance = profileForm.hasHealthInsurance;
       merged.healthInsuranceSumInsured = profileForm.healthInsuranceSumInsured;
-      merged.healthInsurancePremiumInput = profileForm.healthInsurancePremiumInput;
+      merged.healthInsurancePremiumInput =
+        profileForm.healthInsurancePremiumInput;
       merged.healthInsurancePremiumFrequency =
-        profileForm.healthInsurancePremiumFrequency ?? merged.healthInsurancePremiumFrequency;
+        profileForm.healthInsurancePremiumFrequency ??
+        merged.healthInsurancePremiumFrequency;
     }
   }
 
@@ -1238,7 +1324,8 @@ export function mergeAnalyseDraftWithProfile(
       merged.termInsuranceSumAssured = profileForm.termInsuranceSumAssured;
       merged.termInsurancePremiumInput = profileForm.termInsurancePremiumInput;
       merged.termInsurancePremiumFrequency =
-        profileForm.termInsurancePremiumFrequency ?? merged.termInsurancePremiumFrequency;
+        profileForm.termInsurancePremiumFrequency ??
+        merged.termInsurancePremiumFrequency;
     }
   }
 
@@ -1253,7 +1340,9 @@ export function mergeAnalyseDraftWithProfile(
  * Rebuild analyse form values from a stored {@link FinancialProfile} (inverse of normalize).
  * Uses persisted premium input + frequency when present; otherwise falls back to `*PremiumMonthly` as monthly.
  */
-export function financialProfileToFormValues(profile: FinancialProfile): Partial<AnalyseFormValues> {
+export function financialProfileToFormValues(
+  profile: FinancialProfile,
+): Partial<AnalyseFormValues> {
   const p = profile;
   const additionalObligations = (p.additionalObligations ?? []).map((o) => {
     const row = o as {
@@ -1278,7 +1367,9 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
   });
   const legacyPolicies = (
     p as FinancialProfile & {
-      otherInsurancePolicies?: NonNullable<FinancialProfile["otherInsurancePremiums"]>;
+      otherInsurancePolicies?: NonNullable<
+        FinancialProfile["otherInsurancePremiums"]
+      >;
     }
   ).otherInsurancePolicies;
   const otherPolicies = p.otherInsurancePremiums ?? legacyPolicies ?? [];
@@ -1458,16 +1549,19 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     healthInsuranceSumInsured: p.healthInsuranceSumInsured ?? 0,
     healthInsurancePremiumInput:
       p.healthInsurancePremiumInput ?? p.healthInsurancePremiumMonthly ?? 0,
-    healthInsurancePremiumFrequency: p.healthInsurancePremiumFrequency ?? "monthly",
+    healthInsurancePremiumFrequency:
+      p.healthInsurancePremiumFrequency ?? "monthly",
     hasTermInsurance: p.hasTermInsurance,
     termInsuranceSumAssured: p.termInsuranceSumAssured ?? 0,
     termInsurancePremiumInput:
       p.termInsurancePremiumInput ?? p.termInsurancePremiumMonthly ?? 0,
     termInsurancePremiumFrequency: p.termInsurancePremiumFrequency ?? "monthly",
     termInsurancePremiumTillYear: p.termInsurancePremiumTillYear ?? 0,
-    carInsurancePremiumInput: p.carInsurancePremiumInput ?? p.carInsurancePremiumMonthly ?? 0,
+    carInsurancePremiumInput:
+      p.carInsurancePremiumInput ?? p.carInsurancePremiumMonthly ?? 0,
     carInsurancePremiumFrequency: p.carInsurancePremiumFrequency ?? "monthly",
-    bikeInsurancePremiumInput: p.bikeInsurancePremiumInput ?? p.bikeInsurancePremiumMonthly ?? 0,
+    bikeInsurancePremiumInput:
+      p.bikeInsurancePremiumInput ?? p.bikeInsurancePremiumMonthly ?? 0,
     bikeInsurancePremiumFrequency: p.bikeInsurancePremiumFrequency ?? "monthly",
     hasOtherInsurance: hasOther,
     otherInsurancePremiums: otherPolicies.map((row) => {
@@ -1493,7 +1587,8 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
     otherInsurancePremiumInput:
       p.otherInsurancePremiumInput ??
       (otherPolicies.length === 0 ? (p.otherInsurancePremiumMonthly ?? 0) : 0),
-    otherInsurancePremiumFrequency: p.otherInsurancePremiumFrequency ?? "monthly",
+    otherInsurancePremiumFrequency:
+      p.otherInsurancePremiumFrequency ?? "monthly",
     lifeInsuranceMaturityAmount: p.lifeInsuranceMaturityAmount ?? 0,
     lifeInsuranceMaturityYear: p.lifeInsuranceMaturityYear ?? 0,
     savingsAccountBalance: p.savingsAccountBalance ?? 0,
@@ -1554,24 +1649,32 @@ export function financialProfileToFormValues(profile: FinancialProfile): Partial
  * If user entered cover/premium amounts but toggles were missing/false in persisted state,
  * turn toggles on so values are not cleared by effects or stripped in normalize.
  */
-export function coalesceInsuranceToggles<T extends Partial<AnalyseFormValues>>(data: T): T {
+export function coalesceInsuranceToggles<T extends Partial<AnalyseFormValues>>(
+  data: T,
+): T {
   const out = { ...data } as T;
   const hasHealthNumbers =
-    (out.healthInsuranceSumInsured ?? 0) > 0 || (out.healthInsurancePremiumInput ?? 0) > 0;
+    (out.healthInsuranceSumInsured ?? 0) > 0 ||
+    (out.healthInsurancePremiumInput ?? 0) > 0;
   if (hasHealthNumbers && out.hasHealthInsurance !== true) {
     (out as { hasHealthInsurance?: boolean }).hasHealthInsurance = true;
   }
   const hasTermNumbers =
-    (out.termInsuranceSumAssured ?? 0) > 0 || (out.termInsurancePremiumInput ?? 0) > 0;
+    (out.termInsuranceSumAssured ?? 0) > 0 ||
+    (out.termInsurancePremiumInput ?? 0) > 0;
   if (hasTermNumbers && out.hasTermInsurance !== true) {
     (out as { hasTermInsurance?: boolean }).hasTermInsurance = true;
   }
   return out;
 }
 
-export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): FinancialProfile {
+export function normalizeAnalyseFormValues(
+  data: Partial<AnalyseFormValues>,
+): FinancialProfile {
   const form = migrateLegacyAnalysePartial(data);
-  const unifiedLoans = (form.unifiedLoans ?? []).filter((loan) => (loan.monthlyEMI ?? 0) > 0);
+  const unifiedLoans = (form.unifiedLoans ?? []).filter(
+    (loan) => (loan.monthlyEMI ?? 0) > 0,
+  );
 
   const mapUnifiedToAdditionalType = (type: UnifiedLoanType): string => {
     switch (type) {
@@ -1600,36 +1703,49 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     }
   };
 
-  const firstHomeIndex = unifiedLoans.findIndex((loan) => loan.loanType === "home_loan");
-  const firstPersonalIndex = unifiedLoans.findIndex((loan) => loan.loanType === "personal_loan");
-  const firstCarIndex = unifiedLoans.findIndex((loan) => loan.loanType === "car_loan");
-  const firstBikeIndex = unifiedLoans.findIndex((loan) => loan.loanType === "bike_loan");
-  const firstHome = firstHomeIndex >= 0 ? unifiedLoans[firstHomeIndex] : undefined;
-  const firstPersonal = firstPersonalIndex >= 0 ? unifiedLoans[firstPersonalIndex] : undefined;
+  const firstHomeIndex = unifiedLoans.findIndex(
+    (loan) => loan.loanType === "home_loan",
+  );
+  const firstPersonalIndex = unifiedLoans.findIndex(
+    (loan) => loan.loanType === "personal_loan",
+  );
+  const firstCarIndex = unifiedLoans.findIndex(
+    (loan) => loan.loanType === "car_loan",
+  );
+  const firstBikeIndex = unifiedLoans.findIndex(
+    (loan) => loan.loanType === "bike_loan",
+  );
+  const firstHome =
+    firstHomeIndex >= 0 ? unifiedLoans[firstHomeIndex] : undefined;
+  const firstPersonal =
+    firstPersonalIndex >= 0 ? unifiedLoans[firstPersonalIndex] : undefined;
   const firstCar = firstCarIndex >= 0 ? unifiedLoans[firstCarIndex] : undefined;
-  const firstBike = firstBikeIndex >= 0 ? unifiedLoans[firstBikeIndex] : undefined;
+  const firstBike =
+    firstBikeIndex >= 0 ? unifiedLoans[firstBikeIndex] : undefined;
 
-  const existingAdditionalObligations = (form.additionalObligations ?? []).map((row) => {
-    const r = row as {
-      id?: string;
-      type: string;
-      lenderName?: string;
-      lender?: string;
-      monthlyAmount: number;
-      outstandingAmount?: number;
-      tenureMonths?: number;
-      loanTakenYear?: number;
-    };
-    return {
-      id: r.id,
-      type: r.type,
-      lenderName: r.lenderName ?? r.lender,
-      monthlyAmount: r.monthlyAmount,
-      outstandingAmount: r.outstandingAmount,
-      tenureMonths: r.tenureMonths,
-      loanTakenYear: r.loanTakenYear,
-    };
-  });
+  const existingAdditionalObligations = (form.additionalObligations ?? []).map(
+    (row) => {
+      const r = row as {
+        id?: string;
+        type: string;
+        lenderName?: string;
+        lender?: string;
+        monthlyAmount: number;
+        outstandingAmount?: number;
+        tenureMonths?: number;
+        loanTakenYear?: number;
+      };
+      return {
+        id: r.id,
+        type: r.type,
+        lenderName: r.lenderName ?? r.lender,
+        monthlyAmount: r.monthlyAmount,
+        outstandingAmount: r.outstandingAmount,
+        tenureMonths: r.tenureMonths,
+        loanTakenYear: r.loanTakenYear,
+      };
+    },
+  );
 
   const additionalFromUnified = unifiedLoans
     .map((loan, index) => {
@@ -1683,7 +1799,10 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
   const utilityTotal =
     (form.utilityTotal ?? 0) > 0
       ? (form.utilityTotal ?? 0)
-      : (form.electricity ?? 0) + (form.internet ?? 0) + (form.gas ?? 0) + (form.water ?? 0);
+      : (form.electricity ?? 0) +
+        (form.internet ?? 0) +
+        (form.gas ?? 0) +
+        (form.water ?? 0);
   const domesticHelpTotal =
     (form.domesticHelpTotal ?? 0) > 0
       ? (form.domesticHelpTotal ?? 0)
@@ -1691,26 +1810,64 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
   const lifestyleTotal =
     (form.lifestyleTotal ?? 0) > 0
       ? (form.lifestyleTotal ?? 0)
-      : (form.entertainment ?? 0) + (form.shopping ?? 0) + (form.personalCare ?? 0);
+      : (form.entertainment ?? 0) +
+        (form.shopping ?? 0) +
+        (form.personalCare ?? 0);
 
-  const vegetables = (form.foodTotal ?? 0) > 0 ? Math.round(foodTotal * 0.3) : form.vegetables ?? 0;
-  const grocery = (form.foodTotal ?? 0) > 0 ? Math.round(foodTotal * 0.5) : form.grocery ?? 0;
-  const medicine = (form.foodTotal ?? 0) > 0 ? Math.round(foodTotal * 0.2) : form.medicine ?? 0;
-  const fuel = (form.transportTotal ?? 0) > 0 ? Math.round(transportTotal * 0.6) : form.fuel ?? 0;
-  const cabMetro = (form.transportTotal ?? 0) > 0 ? Math.round(transportTotal * 0.4) : form.cabMetro ?? 0;
-  const electricity = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.35) : form.electricity ?? 0;
-  const internet = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.25) : form.internet ?? 0;
-  const gas = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.2) : form.gas ?? 0;
-  const water = (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.1) : form.water;
+  const vegetables =
+    (form.foodTotal ?? 0) > 0
+      ? Math.round(foodTotal * 0.3)
+      : (form.vegetables ?? 0);
+  const grocery =
+    (form.foodTotal ?? 0) > 0
+      ? Math.round(foodTotal * 0.5)
+      : (form.grocery ?? 0);
+  const medicine =
+    (form.foodTotal ?? 0) > 0
+      ? Math.round(foodTotal * 0.2)
+      : (form.medicine ?? 0);
+  const fuel =
+    (form.transportTotal ?? 0) > 0
+      ? Math.round(transportTotal * 0.6)
+      : (form.fuel ?? 0);
+  const cabMetro =
+    (form.transportTotal ?? 0) > 0
+      ? Math.round(transportTotal * 0.4)
+      : (form.cabMetro ?? 0);
+  const electricity =
+    (form.utilityTotal ?? 0) > 0
+      ? Math.round(utilityTotal * 0.35)
+      : (form.electricity ?? 0);
+  const internet =
+    (form.utilityTotal ?? 0) > 0
+      ? Math.round(utilityTotal * 0.25)
+      : (form.internet ?? 0);
+  const gas =
+    (form.utilityTotal ?? 0) > 0
+      ? Math.round(utilityTotal * 0.2)
+      : (form.gas ?? 0);
+  const water =
+    (form.utilityTotal ?? 0) > 0 ? Math.round(utilityTotal * 0.1) : form.water;
   const houseHelpMonthly =
-    (form.domesticHelpTotal ?? 0) > 0 ? Math.round(domesticHelpTotal * 0.6) : form.houseHelpMonthly;
+    (form.domesticHelpTotal ?? 0) > 0
+      ? Math.round(domesticHelpTotal * 0.6)
+      : form.houseHelpMonthly;
   const cookHelpMonthly =
-    (form.domesticHelpTotal ?? 0) > 0 ? Math.round(domesticHelpTotal * 0.4) : form.cookHelpMonthly;
+    (form.domesticHelpTotal ?? 0) > 0
+      ? Math.round(domesticHelpTotal * 0.4)
+      : form.cookHelpMonthly;
   const entertainment =
-    (form.lifestyleTotal ?? 0) > 0 ? Math.round(lifestyleTotal * 0.4) : form.entertainment ?? 0;
-  const shopping = (form.lifestyleTotal ?? 0) > 0 ? Math.round(lifestyleTotal * 0.4) : form.shopping ?? 0;
+    (form.lifestyleTotal ?? 0) > 0
+      ? Math.round(lifestyleTotal * 0.4)
+      : (form.entertainment ?? 0);
+  const shopping =
+    (form.lifestyleTotal ?? 0) > 0
+      ? Math.round(lifestyleTotal * 0.4)
+      : (form.shopping ?? 0);
   const personalCare =
-    (form.lifestyleTotal ?? 0) > 0 ? Math.round(lifestyleTotal * 0.2) : form.personalCare;
+    (form.lifestyleTotal ?? 0) > 0
+      ? Math.round(lifestyleTotal * 0.2)
+      : form.personalCare;
 
   const normalized: FinancialProfile = {
     lifeStage: form.lifeStage ?? "bachelor",
@@ -1719,7 +1876,9 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     numberOfKids: form.lifeStage === "kids" ? form.numberOfKids : undefined,
     kidsAges:
       form.lifeStage === "kids"
-        ? (form.kidsAges ?? []).slice(0, form.numberOfKids ?? 0).filter((v): v is number => v !== undefined)
+        ? (form.kidsAges ?? [])
+            .slice(0, form.numberOfKids ?? 0)
+            .filter((v): v is number => v !== undefined)
         : undefined,
     kidsGenders:
       form.lifeStage === "kids"
@@ -1738,22 +1897,31 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     carLoanEMI: firstCar?.monthlyEMI ?? form.carLoanEMI,
     bikeEMI: firstBike?.monthlyEMI ?? form.bikeEMI,
     personalLoanEMI: firstPersonal?.monthlyEMI ?? form.personalLoanEMI,
-    personalLoanOutstanding: firstPersonal?.outstandingAmount ?? form.personalLoanOutstanding,
-    personalLoanLenderName: firstPersonal?.lenderName ?? form.personalLoanLenderName ?? "",
+    personalLoanOutstanding:
+      firstPersonal?.outstandingAmount ?? form.personalLoanOutstanding,
+    personalLoanLenderName:
+      firstPersonal?.lenderName ?? form.personalLoanLenderName ?? "",
     personalLoanRate: firstPersonal?.interestRate ?? form.personalLoanRate,
-    personalLoanRemainingMonths: firstPersonal?.remainingMonths ?? form.personalLoanRemainingMonths,
+    personalLoanRemainingMonths:
+      firstPersonal?.remainingMonths ?? form.personalLoanRemainingMonths,
     homeLoanLenderName: firstHome?.lenderName ?? form.homeLoanLenderName ?? "",
     homeLoanRate: firstHome?.interestRate ?? form.homeLoanRate,
-    homeLoanRemainingMonths: firstHome?.remainingMonths ?? form.homeLoanRemainingMonths,
+    homeLoanRemainingMonths:
+      firstHome?.remainingMonths ?? form.homeLoanRemainingMonths,
     carLoanLenderName: firstCar?.lenderName ?? form.carLoanLenderName ?? "",
     carLoanRate: firstCar?.interestRate ?? form.carLoanRate,
-    carLoanRemainingMonths: firstCar?.remainingMonths ?? form.carLoanRemainingMonths,
+    carLoanRemainingMonths:
+      firstCar?.remainingMonths ?? form.carLoanRemainingMonths,
     bikeLoanLenderName: firstBike?.lenderName ?? form.bikeLoanLenderName ?? "",
     bikeLoanRate: firstBike?.interestRate ?? form.bikeLoanRate,
-    bikeLoanRemainingMonths: firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths,
+    bikeLoanRemainingMonths:
+      firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths,
     bikeOutstanding: form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
-    additionalObligations: [...existingAdditionalObligations, ...dedupedAdditionalFromUnified],
+    additionalObligations: [
+      ...existingAdditionalObligations,
+      ...dedupedAdditionalFromUnified,
+    ],
     odLimit: form.odLimit,
     odUsed: form.odUsed,
     odInterestRate: form.odInterestRate,
@@ -1784,7 +1952,9 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     kidsActivities: form.lifeStage === "kids" ? form.kidsActivities : undefined,
     parentsSupport: form.parentsSupport,
     parentsHealthInsuranceSumInsured:
-      (form.parentsSupport ?? 0) > 0 ? form.parentsHealthInsuranceSumInsured : undefined,
+      (form.parentsSupport ?? 0) > 0
+        ? form.parentsHealthInsuranceSumInsured
+        : undefined,
     parentsEmergencyCash:
       (form.parentsSupport ?? 0) > 0 ? form.parentsEmergencyCash : undefined,
     parentsCity: (form.parentsSupport ?? 0) > 0 ? form.parentsCity : undefined,
@@ -1803,7 +1973,7 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
       ? form.healthInsurancePremiumInput
       : undefined,
     healthInsurancePremiumFrequency: form.hasHealthInsurance
-      ? form.healthInsurancePremiumFrequency ?? "monthly"
+      ? (form.healthInsurancePremiumFrequency ?? "monthly")
       : undefined,
     hasTermInsurance: form.hasTermInsurance ?? false,
     termInsuranceSumAssured: form.hasTermInsurance
@@ -1815,23 +1985,29 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
           form.termInsurancePremiumFrequency,
         )
       : undefined,
-    termInsurancePremiumInput: form.hasTermInsurance ? form.termInsurancePremiumInput : undefined,
-    termInsurancePremiumFrequency: form.hasTermInsurance
-      ? form.termInsurancePremiumFrequency ?? "monthly"
+    termInsurancePremiumInput: form.hasTermInsurance
+      ? form.termInsurancePremiumInput
       : undefined,
-    termInsurancePremiumTillYear: form.hasTermInsurance ? form.termInsurancePremiumTillYear : undefined,
+    termInsurancePremiumFrequency: form.hasTermInsurance
+      ? (form.termInsurancePremiumFrequency ?? "monthly")
+      : undefined,
+    termInsurancePremiumTillYear: form.hasTermInsurance
+      ? form.termInsurancePremiumTillYear
+      : undefined,
     carInsurancePremiumMonthly: toMonthlyEquivalent(
       form.carInsurancePremiumInput,
       form.carInsurancePremiumFrequency,
     ),
     carInsurancePremiumInput: form.carInsurancePremiumInput,
-    carInsurancePremiumFrequency: form.carInsurancePremiumFrequency ?? "monthly",
+    carInsurancePremiumFrequency:
+      form.carInsurancePremiumFrequency ?? "monthly",
     bikeInsurancePremiumMonthly: toMonthlyEquivalent(
       form.bikeInsurancePremiumInput,
       form.bikeInsurancePremiumFrequency,
     ),
     bikeInsurancePremiumInput: form.bikeInsurancePremiumInput,
-    bikeInsurancePremiumFrequency: form.bikeInsurancePremiumFrequency ?? "monthly",
+    bikeInsurancePremiumFrequency:
+      form.bikeInsurancePremiumFrequency ?? "monthly",
     hasOtherInsurance: form.hasOtherInsurance ?? false,
     otherInsurancePremiums: form.hasOtherInsurance
       ? (form.otherInsurancePremiums ?? []).map((row) => {
@@ -1860,14 +2036,15 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     otherInsurancePremiumMonthly: form.hasOtherInsurance
       ? (() => {
           const rows = form.otherInsurancePremiums ?? [];
-          const fromPolicies = rows.reduce(
-            (total, row) => {
-              const r = row as { premiumAmount?: number; premiumInput?: number; frequency?: PremiumFrequency };
-              const amount = r.premiumAmount ?? r.premiumInput;
-              return total + (toMonthlyEquivalent(amount, r.frequency) ?? 0);
-            },
-            0,
-          );
+          const fromPolicies = rows.reduce((total, row) => {
+            const r = row as {
+              premiumAmount?: number;
+              premiumInput?: number;
+              frequency?: PremiumFrequency;
+            };
+            const amount = r.premiumAmount ?? r.premiumInput;
+            return total + (toMonthlyEquivalent(amount, r.frequency) ?? 0);
+          }, 0);
           if (fromPolicies > 0) return fromPolicies;
           return (
             toMonthlyEquivalent(
@@ -1877,12 +2054,18 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
           );
         })()
       : undefined,
-    otherInsurancePremiumInput: form.hasOtherInsurance ? form.otherInsurancePremiumInput : undefined,
-    otherInsurancePremiumFrequency: form.hasOtherInsurance
-      ? form.otherInsurancePremiumFrequency ?? "monthly"
+    otherInsurancePremiumInput: form.hasOtherInsurance
+      ? form.otherInsurancePremiumInput
       : undefined,
-    lifeInsuranceMaturityAmount: form.hasOtherInsurance ? form.lifeInsuranceMaturityAmount : undefined,
-    lifeInsuranceMaturityYear: form.hasOtherInsurance ? form.lifeInsuranceMaturityYear : undefined,
+    otherInsurancePremiumFrequency: form.hasOtherInsurance
+      ? (form.otherInsurancePremiumFrequency ?? "monthly")
+      : undefined,
+    lifeInsuranceMaturityAmount: form.hasOtherInsurance
+      ? form.lifeInsuranceMaturityAmount
+      : undefined,
+    lifeInsuranceMaturityYear: form.hasOtherInsurance
+      ? form.lifeInsuranceMaturityYear
+      : undefined,
 
     savingsAccountBalance: form.savingsAccountBalance ?? 0,
     fdValue: form.fdValue,
@@ -1922,8 +2105,9 @@ export function normalizeAnalyseFormValues(data: Partial<AnalyseFormValues>): Fi
     ssy: form.ssy,
     nscDepositAmount: form.investsInNsc
       ? (form.nscDepositAmount ??
-          (form as Partial<AnalyseFormValues> & { nscMonthly?: number }).nscMonthly ??
-          0)
+        (form as Partial<AnalyseFormValues> & { nscMonthly?: number })
+          .nscMonthly ??
+        0)
       : 0,
     nscMaturityYear: form.investsInNsc ? form.nscMaturityYear : undefined,
     investsInNsc: form.investsInNsc ?? false,

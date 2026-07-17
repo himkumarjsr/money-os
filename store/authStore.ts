@@ -6,7 +6,11 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 function randomReferralCode(seed: string) {
-  const base = seed.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6) || "FINK";
+  const base =
+    seed
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .toUpperCase()
+      .slice(0, 6) || "FINK";
   return `${base}${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
@@ -49,6 +53,82 @@ export interface User {
   fkBalance?: number;
 }
 
+const AUTH_PERSIST_KEY = "finkoin-auth";
+
+/**
+ * Read persisted login from localStorage.
+ * Must NOT be applied during store module init — that diverges SSR vs client and
+ * causes React hydration mismatches. Apply via `applyPersistedAuthBootstrap()`
+ * in a client useLayoutEffect (before paint) instead.
+ */
+export function readPersistedAuthBootstrap(): {
+  user: User | null;
+  isLoggedIn: boolean;
+  userId: string | null;
+  subscriptionTier: "free" | "pro" | "promax";
+} {
+  if (typeof window === "undefined") {
+    return {
+      user: null,
+      isLoggedIn: false,
+      userId: null,
+      subscriptionTier: "free",
+    };
+  }
+  try {
+    const raw = window.localStorage.getItem(AUTH_PERSIST_KEY);
+    if (!raw) {
+      return {
+        user: null,
+        isLoggedIn: false,
+        userId: null,
+        subscriptionTier: "free",
+      };
+    }
+    const parsed = JSON.parse(raw) as {
+      state?: { user?: User | null; isLoggedIn?: boolean };
+    };
+    const state =
+      parsed?.state ?? (parsed as { user?: User | null; isLoggedIn?: boolean });
+    const user =
+      state?.user && typeof state.user === "object" && state.user.id
+        ? state.user
+        : null;
+    const isLoggedIn = Boolean(state?.isLoggedIn && user);
+    return {
+      user: isLoggedIn ? user : null,
+      isLoggedIn,
+      userId: isLoggedIn && user ? user.id : null,
+      subscriptionTier:
+        isLoggedIn && user
+          ? mapSubscriptionTier(user.subscriptionTier)
+          : "free",
+    };
+  } catch {
+    return {
+      user: null,
+      isLoggedIn: false,
+      userId: null,
+      subscriptionTier: "free",
+    };
+  }
+}
+
+/** Apply localStorage auth before first paint (call from useLayoutEffect only). */
+export function applyPersistedAuthBootstrap(): boolean {
+  const boot = readPersistedAuthBootstrap();
+  if (!boot.isLoggedIn || !boot.user) return false;
+  useAuthStore.setState({
+    user: boot.user,
+    isLoggedIn: true,
+    userId: boot.userId,
+    subscriptionTier: boot.subscriptionTier,
+    isLoading: false,
+    hasInitialized: true,
+  });
+  return true;
+}
+
 let authListenerStarted = false;
 
 interface AuthState {
@@ -65,14 +145,33 @@ interface AuthState {
   setSubscription: (tier: "free" | "pro" | "promax") => void;
   logout: () => Promise<void>;
   initAuth: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string, name: string) => Promise<{ error: string | null }>;
-  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
-  refreshUser: () => Promise<void>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    name: string,
+  ) => Promise<{ error: string | null }>;
+  signInWithEmail: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null }>;
+  refreshUser: (opts?: { clearOnMissingSession?: boolean }) => Promise<void>;
+}
+
+function clearLoggedOutState(set: (partial: Partial<AuthState>) => void) {
+  set({
+    user: null,
+    isLoggedIn: false,
+    userId: null,
+    subscriptionTier: "free",
+    isLoading: false,
+    hasInitialized: true,
+  });
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
+      // Always identical on server + first client render (avoids hydration mismatch).
       user: null,
       isLoggedIn: false,
       isLoading: true,
@@ -135,14 +234,7 @@ export const useAuthStore = create<AuthState>()(
             earnedActions: [],
             toastMessage: null,
           });
-          set({
-            user: null,
-            isLoggedIn: false,
-            userId: null,
-            subscriptionTier: "free",
-            isLoading: false,
-            hasInitialized: true,
-          });
+          clearLoggedOutState(set);
           try {
             await useAuthStore.persist.clearStorage();
           } catch {
@@ -154,7 +246,9 @@ export const useAuthStore = create<AuthState>()(
               const key = localStorage.key(i);
               if (
                 key &&
-                (key.startsWith("finkoin") || key.includes("supabase") || key.toLowerCase().includes("auth-token"))
+                (key.startsWith("finkoin") ||
+                  key.includes("supabase") ||
+                  key.toLowerCase().includes("auth-token"))
               ) {
                 keysToRemove.push(key);
               }
@@ -168,7 +262,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      refreshUser: async () => {
+      refreshUser: async (opts) => {
+        const clearOnMissingSession = opts?.clearOnMissingSession !== false;
+        const hadUser = Boolean(get().user);
+
         try {
           const supabase = getSupabase();
           const {
@@ -184,20 +281,37 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (!authUser) {
-            set({
-              user: null,
-              isLoggedIn: false,
-              isLoading: false,
-              hasInitialized: true,
-              subscriptionTier: "free",
-              userId: null,
-            });
-            return;
+            // Avoid wiping a warm PWA session on a transient cookie miss.
+            if (clearOnMissingSession && !hadUser) {
+              clearLoggedOutState(set);
+            } else if (clearOnMissingSession && hadUser) {
+              // Second chance: cookies sometimes lag on iOS standalone open.
+              await new Promise((r) => setTimeout(r, 250));
+              const {
+                data: { session: retrySession },
+              } = await supabase.auth.getSession();
+              const retryUser =
+                retrySession?.user ?? (await supabase.auth.getUser()).data.user;
+              if (!retryUser) {
+                clearLoggedOutState(set);
+                return;
+              }
+              authUser = retryUser;
+            } else {
+              set({ isLoading: false, hasInitialized: true });
+              return;
+            }
           }
+
+          if (!authUser) return;
 
           const userId = authUser.id;
 
-          const { data: userData } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
+          const { data: userData } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", userId)
+            .maybeSingle();
 
           const row = userData as UsersRow | null;
 
@@ -215,20 +329,32 @@ export const useAuthStore = create<AuthState>()(
               badges: [],
               streak_days: 0,
             });
-            gamData = { fk_balance: 50, total_earned: 50, streak_days: 0, badges: [] };
+            gamData = {
+              fk_balance: 50,
+              total_earned: 50,
+              streak_days: 0,
+              badges: [],
+            };
           }
 
           const tier = mapSubscriptionTier(row?.subscription_tier ?? "free");
           const fkBal = Number(gamData?.fk_balance ?? 50);
 
           const referral =
-            typeof row?.referral_code === "string" && row.referral_code.length > 0
+            typeof row?.referral_code === "string" &&
+            row.referral_code.length > 0
               ? row.referral_code
               : randomReferralCode(userId);
 
-          if (row && (!row.referral_code || String(row.referral_code).length === 0)) {
+          if (
+            row &&
+            (!row.referral_code || String(row.referral_code).length === 0)
+          ) {
             try {
-              await supabase.from("users").update({ referral_code: referral }).eq("id", userId);
+              await supabase
+                .from("users")
+                .update({ referral_code: referral })
+                .eq("id", userId);
             } catch {
               /* ignore RLS / network */
             }
@@ -237,14 +363,21 @@ export const useAuthStore = create<AuthState>()(
           const meta = authUser.user_metadata ?? {};
 
           const rowAvatar =
-            typeof row?.avatar_url === "string" && row.avatar_url.length > 0 ? row.avatar_url : null;
-          const metaAvatar = typeof meta.avatar_url === "string" && meta.avatar_url.length > 0 ? meta.avatar_url : null;
+            typeof row?.avatar_url === "string" && row.avatar_url.length > 0
+              ? row.avatar_url
+              : null;
+          const metaAvatar =
+            typeof meta.avatar_url === "string" && meta.avatar_url.length > 0
+              ? meta.avatar_url
+              : null;
 
           useGamificationStore.setState({
             fkBalance: fkBal,
             totalEarned: Number(gamData?.total_earned ?? fkBal),
             streakDays: Number(gamData?.streak_days ?? 0),
-            badges: Array.isArray(gamData?.badges) ? (gamData.badges as string[]) : [],
+            badges: Array.isArray(gamData?.badges)
+              ? (gamData.badges as string[])
+              : [],
             lastFetched: null,
           });
 
@@ -259,7 +392,10 @@ export const useAuthStore = create<AuthState>()(
             phone: row?.phone ?? authUser.phone ?? null,
             photoURL: rowAvatar ?? metaAvatar,
             panVerified: Boolean(row?.pan_verified),
-            panLast4: typeof row?.pan_last4 === "string" && row.pan_last4.length > 0 ? row.pan_last4 : null,
+            panLast4:
+              typeof row?.pan_last4 === "string" && row.pan_last4.length > 0
+                ? row.pan_last4
+                : null,
             aadhaarVerified: false,
             subscriptionTier: tier,
             subscriptionExpiry: row?.subscription_expiry ?? null,
@@ -280,33 +416,7 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (err) {
           console.error("refreshUser error:", err);
-          try {
-            const supabase = getSupabase();
-            const {
-              data: { session },
-            } = await supabase.auth.getSession();
-            if (!session?.user) {
-              set({
-                user: null,
-                isLoggedIn: false,
-                userId: null,
-                subscriptionTier: "free",
-                isLoading: false,
-                hasInitialized: true,
-              });
-              return;
-            }
-          } catch {
-            set({
-              user: null,
-              isLoggedIn: false,
-              userId: null,
-              subscriptionTier: "free",
-              isLoading: false,
-              hasInitialized: true,
-            });
-            return;
-          }
+          // Network blip: keep persisted login; only mark initialized.
           set({ isLoading: false, hasInitialized: true });
         }
       },
@@ -314,6 +424,7 @@ export const useAuthStore = create<AuthState>()(
       initAuth: async () => {
         console.log("initAuth: starting");
         const supabase = getSupabase();
+        const hadPersistedLogin = get().isLoggedIn && Boolean(get().user);
         set({ isLoading: true });
 
         try {
@@ -331,17 +442,27 @@ export const useAuthStore = create<AuthState>()(
             console.log("initAuth: user=", !!user);
           }
 
+          // iOS PWA cold start: cookies can lag a tick behind local persist.
+          if (!recoveredUser && hadPersistedLogin) {
+            await new Promise((r) => setTimeout(r, 300));
+            const {
+              data: { session: retrySession },
+            } = await supabase.auth.getSession();
+            recoveredUser =
+              retrySession?.user ?? (await supabase.auth.getUser()).data.user;
+            console.log("initAuth: retry user=", !!recoveredUser);
+          }
+
           if (recoveredUser) {
-            await get().refreshUser();
+            await get().refreshUser({ clearOnMissingSession: true });
             set({ hasInitialized: true, isLoading: false });
+          } else if (hadPersistedLogin) {
+            // Confirmed no live session — clear stale persist.
+            clearLoggedOutState(set);
           } else {
             set({
-              user: null,
-              isLoggedIn: false,
               isLoading: false,
               hasInitialized: true,
-              subscriptionTier: "free",
-              userId: null,
             });
           }
 
@@ -356,19 +477,12 @@ export const useAuthStore = create<AuthState>()(
               console.log("Auth event:", event);
 
               if (event === "SIGNED_OUT") {
-                set({
-                  user: null,
-                  isLoggedIn: false,
-                  userId: null,
-                  subscriptionTier: "free",
-                  isLoading: false,
-                  hasInitialized: true,
-                });
+                clearLoggedOutState(set);
                 return;
               }
 
               if (event === "SIGNED_IN" && sess?.user) {
-                await get().refreshUser();
+                await get().refreshUser({ clearOnMissingSession: true });
 
                 try {
                   const createdAt = new Date(sess.user.created_at);
@@ -377,28 +491,29 @@ export const useAuthStore = create<AuthState>()(
                   console.log("SIGNED_IN: account age minutes =", ageMinutes);
 
                   if (ageMinutes < 30) {
-                    const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
-                    const supabase = getSupabase();
-                    await applyPendingReferralRewards(supabase, sess.user.id);
+                    const { applyPendingReferralRewards } =
+                      await import("@/lib/referralRewards");
+                    const client = getSupabase();
+                    await applyPendingReferralRewards(client, sess.user.id);
                     console.log("Referral: processed on SIGNED_IN");
                   }
                 } catch (e) {
                   console.warn("Referral error:", e);
                 }
-              } else if ((event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && sess?.user) {
-                await get().refreshUser();
+              } else if (
+                (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") &&
+                sess?.user
+              ) {
+                await get().refreshUser({ clearOnMissingSession: false });
               }
             });
           }
         } catch (err) {
           console.error("initAuth error:", err);
+          // Keep optimistic persisted login on init failure (offline / flaky network).
           set({
-            user: null,
-            isLoggedIn: false,
             isLoading: false,
             hasInitialized: true,
-            subscriptionTier: "free",
-            userId: null,
           });
         }
       },
@@ -422,11 +537,12 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (data.session) {
-            await get().refreshUser();
+            await get().refreshUser({ clearOnMissingSession: true });
             try {
-              const { applyPendingReferralRewards } = await import("@/lib/referralRewards");
-              const supabase = getSupabase();
-              await applyPendingReferralRewards(supabase, data.session.user.id);
+              const { applyPendingReferralRewards } =
+                await import("@/lib/referralRewards");
+              const client = getSupabase();
+              await applyPendingReferralRewards(client, data.session.user.id);
               console.log("Referral: processed after email signup");
             } catch (e) {
               console.warn("Referral signup error:", e);
@@ -446,7 +562,10 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const supabase = getSupabase();
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
           if (error) {
             set({ isLoading: false });
@@ -454,7 +573,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (data.user) {
-            await get().refreshUser();
+            await get().refreshUser({ clearOnMissingSession: true });
           }
 
           set({ isLoading: false });
@@ -467,8 +586,10 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "finkoin-auth",
+      name: AUTH_PERSIST_KEY,
       storage: createJSONStorage(() => localStorage),
+      // Persist write path only; bootstrap is applied in AppInitializer useLayoutEffect.
+      skipHydration: true,
       partialize: (state) => ({
         user: state.user,
         isLoggedIn: state.isLoggedIn,

@@ -43,16 +43,25 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const redirected = useRef(false);
+  // Start false so SSR + first client render match; persist applies in layout effect.
   const [accessGranted, setAccessGranted] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!hasInitialized) return;
+    setMounted(true);
+  }, []);
 
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Persisted login: show the app immediately; verify session in the background.
     if (isLoggedIn) {
       redirected.current = false;
       setAccessGranted(true);
       return;
     }
+
+    if (!hasInitialized) return;
 
     let cancelled = false;
 
@@ -81,15 +90,17 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [hasInitialized, isLoggedIn, router, pathname]);
+  }, [mounted, hasInitialized, isLoggedIn, router, pathname]);
 
-  if (!hasInitialized) {
+  // Until mounted, always spinner — matches SSR and avoids hydration mismatch.
+  if (!mounted) {
     return <AuthSpinner />;
   }
 
-  if (!isLoggedIn && !accessGranted) {
-    return <AuthSpinner />;
+  // Already logged in from persist / session — never gate behind a spinner.
+  if (isLoggedIn || accessGranted) {
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  return <AuthSpinner />;
 }

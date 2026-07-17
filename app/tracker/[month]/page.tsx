@@ -2,7 +2,9 @@
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
-import ExpenseTable, { type TrackerTransactionRow } from "@/components/tracker/ExpenseTable";
+import ExpenseTable, {
+  type TrackerTransactionRow,
+} from "@/components/tracker/ExpenseTable";
 import MonthSummary from "@/components/tracker/MonthSummary";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import { getSupabase } from "@/lib/supabase";
@@ -31,8 +33,11 @@ function TrackerMonthContent() {
   const [transactions, setTransactions] = useState<TrackerTransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalDefaultBucket, setModalDefaultBucket] = useState<string | undefined>(undefined);
-  const [editingExpense, setEditingExpense] = useState<TrackerTransactionRow | null>(null);
+  const [modalDefaultBucket, setModalDefaultBucket] = useState<
+    string | undefined
+  >(undefined);
+  const [editingExpense, setEditingExpense] =
+    useState<TrackerTransactionRow | null>(null);
   const fetchReqId = useRef(0);
 
   useEffect(() => {
@@ -56,7 +61,11 @@ function TrackerMonthContent() {
       if (!user?.id) return;
       try {
         const supabase = getSupabase();
-        const { data } = await supabase.from("tracker_consent").select("consent_given").eq("user_id", user.id).maybeSingle();
+        const { data } = await supabase
+          .from("tracker_consent")
+          .select("consent_given")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
         if (data?.consent_given) {
           try {
@@ -76,35 +85,39 @@ function TrackerMonthContent() {
     void checkDB();
   }, [user?.id]);
 
-  const fetchTransactions = useCallback(async () => {
-    if (!hasConsent || !parsed) return;
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-    const myId = ++fetchReqId.current;
-    setLoading(true);
-    try {
-      const supabase = getSupabase();
-      const { data, error } = await supabase
-        .from("expense_transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("month", parsed.monthName)
-        .eq("year", parsed.year)
-        .order("date", { ascending: false });
+  const fetchTransactions = useCallback(
+    async (opts?: { soft?: boolean }) => {
+      if (!hasConsent || !parsed) return;
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+      const myId = ++fetchReqId.current;
+      const soft = opts?.soft === true;
+      if (!soft) setLoading(true);
+      try {
+        const supabase = getSupabase();
+        const { data, error } = await supabase
+          .from("expense_transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("month", parsed.monthName)
+          .eq("year", parsed.year)
+          .order("date", { ascending: false });
 
-      if (fetchReqId.current !== myId) return;
-      if (error) console.warn("tracker month fetch:", error.message);
-      setTransactions((data as TrackerTransactionRow[]) || []);
-    } catch (e) {
-      if (fetchReqId.current !== myId) return;
-      console.warn("tracker month fetch failed", e);
-      setTransactions([]);
-    } finally {
-      if (fetchReqId.current === myId) setLoading(false);
-    }
-  }, [user?.id, hasConsent, parsed]);
+        if (fetchReqId.current !== myId) return;
+        if (error) console.warn("tracker month fetch:", error.message);
+        setTransactions((data as TrackerTransactionRow[]) || []);
+      } catch (e) {
+        if (fetchReqId.current !== myId) return;
+        console.warn("tracker month fetch failed", e);
+        setTransactions([]);
+      } finally {
+        if (fetchReqId.current === myId) setLoading(false);
+      }
+    },
+    [user?.id, hasConsent, parsed],
+  );
 
   useEffect(() => {
     if (hasConsent) void fetchTransactions();
@@ -113,11 +126,13 @@ function TrackerMonthContent() {
   useEffect(() => {
     if (!hasConsent) return;
     const onVisible = () => {
-      if (document.visibilityState === "visible") void fetchTransactions();
+      if (document.visibilityState !== "visible") return;
+      if (showAddModal) return;
+      void fetchTransactions({ soft: true });
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [hasConsent, fetchTransactions]);
+  }, [hasConsent, fetchTransactions, showAddModal]);
 
   const defaultDateForModal = parsed
     ? `${parsed.year}-${String(parsed.monthIndex + 1).padStart(2, "0")}-15`
@@ -154,19 +169,60 @@ function TrackerMonthContent() {
   const totalSpent = Object.values(bucketTotals).reduce((a, b) => a + b, 0);
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "24px 16px 80px" }}>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 920,
+        margin: "0 auto",
+        padding: "24px 16px 80px",
+        boxSizing: "border-box",
+      }}
+    >
       <div style={{ marginBottom: 20 }}>
-        <Link href="/tracker" style={{ fontSize: 14, color: "#534AB7", fontWeight: 600, textDecoration: "none" }}>
+        <Link
+          href="/tracker"
+          style={{
+            fontSize: 14,
+            color: "#534AB7",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
           ← Back to current month
         </Link>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 24,
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111110", margin: 0 }}>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: "#111110",
+              margin: 0,
+            }}
+          >
             {parsed.monthName} {parsed.year}
           </h1>
-          <p style={{ fontSize: 13, color: "#111110", margin: "4px 0 0", opacity: 0.88 }}>All transactions</p>
+          <p
+            style={{
+              fontSize: 13,
+              color: "#111110",
+              margin: "4px 0 0",
+              opacity: 0.88,
+            }}
+          >
+            All transactions
+          </p>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           <button
@@ -223,25 +279,53 @@ function TrackerMonthContent() {
           color: "white",
         }}
       >
-        <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>TOTAL THIS MONTH</div>
-        <div style={{ fontSize: 32, fontWeight: 800 }}>₹{totalSpent.toLocaleString("en-IN")}</div>
-        <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{transactions.length} transactions</div>
+        <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
+          TOTAL THIS MONTH
+        </div>
+        <div style={{ fontSize: 32, fontWeight: 800 }}>
+          ₹{totalSpent.toLocaleString("en-IN")}
+        </div>
+        <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
+          {transactions.length} transactions
+        </div>
       </div>
 
-      <MonthSummary title="BY CATEGORY" bucketTotals={bucketTotals} totalSpent={totalSpent} />
+      <MonthSummary
+        title="BY CATEGORY"
+        bucketTotals={bucketTotals}
+        totalSpent={totalSpent}
+      />
 
-      <div style={{ background: "white", border: "1px solid #E8E6F0", borderRadius: 16, overflow: "hidden" }}>
+      <div
+        style={{
+          background: "white",
+          border: "1px solid #E8E6F0",
+          borderRadius: 16,
+          overflow: "hidden",
+        }}
+      >
         <div style={{ padding: "16px", borderBottom: "1px solid #F0EFF8" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#111110", textTransform: "uppercase" }}>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#111110",
+              textTransform: "uppercase",
+            }}
+          >
             ALL TRANSACTIONS
           </span>
         </div>
         {loading ? (
-          <div style={{ padding: "32px", textAlign: "center", color: "#111110" }}>Loading...</div>
+          <div
+            style={{ padding: "32px", textAlign: "center", color: "#111110" }}
+          >
+            Loading...
+          </div>
         ) : (
           <ExpenseTable
             transactions={transactions}
-            onChanged={() => void fetchTransactions()}
+            onChanged={() => void fetchTransactions({ soft: true })}
             onEdit={(txn) => {
               setEditingExpense(txn);
               setShowAddModal(true);
@@ -252,7 +336,9 @@ function TrackerMonthContent() {
 
       {showAddModal ? (
         <AddExpenseModal
-          defaultBucket={editingExpense ? editingExpense.bucket : modalDefaultBucket}
+          defaultBucket={
+            editingExpense ? editingExpense.bucket : modalDefaultBucket
+          }
           defaultDate={defaultDateForModal}
           editExpense={
             editingExpense
@@ -276,7 +362,7 @@ function TrackerMonthContent() {
             setShowAddModal(false);
             setEditingExpense(null);
             setModalDefaultBucket(undefined);
-            void fetchTransactions();
+            void fetchTransactions({ soft: true });
           }}
         />
       ) : null}
