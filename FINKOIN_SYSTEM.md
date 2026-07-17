@@ -48,7 +48,7 @@ the documentation generation prompt again.
 # FINKOIN SYSTEM DOCUMENTATION
 
 Last updated: 2026-07-18  
-Doc / app version: **0.3.0** (`package.json`)  
+Doc / app version: **0.4.0** (`package.json`)  
 Generated from: actual codebase
 
 ---
@@ -2788,6 +2788,26 @@ jsonb fields store JSON securely
 **Changelog — 2026-05-04:** Full SEO pass: blog as real routes with `lib/blogContent.ts`, dedicated tax calculator URL, expanded sitemap/robots, JSON-LD and OG placeholders, metadata on key marketing routes.
 
 **Changelog — 2026-05-07:** Trailing-slash normalization; calculators hub conditional **`WebApplication`** for tax tool; India taxation education articles in Learn + Blog (see **§CHANGE LOG 2026-05-07**). **GA4** instrumentation documented in **§29**.
+
+**Changelog — 2026-07-18 (v0.4.0) — API hardening + Split production-ready:**
+
+_Security / API hardening:_
+
+- New `lib/apiGuard.ts`: shared `getAuthedUser()`, `unauthorized()`, `tooManyRequests()`, and an in-memory fixed-window `rateLimit()` (per warm instance; back with Redis for a strict global limit).
+- `POST /api/ai/analyse` now **requires auth** + rate-limited (10/hr/user) — protects the paid Groq call from anonymous cost/DoS abuse.
+- `POST /api/split/invite` now **requires auth**, verifies the caller is an **active member**, and derives the inviter identity from the session (no longer trusts `invitedById`/`invitedByName` from the client). Email is format-validated; rate-limited 30/hr.
+- `POST /api/split/settle` now uses the **admin client after verifying membership**, validates the amount, blocks self-settlement, checks the recipient is in the group, and records the exact settlement amount (removed the old amount-blind "mark all shares settled" logic). Rate-limited 60/hr.
+- `POST /api/feedback` now derives `user_id` from the **session** (kills FK-token farming via forged `user_id`); anonymous feedback allowed but earns no FK; message/context length-capped; rate-limited 10/hr; removed PII (`console.log` of full body) and verbose error detail from responses.
+- `POST /api/razorpay/create-order` now **requires auth** + rate-limited (15/hr); tags order with `user_id`; removed key-prefix/verbose logging.
+- `next.config.mjs`: added `Referrer-Policy`, `Permissions-Policy`, and a conservative **CSP** (`base-uri 'self'; object-src 'none'; frame-ancestors 'self'; upgrade-insecure-requests`) that hardens clickjacking/base-injection/object-embedding without breaking inline scripts/styles or the payment flow.
+
+_Split (Finkoin Split) — production-ready + debt simplification:_
+
+- New `lib/splitBalances.ts` (+ `lib/splitBalances.test.ts`): deterministic, unit-tested balance engine. `computeNetBalances()` derives per-member net from expenses + shares + settlements (amount-accurate); `simplifyDebts()` implements minimum-cash-flow greedy matching (≤ n−1 transfers). Replaces reliance on the opaque `get_split_balances` DB RPC.
+- New `GET /api/split/balances?groupId=`: auth + membership-checked, computes `{ net, edges }` server-side via admin (bypasses settlement RLS uncertainty).
+- `store/splitStore.ts`: added `netBalances` state; `fetchGroupDetail` now fetches simplified `edges` + `net` from the balances API instead of the RPC; added `getMyNetBalance()`.
+- `app/split/[groupId]/page.tsx`: header net now from precise net balances; **"Simplified settle-up"** list (fewest payments) with per-row **Settle** buttons; new per-member **Balances** summary; proper **Record a payment** modal (replaces `window.prompt`); realtime now also refreshes on `split_settlements` and expense deletes.
+- `app/split/page.tsx`: corrected misleading delete copy (soft close, history kept, creator-only).
 
 -- 1. Find user ID
 SELECT id FROM auth.users

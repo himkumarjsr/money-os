@@ -2,6 +2,7 @@
 
 import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
 import { PaywallModal } from "@/components/analyse/paywall-modal";
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
@@ -142,7 +143,9 @@ export default function AnalyseResultPage() {
           padding: 24,
         }}
       >
-        <div style={{ fontSize: 48 }}>📊</div>
+        <div style={{ fontSize: 48 }}>
+          <AppIcon name="chart" size={44} color="#534AB7" />
+        </div>
         <h2
           style={{
             fontSize: 20,
@@ -389,7 +392,7 @@ export default function AnalyseResultPage() {
           : profile?.lifeStage === "married"
             ? 6
             : 6),
-      icon: "🛡️",
+      icon: "shield",
     },
     {
       id: "medical",
@@ -399,7 +402,7 @@ export default function AnalyseResultPage() {
       formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
       formatTarget: () => "₹2,00,000",
       isOk: (profile?.medicalEmergencyFund || 0) >= 200000,
-      icon: "🏥",
+      icon: "hospital",
     },
     {
       id: "term",
@@ -425,7 +428,7 @@ export default function AnalyseResultPage() {
           : termStatus === "complete"
             ? "Cover is adequate"
             : "You have no term insurance",
-      icon: "🛡️",
+      icon: "shield",
     },
     {
       id: "health",
@@ -441,7 +444,7 @@ export default function AnalyseResultPage() {
       isOk:
         (profile?.healthInsuranceSumInsured || 0) >=
         (profile?.lifeStage === "bachelor" ? 500000 : 1000000),
-      icon: "🏥",
+      icon: "hospital",
     },
     {
       id: "investment",
@@ -451,7 +454,7 @@ export default function AnalyseResultPage() {
       formatCurrent: (v: number) => `${Math.round(v)}% of income`,
       formatTarget: () => "15% minimum",
       isOk: (analysis?.scores?.savingsRate || 0) >= 15,
-      icon: "📈",
+      icon: "trending",
     },
   ];
   const completeCount = safetyItems.filter((i) => i.isOk).length;
@@ -965,7 +968,14 @@ export default function AnalyseResultPage() {
                 >
                   <div className="text-sm">
                     <p className="font-semibold">
-                      {item.icon} {item.title}
+                      <span className="inline-flex items-center gap-2">
+                        <AppIcon
+                          name={item.icon as AppIconName}
+                          size={18}
+                          color="#534AB7"
+                        />
+                        {item.title}
+                      </span>
                     </p>
                     <p className="text-[13px] font-medium leading-snug text-[#454442]">
                       Current {item.formatCurrent(item.current)} vs target{" "}
@@ -1034,9 +1044,17 @@ export default function AnalyseResultPage() {
                   "Start building your safety layer."}
               </p>
               <p className="mt-3 blur-[2px]">
-                🔒 Step 2: [blurred] — unlock to see
+                <span className="inline-flex items-center gap-2">
+                  <AppIcon name="lock" size={14} color="currentColor" />
+                  Step 2: [blurred] — unlock to see
+                </span>
               </p>
-              <p className="blur-[2px]">🔒 Step 3: [blurred] — unlock to see</p>
+              <p className="blur-[2px]">
+                <span className="inline-flex items-center gap-2">
+                  <AppIcon name="lock" size={14} color="currentColor" />
+                  Step 3: [blurred] — unlock to see
+                </span>
+              </p>
               <p className="mt-2 text-xs font-medium text-[#5F5E5A]">
                 + 8 more personalised steps
               </p>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -179,22 +180,22 @@ export default function AboutPage() {
         >
           {[
             {
-              emoji: "💸",
+              icon: "wallet" as AppIconName,
               title: "Money disappears",
               desc: "Most Indians earn well but never know where their money goes. No tracking, no awareness, no plan.",
             },
             {
-              emoji: "😰",
+              icon: "alert" as AppIconName,
               title: "No emergency fund",
               desc: "78% of Indians have less than 3 months of expenses saved. One health emergency can wipe out years of savings.",
             },
             {
-              emoji: "🤷",
+              icon: "shield" as AppIconName,
               title: "Wrong insurance",
               desc: "Most people are underinsured or have the wrong kind of insurance. LIC endowment plans instead of term insurance.",
             },
             {
-              emoji: "📊",
+              icon: "chart" as AppIconName,
               title: "Financial advice is expensive",
               desc: "Good financial advisors charge ₹5,000-50,000 per year. Most Indians cannot afford this.",
             },
@@ -209,11 +210,10 @@ export default function AboutPage() {
             >
               <div
                 style={{
-                  fontSize: 32,
                   marginBottom: 12,
                 }}
               >
-                {item.emoji}
+                <AppIcon name={item.icon} size={28} color="#534AB7" />
               </div>
               <h3
                 style={{
@@ -369,32 +369,38 @@ export default function AboutPage() {
         >
           {[
             {
-              emoji: "🔒",
+              icon: "lock" as AppIconName | null,
+              flag: null as string | null,
               title: "Privacy first",
               desc: "We never ask for PAN, Aadhaar, or bank details. Only numbers. Always encrypted.",
             },
             {
-              emoji: "🎓",
+              icon: "notebook" as AppIconName | null,
+              flag: null,
               title: "Education over selling",
               desc: "We explain every concept so you learn while you plan. Not just results — understanding.",
             },
             {
-              emoji: "🇮🇳",
+              icon: null,
+              flag: "🇮🇳",
               title: "Built for India",
               desc: "Indian tax laws, Indian investment products, Indian financial realities. Not a US product adapted.",
             },
             {
-              emoji: "💰",
+              icon: "coin" as AppIconName | null,
+              flag: null,
               title: "Affordable always",
               desc: "Core features free forever. Premium features at ₹99 — not ₹5,000/year like advisors.",
             },
             {
-              emoji: "🤖",
+              icon: "robot" as AppIconName | null,
+              flag: null,
               title: "AI with integrity",
               desc: "Our AI explains, not decides. You stay in control. We never push products for commission.",
             },
             {
-              emoji: "📊",
+              icon: "chart" as AppIconName | null,
+              flag: null,
               title: "Data-driven",
               desc: "Every suggestion backed by calculations, not opinions. Show the math, not just the answer.",
             },
@@ -409,11 +415,15 @@ export default function AboutPage() {
             >
               <div
                 style={{
-                  fontSize: 28,
+                  fontSize: item.flag ? 28 : undefined,
                   marginBottom: 10,
                 }}
               >
-                {item.emoji}
+                {item.flag ? (
+                  item.flag
+                ) : item.icon ? (
+                  <AppIcon name={item.icon} size={26} color="#534AB7" />
+                ) : null}
               </div>
               <h3
                 style={{

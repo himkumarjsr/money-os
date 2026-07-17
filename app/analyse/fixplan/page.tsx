@@ -6,6 +6,7 @@ import { Analytics } from "@/lib/analytics";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import PrivateAmount from "@/components/ui/PrivateAmount";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -1236,7 +1237,14 @@ export default function FixPlanPage() {
           disabled={downloading}
           className="h-12 w-full rounded-xl border border-[#534AB7] bg-white font-bold text-[#534AB7] disabled:opacity-70"
         >
-          {downloading ? "Generating PDF..." : "📄 Download full report PDF"}
+          {downloading ? (
+            "Generating PDF..."
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2">
+              <AppIcon name="download" size={18} color="currentColor" />
+              Download full report PDF
+            </span>
+          )}
         </button>
 
         <p className="pb-4 text-center text-xs text-[#9B9A94]">

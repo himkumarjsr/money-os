@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { trackShare } from "@/lib/gtag";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -102,9 +103,7 @@ export default function ReferPage() {
           >
             {copied ? (
               <>
-                <span className="text-lg leading-none" aria-hidden>
-                  ✓
-                </span>
+                <AppIcon name="check" size={16} color="#FFFFFF" />
                 Copied
               </>
             ) : (
@@ -127,7 +126,7 @@ export default function ReferPage() {
             })
           }
         >
-          <span aria-hidden>📱</span>
+          <AppIcon name="phone" size={20} color="currentColor" />
           Share on WhatsApp
         </a>
 

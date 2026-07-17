@@ -1,5 +1,6 @@
 "use client";
 
+import { AppIcon } from "@/components/ui/AppIcon";
 import { useAuthStore } from "@/store/authStore";
 import type { Notification } from "@/store/notificationStore";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -158,7 +159,7 @@ export default function MorningTipPopup() {
             lineHeight: 1,
           }}
         >
-          ✕
+          <AppIcon name="close" size={14} color="#9B9A94" />
         </button>
 
         <div
@@ -178,11 +179,10 @@ export default function MorningTipPopup() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 24,
               flexShrink: 0,
             }}
           >
-            {tip.emoji || "💡"}
+            <AppIcon name="bulb" size={22} color="#534AB7" />
           </div>
           <div>
             <div
@@ -195,7 +195,12 @@ export default function MorningTipPopup() {
                 marginBottom: 3,
               }}
             >
-              Good morning 🌅
+              <span
+                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+              >
+                Good morning
+                <AppIcon name="sunrise" size={14} color="#534AB7" />
+              </span>
             </div>
             <div
               style={{
@@ -241,7 +246,7 @@ export default function MorningTipPopup() {
               cursor: "pointer",
             }}
           >
-            Got it 👍
+            Got it
           </button>
           <button
             type="button"

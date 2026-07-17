@@ -2,6 +2,7 @@
 
 import { lazyCalculatorsById } from "@/components/calculators/lazy-calculators";
 import BottomSheet from "@/components/ui/BottomSheet";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { fadeUp, scaleIn, staggerContainer } from "@/lib/animations";
 import { cn } from "@/lib/cn";
 import { m } from "framer-motion";
@@ -32,7 +33,10 @@ export default function CalculatorsClient({
 
   const initialCategory = findCategoryForCalc(initialCalcId);
   const [category, setCategory] = useState<Cat>(initialCategory);
-  const activeCat = useMemo(() => CATEGORIES.find((c) => c.id === category)!, [category]);
+  const activeCat = useMemo(
+    () => CATEGORIES.find((c) => c.id === category)!,
+    [category],
+  );
   const [calcId, setCalcId] = useState(initialCalcId);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -42,7 +46,8 @@ export default function CalculatorsClient({
   }, [activeCat.items, calcId]);
 
   const ActiveCalc =
-    lazyCalculatorsById[activeItem.id] ?? lazyCalculatorsById[activeCat.items[0].id];
+    lazyCalculatorsById[activeItem.id] ??
+    lazyCalculatorsById[activeCat.items[0].id];
 
   const updateCalcInUrl = useCallback(
     (nextCalcId: string) => {
@@ -51,7 +56,9 @@ export default function CalculatorsClient({
           router.replace(urlBaseForTaxCanonical, { scroll: false });
           return;
         }
-        router.replace(`/calculators?calc=${encodeURIComponent(nextCalcId)}`, { scroll: false });
+        router.replace(`/calculators?calc=${encodeURIComponent(nextCalcId)}`, {
+          scroll: false,
+        });
         return;
       }
       const next = new URLSearchParams(searchParams?.toString() ?? "");
@@ -78,14 +85,24 @@ export default function CalculatorsClient({
     const currentCalc = searchParams?.get("calc");
     if (currentCalc === calcId) return;
     updateCalcInUrl(calcId);
-  }, [calcId, pathname, router, searchParams, updateCalcInUrl, urlBaseForTaxCanonical]);
+  }, [
+    calcId,
+    pathname,
+    router,
+    searchParams,
+    updateCalcInUrl,
+    urlBaseForTaxCanonical,
+  ]);
 
   return (
     <div className="min-h-dvh bg-white text-slate-900">
       <header className="border-b border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            <Link href="/" className="text-sm font-semibold text-[#534AB7] hover:underline">
+            <Link
+              href="/"
+              className="text-sm font-semibold text-[#534AB7] hover:underline"
+            >
               Back
             </Link>
             <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
@@ -95,7 +112,8 @@ export default function CalculatorsClient({
               Sliders update results instantly — illustrative, not advice.
             </p>
             <p className="mt-3 text-xs font-medium text-slate-500">
-              Includes SIP calculator India, EMI calculator, and income tax planning tools.
+              Includes SIP calculator India, EMI calculator, and income tax
+              planning tools.
             </p>
           </div>
         </div>
@@ -163,8 +181,10 @@ export default function CalculatorsClient({
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
           aria-live="polite"
         >
-          <h2 className="text-lg font-semibold text-slate-900">
-            {activeItem.icon ? `${activeItem.icon} ` : ""}
+          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
+            {activeItem.icon ? (
+              <AppIcon name={activeItem.icon} size={20} color="#534AB7" />
+            ) : null}
             {activeItem.title}
           </h2>
           <p className="mt-1 text-sm text-slate-600">{activeItem.blurb}</p>
@@ -190,7 +210,11 @@ export default function CalculatorsClient({
           animate="visible"
         >
           {activeCat.items.map((item, index) => (
-            <m.li key={item.id} variants={fadeUp} transition={{ delay: index * 0.05 }}>
+            <m.li
+              key={item.id}
+              variants={fadeUp}
+              transition={{ delay: index * 0.05 }}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -200,8 +224,12 @@ export default function CalculatorsClient({
                 }}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left"
               >
-                <span className="block text-sm font-semibold text-slate-900">{item.title}</span>
-                <span className="mt-0.5 block text-xs text-slate-500">{item.blurb}</span>
+                <span className="block text-sm font-semibold text-slate-900">
+                  {item.title}
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  {item.blurb}
+                </span>
               </button>
             </m.li>
           ))}
@@ -211,7 +239,7 @@ export default function CalculatorsClient({
       <BottomSheet
         isOpen={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`${activeItem.icon ? `${activeItem.icon} ` : ""}${activeItem.title}`}
+        title={activeItem.title}
         fullscreen
         closeOnBackdrop={false}
         closeOnDrag={false}
@@ -233,4 +261,3 @@ export default function CalculatorsClient({
     </div>
   );
 }
-

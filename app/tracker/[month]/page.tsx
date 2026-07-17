@@ -30,9 +30,22 @@ function TrackerMonthContent() {
     return { year: y, monthIndex: m - 1, monthName: label };
   }, [monthParam]);
 
-  const [hasConsent, setHasConsent] = useState<boolean | null>(null);
+  const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
+    try {
+      if (
+        typeof window !== "undefined" &&
+        localStorage.getItem("finkoin_tracker_consent") === "v1"
+      ) {
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  });
   const [transactions, setTransactions] = useState<TrackerTransactionRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  /** Prefer showing the UI shell immediately; soft fetches never blank it. */
+  const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalDefaultBucket, setModalDefaultBucket] = useState<
     string | undefined
@@ -40,6 +53,8 @@ function TrackerMonthContent() {
   const [editingExpense, setEditingExpense] =
     useState<TrackerTransactionRow | null>(null);
   const fetchReqId = useRef(0);
+  /** Hard fetches that are still in flight — soft must not clear the spinner early. */
+  const hardInFlight = useRef(0);
 
   useEffect(() => {
     if (!parsed) {
@@ -48,6 +63,8 @@ function TrackerMonthContent() {
   }, [parsed, router]);
 
   useEffect(() => {
+    if (hasConsent === true) return;
+
     try {
       const local = localStorage.getItem("finkoin_tracker_consent");
       if (local === "v1") {
@@ -84,7 +101,7 @@ function TrackerMonthContent() {
     };
 
     void checkDB();
-  }, [user?.id]);
+  }, [user?.id, hasConsent]);
 
   const fetchTransactions = useCallback(
     async (opts?: { soft?: boolean }) => {
@@ -94,8 +111,11 @@ function TrackerMonthContent() {
         return;
       }
       const myId = ++fetchReqId.current;
-      const soft = opts?.soft === true;
-      if (!soft) setLoading(true);
+      const soft = opts?.soft !== false;
+      if (!soft) {
+        hardInFlight.current += 1;
+        setLoading(true);
+      }
       try {
         const supabase = getSupabase();
         const { data, error } = await supabase
@@ -114,14 +134,21 @@ function TrackerMonthContent() {
         console.warn("tracker month fetch failed", e);
         setTransactions([]);
       } finally {
-        if (fetchReqId.current === myId) setLoading(false);
+        if (!soft) {
+          hardInFlight.current = Math.max(0, hardInFlight.current - 1);
+        }
+        if (hardInFlight.current === 0) {
+          if (fetchReqId.current === myId || !soft) {
+            setLoading(false);
+          }
+        }
       }
     },
     [user?.id, hasConsent, parsed],
   );
 
   useEffect(() => {
-    if (hasConsent) void fetchTransactions();
+    if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
 
   useEffect(() => {
@@ -321,20 +348,25 @@ function TrackerMonthContent() {
         </div>
         {loading ? (
           <div
-            style={{ padding: "32px", textAlign: "center", color: "#111110" }}
-          >
-            Loading...
-          </div>
-        ) : (
-          <ExpenseTable
-            transactions={transactions}
-            onChanged={() => void fetchTransactions({ soft: true })}
-            onEdit={(txn) => {
-              setEditingExpense(txn);
-              setShowAddModal(true);
+            style={{
+              padding: "12px 16px",
+              textAlign: "center",
+              color: "#9B9A94",
+              fontSize: 12,
+              fontWeight: 600,
             }}
-          />
-        )}
+          >
+            Updating…
+          </div>
+        ) : null}
+        <ExpenseTable
+          transactions={transactions}
+          onChanged={() => void fetchTransactions({ soft: true })}
+          onEdit={(txn) => {
+            setEditingExpense(txn);
+            setShowAddModal(true);
+          }}
+        />
       </div>
 
       {showAddModal ? (

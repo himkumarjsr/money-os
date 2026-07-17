@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { AppIcon } from "@/components/ui/AppIcon";
 
 interface ConsentModalProps {
   onAccept: () => void;
   onDecline: () => void;
 }
 
-export default function ConsentModal({ onAccept, onDecline }: ConsentModalProps) {
+export default function ConsentModal({
+  onAccept,
+  onDecline,
+}: ConsentModalProps) {
   const [checked, setChecked] = useState(false);
 
   return (
@@ -47,10 +51,9 @@ export default function ConsentModal({ onAccept, onDecline }: ConsentModalProps)
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 20,
-            fontSize: 28,
           }}
         >
-          🔒
+          <AppIcon name="lock" size={28} color="#534AB7" />
         </div>
 
         <h2
@@ -218,9 +221,17 @@ export default function ConsentModal({ onAccept, onDecline }: ConsentModalProps)
             marginBottom: 16,
           }}
         >
-          <p style={{ fontSize: 13, color: "#3C3489", lineHeight: 1.6, margin: 0 }}>
-            Your data is used only to calculate your financial analysis and generate your personalized plan.
-            We do not sell your personal financial data.
+          <p
+            style={{
+              fontSize: 13,
+              color: "#3C3489",
+              lineHeight: 1.6,
+              margin: 0,
+            }}
+          >
+            Your data is used only to calculate your financial analysis and
+            generate your personalized plan. We do not sell your personal
+            financial data.
           </p>
         </div>
 
@@ -240,7 +251,8 @@ export default function ConsentModal({ onAccept, onDecline }: ConsentModalProps)
             style={{ marginTop: 2 }}
           />
           <span style={{ fontSize: 13, color: "#5F5E5A", lineHeight: 1.5 }}>
-            I understand and consent to Finkoin processing my entered financial data for analysis.
+            I understand and consent to Finkoin processing my entered financial
+            data for analysis.
           </span>
         </label>
 

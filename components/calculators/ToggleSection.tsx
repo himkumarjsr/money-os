@@ -3,9 +3,35 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+
+/** Map legacy emoji props → purple AppIcon names (🇮🇳 is never mapped). */
+const EMOJI_TO_ICON: Record<string, AppIconName> = {
+  "🏠": "home",
+  "✈️": "plane",
+  "📈": "trending",
+  "🎁": "gift",
+  "🌴": "beach",
+  "🏖️": "beach",
+  "💼": "briefcase",
+  "🏢": "bank",
+  "🏦": "bank",
+  "💰": "coin",
+  "📊": "chart",
+  "🌾": "sparkle",
+  "💫": "sparkle",
+  "📒": "notebook",
+  "🩺": "hospital",
+  "📑": "doc",
+  "🧾": "receipt",
+  "🔁": "repeat",
+  "🔒": "lock",
+  "💡": "bulb",
+};
 
 export function ToggleSection({
   emoji,
+  icon,
   title,
   subtitle,
   oneLiner,
@@ -14,7 +40,8 @@ export function ToggleSection({
   children,
 }: {
   id: string;
-  emoji: string;
+  emoji?: string;
+  icon?: AppIconName;
   title: string;
   subtitle: string;
   /** Extra grey helper line under the subtitle (desktop: full; phone: clamped — tap ? inside row for detail). */
@@ -28,6 +55,9 @@ export function ToggleSection({
   useEffect(() => {
     if (!isOn) setExpanded(false);
   }, [isOn]);
+
+  const resolvedIcon: AppIconName =
+    icon ?? (emoji ? EMOJI_TO_ICON[emoji] : undefined) ?? "doc";
 
   return (
     <div
@@ -53,16 +83,19 @@ export function ToggleSection({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 20,
               transition: "background 0.2s",
             }}
             className="mt-0.5 shrink-0 sm:mt-0"
           >
-            {emoji}
+            <AppIcon name={resolvedIcon} size={20} color="#534AB7" />
           </div>
           <div className="min-w-0 flex-1 pr-1">
-            <div className="text-sm font-semibold leading-snug text-[#111110] sm:text-[15px]">{title}</div>
-            <div className="mt-0.5 text-[11px] leading-snug text-[#9B9A94] sm:text-xs">{subtitle}</div>
+            <div className="text-sm font-semibold leading-snug text-[#111110] sm:text-[15px]">
+              {title}
+            </div>
+            <div className="mt-0.5 text-[11px] leading-snug text-[#9B9A94] sm:text-xs">
+              {subtitle}
+            </div>
             {oneLiner ? (
               <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-[#B0AFA8] sm:mt-1 sm:line-clamp-none sm:text-[11px] sm:leading-[1.35]">
                 {oneLiner}
@@ -109,11 +142,16 @@ export function ToggleSection({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#5F5E5A] transition hover:bg-slate-100"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#534AB7] transition hover:bg-slate-100"
               aria-label={expanded ? "Collapse section" : "Expand section"}
               title={expanded ? "Collapse section" : "Expand section"}
             >
-              <span className={cn("text-lg leading-none transition-transform", expanded ? "rotate-180" : "")}>
+              <span
+                className={cn(
+                  "text-lg leading-none transition-transform",
+                  expanded ? "rotate-180" : "",
+                )}
+              >
                 ⌄
               </span>
             </button>

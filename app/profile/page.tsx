@@ -11,6 +11,7 @@ import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { AppIcon } from "@/components/ui/AppIcon";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -156,7 +157,10 @@ export default function ProfilePage() {
           </div>
           <div>
             <p className="text-xs text-slate-500">FK tokens</p>
-            <p className="text-xl font-bold text-slate-900">🪙 {fkBalance}</p>
+            <p className="flex items-center gap-1.5 text-xl font-bold text-slate-900">
+              <AppIcon name="coin" size={20} color="#534AB7" />
+              {fkBalance}
+            </p>
           </div>
         </section>
 
@@ -179,8 +183,13 @@ export default function ProfilePage() {
                 key={item.label}
                 className="flex items-start justify-between rounded-lg border border-slate-100 p-3"
               >
-                <span>
-                  {item.status === "ok" ? "✓" : "✗"} {item.label}
+                <span className="flex items-center gap-2">
+                  <AppIcon
+                    name={item.status === "ok" ? "checkCircle" : "close"}
+                    size={16}
+                    color={item.status === "ok" ? "#1D9E75" : "#E24B4A"}
+                  />
+                  {item.label}
                 </span>
                 <span className="text-xs text-slate-500">{item.detail}</span>
               </li>
@@ -214,8 +223,9 @@ export default function ProfilePage() {
                   </button>
                 </div>
               ) : (
-                <p className="text-sm font-medium text-emerald-700">
-                  ✓ PAN verified{user.panLast4 ? ` · ••••${user.panLast4}` : ""}
+                <p className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+                  <AppIcon name="checkCircle" size={16} color="#534AB7" />
+                  PAN verified{user.panLast4 ? ` · ••••${user.panLast4}` : ""}
                 </p>
               )}
               {panMessage ? (
@@ -223,9 +233,16 @@ export default function ProfilePage() {
               ) : null}
             </div>
             <div className="rounded-lg border border-slate-100 p-3 text-sm">
-              <p>
+              <p className="inline-flex items-center gap-1.5">
                 Mobile verification:{" "}
-                {user?.phone ? "✓ Verified" : "Not verified"}
+                {user?.phone ? (
+                  <>
+                    <AppIcon name="checkCircle" size={14} color="#534AB7" />
+                    Verified
+                  </>
+                ) : (
+                  "Not verified"
+                )}
               </p>
               <p className="mt-1 text-slate-500">
                 Aadhaar verification: Coming soon
@@ -253,9 +270,7 @@ export default function ProfilePage() {
             >
               {referralCopied ? (
                 <>
-                  <span className="text-emerald-600" aria-hidden>
-                    ✓
-                  </span>
+                  <AppIcon name="check" size={14} color="#534AB7" />
                   Copied
                 </>
               ) : (

@@ -1,7 +1,12 @@
 "use client";
 
-import { fetchUpcomingRenewals, formatRenewalDayMonth, getSupabaseAuthUserId } from "@/lib/userPolicies";
+import {
+  fetchUpcomingRenewals,
+  formatRenewalDayMonth,
+  getSupabaseAuthUserId,
+} from "@/lib/userPolicies";
 import { useAuthStore } from "@/store/authStore";
+import { AppIcon } from "@/components/ui/AppIcon";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -82,7 +87,10 @@ export function RenewalReminderBanner() {
     <div className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-950">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/policies" className="flex-1 hover:opacity-90">
-          <p className="font-semibold">⚠️ {count} policy renewal{count === 1 ? "" : "s"} coming up</p>
+          <p className="inline-flex items-center gap-1.5 font-semibold">
+            <AppIcon name="alert" size={16} color="#534AB7" />
+            {count} policy renewal{count === 1 ? "" : "s"} coming up
+          </p>
           <p className="text-xs text-amber-900/90">
             {sampleName} renews on {sampleDate}. Click to view options.
           </p>

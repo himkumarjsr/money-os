@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import { AppIcon } from "@/components/ui/AppIcon";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -8,7 +9,13 @@ import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 const APP_VERSION = "1.0.0";
 export default function SettingsPage() {
@@ -58,7 +65,11 @@ function SettingsInner() {
       }
       setLoadingPref(true);
       const supabase = getSupabase();
-      const { data } = await supabase.from("notification_preferences").select("*").eq("user_id", user.id).maybeSingle();
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
       if (data) {
         setEmailConsent(Boolean(data.email_consent));
         setNotifPrefs({
@@ -68,7 +79,11 @@ function SettingsInner() {
         });
       } else {
         setEmailConsent(false);
-        setNotifPrefs({ morning_tips: false, weekly_summary: false, payment_alerts: true });
+        setNotifPrefs({
+          morning_tips: false,
+          weekly_summary: false,
+          payment_alerts: true,
+        });
       }
       setLoadingPref(false);
     };
@@ -99,9 +114,16 @@ function SettingsInner() {
       setSavingPref(false);
       return;
     }
-    setNotifPrefs((prev) => ({ ...prev, morning_tips: newValue, weekly_summary: newValue }));
+    setNotifPrefs((prev) => ({
+      ...prev,
+      morning_tips: newValue,
+      weekly_summary: newValue,
+    }));
     setSavingPref(false);
-    localStorage.setItem("finkoin_notif_consent", newValue ? "accepted" : "declined");
+    localStorage.setItem(
+      "finkoin_notif_consent",
+      newValue ? "accepted" : "declined",
+    );
   };
 
   const updatePref = async (key: "payment_alerts", value: boolean) => {
@@ -117,7 +139,10 @@ function SettingsInner() {
     setNotifSavingKey(null);
   };
 
-  const initials = useMemo(() => (user?.name?.trim()?.charAt(0) || "U").toUpperCase(), [user?.name]);
+  const initials = useMemo(
+    () => (user?.name?.trim()?.charAt(0) || "U").toUpperCase(),
+    [user?.name],
+  );
 
   const handleNameSave = async () => {
     if (!user?.id || !name.trim()) return;
@@ -125,7 +150,10 @@ function SettingsInner() {
     setNameSaved(false);
     try {
       const supabase = getSupabase();
-      await supabase.from("users").update({ name: name.trim() }).eq("id", user.id);
+      await supabase
+        .from("users")
+        .update({ name: name.trim() })
+        .eq("id", user.id);
       updateUser({ name: name.trim() });
       setNameSaved(true);
       await refreshUser();
@@ -144,11 +172,18 @@ function SettingsInner() {
       const supabase = getSupabase();
       const ext = file.name.split(".").pop() || "jpg";
       const fileName = `${user.id}-avatar.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
       const publicUrl = urlData.publicUrl;
-      await supabase.from("users").update({ avatar_url: publicUrl }).eq("id", user.id);
+      await supabase
+        .from("users")
+        .update({ avatar_url: publicUrl })
+        .eq("id", user.id);
       updateUser({ photoURL: publicUrl });
       await refreshUser();
     } catch (err) {
@@ -174,7 +209,9 @@ function SettingsInner() {
       user,
       lastSubmissionSnapshot: lastSubmission ? { ...lastSubmission } : null,
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `finkoin-export-${user?.id?.slice(0, 8) ?? "user"}.json`;
@@ -183,7 +220,9 @@ function SettingsInner() {
   }, [user, lastSubmission]);
 
   const handleDeleteAccount = async () => {
-    const typed = window.prompt('Type DELETE to confirm permanent removal from this device and session. (Server-side purge may require support.)');
+    const typed = window.prompt(
+      "Type DELETE to confirm permanent removal from this device and session. (Server-side purge may require support.)",
+    );
     if (typed !== "DELETE") return;
     await logoutAction();
     router.push("/");
@@ -193,28 +232,45 @@ function SettingsInner() {
   return (
     <main className="mx-auto max-w-xl px-4 py-10 pb-16 sm:px-6">
       <h1 className="text-3xl font-bold text-[#111110]">Settings</h1>
-      <p className="mt-2 text-sm text-[#5F5E5A]">Profile, security, and data preferences.</p>
+      <p className="mt-2 text-sm text-[#5F5E5A]">
+        Profile, security, and data preferences.
+      </p>
 
       <section className="mt-10 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">Profile</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+          Profile
+        </h2>
         <div className="mt-6 flex items-start gap-6">
           <div className="relative">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-3xl font-bold text-white">
               {user?.photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={user.photoURL}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 initials
               )}
             </div>
             <label className="absolute -bottom-0.5 -right-0.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#111110] text-sm text-white shadow-md">
-              ✏️
-              <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={(ev) => void handlePhotoUpload(ev)} />
+              <AppIcon name="pencil" size={15} color="currentColor" />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={photoBusy}
+                onChange={(ev) => void handlePhotoUpload(ev)}
+              />
             </label>
           </div>
           <div className="min-w-0 flex-1 space-y-3">
             <div>
-              <label className="text-xs font-semibold text-[#5F5E5A]" htmlFor="set-name">
+              <label
+                className="text-xs font-semibold text-[#5F5E5A]"
+                htmlFor="set-name"
+              >
                 Display name
               </label>
               <input
@@ -232,15 +288,24 @@ function SettingsInner() {
             >
               {nameSaving ? "Saving…" : "Save name"}
             </button>
-            {nameSaved ? <p className="text-xs font-medium text-[#1D9E75]">Saved.</p> : null}
+            {nameSaved ? (
+              <p className="text-xs font-medium text-[#1D9E75]">Saved.</p>
+            ) : null}
           </div>
         </div>
         <div className="mt-6 border-t border-[#F0EFF8] pt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">Email</p>
-          <p className="mt-2 text-sm font-medium text-[#111110]">{user?.email ?? "—"}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">
+            Email
+          </p>
+          <p className="mt-2 text-sm font-medium text-[#111110]">
+            {user?.email ?? "—"}
+          </p>
           <p className="mt-2 text-xs leading-relaxed text-[#9B9A94]">
             Email sign-in can&apos;t be changed here.{" "}
-            <a href="mailto:support@finkoin.com" className="font-semibold text-[#534AB7]">
+            <a
+              href="mailto:support@finkoin.com"
+              className="font-semibold text-[#534AB7]"
+            >
               support@finkoin.com
             </a>
           </p>
@@ -248,7 +313,9 @@ function SettingsInner() {
       </section>
 
       <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">Security</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+          Security
+        </h2>
         <button
           type="button"
           onClick={() => void handlePasswordReset()}
@@ -257,23 +324,37 @@ function SettingsInner() {
           Email me a password reset link
         </button>
         {resetSent ? (
-          <p className="mt-3 text-xs font-medium text-[#1D9E75]">Password reset email sent to {user?.email}.</p>
+          <p className="mt-3 text-xs font-medium text-[#1D9E75]">
+            Password reset email sent to {user?.email}.
+          </p>
         ) : null}
       </section>
 
       <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">Notifications</h2>
-        <p className="mt-2 text-xs text-[#9B9A94]">Saved to your account and synced across devices.</p>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+          Notifications
+        </h2>
+        <p className="mt-2 text-xs text-[#9B9A94]">
+          Saved to your account and synced across devices.
+        </p>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-[#E8E6F0] bg-white">
           <div className="flex items-center justify-between gap-4 border-b border-[#F7F7F4] px-4 py-[14px]">
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-[#111110]">Daily finance tips</div>
-              <div className="mt-0.5 text-xs text-[#9B9A94]">One tip every morning at 8:30 AM</div>
+              <div className="text-sm font-semibold text-[#111110]">
+                Daily finance tips
+              </div>
+              <div className="mt-0.5 text-xs text-[#9B9A94]">
+                One tip every morning at 8:30 AM
+              </div>
             </div>
             <button
               type="button"
-              aria-label={emailConsent ? "Turn off daily finance tips" : "Turn on daily finance tips"}
+              aria-label={
+                emailConsent
+                  ? "Turn off daily finance tips"
+                  : "Turn on daily finance tips"
+              }
               disabled={loadingPref || savingPref}
               onClick={() => void toggleEmailConsent()}
               className="relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-50"
@@ -303,8 +384,14 @@ function SettingsInner() {
       </section>
 
       <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">Data</h2>
-        <button type="button" onClick={exportData} className="mt-4 w-full rounded-xl bg-[#F7F7F4] py-3 text-sm font-bold text-[#111110]">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+          Data
+        </h2>
+        <button
+          type="button"
+          onClick={exportData}
+          className="mt-4 w-full rounded-xl bg-[#F7F7F4] py-3 text-sm font-bold text-[#111110]"
+        >
           Export my data (JSON)
         </button>
         <button
@@ -315,8 +402,12 @@ function SettingsInner() {
           Delete account &amp; sign out
         </button>
         <p className="mt-2 text-xs text-[#9B9A94]">
-          Export includes profile snapshot from this browser session. For full deletion from servers, email{" "}
-          <a href="mailto:privacy@finkoin.com" className="font-semibold text-[#534AB7]">
+          Export includes profile snapshot from this browser session. For full
+          deletion from servers, email{" "}
+          <a
+            href="mailto:privacy@finkoin.com"
+            className="font-semibold text-[#534AB7]"
+          >
             privacy@finkoin.com
           </a>
           .
@@ -324,19 +415,24 @@ function SettingsInner() {
       </section>
 
       <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-[#F7F7F4] p-6">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">App</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+          App
+        </h2>
         <ul className="mt-3 space-y-2 text-sm text-[#5F5E5A]">
           <li>
             Version: <strong className="text-[#111110]">{APP_VERSION}</strong>
           </li>
           <li>
             Last analysis draft:{" "}
-            <strong className="text-[#111110]">{lastSubmission ? "Saved on this device" : "None yet"}</strong>
+            <strong className="text-[#111110]">
+              {lastSubmission ? "Saved on this device" : "None yet"}
+            </strong>
           </li>
           <li>
             FK balance:{" "}
-            <strong className="text-[#111110]">
-              🪙 {fkBalance} ·{" "}
+            <strong className="inline-flex items-center gap-1 align-text-bottom text-[#111110]">
+              <AppIcon name="coin" size={16} color="#534AB7" />
+              {fkBalance} ·{" "}
               <Link href="/rewards" className="text-[#534AB7]">
                 Rewards
               </Link>

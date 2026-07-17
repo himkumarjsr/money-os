@@ -11,6 +11,7 @@ import {
   TrackerIcon,
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState, type CSSProperties } from "react";
 
@@ -401,18 +402,23 @@ export default function AddExpenseModal({
               Paid via
             </label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {[
-                { id: "upi", label: "📱 UPI" },
-                { id: "cash", label: "💵 Cash" },
-                { id: "card", label: "💳 Card" },
-                { id: "netbanking", label: "🏦 Net banking" },
-                { id: "wallet", label: "👛 Wallet" },
-              ].map((pm) => (
+              {(
+                [
+                  { id: "upi", label: "UPI", icon: "phone" },
+                  { id: "cash", label: "Cash", icon: "rupee" },
+                  { id: "card", label: "Card", icon: "card" },
+                  { id: "netbanking", label: "Net banking", icon: "bank" },
+                  { id: "wallet", label: "Wallet", icon: "wallet" },
+                ] as { id: string; label: string; icon: AppIconName }[]
+              ).map((pm) => (
                 <button
                   key={pm.id}
                   type="button"
                   onClick={() => setPaymentMethod(pm.id)}
                   style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
                     padding: "8px 12px",
                     borderRadius: 8,
                     border: `1.5px solid ${paymentMethod === pm.id ? "#534AB7" : "#E8E6F0"}`,
@@ -423,6 +429,11 @@ export default function AddExpenseModal({
                     fontWeight: paymentMethod === pm.id ? 700 : 400,
                   }}
                 >
+                  <AppIcon
+                    name={pm.icon}
+                    size={15}
+                    color={paymentMethod === pm.id ? "#534AB7" : "#111110"}
+                  />
                   {pm.label}
                 </button>
               ))}

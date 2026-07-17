@@ -1,25 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
+import {
+  getAuthedUser,
+  rateLimit,
+  tooManyRequests,
+  unauthorized,
+} from "@/lib/apiGuard";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
   try {
-    const { groupId, groupName, invitedEmail, invitedByName, invitedById } = (await req.json()) as {
+    const user = await getAuthedUser();
+    if (!user) {
+      return unauthorized();
+    }
+
+    const { groupId, groupName, invitedEmail } = (await req.json()) as {
       groupId?: string;
       groupName?: string;
       invitedEmail?: string;
-      invitedByName?: string;
-      invitedById?: string;
     };
 
-    if (!groupId || !invitedEmail || !invitedByName || !invitedById) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!groupId || !invitedEmail) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
 
     const email = invitedEmail.toLowerCase().trim();
-    const safeGroupName = groupName?.trim() || "Finkoin Split group";
+    if (!EMAIL_RE.test(email)) {
+      return NextResponse.json(
+        { error: "Enter a valid email address" },
+        { status: 400 },
+      );
+    }
+
+    const limit = rateLimit(`split-invite:${user.id}`, 30, 60 * 60 * 1000);
+    if (!limit.ok) {
+      return tooManyRequests(limit.retryAfter);
+    }
 
     const supabaseAdmin = getSupabaseAdmin();
+
+    // Only an active member of the group may invite others, and we trust the
+    // server session for the inviter identity (never the client payload).
+    const actorEmail = (user.email ?? "").toLowerCase().trim();
+    const { data: membership, error: memErr } = await supabaseAdmin
+      .from("split_group_members")
+      .select("id, role, display_name")
+      .eq("group_id", groupId)
+      .eq("email", actorEmail)
+      .eq("status", "active")
+      .maybeSingle();
+    if (memErr) throw memErr;
+    if (!membership) {
+      return NextResponse.json(
+        { error: "You are not a member of this group" },
+        { status: 403 },
+      );
+    }
+
+    const invitedById = user.id;
+    const invitedByName =
+      membership.display_name?.trim() ||
+      user.user_metadata?.name ||
+      actorEmail.split("@")[0] ||
+      "Finkoin user";
+    const safeGroupName = groupName?.trim() || "Finkoin Split group";
 
     const { data: invite, error } = await supabaseAdmin
       .from("split_invitations")
@@ -30,7 +80,9 @@ export async function POST(req: NextRequest) {
         invited_by: invitedById,
         invited_by_name: invitedByName,
         status: "pending",
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        expires_at: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
       })
       .select()
       .single();
@@ -84,9 +136,11 @@ export async function POST(req: NextRequest) {
     const emailFrom = process.env.EMAIL_FROM?.trim();
 
     if (!resendKey) {
-      emailError = "Email is not configured (missing RESEND_API_KEY). Share the invite link manually.";
+      emailError =
+        "Email is not configured (missing RESEND_API_KEY). Share the invite link manually.";
     } else if (!emailFrom) {
-      emailError = "Email is not configured (missing EMAIL_FROM). Share the invite link manually.";
+      emailError =
+        "Email is not configured (missing EMAIL_FROM). Share the invite link manually.";
     } else {
       try {
         const { Resend } = await import("resend");
@@ -103,7 +157,10 @@ export async function POST(req: NextRequest) {
           emailSent = true;
         }
       } catch (sendErr: unknown) {
-        emailError = sendErr instanceof Error ? sendErr.message : "Could not send invite email";
+        emailError =
+          sendErr instanceof Error
+            ? sendErr.message
+            : "Could not send invite email";
       }
     }
 

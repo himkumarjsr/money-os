@@ -4,7 +4,8 @@ export type Item = {
   id: string;
   title: string;
   blurb: string;
-  icon?: string;
+  /** AppIcon name from components/ui/AppIcon — purple theme icons only. */
+  icon?: "flame" | "receipt" | "trending" | "home" | "bank" | "wallet";
   keywords?: string[];
   isPremium?: boolean;
 };
@@ -14,16 +15,41 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
     id: "investment",
     label: "Investment",
     items: [
-      { id: "sip", title: "SIP", blurb: "Monthly mutual fund SIP projections" },
-      { id: "swp", title: "SWP", blurb: "Withdrawals from a fixed corpus" },
-      { id: "ppf", title: "PPF", blurb: "15-year Public Provident Fund" },
-      { id: "nsc", title: "NSC", blurb: "5-year National Savings Certificate" },
-      { id: "emergency", title: "Emergency fund", blurb: "Target vs gap by life stage" },
+      {
+        id: "sip",
+        title: "SIP",
+        blurb: "Monthly mutual fund SIP projections",
+        icon: "trending",
+      },
+      {
+        id: "swp",
+        title: "SWP",
+        blurb: "Withdrawals from a fixed corpus",
+        icon: "wallet",
+      },
+      {
+        id: "ppf",
+        title: "PPF",
+        blurb: "15-year Public Provident Fund",
+        icon: "bank",
+      },
+      {
+        id: "nsc",
+        title: "NSC",
+        blurb: "5-year National Savings Certificate",
+        icon: "bank",
+      },
+      {
+        id: "emergency",
+        title: "Emergency fund",
+        blurb: "Target vs gap by life stage",
+        icon: "wallet",
+      },
       {
         id: "fire",
         title: "FIRE number",
         blurb: "Financial independence target — 25× expenses + loans",
-        icon: "🔥",
+        icon: "flame",
         keywords: [
           "FIRE number calculator India",
           "financial independence calculator",
@@ -38,24 +64,61 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
     id: "loans",
     label: "Loans",
     items: [
-      { id: "emi", title: "EMI", blurb: "Any reducing-balance loan" },
-      { id: "home", title: "Home loan", blurb: "Property + income stress test" },
-      { id: "car", title: "Car loan", blurb: "EMI + 6× salary rule" },
+      {
+        id: "emi",
+        title: "EMI",
+        blurb: "Any reducing-balance loan",
+        icon: "bank",
+      },
+      {
+        id: "home",
+        title: "Home loan",
+        blurb: "Property + income stress test",
+        icon: "home",
+      },
+      {
+        id: "car",
+        title: "Car loan",
+        blurb: "EMI + 6× salary rule",
+        icon: "wallet",
+      },
     ],
   },
   {
     id: "life",
     label: "Life decisions",
     items: [
-      { id: "rentbuy", title: "Rent vs buy", blurb: "Home: cash-outflow comparison" },
-      { id: "rentcar", title: "Rent vs own car", blurb: "Cab cost vs ownership estimate" },
-      { id: "whencar", title: "When to buy car", blurb: "Down payment timeline & afford rule" },
+      {
+        id: "rentbuy",
+        title: "Rent vs buy",
+        blurb: "Home: cash-outflow comparison",
+        icon: "home",
+      },
+      {
+        id: "rentcar",
+        title: "Rent vs own car",
+        blurb: "Cab cost vs ownership estimate",
+        icon: "wallet",
+      },
+      {
+        id: "whencar",
+        title: "When to buy car",
+        blurb: "Down payment timeline & afford rule",
+        icon: "wallet",
+      },
     ],
   },
   {
     id: "postoffice",
     label: "Post Office",
-    items: [{ id: "po", title: "Post Office suite", blurb: "Seven popular schemes" }],
+    items: [
+      {
+        id: "po",
+        title: "Post Office suite",
+        blurb: "Seven popular schemes",
+        icon: "bank",
+      },
+    ],
   },
   {
     id: "tax",
@@ -65,7 +128,7 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
         id: "tax-regime",
         title: "Tax Regime Comparison",
         blurb: "Old vs New regime — which saves more tax in 2026",
-        icon: "🧾",
+        icon: "receipt",
         isPremium: false,
         keywords: [
           "tax regime 2026",
@@ -87,4 +150,3 @@ export function getItemById(id?: string) {
   }
   return CATEGORIES[0].items[0];
 }
-

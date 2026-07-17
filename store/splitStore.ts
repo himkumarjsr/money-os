@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { getSupabase } from "@/lib/supabase";
+import type { NetBalance, SimplifiedEdge } from "@/lib/splitBalances";
 
 export type SplitGroup = {
   id: string;
@@ -108,7 +109,10 @@ type SplitStore = {
   groups: SplitGroup[];
   activeGroup: SplitGroup | null;
   expenses: SplitExpense[];
+  /** Minimal settle-up transfers (debt-simplified). */
   balances: SplitBalanceEdge[];
+  /** Per-member net balance (+ owed to them, − they owe). */
+  netBalances: NetBalance[];
   loading: boolean;
   lastFetched: Record<string, number>;
 
@@ -172,10 +176,12 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   activeGroup: null,
   expenses: [],
   balances: [],
+  netBalances: [],
   loading: false,
   lastFetched: {},
 
-  clearActive: () => set({ activeGroup: null, expenses: [], balances: [] }),
+  clearActive: () =>
+    set({ activeGroup: null, expenses: [], balances: [], netBalances: [] }),
 
   fetchGroups: async (userId, userEmail, forceRefresh = false) => {
     const email = (userEmail ?? "").toLowerCase().trim();
@@ -236,7 +242,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     set({
       loading: true,
       ...(prev?.id !== groupId
-        ? { activeGroup: null, expenses: [], balances: [] }
+        ? { activeGroup: null, expenses: [], balances: [], netBalances: [] }
         : {}),
     });
     try {
@@ -266,25 +272,31 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       const expenses = (expensesRes.data as SplitExpense[]) ?? [];
 
       let balancesData: SplitBalanceEdge[] = [];
+      let netData: NetBalance[] = [];
       try {
-        const { data: balances, error } = await supabase.rpc(
-          "get_split_balances",
-          { p_group_id: groupId },
+        const res = await fetch(
+          `/api/split/balances?groupId=${encodeURIComponent(groupId)}`,
+          { credentials: "include" },
         );
-        if (error) {
-          console.warn("Balances RPC error:", error);
+        if (res.ok) {
+          const json = (await res.json()) as {
+            net?: NetBalance[];
+            edges?: SimplifiedEdge[];
+          };
+          netData = json.net ?? [];
+          balancesData = (json.edges as SplitBalanceEdge[]) ?? [];
         } else {
-          balancesData = (balances as unknown as SplitBalanceEdge[]) ?? [];
+          console.warn("Balances API error:", res.status);
         }
       } catch (err) {
-        console.warn("Balances RPC error:", err);
-        balancesData = [];
+        console.warn("Balances API error:", err);
       }
 
       set({
         activeGroup: { ...group, members },
         expenses,
         balances: balancesData,
+        netBalances: netData,
         loading: false,
       });
     } catch (err) {
@@ -443,6 +455,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
           state.activeGroup?.id === groupId ? null : state.activeGroup,
         expenses: state.activeGroup?.id === groupId ? [] : state.expenses,
         balances: state.activeGroup?.id === groupId ? [] : state.balances,
+        netBalances: state.activeGroup?.id === groupId ? [] : state.netBalances,
         lastFetched: {},
       }));
       return true;
@@ -481,4 +494,11 @@ export function getMyBalanceFromEdges(
   edges: SplitBalanceEdge[],
 ) {
   return inferMyNetBalance(myEmail, edges);
+}
+
+/** Precise net for a member from server-computed net balances. */
+export function getMyNetBalance(myEmail: string, net: NetBalance[]) {
+  const me = (myEmail ?? "").toLowerCase();
+  const found = net.find((n) => n.email === me);
+  return found ? found.net : 0;
 }

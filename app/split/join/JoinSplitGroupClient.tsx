@@ -9,6 +9,7 @@ import {
 } from "@/lib/splitAuthRedirect";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
+import { AppIcon } from "@/components/ui/AppIcon";
 
 type JoinStatus = "loading" | "success" | "error";
 
@@ -85,8 +86,8 @@ export default function JoinSplitGroupClient() {
       <div className="mx-auto max-w-md rounded-2xl border border-[#E8E6F0] bg-white p-8 text-center shadow-sm">
         {status === "loading" ? (
           <>
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#EEEDFE] text-2xl">
-              ⏳
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#EEEDFE]">
+              <AppIcon name="users" size={28} color="#534AB7" />
             </div>
             <div className="text-lg font-bold text-[#111110]">
               Joining group…
@@ -97,8 +98,8 @@ export default function JoinSplitGroupClient() {
 
         {status === "success" ? (
           <>
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#E1F5EE] text-2xl">
-              ✓
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#EEEDFE]">
+              <AppIcon name="checkCircle" size={28} color="#534AB7" />
             </div>
             <div className="text-lg font-bold text-[#111110]">
               Joined “{groupName}”
@@ -111,7 +112,9 @@ export default function JoinSplitGroupClient() {
 
         {status === "error" ? (
           <>
-            <div className="mb-4 text-4xl">❌</div>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#EEEDFE]">
+              <AppIcon name="alert" size={28} color="#534AB7" />
+            </div>
             <div className="text-base font-bold text-[#111110]">
               Could not join group
             </div>
