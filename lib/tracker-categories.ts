@@ -75,7 +75,7 @@ export const TRACKER_CATEGORIES = {
     icon: "home" as const,
     cap: 30,
     subcategories: [
-      { id: "rent", label: "Rent / Home loan EMI", icon: "home" as const },
+      { id: "rent", label: "Rent", icon: "home" as const },
       { id: "groceries", label: "Groceries", icon: "cart" as const },
       { id: "vegetables", label: "Vegetables & fruits", icon: "leaf" as const },
       { id: "milk", label: "Milk & dairy", icon: "milk" as const },
@@ -195,7 +195,7 @@ export const TRACKER_CATEGORIES = {
         label: "Buy now pay later (EMI)",
         icon: "calendar" as const,
       },
-      { id: "other_loan", label: "Other loan", icon: "other" as const },
+      { id: "other_loan", label: "Other EMI", icon: "other" as const },
     ],
   },
   investment: {
@@ -237,6 +237,23 @@ export const TRACKER_CATEGORIES = {
 } as const satisfies Record<string, TrackerBucket>;
 
 export type BucketType = keyof typeof TRACKER_CATEGORIES;
+
+/**
+ * Subcategories that must never affect tracker maths (spent, caps, Safety Pulse, MoM).
+ * Kept as an exclusion set so any legacy rows still display but don't skew totals.
+ */
+export const TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES = new Set([
+  "loan_prepayment",
+]);
+
+export function countsTowardTrackerTotals(txn: {
+  category?: string | null;
+  subcategory?: string | null;
+}): boolean {
+  const sub = txn.subcategory || txn.category;
+  if (sub && TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES.has(sub)) return false;
+  return true;
+}
 
 /** Subcategories shown in the add-expense picker (hides legacy combined transport). */
 export function pickerSubcategories(bucket: BucketType) {

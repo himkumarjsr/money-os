@@ -47,7 +47,8 @@ the documentation generation prompt again.
 
 # FINKOIN SYSTEM DOCUMENTATION
 
-Last updated: 2026-06-02
+Last updated: 2026-07-18  
+Doc / app version: **0.3.0** (`package.json`)  
 Generated from: actual codebase
 
 ---
@@ -183,6 +184,17 @@ Complete inventory with one-line purpose per file:
 | `app/portfolio/page.tsx`                                  | Portfolio analysis page                                                                                                                                                                                                                                                                                                                             |
 | `app/investments/page.tsx`                                | Investments placeholder page                                                                                                                                                                                                                                                                                                                        |
 | `app/goals/page.tsx`                                      | Goals placeholder page                                                                                                                                                                                                                                                                                                                              |
+| `app/tracker/page.tsx`                                    | Expense tracker home: month nav, privacy eye flip, bucket cards, **Month Safety Pulse**                                                                                                                                                                                                                                                             |
+| `app/tracker/[month]/page.tsx`                            | Historical month detail (`YYYY-MM`) with table + summary bars                                                                                                                                                                                                                                                                                       |
+| `components/tracker/MonthSafetyPulse.tsx`                 | Safe/Tight/Over coaching card (MoM + one action)                                                                                                                                                                                                                                                                                                    |
+| `components/tracker/TrackerIcons.tsx`                     | Purple stroke SVG icons for tracker categories/types                                                                                                                                                                                                                                                                                                |
+| `components/tracker/AddExpenseModal.tsx`                  | Add/edit expense sheet with bucket + type picker                                                                                                                                                                                                                                                                                                    |
+| `components/tracker/ExpenseTable.tsx`                     | Month expense table rows                                                                                                                                                                                                                                                                                                                            |
+| `components/tracker/MonthSummary.tsx`                     | Bucket progress bars for month detail                                                                                                                                                                                                                                                                                                               |
+| `components/tracker/TrackerConsent.tsx`                   | Tracker data-consent gate                                                                                                                                                                                                                                                                                                                           |
+| `lib/tracker-categories.ts`                               | Buckets, % caps, subcategories, `pickerSubcategories` / `findSubcategory`                                                                                                                                                                                                                                                                           |
+| `lib/trackerSafetyPulse.ts`                               | Deterministic month safety analytics engine (no AI)                                                                                                                                                                                                                                                                                                 |
+| `lib/trackerProfileIncome.ts`                             | Cached analyse-profile salary fallback for tracker income                                                                                                                                                                                                                                                                                           |
 | `app/kyc/page.tsx`                                        | KYC status page                                                                                                                                                                                                                                                                                                                                     |
 | `app/refer/page.tsx`                                      | Referral page                                                                                                                                                                                                                                                                                                                                       |
 | `app/rewards/page.tsx`                                    | Rewards page                                                                                                                                                                                                                                                                                                                                        |
@@ -237,6 +249,7 @@ Complete inventory with one-line purpose per file:
 | `components/landing/FeatureCardsCarousel.tsx`             | Landing feature carousel                                                                                                                                                                                                                                                                                                                            |
 | `components/ui/button.tsx`                                | Button primitives                                                                                                                                                                                                                                                                                                                                   |
 | `components/ui/MoneyInput.tsx`                            | Currency input with Indian formatting                                                                                                                                                                                                                                                                                                               |
+| `components/ui/PrivateAmount.tsx`                         | Privacy-aware amount: hidden by default, eye reveals; eye omitted when value is 0 / no data. Used for income displays app-wide                                                                                                                                                                                                                      |
 | `components/ui/NumberInput.tsx`                           | Reusable number input matching MoneyInput style with optional suffix                                                                                                                                                                                                                                                                                |
 | `components/ui/SpeedoMeter.tsx`                           | Multi-gauge speedometer component                                                                                                                                                                                                                                                                                                                   |
 | `components/ui/BottomSheet.tsx`                           | Bottom sheet UI                                                                                                                                                                                                                                                                                                                                     |
@@ -1122,6 +1135,14 @@ On submit:
 - Shows full AI plan view
 - Includes report export CTA wired to `downloadOptimizerPDF()`
 
+### `/tracker`
+
+- Consent gate (`TrackerConsent` + `finkoin_tracker_consent` / `tracker_consent` table).
+- Loads current-month + previous-month `expense_transactions` in parallel.
+- Summary card: income / spent / left with privacy eye (180° flip); bucket cards with purple icons and % caps.
+- **Month Safety Pulse** (`computeMonthSafetyPulse` → `MonthSafetyPulse`): Safe/Tight/Over, MoM spent delta, top movers, one action, daily safe spend when viewing the current calendar month. Amounts masked when eye is off.
+- Add/edit via `AddExpenseModal`; soft refetch while modal open / on visibility to avoid PWA tap lock.
+
 ### `/split` ecosystem
 
 #### `/split`
@@ -1890,6 +1911,12 @@ Important implementation note:
 
 - Run `npm run check:secrets` (fails if service-role / Razorpay secret / Groq key are referenced outside allowed server files).
 
+### To change tracker Safety Pulse rules
+
+- File: `lib/trackerSafetyPulse.ts` (`computeMonthSafetyPulse`)
+- UI: `components/tracker/MonthSafetyPulse.tsx` on `/tracker`
+- Tests: `lib/trackerSafetyPulse.test.ts`
+
 ### To add a new page
 
 1. Create `app/[pagename]/page.tsx`
@@ -1934,6 +1961,22 @@ Important implementation note:
 ---
 
 ## CHANGE LOG
+
+### 2026-07-18 — v0.3.0
+
+- **Analyse loan double-count fix:** `normalizeAnalyseFormValues` in `lib/analyse-form-schema.ts` now treats **`unifiedLoans`** as the single source of truth. When it has entries, extra obligations are derived **only** from it (self-deduped) and the legacy `additionalObligations` is ignored; the previous merge double-counted the same loan when type/lender strings differed (e.g. a lender-carrying copy plus a stale no-lender copy). First-of-type home/personal/car/bike still map to scalar fields **with** their lender; every remaining loan becomes an obligation exactly once, preserving `lenderName`. Regression tests added in `lib/analyse-form-schema.test.ts`. Legacy fallback (no `unifiedLoans`) keeps existing `additionalObligations`.
+- **Tracker “Show all” master privacy toggle:** New pill below the purple summary card in `app/tracker/page.tsx` reveals/hides the summary card + Income + all bucket sections + Month Safety Pulse at once (`allAmountsVisible` / `toggleShowAll`). `MonthSafetyPulse` gained a `forceVisible` prop so the master switch controls it while keeping its own eye.
+- **Income masking everywhere (privacy):** New reusable `components/ui/PrivateAmount.tsx` — hidden by default (`₹••••••`), eye reveals; the **eye is omitted when the value is 0 / no data**. Applied to analyse result (Total income + paywall Monthly Income), fixplan (Monthly income), optimizer (Monthly income + Total income), Finkoin AI plan view (Monthly income net), onboarding “Total monthly income”, and tax calculator Old/New monthly take-home. Tracker retains its existing masking.
+- **Tax calculator multi-source income:** “What best describes you?” (Personal CA wizard) and “Work / income style” (main form) are now **multi-select** in `components/calculators/TaxRegimeCalculator.tsx`. State moved from single `employment` → `employments: EmploymentKind[]`; a derived `primaryEmployment` (priority salaried → freelancer → business_owner → pensioner → retired) is passed to the engine so ITR hints / missed-deduction alerts still fire. `localStorage` persists the array and migrates old single-value data. Tax math itself is unchanged (engine only uses employment for hints, not computation).
+- **Founder + SEO:** About page (`app/about/page.tsx`) now shows the real founder photo (`public/assets/founder-himanshu-kumar.png`) via `next/image` with alt text, plus a visible LinkedIn link. Added founder structured data: `ProfilePage` + `Person` JSON-LD on `/about` and a `founder` Person (with `sameAs` LinkedIn `https://www.linkedin.com/in/himanshu-k-81b484140/`) inside the Organization schema in `app/layout.tsx`.
+- **Canonical host standardized to `www.finkoin.com`:** Default host unified to **www** (Google indexes `www.finkoin.com`). `SITE_URL` fallback in `lib/seo.ts`, `app/sitemap.ts` baseUrl, `app/robots.ts` sitemap (now derives from `SITE_URL`), and referral origin fallbacks (`app/profile/page.tsx`, `app/refer/page.tsx`) all default to `https://www.finkoin.com`. Hardcoded OG image URLs now derive from `SITE_URL`/`siteUrl` (home, analyse, tax-calculator, root layout). Notification email links (`send-daily-tip`, `welcome-tip`, `send-test-tip`) and legal page website links point to www. Email addresses (`hello@`, `support@`, etc.) unchanged. **Set `NEXT_PUBLIC_SITE_URL=https://www.finkoin.com` in the deploy env** so it matches the fallback.
+- **App version:** `package.json` bumped **0.2.0 → 0.3.0**.
+
+### 2026-07-17 — v0.2.0
+
+- **Tracker Month Safety Pulse (brownie feature):** Deterministic analytics engine in `lib/trackerSafetyPulse.ts` compares current vs previous month spend, bucket % caps (Needs 30 / Wants 5 / Loans & Credit 40 / Investment 20), projected month burn, and daily safe spend. UI: `components/tracker/MonthSafetyPulse.tsx` at the bottom of `/tracker` (replaces emoji `SuggestionBox`). Status: **Safe / Tight / Over** + one action + MoM movers. **Own eye toggle** (independent of summary-card privacy eye); amounts masked by default. Income + each bucket section also have **individual eye** toggles.
+- **Tracker categories polish:** Purple theme line icons (`components/tracker/TrackerIcons.tsx`) replace emojis; Needs transport split into **fuel / cab / auto / metro_bus** (legacy `transport_essential` still resolves, hidden from picker via `pickerSubcategories`). **Loans & Credit** = regular EMIs; Needs housing type changed from **“Rent / Home loan EMI”** → **“Rent”** only (home EMI is under Loans & Credit → Home loan EMI). Extra lump-sum **loan prepayment is not an Investment type** and is excluded from all tracker maths via `countsTowardTrackerTotals` (spent, caps, Safety Pulse, MoM).
+- **App version:** `package.json` bumped **0.1.0 → 0.2.0**.
 
 ### 2026-06-02
 

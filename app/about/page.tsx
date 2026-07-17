@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { SITE_URL } from "@/lib/seo";
 
@@ -18,7 +19,14 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/about`,
     siteName: "Finkoin",
     type: "website",
-    images: [{ url: `${SITE_URL}/og/og-home.png`, width: 1200, height: 630, alt: "About Finkoin" }],
+    images: [
+      {
+        url: `${SITE_URL}/og/og-home.png`,
+        width: 1200,
+        height: 630,
+        alt: "About Finkoin",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -26,6 +34,28 @@ export const metadata: Metadata = {
     description:
       "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
     images: [`${SITE_URL}/og/og-home.png`],
+  },
+};
+
+const founderJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  mainEntity: {
+    "@type": "Person",
+    "@id": `${SITE_URL}/about#founder`,
+    name: "Himanshu Kumar",
+    jobTitle: "Founder",
+    description:
+      "Founder of Finkoin, a free personal finance health platform built for India.",
+    image: `${SITE_URL}/assets/founder-himanshu-kumar.png`,
+    url: `${SITE_URL}/about`,
+    worksFor: {
+      "@type": "Organization",
+      name: "Finkoin",
+      url: SITE_URL,
+    },
+    nationality: "Indian",
+    sameAs: ["https://www.linkedin.com/in/himanshu-k-81b484140/"],
   },
 };
 
@@ -38,6 +68,10 @@ export default function AboutPage() {
         padding: "60px 24px 80px",
       }}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(founderJsonLd) }}
+      />
       <div
         style={{
           textAlign: "center",
@@ -83,7 +117,9 @@ export default function AboutPage() {
             lineHeight: 1.7,
           }}
         >
-          Finkoin is a personal finance platform built specifically for India. We help you understand where you stand financially and what to do next.
+          Finkoin is a personal finance platform built specifically for India.
+          We help you understand where you stand financially and what to do
+          next.
         </p>
       </div>
 
@@ -118,7 +154,8 @@ export default function AboutPage() {
             margin: "0 auto",
           }}
         >
-          To give every Indian access to personalised financial guidance that was previously only available to the wealthy few.
+          To give every Indian access to personalised financial guidance that
+          was previously only available to the wealthy few.
         </p>
       </div>
 
@@ -429,23 +466,20 @@ export default function AboutPage() {
             flexWrap: "wrap",
           }}
         >
-          <div
+          <Image
+            src="/assets/founder-himanshu-kumar.png"
+            alt="Himanshu Kumar, Founder of Finkoin"
+            width={80}
+            height={80}
             style={{
               width: 80,
               height: 80,
               borderRadius: "50%",
-              background: "#534AB7",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 28,
-              color: "white",
-              fontWeight: 800,
+              objectFit: "cover",
               flexShrink: 0,
+              border: "2px solid #E8E6F0",
             }}
-          >
-            HK
-          </div>
+          />
           <div style={{ flex: 1, minWidth: 200 }}>
             <h3
               style={{
@@ -462,11 +496,37 @@ export default function AboutPage() {
                 fontSize: 13,
                 color: "#534AB7",
                 fontWeight: 600,
-                marginBottom: 12,
+                marginBottom: 8,
               }}
             >
               Founder, Finkoin
             </p>
+            <a
+              href="https://www.linkedin.com/in/himanshu-k-81b484140/"
+              target="_blank"
+              rel="noopener noreferrer author"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                color: "#534AB7",
+                fontWeight: 600,
+                textDecoration: "none",
+                marginBottom: 12,
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z" />
+              </svg>
+              LinkedIn
+            </a>
             <p
               style={{
                 fontSize: 15,
@@ -475,7 +535,11 @@ export default function AboutPage() {
                 margin: 0,
               }}
             >
-              Finkoin was born from a simple frustration — why is good financial advice so hard to get in India? I built Finkoin to give every working Indian the same quality of financial analysis that was previously only available to the privileged few. No jargon. No hidden agendas. Just clear, honest, personalised guidance.
+              Finkoin was born from a simple frustration — why is good financial
+              advice so hard to get in India? I built Finkoin to give every
+              working Indian the same quality of financial analysis that was
+              previously only available to the privileged few. No jargon. No
+              hidden agendas. Just clear, honest, personalised guidance.
             </p>
           </div>
         </div>
@@ -498,7 +562,11 @@ export default function AboutPage() {
             margin: 0,
           }}
         >
-          <strong>Disclaimer:</strong> Finkoin provides educational financial guidance only. We are not a SEBI-registered investment advisor, IRDAI-licensed insurance agent, or RBI-regulated financial entity. All analysis is algorithmic and educational. Always consult qualified professionals before making major financial decisions.
+          <strong>Disclaimer:</strong> Finkoin provides educational financial
+          guidance only. We are not a SEBI-registered investment advisor,
+          IRDAI-licensed insurance agent, or RBI-regulated financial entity. All
+          analysis is algorithmic and educational. Always consult qualified
+          professionals before making major financial decisions.
         </p>
       </div>
 

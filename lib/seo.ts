@@ -1,4 +1,6 @@
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://finkoin.com").replace(/\/+$/, "");
+export const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.finkoin.com"
+).replace(/\/+$/, "");
 
 export const SEO_CONFIG = {
   siteName: "Finkoin",
@@ -38,14 +40,19 @@ export function generatePageMeta(
   const canonicalPath = options?.canonicalPath ?? "/";
   const ogImagePath = options?.openGraphImagePath ?? "/og/og-home.png";
   const titleField =
-    options?.titleMode === "absolute" ? { absolute: title } : `${title} | ${SEO_CONFIG.siteName}`;
+    options?.titleMode === "absolute"
+      ? { absolute: title }
+      : `${title} | ${SEO_CONFIG.siteName}`;
 
   return {
     title: titleField,
     description,
     keywords: [...(keywords || []), ...SEO_CONFIG.defaultKeywords],
     openGraph: {
-      title: options?.titleMode === "absolute" ? title : `${title} | ${SEO_CONFIG.siteName}`,
+      title:
+        options?.titleMode === "absolute"
+          ? title
+          : `${title} | ${SEO_CONFIG.siteName}`,
       description,
       siteName: SEO_CONFIG.siteName,
       url: `${SEO_CONFIG.siteUrl}${canonicalPath === "/" ? "" : canonicalPath}`,
@@ -61,7 +68,10 @@ export function generatePageMeta(
     },
     twitter: {
       card: "summary_large_image" as const,
-      title: options?.titleMode === "absolute" ? title : `${title} | ${SEO_CONFIG.siteName}`,
+      title:
+        options?.titleMode === "absolute"
+          ? title
+          : `${title} | ${SEO_CONFIG.siteName}`,
       description,
       images: [`${SEO_CONFIG.siteUrl}${ogImagePath}`],
     },

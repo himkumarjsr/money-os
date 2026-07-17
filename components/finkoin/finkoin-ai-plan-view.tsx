@@ -11,6 +11,7 @@ import type {
   FinkoinMonthlyAllocationRow,
 } from "@/lib/finkoinAiPlan";
 import { fmt, fmtWords } from "@/lib/optimizer-format";
+import PrivateAmount from "@/components/ui/PrivateAmount";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
 import { MonthlyAllocationPieChart } from "@/components/finkoin/MonthlyAllocationPieChart";
@@ -72,16 +73,26 @@ function Rupee({ n: value, words }: { n: number; words?: boolean }) {
     <span className="tabular-nums">
       {fmt(r)}
       {words && Math.abs(r) >= 1_00_000 ? (
-        <span className="mt-0.5 block text-xs font-normal text-[#9B9A94]">{fmtWords(r)}</span>
+        <span className="mt-0.5 block text-xs font-normal text-[#9B9A94]">
+          {fmtWords(r)}
+        </span>
       ) : null}
     </span>
   );
 }
 
-function categorizeRowCategory(category: string): "safety" | "invest" | "other" {
+function categorizeRowCategory(
+  category: string,
+): "safety" | "invest" | "other" {
   const c = (category || "").toLowerCase();
-  if (/insur|premium|emergency|health|term|medical|ssy|safety|security|protect/.test(c)) return "safety";
-  if (/sip|invest|equity|mutual|elss|index|ppf|nps|wealth|grow|fund/.test(c)) return "invest";
+  if (
+    /insur|premium|emergency|health|term|medical|ssy|safety|security|protect/.test(
+      c,
+    )
+  )
+    return "safety";
+  if (/sip|invest|equity|mutual|elss|index|ppf|nps|wealth|grow|fund/.test(c))
+    return "invest";
   return "other";
 }
 
@@ -111,10 +122,13 @@ export function FinkoinAiPlanView({
 
   const termGapIndex =
     variant === "full"
-      ? gaps.findIndex((g) => /term\s*life|term\s*insurance|^term$/i.test((g.type || "").trim()))
+      ? gaps.findIndex((g) =>
+          /term\s*life|term\s*insurance|^term$/i.test((g.type || "").trim()),
+        )
       : -1;
   const termGap = termGapIndex >= 0 ? gaps[termGapIndex] : null;
-  const otherGaps = termGapIndex >= 0 ? gaps.filter((_, i) => i !== termGapIndex) : gaps;
+  const otherGaps =
+    termGapIndex >= 0 ? gaps.filter((_, i) => i !== termGapIndex) : gaps;
 
   const showGaps = variant === "full" ? otherGaps : otherGaps.slice(0, 3);
 
@@ -138,22 +152,37 @@ export function FinkoinAiPlanView({
   ].filter((d) => d.value > 0);
   const totalPie = pieAgg.reduce((s, d) => s + d.value, 0);
   const wantsFromRows = rows
-    .filter((r) => /(wants|lifestyle|shopping|entertainment|personal)/i.test(String(r.category ?? "")))
+    .filter((r) =>
+      /(wants|lifestyle|shopping|entertainment|personal)/i.test(
+        String(r.category ?? ""),
+      ),
+    )
     .reduce((s, r) => s + num(r.amount), 0);
   const loansFromRows = rows
-    .filter((r) => /(loan|debt|emi|credit card)/i.test(String(r.category ?? "")))
+    .filter((r) =>
+      /(loan|debt|emi|credit card)/i.test(String(r.category ?? "")),
+    )
     .reduce((s, r) => s + num(r.amount), 0);
   const insuranceFromRows = rows
-    .filter((r) => /(insurance|premium|term|health)/i.test(String(r.category ?? "")))
+    .filter((r) =>
+      /(insurance|premium|term|health)/i.test(String(r.category ?? "")),
+    )
     .reduce((s, r) => s + num(r.amount), 0);
   const needsFromRows = rows
-    .filter((r) => /(needs|living|rent|food|utility|transport|domestic)/i.test(String(r.category ?? "")))
+    .filter((r) =>
+      /(needs|living|rent|food|utility|transport|domestic)/i.test(
+        String(r.category ?? ""),
+      ),
+    )
     .reduce((s, r) => s + num(r.amount), 0);
 
   const ladder = computeMisladder(profile ?? null, kvp);
   const phaseNums =
-    variant === "full" ? getOptimizerPhaseNumbers(profile ?? null, surplusMonthly ?? 0) : null;
-  const runtimePriorityItems = ((plan as any)?.priorityPlan?.priorities ?? []) as Array<any>;
+    variant === "full"
+      ? getOptimizerPhaseNumbers(profile ?? null, surplusMonthly ?? 0)
+      : null;
+  const runtimePriorityItems = ((plan as any)?.priorityPlan?.priorities ??
+    []) as Array<any>;
   const isFallback = !!(plan as any)?.isFallback;
 
   return (
@@ -161,13 +190,20 @@ export function FinkoinAiPlanView({
       {insight && (insight.headline || insight.stage) ? (
         <div className="rounded-2xl border border-[#E8E6F0] bg-gradient-to-br from-[#FAFAFE] to-white p-5">
           <SectionTitle>Life stage insight</SectionTitle>
-          {insight.stage ? <p className="mt-1 text-xs font-medium uppercase text-[#534AB7]">{insight.stage}</p> : null}
+          {insight.stage ? (
+            <p className="mt-1 text-xs font-medium uppercase text-[#534AB7]">
+              {insight.stage}
+            </p>
+          ) : null}
           {insight.headline ? (
-            <p className="mt-2 text-sm font-medium text-slate-900">{sanitizeCopy(insight.headline)}</p>
+            <p className="mt-2 text-sm font-medium text-slate-900">
+              {sanitizeCopy(insight.headline)}
+            </p>
           ) : null}
           {surplusMonthly != null && surplusMonthly > 0 ? (
             <p className="mt-3 text-sm font-medium text-[#3C3489]">
-              You have {fmt(Math.round(surplusMonthly))}/month to build your future with.
+              You have {fmt(Math.round(surplusMonthly))}/month to build your
+              future with.
             </p>
           ) : null}
           {insight.keyChallenge ? (
@@ -178,7 +214,9 @@ export function FinkoinAiPlanView({
           ) : null}
           {insight.biggestMistake ? (
             <p className="mt-1 text-sm text-slate-600">
-              <span className="font-medium text-slate-800">Common mistake: </span>
+              <span className="font-medium text-slate-800">
+                Common mistake:{" "}
+              </span>
               {sanitizeCopy(insight.biggestMistake)}
             </p>
           ) : null}
@@ -190,7 +228,9 @@ export function FinkoinAiPlanView({
           ) : null}
           {insight.nextMilestone ? (
             <p className="mt-1 text-sm text-slate-600">
-              <span className="font-medium text-slate-800">Next milestone: </span>
+              <span className="font-medium text-slate-800">
+                Next milestone:{" "}
+              </span>
               {sanitizeCopy(insight.nextMilestone)}
             </p>
           ) : null}
@@ -199,25 +239,72 @@ export function FinkoinAiPlanView({
 
       {plan.topPriorityAction ? (
         <div className="rounded-2xl border-2 border-[#534AB7] bg-[#EEEDFE]/50 p-4 sm:p-5">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#3C3489]">Top priority this week</p>
-          <p className="mt-2 text-sm font-medium text-slate-900">{sanitizeCopy(plan.topPriorityAction)}</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-[#3C3489]">
+            Top priority this week
+          </p>
+          <p className="mt-2 text-sm font-medium text-slate-900">
+            {sanitizeCopy(plan.topPriorityAction)}
+          </p>
         </div>
       ) : null}
 
-      <p className="text-xs text-slate-500">{isFallback ? "ℹ️ Showing estimated plan — AI analysis will load shortly" : "✓ AI personalised analysis"}</p>
+      <p className="text-xs text-slate-500">
+        {isFallback
+          ? "ℹ️ Showing estimated plan — AI analysis will load shortly"
+          : "✓ AI personalised analysis"}
+      </p>
 
       {surplusMonthly != null ? (
         <details className="rounded-xl bg-gray-50 p-4 text-sm">
           <summary className="cursor-pointer font-semibold text-gray-700">
-            Your monthly surplus: ₹{Math.round(surplusMonthly).toLocaleString("en-IN")}
-            <span className="ml-2 font-normal text-gray-400">(tap to see breakdown)</span>
+            Your monthly surplus: ₹
+            {Math.round(surplusMonthly).toLocaleString("en-IN")}
+            <span className="ml-2 font-normal text-gray-400">
+              (tap to see breakdown)
+            </span>
           </summary>
           <div className="mt-3 space-y-1 text-gray-600">
-            <div className="flex justify-between"><span>Monthly income (net)</span><span className="font-medium">+₹{Math.round((surplusMonthly || 0) + needsFromRows + loansFromRows + insuranceFromRows + wantsFromRows).toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between text-red-600"><span>Living expenses (needs)</span><span>-₹{Math.round(needsFromRows).toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between text-red-600"><span>Loan EMIs</span><span>-₹{Math.round(loansFromRows).toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between text-red-600"><span>Insurance premiums</span><span>-₹{Math.round(insuranceFromRows).toLocaleString("en-IN")}</span></div>
-            <div className="flex justify-between text-red-600"><span>Lifestyle / wants</span><span>-₹{Math.round(wantsFromRows).toLocaleString("en-IN")}</span></div>
+            <div className="flex justify-between">
+              <span>Monthly income (net)</span>
+              <PrivateAmount
+                value={
+                  (surplusMonthly || 0) +
+                  needsFromRows +
+                  loansFromRows +
+                  insuranceFromRows +
+                  wantsFromRows
+                }
+                label="monthly income"
+                valueClassName="font-medium"
+              >
+                +₹
+                {Math.round(
+                  (surplusMonthly || 0) +
+                    needsFromRows +
+                    loansFromRows +
+                    insuranceFromRows +
+                    wantsFromRows,
+                ).toLocaleString("en-IN")}
+              </PrivateAmount>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>Living expenses (needs)</span>
+              <span>-₹{Math.round(needsFromRows).toLocaleString("en-IN")}</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>Loan EMIs</span>
+              <span>-₹{Math.round(loansFromRows).toLocaleString("en-IN")}</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>Insurance premiums</span>
+              <span>
+                -₹{Math.round(insuranceFromRows).toLocaleString("en-IN")}
+              </span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>Lifestyle / wants</span>
+              <span>-₹{Math.round(wantsFromRows).toLocaleString("en-IN")}</span>
+            </div>
             <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 font-bold text-emerald-700">
               <span>Your available surplus</span>
               <span>₹{Math.round(surplusMonthly).toLocaleString("en-IN")}</span>
@@ -226,7 +313,11 @@ export function FinkoinAiPlanView({
         </details>
       ) : null}
 
-      {plan.oneLiner ? <p className="text-sm font-medium text-slate-800">{sanitizeCopy(plan.oneLiner)}</p> : null}
+      {plan.oneLiner ? (
+        <p className="text-sm font-medium text-slate-800">
+          {sanitizeCopy(plan.oneLiner)}
+        </p>
+      ) : null}
 
       {showDebts.length > 0 ? (
         <div className="space-y-3">
@@ -247,13 +338,29 @@ export function FinkoinAiPlanView({
                 {showDebts.map((d: FinkoinDebtPlanItem, i: number) => {
                   const plUnknown = personalLoanPrincipalUnknown(d, profile);
                   return (
-                    <tr key={`${d.debtType}-${i}`} className="border-t border-slate-100">
+                    <tr
+                      key={`${d.debtType}-${i}`}
+                      className="border-t border-slate-100"
+                    >
                       <td className="px-3 py-2 font-medium text-slate-900">
-                        {(d as FinkoinDebtPlanItem & { displayName?: string }).displayName || d.debtType}
-                        {(d as FinkoinDebtPlanItem & { lenderName?: string; displayName?: string }).lenderName &&
-                        !(d as FinkoinDebtPlanItem & { displayName?: string }).displayName ? (
+                        {(d as FinkoinDebtPlanItem & { displayName?: string })
+                          .displayName || d.debtType}
+                        {(
+                          d as FinkoinDebtPlanItem & {
+                            lenderName?: string;
+                            displayName?: string;
+                          }
+                        ).lenderName &&
+                        !(d as FinkoinDebtPlanItem & { displayName?: string })
+                          .displayName ? (
                           <span className="block text-[11px] text-[#9B9A94]">
-                            {(d as FinkoinDebtPlanItem & { lenderName?: string }).lenderName}
+                            {
+                              (
+                                d as FinkoinDebtPlanItem & {
+                                  lenderName?: string;
+                                }
+                              ).lenderName
+                            }
                           </span>
                         ) : null}
                       </td>
@@ -261,7 +368,10 @@ export function FinkoinAiPlanView({
                         {plUnknown ? (
                           <span className="text-slate-500">Not provided</span>
                         ) : (
-                          <Rupee n={num(d.outstanding)} words={Math.abs(num(d.outstanding)) >= 1_00_000} />
+                          <Rupee
+                            n={num(d.outstanding)}
+                            words={Math.abs(num(d.outstanding)) >= 1_00_000}
+                          />
                         )}
                       </td>
                       <td className="px-3 py-2">
@@ -270,7 +380,9 @@ export function FinkoinAiPlanView({
                       <td className="px-3 py-2">
                         <Rupee n={num(d.extraMonthlyPayment)} />
                       </td>
-                      <td className="px-3 py-2">{plUnknown ? "—" : num(d.monthsToClear)}</td>
+                      <td className="px-3 py-2">
+                        {plUnknown ? "—" : num(d.monthsToClear)}
+                      </td>
                       <td className="px-3 py-2">{d.priorityRank ?? "—"}</td>
                     </tr>
                   );
@@ -281,7 +393,9 @@ export function FinkoinAiPlanView({
           {debts.map((d, i) =>
             d.reasoning ? (
               <p key={`r-${i}`} className="text-xs text-slate-600">
-                <span className="font-semibold text-slate-800">{d.debtType}: </span>
+                <span className="font-semibold text-slate-800">
+                  {d.debtType}:{" "}
+                </span>
                 {sanitizeCopy(d.reasoning)}
               </p>
             ) : null,
@@ -305,32 +419,50 @@ export function FinkoinAiPlanView({
                 )}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-900">{f.fundName}</span>
+                  <span className="font-semibold text-slate-900">
+                    {f.fundName}
+                  </span>
                   {f.urgency ? (
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-700">
                       {f.urgency}
                     </span>
                   ) : null}
                 </div>
-                {f.purpose ? <p className="mt-2 text-sm text-slate-600">{sanitizeCopy(f.purpose)}</p> : null}
+                {f.purpose ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    {sanitizeCopy(f.purpose)}
+                  </p>
+                ) : null}
                 <dl className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
                   <div>
                     Target:{" "}
                     <span className="font-medium text-slate-800">
-                      <Rupee n={num(f.targetAmount)} words={num(f.targetAmount) >= 1_00_000} />
+                      <Rupee
+                        n={num(f.targetAmount)}
+                        words={num(f.targetAmount) >= 1_00_000}
+                      />
                     </span>
                   </div>
                   <div>
                     Have:{" "}
                     <span className="font-medium text-slate-800">
-                      <Rupee n={num(f.currentAmount)} words={num(f.currentAmount) >= 1_00_000} />
+                      <Rupee
+                        n={num(f.currentAmount)}
+                        words={num(f.currentAmount) >= 1_00_000}
+                      />
                     </span>
                   </div>
                   <div>
-                    Gap: <span className="font-medium text-slate-800">{fmt(num(f.gap))}</span>
+                    Gap:{" "}
+                    <span className="font-medium text-slate-800">
+                      {fmt(num(f.gap))}
+                    </span>
                   </div>
                   <div>
-                    Monthly: <span className="font-medium text-slate-800">{fmt(num(f.monthlyContribution))}</span>
+                    Monthly:{" "}
+                    <span className="font-medium text-slate-800">
+                      {fmt(num(f.monthlyContribution))}
+                    </span>
                   </div>
                 </dl>
                 {f.whereToKeep ? (
@@ -339,7 +471,11 @@ export function FinkoinAiPlanView({
                     {f.whereToKeep}
                   </p>
                 ) : null}
-                {f.whyThisInstrument ? <p className="mt-1 text-xs italic text-slate-500">{f.whyThisInstrument}</p> : null}
+                {f.whyThisInstrument ? (
+                  <p className="mt-1 text-xs italic text-slate-500">
+                    {f.whyThisInstrument}
+                  </p>
+                ) : null}
                 {f.actionThisWeek ? (
                   <p className="mt-2 rounded-lg bg-[#F4F2FC] px-3 py-2 text-xs font-medium text-[#3C3489]">
                     This week: {sanitizeCopy(f.actionThisWeek)}
@@ -359,20 +495,65 @@ export function FinkoinAiPlanView({
             const monthly = num(item.monthlyContribution);
             const eta = daysToAchieve(gap, monthly) ?? "—";
             return (
-              <div key={`rt-priority-${item.id}-${idx}`} style={{ background: "#F7F7F4", borderRadius: 10, padding: "12px 16px", marginTop: 12 }}>
-                <p className="mb-2 text-sm font-semibold text-slate-900">{item.title}</p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, textAlign: "center" }}>
+              <div
+                key={`rt-priority-${item.id}-${idx}`}
+                style={{
+                  background: "#F7F7F4",
+                  borderRadius: 10,
+                  padding: "12px 16px",
+                  marginTop: 12,
+                }}
+              >
+                <p className="mb-2 text-sm font-semibold text-slate-900">
+                  {item.title}
+                </p>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: 8,
+                    textAlign: "center",
+                  }}
+                >
                   <div>
                     <div style={{ fontSize: 11, color: "#9B9A94" }}>Gap</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111110" }}>₹{Math.round(gap).toLocaleString("en-IN")}</div>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#111110",
+                      }}
+                    >
+                      ₹{Math.round(gap).toLocaleString("en-IN")}
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, color: "#9B9A94" }}>Monthly</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#534AB7" }}>₹{Math.round(monthly).toLocaleString("en-IN")}</div>
+                    <div style={{ fontSize: 11, color: "#9B9A94" }}>
+                      Monthly
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#534AB7",
+                      }}
+                    >
+                      ₹{Math.round(monthly).toLocaleString("en-IN")}
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, color: "#9B9A94" }}>Achieve in</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#1D9E75" }}>{eta}</div>
+                    <div style={{ fontSize: 11, color: "#9B9A94" }}>
+                      Achieve in
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#1D9E75",
+                      }}
+                    >
+                      {eta}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -386,50 +567,83 @@ export function FinkoinAiPlanView({
           <SectionTitle>Asset optimisation</SectionTitle>
           <ul className="space-y-4">
             {showAssets.map((a: FinkoinAssetOptimization, i: number) => (
-              <li key={`${a.currentAsset}-${i}`} className="rounded-xl border border-slate-200 p-4">
+              <li
+                key={`${a.currentAsset}-${i}`}
+                className="rounded-xl border border-slate-200 p-4"
+              >
                 <p className="font-semibold text-slate-900">
                   {a.currentAsset}{" "}
-                  <span className="font-normal text-slate-600">({fmt(num(a.currentAmount))})</span>
+                  <span className="font-normal text-slate-600">
+                    ({fmt(num(a.currentAmount))})
+                  </span>
                 </p>
-                {a.problem ? <p className="mt-2 text-sm text-slate-600">{sanitizeCopy(a.problem)}</p> : null}
-                {a.action ? (
-                  <p className="mt-1 text-xs font-medium uppercase text-[#534AB7]">Action: {a.action}</p>
+                {a.problem ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    {sanitizeCopy(a.problem)}
+                  </p>
                 ) : null}
-                {a.splitPlan && (num(a.splitPlan.keepAmount) > 0 || num(a.splitPlan.moveAmount) > 0) ? (
+                {a.action ? (
+                  <p className="mt-1 text-xs font-medium uppercase text-[#534AB7]">
+                    Action: {a.action}
+                  </p>
+                ) : null}
+                {a.splitPlan &&
+                (num(a.splitPlan.keepAmount) > 0 ||
+                  num(a.splitPlan.moveAmount) > 0) ? (
                   <ul className="mt-2 space-y-1 text-xs text-slate-600">
                     {num(a.splitPlan.keepAmount) > 0 ? (
                       <li>
-                        Keep {fmt(num(a.splitPlan.keepAmount))} in {a.splitPlan.keepWhere} — {a.splitPlan.keepReason}
+                        Keep {fmt(num(a.splitPlan.keepAmount))} in{" "}
+                        {a.splitPlan.keepWhere} — {a.splitPlan.keepReason}
                       </li>
                     ) : null}
                     {num(a.splitPlan.moveAmount) > 0 ? (
                       <li>
-                        Move {fmt(num(a.splitPlan.moveAmount))} to {a.splitPlan.moveWhere} — {a.splitPlan.moveReason}
+                        Move {fmt(num(a.splitPlan.moveAmount))} to{" "}
+                        {a.splitPlan.moveWhere} — {a.splitPlan.moveReason}
                       </li>
                     ) : null}
                     {num(a.splitPlan.moveAmount2) > 0 ? (
                       <li>
-                        Move {fmt(num(a.splitPlan.moveAmount2))} to {a.splitPlan.moveWhere2} — {a.splitPlan.moveReason2}
+                        Move {fmt(num(a.splitPlan.moveAmount2))} to{" "}
+                        {a.splitPlan.moveWhere2} — {a.splitPlan.moveReason2}
                       </li>
                     ) : null}
                   </ul>
                 ) : null}
-                {a.benefit ? <p className="mt-2 text-sm text-emerald-800">{sanitizeCopy(a.benefit)}</p> : null}
-                {a.howToDoIt ? <p className="mt-1 text-xs text-slate-600">{sanitizeCopy(a.howToDoIt)}</p> : null}
+                {a.benefit ? (
+                  <p className="mt-2 text-sm text-emerald-800">
+                    {sanitizeCopy(a.benefit)}
+                  </p>
+                ) : null}
+                {a.howToDoIt ? (
+                  <p className="mt-1 text-xs text-slate-600">
+                    {sanitizeCopy(a.howToDoIt)}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      {variant === "full" && termGap && num(termGap.gap) > 0 ? <TermInsuranceGapCard gap={termGap} /> : null}
+      {variant === "full" && termGap && num(termGap.gap) > 0 ? (
+        <TermInsuranceGapCard gap={termGap} />
+      ) : null}
 
       {showGaps.length > 0 ? (
         <div className="space-y-3">
-          <SectionTitle>{variant === "full" && termGap ? "Other insurance gaps" : "Insurance gaps"}</SectionTitle>
+          <SectionTitle>
+            {variant === "full" && termGap
+              ? "Other insurance gaps"
+              : "Insurance gaps"}
+          </SectionTitle>
           <ul className="space-y-3">
             {showGaps.map((g: FinkoinInsuranceGap, i: number) => (
-              <li key={`${g.type}-${i}`} className="rounded-xl border border-amber-100 bg-amber-50/40 p-4">
+              <li
+                key={`${g.type}-${i}`}
+                className="rounded-xl border border-amber-100 bg-amber-50/40 p-4"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <span className="font-semibold text-slate-900">{g.type}</span>
                   {g.buyFromFinkoin ? (
@@ -442,15 +656,28 @@ export function FinkoinAiPlanView({
                   ) : null}
                 </div>
                 <p className="mt-2 text-sm text-slate-700">
-                  Gap {fmt(num(g.gap))} · You have {fmt(num(g.currentCover))} → target {fmt(num(g.recommendedCover))}
+                  Gap {fmt(num(g.gap))} · You have {fmt(num(g.currentCover))} →
+                  target {fmt(num(g.recommendedCover))}
                 </p>
-                {g.urgency ? <p className="mt-1 text-xs font-medium text-amber-900">Urgency: {g.urgency}</p> : null}
-                {g.monthlyPremiumEstimate != null ? (
-                  <p className="text-xs text-slate-600">Est. premium ~{fmt(num(g.monthlyPremiumEstimate))}/mo</p>
+                {g.urgency ? (
+                  <p className="mt-1 text-xs font-medium text-amber-900">
+                    Urgency: {g.urgency}
+                  </p>
                 ) : null}
-                {g.whyThisAmount ? <p className="mt-1 text-xs text-slate-600">{g.whyThisAmount}</p> : null}
+                {g.monthlyPremiumEstimate != null ? (
+                  <p className="text-xs text-slate-600">
+                    Est. premium ~{fmt(num(g.monthlyPremiumEstimate))}/mo
+                  </p>
+                ) : null}
+                {g.whyThisAmount ? (
+                  <p className="mt-1 text-xs text-slate-600">
+                    {g.whyThisAmount}
+                  </p>
+                ) : null}
                 {g.consequence ? (
-                  <p className="mt-2 text-xs font-medium text-red-800">If skipped: {g.consequence}</p>
+                  <p className="mt-2 text-xs font-medium text-red-800">
+                    If skipped: {g.consequence}
+                  </p>
                 ) : null}
               </li>
             ))}
@@ -470,37 +697,53 @@ export function FinkoinAiPlanView({
             {sp.educationLoan?.applicable && sp.educationLoan.advice ? (
               <div className="rounded-xl border border-slate-200 p-3 text-sm">
                 <p className="font-semibold text-slate-900">Education loan</p>
-                <p className="mt-1 text-slate-600">{sanitizeCopy(sp.educationLoan.advice)}</p>
+                <p className="mt-1 text-slate-600">
+                  {sanitizeCopy(sp.educationLoan.advice)}
+                </p>
               </div>
             ) : null}
             {sp.planningBaby?.applicable && sp.planningBaby.advice ? (
               <div className="rounded-xl border border-slate-200 p-3 text-sm">
                 <p className="font-semibold text-slate-900">Planning a baby</p>
-                {sp.planningBaby.maternityFund != null && sp.planningBaby.maternityFund > 0 ? (
-                  <p className="mt-1 text-slate-600">Maternity / buffer fund target: {fmt(num(sp.planningBaby.maternityFund))}</p>
+                {sp.planningBaby.maternityFund != null &&
+                sp.planningBaby.maternityFund > 0 ? (
+                  <p className="mt-1 text-slate-600">
+                    Maternity / buffer fund target:{" "}
+                    {fmt(num(sp.planningBaby.maternityFund))}
+                  </p>
                 ) : null}
-                <p className="mt-1 text-slate-600">{sanitizeCopy(sp.planningBaby.advice)}</p>
+                <p className="mt-1 text-slate-600">
+                  {sanitizeCopy(sp.planningBaby.advice)}
+                </p>
               </div>
             ) : null}
             {sp.ssyUrgent?.applicable && sp.ssyUrgent.advice ? (
               <div className="rounded-xl border border-red-200 bg-red-50/50 p-3 text-sm">
                 <p className="font-semibold text-red-900">SSY — urgent</p>
                 {sp.ssyUrgent.monthsLeft != null ? (
-                  <p className="mt-1 text-xs text-red-800">Months left: ~{num(sp.ssyUrgent.monthsLeft)}</p>
+                  <p className="mt-1 text-xs text-red-800">
+                    Months left: ~{num(sp.ssyUrgent.monthsLeft)}
+                  </p>
                 ) : null}
-                <p className="mt-1 text-red-900">{sanitizeCopy(sp.ssyUrgent.advice)}</p>
+                <p className="mt-1 text-red-900">
+                  {sanitizeCopy(sp.ssyUrgent.advice)}
+                </p>
               </div>
             ) : null}
             {sp.homePurchasePlan?.applicable && sp.homePurchasePlan.advice ? (
               <div className="rounded-xl border border-slate-200 p-3 text-sm">
                 <p className="font-semibold text-slate-900">Home purchase</p>
-                <p className="mt-1 text-slate-600">{sanitizeCopy(sp.homePurchasePlan.advice)}</p>
+                <p className="mt-1 text-slate-600">
+                  {sanitizeCopy(sp.homePurchasePlan.advice)}
+                </p>
               </div>
             ) : null}
             {sp.retirementGap?.applicable && sp.retirementGap.advice ? (
               <div className="rounded-xl border border-slate-200 p-3 text-sm">
                 <p className="font-semibold text-slate-900">Retirement</p>
-                <p className="mt-1 text-slate-600">{sanitizeCopy(sp.retirementGap.advice)}</p>
+                <p className="mt-1 text-slate-600">
+                  {sanitizeCopy(sp.retirementGap.advice)}
+                </p>
               </div>
             ) : null}
           </div>
@@ -522,15 +765,26 @@ export function FinkoinAiPlanView({
                 </tr>
               </thead>
               <tbody>
-                {(variant === "full" ? rows : rows.slice(0, 6)).map((r: FinkoinMonthlyAllocationRow, i: number) => (
-                  <tr key={`${r.category}-${i}`} className="border-t border-slate-100">
-                    <td className="px-3 py-2">{r.priority ?? i + 1}</td>
-                    <td className="px-3 py-2 font-medium text-slate-900">{r.category}</td>
-                    <td className="px-3 py-2 text-[#534AB7]">{fmt(num(r.amount))}</td>
-                    <td className="px-3 py-2 text-slate-600">{r.where}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{r.why}</td>
-                  </tr>
-                ))}
+                {(variant === "full" ? rows : rows.slice(0, 6)).map(
+                  (r: FinkoinMonthlyAllocationRow, i: number) => (
+                    <tr
+                      key={`${r.category}-${i}`}
+                      className="border-t border-slate-100"
+                    >
+                      <td className="px-3 py-2">{r.priority ?? i + 1}</td>
+                      <td className="px-3 py-2 font-medium text-slate-900">
+                        {r.category}
+                      </td>
+                      <td className="px-3 py-2 text-[#534AB7]">
+                        {fmt(num(r.amount))}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">{r.where}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        {r.why}
+                      </td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>
@@ -545,12 +799,18 @@ export function FinkoinAiPlanView({
           <OptimizerStopPayingInsuranceSection kvp={kvp} ladder={ladder} />
           <OptimizerYearByYearSection ladder={ladder} />
           {phaseNums ? (
-            <OptimizerTwelveMonthPhasesSection profile={profile ?? null} ladder={ladder} {...phaseNums} />
+            <OptimizerTwelveMonthPhasesSection
+              profile={profile ?? null}
+              ladder={ladder}
+              {...phaseNums}
+            />
           ) : null}
         </>
       ) : null}
 
-      {plan.disclaimer ? <p className="text-xs text-slate-500">{plan.disclaimer}</p> : null}
+      {plan.disclaimer ? (
+        <p className="text-xs text-slate-500">{plan.disclaimer}</p>
+      ) : null}
     </div>
   );
 }

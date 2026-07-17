@@ -3,8 +3,13 @@
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
+import MonthSafetyPulse from "@/components/tracker/MonthSafetyPulse";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
-import { TRACKER_CATEGORIES, findSubcategory } from "@/lib/tracker-categories";
+import {
+  TRACKER_CATEGORIES,
+  countsTowardTrackerTotals,
+  findSubcategory,
+} from "@/lib/tracker-categories";
 import {
   TrackerIconBadge,
   TrackerIcon,
@@ -12,8 +17,12 @@ import {
 import { Analytics } from "@/lib/analytics";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
+import {
+  computeMonthSafetyPulse,
+  previousCalendarMonth,
+} from "@/lib/trackerSafetyPulse";
 import { useAuthStore } from "@/store/authStore";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type TrackerTransaction = {
   id: string;
@@ -26,92 +35,73 @@ export type TrackerTransaction = {
   payment_method: string | null;
 };
 
-function SuggestionBox({
-  transactions,
-  bucketTotals,
-  totalSpent,
+function formatMaskedAmount(n: number, visible: boolean) {
+  return visible ? `₹${Math.abs(n).toLocaleString("en-IN")}` : "₹••••••";
+}
+
+function SectionPrivacyEye({
+  visible,
+  onToggle,
+  label,
 }: {
-  transactions: TrackerTransaction[];
-  bucketTotals: Record<string, number>;
-  totalSpent: number;
+  visible: boolean;
+  onToggle: () => void;
+  label: string;
 }) {
-  const suggestions: string[] = [];
-
-  const habitsAmount = bucketTotals.habits || 0;
-  if (habitsAmount > 0) {
-    suggestions.push(
-      `🚬 You spent ₹${habitsAmount.toLocaleString("en-IN")} on habits this month. This is money that could go towards your emergency fund.`,
-    );
-  }
-
-  const wantsAmount = bucketTotals.wants || 0;
-  const wantsPct = totalSpent > 0 ? (wantsAmount / totalSpent) * 100 : 0;
-  if (wantsPct > 5) {
-    const reduceBy = Math.max(0, Math.round(wantsAmount - totalSpent * 0.05));
-    suggestions.push(
-      `🎉 Your wants spending is ${wantsPct.toFixed(1)}% of total. Recommended is 5%. Try reducing dining and entertainment by ₹${reduceBy.toLocaleString("en-IN")}.`,
-    );
-  }
-
-  if (!bucketTotals.investment || bucketTotals.investment === 0) {
-    suggestions.push(
-      `📈 No investments tracked this month. Even ₹500 in a SIP is a great start.`,
-    );
-  }
-
-  const coffeeTransactions = transactions.filter(
-    (t) => t.subcategory === "coffee" || t.subcategory === "cigarettes",
-  );
-  if (coffeeTransactions.length > 0) {
-    const coffeeTotal = coffeeTransactions.reduce(
-      (a, t) => a + Number(t.amount),
-      0,
-    );
-    suggestions.push(
-      `☕ You spent ₹${coffeeTotal.toLocaleString("en-IN")} on tea/coffee and cigarettes. In a year this is ₹${(coffeeTotal * 12).toLocaleString("en-IN")} — enough for a term insurance premium.`,
-    );
-  }
-
-  if (suggestions.length === 0) return null;
-
   return (
-    <div
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      aria-label={visible ? `Hide ${label} amounts` : `Show ${label} amounts`}
+      title={visible ? "Hide amounts" : "Show amounts"}
       style={{
-        background: "#EEEDFE",
-        borderRadius: 16,
-        padding: "16px",
-        marginBottom: 20,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        border: "1px solid #E8E6F0",
+        background: "#F9F9FC",
+        color: "#534AB7",
+        cursor: "pointer",
+        padding: 0,
+        flexShrink: 0,
       }}
     >
-      <div
-        style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#534AB7",
-          marginBottom: 12,
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-        }}
-      >
-        💡 INSIGHTS
-      </div>
-      {suggestions.map((s, i) => (
-        <div
-          key={i}
-          style={{
-            fontSize: 13,
-            color: "#3C3489",
-            lineHeight: 1.6,
-            marginBottom: i < suggestions.length - 1 ? 12 : 0,
-            paddingBottom: i < suggestions.length - 1 ? 12 : 0,
-            borderBottom:
-              i < suggestions.length - 1 ? "1px solid #D4D2F5" : "none",
-          }}
-        >
-          {s}
-        </div>
-      ))}
-    </div>
+      {visible ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-6.5 0-10-7-10-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -122,6 +112,9 @@ function TrackerContent() {
   const [editingExpense, setEditingExpense] =
     useState<TrackerTransaction | null>(null);
   const [transactions, setTransactions] = useState<TrackerTransaction[]>([]);
+  const [previousTransactions, setPreviousTransactions] = useState<
+    TrackerTransaction[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [expandedBucket, setExpandedBucket] = useState<string | null>("");
   const [expandedIncome, setExpandedIncome] = useState(false);
@@ -129,19 +122,46 @@ function TrackerContent() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
-  /** Hidden by default each session. Eye flips only the summary card 180°; bucket amounts reveal without flip. */
+  /** Summary-card eye only (180° flip). Each Income/bucket section has its own eye. */
   const [amountsVisible, setAmountsVisible] = useState(false);
+  const [sectionAmountsVisible, setSectionAmountsVisible] = useState<
+    Record<string, boolean>
+  >({});
   const currentMonth = new Date(selectedYear, selectedMonth, 1).toLocaleString(
     "en-IN",
     { month: "long" },
   );
   const currentYear = selectedYear;
 
-  const maskAmount = (n: number) =>
-    amountsVisible ? `₹${Math.abs(n).toLocaleString("en-IN")}` : "₹••••••";
+  const isSectionVisible = (key: string) => sectionAmountsVisible[key] === true;
+  const toggleSectionVisible = (key: string) => {
+    setSectionAmountsVisible((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const toggleAmountsVisible = () => {
     setAmountsVisible((v) => !v);
+  };
+
+  /** Master privacy switch: reveal/hide the summary card + every section at once. */
+  const privacySectionKeys = [
+    "income",
+    "needs",
+    "wants",
+    "habits",
+    "loans",
+    "investment",
+  ] as const;
+  const allAmountsVisible =
+    amountsVisible &&
+    privacySectionKeys.every((k) => sectionAmountsVisible[k] === true);
+  const toggleShowAll = () => {
+    const next = !allAmountsVisible;
+    setAmountsVisible(next);
+    setSectionAmountsVisible(() => {
+      const rec: Record<string, boolean> = {};
+      for (const k of privacySectionKeys) rec[k] = next;
+      return rec;
+    });
   };
   const fetchReqId = useRef(0);
 
@@ -196,26 +216,49 @@ function TrackerContent() {
       if (!soft) setLoading(true);
       try {
         const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from("expense_transactions")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("month", currentMonth)
-          .eq("year", currentYear)
-          .order("date", { ascending: false });
+        const prev = previousCalendarMonth(selectedMonth, selectedYear);
+
+        const [currentRes, prevRes] = await Promise.all([
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", currentMonth)
+            .eq("year", currentYear)
+            .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", prev.monthName)
+            .eq("year", prev.year)
+            .order("date", { ascending: false }),
+        ]);
 
         if (fetchReqId.current !== myId) return;
-        if (error) console.warn("tracker fetch:", error.message);
-        setTransactions((data as TrackerTransaction[]) || []);
+        if (currentRes.error)
+          console.warn("tracker fetch:", currentRes.error.message);
+        if (prevRes.error)
+          console.warn("tracker prev fetch:", prevRes.error.message);
+        setTransactions((currentRes.data as TrackerTransaction[]) || []);
+        setPreviousTransactions((prevRes.data as TrackerTransaction[]) || []);
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker fetch failed", e);
         setTransactions([]);
+        setPreviousTransactions([]);
       } finally {
         if (fetchReqId.current === myId) setLoading(false);
       }
     },
-    [user?.id, hasConsent, currentMonth, currentYear],
+    [
+      user?.id,
+      hasConsent,
+      currentMonth,
+      currentYear,
+      selectedMonth,
+      selectedYear,
+    ],
   );
 
   useEffect(() => {
@@ -266,6 +309,25 @@ function TrackerContent() {
     [user?.id, fetchTransactions],
   );
 
+  const prevMeta = previousCalendarMonth(selectedMonth, selectedYear);
+  const safetyPulse = useMemo(
+    () =>
+      computeMonthSafetyPulse({
+        currentTxns: transactions,
+        previousTxns: previousTransactions,
+        fallbackIncome: profileMonthlyFromDb,
+        monthIndex: selectedMonth,
+        year: selectedYear,
+      }),
+    [
+      transactions,
+      previousTransactions,
+      profileMonthlyFromDb,
+      selectedMonth,
+      selectedYear,
+    ],
+  );
+
   if (hasConsent === null) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -280,6 +342,7 @@ function TrackerContent() {
 
   const bucketTotals = transactions.reduce(
     (acc, t) => {
+      if (!countsTowardTrackerTotals(t)) return acc;
       acc[t.bucket] = (acc[t.bucket] || 0) + Number(t.amount);
       return acc;
     },
@@ -290,6 +353,8 @@ function TrackerContent() {
   const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
   const incomeCat = TRACKER_CATEGORIES.income;
   const displayIncome = monthlyIncome || profileMonthlyFromDb;
+  // Purple summary card only: "Spent"/"Left" reflect real cash out, so include
+  // loan prepayment here. Bucket cards, caps, and Safety Pulse still exclude it.
   const totalSpent = transactions
     .filter((t) => t.bucket !== "income")
     .reduce((a, t) => a + Number(t.amount), 0);
@@ -322,6 +387,7 @@ function TrackerContent() {
     }
   };
   const buckets = ["needs", "wants", "habits", "loans", "investment"] as const;
+  const incomeVisible = isSectionVisible("income");
 
   const summaryCardInner = (visible: boolean) => (
     <div
@@ -614,6 +680,86 @@ function TrackerContent() {
         </div>
       </div>
 
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: 12,
+        }}
+      >
+        <button
+          type="button"
+          onClick={toggleShowAll}
+          aria-pressed={allAmountsVisible}
+          aria-label={
+            allAmountsVisible ? "Hide all amounts" : "Show all amounts"
+          }
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            height: 36,
+            padding: "0 14px",
+            borderRadius: 999,
+            border: "1px solid #E8E6F0",
+            background: allAmountsVisible ? "#EEEDFE" : "#F9F9FC",
+            color: "#534AB7",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {allAmountsVisible ? (
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-6.5 0-10-7-10-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="3"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          )}
+          {allAmountsVisible ? "Hide all" : "Show all"}
+        </button>
+      </div>
+
       {!loading ? (
         <div
           style={{
@@ -661,21 +807,21 @@ function TrackerContent() {
                     {incomeTxns.length}{" "}
                     {incomeTxns.length === 1 ? "entry" : "entries"}
                     {monthlyIncome === 0 && profileMonthlyFromDb > 0
-                      ? ` · ${maskAmount(profileMonthlyFromDb)} from profile`
+                      ? ` · ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from profile`
                       : ""}
                   </div>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div
                   style={{
                     fontSize: 16,
                     fontWeight: 800,
                     color: "#111110",
-                    letterSpacing: amountsVisible ? "normal" : "0.06em",
+                    letterSpacing: incomeVisible ? "normal" : "0.06em",
                   }}
                 >
-                  {maskAmount(monthlyIncome)}
+                  {formatMaskedAmount(monthlyIncome, incomeVisible)}
                 </div>
                 <span
                   style={{
@@ -687,6 +833,11 @@ function TrackerContent() {
                 >
                   ▼
                 </span>
+                <SectionPrivacyEye
+                  visible={incomeVisible}
+                  onToggle={() => toggleSectionVisible("income")}
+                  label="Income"
+                />
               </div>
             </div>
           </button>
@@ -728,12 +879,15 @@ function TrackerContent() {
                               fontSize: 13,
                               fontWeight: 700,
                               color: "#111110",
-                              letterSpacing: amountsVisible
+                              letterSpacing: incomeVisible
                                 ? "normal"
                                 : "0.06em",
                             }}
                           >
-                            {maskAmount(Number(txn.amount))}
+                            {formatMaskedAmount(
+                              Number(txn.amount),
+                              incomeVisible,
+                            )}
                           </div>
                           <div
                             style={{
@@ -814,7 +968,7 @@ function TrackerContent() {
                   }}
                 >
                   {profileMonthlyFromDb > 0
-                    ? `No income logged yet. Your dashboard shows ${maskAmount(profileMonthlyFromDb)} from your profile — tap Add income to record it here.`
+                    ? `No income logged yet. Your dashboard shows ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from your profile — tap Add income to record it here.`
                     : "No income logged this month. Tap Add income to get started."}
                 </div>
               )}
@@ -865,10 +1019,9 @@ function TrackerContent() {
             const bucketTxns = transactions.filter(
               (t) => t.bucket === bucketKey,
             );
-            const bucketTotal = bucketTxns.reduce(
-              (a, t) => a + Number(t.amount),
-              0,
-            );
+            const bucketTotal = bucketTxns
+              .filter((t) => countsTowardTrackerTotals(t))
+              .reduce((a, t) => a + Number(t.amount), 0);
             const isExpanded = expandedBucket === bucketKey;
             const budgetAmount =
               displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
@@ -886,6 +1039,7 @@ function TrackerContent() {
               },
               {} as Record<string, typeof bucketTxns>,
             );
+            const sectionVisible = isSectionVisible(bucketKey);
 
             return (
               <div
@@ -944,7 +1098,7 @@ function TrackerContent() {
                       </div>
                     </div>
                     <div
-                      style={{ display: "flex", alignItems: "center", gap: 12 }}
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
                       <div style={{ textAlign: "right" }}>
                         <div
@@ -952,10 +1106,10 @@ function TrackerContent() {
                             fontSize: 16,
                             fontWeight: 800,
                             color: overBudget ? "#E24B4A" : "#111110",
-                            letterSpacing: amountsVisible ? "normal" : "0.06em",
+                            letterSpacing: sectionVisible ? "normal" : "0.06em",
                           }}
                         >
-                          {maskAmount(bucketTotal)}
+                          {formatMaskedAmount(bucketTotal, sectionVisible)}
                         </div>
                         {budgetAmount > 0 ? (
                           <div
@@ -963,12 +1117,13 @@ function TrackerContent() {
                               fontSize: 11,
                               color: "#111110",
                               opacity: 0.88,
-                              letterSpacing: amountsVisible
+                              letterSpacing: sectionVisible
                                 ? "normal"
                                 : "0.06em",
                             }}
                           >
-                            of {maskAmount(budgetAmount)}
+                            of{" "}
+                            {formatMaskedAmount(budgetAmount, sectionVisible)}
                           </div>
                         ) : null}
                       </div>
@@ -983,6 +1138,11 @@ function TrackerContent() {
                       >
                         ▼
                       </div>
+                      <SectionPrivacyEye
+                        visible={sectionVisible}
+                        onToggle={() => toggleSectionVisible(bucketKey)}
+                        label={cat.label}
+                      />
                     </div>
                   </div>
                   {budgetAmount > 0 ? (
@@ -998,7 +1158,7 @@ function TrackerContent() {
                         <div
                           style={{
                             height: "100%",
-                            width: amountsVisible
+                            width: sectionVisible
                               ? `${progressPercent}%`
                               : "0%",
                             background:
@@ -1019,11 +1179,14 @@ function TrackerContent() {
                             color: "#E24B4A",
                             marginTop: 4,
                             fontWeight: 600,
-                            letterSpacing: amountsVisible ? "normal" : "0.06em",
+                            letterSpacing: sectionVisible ? "normal" : "0.06em",
                           }}
                         >
                           ⚠️ Over budget by{" "}
-                          {maskAmount(bucketTotal - budgetAmount)}
+                          {formatMaskedAmount(
+                            bucketTotal - budgetAmount,
+                            sectionVisible,
+                          )}
                         </div>
                       ) : null}
                     </div>
@@ -1116,12 +1279,12 @@ function TrackerContent() {
                                   fontSize: 14,
                                   fontWeight: 700,
                                   color: "#111110",
-                                  letterSpacing: amountsVisible
+                                  letterSpacing: sectionVisible
                                     ? "normal"
                                     : "0.06em",
                                 }}
                               >
-                                {maskAmount(subTotal)}
+                                {formatMaskedAmount(subTotal, sectionVisible)}
                               </div>
                             </div>
                             <div
@@ -1152,7 +1315,10 @@ function TrackerContent() {
                                         fontWeight: 700,
                                       }}
                                     >
-                                      {maskAmount(Number(txn.amount))}
+                                      {formatMaskedAmount(
+                                        Number(txn.amount),
+                                        sectionVisible,
+                                      )}
                                     </div>
                                     <div
                                       style={{
@@ -1245,13 +1411,11 @@ function TrackerContent() {
               </div>
             );
           })}
-          {amountsVisible ? (
-            <SuggestionBox
-              transactions={transactions}
-              bucketTotals={bucketTotals}
-              totalSpent={totalSpent}
-            />
-          ) : null}
+          <MonthSafetyPulse
+            pulse={safetyPulse}
+            previousMonthLabel={prevMeta.monthName}
+            forceVisible={allAmountsVisible}
+          />
           <div style={{ marginTop: 16 }}>
             <FeedbackWidget pageContext="tracker" />
           </div>

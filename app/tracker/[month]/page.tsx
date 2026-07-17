@@ -7,6 +7,7 @@ import ExpenseTable, {
 } from "@/components/tracker/ExpenseTable";
 import MonthSummary from "@/components/tracker/MonthSummary";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
+import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
@@ -160,6 +161,8 @@ function TrackerMonthContent() {
 
   const bucketTotals = transactions.reduce(
     (acc, t) => {
+      if (t.bucket === "income") return acc;
+      if (!countsTowardTrackerTotals(t)) return acc;
       acc[t.bucket] = (acc[t.bucket] || 0) + Number(t.amount);
       return acc;
     },
