@@ -3,6 +3,7 @@
 import NotificationBell from "@/components/NotificationBell";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { fadeIn } from "@/lib/animations";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { trackNavClick } from "@/lib/gtag";
@@ -212,8 +213,9 @@ export function GlobalNavbar() {
 
           <div className="flex items-center gap-3">
             {showAsLoggedIn ? (
-              <span className="hidden rounded-full bg-[#EEEDFE] px-3 py-1 text-xs font-semibold text-[#3C3489] md:inline-flex">
-                🪙 {fkBalance} FK
+              <span className="hidden items-center gap-1.5 rounded-full bg-[#EEEDFE] px-3 py-1 text-xs font-semibold text-[#3C3489] md:inline-flex">
+                <AppIcon name="coin" size={14} color="#534AB7" />
+                {fkBalance} FK
               </span>
             ) : null}
 
@@ -296,11 +298,24 @@ export function GlobalNavbar() {
 
             <button
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-700 md:hidden"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-[#534AB7] md:hidden"
               aria-label="Open menu"
               onClick={() => setMobileOpen(true)}
             >
-              ☰
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M4 7h16M4 12h16M4 17h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
           </div>
         </div>
@@ -367,8 +382,9 @@ export function GlobalNavbar() {
               <div className="my-3 border-t border-[#F0EFF8]" />
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-slate-50 p-2">
-                  <p className="text-sm font-bold text-slate-900">
-                    🪙 {fkBalance}
+                  <p className="flex items-center justify-center gap-1 text-sm font-bold text-slate-900">
+                    <AppIcon name="coin" size={15} color="#534AB7" />
+                    {fkBalance}
                   </p>
                   <p className="text-[10px] text-slate-600">tokens earned</p>
                 </div>
@@ -377,8 +393,9 @@ export function GlobalNavbar() {
                   <p className="text-[10px] text-slate-600">badges</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-2">
-                  <p className="text-sm font-bold text-slate-900">
-                    🔥 {streakDays}
+                  <p className="flex items-center justify-center gap-1 text-sm font-bold text-slate-900">
+                    <AppIcon name="flame" size={15} color="#534AB7" />
+                    {streakDays}
                   </p>
                   <p className="text-[10px] text-slate-600">day streak</p>
                 </div>
@@ -386,21 +403,23 @@ export function GlobalNavbar() {
 
               <div className="my-3 border-t border-[#F0EFF8]" />
               <nav className="space-y-1 text-sm">
-                {[
-                  ["👤", "My Profile", "/profile"],
-                  ["📒", "Expense Tracker", "/tracker"],
-                  ["👥", "FK Split", "/split"],
-                  ["📊", "My Analysis", "/analyse/result"],
-                  ["🛡️", "My Policies", "/policies"],
-                  ["🎯", "My Goals", "/goals"],
-                  ["📈", "My Investments", "/investments"],
-                  ["🏆", "Leaderboard", "/leaderboard"],
-                  ["🎁", "Rewards", "/rewards"],
-                  ["👥", "Refer & Earn", "/refer"],
-                  ["⚙️", "Settings", "/settings"],
-                ].map(([icon, label, href]) => (
+                {(
+                  [
+                    ["user", "My Profile", "/profile"],
+                    ["notebook", "Expense Tracker", "/tracker"],
+                    ["users", "FK Split", "/split"],
+                    ["chart", "My Analysis", "/analyse/result"],
+                    ["shield", "My Policies", "/policies"],
+                    ["target", "My Goals", "/goals"],
+                    ["trending", "My Investments", "/investments"],
+                    ["trophy", "Leaderboard", "/leaderboard"],
+                    ["gift", "Rewards", "/rewards"],
+                    ["users", "Refer & Earn", "/refer"],
+                    ["settings", "Settings", "/settings"],
+                  ] as [AppIconName, string, string][]
+                ).map(([icon, label, href]) => (
                   <button
-                    key={href}
+                    key={label}
                     type="button"
                     data-internal-href={href}
                     className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50"
@@ -409,8 +428,9 @@ export function GlobalNavbar() {
                       router.push(href);
                     }}
                   >
-                    <span>
-                      {icon} {label}
+                    <span className="flex items-center gap-2.5">
+                      <AppIcon name={icon} size={17} color="#534AB7" />
+                      {label}
                     </span>
                     <span aria-hidden>›</span>
                   </button>
@@ -471,9 +491,10 @@ export function GlobalNavbar() {
               <button
                 type="button"
                 onClick={() => void handleSignOut()}
-                className="w-full text-center text-sm font-semibold text-red-600"
+                className="flex w-full items-center justify-center gap-2 text-center text-sm font-semibold text-red-600"
               >
-                🚪 Sign out
+                <AppIcon name="logout" size={16} color="currentColor" />
+                Sign out
               </button>
               <p className="mt-1 text-center text-[11px] text-slate-600">
                 Signed in as {user?.phone ?? user?.email ?? "user"}
@@ -494,12 +515,15 @@ export function GlobalNavbar() {
             className="fixed inset-0 z-[60] bg-white px-6 pt-6"
           >
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">
-                {showAsLoggedIn
-                  ? fkBalance > 0
-                    ? `🪙 ${fkBalance} FK earned`
-                    : "🪙 0 FK earned"
-                  : "Menu"}
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                {showAsLoggedIn ? (
+                  <>
+                    <AppIcon name="coin" size={15} color="#534AB7" />
+                    {fkBalance > 0 ? `${fkBalance} FK earned` : "0 FK earned"}
+                  </>
+                ) : (
+                  "Menu"
+                )}
               </p>
               <button
                 type="button"

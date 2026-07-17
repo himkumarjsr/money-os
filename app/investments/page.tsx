@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { ButtonLink } from "@/components/ui/button";
 import { formatIndian } from "@/lib/formatters";
 import { useFinancialStore } from "@/store/financialStore";
@@ -32,18 +33,27 @@ export default function InvestmentsPage() {
     <ProtectedGate>
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-bold text-[#111110]">My Investments</h1>
-        <p className="mt-2 text-sm text-[#5F5E5A]">Snapshot from your last financial analysis submission.</p>
+        <p className="mt-2 text-sm text-[#5F5E5A]">
+          Snapshot from your last financial analysis submission.
+        </p>
 
         {!submission ? (
           <div className="mt-10 rounded-2xl border border-[#F0EFF8] bg-white px-6 py-14 text-center shadow-sm">
-            <div className="text-4xl" aria-hidden>
-              📈
+            <div className="flex justify-center" aria-hidden>
+              <AppIcon name="trending" size={40} color="#534AB7" />
             </div>
-            <h2 className="mt-4 text-xl font-bold text-[#111110]">No analysis yet</h2>
+            <h2 className="mt-4 text-xl font-bold text-[#111110]">
+              No analysis yet
+            </h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-[#9B9A94]">
-              Complete your financial analysis to see your mutual funds, FDs, PPF, equity and other holdings here.
+              Complete your financial analysis to see your mutual funds, FDs,
+              PPF, equity and other holdings here.
             </p>
-            <ButtonLink href="/analyse" variant="primary" className="mt-6 inline-flex bg-[#534AB7] text-white">
+            <ButtonLink
+              href="/analyse"
+              variant="primary"
+              className="mt-6 inline-flex bg-[#534AB7] text-white"
+            >
               Start analysis →
             </ButtonLink>
           </div>
@@ -65,8 +75,12 @@ export default function InvestmentsPage() {
             </div>
 
             <div className="mt-8 rounded-2xl border border-[#EEEDFE] bg-[#EEEDFE]/40 p-6 text-center">
-              <p className="text-sm font-semibold text-[#3C3489]">Portfolio analysis</p>
-              <p className="mt-2 text-sm text-[#5F5E5A]">Deeper allocation insights and benchmarks are coming soon.</p>
+              <p className="text-sm font-semibold text-[#3C3489]">
+                Portfolio analysis
+              </p>
+              <p className="mt-2 text-sm text-[#5F5E5A]">
+                Deeper allocation insights and benchmarks are coming soon.
+              </p>
               <button
                 type="button"
                 disabled
@@ -93,7 +107,9 @@ function Row({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-[#5F5E5A]">{label}</span>
-      <span className="font-semibold text-[#111110]">₹{formatIndian(value)}</span>
+      <span className="font-semibold text-[#111110]">
+        ₹{formatIndian(value)}
+      </span>
     </div>
   );
 }

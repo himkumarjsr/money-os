@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  clientKeyFromHeaders,
+  getAuthedUser,
+  rateLimit,
+  tooManyRequests,
+} from "@/lib/apiGuard";
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,34 +16,54 @@ function getAdmin() {
   });
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_MESSAGE_LEN = 4000;
 
 export async function POST(req: NextRequest) {
   const supabaseAdmin = getAdmin();
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: "Missing Supabase env" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Missing Supabase env" },
+      { status: 500 },
+    );
   }
 
   try {
+    // Trust the session (not the client) for identity. Anonymous feedback is
+    // allowed but never earns FK tokens — this kills token farming.
+    const sessionUser = await getAuthedUser();
+    const user_id = sessionUser?.id ?? null;
+
+    const rateKey = user_id
+      ? `feedback:${user_id}`
+      : `feedback:ip:${clientKeyFromHeaders(req.headers)}`;
+    const limit = rateLimit(rateKey, 10, 60 * 60 * 1000);
+    if (!limit.ok) {
+      return tooManyRequests(limit.retryAfter);
+    }
+
     const body = (await req.json()) as Record<string, unknown>;
 
-    console.log("Feedback API: received", JSON.stringify(body));
-
-    const user_id = typeof body.user_id === "string" ? body.user_id : null;
     const rating = body.rating;
     const message = typeof body.message === "string" ? body.message : "";
-    const page_context = typeof body.page_context === "string" ? body.page_context : "app";
+    const page_context =
+      typeof body.page_context === "string" ? body.page_context : "app";
     const scoreRaw = body.score_at_time;
-    const scoreNum = scoreRaw != null && scoreRaw !== "" ? Number(scoreRaw) : NaN;
+    const scoreNum =
+      scoreRaw != null && scoreRaw !== "" ? Number(scoreRaw) : NaN;
 
     if (rating == null || Number(rating) < 1 || Number(rating) > 5) {
-      return NextResponse.json({ error: "Rating 1 to 5 required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Rating 1 to 5 required" },
+        { status: 400 },
+      );
     }
 
     const insertData: Record<string, unknown> = {
       rating: Number(rating),
-      message: message?.trim() || null,
-      page_context: page_context || "app",
+      message: message?.trim().slice(0, MAX_MESSAGE_LEN) || null,
+      page_context: page_context.slice(0, 120) || "app",
       score_at_time: Number.isFinite(scoreNum) ? scoreNum : null,
       is_approved: false,
       is_featured: false,
@@ -47,19 +73,19 @@ export async function POST(req: NextRequest) {
       insertData.user_id = user_id;
     }
 
-    console.log("Feedback API: inserting", JSON.stringify(insertData));
-
-    const { data, error } = await supabaseAdmin.from("feedback").insert(insertData).select().single();
+    const { data, error } = await supabaseAdmin
+      .from("feedback")
+      .insert(insertData)
+      .select()
+      .single();
 
     if (error) {
-      console.error("Feedback API DB error:", error.code, error.message, error.details);
+      console.error("Feedback API DB error:", error.code, error.message);
       return NextResponse.json(
-        { error: error.message, code: error.code, details: error.details },
+        { error: "Could not save feedback" },
         { status: 500 },
       );
     }
-
-    console.log("Feedback API: success", data?.id);
 
     let fkAwarded = 0;
     if (user_id && UUID_RE.test(user_id)) {
@@ -118,7 +144,10 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const supabaseAdmin = getAdmin();
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: "Missing Supabase env" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Missing Supabase env" },
+      { status: 500 },
+    );
   }
 
   try {

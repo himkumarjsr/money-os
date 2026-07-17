@@ -14,6 +14,7 @@ import {
   TrackerIconBadge,
   TrackerIcon,
 } from "@/components/tracker/TrackerIcons";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { Analytics } from "@/lib/analytics";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
@@ -107,7 +108,19 @@ function SectionPrivacyEye({
 
 function TrackerContent() {
   const user = useAuthStore((s) => s.user);
-  const [hasConsent, setHasConsent] = useState<boolean | null>(null);
+  const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
+    try {
+      if (
+        typeof window !== "undefined" &&
+        localStorage.getItem("finkoin_tracker_consent") === "v1"
+      ) {
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] =
     useState<TrackerTransaction | null>(null);
@@ -115,7 +128,8 @@ function TrackerContent() {
   const [previousTransactions, setPreviousTransactions] = useState<
     TrackerTransaction[]
   >([]);
-  const [loading, setLoading] = useState(true);
+  /** Prefer showing the UI shell immediately; soft fetches never blank it. */
+  const [loading, setLoading] = useState(false);
   const [expandedBucket, setExpandedBucket] = useState<string | null>("");
   const [expandedIncome, setExpandedIncome] = useState(false);
   const [defaultBucket, setDefaultBucket] = useState<string>("");
@@ -164,8 +178,13 @@ function TrackerContent() {
     });
   };
   const fetchReqId = useRef(0);
+  /** Hard fetches that are still in flight — soft must not clear the spinner early. */
+  const hardInFlight = useRef(0);
 
   useEffect(() => {
+    // Already known from localStorage — skip the DB round-trip flash.
+    if (hasConsent === true) return;
+
     try {
       const local = localStorage.getItem("finkoin_tracker_consent");
       if (local === "v1") {
@@ -202,7 +221,7 @@ function TrackerContent() {
     };
 
     void checkDB();
-  }, [user?.id]);
+  }, [user?.id, hasConsent]);
 
   const fetchTransactions = useCallback(
     async (opts?: { soft?: boolean }) => {
@@ -212,8 +231,12 @@ function TrackerContent() {
         return;
       }
       const myId = ++fetchReqId.current;
-      const soft = opts?.soft === true;
-      if (!soft) setLoading(true);
+      // Soft by default so navigating back to Tracker never blanks the UI.
+      const soft = opts?.soft !== false;
+      if (!soft) {
+        hardInFlight.current += 1;
+        setLoading(true);
+      }
       try {
         const supabase = getSupabase();
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
@@ -248,7 +271,14 @@ function TrackerContent() {
         setTransactions([]);
         setPreviousTransactions([]);
       } finally {
-        if (fetchReqId.current === myId) setLoading(false);
+        if (!soft) {
+          hardInFlight.current = Math.max(0, hardInFlight.current - 1);
+        }
+        if (hardInFlight.current === 0) {
+          if (fetchReqId.current === myId || !soft) {
+            setLoading(false);
+          }
+        }
       }
     },
     [
@@ -262,7 +292,7 @@ function TrackerContent() {
   );
 
   useEffect(() => {
-    if (hasConsent) void fetchTransactions();
+    if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
 
   useEffect(() => {
@@ -760,667 +790,644 @@ function TrackerContent() {
         </button>
       </div>
 
-      {!loading ? (
-        <div
-          style={{
-            background: "white",
-            border: `1.5px solid ${expandedIncome ? incomeCat.color : "#E8E6F0"}`,
-            borderRadius: 16,
-            marginBottom: 10,
-            overflow: "hidden",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setExpandedIncome((e) => !e)}
-            style={{
-              width: "100%",
-              padding: "16px",
-              cursor: "pointer",
-              border: "none",
-              background: "white",
-              textAlign: "left",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <TrackerIconBadge
-                  name={incomeCat.icon}
-                  color={incomeCat.color}
-                />
-                <div>
-                  <div
-                    style={{ fontSize: 15, fontWeight: 700, color: "#111110" }}
-                  >
-                    {incomeCat.label}
-                  </div>
-                  <div
-                    style={{ fontSize: 12, color: "#111110", opacity: 0.85 }}
-                  >
-                    {incomeTxns.length}{" "}
-                    {incomeTxns.length === 1 ? "entry" : "entries"}
-                    {monthlyIncome === 0 && profileMonthlyFromDb > 0
-                      ? ` · ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from profile`
-                      : ""}
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color: "#111110",
-                    letterSpacing: incomeVisible ? "normal" : "0.06em",
-                  }}
-                >
-                  {formatMaskedAmount(monthlyIncome, incomeVisible)}
-                </div>
-                <span
-                  style={{
-                    fontSize: 14,
-                    color: "#111110",
-                    transform: !expandedIncome ? "rotate(180deg)" : "none",
-                    transition: "transform 0.2s",
-                  }}
-                >
-                  ▼
-                </span>
-                <SectionPrivacyEye
-                  visible={incomeVisible}
-                  onToggle={() => toggleSectionVisible("income")}
-                  label="Income"
-                />
-              </div>
-            </div>
-          </button>
-          {expandedIncome ? (
-            <div style={{ borderTop: "1px solid #F0EFF8" }}>
-              {incomeTxns.length > 0 ? (
-                <div
-                  style={{ padding: "8px 16px 12px", display: "grid", gap: 8 }}
-                >
-                  {incomeTxns.map((txn) => {
-                    const sub = findSubcategory(
-                      "income",
-                      txn.subcategory ?? txn.category,
-                    );
-                    const dateLabel = new Date(txn.date).toLocaleDateString(
-                      "en-IN",
-                      {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      },
-                    );
-                    return (
-                      <div
-                        key={txn.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          borderRadius: 8,
-                          background: "#F9F9FC",
-                          padding: "10px 12px",
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: "#111110",
-                              letterSpacing: incomeVisible
-                                ? "normal"
-                                : "0.06em",
-                            }}
-                          >
-                            {formatMaskedAmount(
-                              Number(txn.amount),
-                              incomeVisible,
-                            )}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: "#111110",
-                              fontWeight: 500,
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {sub?.label ?? txn.category} ·{" "}
-                            {txn.description?.trim() || dateLabel}
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                            flexShrink: 0,
-                          }}
-                        >
-                          <button
-                            type="button"
-                            aria-label="Edit income"
-                            title="Edit income"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDefaultBucket("income");
-                              setEditingExpense(txn);
-                              setShowAddModal(true);
-                            }}
-                            style={{
-                              border: "none",
-                              background: "transparent",
-                              color: "#534AB7",
-                              fontSize: 14,
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              padding: "6px 8px",
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            aria-label="Delete income"
-                            title="Delete income"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void deleteTransaction(txn.id);
-                            }}
-                            style={{
-                              border: "none",
-                              background: "transparent",
-                              color: "#E24B4A",
-                              fontSize: 14,
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              padding: "6px 8px",
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    padding: "16px",
-                    textAlign: "center",
-                    color: "#111110",
-                    fontSize: 13,
-                  }}
-                >
-                  {profileMonthlyFromDb > 0
-                    ? `No income logged yet. Your dashboard shows ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from your profile — tap Add income to record it here.`
-                    : "No income logged this month. Tap Add income to get started."}
-                </div>
-              )}
-              <div style={{ padding: "12px 16px 16px" }}>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDefaultBucket("income");
-                    setEditingExpense(null);
-                    setShowAddModal(true);
-                  }}
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    borderRadius: 10,
-                    background: `${incomeCat.color}18`,
-                    border: `1.5px dashed ${incomeCat.color}`,
-                    color: incomeCat.color,
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  + Add income
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
       {loading ? (
         <div
           style={{
-            padding: "32px",
+            padding: "8px 0 12px",
             textAlign: "center",
-            color: "#111110",
-            fontSize: 14,
+            color: "#9B9A94",
+            fontSize: 12,
+            fontWeight: 600,
           }}
         >
-          Loading...
+          Updating…
         </div>
-      ) : (
-        <>
-          {buckets.map((bucketKey) => {
-            const cat = TRACKER_CATEGORIES[bucketKey];
-            const bucketTxns = transactions.filter(
-              (t) => t.bucket === bucketKey,
-            );
-            const bucketTotal = bucketTxns
-              .filter((t) => countsTowardTrackerTotals(t))
-              .reduce((a, t) => a + Number(t.amount), 0);
-            const isExpanded = expandedBucket === bucketKey;
-            const budgetAmount =
-              displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
-            const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
-            const progressPercent =
-              budgetAmount > 0
-                ? Math.min((bucketTotal / budgetAmount) * 100, 100)
-                : 0;
-            const bySubcategory = bucketTxns.reduce(
-              (acc, t) => {
-                const key = t.subcategory || "other";
-                if (!acc[key]) acc[key] = [];
-                acc[key].push(t);
-                return acc;
-              },
-              {} as Record<string, typeof bucketTxns>,
-            );
-            const sectionVisible = isSectionVisible(bucketKey);
+      ) : null}
 
-            return (
+      <div
+        style={{
+          background: "white",
+          border: `1.5px solid ${expandedIncome ? incomeCat.color : "#E8E6F0"}`,
+          borderRadius: 16,
+          marginBottom: 10,
+          overflow: "hidden",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setExpandedIncome((e) => !e)}
+          style={{
+            width: "100%",
+            padding: "16px",
+            cursor: "pointer",
+            border: "none",
+            background: "white",
+            textAlign: "left",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 10,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <TrackerIconBadge name={incomeCat.icon} color={incomeCat.color} />
+              <div>
+                <div
+                  style={{ fontSize: 15, fontWeight: 700, color: "#111110" }}
+                >
+                  {incomeCat.label}
+                </div>
+                <div style={{ fontSize: 12, color: "#111110", opacity: 0.85 }}>
+                  {incomeTxns.length}{" "}
+                  {incomeTxns.length === 1 ? "entry" : "entries"}
+                  {monthlyIncome === 0 && profileMonthlyFromDb > 0
+                    ? ` · ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from profile`
+                    : ""}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div
-                key={bucketKey}
                 style={{
-                  background: "white",
-                  border: `1.5px solid ${isExpanded ? cat.color : overBudget ? "#FCEBEB" : "#E8E6F0"}`,
-                  borderRadius: 16,
-                  marginBottom: 10,
-                  overflow: "hidden",
-                  transition: "border-color 0.2s",
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: "#111110",
+                  letterSpacing: incomeVisible ? "normal" : "0.06em",
                 }}
               >
-                <div
-                  onClick={() =>
-                    setExpandedBucket(isExpanded ? null : bucketKey)
-                  }
-                  style={{
-                    padding: "16px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 10,
-                    }}
-                  >
+                {formatMaskedAmount(monthlyIncome, incomeVisible)}
+              </div>
+              <span
+                style={{
+                  fontSize: 14,
+                  color: "#111110",
+                  transform: !expandedIncome ? "rotate(180deg)" : "none",
+                  transition: "transform 0.2s",
+                }}
+              >
+                ▼
+              </span>
+              <SectionPrivacyEye
+                visible={incomeVisible}
+                onToggle={() => toggleSectionVisible("income")}
+                label="Income"
+              />
+            </div>
+          </div>
+        </button>
+        {expandedIncome ? (
+          <div style={{ borderTop: "1px solid #F0EFF8" }}>
+            {incomeTxns.length > 0 ? (
+              <div
+                style={{ padding: "8px 16px 12px", display: "grid", gap: 8 }}
+              >
+                {incomeTxns.map((txn) => {
+                  const sub = findSubcategory(
+                    "income",
+                    txn.subcategory ?? txn.category,
+                  );
+                  const dateLabel = new Date(txn.date).toLocaleDateString(
+                    "en-IN",
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    },
+                  );
+                  return (
                     <div
-                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                      key={txn.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderRadius: 8,
+                        background: "#F9F9FC",
+                        padding: "10px 12px",
+                        gap: 8,
+                      }}
                     >
-                      <TrackerIconBadge name={cat.icon} color={cat.color} />
-                      <div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <div
                           style={{
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: 700,
                             color: "#111110",
+                            letterSpacing: incomeVisible ? "normal" : "0.06em",
                           }}
                         >
-                          {cat.label}
+                          {formatMaskedAmount(
+                            Number(txn.amount),
+                            incomeVisible,
+                          )}
                         </div>
                         <div
                           style={{
                             fontSize: 12,
                             color: "#111110",
-                            opacity: 0.88,
+                            fontWeight: 500,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                           }}
                         >
-                          {bucketTxns.length} items
-                          {cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
+                          {sub?.label ?? txn.category} ·{" "}
+                          {txn.description?.trim() || dateLabel}
                         </div>
                       </div>
-                    </div>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
-                    >
-                      <div style={{ textAlign: "right" }}>
-                        <div
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          aria-label="Edit income"
+                          title="Edit income"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDefaultBucket("income");
+                            setEditingExpense(txn);
+                            setShowAddModal(true);
+                          }}
                           style={{
-                            fontSize: 16,
-                            fontWeight: 800,
-                            color: overBudget ? "#E24B4A" : "#111110",
-                            letterSpacing: sectionVisible ? "normal" : "0.06em",
+                            border: "none",
+                            background: "transparent",
+                            color: "#534AB7",
+                            fontSize: 14,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            padding: "6px 8px",
                           }}
                         >
-                          {formatMaskedAmount(bucketTotal, sectionVisible)}
-                        </div>
-                        {budgetAmount > 0 ? (
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Delete income"
+                          title="Delete income"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void deleteTransaction(txn.id);
+                          }}
+                          style={{
+                            border: "none",
+                            background: "transparent",
+                            color: "#E24B4A",
+                            fontSize: 14,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            padding: "6px 8px",
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: "16px",
+                  textAlign: "center",
+                  color: "#111110",
+                  fontSize: 13,
+                }}
+              >
+                {profileMonthlyFromDb > 0
+                  ? `No income logged yet. Your dashboard shows ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from your profile — tap Add income to record it here.`
+                  : "No income logged this month. Tap Add income to get started."}
+              </div>
+            )}
+            <div style={{ padding: "12px 16px 16px" }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDefaultBucket("income");
+                  setEditingExpense(null);
+                  setShowAddModal(true);
+                }}
+                style={{
+                  width: "100%",
+                  height: 44,
+                  borderRadius: 10,
+                  background: `${incomeCat.color}18`,
+                  border: `1.5px dashed ${incomeCat.color}`,
+                  color: incomeCat.color,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                + Add income
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {buckets.map((bucketKey) => {
+        const cat = TRACKER_CATEGORIES[bucketKey];
+        const bucketTxns = transactions.filter((t) => t.bucket === bucketKey);
+        const bucketTotal = bucketTxns
+          .filter((t) => countsTowardTrackerTotals(t))
+          .reduce((a, t) => a + Number(t.amount), 0);
+        const isExpanded = expandedBucket === bucketKey;
+        const budgetAmount =
+          displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
+        const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
+        const progressPercent =
+          budgetAmount > 0
+            ? Math.min((bucketTotal / budgetAmount) * 100, 100)
+            : 0;
+        const bySubcategory = bucketTxns.reduce(
+          (acc, t) => {
+            const key = t.subcategory || "other";
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(t);
+            return acc;
+          },
+          {} as Record<string, typeof bucketTxns>,
+        );
+        const sectionVisible = isSectionVisible(bucketKey);
+
+        return (
+          <div
+            key={bucketKey}
+            style={{
+              background: "white",
+              border: `1.5px solid ${isExpanded ? cat.color : overBudget ? "#FCEBEB" : "#E8E6F0"}`,
+              borderRadius: 16,
+              marginBottom: 10,
+              overflow: "hidden",
+              transition: "border-color 0.2s",
+            }}
+          >
+            <div
+              onClick={() => setExpandedBucket(isExpanded ? null : bucketKey)}
+              style={{
+                padding: "16px",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <TrackerIconBadge name={cat.icon} color={cat.color} />
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: "#111110",
+                      }}
+                    >
+                      {cat.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#111110",
+                        opacity: 0.88,
+                      }}
+                    >
+                      {bucketTxns.length} items
+                      {cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ textAlign: "right" }}>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: overBudget ? "#E24B4A" : "#111110",
+                        letterSpacing: sectionVisible ? "normal" : "0.06em",
+                      }}
+                    >
+                      {formatMaskedAmount(bucketTotal, sectionVisible)}
+                    </div>
+                    {budgetAmount > 0 ? (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#111110",
+                          opacity: 0.88,
+                          letterSpacing: sectionVisible ? "normal" : "0.06em",
+                        }}
+                      >
+                        of {formatMaskedAmount(budgetAmount, sectionVisible)}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: "#111110",
+                      opacity: 0.75,
+                      transition: "transform 0.2s",
+                      transform: !isExpanded ? "rotate(180deg)" : "none",
+                    }}
+                  >
+                    ▼
+                  </div>
+                  <SectionPrivacyEye
+                    visible={sectionVisible}
+                    onToggle={() => toggleSectionVisible(bucketKey)}
+                    label={cat.label}
+                  />
+                </div>
+              </div>
+              {budgetAmount > 0 ? (
+                <div>
+                  <div
+                    style={{
+                      height: 6,
+                      background: "#F7F7F4",
+                      borderRadius: 3,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: sectionVisible ? `${progressPercent}%` : "0%",
+                        background:
+                          progressPercent >= 100
+                            ? "#E24B4A"
+                            : progressPercent >= 80
+                              ? "#BA7517"
+                              : cat.color,
+                        borderRadius: 3,
+                        transition: "width 0.5s ease",
+                      }}
+                    />
+                  </div>
+                  {overBudget ? (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#E24B4A",
+                        marginTop: 4,
+                        fontWeight: 600,
+                        letterSpacing: sectionVisible ? "normal" : "0.06em",
+                      }}
+                    >
+                      ⚠️ Over budget by{" "}
+                      {formatMaskedAmount(
+                        bucketTotal - budgetAmount,
+                        sectionVisible,
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            {isExpanded ? (
+              <div style={{ borderTop: "1px solid #F0EFF8" }}>
+                <div style={{ padding: "12px 16px" }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDefaultBucket(bucketKey);
+                      setEditingExpense(null);
+                      setShowAddModal(true);
+                    }}
+                    style={{
+                      width: "100%",
+                      height: 40,
+                      borderRadius: 10,
+                      background: `${cat.color}15`,
+                      border: `1px dashed ${cat.color}`,
+                      color: cat.color,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    + Add expense · {cat.label}
+                  </button>
+                </div>
+                {Object.keys(bySubcategory).length > 0 ? (
+                  Object.entries(bySubcategory).map(([subId, txns]) => {
+                    const subTotal = txns.reduce(
+                      (a, t) => a + Number(t.amount),
+                      0,
+                    );
+                    const sub = findSubcategory(bucketKey, subId);
+                    return (
+                      <div
+                        key={subId}
+                        style={{ borderBottom: "1px solid #F7F7F4" }}
+                      >
+                        <div
+                          style={{
+                            padding: "10px 16px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
                           <div
                             style={{
-                              fontSize: 11,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                            }}
+                          >
+                            <TrackerIcon
+                              name={sub?.icon ?? "other"}
+                              size={18}
+                              color={cat.color}
+                            />
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  color: "#111110",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {sub?.label || subId}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#111110",
+                                  opacity: 0.88,
+                                }}
+                              >
+                                {txns.length}{" "}
+                                {txns.length === 1
+                                  ? "transaction"
+                                  : "transactions"}
+                              </div>
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 700,
                               color: "#111110",
-                              opacity: 0.88,
                               letterSpacing: sectionVisible
                                 ? "normal"
                                 : "0.06em",
                             }}
                           >
-                            of{" "}
-                            {formatMaskedAmount(budgetAmount, sectionVisible)}
+                            {formatMaskedAmount(subTotal, sectionVisible)}
                           </div>
-                        ) : null}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          color: "#111110",
-                          opacity: 0.75,
-                          transition: "transform 0.2s",
-                          transform: !isExpanded ? "rotate(180deg)" : "none",
-                        }}
-                      >
-                        ▼
-                      </div>
-                      <SectionPrivacyEye
-                        visible={sectionVisible}
-                        onToggle={() => toggleSectionVisible(bucketKey)}
-                        label={cat.label}
-                      />
-                    </div>
-                  </div>
-                  {budgetAmount > 0 ? (
-                    <div>
-                      <div
-                        style={{
-                          height: 6,
-                          background: "#F7F7F4",
-                          borderRadius: 3,
-                          overflow: "hidden",
-                        }}
-                      >
+                        </div>
                         <div
                           style={{
-                            height: "100%",
-                            width: sectionVisible
-                              ? `${progressPercent}%`
-                              : "0%",
-                            background:
-                              progressPercent >= 100
-                                ? "#E24B4A"
-                                : progressPercent >= 80
-                                  ? "#BA7517"
-                                  : cat.color,
-                            borderRadius: 3,
-                            transition: "width 0.5s ease",
-                          }}
-                        />
-                      </div>
-                      {overBudget ? (
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: "#E24B4A",
-                            marginTop: 4,
-                            fontWeight: 600,
-                            letterSpacing: sectionVisible ? "normal" : "0.06em",
+                            padding: "0 16px 10px 42px",
+                            display: "grid",
+                            gap: 8,
                           }}
                         >
-                          ⚠️ Over budget by{" "}
-                          {formatMaskedAmount(
-                            bucketTotal - budgetAmount,
-                            sectionVisible,
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-                {isExpanded ? (
-                  <div style={{ borderTop: "1px solid #F0EFF8" }}>
-                    <div style={{ padding: "12px 16px" }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDefaultBucket(bucketKey);
-                          setEditingExpense(null);
-                          setShowAddModal(true);
-                        }}
-                        style={{
-                          width: "100%",
-                          height: 40,
-                          borderRadius: 10,
-                          background: `${cat.color}15`,
-                          border: `1px dashed ${cat.color}`,
-                          color: cat.color,
-                          fontSize: 13,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        + Add expense · {cat.label}
-                      </button>
-                    </div>
-                    {Object.keys(bySubcategory).length > 0 ? (
-                      Object.entries(bySubcategory).map(([subId, txns]) => {
-                        const subTotal = txns.reduce(
-                          (a, t) => a + Number(t.amount),
-                          0,
-                        );
-                        const sub = findSubcategory(bucketKey, subId);
-                        return (
-                          <div
-                            key={subId}
-                            style={{ borderBottom: "1px solid #F7F7F4" }}
-                          >
+                          {txns.map((txn) => (
                             <div
+                              key={txn.id}
                               style={{
-                                padding: "10px 16px",
                                 display: "flex",
                                 justifyContent: "space-between",
                                 alignItems: "center",
+                                borderRadius: 8,
+                                background: "#F9F9FC",
+                                padding: "8px 10px",
+                                gap: 8,
                               }}
                             >
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#111110",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {formatMaskedAmount(
+                                    Number(txn.amount),
+                                    sectionVisible,
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#111110",
+                                    fontWeight: 500,
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: 220,
+                                  }}
+                                >
+                                  {txn.description ||
+                                    new Date(txn.date).toLocaleDateString(
+                                      "en-IN",
+                                      { day: "numeric", month: "short" },
+                                    )}
+                                </div>
+                              </div>
                               <div
                                 style={{
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 10,
+                                  gap: 2,
+                                  flexShrink: 0,
                                 }}
                               >
-                                <TrackerIcon
-                                  name={sub?.icon ?? "other"}
-                                  size={18}
-                                  color={cat.color}
-                                />
-                                <div>
-                                  <div
-                                    style={{
-                                      fontSize: 14,
-                                      color: "#111110",
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    {sub?.label || subId}
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontSize: 12,
-                                      color: "#111110",
-                                      opacity: 0.88,
-                                    }}
-                                  >
-                                    {txns.length}{" "}
-                                    {txns.length === 1
-                                      ? "transaction"
-                                      : "transactions"}
-                                  </div>
-                                </div>
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 14,
-                                  fontWeight: 700,
-                                  color: "#111110",
-                                  letterSpacing: sectionVisible
-                                    ? "normal"
-                                    : "0.06em",
-                                }}
-                              >
-                                {formatMaskedAmount(subTotal, sectionVisible)}
-                              </div>
-                            </div>
-                            <div
-                              style={{
-                                padding: "0 16px 10px 42px",
-                                display: "grid",
-                                gap: 8,
-                              }}
-                            >
-                              {txns.map((txn) => (
-                                <div
-                                  key={txn.id}
+                                <button
+                                  type="button"
+                                  aria-label="Edit expense"
+                                  title="Edit expense"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingExpense(txn);
+                                    setShowAddModal(true);
+                                  }}
                                   style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    borderRadius: 8,
-                                    background: "#F9F9FC",
-                                    padding: "8px 10px",
-                                    gap: 8,
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#534AB7",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    padding: "6px 8px",
                                   }}
                                 >
-                                  <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div
-                                      style={{
-                                        fontSize: 12,
-                                        color: "#111110",
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      {formatMaskedAmount(
-                                        Number(txn.amount),
-                                        sectionVisible,
-                                      )}
-                                    </div>
-                                    <div
-                                      style={{
-                                        fontSize: 11,
-                                        color: "#111110",
-                                        fontWeight: 500,
-                                        whiteSpace: "nowrap",
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        maxWidth: 220,
-                                      }}
-                                    >
-                                      {txn.description ||
-                                        new Date(txn.date).toLocaleDateString(
-                                          "en-IN",
-                                          { day: "numeric", month: "short" },
-                                        )}
-                                    </div>
-                                  </div>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 2,
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      aria-label="Edit expense"
-                                      title="Edit expense"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingExpense(txn);
-                                        setShowAddModal(true);
-                                      }}
-                                      style={{
-                                        border: "none",
-                                        background: "transparent",
-                                        color: "#534AB7",
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        cursor: "pointer",
-                                        padding: "6px 8px",
-                                      }}
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      aria-label="Delete expense"
-                                      title="Delete expense"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        void deleteTransaction(txn.id);
-                                      }}
-                                      style={{
-                                        border: "none",
-                                        background: "transparent",
-                                        color: "#E24B4A",
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        cursor: "pointer",
-                                        padding: "6px 8px",
-                                      }}
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label="Delete expense"
+                                  title="Delete expense"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void deleteTransaction(txn.id);
+                                  }}
+                                  style={{
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#E24B4A",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    padding: "6px 8px",
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div
-                        style={{
-                          padding: "20px 16px",
-                          textAlign: "center",
-                          color: "#111110",
-                          fontSize: 13,
-                        }}
-                      >
-                        No {cat.label.toLowerCase()} expenses this month
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    );
+                  })
+                ) : (
+                  <div
+                    style={{
+                      padding: "20px 16px",
+                      textAlign: "center",
+                      color: "#111110",
+                      fontSize: 13,
+                    }}
+                  >
+                    No {cat.label.toLowerCase()} expenses this month
                   </div>
-                ) : null}
+                )}
               </div>
-            );
-          })}
-          <MonthSafetyPulse
-            pulse={safetyPulse}
-            previousMonthLabel={prevMeta.monthName}
-            forceVisible={allAmountsVisible}
-          />
-          <div style={{ marginTop: 16 }}>
-            <FeedbackWidget pageContext="tracker" />
+            ) : null}
           </div>
-        </>
-      )}
+        );
+      })}
+      <MonthSafetyPulse
+        pulse={safetyPulse}
+        previousMonthLabel={prevMeta.monthName}
+        forceVisible={allAmountsVisible}
+      />
+      <div style={{ marginTop: 16 }}>
+        <FeedbackWidget pageContext="tracker" />
+      </div>
 
       {showAddModal ? (
         <AddExpenseModal

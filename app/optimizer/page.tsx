@@ -1,6 +1,7 @@
 "use client";
 
 import { FinkoinAiPlanView } from "@/components/finkoin/finkoin-ai-plan-view";
+import { AppIcon } from "@/components/ui/AppIcon";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import { getAIFixPlan, type FinkoinAIPlan } from "@/lib/aiService";
 import { monthlyTotalIncome } from "@/lib/financialEngine";
@@ -541,7 +542,14 @@ export default function OptimizerPage() {
           disabled={downloading || !aiPlan}
           className="rounded-xl border border-[#534AB7] px-4 py-2 text-sm font-semibold text-[#534AB7] disabled:opacity-60"
         >
-          {downloading ? "Generating PDF..." : "📄 Download full report PDF"}
+          {downloading ? (
+            "Generating PDF..."
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2">
+              <AppIcon name="download" size={18} color="currentColor" />
+              Download full report PDF
+            </span>
+          )}
         </button>
       </div>
     </main>

@@ -4,6 +4,7 @@ import { PaywallModal } from "@/components/analyse/paywall-modal";
 import MoneyInput from "@/components/ui/MoneyInput";
 import NumberInput from "@/components/ui/NumberInput";
 import PrivateAmount from "@/components/ui/PrivateAmount";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { Analytics } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { parseMoneyInput } from "@/lib/analyse-form-schema";
@@ -3859,19 +3860,23 @@ export function TaxRegimeCalculator() {
                       return next;
                     })
                   }
-                  className="rounded-lg border border-[#E8E6F0] px-2.5 py-1.5 text-base leading-none text-[#5F5E5A] hover:bg-slate-50"
+                  className="inline-flex items-center justify-center rounded-lg border border-[#E8E6F0] px-2.5 py-1.5 text-[#534AB7] hover:bg-slate-50"
                   aria-label={speechMuted ? "Unmute voice" : "Mute voice"}
                   title={speechMuted ? "Unmute voice" : "Mute voice"}
                 >
-                  {speechMuted ? "🔇" : "🔊"}
+                  <AppIcon
+                    name={speechMuted ? "mute" : "speaker"}
+                    size={16}
+                    color="#534AB7"
+                  />
                 </button>
                 <button
                   type="button"
                   onClick={closePersonalCA}
-                  className="rounded-lg p-2 text-lg leading-none text-slate-900 hover:bg-slate-100"
+                  className="inline-flex items-center justify-center rounded-lg p-2 text-[#534AB7] hover:bg-slate-100"
                   aria-label="Close"
                 >
-                  ✕
+                  <AppIcon name="close" size={16} color="#534AB7" />
                 </button>
               </div>
             </div>

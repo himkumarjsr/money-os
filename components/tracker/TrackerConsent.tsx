@@ -1,9 +1,35 @@
 "use client";
 
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import type { TrackerIconName } from "@/lib/tracker-categories";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+type TrackItem =
+  | { kind: "tracker"; icon: TrackerIconName; label: string }
+  | { kind: "app"; icon: AppIconName; label: string };
+
+const TRACK_ITEMS: TrackItem[] = [
+  {
+    kind: "tracker",
+    icon: "home",
+    label: "Needs — rent, groceries, utilities",
+  },
+  { kind: "tracker", icon: "party", label: "Wants — dining, entertainment" },
+  {
+    kind: "tracker",
+    icon: "coffee",
+    label: "Habits — tea, coffee, cigarettes",
+  },
+  { kind: "app", icon: "card", label: "Loans & credit card payments" },
+  { kind: "app", icon: "trending", label: "Investments & savings" },
+  { kind: "app", icon: "hospital", label: "Medical & insurance" },
+  { kind: "tracker", icon: "cab", label: "Transport & fuel" },
+  { kind: "tracker", icon: "shirt", label: "Shopping & lifestyle" },
+];
 
 export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
   const [checked, setChecked] = useState(false);
@@ -51,12 +77,12 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
       >
         <div
           style={{
-            fontSize: 48,
-            textAlign: "center",
+            display: "flex",
+            justifyContent: "center",
             marginBottom: 20,
           }}
         >
-          📊
+          <AppIcon name="chart" size={48} color="#534AB7" />
         </div>
 
         <h2
@@ -80,7 +106,8 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
             lineHeight: 1.6,
           }}
         >
-          Track every rupee you spend. See where your money goes. Get insights to spend better.
+          Track every rupee you spend. See where your money goes. Get insights
+          to spend better.
         </p>
 
         <div
@@ -102,32 +129,31 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
           >
             WHAT YOU CAN TRACK
           </div>
-          {[
-            "🏠 Needs — rent, groceries, utilities",
-            "🎉 Wants — dining, entertainment",
-            "☕ Habits — tea, coffee, cigarettes",
-            "💳 Loans & credit card payments",
-            "📈 Investments & savings",
-            "🏥 Medical & insurance",
-            "🚗 Transport & fuel",
-            "👗 Shopping & lifestyle",
-          ].map((item, i) => (
+          {TRACK_ITEMS.map((item) => (
             <div
-              key={i}
+              key={item.label}
               style={{
                 fontSize: 13,
                 color: "#5F5E5A",
-                marginBottom: 6,
+                marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
               }}
             >
-              {item}
+              {item.kind === "tracker" ? (
+                <TrackerIcon name={item.icon} size={16} color="#534AB7" />
+              ) : (
+                <AppIcon name={item.icon} size={16} color="#534AB7" />
+              )}
+              {item.label}
             </div>
           ))}
         </div>
 
         <div
           style={{
-            background: "#E1F5EE",
+            background: "#EEEDFE",
             borderRadius: 12,
             padding: "14px 16px",
             marginBottom: 20,
@@ -136,12 +162,19 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
           <p
             style={{
               fontSize: 13,
-              color: "#1D5C3A",
+              color: "#534AB7",
               margin: 0,
               lineHeight: 1.6,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
             }}
           >
-            🔒 Your expense data is private. Only you can see it. Stored securely and encrypted. Delete anytime from settings.
+            <AppIcon name="lock" size={16} color="#534AB7" />
+            <span>
+              Your expense data is private. Only you can see it. Stored securely
+              and encrypted. Delete anytime from settings.
+            </span>
           </p>
         </div>
 
@@ -176,15 +209,12 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
             role="checkbox"
           >
             {checked ? (
-              <span
-                style={{
-                  color: "white",
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                ✓
-              </span>
+              <AppIcon
+                name="check"
+                size={12}
+                color="#FFFFFF"
+                strokeWidth={2.5}
+              />
             ) : null}
           </button>
           <span
@@ -194,50 +224,54 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
               lineHeight: 1.5,
             }}
           >
-            I understand that Finkoin will store my expense data to show me spending insights. I can delete this data anytime. I agree to the{" "}
-            <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#534AB7" }}>
+            I understand that Finkoin will store my expense data to show me
+            spending insights. I can delete this data anytime. I agree to the{" "}
+            <a
+              href="/legal/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#534AB7" }}
+            >
               Privacy Policy
             </a>
-            .
           </span>
         </label>
 
         <button
           type="button"
+          disabled={!checked || saving}
           onClick={() => void handleAccept()}
-          disabled={!checked || saving || !user?.id}
           style={{
             width: "100%",
-            height: 52,
-            borderRadius: 14,
+            height: 48,
+            borderRadius: 12,
+            border: "none",
             background: checked ? "#534AB7" : "#E8E6F0",
             color: checked ? "white" : "#9B9A94",
-            border: "none",
-            fontSize: 16,
-            fontWeight: 700,
+            fontSize: 15,
+            fontWeight: 800,
             cursor: checked ? "pointer" : "not-allowed",
-            marginBottom: 12,
-            transition: "all 0.15s",
           }}
         >
-          {saving ? "Starting..." : "Start tracking my money →"}
+          {saving ? "Starting…" : "Start tracking"}
         </button>
 
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => router.push("/")}
           style={{
             width: "100%",
-            height: 44,
-            borderRadius: 12,
+            marginTop: 10,
             background: "transparent",
+            border: "none",
             color: "#9B9A94",
-            border: "1px solid #E8E6F0",
-            fontSize: 14,
+            fontSize: 13,
+            fontWeight: 600,
             cursor: "pointer",
+            padding: 8,
           }}
         >
-          Not now
+          Maybe later
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AppIcon } from "@/components/ui/AppIcon";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { resolvePostLoginPath } from "@/lib/splitAuthRedirect";
 import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
@@ -728,9 +729,7 @@ function LoginContent() {
             marginTop: 16,
           }}
         >
-          <span style={{ fontSize: 12 }} aria-hidden>
-            🔐
-          </span>
+          <AppIcon name="lock" size={14} color="#534AB7" />
           <span style={{ fontSize: 11, color: "#9B9A94" }}>
             256-bit encrypted · Secured by Supabase
           </span>

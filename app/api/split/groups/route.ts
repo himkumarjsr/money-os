@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const emoji = body.emoji?.trim() || "👥";
+    const emoji = body.emoji?.trim() || null;
     const groupType = body.type?.trim() || "general";
     const displayName =
       body.displayName?.trim() ||

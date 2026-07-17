@@ -8,7 +8,22 @@ import { getSupabase } from "@/lib/supabase";
 import { Analytics } from "@/lib/analytics";
 import { formatIndian } from "@/lib/formatters";
 import { useAuthStore } from "@/store/authStore";
-import { getMyBalanceFromEdges, useSplitStore } from "@/store/splitStore";
+import { getMyNetBalance, useSplitStore } from "@/store/splitStore";
+import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import { AppIcon } from "@/components/ui/AppIcon";
+import type { TrackerIconName } from "@/lib/tracker-categories";
+
+const SPLIT_CATEGORY_ICON: Record<string, TrackerIconName> = {
+  food: "utensils",
+  transport: "cab",
+  accommodation: "building",
+  entertainment: "party",
+  shopping: "cart",
+  utilities: "bolt",
+  medical: "pill",
+  other: "package",
+  general: "package",
+};
 
 export default function SplitGroupPage() {
   return (
@@ -32,6 +47,7 @@ function SplitGroupInner() {
   const group = useSplitStore((s) => s.activeGroup);
   const expenses = useSplitStore((s) => s.expenses);
   const balances = useSplitStore((s) => s.balances);
+  const netBalances = useSplitStore((s) => s.netBalances);
   const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
   const inviteMember = useSplitStore((s) => s.inviteMember);
   const settleUp = useSplitStore((s) => s.settleUp);
@@ -46,6 +62,12 @@ function SplitGroupInner() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleToEmail, setSettleToEmail] = useState("");
+  const [settleAmount, setSettleAmount] = useState("");
+  const [settleBusy, setSettleBusy] = useState(false);
+  const [settleMsg, setSettleMsg] = useState("");
+
   useEffect(() => {
     if (!groupId) return;
     void fetchGroupDetail(groupId);
@@ -54,31 +76,40 @@ function SplitGroupInner() {
   useEffect(() => {
     if (!groupId || !isLoggedIn) return;
     const supabase = getSupabase();
+    const refresh = () => {
+      void fetchGroupDetail(groupId);
+    };
     const sub = supabase
       .channel(`split:${groupId}`)
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "split_expenses",
           filter: `group_id=eq.${groupId}`,
         },
-        () => {
-          void fetchGroupDetail(groupId);
-        },
+        refresh,
       )
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "split_expense_shares",
           filter: `group_id=eq.${groupId}`,
         },
-        () => {
-          void fetchGroupDetail(groupId);
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "split_settlements",
+          filter: `group_id=eq.${groupId}`,
         },
+        refresh,
       )
       .subscribe();
 
@@ -88,8 +119,8 @@ function SplitGroupInner() {
   }, [fetchGroupDetail, groupId, isLoggedIn]);
 
   const myNet = useMemo(
-    () => getMyBalanceFromEdges(myEmail, balances),
-    [balances, myEmail],
+    () => getMyNetBalance(myEmail, netBalances),
+    [netBalances, myEmail],
   );
 
   const headerTotals = useMemo(() => {
@@ -101,6 +132,11 @@ function SplitGroupInner() {
       .reduce((s, b) => s + Number(b.amount ?? 0), 0);
     return { youOwe, youAreOwed };
   }, [balances, myEmail]);
+
+  const myOwedEdges = useMemo(
+    () => balances.filter((b) => b.from_email?.toLowerCase() === myEmail),
+    [balances, myEmail],
+  );
 
   const openInviteModal = () => {
     setInviteEmail("");
@@ -155,17 +191,40 @@ function SplitGroupInner() {
     void fetchGroupDetail(groupId);
   };
 
-  const handleSettle = async () => {
+  const openSettle = (toEmail?: string, amount?: number) => {
+    setSettleMsg("");
+    setSettleBusy(false);
+    // Default to the first debt I owe (simplified) when nothing is passed.
+    const firstOwed = myOwedEdges[0];
+    setSettleToEmail(toEmail ?? firstOwed?.to_email ?? "");
+    setSettleAmount(
+      amount != null
+        ? String(Math.round(amount))
+        : firstOwed
+          ? String(Math.round(Number(firstOwed.amount ?? 0)))
+          : "",
+    );
+    setSettleOpen(true);
+  };
+
+  const handleConfirmSettle = async () => {
     const actorId = user?.id ?? userId;
     if (!groupId || !actorId || !myEmail) return;
-    const toEmail = window.prompt("Settle up to (email)");
-    if (!toEmail) return;
-    const amountRaw = window.prompt("Amount (₹)");
-    const amount = Number(amountRaw ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      window.alert("Enter a valid amount.");
+    const toEmail = settleToEmail.trim().toLowerCase();
+    const amount = Number(settleAmount);
+    if (!toEmail) {
+      setSettleMsg("Choose who you paid.");
       return;
     }
+    if (toEmail === myEmail) {
+      setSettleMsg("You cannot settle up with yourself.");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setSettleMsg("Enter a valid amount.");
+      return;
+    }
+    setSettleBusy(true);
     const res = await settleUp({
       groupId,
       toEmail,
@@ -173,8 +232,19 @@ function SplitGroupInner() {
       userId: actorId,
       userEmail: myEmail,
     });
-    if (res.error) window.alert(res.error);
+    setSettleBusy(false);
+    if (res.error) {
+      setSettleMsg(res.error);
+      return;
+    }
+    setSettleOpen(false);
   };
+
+  const otherMembers = useMemo(
+    () =>
+      (group?.members ?? []).filter((m) => m.email?.toLowerCase() !== myEmail),
+    [group?.members, myEmail],
+  );
 
   const isCreator = group?.created_by === user?.id;
 
@@ -223,7 +293,11 @@ function SplitGroupInner() {
               </Link>
               <div className="mt-3 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-xl ring-1 ring-white/20">
-                  {group?.emoji || "💰"}
+                  {group?.emoji ? (
+                    group.emoji
+                  ) : (
+                    <AppIcon name="users" size={22} color="#FFFFFF" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <h1 className="truncate text-xl font-extrabold">
@@ -288,7 +362,7 @@ function SplitGroupInner() {
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => void handleSettle()}
+              onClick={() => openSettle()}
               className="h-12 rounded-2xl border border-white/25 bg-white/15 text-sm font-extrabold text-white ring-1 ring-white/20 hover:bg-white/20 min-h-[44px]"
             >
               Settle up
@@ -307,9 +381,14 @@ function SplitGroupInner() {
 
         <section className="mt-8">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
-              Who owes whom
-            </h2>
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+                Simplified settle-up
+              </h2>
+              <p className="mt-1 text-xs text-[#9B9A94]">
+                Fewest payments to clear everyone.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => groupId && void fetchGroupDetail(groupId)}
@@ -328,33 +407,82 @@ function SplitGroupInner() {
 
             {!loading && balances.length === 0 ? (
               <div className="rounded-2xl border border-[#E8E6F0] bg-white p-6 text-sm text-[#5F5E5A]">
-                No pending balances. Add an expense to start splitting.
+                All settled up. Add an expense to start splitting.
               </div>
             ) : null}
 
-            {balances.map((b, idx) => (
-              <div
-                key={`${b.from_email}-${b.to_email}-${idx}`}
-                className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-bold text-[#111110]">
-                      {b.from_name} <span className="text-slate-400">→</span>{" "}
-                      {b.to_name}
+            {balances.map((b, idx) => {
+              const iPay = b.from_email?.toLowerCase() === myEmail;
+              return (
+                <div
+                  key={`${b.from_email}-${b.to_email}-${idx}`}
+                  className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-bold text-[#111110]">
+                        {iPay ? "You" : b.from_name}{" "}
+                        <span className="text-slate-400">→</span> {b.to_name}
+                      </div>
+                      <div className="mt-1 text-xs text-[#9B9A94]">
+                        {iPay ? "You pay" : `${b.from_name} pays`} {b.to_name}
+                      </div>
                     </div>
-                    <div className="mt-1 text-xs text-[#9B9A94]">
-                      {b.from_email} pays {b.to_email}
+                    <div className="flex shrink-0 items-center gap-3">
+                      <div className="text-sm font-extrabold text-[#111110]">
+                        ₹{formatIndian(Math.round(Number(b.amount ?? 0)))}
+                      </div>
+                      {iPay ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openSettle(b.to_email, Number(b.amount ?? 0))
+                          }
+                          className="rounded-xl bg-[#534AB7] px-3 py-2 text-xs font-extrabold text-white min-h-[44px]"
+                        >
+                          Settle
+                        </button>
+                      ) : null}
                     </div>
-                  </div>
-                  <div className="shrink-0 text-sm font-extrabold text-[#111110]">
-                    ₹{formatIndian(Math.round(Number(b.amount ?? 0)))}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
+
+        {netBalances.some((n) => Math.abs(n.net) > 0.5) ? (
+          <section className="mt-8">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+              Balances
+            </h2>
+            <div className="mt-3 space-y-2">
+              {netBalances
+                .filter((n) => Math.abs(n.net) > 0.5)
+                .map((n) => {
+                  const isMe = n.email === myEmail;
+                  const owed = n.net > 0;
+                  return (
+                    <div
+                      key={n.email}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E6F0] bg-white px-5 py-4"
+                    >
+                      <div className="min-w-0 truncate text-sm font-bold text-[#111110]">
+                        {isMe ? "You" : n.name}
+                      </div>
+                      <div
+                        className="shrink-0 text-sm font-extrabold"
+                        style={{ color: owed ? "#1D9E75" : "#E24B4A" }}
+                      >
+                        {owed ? "gets back" : "owes"} ₹
+                        {formatIndian(Math.round(Math.abs(n.net)))}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </section>
+        ) : null}
 
         <section className="mt-8">
           <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
@@ -402,22 +530,16 @@ function SplitGroupInner() {
                       <div className="text-sm font-extrabold text-[#111110]">
                         ₹{formatIndian(Math.round(Number(e.amount ?? 0)))}
                       </div>
-                      <div className="mt-1 text-[11px] font-semibold text-[#9B9A94] uppercase tracking-wide">
-                        {e.category === "food"
-                          ? "🍽️ food"
-                          : e.category === "transport"
-                            ? "🚕 transport"
-                            : e.category === "accommodation"
-                              ? "🏨 accommodation"
-                              : e.category === "entertainment"
-                                ? "🎉 entertainment"
-                                : e.category === "shopping"
-                                  ? "🛒 shopping"
-                                  : e.category === "utilities"
-                                    ? "⚡ utilities"
-                                    : e.category === "medical"
-                                      ? "💊 medical"
-                                      : e.category || "📦 general"}
+                      <div className="mt-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#9B9A94] uppercase tracking-wide">
+                        <TrackerIcon
+                          name={
+                            SPLIT_CATEGORY_ICON[e.category ?? "general"] ??
+                            "package"
+                          }
+                          size={13}
+                          color="#9B9A94"
+                        />
+                        {e.category || "general"}
                       </div>
                       {canDeleteExpense ? (
                         <button
@@ -467,9 +589,10 @@ function SplitGroupInner() {
               <button
                 type="button"
                 onClick={() => setInviteOpen(false)}
-                className="rounded-xl bg-[#F7F7F4] px-3 py-2 text-sm font-bold text-[#111110]"
+                className="rounded-xl bg-[#F7F7F4] px-3 py-2 text-sm font-bold text-[#534AB7]"
+                aria-label="Close"
               >
-                ✕
+                <AppIcon name="close" size={16} color="#534AB7" />
               </button>
             </div>
 
@@ -551,6 +674,91 @@ function SplitGroupInner() {
         </div>
       ) : null}
 
+      {settleOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40"
+          onClick={() => setSettleOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-[calc(env(safe-area-inset-bottom)+24px)] shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settle-title"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div
+                  id="settle-title"
+                  className="text-base font-extrabold text-[#111110]"
+                >
+                  Record a payment
+                </div>
+                <div className="mt-1 text-xs text-[#9B9A94]">
+                  Log money you paid to a group member.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettleOpen(false)}
+                className="rounded-xl bg-[#F7F7F4] px-3 py-2 text-sm font-bold text-[#534AB7]"
+                aria-label="Close"
+              >
+                <AppIcon name="close" size={16} color="#534AB7" />
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <label className="text-xs font-semibold text-[#5F5E5A]">
+                You paid
+              </label>
+              <select
+                value={settleToEmail}
+                onChange={(e) => setSettleToEmail(e.target.value)}
+                className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] bg-white px-3 text-base outline-none focus:border-[#534AB7]"
+              >
+                <option value="">Select member…</option>
+                {otherMembers.map((m) => (
+                  <option key={m.email} value={m.email}>
+                    {m.display_name} ({m.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-4">
+              <label className="text-xs font-semibold text-[#5F5E5A]">
+                Amount (₹)
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={settleAmount}
+                onChange={(e) => setSettleAmount(e.target.value)}
+                placeholder="0"
+                className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
+              />
+            </div>
+
+            {settleMsg ? (
+              <p className="mt-3 text-sm font-medium text-[#C0392B]">
+                {settleMsg}
+              </p>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={settleBusy || !settleToEmail || !settleAmount}
+              onClick={() => void handleConfirmSettle()}
+              className="mt-5 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50 min-h-[44px]"
+            >
+              {settleBusy ? "Saving…" : "Record payment"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {showDeleteConfirm ? (
         <>
           <div
@@ -560,7 +768,11 @@ function SplitGroupInner() {
           <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto w-full max-w-[480px] rounded-t-[20px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+40px)] pt-6">
             <div className="mx-auto mb-5 h-1 w-10 rounded bg-[#E8E6F0]" />
             <div className="mb-5 text-center">
-              <div className="mb-3 text-[44px]">🗑️</div>
+              <div className="mb-3 flex justify-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FDEDED]">
+                  <AppIcon name="trash" size={26} color="#E24B4A" />
+                </span>
+              </div>
               <div className="mb-2 text-[18px] font-extrabold text-[#111110]">
                 {`Delete "${group?.name}"?`}
               </div>

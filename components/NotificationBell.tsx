@@ -1,5 +1,6 @@
 "use client";
 
+import { AppIcon } from "@/components/ui/AppIcon";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -198,7 +199,15 @@ export default function NotificationBell() {
               </div>
             ) : notifications.length === 0 ? (
               <div style={{ padding: "40px 16px", textAlign: "center" }}>
-                <div style={{ fontSize: 44, marginBottom: 12 }}>🔔</div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  <AppIcon name="bell" size={44} color="#534AB7" />
+                </div>
                 <div
                   style={{
                     fontSize: 14,
@@ -241,11 +250,10 @@ export default function NotificationBell() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 18,
                       flexShrink: 0,
                     }}
                   >
-                    {n.emoji || "💡"}
+                    <AppIcon name="bulb" size={18} color="#534AB7" />
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>

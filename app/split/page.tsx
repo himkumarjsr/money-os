@@ -8,6 +8,7 @@ import { Analytics } from "@/lib/analytics";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
+import { AppIcon } from "@/components/ui/AppIcon";
 
 export default function SplitHomePage() {
   return (
@@ -34,7 +35,7 @@ function SplitHomeInner() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [gName, setGName] = useState("");
-  const [gEmoji, setGEmoji] = useState("👥");
+  const [gEmoji, setGEmoji] = useState("");
   const [gType, setGType] = useState("general");
   const [inviteEmailOnCreate, setInviteEmailOnCreate] = useState("");
   const [busy, setBusy] = useState(false);
@@ -113,7 +114,7 @@ function SplitHomeInner() {
     setCreateError("");
     const { groupId, error } = await createGroup({
       name: gName.trim(),
-      emoji: gEmoji.trim() || "👥",
+      emoji: gEmoji.trim(),
       type: gType,
       userId: user.id,
       userEmail: email,
@@ -156,12 +157,14 @@ function SplitHomeInner() {
 
   const handleDeleteGroup = async (groupId: string, groupName: string) => {
     const ok = window.confirm(
-      `Delete "${groupName}"?\n\nThis will remove all expenses, invites and balances in this group.`,
+      `Close "${groupName}"?\n\nThis closes the group for everyone. Only the group creator can do this. Your expense history is kept.`,
     );
     if (!ok) return;
     const okDelete = await deleteGroup(groupId);
     if (!okDelete) {
-      window.alert("Could not delete group.");
+      window.alert(
+        "Could not close group. Only the group creator can close it.",
+      );
       return;
     }
   };
@@ -227,8 +230,8 @@ function SplitHomeInner() {
 
           {!loading && groups.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#E8E6F0] bg-white p-7 text-center">
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EEEDFE] text-2xl">
-                👥
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EEEDFE]">
+                <AppIcon name="users" size={26} color="#534AB7" />
               </div>
               <div className="text-base font-bold text-[#111110]">
                 No groups yet
@@ -258,7 +261,11 @@ function SplitHomeInner() {
                   className="flex min-w-0 flex-1 items-center gap-4 text-left min-h-[44px]"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#EEEDFE] text-2xl">
-                    {g.emoji || "💰"}
+                    {g.emoji ? (
+                      g.emoji
+                    ) : (
+                      <AppIcon name="users" size={22} color="#534AB7" />
+                    )}
                   </div>
                   <div className="min-w-0">
                     <div className="truncate text-base font-bold text-[#111110]">
@@ -321,9 +328,10 @@ function SplitHomeInner() {
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}
-                className="rounded-xl bg-[#F7F7F4] px-3 py-2 text-sm font-bold text-[#111110]"
+                className="rounded-xl bg-[#F7F7F4] px-3 py-2 text-sm font-bold text-[#534AB7]"
+                aria-label="Close"
               >
-                ✕
+                <AppIcon name="close" size={16} color="#534AB7" />
               </button>
             </div>
 
@@ -342,12 +350,12 @@ function SplitHomeInner() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-[#5F5E5A]">
-                    Emoji
+                    Icon (optional)
                   </label>
                   <input
                     value={gEmoji}
                     onChange={(e) => setGEmoji(e.target.value)}
-                    placeholder="🏖️"
+                    placeholder="Optional"
                     className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
                   />
                 </div>

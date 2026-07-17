@@ -1,5 +1,11 @@
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { formatForPrompt, retrieveKnowledge } from "@/lib/rag/retriever";
+import {
+  getAuthedUser,
+  rateLimit,
+  tooManyRequests,
+  unauthorized,
+} from "@/lib/apiGuard";
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -23,6 +29,17 @@ export async function POST(req: NextRequest) {
   let analysis: any = null;
   if (!groqKey) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
+  }
+
+  // Auth: this route triggers a paid third-party (Groq) call — require a
+  // logged-in user and cap how often each user can invoke it.
+  const user = await getAuthedUser();
+  if (!user) {
+    return unauthorized();
+  }
+  const limit = rateLimit(`ai-analyse:${user.id}`, 10, 60 * 60 * 1000);
+  if (!limit.ok) {
+    return tooManyRequests(limit.retryAfter);
   }
 
   try {
@@ -140,7 +157,11 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
     // User still gets a plan — just without
     // AI's personalised explanations
     if (priorityPlan) {
-      const surplus = Math.round(priorityPlan.monthlySurplus || priorityPlan.surplusBreakdown?.netSurplus || 0);
+      const surplus = Math.round(
+        priorityPlan.monthlySurplus ||
+          priorityPlan.surplusBreakdown?.netSurplus ||
+          0,
+      );
       const score = analysis?.overallScore ?? priorityPlan.scoreToday ?? 0;
       const top2 = (priorityPlan.priorities || [])
         .filter((p: any) => p.status !== "complete" && Number(p.gap || 0) > 0)
@@ -170,14 +191,15 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
           ]),
         ),
         debtStrategy: debtLines,
-        goalAdvice:
-          priorityPlan.goals?.[0]
-            ? `${priorityPlan.goals[0].goalType}: target ₹${Number(priorityPlan.goals[0].targetAmount || 0).toLocaleString("en-IN")}, saved ₹${Number(priorityPlan.goals[0].currentSaved || 0).toLocaleString("en-IN")}, allocate ~₹${Number(priorityPlan.goals[0].monthlyRequired || 0).toLocaleString("en-IN")}/mo over ~${priorityPlan.goals[0].yearsToGoal}y`
-            : "Work through the priority items above before focusing heavily on goals.",
+        goalAdvice: priorityPlan.goals?.[0]
+          ? `${priorityPlan.goals[0].goalType}: target ₹${Number(priorityPlan.goals[0].targetAmount || 0).toLocaleString("en-IN")}, saved ₹${Number(priorityPlan.goals[0].currentSaved || 0).toLocaleString("en-IN")}, allocate ~₹${Number(priorityPlan.goals[0].monthlyRequired || 0).toLocaleString("en-IN")}/mo over ~${priorityPlan.goals[0].yearsToGoal}y`
+          : "Work through the priority items above before focusing heavily on goals.",
         thisWeekAction: priorityPlan.topAction,
         in12Months: `Following this plan your score could improve from ${priorityPlan.scoreToday} to ${priorityPlan.scoreAfter12Months} (with ~₹${surplus.toLocaleString("en-IN")}/mo deployable surplus in the model).`,
-        encouragement: "Every step you take toward financial security compounds over time.",
-        disclaimer: "Educational guidance only. Not SEBI registered investment advice.",
+        encouragement:
+          "Every step you take toward financial security compounds over time.",
+        disclaimer:
+          "Educational guidance only. Not SEBI registered investment advice.",
       };
 
       return NextResponse.json({
@@ -188,9 +210,6 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
       });
     }
 
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

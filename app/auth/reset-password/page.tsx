@@ -1,5 +1,6 @@
 "use client";
 
+import { AppIcon } from "@/components/ui/AppIcon";
 import { getSupabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useState } from "react";
@@ -17,9 +18,12 @@ export default function ResetPasswordPage() {
     }
 
     const supabase = getSupabase();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
-    });
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      },
+    );
 
     if (resetError) {
       setError(resetError.message);
@@ -41,12 +45,22 @@ export default function ResetPasswordPage() {
           padding: 24,
         }}
       >
-        <div style={{ fontSize: 48 }} aria-hidden>
-          📧
+        <div style={{ display: "flex", justifyContent: "center" }} aria-hidden>
+          <AppIcon name="mail" size={44} color="#534AB7" />
         </div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111110" }}>Check your email</h2>
-        <p style={{ fontSize: 14, color: "#9B9A94", textAlign: "center", maxWidth: 320 }}>
-          We sent a password reset link to {email}. Open it on this device to choose a new password.
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111110" }}>
+          Check your email
+        </h2>
+        <p
+          style={{
+            fontSize: 14,
+            color: "#9B9A94",
+            textAlign: "center",
+            maxWidth: 320,
+          }}
+        >
+          We sent a password reset link to {email}. Open it on this device to
+          choose a new password.
         </p>
         <Link href="/login" style={{ color: "#534AB7", fontWeight: 600 }}>
           Back to login
@@ -76,7 +90,16 @@ export default function ResetPasswordPage() {
           boxShadow: "0 4px 40px rgba(0,0,0,0.06)",
         }}
       >
-        <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: "#111110" }}>Reset password</h1>
+        <h1
+          style={{
+            fontSize: 24,
+            fontWeight: 800,
+            marginBottom: 8,
+            color: "#111110",
+          }}
+        >
+          Reset password
+        </h1>
         <p style={{ fontSize: 14, color: "#9B9A94", marginBottom: 24 }}>
           Enter your email and we will send a secure reset link.
         </p>

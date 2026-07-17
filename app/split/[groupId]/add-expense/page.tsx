@@ -7,19 +7,25 @@ import { Analytics } from "@/lib/analytics";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore, type SplitGroupMember } from "@/store/splitStore";
 import { formatIndian } from "@/lib/formatters";
+import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import type { TrackerIconName } from "@/lib/tracker-categories";
 
 type SplitType = "equal" | "exact" | "percentage";
 
-const CATEGORY_OPTIONS = [
-  { key: "food", label: "Food", emoji: "🍽️" },
-  { key: "transport", label: "Transport", emoji: "🚕" },
-  { key: "accommodation", label: "Hotel", emoji: "🏨" },
-  { key: "entertainment", label: "Entertainment", emoji: "🎉" },
-  { key: "shopping", label: "Shopping", emoji: "🛒" },
-  { key: "utilities", label: "Utilities", emoji: "⚡" },
-  { key: "medical", label: "Medical", emoji: "💊" },
-  { key: "other", label: "Other", emoji: "📦" },
-] as const;
+const CATEGORY_OPTIONS: {
+  key: string;
+  label: string;
+  icon: TrackerIconName;
+}[] = [
+  { key: "food", label: "Food", icon: "utensils" },
+  { key: "transport", label: "Transport", icon: "cab" },
+  { key: "accommodation", label: "Hotel", icon: "building" },
+  { key: "entertainment", label: "Entertainment", icon: "party" },
+  { key: "shopping", label: "Shopping", icon: "cart" },
+  { key: "utilities", label: "Utilities", icon: "bolt" },
+  { key: "medical", label: "Medical", icon: "pill" },
+  { key: "other", label: "Other", icon: "package" },
+];
 
 function todayISODate() {
   const d = new Date();
@@ -526,13 +532,18 @@ function AddSplitExpenseInner() {
                   key={c.key}
                   type="button"
                   onClick={() => setCategory(c.key)}
-                  className={`h-11 min-h-[44px] rounded-xl border text-xs font-extrabold ${
+                  className={`flex h-11 min-h-[44px] items-center justify-center gap-1.5 rounded-xl border text-xs font-extrabold ${
                     category === c.key
                       ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
                       : "border-[#E8E6F0] bg-white text-[#111110]"
                   }`}
                 >
-                  {c.emoji} {c.label}
+                  <TrackerIcon
+                    name={c.icon}
+                    size={16}
+                    color={category === c.key ? "#534AB7" : "#111110"}
+                  />
+                  {c.label}
                 </button>
               ))}
             </div>
