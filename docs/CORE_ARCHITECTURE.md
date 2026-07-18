@@ -1,5 +1,7 @@
 # Finkoin Core Architecture
 
+Overview layer. Deep rules/runbooks: [`FINKOIN_SYSTEM.md`](../FINKOIN_SYSTEM.md). Route catalog: [PRODUCT_SURFACE.md](./PRODUCT_SURFACE.md). APIs: [API_REFERENCE.md](./API_REFERENCE.md). Data: [DATA_AND_STORES.md](./DATA_AND_STORES.md).
+
 ## System Overview
 
 ```
@@ -12,7 +14,9 @@ Browser (Next.js App Router + Zustand + PWA)
     │     ├─ Razorpay    → create-order / verify-payment
     │     ├─ Split       → groups / invite / join / expenses / balances / settle
     │     └─ Tips cron   → /api/notifications/deliver-tip
-    └─ Supabase DB + RLS (snapshots, gamification, tracker, split tables, notifications)
+    └─ Supabase DB + RLS
+          ├─ In-repo migrations + supabase/manual/*
+          └─ Split + tip tables often remote/manual (see DATA_AND_STORES.md)
 ```
 
 ## Data Flow
@@ -22,7 +26,7 @@ Browser (Next.js App Router + Zustand + PWA)
 1. User opens `/analyse` (must be logged in; consent modal)
 2. 7-step RHF + Zod form (`analyse-onboarding-form`)
 3. Submit → normalize → `financialStore.setFullAnalysis` → `analyseFinances`
-4. Optional AI → `POST /api/ai/analyse` (auth + 10/hr) → `buildPriorityPlan` + RAG + Groq
+4. Optional AI → `POST /api/ai/analyse` (**auth** + 10/hr) → `buildPriorityPlan` + RAG + Groq
 5. Snapshot → `user_analyse_snapshots` when logged in
 6. `/analyse/result` free report + paywall
 7. Unlock (Razorpay ₹99 / FK / skip env / admin) → `/analyse/fixplan` + PDF
@@ -34,6 +38,7 @@ Browser (Next.js App Router + Zustand + PWA)
 3. Email / Google OAuth → `/auth/callback` PKCE
 4. `initAuth` loads `users` + `gamification`
 5. Logout: `POST /api/auth/sign-out` + client clear
+6. Split invite resume: `lib/splitAuthRedirect.ts` + `SplitInviteResume` preserves join token through login
 
 ### Split Flow
 
@@ -43,24 +48,28 @@ Browser (Next.js App Router + Zustand + PWA)
 4. Join → `POST /api/split/join` (open: any logged-in user; email: must match)
 5. Add expense → `computeSplitShares` → `POST /api/split/expenses`
 6. Balances → `GET /api/split/balances` → `computeNetBalances` + `simplifyDebts`
-7. Settle → `POST /api/split/settle` (amount-accurate)
+7. Settle → `POST /api/split/settle` (amount-accurate via `split_settlements`; does **not** flip share `is_settled`)
+8. Soft-close → `DELETE /api/split/groups?groupId=` (creator; `is_active=false`)
+
+### Tracker Flow
+
+1. Consent → month view `/tracker` / `/tracker/[month]`
+2. Add expense / savings → buckets (`tracker-categories`) + optional credit card encoding
+3. Month Safety Pulse → `computeMonthSafetyPulse` → Safe / Tight / Over (`MonthSafetyPulse`)
+4. Credit card bill reminder → next-month prompt → Loans / `credit_card` payment prefill
 
 ### Notification Flow
 
-1. Vercel cron `0 3 * * *` → `/api/notifications/deliver-tip` (`CRON_SECRET` / Vercel cron header)
+1. Vercel cron → `/api/notifications/deliver-tip` (`CRON_SECRET` / Vercel cron header)
 2. RPC `get_next_tip_for_user` → insert `user_notifications`
 3. Client: `NotificationBell` + `MorningTipPopup` (IST once/day)
-4. Optional email path: `/api/notifications/send-daily-tip` via Resend
+4. Optional email: `/api/notifications/send-daily-tip` via Resend
 
 ### Payment Flow
 
 1. `GET /api/razorpay/checkout-config` → public key
-2. Authed `POST /api/razorpay/create-order` → ₹99 order
-3. Checkout → `POST /api/razorpay/verify-payment` HMAC → `users.subscription_tier = pro`
-
-### Tracker Safety Pulse
-
-Month transactions → `computeMonthSafetyPulse` → Safe / Tight / Over UI (`MonthSafetyPulse`) with privacy eyes.
+2. Authed `POST /api/razorpay/create-order` → ₹99 order (15/hr)
+3. Checkout → `POST /api/razorpay/verify-payment` HMAC + Bearer → `users.subscription_tier = pro`
 
 ## State Management
 
@@ -72,6 +81,7 @@ Month transactions → `computeMonthSafetyPulse` → Safe / Tight / Over UI (`Mo
 | `gamificationStore` | FK balance, streaks, badges    |
 | `notificationStore` | Inbox + popup state            |
 | `portfolioStore`    | Demo portfolio analysis        |
+| `useAppStore`       | Onboarding step only           |
 
 ## Caching Strategy
 
@@ -92,16 +102,18 @@ Month transactions → `computeMonthSafetyPulse` → Safe / Tight / Over UI (`Mo
 - Razorpay signature verification server-side
 - Open split invites intentionally reusable; email invites are identity-bound
 
-## API Architecture
+## API Architecture (summary)
 
-| Route                     | Role                                             |
+| Route family              | Role                                             |
 | ------------------------- | ------------------------------------------------ |
-| `POST /api/ai/analyse`    | Groq fix plan                                    |
+| `POST /api/ai/analyse`    | Groq fix plan (auth)                             |
 | `POST /api/auth/sign-out` | Cookie sign-out                                  |
-| `POST /api/feedback`      | Feedback (+ optional FK)                         |
+| `POST/GET /api/feedback`  | Feedback                                         |
 | `GET /api/testimonials`   | Landing testimonials                             |
 | `*/api/razorpay/*`        | Checkout / order / verify                        |
 | `*/api/split/*`           | Groups, invite, join, expenses, balances, settle |
 | `*/api/notifications/*`   | Tip delivery + email helpers                     |
+
+Full table: [API_REFERENCE.md](./API_REFERENCE.md).
 
 See also: `FINKOIN_SYSTEM.md` §§10, 13, 14, 30–35.

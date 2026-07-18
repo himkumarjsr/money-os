@@ -1,12 +1,36 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-echo "🔍 Running pre-commit checks..."
+set -e
 
-# Run lint-staged
+echo "🔍 Running pre-commit checks (all must pass)..."
+echo ""
+
+# Format + fix staged files first
+echo "1️⃣  lint-staged (eslint --fix + prettier on staged files)..."
 npx lint-staged
 
-# Check for console.log in staged files
+# Full repo ESLint (blocks commit)
+echo ""
+echo "2️⃣  ESLint (full repo)..."
+npm run lint
+
+# Unit tests + coverage gate (blocks commit)
+echo ""
+echo "3️⃣  Unit tests + coverage..."
+npm run test:coverage
+
+# Playwright e2e (starts/reuses dev server; blocks commit)
+echo ""
+echo "4️⃣  E2E tests..."
+npm run test:e2e
+
+# Production build (blocks commit)
+echo ""
+echo "5️⃣  Production build..."
+npm run build
+
+# console.log warning on staged TS (non-blocking)
 STAGED=$(git diff --cached --name-only \
   --diff-filter=ACM | \
   grep -E '\.(ts|tsx)$' || true)
@@ -16,12 +40,11 @@ if [ -n "$STAGED" ]; then
     xargs grep -l "console\.log" \
     2>/dev/null; then
     echo ""
-    echo "⚠️  WARNING: console.log found"
+    echo "⚠️  WARNING: console.log found in staged files"
     echo "Remove before pushing to production"
     echo ""
-    # Warning only — does not block commit
-    # Change to exit 1 to block
   fi
 fi
 
-echo "✅ Pre-commit checks passed"
+echo ""
+echo "✅ All pre-commit checks passed — committing"

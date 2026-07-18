@@ -48,9 +48,15 @@ ${testLine}
 Failed: ${failed}
 
 Living docs:
-- \`docs/DESIGN_SYSTEM.md\`
-- \`docs/FUNCTIONS_REFERENCE.md\`
+- \`docs/README.md\`
+- \`docs/PRODUCT_SURFACE.md\`
+- \`docs/API_REFERENCE.md\`
 - \`docs/CORE_ARCHITECTURE.md\`
+- \`docs/DATA_AND_STORES.md\`
+- \`docs/FUNCTIONS_REFERENCE.md\`
+- \`docs/DESIGN_SYSTEM.md\`
+- \`docs/ENV_AND_SCRIPTS.md\`
+- \`docs/TESTING.md\`
 
 `;
 
