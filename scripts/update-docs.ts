@@ -57,21 +57,31 @@ Living docs:
 const systemPath = "FINKOIN_SYSTEM.md";
 if (existsSync(systemPath)) {
   const systemMd = readFileSync(systemPath, "utf8");
-  let updated: string;
-  if (/## TEST STATUS[\s\S]*?(?=\n## |\n# |$)/.test(systemMd)) {
-    updated = systemMd.replace(
-      /## TEST STATUS[\s\S]*?(?=\n## |\n# |$)/,
-      statusBlock,
-    );
+  const existingMatch = systemMd.match(
+    /## TEST STATUS[\s\S]*?(?=\n## |\n# |$)/,
+  );
+  const stripRun = (s: string) => s.replace(/Last run:.*\n/, "");
+  if (
+    existingMatch &&
+    stripRun(existingMatch[0]).trim() === stripRun(statusBlock).trim()
+  ) {
+    console.log("✅ FINKOIN_SYSTEM.md TEST STATUS unchanged (skip write)");
   } else {
-    // Insert after the version header block.
-    updated = systemMd.replace(
-      /(Generated from:[\s\S]*?\n\n---\n)/,
-      `$1\n${statusBlock}---\n`,
-    );
+    let updated: string;
+    if (existingMatch) {
+      updated = systemMd.replace(
+        /## TEST STATUS[\s\S]*?(?=\n## |\n# |$)/,
+        statusBlock,
+      );
+    } else {
+      updated = systemMd.replace(
+        /(Generated from:[\s\S]*?\n\n---\n)/,
+        `$1\n${statusBlock}---\n`,
+      );
+    }
+    writeFileSync(systemPath, updated);
+    console.log("✅ FINKOIN_SYSTEM.md TEST STATUS updated");
   }
-  writeFileSync(systemPath, updated);
-  console.log("✅ FINKOIN_SYSTEM.md TEST STATUS updated");
 }
 
 console.log("📘 Checking TypeScript...");
