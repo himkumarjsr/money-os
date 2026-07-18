@@ -1,121 +1,79 @@
 # Finkoin (money-os)
 
-Finkoin is a Next.js personal finance app focused on Indian users.  
-It includes:
+Next.js personal finance app for Indian users — health check, trackers, calculators, FK Split, rewards, and an AI fix plan.
 
-- a 7-step financial health analysis flow
-- detailed result report with actionable insights
-- multiple calculators (SIP, EMI, SWP, PPF, loans, rent/buy, etc.)
-- profile/auth shell with rewards, referrals, and KYC placeholders
-- gamification (FK tokens, badges, streaks)
+**App version:** 0.4.0 · **Canonical site:** https://www.finkoin.com
 
-## Tech Stack
+## Product (shipped)
 
-- Next.js 14 (App Router)
-- React 18 + TypeScript
-- Tailwind CSS
-- Zustand (state + persistence)
-- React Hook Form + Zod
-- Recharts (calculator charts)
-- Framer Motion (animations)
-- XLSX (amortisation export)
-- Supabase JS client (auth integration scaffold)
+- **Analyse** — 7-step financial health check → score, checklist, buckets, AI fix plan (₹99 / FK unlock)
+- **Tracker** — monthly expenses, Month Safety Pulse, credit-card reminders
+- **FK Split** — groups, open/email invites, expenses, balances, settle-up
+- **Calculators** — SIP, SWP, EMI, FIRE, tax regime 2026, and more
+- **Profile / rewards** — assets sync, FK tokens, streaks, referrals, leaderboard
+- **Learn / blog / legal** — education + SEO + DPDP-oriented legal pages
+- **PWA** — installable production build (`next-pwa`)
 
-## Project Structure
+Placeholders / partial: goals, pricing/plans polish, KYC (PAN mock), insurance comparison, live portfolio feeds.
 
-- `app/` – routes and pages
-  - `app/page.tsx` – landing page
-  - `app/analyse/` – analysis flow + result
-  - `app/calculators/` – calculators directory + UI
-  - `app/profile/` – user profile dashboard
-- `components/`
-  - `components/forms/` – analysis onboarding form and steps
-  - `components/calculators/` – calculator components
-  - `components/ui/` – shared UI (navbar, login sheet, money input, bottom sheet, etc.)
-- `store/` – Zustand stores (`authStore`, `financialStore`, `gamificationStore`)
-- `lib/` – helpers (`financialEngine`, `auth`, `kycVerification`, formatters, animation variants)
-- `supabase/migrations/` – SQL migrations (initial schema scaffold)
+## Docs
 
-## Main Features
+| Start here                                             |                                                      |
+| ------------------------------------------------------ | ---------------------------------------------------- |
+| [`docs/README.md`](./docs/README.md)                   | Docs index                                           |
+| [`FINKOIN_SYSTEM.md`](./FINKOIN_SYSTEM.md)             | **System source of truth** (rules, schema, runbooks) |
+| [`docs/PRODUCT_SURFACE.md`](./docs/PRODUCT_SURFACE.md) | All routes                                           |
+| [`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md)     | All APIs                                             |
+| [`docs/ENV_AND_SCRIPTS.md`](./docs/ENV_AND_SCRIPTS.md) | Env keys + npm scripts                               |
+| [`tests/TESTING.md`](./tests/TESTING.md)               | Unit + e2e                                           |
 
-### 1) Financial Health Analysis
+## Tech stack
 
-- 7-step input flow in `components/forms/analyse-onboarding-form.tsx`
-- persisted draft state with Zustand
-- result generated via `lib/financialEngine.ts`
-- result page includes metrics, checklist, plan steps, and score visualization
+Next.js 14 (App Router) · React 18 · TypeScript · Tailwind · Zustand · React Hook Form + Zod · Supabase Auth/DB · Razorpay · Groq · Resend · Recharts · Framer Motion · Vitest · Playwright · next-pwa
 
-### 2) Calculators
+## Project structure
 
-- Investment and loan calculators with live sliders/manual input
-- Indian number formatting + words display for money fields
-- charts powered by Recharts
-- amortisation schedule + Excel download for relevant loan calculators
-
-> Note: calculator math logic is intentionally isolated in individual calculator components and engine helpers.
-
-### 3) Auth + Profile (Scaffolded)
-
-- persisted auth state in `store/authStore.ts`
-- login bottom sheet in `components/ui/LoginSheet.tsx`
-  - Google sign-in flow hook
-  - phone OTP flow hook
-- profile dropdown in navbar and `/profile` dashboard page
-- PAN verification mock in `lib/kycVerification.ts`
-
-## Environment Variables
-
-Create `.env.local` in project root:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+app/           # Routes + API handlers
+components/    # UI by domain (forms, tracker, split, landing, …)
+store/         # Zustand (auth, financial, split, gamification, notifications, …)
+lib/           # Engines + helpers (finance, split, tracker, tax, …)
+supabase/      # migrations/ + manual/ SQL
+docs/          # Maintained overview docs
+tests/         # Playwright e2e + unit helpers
+FINKOIN_SYSTEM.md
 ```
 
-If these are not set, auth helpers fail gracefully with configuration errors.
-
-## Installation
+## Setup
 
 ```bash
 npm install
-```
-
-## Run Locally
-
-```bash
+cp .env.example .env.local   # fill Supabase (+ optional Razorpay/Groq/Resend)
 npm run dev
 ```
 
-Then open:
-
-- `http://localhost:3000` (or next available port)
-
-## Production Build
-
-```bash
-npm run build
-npm start
-```
-
-## Supabase Migration
-
-Migration scaffold is available at:
-
-- `supabase/migrations/001_initial.sql`
-
-Apply it in your Supabase SQL editor or migration workflow.
+Open `http://localhost:3000`. Full env catalog: [docs/ENV_AND_SCRIPTS.md](./docs/ENV_AND_SCRIPTS.md).
 
 ## Scripts
 
-- `npm run dev` – start dev server
-- `npm run build` – production build + type checks
-- `npm run start` – run built app
-- `npm run lint` – lint checks
-- `npm run test` – run tests
+```bash
+npm run dev
+npm run build && npm start
+npm run lint
+npm test
+npm run test:coverage
+npm run test:e2e
+npm run docs:update
+```
+
+## Database
+
+- Apply `supabase/migrations/*` in order (or via your Supabase workflow).
+- Apply `supabase/manual/*` for tracker / credit cards / avatars as needed.
+- **Split tables** and tip RPCs are documented in `FINKOIN_SYSTEM.md` §34 — they may live only on the remote project until checked into repo SQL.
 
 ## Notes
 
-- Current auth/KYC is a hybrid scaffold: UI and store are ready, backend verification and secure persistence should be finalized before production.
-- PAN verification currently uses mock validation logic and must be replaced with compliant production APIs.
-- Never store full PAN permanently; only store verification status and masked form.
-
+- Auth is production cookie session (Supabase SSR) + client `ProtectedGate` — not a demo scaffold.
+- PAN verification in `lib/kycVerification.ts` is still mock; do not store full PAN.
+- Server-only secrets must never use `NEXT_PUBLIC_` (`npm run check:secrets`).

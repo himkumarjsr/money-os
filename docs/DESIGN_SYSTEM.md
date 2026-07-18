@@ -95,20 +95,21 @@ Approximate scale in product UI:
 
 ### Domain folders
 
-| Folder                      | Role                                       |
-| --------------------------- | ------------------------------------------ |
-| `auth/ProtectedGate.tsx`    | Client auth gate → `/login?redirect=`      |
-| `forms/`                    | 7-step analyse onboarding                  |
-| `analyse/`                  | Consent + paywall + error boundary         |
-| `tracker/`                  | Expense modals + Month Safety Pulse        |
-| `split/InviteLinkShare.tsx` | Copy + WhatsApp invite link                |
-| `profile/ProfileAssets.tsx` | Editable assets sync                       |
-| `landing/`                  | Home hero, quick tools, below-fold, footer |
-| `calculators/`              | SIP/SWP/EMI/tax/FIRE/etc.                  |
-| `finkoin/`                  | AI plan / optimizer sections               |
-| `learn/`                    | Guides + tax education                     |
-| `policies/`                 | Policy vault client                        |
-| `feedback/`                 | Feedback modal                             |
+| Folder                      | Role                                                                  |
+| --------------------------- | --------------------------------------------------------------------- |
+| `auth/ProtectedGate.tsx`    | Client auth gate → `/login?redirect=`                                 |
+| `forms/`                    | 7-step analyse onboarding                                             |
+| `analyse/`                  | Consent + paywall + error boundary                                    |
+| `tracker/`                  | Expense/savings modals, Month Safety Pulse, credit-card bill reminder |
+| `split/InviteLinkShare.tsx` | Copy + WhatsApp invite link                                           |
+| `SplitInviteResume.tsx`     | Global flusher for join-after-login                                   |
+| `profile/ProfileAssets.tsx` | Editable assets sync                                                  |
+| `landing/`                  | Home hero, quick tools, below-fold, footer                            |
+| `calculators/`              | SIP/SWP/EMI/tax/FIRE/etc.                                             |
+| `finkoin/`                  | AI plan / optimizer sections                                          |
+| `learn/`                    | Guides + tax education                                                |
+| `policies/`                 | Policy vault client                                                   |
+| `feedback/`                 | Feedback modal                                                        |
 
 ## Screen Patterns
 

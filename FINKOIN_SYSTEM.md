@@ -900,7 +900,7 @@ Current `buildPriorityPlan` implementation returns:
 ### POST `/api/ai/analyse`
 
 File: `app/api/ai/analyse/route.ts`  
-Auth required: No (expects profile+analysis payload)
+Auth required: Yes — cookie session via `getAuthedUser` (rate limit 10/hr/user). Body: profile+analysis payload.
 
 Request body:
 
@@ -956,7 +956,7 @@ Errors: **503** `{ "error": "Payments are not configured." }` when neither env K
 ### POST `/api/razorpay/create-order`
 
 File: `app/api/razorpay/create-order/route.ts`  
-Auth required: No
+Auth required: Yes — cookie session via `getAuthedUser` (rate limit 15/hr/user).
 
 Creates a fixed **₹99** (9900 paise) INR order via Razorpay Orders API.
 
@@ -1363,6 +1363,8 @@ Current status: **partially implemented**
 - Middleware **does not** enforce login redirects — use `ProtectedGate` / page logic.
 - Split balances use **`GET /api/split/balances`**, not `get_split_balances` RPC, for UI.
 - Open invites (`__open__@finkoin.invite`) are first-class; email-match join is email invites only.
+- `POST /api/ai/analyse` and `POST /api/razorpay/create-order` **require auth** (cookie session + rate limits).
+- Overview docs live under `docs/` ([`docs/README.md`](./docs/README.md)); this file remains deep SoT.
 
 ### Legal pages (complete)
 
@@ -2591,7 +2593,7 @@ Expense delete:
    - group from `split_groups`
    - members from `split_group_members` (`active|pending`)
    - expenses (+ joined shares) from `split_expenses` / `split_expense_shares`.
-2. Calls RPC `get_split_balances(p_group_id)` for debt edges.
+2. Loads **`netBalances` + simplified edges** from **`GET /api/split/balances?groupId=`** (`lib/splitBalances.ts`) — not the old `get_split_balances` RPC.
 3. Realtime channel listens:
    - `split_expenses` INSERT
    - `split_expense_shares` UPDATE

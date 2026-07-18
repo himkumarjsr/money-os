@@ -1,6 +1,6 @@
 # Finkoin Functions Reference
 
-Generated from the live codebase. Prefer this over invented helper names.
+Generated from the live codebase. Prefer this over invented helper names. Not every `lib/` file is listed — see [DATA_AND_STORES.md](./DATA_AND_STORES.md) for the full domain map.
 
 ---
 
@@ -72,6 +72,27 @@ const plan = buildPriorityPlan(profile, analyseFinances(profile));
 
 ---
 
+## lib/trackerSafetyPulse.ts
+
+### `computeMonthSafetyPulse`
+
+**Params:** month transactions + income context  
+**Returns:** Safe / Tight / Over pulse for tracker UI (`MonthSafetyPulse`).
+
+---
+
+## lib/trackerCreditCards.ts
+
+Helpers to encode/decode `payment_method` as `credit_card::{id}::{label}`, persist saved cards (localStorage), and support bill-reminder → loan payment prefill.
+
+---
+
+## lib/tracker-categories.ts
+
+Bucket labels and category catalogs for Needs / Wants / Habit / investment / Others (including `savings_account`).
+
+---
+
 ## lib/splitBalances.ts
 
 | Function                                              | Purpose             |
@@ -92,6 +113,8 @@ Settlements reduce nets by exact amount. Nets should sum ~0.
 **Params:** amount, members, split type (`equal` \| `exact` \| `percentage`), maps  
 **Returns:** `{ shares, error }` — validates exact sum and % = 100.
 
+Note: `shares` type may appear in types but is **not** implemented here.
+
 ---
 
 ## lib/splitInvite.ts
@@ -100,6 +123,12 @@ Settlements reduce nets by exact amount. Nets should sum ~0.
 | -------------------------- | ------------------------- |
 | `OPEN_SPLIT_INVITE_EMAIL`  | `__open__@finkoin.invite` |
 | `isOpenSplitInvite(email)` | Open-link detection       |
+
+---
+
+## lib/splitAuthRedirect.ts
+
+Peek/consume helpers for post-login Split join (`localStorage` token + `?next=`). Used by login, OAuth callback, and `SplitInviteResume`.
 
 ---
 
@@ -134,6 +163,18 @@ Settlements reduce nets by exact amount. Nets should sum ~0.
 
 ---
 
+## lib/fireCalculator.ts / amortisation.ts / finance.ts
+
+Calculator math isolated from UI: FIRE numbers, amortisation schedules, generic finance helpers. Tax: `taxCalculatorHelpers.ts`, `taxRegimeComparisonFY2026.ts`.
+
+---
+
+## lib/referralRewards.ts / subscriptionBypass.ts / payment.ts
+
+FK referral rewards, skip-payment / admin unlock, Razorpay client helpers.
+
+---
+
 ## lib/analytics.ts — `Analytics.*`
 
 Notable helpers: `healthCheckStarted`, `healthCheckCompleted`, `splitGroupCreated`, `splitExpenseAdded`, `splitInviteSent`, `feedbackSubmitted`, `loginCompleted`, plus compatibility wrappers.
@@ -162,3 +203,11 @@ Helpers: `getMyNetBalance`, `getMyBalanceFromEdges`
 ### `useNotificationStore`
 
 `fetchNotifications`, `markAllRead`, `markPopupShown`, `getTodayUnshownPopup`
+
+### `usePortfolioStore`
+
+Demo portfolio load / analysis state for `/portfolio`.
+
+### `useAppStore`
+
+Onboarding step only.
