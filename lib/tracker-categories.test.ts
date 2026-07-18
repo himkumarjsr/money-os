@@ -32,9 +32,10 @@ describe("TRACKER_CATEGORIES", () => {
 
   it("picker hides legacy transport_essential but keeps others", () => {
     const needs = pickerSubcategories("needs");
-    expect(needs.some((s) => s.id === "transport_essential")).toBe(false);
-    expect(needs.some((s) => s.id === "others")).toBe(true);
-    expect(needs.some((s) => s.id === "rent")).toBe(true);
+    const ids = needs.map((s) => s.id as string);
+    expect(ids).not.toContain("transport_essential");
+    expect(ids).toContain("others");
+    expect(ids).toContain("rent");
   });
 
   it("excludes loan_prepayment from tracker totals", () => {
