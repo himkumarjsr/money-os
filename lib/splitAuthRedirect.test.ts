@@ -22,6 +22,11 @@ describe("sanitizeAppPath", () => {
     expect(sanitizeAppPath("%2Fsplit%2Fjoin%3Ftoken%3Dabc")).toBe(
       "/split/join?token=abc",
     );
+    expect(sanitizeAppPath("foo%2Fbar")).toBeNull();
+  });
+
+  it("returns null when decodeURIComponent throws", () => {
+    expect(sanitizeAppPath("%2F%E0%A4%A")).toBeNull();
   });
 
   it("rejects open redirects and invalid values", () => {

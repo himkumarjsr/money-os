@@ -16,13 +16,17 @@ const TRACK_ITEMS: TrackItem[] = [
   {
     kind: "tracker",
     icon: "home",
-    label: "Needs — rent, groceries, utilities",
+    label: "Mandatory expenses — rent, groceries, utilities",
   },
-  { kind: "tracker", icon: "party", label: "Wants — dining, entertainment" },
+  {
+    kind: "tracker",
+    icon: "party",
+    label: "Non-mandatory expenses — dining, entertainment",
+  },
   {
     kind: "tracker",
     icon: "coffee",
-    label: "Habits — tea, coffee, cigarettes",
+    label: "Habit expenses — tea, coffee, cigarettes",
   },
   { kind: "app", icon: "card", label: "Loans & credit card payments" },
   { kind: "app", icon: "trending", label: "Investments & savings" },
@@ -191,21 +195,21 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
             type="button"
             onClick={() => setChecked(!checked)}
             style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
+              width: 44,
+              height: 44,
+              borderRadius: 8,
               border: checked ? "2px solid #534AB7" : "2px solid #E8E6F0",
               background: checked ? "#534AB7" : "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
-              marginTop: 1,
               cursor: "pointer",
               transition: "all 0.15s",
               padding: 0,
             }}
             aria-checked={checked}
+            aria-label="I agree to store expense data for insights"
             role="checkbox"
           >
             {checked ? (

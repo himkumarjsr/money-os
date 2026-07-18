@@ -1,6 +1,8 @@
 import {
   analyseFinances,
+  computeRealEmergencyFund,
   housingAndEmiTotal,
+  isMetroCity,
   monthlyInsuranceTotal,
   monthlySavingsContributions,
   monthlyTotalExpenses,
@@ -50,7 +52,9 @@ function baseProfile(overrides: Partial<FinancialProfile>): FinancialProfile {
 
 describe("financialEngine", () => {
   it("does not count spouse income when life stage is bachelor (stale field from a prior profile)", () => {
-    expect(monthlyTotalIncome(baseProfile({ spouseIncome: 50_000 }))).toBe(100_000);
+    expect(monthlyTotalIncome(baseProfile({ spouseIncome: 50_000 }))).toBe(
+      100_000,
+    );
   });
 
   it("computes income, expenses, and contributions with new field groups", () => {
@@ -80,9 +84,15 @@ describe("financialEngine", () => {
     );
 
     expect(result.scores.savingsRate).toBeLessThan(20);
-    expect(result.issues.some((issue) => issue.code === "investment_on_track")).toBe(true);
-    expect(result.issues.some((issue) => issue.code === "emergency_fund_short")).toBe(true);
-    expect(result.securityChecklist.some((item) => item.label === "Emergency fund")).toBe(true);
+    expect(
+      result.issues.some((issue) => issue.code === "investment_on_track"),
+    ).toBe(true);
+    expect(
+      result.issues.some((issue) => issue.code === "emergency_fund_short"),
+    ).toBe(true);
+    expect(
+      result.securityChecklist.some((item) => item.label === "Emergency fund"),
+    ).toBe(true);
   });
 
   it("can produce good signals under the universal framework", () => {
@@ -107,8 +117,12 @@ describe("financialEngine", () => {
 
     // Savings rate counts SIP + EPF contributions.
     expect(result.scores.savingsRate).toBeCloseTo(26.15, 1);
-    expect(result.issues.some((issue) => issue.code === "investment_on_track")).toBe(true);
-    expect(result.issues.some((issue) => issue.code === "emergency_fund_ok")).toBe(true);
+    expect(
+      result.issues.some((issue) => issue.code === "investment_on_track"),
+    ).toBe(true);
+    expect(
+      result.issues.some((issue) => issue.code === "emergency_fund_ok"),
+    ).toBe(true);
     expect(result.planSteps).toHaveLength(7);
   });
 
@@ -131,7 +145,71 @@ describe("financialEngine", () => {
 
     expect(result.planSteps).toHaveLength(7);
     expect(result.planSteps.some((step) => step.includes("₹"))).toBe(true);
-    expect(result.planSteps.some((step) => step.includes("Make debt payoff your default surplus use"))).toBe(true);
-    expect(result.securityChecklist.some((item) => item.label === "Child education fund")).toBe(true);
+    expect(
+      result.planSteps.some((step) =>
+        step.includes("Make debt payoff your default surplus use"),
+      ),
+    ).toBe(true);
+    expect(
+      result.securityChecklist.some(
+        (item) => item.label === "Child education fund",
+      ),
+    ).toBe(true);
+  });
+
+  it("computes emergency fund and metro helper", () => {
+    expect(isMetroCity("metro")).toBe(true);
+    expect(isMetroCity("tier2")).toBe(false);
+    const er = computeRealEmergencyFund(
+      baseProfile({
+        savingsAccountBalance: 50_000,
+        fdValue: 25_000,
+        liquidMFValue: 10_000,
+        otherLiquidSavings: 5_000,
+        emergencyFundCurrent: 0,
+      }),
+    );
+    // 50k + 10k*0.95 + 25k*0.7 + 5k*0.5
+    expect(er.realTotal).toBe(79_500);
+  });
+
+  it("includes custom investments and non-duplicate unified loans in net worth", () => {
+    const result = analyseFinances(
+      baseProfile({
+        monthlySalary: 200_000,
+        customInvestments: [
+          {
+            label: "Custom",
+            currentValue: 75_000,
+            monthlyContribution: 0,
+            type: "other" as const,
+          },
+        ],
+        unifiedLoans: [
+          {
+            loanType: "personal_loan" as const,
+            outstandingAmount: 99_999,
+            monthlyEMI: 5_000,
+          },
+          {
+            loanType: "education_loan" as const,
+            outstandingAmount: 120_000,
+            monthlyEMI: 8_000,
+          },
+          {
+            loanType: "gold_loan" as const,
+            monthlyEMI: 5_000,
+            remainingMonths: 12,
+            outstandingAmount: 0,
+          },
+        ],
+        personalLoanEMI: 0,
+        carLoanEMI: 0,
+        bikeEMI: 0,
+      }) as FinancialProfile,
+    );
+    expect(result.netWorth).toBeTypeOf("number");
+    // education 120k + gold EMI*months 60k counted; personal_loan skipped as duplicate type
+    expect(result.totalLiabilities).toBeGreaterThanOrEqual(180_000);
   });
 });
