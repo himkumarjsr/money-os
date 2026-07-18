@@ -106,6 +106,7 @@ export const TRACKER_CATEGORIES = {
         label: "Transport to work / fuel",
         icon: "transit" as const,
       },
+      { id: "others", label: "Others", icon: "other" as const },
     ],
   },
   wants: {
@@ -147,6 +148,7 @@ export const TRACKER_CATEGORIES = {
         label: "Amazon / Flipkart shopping",
         icon: "package" as const,
       },
+      { id: "others", label: "Others", icon: "other" as const },
     ],
   },
   habits: {
@@ -164,6 +166,7 @@ export const TRACKER_CATEGORIES = {
       { id: "gutka", label: "Gutka / pan masala", icon: "herb" as const },
       { id: "gambling", label: "Gambling / lottery", icon: "dice" as const },
       { id: "paan", label: "Paan / supari", icon: "herb" as const },
+      { id: "others", label: "Others", icon: "other" as const },
     ],
   },
   loans: {
@@ -196,6 +199,7 @@ export const TRACKER_CATEGORIES = {
         icon: "calendar" as const,
       },
       { id: "other_loan", label: "Other EMI", icon: "other" as const },
+      { id: "others", label: "Others", icon: "other" as const },
     ],
   },
   investment: {
@@ -204,6 +208,11 @@ export const TRACKER_CATEGORIES = {
     icon: "trending" as const,
     cap: 20,
     subcategories: [
+      {
+        id: "savings_account",
+        label: "Savings account / cash",
+        icon: "wallet" as const,
+      },
       { id: "sip", label: "SIP / Mutual fund", icon: "trending" as const },
       { id: "ppf", label: "PPF", icon: "bank" as const },
       { id: "epf", label: "EPF / PF", icon: "bank" as const },
@@ -218,6 +227,7 @@ export const TRACKER_CATEGORIES = {
       },
       { id: "rd", label: "Recurring deposit", icon: "calendar" as const },
       { id: "crypto", label: "Crypto", icon: "coin" as const },
+      { id: "others", label: "Others", icon: "other" as const },
     ],
   },
   income: {
@@ -232,6 +242,7 @@ export const TRACKER_CATEGORIES = {
       { id: "dividend", label: "Dividend / interest", icon: "chart" as const },
       { id: "bonus", label: "Bonus", icon: "gift" as const },
       { id: "other_income", label: "Other income", icon: "other" as const },
+      { id: "others", label: "Others", icon: "other" as const },
     ],
   },
 } as const satisfies Record<string, TrackerBucket>;

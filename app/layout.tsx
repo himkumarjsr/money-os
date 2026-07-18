@@ -15,6 +15,7 @@ import MorningTipPopup from "@/components/MorningTipPopup";
 import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
+import RouteChangeLoader from "@/components/ui/RouteChangeLoader";
 import { SEO_CONFIG, SITE_URL } from "@/lib/seo";
 
 const RenewalReminderBanner = dynamic(
@@ -344,6 +345,7 @@ export default function RootLayout({
           </Suspense>
           <AppInitializer>
             <ScrollToTopOnRouteChange />
+            <RouteChangeLoader />
             <AuthSessionSync />
             <FinancialStoreAuthSync />
             <GlobalNavbar />
