@@ -63,15 +63,21 @@ Canonical site: **https://www.finkoin.com**
 
 ## TEST STATUS
 
-Last run: 2026-07-18T16:49:48.076Z
+Last run: 2026-07-18T17:20:35.666Z
 Unit tests: 306/306 passing
 Failed: 0
 
 Living docs:
 
-- `docs/DESIGN_SYSTEM.md`
-- `docs/FUNCTIONS_REFERENCE.md`
+- `docs/README.md`
+- `docs/PRODUCT_SURFACE.md`
+- `docs/API_REFERENCE.md`
 - `docs/CORE_ARCHITECTURE.md`
+- `docs/DATA_AND_STORES.md`
+- `docs/FUNCTIONS_REFERENCE.md`
+- `docs/DESIGN_SYSTEM.md`
+- `docs/ENV_AND_SCRIPTS.md`
+- `docs/TESTING.md`
 
 ## 1. PRODUCT OVERVIEW
 

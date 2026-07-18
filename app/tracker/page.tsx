@@ -862,7 +862,13 @@ function TrackerContent() {
       >
         <button
           type="button"
-          onClick={() => setExpandedIncome((e) => !e)}
+          onClick={() => {
+            setExpandedIncome((open) => {
+              const next = !open;
+              if (next) setExpandedBucket(null);
+              return next;
+            });
+          }}
           style={{
             width: "100%",
             padding: "16px",
@@ -1123,7 +1129,15 @@ function TrackerContent() {
             }}
           >
             <div
-              onClick={() => setExpandedBucket(isExpanded ? null : bucketKey)}
+              onClick={() => {
+                // Accordion: only one section open at a time; do not auto-scroll.
+                if (isExpanded) {
+                  setExpandedBucket(null);
+                  return;
+                }
+                setExpandedIncome(false);
+                setExpandedBucket(bucketKey);
+              }}
               style={{
                 padding: "16px",
                 cursor: "pointer",

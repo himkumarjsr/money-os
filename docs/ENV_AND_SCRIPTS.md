@@ -71,6 +71,15 @@ See comments in `.env.example` for Google Form URLs / entry IDs.
 
 ---
 
+## Git hooks (Husky)
+
+| Hook           | Runs                                                                                          | Blocks?                                 |
+| -------------- | --------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **pre-commit** | lint-staged → `npm run lint` → `npm run test:coverage` → `npm run test:e2e` → `npm run build` | **Yes** — commit only if all pass       |
+| **pre-push**   | `tsc --noEmit` + `npm run docs:update`                                                        | Typecheck yes; docs update non-blocking |
+
+Expect commits to take several minutes (e2e starts/reuses `npm run dev`, then full build).
+
 ## npm scripts
 
 | Script                                      | What it does                                               |

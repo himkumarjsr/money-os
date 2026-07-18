@@ -1,38 +1,16 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Full eslint / coverage / e2e / build already gate every commit (.husky/pre-commit).
+# Keep push light: typecheck + living docs status.
+
+set -e
+
 echo "🚀 Running pre-push checks..."
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-echo "Branch: $BRANCH"
-
-# Full TypeScript check before push
 echo "Checking TypeScript..."
 npx tsc --noEmit
 
-if [ $? -ne 0 ]; then
-  echo "❌ TypeScript errors found"
-  echo "Fix errors before pushing"
-  exit 1
-fi
-
-# Build check only for production branch
-if [ "$BRANCH" = "production" ]; then
-  echo "🏭 Production branch detected"
-  echo "Running full build check..."
-  
-  npm run build
-  
-  if [ $? -ne 0 ]; then
-    echo "❌ Build failed"
-    echo "Fix build errors before pushing"
-    exit 1
-  fi
-  
-  echo "✅ Production build passed"
-fi
-
-# Refresh living docs + unit-test status (non-blocking for docs script internals)
 echo "Updating docs / test status..."
 npm run docs:update || echo "⚠️ docs:update reported issues (continuing)"
 
