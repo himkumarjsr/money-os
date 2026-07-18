@@ -8,18 +8,30 @@ import {
   pickerSubcategories,
 } from "@/lib/tracker-categories";
 import {
+  encodeCreditCardPaymentMethod,
+  isCreditCardPaymentMethod,
+  loadSavedCreditCards,
+  parseCreditCardPaymentMethod,
+  upsertSavedCreditCard,
+  type SavedCreditCard,
+} from "@/lib/trackerCreditCards";
+import {
   TrackerIcon,
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { useAuthStore } from "@/store/authStore";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 interface AddExpenseModalProps {
   onClose: () => void;
   onSaved: () => void;
   defaultDate?: string;
   defaultBucket?: string;
+  defaultSubcategory?: string;
+  defaultAmount?: number;
+  defaultDescription?: string;
+  defaultPaymentMethod?: string;
   editExpense?: {
     id: string;
     date: string;
@@ -29,6 +41,12 @@ interface AddExpenseModalProps {
     description: string | null;
     payment_method: string | null;
   };
+}
+
+function initialPaymentKind(method: string | null | undefined) {
+  if (isCreditCardPaymentMethod(method)) return "credit_card";
+  if (method === "card") return "credit_card";
+  return method || "upi";
 }
 
 const FIELD_LABEL_COLOR = "#111110";
@@ -51,56 +69,133 @@ export default function AddExpenseModal({
   onSaved,
   defaultDate,
   defaultBucket,
+  defaultSubcategory,
+  defaultAmount,
+  defaultDescription,
+  defaultPaymentMethod,
   editExpense,
 }: AddExpenseModalProps) {
   const user = useAuthStore((s) => s.user);
   const today = new Date().toISOString().split("T")[0];
+  const seedPayment =
+    editExpense?.payment_method || defaultPaymentMethod || "upi";
+  const seedParsed = parseCreditCardPaymentMethod(seedPayment);
 
   const [date, setDate] = useState(editExpense?.date || defaultDate || today);
-  const [amount, setAmount] = useState(editExpense?.amount || 0);
+  const [amount, setAmount] = useState(
+    editExpense?.amount || defaultAmount || 0,
+  );
   const [bucket, setBucket] = useState(
     editExpense?.bucket || defaultBucket || "",
   );
   const [subcategory, setSubcategory] = useState(
-    editExpense?.subcategory || "",
+    editExpense?.subcategory || defaultSubcategory || "",
   );
   const [description, setDescription] = useState(
-    editExpense?.description || "",
+    editExpense?.description || defaultDescription || "",
   );
   const [paymentMethod, setPaymentMethod] = useState(
-    editExpense?.payment_method || "upi",
+    initialPaymentKind(seedPayment),
   );
+  const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string>(
+    seedParsed.cardId || "",
+  );
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [newCardNickname, setNewCardNickname] = useState("");
+  const [newCardLast4, setNewCardLast4] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prev;
+      // Always clear — stacked modals / PWA remounts can leave body stuck.
+      document.body.style.overflow = "";
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const cards = loadSavedCreditCards(user.id);
+    setSavedCards(cards);
+    if (
+      !selectedCardId &&
+      cards.length === 1 &&
+      paymentMethod === "credit_card"
+    ) {
+      setSelectedCardId(cards[0].id);
+    }
+    if (
+      paymentMethod === "credit_card" &&
+      cards.length === 0 &&
+      !seedParsed.cardId
+    ) {
+      setShowAddCard(true);
+    }
+  }, [user?.id]);
+
+  const selectedCard = useMemo(
+    () => savedCards.find((c) => c.id === selectedCardId) ?? null,
+    [savedCards, selectedCardId],
+  );
 
   const selectedBucket = bucket
     ? TRACKER_CATEGORIES[bucket as keyof typeof TRACKER_CATEGORIES]
     : null;
   const isIncome = bucket === "income";
+  const isSavings = bucket === "investment";
   const modalTitle = editExpense
     ? isIncome
       ? "Edit income"
-      : "Edit expense"
+      : isSavings
+        ? "Edit savings"
+        : "Edit expense"
     : isIncome
       ? "Add income"
-      : "Add expense";
+      : isSavings
+        ? "Add savings"
+        : "Add expense";
   const primaryCta = saving
     ? "Saving..."
     : editExpense
       ? isIncome
         ? "Update income"
-        : "Update expense"
+        : isSavings
+          ? "Update savings"
+          : "Update expense"
       : isIncome
         ? "Save income"
-        : "Save expense";
+        : isSavings
+          ? "Save savings"
+          : "Save expense";
+
+  const handleAddCard = () => {
+    if (!user?.id) {
+      setError("You must be signed in");
+      return;
+    }
+    const nick = newCardNickname.trim();
+    const last4 = newCardLast4.replace(/\D/g, "").slice(-4);
+    if (!nick) {
+      setError("Enter a card name (e.g. HDFC Millennia)");
+      return;
+    }
+    if (last4.length !== 4) {
+      setError("Enter the last 4 digits of the card");
+      return;
+    }
+    const card = upsertSavedCreditCard(user.id, {
+      nickname: nick,
+      last4,
+    });
+    setSavedCards(loadSavedCreditCards(user.id));
+    setSelectedCardId(card.id);
+    setShowAddCard(false);
+    setNewCardNickname("");
+    setNewCardLast4("");
+    setError("");
+  };
 
   const handleSave = async () => {
     if (!amount || !bucket || !subcategory) {
@@ -110,6 +205,18 @@ export default function AddExpenseModal({
     if (!user?.id) {
       setError("You must be signed in");
       return;
+    }
+
+    let paymentToStore = paymentMethod;
+    if (paymentMethod === "credit_card") {
+      const card =
+        selectedCard || savedCards.find((c) => c.id === selectedCardId) || null;
+      if (!card) {
+        setError("Select a credit card or add a new one");
+        setShowAddCard(true);
+        return;
+      }
+      paymentToStore = encodeCreditCardPaymentMethod(card);
     }
 
     setSaving(true);
@@ -126,27 +233,47 @@ export default function AddExpenseModal({
       subcategory,
       description,
       bucket,
-      payment_method: paymentMethod,
+      payment_method: paymentToStore,
       month: dateObj.toLocaleString("default", { month: "long" }),
       year: dateObj.getFullYear(),
     };
 
-    const { error: dbError } = editExpense?.id
-      ? await supabase
-          .from("expense_transactions")
-          .update(payload)
-          .eq("id", editExpense.id)
-          .eq("user_id", user.id)
-      : await supabase.from("expense_transactions").insert(payload);
+    try {
+      const write = editExpense?.id
+        ? supabase
+            .from("expense_transactions")
+            .update(payload)
+            .eq("id", editExpense.id)
+            .eq("user_id", user.id)
+        : supabase.from("expense_transactions").insert(payload);
 
-    setSaving(false);
+      const timeout = new Promise<never>((_, reject) => {
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                "Save is taking too long. Check your connection and try again.",
+              ),
+            ),
+          15000,
+        );
+      });
 
-    if (dbError) {
-      setError(dbError.message);
-      return;
+      const { error: dbError } = await Promise.race([write, timeout]);
+
+      if (dbError) {
+        setError(dbError.message);
+        return;
+      }
+
+      onSaved();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not save. Please try again.",
+      );
+    } finally {
+      setSaving(false);
     }
-
-    onSaved();
   };
 
   return (
@@ -406,7 +533,7 @@ export default function AddExpenseModal({
                 [
                   { id: "upi", label: "UPI", icon: "phone" },
                   { id: "cash", label: "Cash", icon: "rupee" },
-                  { id: "card", label: "Card", icon: "card" },
+                  { id: "credit_card", label: "Credit card", icon: "card" },
                   { id: "netbanking", label: "Net banking", icon: "bank" },
                   { id: "wallet", label: "Wallet", icon: "wallet" },
                 ] as { id: string; label: string; icon: AppIconName }[]
@@ -414,7 +541,17 @@ export default function AddExpenseModal({
                 <button
                   key={pm.id}
                   type="button"
-                  onClick={() => setPaymentMethod(pm.id)}
+                  onClick={() => {
+                    setPaymentMethod(pm.id);
+                    if (pm.id === "credit_card") {
+                      if (savedCards.length === 0) setShowAddCard(true);
+                      else if (!selectedCardId && savedCards[0]) {
+                        setSelectedCardId(savedCards[0].id);
+                      }
+                    } else {
+                      setShowAddCard(false);
+                    }
+                  }}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -438,6 +575,135 @@ export default function AddExpenseModal({
                 </button>
               ))}
             </div>
+
+            {paymentMethod === "credit_card" ? (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #E8E6F0",
+                  background: "#FAFAFE",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#5F5E5A",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  Which credit card?
+                </label>
+                {savedCards.length > 0 ? (
+                  <select
+                    value={selectedCardId}
+                    onChange={(e) => {
+                      if (e.target.value === "__add__") {
+                        setShowAddCard(true);
+                        return;
+                      }
+                      setSelectedCardId(e.target.value);
+                      setShowAddCard(false);
+                    }}
+                    style={{
+                      ...IOS_DATE_INPUT_STYLE,
+                      marginBottom: showAddCard ? 12 : 0,
+                    }}
+                  >
+                    <option value="" disabled>
+                      Select a card
+                    </option>
+                    {savedCards.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nickname} ****{c.last4}
+                      </option>
+                    ))}
+                    <option value="__add__">+ Add new card…</option>
+                  </select>
+                ) : null}
+
+                {showAddCard || savedCards.length === 0 ? (
+                  <div style={{ display: "grid", gap: 10, marginTop: 4 }}>
+                    <div>
+                      <label
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: FIELD_LABEL_COLOR,
+                          display: "block",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Card name
+                      </label>
+                      <input
+                        type="text"
+                        value={newCardNickname}
+                        onChange={(e) => setNewCardNickname(e.target.value)}
+                        placeholder="e.g. HDFC Millennia"
+                        style={IOS_DATE_INPUT_STYLE}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: FIELD_LABEL_COLOR,
+                          display: "block",
+                          marginBottom: 4,
+                        }}
+                      >
+                        Last 4 digits
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={newCardLast4}
+                        onChange={(e) =>
+                          setNewCardLast4(
+                            e.target.value.replace(/\D/g, "").slice(0, 4),
+                          )
+                        }
+                        placeholder="1234"
+                        style={IOS_DATE_INPUT_STYLE}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddCard}
+                      style={{
+                        height: 44,
+                        borderRadius: 10,
+                        border: "1.5px solid #534AB7",
+                        background: "white",
+                        color: "#534AB7",
+                        fontWeight: 700,
+                        fontSize: 14,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Save card
+                    </button>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 11,
+                        color: "#9B9A94",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Saved on this device. Next month we’ll remind you to pay
+                      this card’s spend from salary.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

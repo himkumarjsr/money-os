@@ -1,41 +1,11 @@
 "use client";
 
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { useAuthStore } from "@/store/authStore";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-
-function AuthSpinner() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "60vh",
-        flexDirection: "column",
-        gap: 12,
-      }}
-    >
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: "50%",
-          border: "3px solid #534AB7",
-          borderTop: "3px solid transparent",
-          animation: "spin 0.8s linear infinite",
-        }}
-      />
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  );
-}
 
 export function ProtectedGate({ children }: { children: ReactNode }) {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
@@ -94,7 +64,7 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
 
   // Until mounted, always spinner — matches SSR and avoids hydration mismatch.
   if (!mounted) {
-    return <AuthSpinner />;
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   // Already logged in from persist / session — never gate behind a spinner.
@@ -102,5 +72,5 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  return <AuthSpinner />;
+  return <BrandPageLoader fullScreen={false} label="Checking sign-in…" />;
 }

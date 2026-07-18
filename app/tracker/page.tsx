@@ -3,6 +3,7 @@
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
+import CreditCardBillReminder from "@/components/tracker/CreditCardBillReminder";
 import MonthSafetyPulse from "@/components/tracker/MonthSafetyPulse";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import {
@@ -133,6 +134,12 @@ function TrackerContent() {
   const [expandedBucket, setExpandedBucket] = useState<string | null>("");
   const [expandedIncome, setExpandedIncome] = useState(false);
   const [defaultBucket, setDefaultBucket] = useState<string>("");
+  const [modalDefaults, setModalDefaults] = useState<{
+    subcategory?: string;
+    amount?: number;
+    description?: string;
+    paymentMethod?: string;
+  }>({});
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
@@ -292,19 +299,36 @@ function TrackerContent() {
   );
 
   useEffect(() => {
+    // Safety: clear sticky body lock if a modal remount was interrupted (PWA idle).
+    document.body.style.overflow = "";
+  }, []);
+
+  useEffect(() => {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
 
   useEffect(() => {
     if (!hasConsent) return;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastSoftFetchAt = 0;
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       // Soft refresh — full loading teardown breaks PWA "Add expense" taps after a few entries.
       if (showAddModal) return;
-      void fetchTransactions({ soft: true });
+      // Avoid stacking fetches on resume (auth refresh + visibility) after idle.
+      const now = Date.now();
+      if (now - lastSoftFetchAt < 8000) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        lastSoftFetchAt = Date.now();
+        void fetchTransactions({ soft: true });
+      }, 400);
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, [hasConsent, fetchTransactions, showAddModal]);
 
   useEffect(() => {
@@ -340,6 +364,9 @@ function TrackerContent() {
   );
 
   const prevMeta = previousCalendarMonth(selectedMonth, selectedYear);
+  const viewingCurrentMonth =
+    selectedMonth === new Date().getMonth() &&
+    selectedYear === new Date().getFullYear();
   const safetyPulse = useMemo(
     () =>
       computeMonthSafetyPulse({
@@ -790,6 +817,26 @@ function TrackerContent() {
         </button>
       </div>
 
+      {viewingCurrentMonth ? (
+        <CreditCardBillReminder
+          previousTransactions={previousTransactions}
+          monthName={currentMonth}
+          year={currentYear}
+          monthlySalary={profileMonthlyFromDb}
+          onPayBill={(amount, label) => {
+            setEditingExpense(null);
+            setDefaultBucket("loans");
+            setModalDefaults({
+              subcategory: "credit_card",
+              amount,
+              description: `Pay bill · ${label}`,
+              paymentMethod: "upi",
+            });
+            setShowAddModal(true);
+          }}
+        />
+      ) : null}
+
       {loading ? (
         <div
           style={{
@@ -953,6 +1000,7 @@ function TrackerContent() {
                           title="Edit income"
                           onClick={(e) => {
                             e.stopPropagation();
+                            setModalDefaults({});
                             setDefaultBucket("income");
                             setEditingExpense(txn);
                             setShowAddModal(true);
@@ -1013,6 +1061,7 @@ function TrackerContent() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  setModalDefaults({});
                   setDefaultBucket("income");
                   setEditingExpense(null);
                   setShowAddModal(true);
@@ -1208,6 +1257,7 @@ function TrackerContent() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      setModalDefaults({});
                       setDefaultBucket(bucketKey);
                       setEditingExpense(null);
                       setShowAddModal(true);
@@ -1224,7 +1274,9 @@ function TrackerContent() {
                       cursor: "pointer",
                     }}
                   >
-                    + Add expense · {cat.label}
+                    {bucketKey === "investment"
+                      ? `+ Add savings · ${cat.label}`
+                      : `+ Add expense · ${cat.label}`}
                   </button>
                 </div>
                 {Object.keys(bySubcategory).length > 0 ? (
@@ -1361,6 +1413,7 @@ function TrackerContent() {
                                   title="Edit expense"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    setModalDefaults({});
                                     setEditingExpense(txn);
                                     setShowAddModal(true);
                                   }}
@@ -1434,6 +1487,16 @@ function TrackerContent() {
           defaultBucket={
             editingExpense ? editingExpense.bucket : defaultBucket || undefined
           }
+          defaultSubcategory={
+            editingExpense ? undefined : modalDefaults.subcategory
+          }
+          defaultAmount={editingExpense ? undefined : modalDefaults.amount}
+          defaultDescription={
+            editingExpense ? undefined : modalDefaults.description
+          }
+          defaultPaymentMethod={
+            editingExpense ? undefined : modalDefaults.paymentMethod
+          }
           editExpense={
             editingExpense
               ? {
@@ -1450,6 +1513,7 @@ function TrackerContent() {
           onClose={() => {
             setShowAddModal(false);
             setEditingExpense(null);
+            setModalDefaults({});
           }}
           onSaved={() => {
             if (!editingExpense) {
@@ -1458,6 +1522,7 @@ function TrackerContent() {
             }
             setShowAddModal(false);
             setDefaultBucket("");
+            setModalDefaults({});
             setEditingExpense(null);
             void fetchTransactions({ soft: true });
           }}

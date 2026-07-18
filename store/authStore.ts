@@ -473,7 +473,9 @@ export const useAuthStore = create<AuthState>()(
 
           if (!authListenerStarted) {
             authListenerStarted = true;
-            supabase.auth.onAuthStateChange(async (event, sess) => {
+            // Sync callback only — never await auth APIs inside onAuthStateChange
+            // (can deadlock after idle tab resume / token refresh).
+            supabase.auth.onAuthStateChange((event, sess) => {
               console.log("Auth event:", event);
 
               if (event === "SIGNED_OUT") {
@@ -482,29 +484,37 @@ export const useAuthStore = create<AuthState>()(
               }
 
               if (event === "SIGNED_IN" && sess?.user) {
-                await get().refreshUser({ clearOnMissingSession: true });
-
-                try {
-                  const createdAt = new Date(sess.user.created_at);
-                  const ageMinutes = (Date.now() - createdAt.getTime()) / 60000;
-
-                  console.log("SIGNED_IN: account age minutes =", ageMinutes);
-
-                  if (ageMinutes < 30) {
-                    const { applyPendingReferralRewards } =
-                      await import("@/lib/referralRewards");
-                    const client = getSupabase();
-                    await applyPendingReferralRewards(client, sess.user.id);
-                    console.log("Referral: processed on SIGNED_IN");
-                  }
-                } catch (e) {
-                  console.warn("Referral error:", e);
-                }
+                const userId = sess.user.id;
+                const createdAt = sess.user.created_at;
+                setTimeout(() => {
+                  void (async () => {
+                    await get().refreshUser({ clearOnMissingSession: true });
+                    try {
+                      const ageMinutes =
+                        (Date.now() - new Date(createdAt).getTime()) / 60000;
+                      console.log(
+                        "SIGNED_IN: account age minutes =",
+                        ageMinutes,
+                      );
+                      if (ageMinutes < 30) {
+                        const { applyPendingReferralRewards } =
+                          await import("@/lib/referralRewards");
+                        const client = getSupabase();
+                        await applyPendingReferralRewards(client, userId);
+                        console.log("Referral: processed on SIGNED_IN");
+                      }
+                    } catch (e) {
+                      console.warn("Referral error:", e);
+                    }
+                  })();
+                }, 0);
               } else if (
                 (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") &&
                 sess?.user
               ) {
-                await get().refreshUser({ clearOnMissingSession: false });
+                setTimeout(() => {
+                  void get().refreshUser({ clearOnMissingSession: false });
+                }, 0);
               }
             });
           }
