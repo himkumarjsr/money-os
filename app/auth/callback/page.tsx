@@ -1,7 +1,7 @@
 "use client";
 
 import { applyPendingReferralRewards } from "@/lib/referralRewards";
-import { resolvePostLoginPath } from "@/lib/splitAuthRedirect";
+import { peekPostLoginPath, sanitizeAppPath } from "@/lib/splitAuthRedirect";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -20,11 +20,10 @@ function AuthCallbackContent() {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("code");
         const type = params.get("type");
-        const nextParam = params.get("next");
+        // Prefer URL next, then pending Split invite in localStorage — never wipe invite yet.
         const next =
-          nextParam && nextParam.startsWith("/")
-            ? nextParam
-            : resolvePostLoginPath("");
+          sanitizeAppPath(params.get("next")) ??
+          peekPostLoginPath(window.location.search);
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);

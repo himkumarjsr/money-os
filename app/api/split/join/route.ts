@@ -117,18 +117,41 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const { error: memberErr } = await admin
+    const { data: existingMember } = await admin
       .from("split_group_members")
-      .update({
-        user_id: user.id,
-        display_name: displayName,
-        status: "active",
-        joined_at: now,
-      })
+      .select("id, status")
       .eq("group_id", invite.group_id)
-      .eq("email", invitedEmail);
-    if (memberErr) {
-      throw memberErr;
+      .eq("email", invitedEmail)
+      .maybeSingle();
+
+    if (existingMember) {
+      const { error: memberErr } = await admin
+        .from("split_group_members")
+        .update({
+          user_id: user.id,
+          display_name: displayName,
+          status: "active",
+          joined_at: now,
+        })
+        .eq("id", existingMember.id);
+      if (memberErr) throw memberErr;
+    } else {
+      // Invite email row may be missing — still admit the invited user.
+      const { error: insertErr } = await admin
+        .from("split_group_members")
+        .upsert(
+          {
+            group_id: invite.group_id,
+            user_id: user.id,
+            email: invitedEmail,
+            display_name: displayName,
+            status: "active",
+            role: "member",
+            joined_at: now,
+          },
+          { onConflict: "group_id,email" },
+        );
+      if (insertErr) throw insertErr;
     }
 
     if (invite.status === "pending") {

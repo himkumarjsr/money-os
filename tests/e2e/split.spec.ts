@@ -22,4 +22,13 @@ test.describe("FK Split", () => {
     await page.waitForTimeout(1500);
     await expect(page.locator("body")).toBeVisible();
   });
+
+  test("join page with token shows joining or result UI", async ({ page }) => {
+    await page.goto("/split/join?token=e2e-open-invite-token");
+    await page.waitForTimeout(2000);
+    await expect(page.locator("body")).toBeVisible();
+    // Smoke: join client mounted (loading / success / error / login redirect).
+    const url = page.url();
+    expect(url).toMatch(/\/(split\/join|login)/);
+  });
 });
