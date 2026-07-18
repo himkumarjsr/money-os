@@ -279,8 +279,8 @@ export function getUniversalBucketRows(
   const actuals = getUniversalBucketActuals(data);
   const caps = getUniversalCaps(data);
   const defs: Array<{ key: UniversalBucketKey; label: string }> = [
-    { key: "needs", label: "Mandatory expenses" },
-    { key: "wants", label: "Non-mandatory expenses" },
+    { key: "needs", label: "Needs / mandatory expenses" },
+    { key: "wants", label: "Wants / non-mandatory expenses" },
     { key: "security", label: "Insurance (monthly)" },
     { key: "loans", label: "Loans" },
     { key: "investment", label: "Investment" },
