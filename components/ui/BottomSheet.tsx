@@ -95,13 +95,17 @@ export default function BottomSheet({
           fullscreen
             ? "h-[100dvh] max-h-[100dvh] rounded-none"
             : "h-[90vh] max-h-[90vh] rounded-t-[20px]",
+          !isOpen && "pointer-events-none",
         )}
         style={{
           transform: isOpen ? `translateY(${dragY}px)` : "translateY(100%)",
-          transition: isDragging ? "none" : "transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)",
+          transition: isDragging
+            ? "none"
+            : "transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
         role="dialog"
         aria-modal="true"
+        aria-hidden={!isOpen}
         aria-labelledby="bottom-sheet-title"
       >
         {/* Drag-to-dismiss attaches only here — scrolling the body never fires these handlers. */}
@@ -117,7 +121,10 @@ export default function BottomSheet({
             <div className="h-1 w-9 rounded-full bg-[#E0DFF8]" aria-hidden />
           </div>
           <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-3">
-            <h3 id="bottom-sheet-title" className="min-w-0 flex-1 text-base font-bold text-slate-900">
+            <h3
+              id="bottom-sheet-title"
+              className="min-w-0 flex-1 text-base font-bold text-slate-900"
+            >
               {title}
             </h3>
             <button
@@ -134,6 +141,7 @@ export default function BottomSheet({
         <div
           className={cn(
             "min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4",
+            "touch-pan-y [-webkit-overflow-scrolling:touch]",
             "pb-[max(1.25rem,env(safe-area-inset-bottom))]",
           )}
         >

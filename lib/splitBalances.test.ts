@@ -107,4 +107,57 @@ describe("simplifyDebts", () => {
     ]);
     expect(edges.length).toBeLessThanOrEqual(members.length - 1);
   });
+
+  it("handles empty expenses and single-member groups", () => {
+    const empty = computeNetBalances(members, []);
+    expect(empty.every((n) => n.net === 0)).toBe(true);
+    expect(empty).toHaveLength(members.length);
+    const solo = [{ email: "solo@x.com", display_name: "Solo" }];
+    const net = computeNetBalances(solo, [
+      {
+        amount: 100,
+        paid_by_email: "solo@x.com",
+        shares: [
+          { email: "solo@x.com", display_name: "Solo", share_amount: 100 },
+        ],
+      },
+    ]);
+    expect(net[0]?.net).toBe(0);
+    expect(simplifyDebts(net)).toHaveLength(0);
+  });
+
+  it("ignores zero/negative settlement noise", () => {
+    const net = computeNetBalances(
+      members,
+      [equalExpense(300, "a@x.com")],
+      [
+        { from_email: "b@x.com", to_email: "a@x.com", amount: 0 },
+        { from_email: "b@x.com", to_email: "a@x.com", amount: -50 },
+      ],
+    );
+    expect(net.find((n) => n.email === "b@x.com")!.net).toBe(-100);
+  });
+
+  it("is case-insensitive on emails", () => {
+    const net = computeNetBalances(
+      [
+        { email: "A@x.com", display_name: "Aa" },
+        { email: "b@x.com", display_name: "Bb" },
+      ],
+      [
+        {
+          amount: 100,
+          paid_by_email: "a@x.com",
+          shares: [
+            { email: "A@x.com", display_name: "Aa", share_amount: 50 },
+            { email: "b@x.com", display_name: "Bb", share_amount: 50 },
+          ],
+        },
+      ],
+    );
+    const a = net.find((n) => n.email.toLowerCase() === "a@x.com");
+    const b = net.find((n) => n.email.toLowerCase() === "b@x.com");
+    expect(a?.net).toBe(50);
+    expect(b?.net).toBe(-50);
+  });
 });

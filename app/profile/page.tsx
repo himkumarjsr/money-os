@@ -3,6 +3,7 @@
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import ProfileAssets from "@/components/profile/ProfileAssets";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BackLink from "@/components/ui/BackLink";
 import { analyseFinances } from "@/lib/financialEngine";
 import { verifyPAN } from "@/lib/kycVerification";
 import { trackShare } from "@/lib/gtag";
@@ -121,7 +122,8 @@ export default function ProfilePage() {
 
   return (
     <ProtectedGate>
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 pb-28 sm:px-6 md:pb-8">
+        <BackLink fallbackHref="/" label="Back" />
         <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
           <div className="mx-auto inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-2xl font-bold text-white">
             {user?.photoURL ? (
@@ -192,23 +194,32 @@ export default function ProfilePage() {
               }}
             />
           </div>
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-4 space-y-3">
             {checklist.slice(0, 8).map((item) => (
               <li
                 key={item.label}
-                className="flex items-start justify-between rounded-lg border border-slate-100 p-3"
+                className="flex items-center justify-between gap-3 text-sm"
               >
-                <span className="flex items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2 text-[#5F5E5A]">
                   <AppIcon
                     name={item.status === "ok" ? "checkCircle" : "close"}
                     size={16}
                     color={item.status === "ok" ? "#1D9E75" : "#E24B4A"}
                   />
-                  {item.label}
+                  <span className="truncate font-medium text-[#111110]">
+                    {item.label}
+                  </span>
                 </span>
-                <span className="text-xs text-slate-500">{item.detail}</span>
+                <span className="shrink-0 text-right text-xs font-semibold text-[#9B9A94]">
+                  {item.detail || (item.status === "ok" ? "Done" : "Pending")}
+                </span>
               </li>
             ))}
+            {checklist.length === 0 ? (
+              <li className="text-center text-sm text-slate-500">
+                Complete analysis to unlock your checklist.
+              </li>
+            ) : null}
           </ul>
         </section>
 

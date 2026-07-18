@@ -92,7 +92,7 @@ export default function HomePage() {
         <h1 className="mx-auto max-w-4xl text-balance text-center text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
           Finkoin — Free Financial Health Check for India
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-pretty text-center text-sm leading-relaxed text-slate-600 sm:text-base sm:leading-relaxed">
+        <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] leading-tight text-slate-600 line-clamp-1 sm:mt-4 sm:line-clamp-none sm:text-pretty sm:text-base sm:leading-relaxed">
           Finkoin helps Indians check their financial health score in 5
           minutes—emergency fund, insurance gap, net worth, and a clear fix
           plan. Free. No PAN. No Aadhaar.

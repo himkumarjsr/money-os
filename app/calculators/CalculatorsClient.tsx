@@ -1,14 +1,12 @@
 "use client";
 
 import { lazyCalculatorsById } from "@/components/calculators/lazy-calculators";
-import BottomSheet from "@/components/ui/BottomSheet";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { fadeUp, scaleIn, staggerContainer } from "@/lib/animations";
+import BackLink from "@/components/ui/BackLink";
+import BottomSheet from "@/components/ui/BottomSheet";
 import { cn } from "@/lib/cn";
-import { m } from "framer-motion";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { trackToolOpen } from "@/lib/gtag";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, type Cat } from "./calculator-config";
 
@@ -95,16 +93,11 @@ export default function CalculatorsClient({
   ]);
 
   return (
-    <div className="min-h-dvh bg-white text-slate-900">
+    <div className="min-h-0 bg-white text-slate-900 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">
       <header className="border-b border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            <Link
-              href="/"
-              className="text-sm font-semibold text-[#534AB7] hover:underline"
-            >
-              Back
-            </Link>
+            <BackLink fallbackHref="/" label="Back" />
             <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
               Calculators
             </h1>
@@ -118,7 +111,7 @@ export default function CalculatorsClient({
           </div>
         </div>
         <nav
-          className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6"
+          className="mx-auto flex max-w-6xl gap-2 overflow-x-auto overscroll-x-contain px-4 pb-3 [-webkit-overflow-scrolling:touch] sm:px-6"
           aria-label="Calculator categories"
         >
           {CATEGORIES.map((c) => (
@@ -195,26 +188,12 @@ export default function CalculatorsClient({
       </div>
 
       <div className="mx-auto px-4 py-6 md:hidden">
-        <m.p
-          variants={fadeUp}
-          initial="hidden"
-          animate="visible"
-          className="text-xs font-semibold uppercase tracking-wide text-slate-500"
-        >
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {activeCat.label}
-        </m.p>
-        <m.ul
-          className="mt-3 space-y-2"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-        >
-          {activeCat.items.map((item, index) => (
-            <m.li
-              key={item.id}
-              variants={fadeUp}
-              transition={{ delay: index * 0.05 }}
-            >
+        </p>
+        <ul className="mt-3 space-y-2">
+          {activeCat.items.map((item) => (
+            <li key={item.id}>
               <button
                 type="button"
                 onClick={() => {
@@ -231,9 +210,9 @@ export default function CalculatorsClient({
                   {item.blurb}
                 </span>
               </button>
-            </m.li>
+            </li>
           ))}
-        </m.ul>
+        </ul>
       </div>
 
       <BottomSheet
@@ -244,19 +223,16 @@ export default function CalculatorsClient({
         closeOnBackdrop={false}
         closeOnDrag={false}
       >
-        <m.section
+        <section
           key={calcId}
-          variants={scaleIn}
-          initial="hidden"
-          animate="visible"
           className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
           aria-live="polite"
         >
           <p className="text-sm text-slate-600">{activeItem.blurb}</p>
-          <div className="mt-5">
+          <div className="mt-5 min-w-0">
             <ActiveCalc />
           </div>
-        </m.section>
+        </section>
       </BottomSheet>
     </div>
   );

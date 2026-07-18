@@ -2,9 +2,8 @@
 
 import type { ReactNode } from "react";
 import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
+import HomeMobileQuickTools from "@/components/landing/HomeMobileQuickTools";
 import { TrackImpression } from "@/components/TrackImpression";
-import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
-import { AppIcon } from "@/components/ui/AppIcon";
 import { m, useScroll, useSpring, useTransform } from "framer-motion";
 import dynamic from "next/dynamic";
 
@@ -50,7 +49,7 @@ export default function HomePageClient({ children }: { children: ReactNode }) {
       />
       <main className="snap-y snap-mandatory">
         <TrackImpression component_id="home_hero_section" threshold={0.2}>
-          <section className="relative z-10 overflow-hidden border-b border-indigo-100/80 px-4 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-20 lg:px-8">
+          <section className="relative z-10 overflow-hidden border-b border-indigo-100/80 px-4 pb-10 pt-8 sm:px-6 sm:pb-24 sm:pt-20 lg:px-8">
             <m.div
               aria-hidden
               className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-indigo-100/70 via-violet-100/60 to-blue-100/60"
@@ -79,56 +78,11 @@ export default function HomePageClient({ children }: { children: ReactNode }) {
               className="relative mx-auto max-w-4xl text-center"
             >
               {children}
-              <div className="mt-6 sm:mt-8">
+              <div className="mt-3 sm:mt-8">
                 <HomeHeroCarousel />
               </div>
-              <div className="mt-3 flex flex-col items-center gap-4 sm:mt-3">
-                <AnimateOnScroll variant="fadeUp" delay={0.2} aboveFold>
-                  <div
-                    className="flex flex-col items-center gap-3 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-4 sm:gap-y-2"
-                    role="list"
-                  >
-                    <span
-                      role="listitem"
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/60 px-3 py-1 text-xs font-medium text-violet-800 shadow-sm shadow-indigo-500/5 ring-1 ring-violet-200/60 backdrop-blur-sm sm:text-sm"
-                    >
-                      <AppIcon name="sparkle" size={14} color="#534AB7" /> Earn
-                      Finkoins
-                    </span>
-                    <span
-                      role="listitem"
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/60 px-3 py-1 ring-1 ring-slate-200/70 backdrop-blur-sm"
-                    >
-                      <AppIcon name="star" size={14} color="#534AB7" /> 10,000+
-                      Users
-                    </span>
-                    <span
-                      className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline"
-                      aria-hidden
-                    />
-                    <span
-                      role="listitem"
-                      className="whitespace-nowrap rounded-full bg-white/60 px-3 py-1 ring-1 ring-slate-200/70 backdrop-blur-sm"
-                    >
-                      🇮🇳 Made in India
-                    </span>
-                    <span
-                      className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline"
-                      aria-hidden
-                    />
-                    <span
-                      role="listitem"
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/60 px-3 py-1 ring-1 ring-slate-200/70 backdrop-blur-sm"
-                    >
-                      <AppIcon name="lock" size={14} color="#534AB7" />{" "}
-                      Bank-level security
-                    </span>
-                  </div>
-                  <p className="mt-3 inline-flex items-center justify-center gap-1.5 text-center text-xs font-medium text-slate-500 sm:text-sm">
-                    <AppIcon name="trophy" size={14} color="#534AB7" /> Earn
-                    Finkoins for every smart money decision
-                  </p>
-                </AnimateOnScroll>
+              <div className="mt-3 md:hidden">
+                <HomeMobileQuickTools />
               </div>
             </m.div>
           </section>

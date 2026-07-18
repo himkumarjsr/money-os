@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isOpenSplitInvite } from "@/lib/splitInvite";
 import {
   createSupabaseServerClient,
   getSupabaseAdmin,
@@ -50,7 +51,9 @@ export async function POST(req: NextRequest) {
     const invitedEmail = String(invite.invited_email ?? "")
       .toLowerCase()
       .trim();
-    if (!invitedEmail || invitedEmail !== userEmail) {
+    const openInvite = isOpenSplitInvite(invitedEmail);
+
+    if (!openInvite && (!invitedEmail || invitedEmail !== userEmail)) {
       return NextResponse.json(
         {
           error: `This invite was sent to ${invite.invited_email}. Please log in with that email.`,
@@ -73,6 +76,46 @@ export async function POST(req: NextRequest) {
     const displayName =
       user.user_metadata?.name || userEmail.split("@")[0] || "Member";
     const now = new Date().toISOString();
+
+    if (openInvite) {
+      const { data: existing } = await admin
+        .from("split_group_members")
+        .select("id, status")
+        .eq("group_id", invite.group_id)
+        .eq("email", userEmail)
+        .maybeSingle();
+
+      if (existing?.status === "active") {
+        return NextResponse.json({
+          success: true,
+          groupId: invite.group_id,
+          groupName: invite.group_name ?? "Split",
+        });
+      }
+
+      const { error: upsertErr } = await admin
+        .from("split_group_members")
+        .upsert(
+          {
+            group_id: invite.group_id,
+            user_id: user.id,
+            email: userEmail,
+            display_name: displayName,
+            status: "active",
+            role: "member",
+            joined_at: now,
+          },
+          { onConflict: "group_id,email" },
+        );
+      if (upsertErr) throw upsertErr;
+
+      // Keep open invite pending so the same link can be reused.
+      return NextResponse.json({
+        success: true,
+        groupId: invite.group_id,
+        groupName: invite.group_name ?? "Split",
+      });
+    }
 
     const { error: memberErr } = await admin
       .from("split_group_members")
@@ -101,11 +144,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       groupId: invite.group_id,
-      groupName: invite.group_name ?? "group",
+      groupName: invite.group_name ?? "Split",
     });
   } catch (err: unknown) {
     console.error("Split join error:", err);
-    const message = err instanceof Error ? err.message : "Could not join group";
+    const message = err instanceof Error ? err.message : "Could not join";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

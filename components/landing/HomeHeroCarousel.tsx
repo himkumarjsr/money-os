@@ -49,20 +49,23 @@ const SLIDES: Slide[] = [
   {
     key: "tax",
     title: "New vs old tax regime",
-    subtitle: "Compare regimes with HRA, 80C, NPS — built for FY 2025-26 planning.",
+    subtitle:
+      "Compare regimes with HRA, 80C, NPS — built for FY 2025-26 planning.",
     href: "/calculators/tax-regime-2026",
     cta: "Open calculator",
   },
   {
     key: "portfolio",
     title: "Portfolio analysis",
-    subtitle: "Review holdings and allocation in one workspace — built for Indian investors.",
+    subtitle:
+      "Review holdings and allocation in one workspace — built for Indian investors.",
     comingSoon: true,
   },
   {
     key: "tracker",
     title: "Expense Tracker",
-    subtitle: "Track every rupee. See where money goes. Get insights to spend better.",
+    subtitle:
+      "Track every rupee. See where money goes. Get insights to spend better.",
     href: "/tracker",
     cta: "Start tracking",
     isNew: true,
@@ -88,7 +91,11 @@ export default function HomeHeroCarousel() {
     if (reduceMotion || paused) return;
 
     const tick = () => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState !== "visible"
+      )
+        return;
       advance();
     };
 
@@ -113,7 +120,7 @@ export default function HomeHeroCarousel() {
 
   return (
     <div
-      className="mx-auto w-full max-w-4xl rounded-3xl border border-indigo-100/70 px-4 py-5 backdrop-blur-sm sm:px-6 sm:py-7"
+      className="mx-auto w-full max-w-4xl rounded-xl border border-indigo-100/70 px-2.5 py-2 backdrop-blur-sm sm:rounded-3xl sm:px-6 sm:py-7"
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured Finkoin tools"
@@ -121,45 +128,49 @@ export default function HomeHeroCarousel() {
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setPaused(false);
+        if (!e.currentTarget.contains(e.relatedTarget as Node))
+          setPaused(false);
       }}
     >
-      <div className="relative min-h-[280px] sm:min-h-[250px] md:min-h-[230px]">
+      <div className="relative min-h-[96px] sm:min-h-[250px] md:min-h-[230px]">
         <AnimatePresence mode="wait" initial={false}>
           <m.div
             key={slide.key}
             initial={reduceMotion ? false : fade.initial}
             animate={reduceMotion ? false : fade.animate}
             exit={reduceMotion ? undefined : fade.exit}
-            transition={{ duration: reduceMotion ? 0 : 0.38, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="absolute inset-x-0 top-0 flex flex-col items-center px-1 text-center sm:px-2"
+            transition={{
+              duration: reduceMotion ? 0 : 0.38,
+              ease: [0.25, 0.46, 0.45, 0.94],
+            }}
+            className="absolute inset-x-0 top-0 flex flex-col items-center px-0.5 text-center sm:px-2"
           >
             <div className="relative inline-flex max-w-full flex-col items-center">
               {"isNew" in slide && slide.isNew ? (
-                <span className="mb-2 inline-flex rounded-full bg-emerald-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                <span className="mb-0.5 inline-flex rounded-full bg-emerald-700 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white sm:mb-2 sm:px-2 sm:py-0.5 sm:text-[10px]">
                   NEW
                 </span>
               ) : null}
               {"comingSoon" in slide && slide.comingSoon ? (
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-800">
+                <span className="mb-0.5 inline-flex rounded-full bg-slate-200 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-slate-800 sm:mb-2 sm:px-2 sm:py-0.5 sm:text-[10px]">
                   Coming soon
                 </span>
               ) : null}
-              <h2 className="text-balance text-2xl font-bold leading-[1.08] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+              <h2 className="text-balance text-[13px] font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl sm:leading-[1.08] md:text-5xl">
                 {slide.title}
               </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-slate-600 sm:mt-6 sm:text-xl sm:leading-relaxed">
+              <p className="mx-auto mt-0.5 hidden max-w-2xl text-pretty text-slate-600 sm:mt-6 sm:block sm:text-xl sm:leading-relaxed">
                 {slide.subtitle}
               </p>
             </div>
 
-            <div className="relative mt-6 flex w-full max-w-md flex-col items-center gap-3 sm:max-w-none sm:flex-row sm:justify-center">
+            <div className="relative mt-2 flex w-full max-w-md flex-col items-center gap-1.5 sm:mt-6 sm:max-w-none sm:flex-row sm:justify-center sm:gap-3">
               <div
-                className="pointer-events-none absolute inset-0 -z-10 scale-[1.35] rounded-3xl bg-gradient-to-r from-indigo-500/45 via-violet-500/40 to-purple-500/35 opacity-90 blur-2xl"
+                className="pointer-events-none absolute inset-0 -z-10 hidden scale-[1.35] rounded-3xl bg-gradient-to-r from-indigo-500/45 via-violet-500/40 to-purple-500/35 opacity-90 blur-2xl sm:block"
                 aria-hidden
               />
               {"comingSoon" in slide && slide.comingSoon ? (
-                <span className="relative z-10 inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-xl border border-slate-300 bg-white/90 px-8 text-sm font-semibold text-slate-500 sm:w-auto">
+                <span className="relative z-10 inline-flex min-h-8 w-auto cursor-not-allowed items-center justify-center rounded-lg border border-slate-300 bg-white/90 px-3 text-[11px] font-semibold text-slate-500 sm:min-h-12 sm:rounded-xl sm:px-8 sm:text-sm">
                   Coming soon
                 </span>
               ) : "href" in slide ? (
@@ -167,7 +178,7 @@ export default function HomeHeroCarousel() {
                   href={slide.href}
                   variant="primary"
                   size="lg"
-                  className="relative z-10 w-full bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-xl hover:shadow-indigo-500/35 active:scale-[0.99] sm:w-auto"
+                  className="relative z-10 min-h-8 w-auto bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 px-3 py-1.5 text-[11px] shadow-md shadow-indigo-500/25 sm:min-h-12 sm:w-auto sm:px-8 sm:text-sm sm:shadow-lg sm:shadow-indigo-500/30 sm:transition-all sm:duration-300 sm:hover:-translate-y-0.5 sm:hover:scale-[1.02] sm:hover:shadow-xl sm:hover:shadow-indigo-500/35 sm:active:scale-[0.99]"
                   onClick={() =>
                     trackCta({
                       cta_name: slide.cta,
@@ -186,7 +197,7 @@ export default function HomeHeroCarousel() {
       </div>
 
       <div
-        className="mt-7 flex flex-wrap items-center justify-center gap-2"
+        className="mt-1.5 flex flex-wrap items-center justify-center gap-1 sm:mt-7 sm:gap-2"
         role="tablist"
         aria-label="Choose hero slide"
       >
@@ -208,8 +219,8 @@ export default function HomeHeroCarousel() {
             onClick={() => goTo(i)}
             className={
               i === index
-                ? "h-2.5 min-w-[28px] rounded-full bg-[#534AB7] px-1 transition"
-                : "h-2.5 w-2.5 rounded-full bg-slate-300 transition hover:bg-slate-400"
+                ? "h-1.5 min-w-[18px] rounded-full bg-[#534AB7] px-1 transition sm:h-2.5 sm:min-w-[28px]"
+                : "h-1.5 w-1.5 rounded-full bg-slate-300 transition hover:bg-slate-400 sm:h-2.5 sm:w-2.5"
             }
           />
         ))}
