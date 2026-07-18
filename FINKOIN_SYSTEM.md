@@ -61,6 +61,18 @@ Canonical site: **https://www.finkoin.com**
 
 ---
 
+## TEST STATUS
+
+Last run: 2026-07-18T15:40:17.589Z
+Unit tests: 69/69 passing
+Failed: 0
+
+Living docs:
+
+- `docs/DESIGN_SYSTEM.md`
+- `docs/FUNCTIONS_REFERENCE.md`
+- `docs/CORE_ARCHITECTURE.md`
+
 ## 1. PRODUCT OVERVIEW
 
 Finkoin is a Next.js web app for Indian personal finance planning, analysis, and guided action.  
@@ -3121,7 +3133,13 @@ This section answers _why_ major systems exist.
 
 ## 33. TEST SUITE
 
-Runner: `npm test` → `vitest run` (`vitest.config.ts`).
+Runner: `npm test` → `vitest run` (`vitest.config.ts`, jsdom + `tests/setup.ts`).
+
+Coverage: `npm run test:coverage`  
+E2E: `npm run test:e2e` (Playwright chromium + Mobile Chrome; WebKit via `npm run test:e2e:webkit` after `npx playwright install webkit`)  
+Docs refresh: `npm run docs:update` (updates **TEST STATUS** in this file; hooked in `.husky/pre-push`)
+
+### Unit — `lib/**/*.test.ts` (existing)
 
 | File                              | What it locks in                                                                                      |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -3134,7 +3152,27 @@ Runner: `npm test` → `vitest run` (`vitest.config.ts`).
 | `lib/profileAssetsPatch.test.ts`  | scalar patch, loans, custom investments, catalogs                                                     |
 | `lib/trackerSafetyPulse.test.ts`  | Safe/Tight/Over, MoM, loan_prepayment exclusion                                                       |
 
-No Playwright/e2e suite in-repo. Prefer unit tests for money math before UI changes.
+### Unit — `tests/unit/**` (expanded QA suite)
+
+| File                                    | What it locks in                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `tests/unit/financialEngine.test.ts`    | `buildNetWorth`, `computeRealEmergencyFund`, `calculateTermNeeded`, `analyseFinances` integration |
+| `tests/unit/priorityEngine.test.ts`     | `buildPriorityPlan` ranking, surplus, tight cash-flow                                             |
+| `tests/unit/splitBalances.unit.test.ts` | Dinner / settle / three-way edges via `lib/splitBalances`                                         |
+
+### E2E — `tests/e2e/**`
+
+| File                   | Coverage                         |
+| ---------------------- | -------------------------------- |
+| `health-check.spec.ts` | Landing + analyse shell          |
+| `calculators.spec.ts`  | Tax landing + SIP/EMI deep links |
+| `split.spec.ts`        | Logged-out split / join token    |
+| `navigation.spec.ts`   | Route smoke + history            |
+| `responsive.spec.ts`   | Viewports + overflow slack       |
+
+Living docs: `docs/DESIGN_SYSTEM.md`, `docs/FUNCTIONS_REFERENCE.md`, `docs/CORE_ARCHITECTURE.md`.
+
+Prefer unit tests for money math before UI changes. E2E asserts shells/navigation — full authenticated analyse/split flows need seeded credentials.
 
 ---
 

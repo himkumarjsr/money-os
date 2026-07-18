@@ -32,4 +32,8 @@ if [ "$BRANCH" = "production" ]; then
   echo "✅ Production build passed"
 fi
 
+# Refresh living docs + unit-test status (non-blocking for docs script internals)
+echo "Updating docs / test status..."
+npm run docs:update || echo "⚠️ docs:update reported issues (continuing)"
+
 echo "✅ Pre-push checks passed"
