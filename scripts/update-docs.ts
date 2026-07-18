@@ -60,11 +60,12 @@ if (existsSync(systemPath)) {
   const existingMatch = systemMd.match(
     /## TEST STATUS[\s\S]*?(?=\n## |\n# |$)/,
   );
-  const stripRun = (s: string) => s.replace(/Last run:.*\n/, "");
-  if (
-    existingMatch &&
-    stripRun(existingMatch[0]).trim() === stripRun(statusBlock).trim()
-  ) {
+  const stripRun = (s: string) =>
+    s
+      .replace(/Last run:.*\n/, "")
+      .replace(/\n{2,}/g, "\n")
+      .trim();
+  if (existingMatch && stripRun(existingMatch[0]) === stripRun(statusBlock)) {
     console.log("✅ FINKOIN_SYSTEM.md TEST STATUS unchanged (skip write)");
   } else {
     let updated: string;
