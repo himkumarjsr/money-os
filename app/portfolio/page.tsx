@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BackLink from "@/components/ui/BackLink";
 import { useAuthStore } from "@/store/authStore";
 import { usePortfolioStore, type PortfolioFund } from "@/store/portfolioStore";
 import { useGamificationStore } from "@/store/gamificationStore";
@@ -71,28 +72,34 @@ export default function PortfolioPage() {
 
   if (tier === "free" || tier === "pro") {
     return (
-      <div className="min-h-dvh bg-white px-4 py-12">
-        <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 p-6">
-          <AppIcon name="lock" size={28} color="#534AB7" />
-          <h1 className="mt-2 text-2xl font-semibold">MF Portfolio Analysis</h1>
-          <p className="mt-2 text-slate-600">
-            Available in Pro Max — ₹99/month
-          </p>
-          <Link
-            href="/plans"
-            className="mt-6 inline-flex rounded-xl bg-[#534AB7] px-4 py-2 font-semibold text-white"
-          >
-            Upgrade to Pro Max
-          </Link>
+      <div className="min-h-dvh bg-white px-4 py-12 pb-28 md:pb-12">
+        <div className="mx-auto max-w-xl">
+          <BackLink fallbackHref="/" label="Back" />
+          <div className="mt-3 rounded-2xl border border-slate-200 p-6">
+            <AppIcon name="lock" size={28} color="#534AB7" />
+            <h1 className="mt-2 text-2xl font-semibold">
+              MF Portfolio Analysis
+            </h1>
+            <p className="mt-2 text-slate-600">
+              Available in Pro Max — ₹99/month
+            </p>
+            <Link
+              href="/plans"
+              className="mt-6 inline-flex rounded-xl bg-[#534AB7] px-4 py-2 font-semibold text-white"
+            >
+              Upgrade to Pro Max
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-white px-4 py-10">
+    <div className="min-h-dvh bg-white px-4 py-10 pb-28 md:pb-10">
       <div className="mx-auto max-w-4xl">
-        <h1 className="text-3xl font-semibold">MF Portfolio Analysis</h1>
+        <BackLink fallbackHref="/" label="Back" />
+        <h1 className="mt-3 text-3xl font-semibold">MF Portfolio Analysis</h1>
         <div className="mt-6 rounded-2xl border border-slate-200 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <input

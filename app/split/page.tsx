@@ -49,24 +49,40 @@ function SplitHomeInner() {
 
     void fetchGroups(userId, email, false);
 
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
         void fetchGroups(userId, email, true);
-      }
+      }, 500);
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) scheduleRefresh();
     };
 
     const handleFocus = () => {
-      void fetchGroups(userId, email, true);
+      scheduleRefresh();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleFocus);
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
     };
   }, [email, fetchGroups, isLoggedIn, userId]);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [createOpen]);
 
   useEffect(() => {
     if (!isLoggedIn || !userId || !email) return;
@@ -186,8 +202,8 @@ function SplitHomeInner() {
   };
 
   return (
-    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[90px] sm:px-6">
-      <div className="mx-auto max-w-3xl">
+    <main className="min-h-dvh overflow-x-hidden overscroll-y-contain bg-[#F7F7F4] px-4 py-8 pb-[90px] touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
+      <div className="mx-auto max-w-3xl min-w-0">
         <div className="mb-4">
           <BackLink fallbackHref="/" label="Back" />
         </div>

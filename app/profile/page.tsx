@@ -122,9 +122,9 @@ export default function ProfilePage() {
 
   return (
     <ProtectedGate>
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 pb-28 sm:px-6 md:pb-8">
+      <main className="mx-auto w-full max-w-5xl min-w-0 space-y-6 overflow-x-hidden px-4 py-8 pb-28 sm:px-6 md:pb-8">
         <BackLink fallbackHref="/" label="Back" />
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-6 text-center">
           <div className="mx-auto inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-2xl font-bold text-white">
             {user?.photoURL ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -181,7 +181,7 @@ export default function ProfilePage() {
 
         <ProfileAssets profile={submission} analysis={analysisSnapshot} />
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="text-lg font-semibold">Your financial checklist</h2>
           <p className="mt-1 text-sm text-slate-500">
             {checklistCount} of {Math.max(1, checklist.length)} completed
@@ -198,21 +198,30 @@ export default function ProfilePage() {
             {checklist.slice(0, 8).map((item) => (
               <li
                 key={item.label}
-                className="flex items-center justify-between gap-3 text-sm"
+                className="flex min-w-0 items-start gap-2 text-sm"
               >
-                <span className="flex min-w-0 items-center gap-2 text-[#5F5E5A]">
+                <span className="mt-0.5 shrink-0">
                   <AppIcon
                     name={item.status === "ok" ? "checkCircle" : "close"}
                     size={16}
                     color={item.status === "ok" ? "#1D9E75" : "#E24B4A"}
                   />
-                  <span className="truncate font-medium text-[#111110]">
-                    {item.label}
-                  </span>
                 </span>
-                <span className="shrink-0 text-right text-xs font-semibold text-[#9B9A94]">
-                  {item.detail || (item.status === "ok" ? "Done" : "Pending")}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 break-words font-medium text-[#111110]">
+                      {item.label}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-[#9B9A94]">
+                      {item.status === "ok" ? "Done" : "Pending"}
+                    </span>
+                  </div>
+                  {item.detail ? (
+                    <p className="mt-0.5 break-words text-xs leading-snug text-[#9B9A94]">
+                      {item.detail}
+                    </p>
+                  ) : null}
+                </div>
               </li>
             ))}
             {checklist.length === 0 ? (

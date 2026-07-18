@@ -40,11 +40,11 @@ export default function InviteLinkShare({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl bg-[#F7F7F4] px-3 py-3">
+      <div className="rounded-xl bg-[#F7F7F4] px-3 py-3 overflow-hidden">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9B9A94]">
           Invite link
         </p>
-        <p className="mt-1 break-all font-mono text-xs font-medium text-[#534AB7]">
+        <p className="mt-1 max-w-full break-all font-mono text-xs font-medium text-[#534AB7]">
           {inviteUrl}
         </p>
       </div>

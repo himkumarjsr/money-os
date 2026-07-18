@@ -315,7 +315,7 @@ function SectionCard({
                 <button
                   type="button"
                   onClick={() => onEdit(item)}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] px-3 py-3 text-left transition hover:border-[#534AB7]"
+                  className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] px-3 py-3 text-left transition hover:border-[#534AB7]"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <AppIcon name={item.icon} size={16} color="#534AB7" />
@@ -323,12 +323,12 @@ function SectionCard({
                       <div className="truncate text-sm font-semibold text-[#111110]">
                         {item.label}
                       </div>
-                      <div className="text-[11px] font-medium text-[#9B9A94]">
+                      <div className="truncate text-[11px] font-medium text-[#9B9A94]">
                         {item.meta || "Tap to edit"}
                       </div>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-[#111110]">
+                  <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-[#111110]">
                     {money(item.amount)}
                   </span>
                 </button>
@@ -340,13 +340,13 @@ function SectionCard({
                 <button
                   type="button"
                   onClick={() => onEdit(item)}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-[#E8E6F0] px-3 py-3 text-sm transition hover:border-[#534AB7] hover:bg-[#EEEDFE]/40"
+                  className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-dashed border-[#E8E6F0] px-3 py-3 text-sm transition hover:border-[#534AB7] hover:bg-[#EEEDFE]/40"
                 >
-                  <span className="flex items-center gap-2.5 text-[#5F5E5A]">
+                  <span className="flex min-w-0 items-center gap-2.5 text-[#5F5E5A]">
                     <AppIcon name={item.icon} size={16} color="#9B9A94" />
-                    {item.label}
+                    <span className="truncate">{item.label}</span>
                   </span>
-                  <span className="font-bold text-[#534AB7]">Add</span>
+                  <span className="shrink-0 font-bold text-[#534AB7]">Add</span>
                 </button>
               </li>
             ))}
@@ -555,7 +555,7 @@ export default function ProfileAssets({
   };
 
   return (
-    <section className="space-y-3">
+    <section className="min-w-0 space-y-3 overflow-x-hidden">
       <div className="overflow-hidden rounded-2xl bg-[#534AB7] p-5 text-white shadow-[0_14px_40px_rgba(83,74,183,0.25)]">
         <div className="flex items-start justify-between gap-3">
           <div>

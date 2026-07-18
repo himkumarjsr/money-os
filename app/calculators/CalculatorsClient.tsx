@@ -7,7 +7,7 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import { cn } from "@/lib/cn";
 import { trackToolOpen } from "@/lib/gtag";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES, type Cat } from "./calculator-config";
 
 function findCategoryForCalc(calcId: string): Cat {
@@ -37,6 +37,7 @@ export default function CalculatorsClient({
   );
   const [calcId, setCalcId] = useState(initialCalcId);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const lastDeepLinkCalc = useRef<string | null>(null);
 
   const activeItem = useMemo(() => {
     const item = activeCat.items.find((i) => i.id === calcId);
@@ -73,6 +74,22 @@ export default function CalculatorsClient({
       tool_name: activeItem.title,
     });
   }, [activeItem.id, activeItem.title]);
+
+  // Deep links (?calc=sip|swp|emi) select category AND open the mobile sheet once per calc id.
+  useEffect(() => {
+    const fromUrl = searchParams?.get("calc") ?? initialCalcId;
+    if (!fromUrl) return;
+    setCategory(findCategoryForCalc(fromUrl));
+    setCalcId(fromUrl);
+    if (lastDeepLinkCalc.current === fromUrl) return;
+    lastDeepLinkCalc.current = fromUrl;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches
+    ) {
+      setSheetOpen(true);
+    }
+  }, [initialCalcId, searchParams]);
 
   useEffect(() => {
     if (urlBaseForTaxCanonical && calcId === "tax-regime") {

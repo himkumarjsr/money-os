@@ -246,7 +246,7 @@ function AddSplitExpenseInner() {
     includedMembers.length > 0;
 
   return (
-    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-24 sm:px-6">
+    <main className="min-h-dvh overflow-x-hidden overscroll-y-contain bg-[#F7F7F4] px-4 py-8 pb-24 touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
       <div className="mx-auto max-w-2xl">
         <div className="rounded-3xl bg-[#534AB7] px-6 py-5 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-center justify-between gap-4">

@@ -77,8 +77,13 @@ function SplitGroupInner() {
   useEffect(() => {
     if (!groupId || !isLoggedIn) return;
     const supabase = getSupabase();
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     const refresh = () => {
-      void fetchGroupDetail(groupId);
+      if (refreshTimer) clearTimeout(refreshTimer);
+      // Debounce realtime storms — rapid INSERT/UPDATE bursts freeze PWA scroll.
+      refreshTimer = setTimeout(() => {
+        void fetchGroupDetail(groupId);
+      }, 400);
     };
     const sub = supabase
       .channel(`split:${groupId}`)
@@ -115,9 +120,21 @@ function SplitGroupInner() {
       .subscribe();
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       void supabase.removeChannel(sub);
     };
   }, [fetchGroupDetail, groupId, isLoggedIn]);
+
+  // Lock page scroll while modals are open (critical for iOS PWA).
+  useEffect(() => {
+    const locked = inviteOpen || settleOpen || showDeleteConfirm;
+    if (!locked) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [inviteOpen, settleOpen, showDeleteConfirm]);
 
   const myNet = useMemo(
     () => getMyNetBalance(myEmail, netBalances),
@@ -295,9 +312,9 @@ function SplitGroupInner() {
     tone === "owed" ? "#1D9E75" : tone === "owe" ? "#E24B4A" : "#9B9A94";
 
   return (
-    <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-24 sm:px-6">
-      <div className="mx-auto max-w-3xl">
-        <div className="rounded-3xl bg-[#534AB7] px-6 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
+    <main className="min-h-dvh overflow-x-hidden overscroll-y-contain bg-[#F7F7F4] px-4 py-8 pb-24 touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
+      <div className="mx-auto max-w-3xl min-w-0">
+        <div className="rounded-3xl bg-[#534AB7] px-4 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)] sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <BackHref
