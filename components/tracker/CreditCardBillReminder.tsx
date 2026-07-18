@@ -47,7 +47,8 @@ export default function CreditCardBillReminder({
       : " Pay these from this month’s salary so interest doesn’t pile up.";
 
   return (
-    <div
+    <section
+      aria-labelledby="cc-bill-reminder-title"
       style={{
         marginBottom: 16,
         borderRadius: 16,
@@ -66,6 +67,7 @@ export default function CreditCardBillReminder({
       >
         <div style={{ display: "flex", gap: 10, minWidth: 0 }}>
           <div
+            aria-hidden
             style={{
               width: 36,
               height: 36,
@@ -80,20 +82,22 @@ export default function CreditCardBillReminder({
             <AppIcon name="card" size={18} color="#FFFFFF" />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div
+            <h2
+              id="cc-bill-reminder-title"
               style={{
                 fontSize: 14,
                 fontWeight: 800,
                 color: "#111110",
+                margin: 0,
               }}
             >
               Pay last month’s credit card bills
-            </div>
+            </h2>
             <p
               style={{
                 margin: "4px 0 0",
-                fontSize: 12,
-                lineHeight: 1.45,
+                fontSize: 13,
+                lineHeight: 1.5,
                 color: "#5F5E5A",
               }}
             >
@@ -115,12 +119,17 @@ export default function CreditCardBillReminder({
           style={{
             border: "none",
             background: "transparent",
-            color: "#9B9A94",
-            fontSize: 18,
+            color: "#5F5E5A",
+            fontSize: 22,
             fontWeight: 700,
             cursor: "pointer",
             lineHeight: 1,
-            padding: 4,
+            minWidth: 44,
+            minHeight: 44,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
           }}
         >
           ×
@@ -171,15 +180,16 @@ export default function CreditCardBillReminder({
               {onPayBill ? (
                 <button
                   type="button"
+                  aria-label={`Pay ₹${Math.round(b.amount).toLocaleString("en-IN")} for ${b.label}`}
                   onClick={() => onPayBill(b.amount, b.label)}
                   style={{
-                    height: 32,
-                    padding: "0 10px",
-                    borderRadius: 8,
+                    minHeight: 44,
+                    padding: "0 14px",
+                    borderRadius: 10,
                     border: "none",
                     background: "#534AB7",
                     color: "white",
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 700,
                     cursor: "pointer",
                     whiteSpace: "nowrap",
@@ -192,6 +202,6 @@ export default function CreditCardBillReminder({
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }

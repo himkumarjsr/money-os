@@ -27,7 +27,7 @@ export default function BrandPageLoader({
         padding: 24,
       }}
     >
-      <div style={{ position: "relative", width: 56, height: 56 }}>
+      <div aria-hidden style={{ position: "relative", width: 56, height: 56 }}>
         <div
           style={{
             position: "absolute",
@@ -56,15 +56,16 @@ export default function BrandPageLoader({
           FK
         </div>
       </div>
-      <div
+      <p
         style={{
-          fontSize: 13,
+          margin: 0,
+          fontSize: 14,
           fontWeight: 600,
           color: "var(--color-muted, #6B6680)",
         }}
       >
         {label}
-      </div>
+      </p>
     </div>
   );
 

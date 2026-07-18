@@ -381,7 +381,7 @@ export function computeMonthSafetyPulse(input: {
       action =
         "Stay on plan: log big spends the day they happen so this pulse stays accurate.";
     } else if (status === "over" && current.remaining < 0) {
-      action = `Pause non-essential Wants/Habits until you’ve closed the ${formatInr(-current.remaining)} gap.`;
+      action = `Pause non-mandatory and habit expenses until you’ve closed the ${formatInr(-current.remaining)} gap.`;
     }
   }
 

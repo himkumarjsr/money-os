@@ -1,4 +1,7 @@
-import type { FinancialProfile, PremiumFrequency } from "@/lib/analyse-form-schema";
+import type {
+  FinancialProfile,
+  PremiumFrequency,
+} from "@/lib/analyse-form-schema";
 import { toMonthlyEquivalent } from "@/lib/analyse-form-schema";
 
 /** Form fields used before `normalizeAnalyseFormValues` runs */
@@ -84,7 +87,10 @@ function otherInsurancePremiumMonthly(data: BucketProfileInput): number {
   if (typeof data.otherInsurancePremiumMonthly === "number") {
     return n(data.otherInsurancePremiumMonthly);
   }
-  if (data.hasOtherInsurance && (data.otherInsurancePremiums?.length ?? 0) > 0) {
+  if (
+    data.hasOtherInsurance &&
+    (data.otherInsurancePremiums?.length ?? 0) > 0
+  ) {
     return (data.otherInsurancePremiums ?? []).reduce(
       (total, row) =>
         total +
@@ -172,9 +178,13 @@ export function getUniversalBucketStatus(
 export function getUniversalBucketActuals(data: BucketProfileInput) {
   const kids = data.lifeStage === "kids";
   const foodActual =
-    n(data.foodTotal) > 0 ? n(data.foodTotal) : n(data.vegetables) + n(data.grocery) + n(data.medicine);
+    n(data.foodTotal) > 0
+      ? n(data.foodTotal)
+      : n(data.vegetables) + n(data.grocery) + n(data.medicine);
   const transportActual =
-    n(data.transportTotal) > 0 ? n(data.transportTotal) : n(data.fuel) + n(data.cabMetro);
+    n(data.transportTotal) > 0
+      ? n(data.transportTotal)
+      : n(data.fuel) + n(data.cabMetro);
   const utilityActual =
     n(data.utilityTotal) > 0
       ? n(data.utilityTotal)
@@ -200,12 +210,9 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     needsActual += n(data.parentsSupport);
   }
 
-  needsActual +=
-    (kids ? n(data.kidsActivities) : 0) +
-    domesticActual;
+  needsActual += (kids ? n(data.kidsActivities) : 0) + domesticActual;
 
-  const wantsActual =
-    lifestyleActual;
+  const wantsActual = lifestyleActual;
 
   // Security = insurance premiums only (health + term + motor + other policies).
   // NOT EPF/PF/NPS or SSY — those belong in the investment bucket as monthly contributions.
@@ -222,8 +229,12 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
         .filter((row) => n(row.monthlyAmount) > 0)
         .map((row) => {
           const key = [
-            String((row as any)?.type || "other").toLowerCase().trim(),
-            String((row as any)?.lenderName || "").toLowerCase().trim(),
+            String((row as any)?.type || "other")
+              .toLowerCase()
+              .trim(),
+            String((row as any)?.lenderName || "")
+              .toLowerCase()
+              .trim(),
             Math.round(n((row as any)?.monthlyAmount)),
           ].join("|");
           return [key, row] as const;
@@ -261,13 +272,15 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
   };
 }
 
-export function getUniversalBucketRows(data: BucketProfileInput): UniversalBucketRow[] {
+export function getUniversalBucketRows(
+  data: BucketProfileInput,
+): UniversalBucketRow[] {
   const totalMonthlyIncome = totalIncome(data);
   const actuals = getUniversalBucketActuals(data);
   const caps = getUniversalCaps(data);
   const defs: Array<{ key: UniversalBucketKey; label: string }> = [
-    { key: "needs", label: "Needs" },
-    { key: "wants", label: "Wants" },
+    { key: "needs", label: "Needs / mandatory expenses" },
+    { key: "wants", label: "Wants / non-mandatory expenses" },
     { key: "security", label: "Insurance (monthly)" },
     { key: "loans", label: "Loans" },
     { key: "investment", label: "Investment" },
@@ -286,17 +299,15 @@ export function getUniversalBucketRows(data: BucketProfileInput): UniversalBucke
           ? "30%"
           : key === "wants"
             ? "5%"
-          : key === "security"
-            ? "5%"
-          : key === "loans"
-            ? "40%"
-          : key === "investment"
-            ? "20%"
-            : `${Math.round(capPercent * 100)}%`,
+            : key === "security"
+              ? "5%"
+              : key === "loans"
+                ? "40%"
+                : key === "investment"
+                  ? "20%"
+                  : `${Math.round(capPercent * 100)}%`,
       capHelper:
-        key === "loans"
-          ? "(includes home EMI obligations)"
-          : undefined,
+        key === "loans" ? "(includes home EMI obligations)" : undefined,
       capAmount,
       actual,
       status: getUniversalBucketStatus(actual, capAmount),

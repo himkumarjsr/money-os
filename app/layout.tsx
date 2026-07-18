@@ -9,6 +9,7 @@ import { MotionLazyProvider } from "@/components/MotionLazyProvider";
 import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
+import { SplitInviteResume } from "@/components/SplitInviteResume";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import FeedbackPopupManager from "@/components/FeedbackPopupManager";
 import MorningTipPopup from "@/components/MorningTipPopup";
@@ -347,6 +348,7 @@ export default function RootLayout({
             <ScrollToTopOnRouteChange />
             <RouteChangeLoader />
             <AuthSessionSync />
+            <SplitInviteResume />
             <FinancialStoreAuthSync />
             <GlobalNavbar />
             <RenewalReminderBanner />

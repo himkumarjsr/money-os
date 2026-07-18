@@ -2,7 +2,7 @@
 
 import { AppIcon } from "@/components/ui/AppIcon";
 import { resolveAuthenticated } from "@/lib/authSession";
-import { resolvePostLoginPath } from "@/lib/splitAuthRedirect";
+import { peekPostLoginPath, sanitizeAppPath } from "@/lib/splitAuthRedirect";
 import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -12,16 +12,9 @@ import { Suspense, useEffect, useRef, useState } from "react";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectFromUrl = (() => {
-    const next = searchParams?.get("next") || searchParams?.get("redirect");
-    if (!next) return null;
-    try {
-      const decoded = decodeURIComponent(next);
-      return decoded.startsWith("/") ? decoded : null;
-    } catch {
-      return null;
-    }
-  })();
+  const redirectFromUrl = sanitizeAppPath(
+    searchParams?.get("next") || searchParams?.get("redirect"),
+  );
 
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
@@ -47,8 +40,8 @@ function LoginContent() {
   useEffect(() => {
     if (!hasInitialized) return;
 
-    const destination =
-      redirectFromUrl ?? resolvePostLoginPath(window.location.search);
+    // Peek only — never clear invite localStorage until join succeeds.
+    const destination = peekPostLoginPath(window.location.search);
 
     if (isLoggedIn) {
       if (redirectedAway.current) return;
@@ -145,12 +138,13 @@ function LoginContent() {
         return;
       }
 
+      const postSignupNext = peekPostLoginPath(window.location.search);
       const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           data: { name: name.trim() },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(postSignupNext)}`,
         },
       });
 
@@ -197,7 +191,7 @@ function LoginContent() {
         }
       }
 
-      router.push(resolvePostLoginPath(window.location.search));
+      router.push(peekPostLoginPath(window.location.search));
       return;
     }
 
@@ -219,14 +213,13 @@ function LoginContent() {
 
     if (data.user) {
       await initAuth();
-      router.push(resolvePostLoginPath(window.location.search));
+      router.push(peekPostLoginPath(window.location.search));
     }
   };
 
   const handleGoogleLogin = async () => {
     const supabase = getSupabase();
-    const safeNext =
-      redirectFromUrl ?? resolvePostLoginPath(window.location.search);
+    const safeNext = peekPostLoginPath(window.location.search);
     const { error: oauthErr } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

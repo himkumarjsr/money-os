@@ -47,7 +47,7 @@ function SplitHomeInner() {
   useEffect(() => {
     if (!isLoggedIn || !userId || !email) return;
 
-    void fetchGroups(userId, email, false);
+    void fetchGroups(userId, email, true);
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleRefresh = () => {
@@ -94,7 +94,7 @@ function SplitHomeInner() {
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "split_group_members",
           filter: `user_id=eq.${userId}`,

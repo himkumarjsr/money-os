@@ -3,6 +3,7 @@ import {
   computeNetBalances,
   simplifyDebts,
   computeGroupBalances,
+  netFor,
   type BalanceExpense,
   type BalanceMember,
 } from "./splitBalances";
@@ -159,5 +160,51 @@ describe("simplifyDebts", () => {
     const b = net.find((n) => n.email.toLowerCase() === "b@x.com");
     expect(a?.net).toBe(50);
     expect(b?.net).toBe(-50);
+  });
+
+  it("falls back to email local-part when display name is blank", () => {
+    const net = computeNetBalances(
+      [{ email: "ghost@x.com", display_name: "  " }],
+      [
+        {
+          amount: 40,
+          paid_by_email: "ghost@x.com",
+          paid_by_name: "  ",
+          shares: [
+            {
+              email: "guest@x.com",
+              display_name: null,
+              share_amount: 40,
+            },
+          ],
+        },
+      ],
+    );
+    expect(net.find((n) => n.email === "ghost@x.com")?.name).toBe("ghost");
+    expect(net.find((n) => n.email === "guest@x.com")?.name).toBe("guest");
+  });
+
+  it("ignores blank emails and zero-amount expenses", () => {
+    const net = computeNetBalances(members, [
+      {
+        amount: 0,
+        paid_by_email: "a@x.com",
+        shares: [{ email: "b@x.com", share_amount: 0 }],
+      },
+      {
+        amount: 50,
+        paid_by_email: "  ",
+        shares: [{ email: "", share_amount: 50 }],
+      },
+    ]);
+    expect(net.every((n) => n.net === 0)).toBe(true);
+  });
+});
+
+describe("netFor", () => {
+  it("looks up net balance by email case-insensitively", () => {
+    const net = computeNetBalances(members, [equalExpense(300, "a@x.com")]);
+    expect(netFor("A@x.com", net)).toBe(200);
+    expect(netFor("missing@x.com", net)).toBe(0);
   });
 });

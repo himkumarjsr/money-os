@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolveAuthenticated } from "@/lib/authSession";
 import {
+  clearSplitInviteRedirect,
   saveSplitInviteRedirect,
   saveSplitInviteToken,
 } from "@/lib/splitAuthRedirect";
@@ -13,14 +14,48 @@ import { AppIcon } from "@/components/ui/AppIcon";
 
 type JoinStatus = "loading" | "success" | "error";
 
+async function joinWithRetry(token: string, attempts = 3) {
+  let lastError = "Could not join group";
+  for (let i = 0; i < attempts; i++) {
+    const response = await fetch("/api/split/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ token }),
+    });
+    const result = (await response.json()) as {
+      success?: boolean;
+      groupId?: string;
+      groupName?: string;
+      error?: string;
+    };
+
+    if (response.ok && result.success && result.groupId) {
+      return result;
+    }
+
+    lastError = result.error ?? lastError;
+    // Session cookie may lag right after OAuth — retry briefly.
+    if (response.status === 401 && i < attempts - 1) {
+      await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+      continue;
+    }
+    throw new Error(lastError);
+  }
+  throw new Error(lastError);
+}
+
 export default function JoinSplitGroupClient() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params?.get("token") ?? null;
-  const { user, isLoggedIn, hasInitialized } = useAuthStore();
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [status, setStatus] = useState<JoinStatus>("loading");
   const [message, setMessage] = useState("");
   const [groupName, setGroupName] = useState("");
+  const joinInFlight = useRef(false);
+  const joinedToken = useRef<string | null>(null);
 
   useEffect(() => {
     if (!hasInitialized) return;
@@ -29,6 +64,7 @@ export default function JoinSplitGroupClient() {
       setMessage("Invalid invite link");
       return;
     }
+    if (joinedToken.current === token || joinInFlight.current) return;
 
     const process = async () => {
       const authenticated = await resolveAuthenticated();
@@ -43,43 +79,35 @@ export default function JoinSplitGroupClient() {
         return;
       }
 
+      joinInFlight.current = true;
+      setStatus("loading");
+
       try {
-        const response = await fetch("/api/split/join", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ token }),
-        });
-        const result = (await response.json()) as {
-          success?: boolean;
-          groupId?: string;
-          groupName?: string;
-          error?: string;
-        };
-
-        if (!response.ok || !result.success || !result.groupId) {
-          setStatus("error");
-          setMessage(result.error ?? "Invite not found");
-          return;
-        }
-
-        const userEmail = (user?.email ?? "").toLowerCase();
+        const result = await joinWithRetry(token);
+        joinedToken.current = token;
         setGroupName(result.groupName ?? "group");
 
-        if (user?.id && userEmail) {
-          await useSplitStore.getState().fetchGroups(user.id, userEmail, true);
+        const authUser = useAuthStore.getState().user;
+        const userEmail = (authUser?.email ?? "").toLowerCase();
+        if (authUser?.id && userEmail) {
+          await useSplitStore
+            .getState()
+            .fetchGroups(authUser.id, userEmail, true);
         }
 
+        clearSplitInviteRedirect();
         setStatus("success");
-        setTimeout(() => router.replace(`/split/${result.groupId}`), 1500);
+        setTimeout(() => router.replace(`/split/${result.groupId}`), 1200);
       } catch (err: unknown) {
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Could not join group");
+      } finally {
+        joinInFlight.current = false;
       }
     };
 
     void process();
-  }, [hasInitialized, isLoggedIn, router, token, user]);
+  }, [hasInitialized, isLoggedIn, router, token]);
 
   return (
     <div className="min-h-dvh bg-[#F7F7F4] px-6 py-10">

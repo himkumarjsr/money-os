@@ -70,7 +70,8 @@ export const TRACKER_ICON_COLOR = "#534AB7";
 
 export const TRACKER_CATEGORIES = {
   needs: {
-    label: "Needs",
+    /** Essentials you must pay (rent, groceries, bills). Internal id stays `needs`. */
+    label: "Needs / mandatory expenses",
     color: "#534AB7",
     icon: "home" as const,
     cap: 30,
@@ -110,7 +111,8 @@ export const TRACKER_CATEGORIES = {
     ],
   },
   wants: {
-    label: "Wants",
+    /** Lifestyle / discretionary — can be cut first. Internal id stays `wants`. */
+    label: "Wants / non-mandatory expenses",
     color: "#6B63C9",
     icon: "party" as const,
     cap: 5,
@@ -152,7 +154,7 @@ export const TRACKER_CATEGORIES = {
     ],
   },
   habits: {
-    label: "Habits",
+    label: "Habit expenses",
     color: "#7A72D4",
     icon: "alert" as const,
     cap: 0,
