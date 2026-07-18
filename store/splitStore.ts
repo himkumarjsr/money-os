@@ -128,13 +128,15 @@ type SplitStore = {
   inviteMember: (input: {
     groupId: string;
     groupName: string;
-    invitedEmail: string;
-    invitedByName: string;
-    invitedById: string;
+    invitedEmail?: string;
+    invitedByName?: string;
+    invitedById?: string;
+    linkOnly?: boolean;
   }) => Promise<{
     inviteUrl?: string;
     emailSent?: boolean;
     emailError?: string;
+    linkOnly?: boolean;
     error?: string;
   }>;
   addExpense: (input: AddExpenseInput) => Promise<{ error?: string }>;
@@ -341,13 +343,19 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(input),
+        body: JSON.stringify({
+          groupId: input.groupId,
+          groupName: input.groupName,
+          invitedEmail: input.invitedEmail,
+          linkOnly: input.linkOnly === true || !input.invitedEmail,
+        }),
       });
       const json = (await res.json()) as {
         success?: boolean;
         inviteUrl?: string;
         emailSent?: boolean;
         emailError?: string;
+        linkOnly?: boolean;
         error?: string;
       };
       if (!res.ok) return { error: json.error ?? "Invite failed" };
@@ -355,6 +363,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         inviteUrl: json.inviteUrl,
         emailSent: json.emailSent,
         emailError: json.emailError,
+        linkOnly: json.linkOnly,
       };
     } catch (err) {
       console.error("inviteMember error:", err);

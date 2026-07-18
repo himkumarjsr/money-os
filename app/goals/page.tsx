@@ -1,8 +1,9 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
-import { AppIcon } from "@/components/ui/AppIcon";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import { AppIcon } from "@/components/ui/AppIcon";
+import BackLink from "@/components/ui/BackLink";
 import { ButtonLink } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -50,8 +51,9 @@ const goals = [
 export default function GoalsPage() {
   return (
     <ProtectedGate>
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <main className="mx-auto max-w-5xl px-4 py-10 pb-28 sm:px-6 md:pb-10">
+        <BackLink fallbackHref="/profile" label="Back" />
+        <div className="mb-8 mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-[#111110]">My Goals</h1>
             <p className="mt-2 max-w-xl text-sm text-[#5F5E5A]">

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import InviteLinkShare from "@/components/split/InviteLinkShare";
+import { AppIcon } from "@/components/ui/AppIcon";
+import BackLink from "@/components/ui/BackLink";
 import { Analytics } from "@/lib/analytics";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
-import { AppIcon } from "@/components/ui/AppIcon";
 
 export default function SplitHomePage() {
   return (
@@ -34,10 +36,11 @@ function SplitHomeInner() {
   const inviteMember = useSplitStore((s) => s.inviteMember);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [createStep, setCreateStep] = useState<"details" | "invite">("details");
   const [gName, setGName] = useState("");
   const [gEmoji, setGEmoji] = useState("");
-  const [gType, setGType] = useState("general");
-  const [inviteEmailOnCreate, setInviteEmailOnCreate] = useState("");
+  const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -99,15 +102,27 @@ function SplitHomeInner() {
     };
   }, [groups.length]);
 
+  const resetCreateModal = () => {
+    setCreateOpen(false);
+    setCreateStep("details");
+    setCreateError("");
+    setGName("");
+    setGEmoji("");
+    setCreatedGroupId(null);
+    setInviteLink("");
+  };
+
   const openCreateModal = () => {
     setCreateError("");
-    setInviteEmailOnCreate("");
+    setCreateStep("details");
+    setCreatedGroupId(null);
+    setInviteLink("");
     setCreateOpen(true);
   };
 
   const handleCreate = async () => {
     if (!gName.trim() || !email || !user?.id) {
-      setCreateError("Please enter a group name.");
+      setCreateError("Please enter a name.");
       return;
     }
     setBusy(true);
@@ -115,44 +130,45 @@ function SplitHomeInner() {
     const { groupId, error } = await createGroup({
       name: gName.trim(),
       emoji: gEmoji.trim(),
-      type: gType,
+      type: "general",
       userId: user.id,
       userEmail: email,
       userName: name,
     });
-    setBusy(false);
-    if (error) {
-      setCreateError(error);
+    if (error || !groupId) {
+      setBusy(false);
+      setCreateError(error ?? "Could not create. Please try again.");
       return;
     }
-    if (groupId) {
-      Analytics.splitGroupCreated();
-      const inviteEmail = inviteEmailOnCreate.trim().toLowerCase();
-      if (inviteEmail && inviteEmail !== email) {
-        const inviteRes = await inviteMember({
-          groupId,
-          groupName: gName.trim(),
-          invitedEmail: inviteEmail,
-          invitedByName: name,
-          invitedById: user.id,
-        });
-        if (inviteRes.error) {
-          window.alert(
-            `Group created, but invite email failed: ${inviteRes.error}`,
-          );
-        } else if (!inviteRes.emailSent) {
-          window.alert(
-            "Group created. Invite link was created but email was not sent. Open the group and invite manually.",
-          );
-        }
-      }
-      setCreateOpen(false);
-      setGName("");
-      setInviteEmailOnCreate("");
-      router.push(`/split/${groupId}`);
-    } else {
-      setCreateError("Could not create group. Please try again.");
+
+    Analytics.splitGroupCreated();
+    setCreatedGroupId(groupId);
+
+    const inviteRes = await inviteMember({
+      groupId,
+      groupName: gName.trim(),
+      linkOnly: true,
+    });
+    setBusy(false);
+
+    if (inviteRes.inviteUrl) {
+      setInviteLink(inviteRes.inviteUrl);
+      setCreateStep("invite");
+      return;
     }
+
+    setCreateError(
+      inviteRes.error
+        ? `Created, but invite link failed: ${inviteRes.error}`
+        : "Created, but invite link could not be generated.",
+    );
+    setCreateStep("invite");
+  };
+
+  const finishCreate = () => {
+    const id = createdGroupId;
+    resetCreateModal();
+    if (id) router.push(`/split/${id}`);
   };
 
   const handleDeleteGroup = async (groupId: string, groupName: string) => {
@@ -172,6 +188,9 @@ function SplitHomeInner() {
   return (
     <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[90px] sm:px-6">
       <div className="mx-auto max-w-3xl">
+        <div className="mb-4">
+          <BackLink fallbackHref="/" label="Back" />
+        </div>
         <div className="rounded-3xl bg-[#534AB7] px-6 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -271,9 +290,7 @@ function SplitHomeInner() {
                     <div className="truncate text-base font-bold text-[#111110]">
                       {g.name}
                     </div>
-                    <div className="mt-0.5 text-xs text-[#9B9A94]">
-                      {(g.group_type || "general").toUpperCase()} · INR
-                    </div>
+                    <div className="mt-0.5 text-xs text-[#9B9A94]">INR</div>
                   </div>
                 </button>
 
@@ -303,7 +320,10 @@ function SplitHomeInner() {
       {createOpen ? (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40"
-          onClick={() => setCreateOpen(false)}
+          onClick={() => {
+            if (createStep === "invite") finishCreate();
+            else resetCreateModal();
+          }}
           role="presentation"
         >
           <div
@@ -319,15 +339,20 @@ function SplitHomeInner() {
                   id="create-group-title"
                   className="text-base font-extrabold text-[#111110]"
                 >
-                  Create a group
+                  {createStep === "invite" ? "Invite friends" : "Create"}
                 </div>
                 <div className="mt-1 text-xs text-[#9B9A94]">
-                  You’ll be added as admin.
+                  {createStep === "invite"
+                    ? "Share this link on WhatsApp or copy it."
+                    : "You’ll be added as admin."}
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setCreateOpen(false)}
+                onClick={() => {
+                  if (createStep === "invite") finishCreate();
+                  else resetCreateModal();
+                }}
                 className="rounded-xl bg-[#F7F7F4] px-3 py-2 text-sm font-bold text-[#534AB7]"
                 aria-label="Close"
               >
@@ -335,19 +360,19 @@ function SplitHomeInner() {
               </button>
             </div>
 
-            <div className="mt-5 space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-[#5F5E5A]">
-                  Group name
-                </label>
-                <input
-                  value={gName}
-                  onChange={(e) => setGName(e.target.value)}
-                  placeholder="Test Trip"
-                  className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            {createStep === "details" ? (
+              <div className="mt-5 space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-[#5F5E5A]">
+                    Name
+                  </label>
+                  <input
+                    value={gName}
+                    onChange={(e) => setGName(e.target.value)}
+                    placeholder="Goa trip / Flat expenses"
+                    className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
+                  />
+                </div>
                 <div>
                   <label className="text-xs font-semibold text-[#5F5E5A]">
                     Icon (optional)
@@ -355,56 +380,51 @@ function SplitHomeInner() {
                   <input
                     value={gEmoji}
                     onChange={(e) => setGEmoji(e.target.value)}
-                    placeholder="Optional"
+                    placeholder="Optional emoji"
                     className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-[#5F5E5A]">
-                    Type
-                  </label>
-                  <select
-                    value={gType}
-                    onChange={(e) => setGType(e.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] bg-white px-3 text-base outline-none focus:border-[#534AB7]"
-                  >
-                    <option value="general">General</option>
-                    <option value="trip">Trip</option>
-                    <option value="flat">Flat</option>
-                    <option value="office">Office</option>
-                    <option value="event">Event</option>
-                  </select>
-                </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-semibold text-[#5F5E5A]">
-                  Invite email (optional)
-                </label>
-                <input
-                  type="email"
-                  value={inviteEmailOnCreate}
-                  onChange={(e) => setInviteEmailOnCreate(e.target.value)}
-                  placeholder="friend@example.com"
-                  className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
-                />
-              </div>
+                {createError ? (
+                  <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                    {createError}
+                  </p>
+                ) : null}
 
-              {createError ? (
-                <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                  {createError}
+                <button
+                  type="button"
+                  disabled={busy || !gName.trim()}
+                  onClick={() => void handleCreate()}
+                  className="mt-2 min-h-[44px] w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50"
+                >
+                  {busy ? "Creating…" : "Create & get invite link"}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                <p className="text-sm font-semibold text-[#111110]">
+                  “{gName.trim()}” is ready
                 </p>
-              ) : null}
-
-              <button
-                type="button"
-                disabled={busy || !gName.trim()}
-                onClick={() => void handleCreate()}
-                className="mt-2 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50 min-h-[44px]"
-              >
-                {busy ? "Creating…" : "Create group"}
-              </button>
-            </div>
+                {inviteLink ? (
+                  <InviteLinkShare
+                    inviteUrl={inviteLink}
+                    groupName={gName.trim() || "Split"}
+                  />
+                ) : (
+                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    {createError ||
+                      "Invite link unavailable. Open the split and tap Invite."}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={finishCreate}
+                  className="min-h-[44px] w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white"
+                >
+                  Continue
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : null}

@@ -2,6 +2,7 @@
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BackLink from "@/components/ui/BackLink";
 import { ButtonLink } from "@/components/ui/button";
 import { formatIndian } from "@/lib/formatters";
 import { useFinancialStore } from "@/store/financialStore";
@@ -31,8 +32,11 @@ export default function InvestmentsPage() {
 
   return (
     <ProtectedGate>
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <h1 className="text-3xl font-bold text-[#111110]">My Investments</h1>
+      <main className="mx-auto max-w-3xl px-4 py-10 pb-28 sm:px-6 md:pb-10">
+        <BackLink fallbackHref="/profile" label="Back" />
+        <h1 className="mt-3 text-3xl font-bold text-[#111110]">
+          My Investments
+        </h1>
         <p className="mt-2 text-sm text-[#5F5E5A]">
           Snapshot from your last financial analysis submission.
         </p>

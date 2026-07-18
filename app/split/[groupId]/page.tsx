@@ -1,17 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
-import { getSupabase } from "@/lib/supabase";
-import { Analytics } from "@/lib/analytics";
-import { formatIndian } from "@/lib/formatters";
-import { useAuthStore } from "@/store/authStore";
-import { getMyNetBalance, useSplitStore } from "@/store/splitStore";
+import InviteLinkShare from "@/components/split/InviteLinkShare";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { BackHref } from "@/components/ui/BackLink";
+import { Analytics } from "@/lib/analytics";
+import { formatIndian } from "@/lib/formatters";
+import { getSupabase } from "@/lib/supabase";
 import type { TrackerIconName } from "@/lib/tracker-categories";
+import { useAuthStore } from "@/store/authStore";
+import { getMyNetBalance, useSplitStore } from "@/store/splitStore";
 
 const SPLIT_CATEGORY_ICON: Record<string, TrackerIconName> = {
   food: "utensils",
@@ -143,19 +144,34 @@ function SplitGroupInner() {
     setInviteLink("");
     setInviteMsg("");
     setInviteOpen(true);
+    if (!groupId || !group?.name) return;
+    setInviteBusy(true);
+    void inviteMember({
+      groupId,
+      groupName: group.name,
+      linkOnly: true,
+    }).then((res) => {
+      setInviteBusy(false);
+      if (res.error) {
+        setInviteMsg(res.error);
+        return;
+      }
+      if (res.inviteUrl) {
+        setInviteLink(res.inviteUrl);
+        Analytics.splitInviteSent();
+      }
+    });
   };
 
   const handleSendInvite = async () => {
-    const actorId = user?.id ?? userId;
     const email = inviteEmail.trim();
-    if (!groupId || !group?.name || !actorId) return;
+    if (!groupId || !group?.name) return;
     if (!email) {
       setInviteMsg("Enter an email address.");
       return;
     }
 
     setInviteBusy(true);
-    setInviteLink("");
     setInviteMsg("");
 
     const res = await inviteMember({
@@ -163,7 +179,7 @@ function SplitGroupInner() {
       groupName: group.name,
       invitedEmail: email,
       invitedByName: user?.name || user?.email?.split("@")[0] || "Finkoin user",
-      invitedById: actorId,
+      invitedById: user?.id ?? userId ?? undefined,
     });
     setInviteBusy(false);
 
@@ -176,13 +192,12 @@ function SplitGroupInner() {
       Analytics.splitInviteSent();
       setInviteMsg(`Invite sent to ${email} ✓`);
       setInviteEmail("");
-      setInviteLink("");
     } else if (res.inviteUrl) {
       setInviteLink(res.inviteUrl);
       setInviteMsg(
         res.emailError
-          ? `${res.emailError} Share this link manually:`
-          : "Email not configured. Share this link manually:",
+          ? `${res.emailError} Share the link below instead:`
+          : "Email not sent — share the link below:",
       );
     } else {
       setInviteMsg("Invite created.");
@@ -285,12 +300,11 @@ function SplitGroupInner() {
         <div className="rounded-3xl bg-[#534AB7] px-6 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <Link
+              <BackHref
                 href="/split"
-                className="text-xs font-bold text-white/80 hover:text-white"
-              >
-                ← Back
-              </Link>
+                label="Back"
+                className="text-white [&_span:first-child]:bg-white/15 [&_span:last-child]:text-white/90"
+              />
               <div className="mt-3 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-xl ring-1 ring-white/20">
                   {group?.emoji ? (
@@ -580,10 +594,10 @@ function SplitGroupInner() {
                   id="invite-member-title"
                   className="text-base font-extrabold text-[#111110]"
                 >
-                  Invite member
+                  Invite friends
                 </div>
                 <div className="mt-1 text-xs text-[#9B9A94]">
-                  They can join via email or invite link.
+                  Share a link, or email someone directly.
                 </div>
               </div>
               <button
@@ -596,80 +610,48 @@ function SplitGroupInner() {
               </button>
             </div>
 
-            <div className="mt-5">
-              <label className="text-xs font-semibold text-[#5F5E5A]">
-                Email
-              </label>
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="friend@example.com"
-                className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
-              />
-            </div>
+            <div className="mt-5 space-y-4">
+              {inviteBusy && !inviteLink ? (
+                <p className="text-sm text-[#9B9A94]">
+                  Generating invite link…
+                </p>
+              ) : null}
 
-            {inviteMsg ? (
-              <p className="mt-3 text-sm font-medium text-[#5F5E5A]">
-                {inviteMsg}
-              </p>
-            ) : null}
+              {inviteLink ? (
+                <InviteLinkShare
+                  inviteUrl={inviteLink}
+                  groupName={group?.name ?? "Split"}
+                />
+              ) : null}
 
-            {inviteLink ? (
-              <div
-                style={{
-                  background: "#F7F7F4",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  marginTop: 10,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    fontSize: 11,
-                    color: "#534AB7",
-                    wordBreak: "break-all",
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {inviteLink}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(inviteLink);
-                    setInviteMsg("Link copied!");
-                    setInviteLink("");
-                  }}
-                  style={{
-                    background: "#534AB7",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "6px 12px",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                  }}
-                >
-                  Copy
-                </button>
+              <div>
+                <label className="text-xs font-semibold text-[#5F5E5A]">
+                  Or invite by email
+                </label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="friend@example.com"
+                  className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
+                />
               </div>
-            ) : null}
 
-            <button
-              type="button"
-              disabled={inviteBusy || !inviteEmail.trim()}
-              onClick={() => void handleSendInvite()}
-              className="mt-5 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50 min-h-[44px]"
-            >
-              {inviteBusy ? "Sending…" : "Send invite"}
-            </button>
+              {inviteMsg ? (
+                <p className="text-sm font-medium text-[#5F5E5A]">
+                  {inviteMsg}
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                disabled={inviteBusy || !inviteEmail.trim()}
+                onClick={() => void handleSendInvite()}
+                className="min-h-[44px] w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50"
+              >
+                {inviteBusy ? "Sending…" : "Send email invite"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

@@ -8,7 +8,11 @@ import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
 import type { FinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { useAuthStore } from "@/store/authStore";
 import { create } from "zustand";
-import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+import {
+  createJSONStorage,
+  persist,
+  type StateStorage,
+} from "zustand/middleware";
 
 const FINANCIAL_PERSIST_NAME = "finkoin-financial";
 
@@ -71,7 +75,10 @@ type FinancialState = {
   hydrateFromSnapshot: (
     profile: FinancialProfile,
     result: AnalysisResult,
-    options?: { aiPlan?: FinkoinAIPlan | null; analysisPatch?: Partial<AnalyseFormValues> },
+    options?: {
+      aiPlan?: FinkoinAIPlan | null;
+      analysisPatch?: Partial<AnalyseFormValues>;
+    },
   ) => void;
   runAnalysis: () => void;
   clearSubmission: () => void;
@@ -93,13 +100,30 @@ export const useFinancialStore = create<FinancialState>()(
       hasHydrated: false,
       setAnalysis: (patch) =>
         set((state) => ({
-          analysis: { ...analyseDefaultValues, ...(state.analysis ?? {}), ...patch },
-          profile: { ...analyseDefaultValues, ...(state.profile ?? {}), ...patch },
+          analysis: {
+            ...analyseDefaultValues,
+            ...(state.analysis ?? {}),
+            ...patch,
+          },
+          profile: {
+            ...analyseDefaultValues,
+            ...(state.profile ?? {}),
+            ...patch,
+          },
         })),
       setFullAnalysis: (data) => {
         try {
           const result = analyseFinances(data);
-          set({ lastSubmission: data, result });
+          const form = {
+            ...analyseDefaultValues,
+            ...financialProfileToFormValues(data),
+          };
+          set({
+            lastSubmission: data,
+            result,
+            profile: form,
+            analysis: form,
+          });
           if (process.env.NODE_ENV === "development") {
             console.log("[financialStore] setFullAnalysis OK", {
               hasResult: !!result,
@@ -108,19 +132,37 @@ export const useFinancialStore = create<FinancialState>()(
           }
         } catch (e) {
           console.error("[financialStore] setFullAnalysis failed:", e);
-          set({ lastSubmission: data, result: null });
+          const form = {
+            ...analyseDefaultValues,
+            ...financialProfileToFormValues(data),
+          };
+          set({
+            lastSubmission: data,
+            result: null,
+            profile: form,
+            analysis: form,
+          });
         }
       },
       updateProfile: (patch) =>
         set((state) => ({
-          profile: { ...analyseDefaultValues, ...(state.profile ?? {}), ...patch },
-          analysis: { ...analyseDefaultValues, ...(state.analysis ?? {}), ...patch },
+          profile: {
+            ...analyseDefaultValues,
+            ...(state.profile ?? {}),
+            ...patch,
+          },
+          analysis: {
+            ...analyseDefaultValues,
+            ...(state.analysis ?? {}),
+            ...patch,
+          },
         })),
       setResult: (result) => set({ result }),
       setAiPlan: (plan) => set({ aiPlan: plan }),
       setCurrentStep: (value) =>
         set((state) => {
-          const next = typeof value === "function" ? value(state.currentStep) : value;
+          const next =
+            typeof value === "function" ? value(state.currentStep) : value;
           return { currentStep: Math.max(0, Math.min(MAX_ANALYSE_STEP, next)) };
         }),
       hydrateFromSnapshot: (profile, result, options) => {
@@ -161,7 +203,8 @@ export const useFinancialStore = create<FinancialState>()(
           console.error("[financialStore] runAnalysis error:", e);
         }
       },
-      clearSubmission: () => set({ lastSubmission: null, result: null, aiPlan: null }),
+      clearSubmission: () =>
+        set({ lastSubmission: null, result: null, aiPlan: null }),
       resetAll: () =>
         set({
           lastSubmission: null,

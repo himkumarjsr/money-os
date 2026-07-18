@@ -59,6 +59,8 @@ export default function PrivateAmount({
   gap = 6,
   label = "amount",
   align = "center",
+  /** Use on purple/dark surfaces so the eye button stays visible. */
+  tone = "light",
 }: {
   /** The numeric value used to decide whether there's data to protect. */
   value: number;
@@ -72,6 +74,7 @@ export default function PrivateAmount({
   gap?: number;
   label?: string;
   align?: CSSProperties["alignItems"];
+  tone?: "light" | "dark";
 }) {
   const [visible, setVisible] = useState(false);
   const hasData = Number.isFinite(value) && Math.abs(value) > 0;
@@ -83,6 +86,9 @@ export default function PrivateAmount({
       </span>
     );
   }
+
+  const onDark = tone === "dark";
+  const resolvedEyeColor = onDark ? "#FFFFFF" : eyeColor;
 
   return (
     <span
@@ -106,23 +112,23 @@ export default function PrivateAmount({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          e.preventDefault();
           setVisible((v) => !v);
         }}
         aria-label={visible ? `Hide ${label}` : `Show ${label}`}
         title={visible ? "Hide" : "Show"}
+        className="inline-flex shrink-0 items-center justify-center rounded-lg p-0"
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
           width: eyeSize + 14,
           height: eyeSize + 14,
           borderRadius: 8,
-          border: "1px solid #E8E6F0",
-          background: "#F9F9FC",
-          color: eyeColor,
+          border: onDark
+            ? "1.5px solid rgba(255,255,255,0.55)"
+            : "1px solid #E8E6F0",
+          background: onDark ? "rgba(255,255,255,0.22)" : "#F9F9FC",
+          color: resolvedEyeColor,
           cursor: "pointer",
-          padding: 0,
-          flexShrink: 0,
+          boxShadow: onDark ? "0 1px 2px rgba(0,0,0,0.15)" : undefined,
         }}
       >
         <EyeGlyph open={visible} size={eyeSize} />

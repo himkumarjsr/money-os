@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPublicSiteUrl } from "@/lib/siteUrl";
-import { getSupabaseAdmin } from "@/lib/supabaseServer";
 import {
   getAuthedUser,
   rateLimit,
   tooManyRequests,
   unauthorized,
 } from "@/lib/apiGuard";
+import { getPublicSiteUrl } from "@/lib/siteUrl";
+import { isOpenSplitInvite, OPEN_SPLIT_INVITE_EMAIL } from "@/lib/splitInvite";
+import { getSupabaseAdmin } from "@/lib/supabaseServer";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -17,25 +18,36 @@ export async function POST(req: NextRequest) {
       return unauthorized();
     }
 
-    const { groupId, groupName, invitedEmail } = (await req.json()) as {
-      groupId?: string;
-      groupName?: string;
-      invitedEmail?: string;
-    };
+    const { groupId, groupName, invitedEmail, linkOnly } =
+      (await req.json()) as {
+        groupId?: string;
+        groupName?: string;
+        invitedEmail?: string;
+        /** When true (or email omitted), create a reusable shareable invite link. */
+        linkOnly?: boolean;
+      };
 
-    if (!groupId || !invitedEmail) {
+    if (!groupId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
       );
     }
 
-    const email = invitedEmail.toLowerCase().trim();
-    if (!EMAIL_RE.test(email)) {
-      return NextResponse.json(
-        { error: "Enter a valid email address" },
-        { status: 400 },
-      );
+    const wantsLinkOnly =
+      linkOnly === true || !invitedEmail || !String(invitedEmail).trim();
+
+    let email = "";
+    if (!wantsLinkOnly) {
+      email = invitedEmail!.toLowerCase().trim();
+      if (!EMAIL_RE.test(email)) {
+        return NextResponse.json(
+          { error: "Enter a valid email address" },
+          { status: 400 },
+        );
+      }
+    } else {
+      email = OPEN_SPLIT_INVITE_EMAIL;
     }
 
     const limit = rateLimit(`split-invite:${user.id}`, 30, 60 * 60 * 1000);
@@ -69,7 +81,43 @@ export async function POST(req: NextRequest) {
       user.user_metadata?.name ||
       actorEmail.split("@")[0] ||
       "Finkoin user";
-    const safeGroupName = groupName?.trim() || "Finkoin Split group";
+    const safeGroupName = groupName?.trim() || "Finkoin Split";
+
+    // Reuse / refresh an existing open invite link when possible.
+    if (isOpenSplitInvite(email)) {
+      const { data: existing } = await supabaseAdmin
+        .from("split_invitations")
+        .select("id, token, expires_at")
+        .eq("group_id", groupId)
+        .eq("invited_email", OPEN_SPLIT_INVITE_EMAIL)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing?.token) {
+        const siteUrl = getPublicSiteUrl();
+        const expired =
+          existing.expires_at && new Date(existing.expires_at) <= new Date();
+        if (expired && existing.id) {
+          const nextExpiry = new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+          await supabaseAdmin
+            .from("split_invitations")
+            .update({ expires_at: nextExpiry })
+            .eq("id", existing.id);
+        }
+        return NextResponse.json({
+          success: true,
+          inviteUrl: `${siteUrl}/split/join?token=${existing.token}`,
+          token: existing.token,
+          emailSent: false,
+          emailError: null,
+          linkOnly: true,
+        });
+      }
+    }
 
     const { data: invite, error } = await supabaseAdmin
       .from("split_invitations")
@@ -89,20 +137,34 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
 
-    await supabaseAdmin.from("split_group_members").upsert(
-      {
-        group_id: groupId,
-        email,
-        display_name: email.split("@")[0] || "Member",
-        status: "pending",
-        invited_by: invitedById,
-        role: "member",
-      },
-      { onConflict: "group_id,email" },
-    );
+    // Email invites reserve a pending seat; open links add members on join.
+    if (!isOpenSplitInvite(email)) {
+      await supabaseAdmin.from("split_group_members").upsert(
+        {
+          group_id: groupId,
+          email,
+          display_name: email.split("@")[0] || "Member",
+          status: "pending",
+          invited_by: invitedById,
+          role: "member",
+        },
+        { onConflict: "group_id,email" },
+      );
+    }
 
     const siteUrl = getPublicSiteUrl();
     const inviteUrl = `${siteUrl}/split/join?token=${invite.token}`;
+
+    if (isOpenSplitInvite(email)) {
+      return NextResponse.json({
+        success: true,
+        inviteUrl,
+        token: invite.token,
+        emailSent: false,
+        emailError: null,
+        linkOnly: true,
+      });
+    }
 
     const emailHtml = `
       <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
@@ -116,7 +178,7 @@ export async function POST(req: NextRequest) {
         </h2>
 
         <p style="color:#5F5E5A;font-size:14px;line-height:1.6;margin:0 0 20px;">
-          Join the group to split bills, track shared spending, and settle up easily.
+          Join to split bills, track shared spending, and settle up easily.
         </p>
 
         <a href="${inviteUrl}" style="display:block;background:#534AB7;color:white;text-decoration:none;text-align:center;padding:14px 18px;border-radius:12px;font-weight:800;font-size:14px;">
@@ -170,6 +232,7 @@ export async function POST(req: NextRequest) {
       token: invite.token,
       emailSent,
       emailError,
+      linkOnly: false,
     });
   } catch (err: unknown) {
     console.error("Split invite error:", err);
