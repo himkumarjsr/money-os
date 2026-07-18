@@ -5,11 +5,13 @@ At the start of any new Cursor conversation paste:
 "Read FINKOIN_SYSTEM.md first. 
 Use it as complete context for all changes.
 Do not break existing functionality.
-Check sections 27 (critical paths) and 29 (analytics) before making relevant changes."
+Check sections 27 (critical paths), 29 (analytics), 30 (runbooks),
+32 (requirements→solution→outcome), and 34 (split schema)
+before making relevant changes."
 
-This file is auto-generated from the codebase.
-Update it after every significant change by running
-the documentation generation prompt again.
+This file is the system source of truth for Finkoin (money-os).
+Update it after every significant change (flows, APIs, schema, UX).
+Last full sync: 2026-07-18 — app v0.4.0.
 ---
 
 ## TABLE OF CONTENTS
@@ -44,20 +46,47 @@ the documentation generation prompt again.
 28. Progressive Web App (PWA)
 29. Analytics & GA4 (product telemetry)
 30. Precise Flow Runbooks (line-by-line)
+31. Complete Feature Catalog (routes + outcome)
+32. Requirements → Solution → Outcome
+33. Test Suite
+34. Split Schema (runtime tables)
+35. Home / Profile / Navigation UX (2026-07-18)
 
 # FINKOIN SYSTEM DOCUMENTATION
 
-Last updated: 2026-07-18  
+Last updated: 2026-07-18 (full codebase sync)  
 Doc / app version: **0.4.0** (`package.json`)  
-Generated from: actual codebase
+Generated from: actual codebase at `/Users/himanshukumar/Desktop/money-os`  
+Canonical site: **https://www.finkoin.com**
 
 ---
 
 ## 1. PRODUCT OVERVIEW
 
 Finkoin is a Next.js web app for Indian personal finance planning, analysis, and guided action.  
-It is built for Indian users who want structured budgeting, insurance and debt checks, portfolio/goals tracking, and a personalized AI “fix plan.”  
-The core value proposition is: collect profile + money data once, run deterministic finance logic in code, and optionally augment it with RAG-grounded AI explanations.
+It is built for Indian users who want structured budgeting, insurance and debt checks, portfolio/goals tracking, expense tracking, bill splitting (**FK Split**), and a personalized AI “fix plan.”
+
+**Marketing promise (landing):** Free financial health check in ~5 minutes — emergency fund, insurance gap, net worth, and a clear fix plan. **No PAN. No Aadhaar** required for the core check.
+
+**Core value proposition:** Collect profile + money data once → run **deterministic** finance logic in code (`lib/financialEngine.ts`, `lib/priorityEngine.ts`, `lib/universal-buckets.ts`) → optionally augment with **RAG-grounded Groq AI** explanations → unlock deeper fix-plan via **₹99 Razorpay** or **FK tokens**.
+
+**Major product surfaces:**
+
+| Surface            | Route(s)                                            | Outcome for user                                    |
+| ------------------ | --------------------------------------------------- | --------------------------------------------------- |
+| Landing / PWA home | `/`                                                 | Health-check CTA, hero carousel, mobile quick tools |
+| Analyse            | `/analyse` → `/analyse/result` → `/analyse/fixplan` | Score, checklist, buckets, AI fix plan              |
+| Calculators        | `/calculators`, `/calculators/tax-regime-2026`      | SIP/SWP/EMI/tax/FIRE/PPF/etc.                       |
+| Tracker            | `/tracker`, `/tracker/[month]`                      | Monthly spend + Month Safety Pulse                  |
+| Split              | `/split`, `/split/[groupId]`, `/split/join`         | Groups, open invite links, settle-up                |
+| Profile / assets   | `/profile`, `/investments`                          | Editable assets synced app-wide                     |
+| Rewards / refer    | `/rewards`, `/refer`, `/leaderboard`                | FK gamification                                     |
+| Policies           | `/policies`, `/insurance`                           | Policy vault + marketplace shell                    |
+| Learn / blog       | `/learn`, `/blog`                                   | Education + SEO content                             |
+| Legal              | `/legal/*`                                          | Privacy, terms, refund, disclaimer                  |
+
+**Auth:** Supabase (email + Google OAuth + optional phone OTP helpers). **Not Firebase.**  
+**Payments:** Razorpay. **Email:** Resend (split invites + tips). **Analytics:** GA4 + Microsoft Clarity (optional env).
 
 ---
 
@@ -97,27 +126,31 @@ The core value proposition is: collect profile + money data once, run determinis
 
 ## 3. ENVIRONMENT VARIABLES
 
-| Variable                       | Required                 | Purpose                                                                                                        | Where to get                                  |
-| ------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| NEXT_PUBLIC_SUPABASE_URL       | Yes                      | Public Supabase URL for browser + server clients                                                               | Supabase project settings                     |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY  | Yes                      | Public anon key for browser auth/db calls                                                                      | Supabase project settings                     |
-| SUPABASE_SERVICE_ROLE_KEY      | Yes (server features)    | Server/admin Supabase operations (`supabaseServer`)                                                            | Supabase project settings                     |
-| GROQ_API_KEY                   | Yes (AI plan)            | Groq API key used by `/api/ai/analyse`                                                                         | Groq console                                  |
-| NEXT_PUBLIC_APP_URL            | Recommended              | App URL used in UI/runtime references                                                                          | Deployment URL                                |
-| NEXT_PUBLIC_APP_NAME           | Optional                 | Branding name string                                                                                           | Internal config                               |
-| NEXT_PUBLIC_SKIP_PAYMENT       | Optional                 | Payment bypass for dev/test access logic                                                                       | Internal config                               |
-| NEXT_PUBLIC_ADMIN_EMAIL        | Optional                 | Admin email marker                                                                                             | Internal config                               |
-| RAZORPAY_KEY_ID                | Yes (Razorpay API route) | Razorpay order creation ID                                                                                     | Razorpay dashboard                            |
-| RAZORPAY_KEY_SECRET            | Yes (Razorpay API route) | Razorpay order creation secret                                                                                 | Razorpay dashboard                            |
-| NEXT_PUBLIC_RAZORPAY_KEY_ID    | Yes (client payment UI)  | Client-side Razorpay key for checkout                                                                          | Razorpay dashboard                            |
-| NEXT_PUBLIC_FINKOIN_AGENT_CODE | Optional                 | Agent code used in policy transfer links                                                                       | Internal config                               |
-| NEXT_PUBLIC_SITE_URL           | Recommended              | Metadata/sitemap/robots canonical URL                                                                          | Deployment URL                                |
-| NEXT_PUBLIC_GA_MEASUREMENT_ID  | Optional                 | GA4 Measurement ID (`G-xxxxxxxxxx`). When set, loads gtag + enriched events; omit to disable analytics scripts | Google Analytics → Admin → Data streams → Web |
-| NEXT_PUBLIC_CLARITY_ID         | Optional                 | Microsoft Clarity project ID loaded by `components/ClarityScript.tsx`                                          | Clarity project settings                      |
-| RESEND_API_KEY                 | Optional (split invites) | Resend API key for sending split invite emails from `/api/split/invite`                                        | [Resend dashboard](https://resend.com)        |
-| EMAIL_FROM                     | Optional (split invites) | Sender email identity for split invite emails (used as `FK Split <...>`)                                       | Verified sender/domain in Resend              |
-| NEXT_PUBLIC_DEBUG_AI           | Optional                 | AI debug logging in client service                                                                             | Internal config                               |
-| NEXT_PUBLIC_AI_TIMEOUT_MS      | Optional                 | Client-side AI timeout override                                                                                | Internal config                               |
+| Variable                                                       | Required                              | Purpose                                                                                                        | Where to get                                  |
+| -------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| NEXT_PUBLIC_SUPABASE_URL                                       | Yes                                   | Public Supabase URL for browser + server clients                                                               | Supabase project settings                     |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY                                  | Yes                                   | Public anon key for browser auth/db calls                                                                      | Supabase project settings                     |
+| SUPABASE_SERVICE_ROLE_KEY                                      | Yes (server features)                 | Server/admin Supabase operations (`supabaseServer`)                                                            | Supabase project settings                     |
+| GROQ_API_KEY                                                   | Yes (AI plan)                         | Groq API key used by `/api/ai/analyse`                                                                         | Groq console                                  |
+| NEXT_PUBLIC_APP_URL                                            | Recommended                           | App URL used in UI/runtime references                                                                          | Deployment URL                                |
+| NEXT_PUBLIC_APP_NAME                                           | Optional                              | Branding name string                                                                                           | Internal config                               |
+| NEXT_PUBLIC_SKIP_PAYMENT                                       | Optional                              | Payment bypass for dev/test access logic                                                                       | Internal config                               |
+| NEXT_PUBLIC_ADMIN_EMAIL                                        | Optional                              | Admin email marker                                                                                             | Internal config                               |
+| RAZORPAY_KEY_ID                                                | Yes (Razorpay API route)              | Razorpay order creation ID                                                                                     | Razorpay dashboard                            |
+| RAZORPAY_KEY_SECRET                                            | Yes (Razorpay API route)              | Razorpay order creation secret                                                                                 | Razorpay dashboard                            |
+| NEXT_PUBLIC_RAZORPAY_KEY_ID                                    | Yes (client payment UI)               | Client-side Razorpay key for checkout                                                                          | Razorpay dashboard                            |
+| NEXT_PUBLIC_FINKOIN_AGENT_CODE                                 | Optional                              | Agent code used in policy transfer links                                                                       | Internal config                               |
+| NEXT_PUBLIC_SITE_URL                                           | Recommended                           | Metadata/sitemap/robots canonical URL                                                                          | Deployment URL                                |
+| NEXT_PUBLIC_GA_MEASUREMENT_ID                                  | Optional                              | GA4 Measurement ID (`G-xxxxxxxxxx`). When set, loads gtag + enriched events; omit to disable analytics scripts | Google Analytics → Admin → Data streams → Web |
+| NEXT_PUBLIC_CLARITY_ID                                         | Optional                              | Microsoft Clarity project ID loaded by `components/ClarityScript.tsx`                                          | Clarity project settings                      |
+| RESEND_API_KEY                                                 | Optional (split invites + tip emails) | Resend API key for split invite emails and notification tip emails                                             | [Resend dashboard](https://resend.com)        |
+| EMAIL_FROM                                                     | Optional (emails)                     | Sender identity (e.g. `tips@finkoin.com` / verified domain)                                                    | Verified sender/domain in Resend              |
+| CRON_SECRET                                                    | Yes (cron tip delivery)               | Bearer secret for `GET/POST /api/notifications/deliver-tip` (Vercel cron)                                      | Generate a long random string                 |
+| NEXT_PUBLIC_DEBUG_AI                                           | Optional                              | AI debug logging in client service                                                                             | Internal config                               |
+| NEXT_PUBLIC_AI_TIMEOUT_MS                                      | Optional                              | Client-side AI timeout override                                                                                | Internal config                               |
+| NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY                          | Optional                              | Web push public key (if push enabled)                                                                          | Internal config                               |
+| NEXT_PUBLIC_FEEDBACK_GOOGLE_FORM_URL                           | Optional                              | When set, Feedback button opens Google Form only (no DB write)                                                 | Google Forms                                  |
+| GOOGLE*FEEDBACK_FORM_RESPONSE_URL / `GOOGLE_FEEDBACK_ENTRY*\*` | Optional (server)                     | Mirror in-app wizard answers to a Google Form                                                                  | Google Forms HTML / prefilled link            |
 
 ### 3.1 Secret hygiene (what you should do)
 
@@ -367,6 +400,31 @@ Complete inventory with one-line purpose per file:
 - `package.json`: lint-staged currently runs `eslint --fix` + `prettier --write` for TS/TSX; Prettier for JSON/MD/CSS.
 - `eslint.config.mjs`: stricter lint rules scoped to split paths (`app/split/**/*`, `app/api/split/**/*`, `store/splitStore.ts`).
 - `vercel.json`: daily cron for `/api/notifications/deliver-tip` at `0 3 * * *` UTC.
+
+### 4.y Incremental inventory updates (2026-07-18 — open invites, profile assets, home mobile)
+
+- `lib/splitInvite.ts`: open-invite marker `OPEN_SPLIT_INVITE_EMAIL = __open__@finkoin.invite` + `isOpenSplitInvite()`.
+- `lib/splitInvite.test.ts`: unit tests for open-invite recognition.
+- `lib/splitBalances.ts` + `lib/splitBalances.test.ts`: net balances + `simplifyDebts` (min cash-flow).
+- `lib/splitShares.ts` + `lib/splitShares.test.ts`: equal / exact / percentage share math.
+- `lib/apiGuard.ts`: `getAuthedUser`, `unauthorized`, `tooManyRequests`, in-memory `rateLimit`.
+- `lib/profileAssetsPatch.ts` + `lib/profileAssetsPatch.test.ts`: catalogs + patch helpers for cash/investments/physical/liabilities.
+- `lib/syncProfileAssets.ts`: `setFullAnalysis` + `upsertUserAnalyseSnapshot` after asset edits.
+- `components/profile/ProfileAssets.tsx`: IndMoney-style editable Assets UI with Add menus + privacy eye.
+- `components/split/InviteLinkShare.tsx`: copy + WhatsApp share + visible invite URL.
+- `components/ui/BackLink.tsx`: `BackLink` (history.back + fallback) and `BackHref` (static link).
+- `components/landing/HomeMobileQuickTools.tsx`: mobile-only quick tools under hero (SIP → SWP → Split → Tax → EMI → Portfolio → Analyse).
+- `components/landing/HomeHeroCarousel.tsx`: compact mobile banner heights / typography.
+- `components/landing/HomePageClient.tsx`: hero + carousel + mobile quick tools; social-proof badge row removed.
+- `app/api/split/invite/route.ts`: `linkOnly` / open invites; reuse pending open token; skip pending seat for open links.
+- `app/api/split/join/route.ts`: open invites allow any logged-in user; invite stays `pending` for reuse.
+- `app/api/split/balances/route.ts`: `GET` membership-checked net + simplified edges.
+- `store/splitStore.ts`: `linkOnly` on `inviteMember`; `netBalances` + balances API (not RPC).
+- `app/split/page.tsx`: create → invite-link step (no group type); `InviteLinkShare`.
+- `app/split/[groupId]/page.tsx`: auto-generate open link on Invite; email optional; `BackHref`.
+- Profile / goals / investments / calculators: `BackLink` + mobile bottom-nav padding.
+- `app/page.tsx`: hero subtitle `line-clamp-1` on mobile.
+- Tests: `profileAssetsPatch`, `splitInvite`, expanded `splitBalances` / `splitShares`.
 
 ---
 
@@ -667,23 +725,24 @@ Persisted: No
 
 State:
 
-- `groups`, `activeGroup`, `expenses`, `balances`, `loading`, `lastFetched`
+- `groups`, `activeGroup`, `expenses`, `balances`, `netBalances`, `loading`, `lastFetched`
 
 Actions:
 
 - `fetchGroups(userId, userEmail, forceRefresh?)` (2-minute TTL cache keyed by user)
-- `fetchGroupDetail(groupId)` (group, members, expenses + shares, RPC `get_split_balances`)
+- `fetchGroupDetail(groupId)` — group, members, expenses + shares; loads **`netBalances` + simplified edges** from **`GET /api/split/balances`** (not the old `get_split_balances` RPC)
 - `createGroup(...)`
-- `inviteMember(...)`
+- `inviteMember({ groupId, groupName, invitedEmail?, invitedByName?, invitedById?, linkOnly? })` — `linkOnly: true` or empty email → open shareable invite
 - `addExpense(...)`
 - `settleUp(...)`
 - `deleteGroup(groupId)` (soft delete route)
 - `deleteExpense(groupId, expenseId)`
 - `clearActive()`
 
-Helper export:
+Helper exports:
 
-- `getMyBalanceFromEdges(myEmail, edges)`
+- `getMyNetBalance(myEmail, netBalances)`
+- `getMyBalanceFromEdges(myEmail, edges)` (legacy helper if edges present)
 
 ### notificationStore
 
@@ -937,6 +996,8 @@ Errors: **401** without valid session; **400** missing fields or signature misma
 
 ### Split routes (`/api/split/*`)
 
+Auth: cookie session via `createSupabaseServerClient` / `getAuthedUser` (`lib/apiGuard.ts`) where noted. Rate limits apply on invite/settle.
+
 #### POST `/api/split/groups`
 
 Creates a split group for the authenticated user and inserts creator membership as `admin` in `split_group_members`.
@@ -951,7 +1012,25 @@ Hard-delete route for active admins: removes `split_expense_shares`, `split_sett
 
 #### POST `/api/split/invite`
 
-Creates invite token row in `split_invitations`, upserts pending member in `split_group_members`, returns `inviteUrl`, and optionally sends email via Resend (`RESEND_API_KEY`, `EMAIL_FROM`).
+**Requires auth** + active group membership. Rate limit: 30/hr/user.
+
+Body: `{ groupId, groupName?, invitedEmail?, linkOnly? }`
+
+Modes:
+
+1. **Email invite** — valid `invitedEmail`:
+   - Inserts `split_invitations` (`status=pending`, expiry +7d).
+   - Upserts **pending** seat in `split_group_members`.
+   - Optionally emails via Resend (`RESEND_API_KEY`, `EMAIL_FROM`).
+   - Returns `{ inviteUrl, token, emailSent, emailError, linkOnly: false }`.
+
+2. **Open / link-only invite** — `linkOnly: true` **or** empty/missing email:
+   - Stores `invited_email = __open__@finkoin.invite` (`OPEN_SPLIT_INVITE_EMAIL` in `lib/splitInvite.ts`).
+   - **Reuses** existing pending open invite for the group when present (refreshes expiry if expired).
+   - Does **not** upsert a pending member (members are added on join).
+   - Returns `{ inviteUrl, token, emailSent: false, linkOnly: true }` — no email sent.
+
+Invite URL shape: `<siteUrl>/split/join?token=<token>` (`getPublicSiteUrl()`).
 
 #### POST `/api/split/join`
 
@@ -959,9 +1038,13 @@ Server-side invite acceptance:
 
 1. Authenticates current user (`createSupabaseServerClient`)
 2. Validates invite token and expiry from `split_invitations`
-3. Enforces invited email == logged-in email
-4. Activates corresponding member row in `split_group_members`
-5. Marks invitation `accepted` when pending
+3. **Email invite:** enforces invited email == logged-in email; activates pending member; marks invitation `accepted`
+4. **Open invite** (`isOpenSplitInvite`): any logged-in user may join; upserts **active** member for their email; **keeps invite `pending`** so the same link stays reusable
+5. If already active member on open invite → success (idempotent)
+
+#### GET `/api/split/balances?groupId=`
+
+Auth + membership-checked. Computes `{ net, edges }` via `lib/splitBalances.ts` (`computeNetBalances` + `simplifyDebts`) using admin client. Replaces opaque `get_split_balances` RPC for UI.
 
 #### POST `/api/split/expenses`
 
@@ -973,9 +1056,7 @@ Allows expense deletion by creator or active group admin, deletes related rows f
 
 #### POST `/api/split/settle`
 
-Creates settlement row in `split_settlements` and marks matching unsettled shares as settled in `split_expense_shares`.
-
----
+Auth + membership. Records settlement amount in `split_settlements` (amount-accurate; blocks self-settlement). Rate-limited 60/hr.
 
 ## 11. RAG SYSTEM
 
@@ -1039,9 +1120,11 @@ Source categories used in DB rows include:
 
 1. **Browser client** (`lib/supabase.ts`): `@supabase/ssr` **`createBrowserClient`** singleton via **`getSupabase()`**. Sessions use **cookie-backed storage** aligned with middleware. Options include **`auth.storageKey: 'finkoin-auth-token'`**, **`persistSession`**, **`autoRefreshToken`**, **`detectSessionInUrl`**. A **`supabase` proxy** preserves legacy `import { supabase } from "@/lib/supabase"` call sites (client-only).
 
-2. **Middleware** (`middleware.ts`): **`createServerClient`** from `@supabase/ssr` reads request cookies, runs **`auth.getUser()`** (validates JWT + refreshes / rotates refresh token when needed), writes updated cookies on the response via **`setAll`** (including forwarded **`headers`** per `@supabase/ssr`). If env vars are missing, middleware no-ops. Redirects to login **merge cookies** from the refreshed response onto the redirect so rotated tokens are not dropped.
+2. **Middleware** (`middleware.ts`): **`createServerClient`** from `@supabase/ssr` reads request cookies, runs **`auth.getUser()`** (validates JWT + refreshes / rotates refresh token when needed), writes updated cookies on the response via **`setAll`**. If env vars are missing, middleware no-ops. **Homepage `/` is skipped** (no Supabase round-trip — LCP).
 
-3. **Protected routes** (middleware): `/analyse/fixplan`, `/profile`, `/policies`, `/rewards`, `/goals`, `/investments`, `/leaderboard`, `/refer`, `/settings` — unauthenticated users are redirected to **`/login?redirect=<path>`**. Client pages also wrap with **`components/auth/ProtectedGate.tsx`**, which waits for **`hasInitialized`** before treating **`isLoggedIn`** as authoritative (avoids false redirects while auth hydrates).
+   **Important (current code):** Middleware does **NOT** redirect unauthenticated users to `/login`. Page protection is **client-side** via **`ProtectedGate`** + route-level checks (e.g. `/analyse` login redirect). Server-only cookie gates previously caused logged-in mobile users to be bounced incorrectly.
+
+3. **Protected routes (client `ProtectedGate`):** `/profile`, `/policies` (as used), `/rewards`, `/goals`, `/investments`, `/leaderboard`, `/refer`, `/settings`, `/tracker`, `/tracker/[month]`, `/split`, `/split/[groupId]`, `/split/.../add-expense`. Unauthenticated users are redirected to **`/login?redirect=<path>`** (or equivalent next param) after **`hasInitialized`**. `/analyse/fixplan` also gates via **`canAccessFixPlan`** / login.
 
 4. **App bootstrap** (`components/AppInitializer.tsx`): Waits for **`useAuthStore.persist.rehydrate()`** + hydration completion, then **`initAuth()`** so UI does not trust persisted Zustand user state before Supabase **`getSession()`** validates the session (avoids **refresh crashes** from stale persisted user).
 
@@ -1090,9 +1173,18 @@ Configure in **Supabase Dashboard → Authentication**: JWT expiry (e.g. **3600s
 
 ## 14. PAGE FLOWS
 
+### `/` (landing)
+
+1. `app/page.tsx` renders H1 + health-score blurb inside `HomePageClient`.
+2. Mobile: blurb is **one line** (`line-clamp-1`); desktop wraps normally.
+3. Hero carousel (`HomeHeroCarousel`) — compact on mobile.
+4. **Below carousel on mobile only:** `HomeMobileQuickTools` — SIP → SWP → Split → Tax → EMI → Portfolio → Analyse (no Calcs tile).
+5. Social-proof pills (Earn Finkoins / 10k users / Made in India / bank-level security) were **removed** from the hero.
+6. Below-fold content lazy-loaded via `HomePageBelowFold`.
+
 ### `/analyse` (7-step form)
 
-**Gate:** `components/analyse/ConsentModal.tsx` must be accepted once per user: **`localStorage`** fast path + **`users`** row fallback + **`UPDATE`** on agree (see **`app/analyse/page.tsx`**). **`redirectedToLoginRef`** avoids duplicate login redirects under Strict Mode.
+**Gate:** `components/analyse/ConsentModal.tsx` must be accepted once per user: **`localStorage`** fast path + **`users`** row fallback + **`UPDATE`** on agree (see **`app/analyse/page.tsx`**). **`redirectedToLoginRef`** avoids duplicate login redirects under Strict Mode. User must be logged in (page redirects to login).
 
 Current runtime uses `components/forms/analyse-onboarding-form.tsx`:
 
@@ -1135,6 +1227,24 @@ On submit:
 - Shows full AI plan view
 - Includes report export CTA wired to `downloadOptimizerPDF()`
 
+### `/calculators`
+
+- Hub with category chips; `?calc=<id>` opens tool in BottomSheet (mobile) / panel (desktop).
+- Lazy components via `components/calculators/lazy-calculators.tsx`.
+- Mobile list scrolls with bottom-nav padding; Framer wrappers removed from mobile list for scroll reliability.
+- `BackLink` → `/`.
+
+### `/profile`
+
+- `ProtectedGate` + `BackLink` → `/`.
+- Hero with avatar; checklist rows (label left / detail right).
+- **`ProfileAssets`**: editable Cash / Investments / Physical / Liabilities with Add menus; eye privacy; patches via `profileAssetsPatch` → `syncProfileAssets` (re-runs engine + snapshot).
+- PAN mock KYC; referral share; Aadhaar coming soon.
+
+### `/investments` / `/goals`
+
+- Protected; assets rollup / goal cards; `BackLink` → `/profile`. Goals actions mostly “Coming soon”.
+
 ### `/tracker`
 
 - Consent gate (`TrackerConsent` + `finkoin_tracker_consent` / `tracker_consent` table).
@@ -1147,19 +1257,21 @@ On submit:
 
 #### `/split`
 
-- Protected by `ProtectedGate`.
-- Group list fetched via `useSplitStore.fetchGroups`.
-- Create group modal supports optional immediate invite.
+- Protected by `ProtectedGate` + `BackLink` → `/`.
+- Group list via `useSplitStore.fetchGroups`.
+- **Create modal (2 steps):**
+  1. **details** — name + optional emoji only (no group type).
+  2. After create → auto `inviteMember({ linkOnly: true })` → **invite** step with `InviteLinkShare` (Copy / WhatsApp / URL).
+  3. Continue → `/split/[groupId]`.
 - Refreshes on visibility/focus and realtime updates from `split_group_members`.
 
 #### `/split/[groupId]`
 
-- Loads group details via `fetchGroupDetail`.
-- Shows balances (`get_split_balances` RPC result), expenses, and invite/settle actions.
-- Realtime subscriptions:
-  - `split_expenses` INSERT
-  - `split_expense_shares` UPDATE
-- Creator can trigger delete group flow (soft delete route currently used in store).
+- Loads group details via `fetchGroupDetail` (balances from **`/api/split/balances`**).
+- Header net + **Simplified settle-up** edges + per-member balances; settle modal (no `window.prompt`).
+- **Invite friends:** opening modal auto-generates open link; optional email invite secondary.
+- `InviteLinkShare` for copy/WhatsApp; `BackHref` → `/split`.
+- Realtime: expenses insert/update/delete, shares, settlements.
 
 #### `/split/[groupId]/add-expense`
 
@@ -1172,6 +1284,7 @@ On submit:
 - Invite join client in `JoinSplitGroupClient`.
 - If unauthenticated: persists token + redirect path (`finkoin_split_token`, `finkoin_split_redirect`) then redirects to `/login`.
 - After auth: joins via `POST /api/split/join` and redirects to `/split/[groupId]` on success.
+- Open links work for any logged-in account; email invites require matching email.
 
 ### Notification and feedback surfaces
 
@@ -1227,8 +1340,17 @@ Current status: **partially implemented**
 
 - `app/goals/page.tsx`: coming soon
 - `app/pricing/page.tsx`: full plans coming soon
-- `lib/kycVerification.ts`: PAN verification is mock logic
+- `app/careers/page.tsx`, `app/press/page.tsx`: coming soon
+- `lib/kycVerification.ts`: PAN verification is mock logic; Aadhaar on profile is “Coming soon”
 - `app/insurance/page.tsx`: full comparison engine not complete
+- `app/portfolio/page.tsx`: sample fund data (not live CAMS)
+- `app/plans/page.tsx`: Razorpay wiring TODOs remain
+
+### Doc accuracy notes (2026-07-18)
+
+- Middleware **does not** enforce login redirects — use `ProtectedGate` / page logic.
+- Split balances use **`GET /api/split/balances`**, not `get_split_balances` RPC, for UI.
+- Open invites (`__open__@finkoin.invite`) are first-class; email-match join is email invites only.
 
 ### Legal pages (complete)
 
@@ -1962,6 +2084,34 @@ Important implementation note:
 
 ## CHANGE LOG
 
+### 2026-07-18 — v0.4.0+ (doc sync: open invites, profile assets, home mobile UX)
+
+_Product / Split:_
+
+- **Open shareable invite links:** `linkOnly` invites use marker email `__open__@finkoin.invite`; reusable pending tokens; join does not require email match; UI via `InviteLinkShare` (Copy + WhatsApp).
+- **Create group simplified:** name + optional emoji only; post-create invite step; group type removed from UI (always `general`).
+- **Balances:** app-side `lib/splitBalances.ts` + `GET /api/split/balances`; simplified settle-up edges on group page.
+- **API hardening:** `lib/apiGuard.ts` on AI analyse, split invite/settle, feedback, Razorpay create-order (see also end-of-file v0.4.0 notes).
+
+_Profile / Assets:_
+
+- Editable **Assets** on `/profile` (`ProfileAssets` + `profileAssetsPatch` + `syncProfileAssets`) — cash / investments / physical / liabilities; Add menus; privacy eye; syncs Zustand + `user_analyse_snapshots` and recomputes net worth / checklist.
+- Checklist mobile layout aligned with investments-style rows; `BackLink` on profile, goals, investments, calculators, split.
+
+_Home / mobile:_
+
+- Compact hero carousel on phone; quick tools **below** banner (`HomeMobileQuickTools` order: SIP, SWP, Split, Tax, EMI, Portfolio, Analyse).
+- Removed hero badge row (Earn Finkoins, 10k users, Made in India, bank-level security) and trophy earn line.
+- Hero subtitle single-line clamp on mobile.
+
+_Calculators:_
+
+- Mobile Investment/category list scroll fix (bottom padding, BottomSheet pointer-events, reduced motion wrappers).
+
+_Tests:_
+
+- `lib/splitInvite.test.ts`, `lib/profileAssetsPatch.test.ts`, expanded split balance/share tests.
+
 ### 2026-07-18 — v0.3.0
 
 - **Analyse loan double-count fix:** `normalizeAnalyseFormValues` in `lib/analyse-form-schema.ts` now treats **`unifiedLoans`** as the single source of truth. When it has entries, extra obligations are derived **only** from it (self-deduped) and the legacy `additionalObligations` is ignored; the previous merge double-counted the same loan when type/lender strings differed (e.g. a lender-carrying copy plus a stale no-lender copy). First-of-type home/personal/car/bike still map to scalar fields **with** their lender; every remaining loan becomes an obligation exactly once, preserving `lenderName`. Regression tests added in `lib/analyse-form-schema.test.ts`. Legacy fallback (no `unifiedLoans`) keeps existing `additionalObligations`.
@@ -2268,14 +2418,15 @@ Server path (`app/api/split/join/route.ts`):
 2. Auth user from `createSupabaseServerClient().auth.getUser()`.
 3. Read invite row from `split_invitations` by `token`:
    - `id, group_id, group_name, invited_email, status, expires_at`.
-4. Validate:
-   - invite exists (`404` otherwise)
-   - logged-in email equals `invited_email` (`403` otherwise)
-   - `expires_at` not in past (`400` otherwise)
-   - `status` in `pending|accepted` (`400` otherwise)
-5. Update `split_group_members` where `group_id + email`:
-   - set `user_id`, `display_name`, `status="active"`, `joined_at`.
-6. If invite status is `pending` -> update `split_invitations.status="accepted"`.
+4. Validate invite exists (`404`), not expired (`400`), status in `pending|accepted` (`400`).
+5. **If open invite** (`invited_email === __open__@finkoin.invite`):
+   - If member already `active` for this email → return success (idempotent).
+   - Else upsert `split_group_members` as `active` for logged-in email.
+   - **Do not** mark invitation accepted (link stays reusable).
+6. **Else (email invite):**
+   - Require logged-in email equals `invited_email` (`403` otherwise).
+   - Update `split_group_members` where `group_id + email` → `active`, `joined_at`.
+   - If invite status is `pending` → `split_invitations.status="accepted"`.
 7. Return `{ success: true, groupId, groupName }`.
 
 ### 30.2 Split create group flow (`/split` -> create modal)
@@ -2283,18 +2434,17 @@ Server path (`app/api/split/join/route.ts`):
 Client path (`app/split/page.tsx`):
 
 1. `handleCreate()` validates `gName`, authenticated `user.id`, and email.
-2. Calls `useSplitStore.createGroup(...)`.
-3. On success -> `Analytics.splitGroupCreated()`.
-4. If optional invite email entered and not self:
-   - call `useSplitStore.inviteMember(...)`
-   - show alert if invite email fails / email not sent.
-5. Close modal and `router.push("/split/<groupId>")`.
+2. Calls `useSplitStore.createGroup({ name, emoji, type: "general", ... })` — UI no longer collects group type.
+3. On success → `Analytics.splitGroupCreated()`.
+4. Immediately `inviteMember({ groupId, groupName, linkOnly: true })`.
+5. On invite URL → set `createStep = "invite"` and show `InviteLinkShare`.
+6. User taps Continue / closes → `finishCreate()` → `router.push("/split/<groupId>")`.
 
 Store path (`store/splitStore.ts`):
 
-1. `createGroup` -> `POST /api/split/groups` with `{name, emoji, type, displayName}`.
-2. On success -> clears `lastFetched` cache map.
-3. `inviteMember` -> `POST /api/split/invite`.
+1. `createGroup` → `POST /api/split/groups` with `{name, emoji, type, displayName}`.
+2. On success → clears `lastFetched` cache map.
+3. `inviteMember` → `POST /api/split/invite` with `linkOnly: true` (or email when provided).
 
 Server create path (`app/api/split/groups/route.ts`, `POST`):
 
@@ -2310,19 +2460,24 @@ Server create path (`app/api/split/groups/route.ts`, `POST`):
 
 Server path (`app/api/split/invite/route.ts`):
 
-1. Parse required body fields:
-   - `groupId`, `groupName`, `invitedEmail`, `invitedByName`, `invitedById`.
-2. Insert invitation row into `split_invitations` with:
-   - `status="pending"`
-   - `expires_at = now + 7 days`.
-3. Upsert pending member row in `split_group_members` (`onConflict: group_id,email`) with:
-   - `status="pending"`, `role="member"`.
-4. Build invite URL: `<siteUrl>/split/join?token=<invite.token>`.
-5. Email delivery branch:
-   - if `RESEND_API_KEY` missing -> `emailError`
-   - if `EMAIL_FROM` missing -> `emailError`
-   - else `resend.emails.send(...)` with invite HTML.
-6. Return payload with `inviteUrl`, `token`, `emailSent`, `emailError`.
+1. Auth + rate limit + membership check (`lib/apiGuard.ts`).
+2. Body: `groupId` required; `invitedEmail` optional; `linkOnly` optional.
+3. Resolve email:
+   - link-only / empty email → `OPEN_SPLIT_INVITE_EMAIL`
+   - else validate email format.
+4. **Open invite reuse:** if pending open invite exists for group, return its URL (refresh expiry if needed). Skip new insert.
+5. Else insert `split_invitations` (`status=pending`, `expires_at = now + 7 days`).
+6. **Email invite only:** upsert pending member in `split_group_members`.
+7. Build invite URL: `<siteUrl>/split/join?token=<invite.token>`.
+8. Email branch (email invites only):
+   - if `RESEND_API_KEY` / `EMAIL_FROM` missing → `emailError`
+   - else `resend.emails.send(...)`.
+9. Return `{ inviteUrl, token, emailSent, emailError, linkOnly }`.
+
+Client UX:
+
+- Create modal + group Invite modal use `InviteLinkShare` (copy / WhatsApp / show URL).
+- Group page may auto-call `inviteMember({ linkOnly: true })` when opening Invite.
 
 ### 30.4 Split add-expense flow
 
@@ -2841,3 +2996,192 @@ WHERE user_id = 'YOUR_ID';
 -- 6. Delete all notifications (fresh start)
 DELETE FROM public.user_notifications
 WHERE user_id = 'YOUR_ID';
+
+---
+
+## 31. COMPLETE FEATURE CATALOG (ROUTES + OUTCOME)
+
+Use this as the master inventory of what the app ships. Status: **shipped** | **partial** | **placeholder**.
+
+### 31.1 Core money product
+
+| Feature                       | Routes / files                                                  | Requirement                                       | Solution                                                      | Outcome                                                    | Status      |
+| ----------------------------- | --------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- | ----------- |
+| Financial health check        | `/analyse`, `analyse-onboarding-form.tsx`, `financialEngine.ts` | Collect India-relevant profile once; score + gaps | 7-step RHF+Zod form → `analyseFinances` → snapshot            | Score, buckets, checklist, plan steps on `/analyse/result` | shipped     |
+| AI fix plan                   | `/analyse/fixplan`, `/api/ai/analyse`, RAG                      | Explain priorities with India knowledge           | Groq + `search_by_keywords` + cache                           | Personalized plan + PDF                                    | shipped     |
+| Paywall unlock                | Razorpay routes, paywall modal                                  | Monetize deep plan                                | ₹99 order + verify → `subscription_tier=pro`; FK redeem paths | Access to fixplan                                          | shipped     |
+| Calculators hub               | `/calculators`, `calculator-config.ts`                          | Instant tools without full analyse                | Lazy-loaded SIP/SWP/EMI/tax/FIRE/PPF/NSC/home/car/rentbuy/…   | Live math + charts; GA `tool_open`                         | shipped     |
+| Tax regime FY2026             | `/calculators/tax-regime-2026`, `taxRegimeComparisonFY2026.ts`  | Old vs new regime compare                         | Client-side engine + multi-select employment                  | Take-home comparison + alerts                              | shipped     |
+| Expense tracker               | `/tracker`, `expense_transactions`                              | Monthly spend vs caps                             | Categories + Safety Pulse                                     | Safe/Tight/Over coaching                                   | shipped     |
+| FK Split                      | `/split/*`, `/api/split/*`                                      | Split bills with friends                          | Groups, open/email invites, shares, balances, settle          | Shared expenses + fewest payments                          | shipped     |
+| Profile assets                | `/profile` `ProfileAssets`                                      | Edit net-worth inputs after analyse               | Patch helpers + `syncProfileAssets`                           | App-wide net worth/checklist stay current                  | shipped     |
+| Investments view              | `/investments`                                                  | Snapshot of assets                                | Read from financial store / analysis                          | Read-only rollup                                           | shipped     |
+| Goals                         | `/goals`                                                        | Goal tracking UI                                  | Cards UI                                                      | Most actions coming soon                                   | placeholder |
+| Portfolio demo                | `/portfolio`                                                    | Fund verdicts teaser                              | Sample data + CAMS/PAN placeholders                           | Demo only — not live CAMS                                  | partial     |
+| Policy vault                  | `/policies`                                                     | Store insurance policies                          | `user_policies` CRUD                                          | Renew/transfer intents                                     | partial     |
+| Insurance marketplace         | `/insurance`                                                    | Compare/buy                                       | Entry UX + `insurance_clicks`                                 | Full compare engine incomplete                             | partial     |
+| Rewards / leaderboard / refer | `/rewards`, `/leaderboard`, `/refer`                            | Engagement loop                                   | FK + `leaderboard_view` + referrals                           | Earn/spend FK, refer codes                                 | shipped     |
+| Settings                      | `/settings`                                                     | Account prefs                                     | Name, avatar, password reset, tip prefs                       | Profile maintenance                                        | shipped     |
+| KYC                           | `/kyc`, profile PAN                                             | Verify identity for future insurance              | Mock PAN format check                                         | Status UI; Aadhaar soon                                    | partial     |
+| Learn / Blog                  | `/learn`, `/blog`                                               | Education + SEO                                   | Static/MD content modules                                     | Articles + FK read rewards                                 | shipped     |
+| Legal                         | `/legal/*`                                                      | Compliance                                        | Full privacy/terms/refund/disclaimer                          | Linked from footer/profile                                 | shipped     |
+| PWA                           | `next-pwa`, `/offline`                                          | Installable app                                   | SW + icons + install prompt                                   | Offline fallback page                                      | shipped     |
+| Plans / Pricing               | `/plans`, `/pricing`                                            | Subscription catalog                              | UI shells; Razorpay TODOs on plans                            | Coming soon / partial                                      | placeholder |
+
+### 31.2 Auth & account
+
+| Feature            | Solution                                                             | Outcome                       |
+| ------------------ | -------------------------------------------------------------------- | ----------------------------- |
+| Email signup/login | Supabase Auth + `/login`                                             | Session cookies + `authStore` |
+| Google OAuth       | `signInWithOAuth` → `/auth/callback`                                 | Deep-link `next` preserved    |
+| Password reset     | `/auth/reset-password` → recovery callback → `/auth/update-password` | New password set              |
+| Session refresh    | Middleware `getUser()` (no login redirect)                           | Rotated cookies               |
+| Page gates         | `ProtectedGate`                                                      | No flash of protected content |
+| Sign out           | `POST /api/auth/sign-out` + client clear                             | Clean local + cookie state    |
+| Referrals          | `?ref=` + `referralRewards.ts`                                       | FK bonuses best-effort        |
+
+### 31.3 Cross-cutting UX
+
+| Feature                   | Files                                  | Outcome                         |
+| ------------------------- | -------------------------------------- | ------------------------------- |
+| Back navigation           | `BackLink`, `BackHref`                 | History back or safe fallback   |
+| Private amounts           | `PrivateAmount`                        | Masked ₹ by default + eye       |
+| Mobile bottom nav padding | profile/split/calculators/etc.         | Content not hidden behind nav   |
+| Home mobile quick tools   | `HomeMobileQuickTools`                 | One-tap tool entry under banner |
+| Notifications inbox       | `NotificationBell`, cron tips          | Daily tips + unread badge       |
+| Feedback                  | widget / wizard / optional Google Form | Product feedback + optional FK  |
+
+---
+
+## 32. REQUIREMENTS → SOLUTION → OUTCOME (BUILD RATIONALE)
+
+This section answers _why_ major systems exist.
+
+### R1 — “Check financial health without KYC”
+
+- **Requirement:** Indians should get an actionable score without PAN/Aadhaar.
+- **Solution:** 7-step analyse form + deterministic engine; marketing copy states Free / No PAN / No Aadhaar.
+- **Outcome:** `/analyse/result` with score, emergency fund, insurance gap, net worth, checklist.
+
+### R2 — “Advice must be India-specific and not hallucinate rates”
+
+- **Requirement:** AI explanations grounded in curated knowledge.
+- **Solution:** RAG over `finkoin_knowledge` via `search_by_keywords` + Groq constrained prompts; deterministic engines remain source of truth for numbers.
+- **Outcome:** Fix plan cites priorities from `priorityEngine` + knowledge chunks.
+
+### R3 — “Protect paid AI from abuse”
+
+- **Requirement:** Groq cost control + auth.
+- **Solution:** `/api/ai/analyse` requires session + 10/hr rate limit (`apiGuard`).
+- **Outcome:** Anonymous callers cannot burn AI quota.
+
+### R4 — “Split bills like Splitwise, WhatsApp-friendly”
+
+- **Requirement:** Create group, share link, join after login, settle fewest payments.
+- **Solution:** Open invite marker email; `InviteLinkShare`; `computeSplitShares` + `computeNetBalances`/`simplifyDebts`; settle API amount-accurate.
+- **Outcome:** Reusable invite URLs; simplified settle-up list on group page.
+
+### R5 — “Edit assets later without redoing full form”
+
+- **Requirement:** Profile page should update net worth everywhere.
+- **Solution:** `ProfileAssets` → patch catalogs → `syncProfileAssets` → `setFullAnalysis` + snapshot upsert.
+- **Outcome:** Investments page, checklist, and analysis stay consistent.
+
+### R6 — “Mobile home must be fast and tool-first”
+
+- **Requirement:** Small banner; tools below (not beside); clear CTAs.
+- **Solution:** Compact carousel; `HomeMobileQuickTools` grid; remove badge clutter; one-line subtitle clamp.
+- **Outcome:** Faster first viewport; SIP/SWP/Split/Tax/EMI/Portfolio/Analyse one tap away.
+
+### R7 — “Tracker should coach, not just list expenses”
+
+- **Requirement:** Know if month is Safe/Tight/Over.
+- **Solution:** `trackerSafetyPulse` vs bucket caps + MoM; privacy eyes.
+- **Outcome:** Month Safety Pulse with one recommended action.
+
+### R8 — “Payments must be server-verified”
+
+- **Requirement:** Unlock only after real payment.
+- **Solution:** Razorpay create-order (auth) + HMAC verify → `users.subscription_tier=pro`.
+- **Outcome:** Client cannot forge unlock without signature.
+
+### R9 — “Secrets never in the browser”
+
+- **Requirement:** Service role / Razorpay secret / Groq key server-only.
+- **Solution:** `NEXT_PUBLIC_*` discipline + `npm run check:secrets` + CSP headers.
+- **Outcome:** Client bundles cannot contain server secrets.
+
+### R10 — “Session reliability on mobile”
+
+- **Requirement:** Logged-in users must not be falsely sent to login.
+- **Solution:** Middleware refreshes cookies only; `ProtectedGate` waits for `hasInitialized`; `AuthSessionSync` on focus.
+- **Outcome:** Profile/split tabs work after PWA resume.
+
+---
+
+## 33. TEST SUITE
+
+Runner: `npm test` → `vitest run` (`vitest.config.ts`).
+
+| File                              | What it locks in                                                                                      |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `lib/financialEngine.test.ts`     | Income/expense totals, buckets, emergency fund, plan steps, bachelor spouse-income ignore             |
+| `lib/analyse-form-schema.test.ts` | Money parse, salary step, loan/premium normalization, girl-child fields, unifiedLoans no double-count |
+| `lib/fireCalculator.test.ts`      | 25× FIRE, SIP FV, years-to-wealth                                                                     |
+| `lib/splitShares.test.ts`         | equal / exact / percentage validation & rounding                                                      |
+| `lib/splitBalances.test.ts`       | net balances, simplifyDebts, settlements                                                              |
+| `lib/splitInvite.test.ts`         | open-invite marker recognition                                                                        |
+| `lib/profileAssetsPatch.test.ts`  | scalar patch, loans, custom investments, catalogs                                                     |
+| `lib/trackerSafetyPulse.test.ts`  | Safe/Tight/Over, MoM, loan_prepayment exclusion                                                       |
+
+No Playwright/e2e suite in-repo. Prefer unit tests for money math before UI changes.
+
+---
+
+## 34. SPLIT SCHEMA (RUNTIME TABLES)
+
+These tables are **heavily used in app code** but may live in remote/manual SQL (not all appear under `supabase/migrations/`). Treat as required for Split production:
+
+| Table                  | Role                                                                             |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `split_groups`         | Group metadata (`name`, `emoji`, `group_type`, `created_by`, `is_active`, …)     |
+| `split_group_members`  | Membership (`email`, `user_id`, `role`, `status` pending/active, `display_name`) |
+| `split_expenses`       | Expense header (amount, title, category, paid_by, …)                             |
+| `split_expense_shares` | Per-member share amounts / settled flags                                         |
+| `split_invitations`    | Tokens; `invited_email` may be real email **or** `__open__@finkoin.invite`       |
+| `split_settlements`    | Recorded payments between members                                                |
+
+**Open invite invariant:** marker email never corresponds to a real user; join upserts the joiner’s real email as `active`; invitation row stays `pending` for reuse.
+
+**Balance invariant:** UI nets come from `lib/splitBalances.ts` via `GET /api/split/balances`, not from trusting client math alone.
+
+Manual SQL also exists for tracker (`supabase/manual/expense_tracker.sql`) and avatars (`supabase/manual/referral_code_avatars.sql`).
+
+---
+
+## 35. HOME / PROFILE / NAVIGATION UX (2026-07-18)
+
+### Home hero composition (mobile)
+
+1. Brand H1 + one-line health blurb (`line-clamp-1`).
+2. Compact feature carousel.
+3. Quick tools grid (4 columns) — order fixed in `HomeMobileQuickTools.tsx`.
+4. No Earn Finkoin / social-proof pills under carousel.
+
+### Back controls
+
+- Prefer `BackLink` when history may exist (profile, goals, investments, calculators, split home).
+- Prefer `BackHref` when a fixed parent is required (e.g. group detail → `/split`).
+
+### Profile assets edit loop
+
+1. User edits amount or Adds catalog item in `ProfileAssets`.
+2. `patchScalarAsset` / `upsertUnifiedLoan` / `upsertCustomInvestment` produce new `FinancialProfile`.
+3. `syncProfileAssets` → `setFullAnalysis` (engine) → optional Supabase snapshot.
+4. `/investments` and checklist read the same store/snapshot.
+
+### Cursor agent instruction (keep at top of this file)
+
+At the start of any new Cursor conversation paste:
+
+> Read FINKOIN_SYSTEM.md first. Use it as complete context for all changes. Do not break existing functionality. Check sections **27** (critical paths), **29** (analytics), **30** (runbooks), **32** (requirements), and **34** (split schema) before making relevant changes.
