@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       paidByEmail?: string;
       paidByName?: string;
       paidByUserId?: string | null;
-      splitType?: "equal" | "exact" | "percentage";
+      splitType?: "equal" | "exact" | "percentage" | "shares";
       expenseDate?: string;
       notes?: string;
       includedMembers?: Array<{
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
       }>;
       exactAmounts?: Record<string, number>;
       percentages?: Record<string, number>;
+      shareCounts?: Record<string, number>;
     };
 
     const groupId = body.groupId?.trim();
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
       includedMembers,
       exactAmounts: body.exactAmounts,
       percentages: body.percentages,
+      shareCounts: body.shareCounts,
     });
     if (shareErr) {
       return NextResponse.json({ error: shareErr }, { status: 400 });

@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { Analytics } from "@/lib/analytics";
 import { useAuthStore } from "@/store/authStore";
@@ -10,7 +17,7 @@ import { formatIndian } from "@/lib/formatters";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import type { TrackerIconName } from "@/lib/tracker-categories";
 
-type SplitType = "equal" | "exact" | "percentage";
+type SplitType = "equal" | "exact" | "percentage" | "shares";
 
 const CATEGORY_OPTIONS: {
   key: string;
@@ -38,14 +45,24 @@ function todayISODate() {
 export default function AddSplitExpensePage() {
   return (
     <ProtectedGate>
-      <AddSplitExpenseInner />
+      <Suspense
+        fallback={
+          <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8">
+            <p className="text-sm text-[#9B9A94]">Loading…</p>
+          </main>
+        }
+      >
+        <AddSplitExpenseInner />
+      </Suspense>
     </ProtectedGate>
   );
 }
 
 function AddSplitExpenseInner() {
   const params = useParams<{ groupId: string }>();
+  const searchParams = useSearchParams();
   const groupId = params?.groupId;
+  const editExpenseId = searchParams?.get("edit") ?? null;
   const router = useRouter();
 
   const user = useAuthStore((s) => s.user);
@@ -54,11 +71,14 @@ function AddSplitExpenseInner() {
   const createdBy = userId ?? user?.id ?? "";
 
   const activeGroup = useSplitStore((s) => s.activeGroup);
+  const expenses = useSplitStore((s) => s.expenses);
   const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
   const addExpense = useSplitStore((s) => s.addExpense);
+  const editExpense = useSplitStore((s) => s.editExpense);
   const storeLoading = useSplitStore((s) => s.loading);
   const [detailReady, setDetailReady] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const hydratedEdit = useRef<string | null>(null);
 
   const groupLoaded = detailReady && activeGroup?.id === groupId;
   const members = (
@@ -87,11 +107,13 @@ function AddSplitExpenseInner() {
   );
   const [exactMap, setExactMap] = useState<Record<string, number>>({});
   const [pctMap, setPctMap] = useState<Record<string, number>>({});
+  const [shareCounts, setShareCounts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!groupId) return;
     setDetailReady(false);
     setLoadError("");
+    hydratedEdit.current = null;
     void fetchGroupDetail(groupId)
       .then(() => {
         const loaded = useSplitStore.getState().activeGroup;
@@ -107,6 +129,7 @@ function AddSplitExpenseInner() {
 
   useEffect(() => {
     if (!memberKey) return;
+    if (editExpenseId && hydratedEdit.current === editExpenseId) return;
     const init: Record<string, boolean> = {};
     for (const m of splittableMembers) init[m.email.toLowerCase()] = true;
     setIncludedEmails(init);
@@ -117,7 +140,50 @@ function AddSplitExpenseInner() {
       splittableMembers[0]?.email ??
       "";
     setPaidByEmail(defaultPaid);
-  }, [memberKey, splittableMembers, user?.email]);
+  }, [memberKey, splittableMembers, user?.email, editExpenseId]);
+
+  useEffect(() => {
+    if (!editExpenseId || !detailReady) return;
+    if (hydratedEdit.current === editExpenseId) return;
+    const expense = expenses.find((e) => e.id === editExpenseId);
+    if (!expense) return;
+    hydratedEdit.current = editExpenseId;
+    setAmountRaw(Number(expense.amount) || 0);
+    setTitle(expense.title || "");
+    setPaidByEmail(expense.paid_by_email || "");
+    setCategory(expense.category || "food");
+    setExpenseDate(expense.expense_date || todayISODate());
+    setNotes(expense.notes || "");
+    const st = expense.split_type;
+    if (
+      st === "equal" ||
+      st === "exact" ||
+      st === "percentage" ||
+      st === "shares"
+    ) {
+      setSplitType(st);
+    }
+    const included: Record<string, boolean> = {};
+    const exact: Record<string, number> = {};
+    const pct: Record<string, number> = {};
+    const shares: Record<string, string> = {};
+    for (const m of splittableMembers) {
+      included[m.email.toLowerCase()] = false;
+    }
+    for (const s of expense.shares ?? []) {
+      const key = s.email.toLowerCase();
+      included[key] = true;
+      exact[key] = Number(s.share_amount) || 0;
+      pct[key] = Number(s.share_percentage) || 0;
+      shares[key] = String(
+        Math.max(1, Math.round(Number(s.share_percentage) || 1)),
+      );
+    }
+    setIncludedEmails(included);
+    setExactMap(exact);
+    setPctMap(pct);
+    setShareCounts(shares);
+  }, [editExpenseId, detailReady, expenses, splittableMembers]);
 
   const handleBack = useCallback(() => {
     if (groupId) {
@@ -209,9 +275,26 @@ function AddSplitExpenseInner() {
         return;
       }
     }
+    if (splitType === "shares") {
+      const totalShares = includedMembers.reduce(
+        (s, m) =>
+          s + (parseFloat(shareCounts[m.email.toLowerCase()] || "1") || 0),
+        0,
+      );
+      if (totalShares <= 0) {
+        setFormError("Enter a positive share count for at least one member.");
+        return;
+      }
+    }
+
+    const shareCountNums: Record<string, number> = {};
+    for (const m of includedMembers) {
+      const key = m.email.toLowerCase();
+      shareCountNums[key] = parseFloat(shareCounts[key] || "1") || 1;
+    }
 
     setBusy(true);
-    const res = await addExpense({
+    const payload = {
       groupId,
       title: title.trim(),
       amount: amountRaw,
@@ -225,15 +308,33 @@ function AddSplitExpenseInner() {
       includedMembers,
       exactAmounts: splitType === "exact" ? exactMap : undefined,
       percentages: splitType === "percentage" ? pctMap : undefined,
+      shareCounts: splitType === "shares" ? shareCountNums : undefined,
       createdBy,
-    });
+    };
+
+    const res = editExpenseId
+      ? await editExpense({
+          expenseId: editExpenseId,
+          groupId,
+          title: payload.title,
+          amount: payload.amount,
+          category: payload.category,
+          expenseDate: payload.expenseDate,
+          notes: payload.notes ?? null,
+          splitType: payload.splitType,
+          includedMembers: payload.includedMembers,
+          exactAmounts: payload.exactAmounts,
+          percentages: payload.percentages,
+          shareCounts: payload.shareCounts,
+        })
+      : await addExpense(payload);
     setBusy(false);
 
     if (res.error) {
       setFormError(res.error);
       return;
     }
-    Analytics.splitExpenseAdded();
+    if (!editExpenseId) Analytics.splitExpenseAdded();
     router.push(`/split/${groupId}`);
   };
 
@@ -258,10 +359,12 @@ function AddSplitExpenseInner() {
               ← Back
             </button>
             <div className="text-xs font-semibold text-white/75">
-              Add expense
+              {editExpenseId ? "Edit expense" : "Add expense"}
             </div>
           </div>
-          <div className="mt-3 text-lg font-extrabold">New expense</div>
+          <div className="mt-3 text-lg font-extrabold">
+            {editExpenseId ? "Update expense" : "New expense"}
+          </div>
           <div className="mt-0.5 text-sm text-white/80">
             Split among selected members.
           </div>
@@ -394,25 +497,29 @@ function AddSplitExpenseInner() {
               <label className="text-xs font-semibold text-[#5F5E5A]">
                 Split type
               </label>
-              <div className="mt-1 grid grid-cols-3 gap-2">
-                {(["equal", "exact", "percentage"] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setSplitType(t)}
-                    className={`h-11 min-h-[44px] rounded-xl border text-sm font-bold ${
-                      splitType === t
-                        ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
-                        : "border-[#E8E6F0] bg-white text-[#111110]"
-                    }`}
-                  >
-                    {t === "equal"
-                      ? "Equal"
-                      : t === "exact"
-                        ? "Exact"
-                        : "Percent"}
-                  </button>
-                ))}
+              <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(["equal", "exact", "percentage", "shares"] as const).map(
+                  (t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setSplitType(t)}
+                      className={`h-11 min-h-[44px] rounded-xl border text-sm font-bold ${
+                        splitType === t
+                          ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
+                          : "border-[#E8E6F0] bg-white text-[#111110]"
+                      }`}
+                    >
+                      {t === "equal"
+                        ? "Equal"
+                        : t === "exact"
+                          ? "Exact"
+                          : t === "percentage"
+                            ? "Percent"
+                            : "Shares"}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
           </div>
@@ -477,6 +584,42 @@ function AddSplitExpenseInner() {
               <div className="mt-3 text-xs font-semibold text-[#5F5E5A]">
                 Total: ₹{formatIndian(Math.round(exactSum))} / ₹
                 {formatIndian(Math.round(amountRaw || 0))}
+              </div>
+            </div>
+          ) : null}
+
+          {splitType === "shares" ? (
+            <div className="mt-5 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-[#9B9A94]">
+                Share counts
+              </div>
+              <p className="mt-1 text-[11px] text-[#9B9A94]">
+                Enter number of shares per person. Amount is divided
+                proportionally.
+              </p>
+              <div className="mt-3 space-y-2">
+                {includedMembers.map((m) => (
+                  <div
+                    key={m.email}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 text-sm font-semibold text-[#111110]">
+                      {m.display_name}
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={shareCounts[m.email.toLowerCase()] ?? "1"}
+                      onChange={(e) =>
+                        setShareCounts((prev) => ({
+                          ...prev,
+                          [m.email.toLowerCase()]: e.target.value,
+                        }))
+                      }
+                      className="h-11 w-[80px] rounded-xl border border-[#E8E6F0] bg-white px-3 text-right text-base font-bold text-[#534AB7] outline-none focus:border-[#534AB7]"
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           ) : null}
@@ -586,7 +729,13 @@ function AddSplitExpenseInner() {
             onClick={() => void handleSubmit()}
             className="mt-6 w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50 min-h-[44px]"
           >
-            {busy ? "Adding…" : "Add expense"}
+            {busy
+              ? editExpenseId
+                ? "Saving…"
+                : "Adding…"
+              : editExpenseId
+                ? "Save changes"
+                : "Add expense"}
           </button>
         </div>
       </div>

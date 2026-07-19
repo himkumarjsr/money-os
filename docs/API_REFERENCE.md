@@ -34,17 +34,19 @@ All handlers under `app/api/**/route.ts` (19 routes). Auth uses cookie session v
 
 ## FK Split
 
-| Method | Path                              | Auth                    | Rate limit | Role                                                                     |
-| ------ | --------------------------------- | ----------------------- | ---------- | ------------------------------------------------------------------------ |
-| POST   | `/api/split/groups`               | Yes                     | —          | Create group + creator admin member                                      |
-| DELETE | `/api/split/groups?groupId=`      | Yes (creator)           | —          | Soft-delete `is_active=false` (used by UI)                               |
-| DELETE | `/api/split/groups/[groupId]`     | Yes (admin)             | —          | Hard-delete cascade (**not used by UI**)                                 |
-| POST   | `/api/split/invite`               | Yes + active member     | 30/hr      | Open link (`linkOnly`) or email invite (+ optional Resend)               |
-| POST   | `/api/split/join`                 | Yes                     | —          | Accept open or email invite                                              |
-| GET    | `/api/split/balances?groupId=`    | Yes + member            | —          | `computeGroupBalances` (not RPC)                                         |
-| POST   | `/api/split/expenses`             | Yes + member            | —          | Expense + shares via `computeSplitShares`                                |
-| DELETE | `/api/split/expenses/[expenseId]` | Creator or active admin | —          | Delete expense + shares                                                  |
-| POST   | `/api/split/settle`               | Yes + active member     | 60/hr      | Insert `split_settlements` (amount-accurate; no share `is_settled` flip) |
+| Method | Path                              | Auth                | Rate limit | Role                                                       |
+| ------ | --------------------------------- | ------------------- | ---------- | ---------------------------------------------------------- |
+| POST   | `/api/split/groups`               | Yes                 | —          | Create group + creator admin member                        |
+| DELETE | `/api/split/groups?groupId=`      | Yes (creator)       | —          | Soft-delete `is_active=false` (used by UI)                 |
+| DELETE | `/api/split/groups/[groupId]`     | Yes (admin)         | —          | Hard-delete cascade (**not used by UI**)                   |
+| POST   | `/api/split/invite`               | Yes + active member | 30/hr      | Open link (`linkOnly`) or email invite (+ optional Resend) |
+| POST   | `/api/split/join`                 | Yes                 | —          | `{ token }` invite or `{ code }` group `invite_code`       |
+| GET    | `/api/split/balances?groupId=`    | Yes + member        | —          | `computeGroupBalances` (excludes soft-deleted expenses)    |
+| POST   | `/api/split/expenses`             | Yes + member        | —          | Expense + shares (`equal`/`exact`/`percentage`/`shares`)   |
+| PUT    | `/api/split/expenses/[expenseId]` | Expense creator     | —          | Edit expense + recompute shares                            |
+| DELETE | `/api/split/expenses/[expenseId]` | Expense creator     | —          | Soft-delete (`is_deleted=true`)                            |
+| DELETE | `/api/split/members?groupId=`     | Self or admin       | —          | Leave/remove (`status=left`; blocked if unsettled)         |
+| POST   | `/api/split/settle`               | Yes + active member | 60/hr      | Insert `split_settlements` (+ `payment_method`)            |
 
 Open invites use marker email `__open__@finkoin.invite` (`lib/splitInvite.ts`). Same token stays reusable after join.
 

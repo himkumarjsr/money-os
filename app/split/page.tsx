@@ -311,14 +311,16 @@ function SplitHomeInner() {
                 </button>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleDeleteGroup(g.id, g.name)}
-                    className="rounded-lg border border-[#F5D0D0] px-2.5 py-1.5 text-xs font-bold text-[#C0392B] hover:bg-[#FFF4F4] min-h-[44px] min-w-[44px]"
-                    title="Delete group"
-                  >
-                    Delete
-                  </button>
+                  {g.created_by && g.created_by === (user?.id ?? userId) ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteGroup(g.id, g.name)}
+                      className="rounded-lg border border-[#F5D0D0] px-2.5 py-1.5 text-xs font-bold text-[#C0392B] hover:bg-[#FFF4F4] min-h-[44px] min-w-[44px]"
+                      title="Delete group"
+                    >
+                      Delete
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => router.push(`/split/${g.id}`)}

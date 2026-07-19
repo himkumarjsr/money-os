@@ -75,6 +75,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Ensure permanent group invite_code exists for /split/join?code=
+    const { data: groupRow } = await supabaseAdmin
+      .from("split_groups")
+      .select("invite_code")
+      .eq("id", groupId)
+      .maybeSingle();
+    if (!groupRow?.invite_code) {
+      const inviteCode = Array.from({ length: 8 }, () =>
+        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".charAt(
+          Math.floor(Math.random() * 32),
+        ),
+      ).join("");
+      await supabaseAdmin
+        .from("split_groups")
+        .update({ invite_code: inviteCode })
+        .eq("id", groupId);
+    }
+
     const invitedById = user.id;
     const invitedByName =
       membership.display_name?.trim() ||

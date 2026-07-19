@@ -47,6 +47,7 @@ function SplitGroupInner() {
   const loading = useSplitStore((s) => s.loading);
   const group = useSplitStore((s) => s.activeGroup);
   const expenses = useSplitStore((s) => s.expenses);
+  const settlements = useSplitStore((s) => s.settlements);
   const balances = useSplitStore((s) => s.balances);
   const netBalances = useSplitStore((s) => s.netBalances);
   const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
@@ -54,7 +55,11 @@ function SplitGroupInner() {
   const settleUp = useSplitStore((s) => s.settleUp);
   const deleteExpense = useSplitStore((s) => s.deleteExpense);
   const deleteGroup = useSplitStore((s) => s.deleteGroup);
+  const leaveGroup = useSplitStore((s) => s.leaveGroup);
 
+  const [activeTab, setActiveTab] = useState<
+    "expenses" | "members" | "settlements"
+  >("expenses");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLink, setInviteLink] = useState("");
@@ -62,12 +67,20 @@ function SplitGroupInner() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(
+    null,
+  );
+  const [deletingExpenseBusy, setDeletingExpenseBusy] = useState(false);
 
   const [settleOpen, setSettleOpen] = useState(false);
   const [settleToEmail, setSettleToEmail] = useState("");
   const [settleAmount, setSettleAmount] = useState("");
   const [settleBusy, setSettleBusy] = useState(false);
   const [settleMsg, setSettleMsg] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "upi" | "cash" | "bank" | "other"
+  >("upi");
+  const [upiNote, setUpiNote] = useState("");
 
   useEffect(() => {
     if (!groupId) return;
@@ -127,14 +140,27 @@ function SplitGroupInner() {
 
   // Lock page scroll while modals are open (critical for iOS PWA).
   useEffect(() => {
-    const locked = inviteOpen || settleOpen || showDeleteConfirm;
+    const locked =
+      inviteOpen ||
+      settleOpen ||
+      showDeleteConfirm ||
+      Boolean(deletingExpenseId);
     if (!locked) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [inviteOpen, settleOpen, showDeleteConfirm]);
+  }, [inviteOpen, settleOpen, showDeleteConfirm, deletingExpenseId]);
+
+  const siteUrl =
+    (typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL) ||
+    "https://www.finkoin.com";
+  const groupInviteLink = group?.invite_code
+    ? `${siteUrl}/split/join?code=${encodeURIComponent(group.invite_code)}`
+    : "";
 
   const myNet = useMemo(
     () => getMyNetBalance(myEmail, netBalances),
@@ -226,7 +252,8 @@ function SplitGroupInner() {
   const openSettle = (toEmail?: string, amount?: number) => {
     setSettleMsg("");
     setSettleBusy(false);
-    // Default to the first debt I owe (simplified) when nothing is passed.
+    setPaymentMethod("upi");
+    setUpiNote("");
     const firstOwed = myOwedEdges[0];
     setSettleToEmail(toEmail ?? firstOwed?.to_email ?? "");
     setSettleAmount(
@@ -263,6 +290,9 @@ function SplitGroupInner() {
       amount,
       userId: actorId,
       userEmail: myEmail,
+      paymentMethod,
+      notes:
+        paymentMethod === "upi" && upiNote.trim() ? upiNote.trim() : undefined,
     });
     setSettleBusy(false);
     if (res.error) {
@@ -270,6 +300,7 @@ function SplitGroupInner() {
       return;
     }
     setSettleOpen(false);
+    setActiveTab("settlements");
   };
 
   const otherMembers = useMemo(
@@ -278,14 +309,37 @@ function SplitGroupInner() {
     [group?.members, myEmail],
   );
 
-  const isCreator = group?.created_by === user?.id;
+  const isCreator =
+    Boolean(group?.created_by) && group?.created_by === (user?.id ?? userId);
 
-  const handleDeleteExpense = async (expenseId: string, title: string) => {
+  const handleConfirmDeleteExpense = async () => {
+    if (!groupId || !deletingExpenseId) return;
+    setDeletingExpenseBusy(true);
+    const res = await deleteExpense(groupId, deletingExpenseId);
+    setDeletingExpenseBusy(false);
+    if (res.error) {
+      window.alert(res.error);
+      return;
+    }
+    setDeletingExpenseId(null);
+  };
+
+  const handleLeaveOrRemove = async (email?: string) => {
     if (!groupId) return;
-    const ok = window.confirm(`Delete expense "${title}"?`);
-    if (!ok) return;
-    const res = await deleteExpense(groupId, expenseId);
-    if (res.error) window.alert(res.error);
+    const res = await leaveGroup(groupId, email);
+    if (!res.success) {
+      const amt =
+        res.amount != null
+          ? ` (≈ ₹${formatIndian(Math.round(res.amount))})`
+          : "";
+      window.alert((res.error || "Could not update member") + amt);
+      return;
+    }
+    if (!email) {
+      router.push("/split");
+      return;
+    }
+    void fetchGroupDetail(groupId);
   };
 
   const handleDeleteGroup = async () => {
@@ -410,186 +464,337 @@ function SplitGroupInner() {
           </div>
         </div>
 
-        <section className="mt-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
-                Simplified settle-up
-              </h2>
-              <p className="mt-1 text-xs text-[#9B9A94]">
-                Fewest payments to clear everyone.
-              </p>
-            </div>
+        <div className="mt-4 flex rounded-2xl border border-[#E8E6F0] bg-white">
+          {(["expenses", "members", "settlements"] as const).map((tab) => (
             <button
+              key={tab}
               type="button"
-              onClick={() => groupId && void fetchGroupDetail(groupId)}
-              className="text-xs font-bold text-[#534AB7]"
+              onClick={() => setActiveTab(tab)}
+              className="h-11 flex-1 border-b-2 text-sm font-semibold capitalize"
+              style={{
+                color: activeTab === tab ? "#534AB7" : "#9B9A94",
+                borderBottomColor:
+                  activeTab === tab ? "#534AB7" : "transparent",
+                background: "transparent",
+              }}
             >
-              Refresh
+              {tab}
             </button>
-          </div>
+          ))}
+        </div>
 
-          <div className="mt-3 space-y-2">
-            {loading ? (
-              <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5 text-sm text-slate-600">
-                Loading…
-              </div>
-            ) : null}
-
-            {!loading && balances.length === 0 ? (
-              <div className="rounded-2xl border border-[#E8E6F0] bg-white p-6 text-sm text-[#5F5E5A]">
-                All settled up. Add an expense to start splitting.
-              </div>
-            ) : null}
-
-            {balances.map((b, idx) => {
-              const iPay = b.from_email?.toLowerCase() === myEmail;
-              return (
-                <div
-                  key={`${b.from_email}-${b.to_email}-${idx}`}
-                  className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-bold text-[#111110]">
-                        {iPay ? "You" : b.from_name}{" "}
-                        <span className="text-slate-400">→</span> {b.to_name}
-                      </div>
-                      <div className="mt-1 text-xs text-[#9B9A94]">
-                        {iPay ? "You pay" : `${b.from_name} pays`} {b.to_name}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <div className="text-sm font-extrabold text-[#111110]">
-                        ₹{formatIndian(Math.round(Number(b.amount ?? 0)))}
-                      </div>
-                      {iPay ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openSettle(b.to_email, Number(b.amount ?? 0))
-                          }
-                          className="rounded-xl bg-[#534AB7] px-3 py-2 text-xs font-extrabold text-white min-h-[44px]"
-                        >
-                          Settle
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
+        {activeTab === "expenses" ? (
+          <>
+            <section className="mt-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+                    Simplified settle-up
+                  </h2>
+                  <p className="mt-1 text-xs text-[#9B9A94]">
+                    Fewest payments to clear everyone.
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        </section>
+                <button
+                  type="button"
+                  onClick={() => groupId && void fetchGroupDetail(groupId)}
+                  className="text-xs font-bold text-[#534AB7]"
+                >
+                  Refresh
+                </button>
+              </div>
 
-        {netBalances.some((n) => Math.abs(n.net) > 0.5) ? (
-          <section className="mt-8">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
-              Balances
-            </h2>
-            <div className="mt-3 space-y-2">
-              {netBalances
-                .filter((n) => Math.abs(n.net) > 0.5)
-                .map((n) => {
-                  const isMe = n.email === myEmail;
-                  const owed = n.net > 0;
+              <div className="mt-3 space-y-2">
+                {loading ? (
+                  <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5 text-sm text-slate-600">
+                    Loading…
+                  </div>
+                ) : null}
+
+                {!loading && balances.length === 0 ? (
+                  <div className="rounded-2xl border border-[#E8E6F0] bg-white p-6 text-sm text-[#5F5E5A]">
+                    All settled up. Add an expense to start splitting.
+                  </div>
+                ) : null}
+
+                {balances.map((b, idx) => {
+                  const iPay = b.from_email?.toLowerCase() === myEmail;
                   return (
                     <div
-                      key={n.email}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E6F0] bg-white px-5 py-4"
+                      key={`${b.from_email}-${b.to_email}-${idx}`}
+                      className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
                     >
-                      <div className="min-w-0 truncate text-sm font-bold text-[#111110]">
-                        {isMe ? "You" : n.name}
-                      </div>
-                      <div
-                        className="shrink-0 text-sm font-extrabold"
-                        style={{ color: owed ? "#1D9E75" : "#E24B4A" }}
-                      >
-                        {owed ? "gets back" : "owes"} ₹
-                        {formatIndian(Math.round(Math.abs(n.net)))}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-bold text-[#111110]">
+                            {iPay ? "You" : b.from_name}{" "}
+                            <span className="text-slate-400">→</span>{" "}
+                            {b.to_name}
+                          </div>
+                          <div className="mt-1 text-xs text-[#9B9A94]">
+                            {iPay ? "You pay" : `${b.from_name} pays`}{" "}
+                            {b.to_name}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <div className="text-sm font-extrabold text-[#111110]">
+                            ₹{formatIndian(Math.round(Number(b.amount ?? 0)))}
+                          </div>
+                          {iPay ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openSettle(b.to_email, Number(b.amount ?? 0))
+                              }
+                              className="rounded-xl bg-[#534AB7] px-3 py-2 text-xs font-extrabold text-white min-h-[44px]"
+                            >
+                              Settle
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
+              </div>
+            </section>
+
+            {netBalances.some((n) => Math.abs(n.net) > 0.5) ? (
+              <section className="mt-8">
+                <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+                  Balances
+                </h2>
+                <div className="mt-3 space-y-2">
+                  {netBalances
+                    .filter((n) => Math.abs(n.net) > 0.5)
+                    .map((n) => {
+                      const isMe = n.email === myEmail;
+                      const owed = n.net > 0;
+                      return (
+                        <div
+                          key={n.email}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E6F0] bg-white px-5 py-4"
+                        >
+                          <div className="min-w-0 truncate text-sm font-bold text-[#111110]">
+                            {isMe ? "You" : n.name}
+                          </div>
+                          <div
+                            className="shrink-0 text-sm font-extrabold"
+                            style={{ color: owed ? "#1D9E75" : "#E24B4A" }}
+                          >
+                            {owed ? "gets back" : "owes"} ₹
+                            {formatIndian(Math.round(Math.abs(n.net)))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="mt-8">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+                Expenses
+              </h2>
+              <div className="mt-3 space-y-2">
+                {expenses.length === 0 && !loading ? (
+                  <div className="rounded-2xl border border-[#E8E6F0] bg-white p-6 text-sm text-[#5F5E5A]">
+                    No expenses yet.
+                  </div>
+                ) : null}
+
+                {expenses.map((e) => {
+                  const myShare = (e.shares ?? [])
+                    .filter((s) => s.email?.toLowerCase() === myEmail)
+                    .reduce((sum, s) => sum + Number(s.share_amount ?? 0), 0);
+                  const isExpenseCreator = Boolean(
+                    (user?.id ?? userId) &&
+                    e.created_by === (user?.id ?? userId),
+                  );
+                  return (
+                    <div
+                      key={e.id}
+                      className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="truncate text-base font-bold text-[#111110]">
+                            {e.title}
+                          </div>
+                          <div className="mt-1 text-xs text-[#9B9A94]">
+                            Paid by{" "}
+                            <span className="font-semibold text-[#5F5E5A]">
+                              {e.paid_by_name}
+                            </span>{" "}
+                            · {e.expense_date}
+                          </div>
+                          <div className="mt-2 text-xs text-[#9B9A94]">
+                            Your share:{" "}
+                            <span className="font-bold text-[#111110]">
+                              ₹{formatIndian(Math.round(myShare))}
+                            </span>
+                          </div>
+                          {isExpenseCreator ? (
+                            <div className="mt-2 flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  groupId &&
+                                  router.push(
+                                    `/split/${groupId}/add-expense?edit=${e.id}`,
+                                  )
+                                }
+                                className="rounded-md bg-[#EEEDFE] px-2 py-1 text-[11px] font-bold text-[#534AB7]"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeletingExpenseId(e.id)}
+                                className="rounded-md bg-[#FCEBEB] px-2 py-1 text-[11px] font-bold text-[#E24B4A]"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-sm font-extrabold text-[#111110]">
+                            ₹{formatIndian(Math.round(Number(e.amount ?? 0)))}
+                          </div>
+                          <div className="mt-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#9B9A94] uppercase tracking-wide">
+                            <TrackerIcon
+                              name={
+                                SPLIT_CATEGORY_ICON[e.category ?? "general"] ??
+                                "package"
+                              }
+                              size={13}
+                              color="#9B9A94"
+                            />
+                            {e.category || "general"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        {activeTab === "members" ? (
+          <section className="mt-6">
+            <div className="overflow-hidden rounded-2xl border border-[#E8E6F0] bg-white">
+              {(group?.members ?? []).map((member, i, arr) => {
+                const email = member.email.toLowerCase();
+                const isMe = email === myEmail;
+                const initials = (member.display_name || email)
+                  .substring(0, 2)
+                  .toUpperCase();
+                return (
+                  <div
+                    key={member.id || email}
+                    className="flex items-center gap-3 px-4 py-3.5"
+                    style={{
+                      borderBottom:
+                        i < arr.length - 1 ? "1px solid #F7F7F4" : "none",
+                    }}
+                  >
+                    <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-[#EEEDFE] text-[13px] font-bold text-[#534AB7]">
+                      {initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-[#111110]">
+                        {isMe
+                          ? `${member.display_name} (You)`
+                          : member.display_name}
+                      </div>
+                      <div className="truncate text-[11px] text-[#9B9A94]">
+                        {member.role} · {member.email}
+                      </div>
+                    </div>
+                    {member.role !== "admin" && isCreator && !isMe ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleLeaveOrRemove(member.email)}
+                        className="rounded-md bg-[#FCEBEB] px-2.5 py-1 text-[11px] font-bold text-[#E24B4A]"
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                    {isMe && !isCreator ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleLeaveOrRemove()}
+                        className="rounded-md bg-[#FCEBEB] px-2.5 py-1 text-[11px] font-bold text-[#E24B4A]"
+                      >
+                        Leave
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </section>
         ) : null}
 
-        <section className="mt-8">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
-            Expenses
-          </h2>
-          <div className="mt-3 space-y-2">
-            {expenses.length === 0 && !loading ? (
-              <div className="rounded-2xl border border-[#E8E6F0] bg-white p-6 text-sm text-[#5F5E5A]">
-                No expenses yet.
+        {activeTab === "settlements" ? (
+          <section className="mt-6">
+            {settlements.length === 0 ? (
+              <div className="rounded-2xl border border-[#E8E6F0] bg-white px-6 py-10 text-center text-sm text-[#9B9A94]">
+                No settlements yet
               </div>
-            ) : null}
-
-            {expenses.map((e) => {
-              const myShare = (e.shares ?? [])
-                .filter((s) => s.email?.toLowerCase() === myEmail)
-                .reduce((sum, s) => sum + Number(s.share_amount ?? 0), 0);
-              const canDeleteExpense = Boolean(
-                user?.id && (e.created_by === user.id || isCreator),
-              );
-              return (
-                <div
-                  key={e.id}
-                  className="rounded-2xl border border-[#E8E6F0] bg-white p-5 min-h-[64px]"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="truncate text-base font-bold text-[#111110]">
-                        {e.title}
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-[#E8E6F0] bg-white">
+                {settlements.map((s, i) => {
+                  const isFromMe = s.from_email?.toLowerCase() === myEmail;
+                  const isToMe = s.to_email?.toLowerCase() === myEmail;
+                  return (
+                    <div
+                      key={s.id}
+                      className="flex items-center gap-3 px-4 py-3.5"
+                      style={{
+                        borderBottom:
+                          i < settlements.length - 1
+                            ? "1px solid #F7F7F4"
+                            : "none",
+                      }}
+                    >
+                      <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-[#E1F5EE] text-[18px] text-[#1D9E75]">
+                        ✓
                       </div>
-                      <div className="mt-1 text-xs text-[#9B9A94]">
-                        Paid by{" "}
-                        <span className="font-semibold text-[#5F5E5A]">
-                          {e.paid_by_name}
-                        </span>{" "}
-                        · {e.expense_date}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-semibold text-[#111110]">
+                          {isFromMe ? "You" : s.from_email?.split("@")[0]} paid{" "}
+                          {isToMe ? "you" : s.to_email?.split("@")[0]}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-[#9B9A94]">
+                          {s.completed_at
+                            ? new Date(s.completed_at).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )
+                            : ""}
+                          {s.payment_method
+                            ? ` · ${s.payment_method.toUpperCase()}`
+                            : ""}
+                        </div>
                       </div>
-                      <div className="mt-2 text-xs text-[#9B9A94]">
-                        Your share:{" "}
-                        <span className="font-bold text-[#111110]">
-                          ₹{formatIndian(Math.round(myShare))}
-                        </span>
+                      <div className="text-sm font-bold text-[#1D9E75]">
+                        ₹{formatIndian(Math.round(Number(s.amount ?? 0)))}
                       </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-sm font-extrabold text-[#111110]">
-                        ₹{formatIndian(Math.round(Number(e.amount ?? 0)))}
-                      </div>
-                      <div className="mt-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#9B9A94] uppercase tracking-wide">
-                        <TrackerIcon
-                          name={
-                            SPLIT_CATEGORY_ICON[e.category ?? "general"] ??
-                            "package"
-                          }
-                          size={13}
-                          color="#9B9A94"
-                        />
-                        {e.category || "general"}
-                      </div>
-                      {canDeleteExpense ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void handleDeleteExpense(e.id, e.title)
-                          }
-                          className="mt-2 rounded-md border border-[#F5D0D0] px-2 py-1 text-[11px] font-bold text-[#C0392B] hover:bg-[#FFF4F4] min-h-[44px] min-w-[44px]"
-                        >
-                          Delete
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        ) : null}
       </div>
 
       {inviteOpen ? (
@@ -639,6 +844,32 @@ function SplitGroupInner() {
                   inviteUrl={inviteLink}
                   groupName={group?.name ?? "Split"}
                 />
+              ) : null}
+
+              {groupInviteLink ? (
+                <div className="border-t border-[#F7F7F4] pt-4">
+                  <div className="mb-2 text-xs font-semibold uppercase text-[#9B9A94]">
+                    Or share group link
+                  </div>
+                  <div className="flex items-center gap-2 rounded-[10px] bg-[#F7F7F4] px-3 py-2.5">
+                    <div className="min-w-0 flex-1 break-all font-mono text-xs text-[#534AB7]">
+                      {groupInviteLink}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(groupInviteLink);
+                        setInviteMsg("Link copied!");
+                      }}
+                      className="shrink-0 rounded-lg bg-[#534AB7] px-3 py-1.5 text-xs font-bold text-white"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="mt-1.5 text-[11px] text-[#9B9A94]">
+                    Anyone with this link can join the group
+                  </div>
+                </div>
               ) : null}
 
               <div>
@@ -740,6 +971,44 @@ function SplitGroupInner() {
               />
             </div>
 
+            <div className="mt-4">
+              <div className="mb-2 text-xs font-semibold uppercase text-[#9B9A94]">
+                Payment method
+              </div>
+              <div className="flex gap-2">
+                {(["upi", "cash", "bank"] as const).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setPaymentMethod(method)}
+                    className="h-10 flex-1 rounded-[10px] text-xs font-semibold uppercase"
+                    style={{
+                      border: `1.5px solid ${
+                        paymentMethod === method ? "#534AB7" : "#E8E6F0"
+                      }`,
+                      background:
+                        paymentMethod === method ? "#EEEDFE" : "white",
+                      color: paymentMethod === method ? "#534AB7" : "#9B9A94",
+                    }}
+                  >
+                    {method === "upi"
+                      ? "UPI"
+                      : method === "bank"
+                        ? "Bank"
+                        : "Cash"}
+                  </button>
+                ))}
+              </div>
+              {paymentMethod === "upi" ? (
+                <input
+                  value={upiNote}
+                  onChange={(e) => setUpiNote(e.target.value)}
+                  placeholder="UPI reference / note (optional)"
+                  className="mt-2.5 h-11 w-full rounded-[10px] border border-[#E8E6F0] px-3.5 text-[13px] outline-none"
+                />
+              ) : null}
+            </div>
+
             {settleMsg ? (
               <p className="mt-3 text-sm font-medium text-[#C0392B]">
                 {settleMsg}
@@ -756,6 +1025,44 @@ function SplitGroupInner() {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {deletingExpenseId ? (
+        <>
+          <div
+            onClick={() => setDeletingExpenseId(null)}
+            className="fixed inset-0 z-[990] bg-black/40"
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto w-full max-w-[480px] rounded-t-[20px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+40px)] pt-6">
+            <div className="mx-auto mb-5 h-1 w-10 rounded bg-[#E8E6F0]" />
+            <div className="mb-5 text-center">
+              <div className="mb-3 text-4xl">🗑️</div>
+              <div className="mb-2 text-[17px] font-extrabold text-[#111110]">
+                Delete this expense?
+              </div>
+              <div className="text-[13px] text-[#9B9A94]">
+                This cannot be undone. Balances will be updated.
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                disabled={deletingExpenseBusy}
+                onClick={() => void handleConfirmDeleteExpense()}
+                className="h-[50px] w-full rounded-[13px] bg-[#E24B4A] text-[15px] font-bold text-white disabled:opacity-50"
+              >
+                {deletingExpenseBusy ? "Deleting…" : "Yes, delete"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeletingExpenseId(null)}
+                className="h-[50px] w-full rounded-[13px] bg-[#F7F7F4] text-[15px] text-[#5F5E5A]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
       ) : null}
 
       {showDeleteConfirm ? (

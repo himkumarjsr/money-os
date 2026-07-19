@@ -1068,13 +1068,21 @@ Auth + membership-checked. Computes `{ net, edges }` via `lib/splitBalances.ts` 
 
 Creates an expense in `split_expenses`, computes/validates shares via `computeSplitShares`, inserts `split_expense_shares`, then bumps `split_groups.updated_at`.
 
+#### PUT `/api/split/expenses/[expenseId]`
+
+Expense **creator only**. Updates title/amount/category/date/notes and recomputes shares via `computeSplitShares` (supports `shares` type).
+
 #### DELETE `/api/split/expenses/[expenseId]`
 
-Allows expense deletion by creator or active group admin, deletes related rows from `split_expense_shares`, then deletes expense row.
+Expense **creator only**. Soft-deletes with `is_deleted=true` (balances/list exclude deleted).
+
+#### DELETE `/api/split/members?groupId=&email=`
+
+Self-leave or admin/creator remove. Sets `status=left` + `left_at`. Blocked when target net balance ≠ 0 (settlement-aware). Creators cannot leave via this path.
 
 #### POST `/api/split/settle`
 
-Auth + membership. Records settlement amount in `split_settlements` (amount-accurate; blocks self-settlement). Rate-limited 60/hr.
+Auth + membership. Records settlement amount in `split_settlements` (amount-accurate; `payment_method`; blocks self-settlement). Rate-limited 60/hr.
 
 ## 11. RAG SYSTEM
 
@@ -1285,24 +1293,28 @@ On submit:
 
 #### `/split/[groupId]`
 
-- Loads group details via `fetchGroupDetail` (balances from **`/api/split/balances`**).
-- Header net + **Simplified settle-up** edges + per-member balances; settle modal (no `window.prompt`).
-- **Invite friends:** opening modal auto-generates open link; optional email invite secondary.
-- `InviteLinkShare` for copy/WhatsApp; `BackHref` → `/split`.
+- Loads group details via `fetchGroupDetail` (balances from **`/api/split/balances`**, with optional `get_split_balances` RPC probe; expenses filtered `is_deleted=false`).
+- Tabs: **expenses** | **members** | **settlements**.
+- Header net + **Simplified settle-up** edges + per-member balances; settle modal with payment method (UPI/cash/bank).
+- Expense creator: **Edit** (`/add-expense?edit=`) + soft **Delete** (`is_deleted=true`).
+- Members tab: admin/creator can Remove others; non-creator can Leave (blocked if unsettled net).
+- **Invite friends:** open token link + permanent `invite_code` group link (`/split/join?code=`).
+- Group soft-delete (`…`) **creator-only** on detail + list.
 - Realtime: expenses insert/update/delete, shares, settlements.
 
 #### `/split/[groupId]/add-expense`
 
-- Expense creation flow supports split types `equal`, `exact`, `percentage`.
-- Validates exact sum equals amount and percentage sum equals 100.
-- Sends payload to `/api/split/expenses`.
+- Create + edit (`?edit=<expenseId>`).
+- Split types: `equal`, `exact`, `percentage`, **`shares`** (proportional share counts).
+- Validates exact sum / % = 100 / positive share counts.
+- `POST /api/split/expenses` or `PUT /api/split/expenses/[id]`.
 
-#### `/split/join?token=...`
+#### `/split/join?token=...` or `?code=...`
 
-- Invite join client in `JoinSplitGroupClient`.
-- If unauthenticated: persists token + redirect path (`finkoin_split_token`, `finkoin_split_redirect`) then redirects to `/login`.
-- After auth: joins via `POST /api/split/join` and redirects to `/split/[groupId]` on success.
-- Open links work for any logged-in account; email invites require matching email.
+- Invite join client in `JoinSplitGroupClient` (token **or** group `invite_code`).
+- If unauthenticated: persists redirect path then `/login?next=`.
+- After auth: `POST /api/split/join` `{ token }` or `{ code }` → `/split/[groupId]`.
+- Open token links: any logged-in account; email invites: matching email; code: any logged-in user.
 
 ### Notification and feedback surfaces
 
