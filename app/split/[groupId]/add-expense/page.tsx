@@ -47,9 +47,9 @@ export default function AddSplitExpensePage() {
     <ProtectedGate>
       <Suspense
         fallback={
-          <main className="min-h-dvh bg-[#F7F7F4] px-4 py-8">
+          <div className="bg-[#F7F7F4] px-4 py-8">
             <p className="text-sm text-[#9B9A94]">Loading…</p>
-          </main>
+          </div>
         }
       >
         <AddSplitExpenseInner />
@@ -346,8 +346,14 @@ function AddSplitExpenseInner() {
     splittableMembers.length > 0 &&
     includedMembers.length > 0;
 
+  // Clear any leftover body scroll-lock from prior modals (create/invite sheets).
+  useEffect(() => {
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+  }, []);
+
   return (
-    <main className="min-h-dvh overflow-x-hidden overscroll-y-contain bg-[#F7F7F4] px-4 py-8 pb-24 touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
+    <div className="w-full bg-[#F7F7F4] px-4 py-8 pb-36 touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
       <div className="mx-auto max-w-2xl">
         <div className="rounded-3xl bg-[#534AB7] px-6 py-5 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-center justify-between gap-4">
@@ -722,12 +728,16 @@ function AddSplitExpenseInner() {
               {formError}
             </p>
           ) : null}
+        </div>
+      </div>
 
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[#F7F7F4] via-[#F7F7F4] to-transparent px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-8 md:pb-6">
+        <div className="pointer-events-auto mx-auto max-w-2xl">
           <button
             type="button"
             disabled={!canSubmit}
             onClick={() => void handleSubmit()}
-            className="mt-6 w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50 min-h-[44px]"
+            className="min-h-[48px] w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50"
           >
             {busy
               ? editExpenseId
@@ -739,6 +749,6 @@ function AddSplitExpenseInner() {
           </button>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

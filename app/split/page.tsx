@@ -337,7 +337,7 @@ function SplitHomeInner() {
 
       {createOpen ? (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
           onClick={() => {
             if (createStep === "invite") finishCreate();
             else resetCreateModal();
@@ -345,7 +345,7 @@ function SplitHomeInner() {
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-[calc(env(safe-area-inset-bottom)+24px)] shadow-xl"
+            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
