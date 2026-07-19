@@ -16,6 +16,10 @@ export default function ClarityScript() {
           t.src="https://www.clarity.ms/tag/"+i;
           y=l.getElementsByTagName(r)[0];
           y.parentNode.insertBefore(t,y);
+          c[a]("consentv2", {
+            ad_Storage: "denied",
+            analytics_Storage: "denied"
+          });
         })(window, document, "clarity", "script", "${clarityId}");
       `}
     </Script>

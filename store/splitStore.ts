@@ -474,27 +474,35 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   addExpense: async (input) => {
     try {
-      const res = await fetch("/api/split/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          groupId: input.groupId,
-          title: input.title,
-          amount: input.amount,
-          category: input.category,
-          paidByEmail: input.paidByEmail,
-          paidByName: input.paidByName,
-          paidByUserId: input.paidByUserId,
-          splitType: input.splitType,
-          expenseDate: input.expenseDate,
-          notes: input.notes,
-          includedMembers: input.includedMembers,
-          exactAmounts: input.exactAmounts,
-          percentages: input.percentages,
-          shareCounts: input.shareCounts,
-        }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20_000);
+      let res: Response;
+      try {
+        res = await fetch("/api/split/expenses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          signal: controller.signal,
+          body: JSON.stringify({
+            groupId: input.groupId,
+            title: input.title,
+            amount: input.amount,
+            category: input.category,
+            paidByEmail: input.paidByEmail,
+            paidByName: input.paidByName,
+            paidByUserId: input.paidByUserId,
+            splitType: input.splitType,
+            expenseDate: input.expenseDate,
+            notes: input.notes,
+            includedMembers: input.includedMembers,
+            exactAmounts: input.exactAmounts,
+            percentages: input.percentages,
+            shareCounts: input.shareCounts,
+          }),
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const json = (await res.json()) as {
         expense?: SplitExpense;
@@ -520,6 +528,12 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       return {};
     } catch (err: unknown) {
       console.error("addExpense error:", err);
+      if (err instanceof Error && err.name === "AbortError") {
+        return {
+          error:
+            "Save is taking too long. Check your connection and try again.",
+        };
+      }
       return {
         error: err instanceof Error ? err.message : "Could not add expense",
       };

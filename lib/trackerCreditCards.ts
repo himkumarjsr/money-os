@@ -1,7 +1,8 @@
 export type SavedCreditCard = {
   id: string;
   nickname: string;
-  last4: string;
+  /** Optional; older saved cards may still have this. Not collected for new cards. */
+  last4?: string;
   createdAt: string;
 };
 
@@ -18,7 +19,8 @@ export function formatCreditCardLabel(
   card: Pick<SavedCreditCard, "nickname" | "last4">,
 ) {
   const nick = card.nickname.trim() || "Credit card";
-  const last4 = card.last4.replace(/\D/g, "").slice(-4);
+  const last4 = (card.last4 ?? "").replace(/\D/g, "").slice(-4);
+  // Prefer name-only; keep last4 in label only for legacy saved cards.
   return last4 ? `${nick} ****${last4}` : nick;
 }
 
@@ -97,23 +99,21 @@ export function saveCreditCards(userId: string, cards: SavedCreditCard[]) {
 
 export function upsertSavedCreditCard(
   userId: string,
-  input: { nickname: string; last4: string; id?: string },
+  input: { nickname: string; last4?: string; id?: string },
 ): SavedCreditCard {
   const nickname = input.nickname.trim();
-  const last4 = input.last4.replace(/\D/g, "").slice(-4);
+  const last4 = (input.last4 ?? "").replace(/\D/g, "").slice(-4);
   const cards = loadSavedCreditCards(userId);
   const existingIdx = input.id
     ? cards.findIndex((c) => c.id === input.id)
     : cards.findIndex(
-        (c) =>
-          c.nickname.toLowerCase() === nickname.toLowerCase() &&
-          c.last4 === last4,
+        (c) => c.nickname.toLowerCase() === nickname.toLowerCase(),
       );
 
   const next: SavedCreditCard = {
     id: existingIdx >= 0 ? cards[existingIdx].id : crypto.randomUUID(),
     nickname,
-    last4,
+    ...(last4 ? { last4 } : {}),
     createdAt:
       existingIdx >= 0
         ? cards[existingIdx].createdAt
@@ -124,6 +124,15 @@ export function upsertSavedCreditCard(
   else cards.unshift(next);
   saveCreditCards(userId, cards);
   return next;
+}
+
+export function deleteSavedCreditCard(userId: string, cardId: string): boolean {
+  if (!userId || !cardId) return false;
+  const cards = loadSavedCreditCards(userId);
+  const next = cards.filter((c) => c.id !== cardId);
+  if (next.length === cards.length) return false;
+  saveCreditCards(userId, next);
+  return true;
 }
 
 export function summarizeCreditCardBills(

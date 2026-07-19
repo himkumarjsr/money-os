@@ -103,13 +103,13 @@ export default function HomePageBelowFold() {
                 </span>
               </Link>
               <Link
-                href="/calculators/tax-regime-2026"
+                href="/calculators/tax-regime-2026?from=home"
                 className="group flex flex-col rounded-2xl border border-violet-200/80 bg-gradient-to-br from-white to-violet-50/90 p-6 shadow-md shadow-violet-500/10 transition hover:-translate-y-0.5 hover:border-violet-400 hover:shadow-lg"
                 onClick={() =>
                   trackCta({
                     cta_name: "Tax regime card",
                     cta_location: "home_top_picks",
-                    href: "/calculators/tax-regime-2026",
+                    href: "/calculators/tax-regime-2026?from=home",
                   })
                 }
               >

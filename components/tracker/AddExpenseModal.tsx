@@ -2,13 +2,16 @@
 
 import MoneyInput from "@/components/ui/MoneyInput";
 import { handleMoneyInput } from "@/lib/formatters";
+import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import {
   TRACKER_CATEGORIES,
   pickerSubcategories,
 } from "@/lib/tracker-categories";
 import {
+  deleteSavedCreditCard,
   encodeCreditCardPaymentMethod,
+  formatCreditCardLabel,
   isCreditCardPaymentMethod,
   loadSavedCreditCards,
   parseCreditCardPaymentMethod,
@@ -76,12 +79,14 @@ export default function AddExpenseModal({
   editExpense,
 }: AddExpenseModalProps) {
   const user = useAuthStore((s) => s.user);
-  const today = new Date().toISOString().split("T")[0];
+  const [today, setToday] = useState(() => localISODate());
   const seedPayment =
     editExpense?.payment_method || defaultPaymentMethod || "upi";
   const seedParsed = parseCreditCardPaymentMethod(seedPayment);
 
-  const [date, setDate] = useState(editExpense?.date || defaultDate || today);
+  const [date, setDate] = useState(
+    editExpense?.date || defaultDate || localISODate(),
+  );
   const [amount, setAmount] = useState(
     editExpense?.amount || defaultAmount || 0,
   );
@@ -103,7 +108,6 @@ export default function AddExpenseModal({
   );
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCardNickname, setNewCardNickname] = useState("");
-  const [newCardLast4, setNewCardLast4] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -114,6 +118,35 @@ export default function AddExpenseModal({
       document.body.style.overflow = "";
     };
   }, []);
+
+  // Keep default date on the device's local calendar day (not UTC).
+  useEffect(() => {
+    let midnightTimer = 0;
+    const syncToday = () => {
+      const next = localISODate();
+      setToday((prevToday) => {
+        if (!editExpense?.id) {
+          setDate((prevDate) =>
+            !prevDate || prevDate === prevToday ? next : prevDate,
+          );
+        }
+        return next;
+      });
+      window.clearTimeout(midnightTimer);
+      midnightTimer = window.setTimeout(syncToday, msUntilNextLocalMidnight());
+    };
+    syncToday();
+    const onVis = () => {
+      if (document.visibilityState === "visible") syncToday();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", syncToday);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", syncToday);
+      window.clearTimeout(midnightTimer);
+    };
+  }, [editExpense?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -176,24 +209,26 @@ export default function AddExpenseModal({
       return;
     }
     const nick = newCardNickname.trim();
-    const last4 = newCardLast4.replace(/\D/g, "").slice(-4);
     if (!nick) {
       setError("Enter a card name (e.g. HDFC Millennia)");
       return;
     }
-    if (last4.length !== 4) {
-      setError("Enter the last 4 digits of the card");
-      return;
-    }
-    const card = upsertSavedCreditCard(user.id, {
-      nickname: nick,
-      last4,
-    });
+    const card = upsertSavedCreditCard(user.id, { nickname: nick });
     setSavedCards(loadSavedCreditCards(user.id));
     setSelectedCardId(card.id);
     setShowAddCard(false);
     setNewCardNickname("");
-    setNewCardLast4("");
+    setError("");
+  };
+
+  const handleDeleteCard = (cardId: string) => {
+    if (!user?.id || !cardId) return;
+    deleteSavedCreditCard(user.id, cardId);
+    const next = loadSavedCreditCards(user.id);
+    setSavedCards(next);
+    if (selectedCardId === cardId) {
+      setSelectedCardId(next[0]?.id ?? "");
+    }
     setError("");
   };
 
@@ -598,31 +633,94 @@ export default function AddExpenseModal({
                   Which credit card?
                 </label>
                 {savedCards.length > 0 ? (
-                  <select
-                    value={selectedCardId}
-                    onChange={(e) => {
-                      if (e.target.value === "__add__") {
-                        setShowAddCard(true);
-                        return;
-                      }
-                      setSelectedCardId(e.target.value);
-                      setShowAddCard(false);
-                    }}
-                    style={{
-                      ...IOS_DATE_INPUT_STYLE,
-                      marginBottom: showAddCard ? 12 : 0,
-                    }}
-                  >
-                    <option value="" disabled>
-                      Select a card
-                    </option>
-                    {savedCards.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nickname} ****{c.last4}
-                      </option>
-                    ))}
-                    <option value="__add__">+ Add new card…</option>
-                  </select>
+                  <div style={{ marginBottom: showAddCard ? 12 : 0 }}>
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        margin: 0,
+                        padding: 0,
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      {savedCards.map((c) => {
+                        const selected = selectedCardId === c.id;
+                        return (
+                          <li
+                            key={c.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              borderRadius: 12,
+                              border: selected
+                                ? "1.5px solid #534AB7"
+                                : "1.5px solid #E8E6F0",
+                              background: selected ? "#EEEDFE" : "white",
+                              padding: "8px 10px",
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCardId(c.id);
+                                setShowAddCard(false);
+                              }}
+                              style={{
+                                flex: 1,
+                                textAlign: "left",
+                                border: "none",
+                                background: "transparent",
+                                fontWeight: 700,
+                                fontSize: 14,
+                                color: "#111110",
+                                cursor: "pointer",
+                                minHeight: 36,
+                              }}
+                            >
+                              {formatCreditCardLabel(c)}
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Delete ${c.nickname}`}
+                              onClick={() => handleDeleteCard(c.id)}
+                              style={{
+                                border: "none",
+                                background: "#FCEBEB",
+                                color: "#E24B4A",
+                                borderRadius: 8,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                padding: "8px 10px",
+                                cursor: "pointer",
+                                minHeight: 36,
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddCard(true)}
+                      style={{
+                        marginTop: 10,
+                        width: "100%",
+                        height: 40,
+                        borderRadius: 10,
+                        border: "1px dashed #C9C4F2",
+                        background: "white",
+                        color: "#534AB7",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: "pointer",
+                      }}
+                    >
+                      + Add new card
+                    </button>
+                  </div>
                 ) : null}
 
                 {showAddCard || savedCards.length === 0 ? (
@@ -644,32 +742,6 @@ export default function AddExpenseModal({
                         value={newCardNickname}
                         onChange={(e) => setNewCardNickname(e.target.value)}
                         placeholder="e.g. HDFC Millennia"
-                        style={IOS_DATE_INPUT_STYLE}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: FIELD_LABEL_COLOR,
-                          display: "block",
-                          marginBottom: 4,
-                        }}
-                      >
-                        Last 4 digits
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={newCardLast4}
-                        onChange={(e) =>
-                          setNewCardLast4(
-                            e.target.value.replace(/\D/g, "").slice(0, 4),
-                          )
-                        }
-                        placeholder="1234"
                         style={IOS_DATE_INPUT_STYLE}
                       />
                     </div>
@@ -697,8 +769,8 @@ export default function AddExpenseModal({
                         lineHeight: 1.4,
                       }}
                     >
-                      Saved on this device. Next month we’ll remind you to pay
-                      this card’s spend from salary.
+                      Only the card name is saved on this device — no card
+                      number needed.
                     </p>
                   </div>
                 ) : null}

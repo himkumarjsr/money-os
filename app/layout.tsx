@@ -334,6 +334,11 @@ export default function RootLayout({
           "https://www.clarity.ms/tag/"+i;
         y=l.getElementsByTagName(r)[0];
         y.parentNode.insertBefore(t,y);
+        // Queue cookieless mode before Clarity boots (no 1P/3P cookies).
+        c[a]("consentv2", {
+          ad_Storage: "denied",
+          analytics_Storage: "denied"
+        });
       })(window, document, 
         "clarity", "script", 
         "wy7rqfej1z");

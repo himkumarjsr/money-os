@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  deleteSavedCreditCard,
   dismissCreditCardBillReminder,
   displayPaymentMethod,
   encodeCreditCardPaymentMethod,
@@ -14,21 +15,20 @@ import {
 } from "./trackerCreditCards";
 
 describe("credit card payment method encoding", () => {
-  it("formats and encodes card labels", () => {
+  it("formats labels with name only (and legacy last4)", () => {
     expect(
       formatCreditCardLabel({ nickname: "HDFC Millennia", last4: "1234" }),
     ).toBe("HDFC Millennia ****1234");
-    expect(formatCreditCardLabel({ nickname: "  ", last4: "12ab34" })).toBe(
-      "Credit card ****1234",
+    expect(formatCreditCardLabel({ nickname: "Amex" })).toBe("Amex");
+    expect(formatCreditCardLabel({ nickname: "  ", last4: "" })).toBe(
+      "Credit card",
     );
-    expect(formatCreditCardLabel({ nickname: "Amex", last4: "" })).toBe("Amex");
     expect(
       encodeCreditCardPaymentMethod({
         id: "card-1",
         nickname: "HDFC|Prime",
-        last4: "9999",
       }),
-    ).toBe("credit_card::card-1::HDFC/Prime ****9999");
+    ).toBe("credit_card::card-1::HDFC/Prime");
   });
 
   it("detects credit card payment methods", () => {
@@ -75,27 +75,24 @@ describe("saved credit cards localStorage", () => {
     localStorage.clear();
   });
 
-  it("upserts and reloads cards for a user", () => {
+  it("upserts by nickname only (no card number required)", () => {
     const card = upsertSavedCreditCard("user-1", {
       nickname: "Axis Ace",
-      last4: "7788",
     });
     expect(card.nickname).toBe("Axis Ace");
-    expect(card.last4).toBe("7788");
+    expect(card.last4).toBeUndefined();
 
     const loaded = loadSavedCreditCards("user-1");
     expect(loaded).toHaveLength(1);
     expect(loaded[0].id).toBe(card.id);
   });
 
-  it("dedupes by nickname + last4", () => {
+  it("dedupes by nickname", () => {
     const first = upsertSavedCreditCard("user-1", {
       nickname: "HDFC",
-      last4: "1111",
     });
     const second = upsertSavedCreditCard("user-1", {
       nickname: "hdfc",
-      last4: "1111",
     });
     expect(second.id).toBe(first.id);
     expect(loadSavedCreditCards("user-1")).toHaveLength(1);
@@ -104,22 +101,30 @@ describe("saved credit cards localStorage", () => {
   it("updates an existing card by id", () => {
     const first = upsertSavedCreditCard("user-1", {
       nickname: "Old",
-      last4: "1111",
     });
     const updated = upsertSavedCreditCard("user-1", {
       id: first.id,
       nickname: "New Nick",
-      last4: "2222",
     });
     expect(updated.id).toBe(first.id);
     expect(updated.nickname).toBe("New Nick");
-    expect(updated.last4).toBe("2222");
     expect(updated.createdAt).toBe(first.createdAt);
   });
 
+  it("deletes a card from the list", () => {
+    const a = upsertSavedCreditCard("user-1", { nickname: "A" });
+    const b = upsertSavedCreditCard("user-1", { nickname: "B" });
+    expect(loadSavedCreditCards("user-1")).toHaveLength(2);
+    expect(deleteSavedCreditCard("user-1", a.id)).toBe(true);
+    const left = loadSavedCreditCards("user-1");
+    expect(left).toHaveLength(1);
+    expect(left[0].id).toBe(b.id);
+    expect(deleteSavedCreditCard("user-1", "missing")).toBe(false);
+  });
+
   it("keeps cards isolated per user", () => {
-    upsertSavedCreditCard("user-a", { nickname: "A", last4: "0001" });
-    upsertSavedCreditCard("user-b", { nickname: "B", last4: "0002" });
+    upsertSavedCreditCard("user-a", { nickname: "A" });
+    upsertSavedCreditCard("user-b", { nickname: "B" });
     expect(loadSavedCreditCards("user-a")).toHaveLength(1);
     expect(loadSavedCreditCards("user-b")[0].nickname).toBe("B");
   });
@@ -152,7 +157,6 @@ describe("saved credit cards localStorage", () => {
         {
           id: "c1",
           nickname: "X",
-          last4: "1111",
           createdAt: new Date().toISOString(),
         },
       ]),

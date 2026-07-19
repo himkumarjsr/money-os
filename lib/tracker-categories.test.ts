@@ -10,8 +10,18 @@ import {
 const BUCKETS = Object.keys(TRACKER_CATEGORIES) as BucketType[];
 
 describe("TRACKER_CATEGORIES", () => {
-  it("includes Others in every section", () => {
+  it("includes Others in expense/savings sections; income uses Other income", () => {
     for (const bucket of BUCKETS) {
+      if (bucket === "income") {
+        expect(findSubcategory("income", "other_income")).toEqual(
+          expect.objectContaining({
+            id: "other_income",
+            label: "Other income",
+          }),
+        );
+        expect(findSubcategory("income", "others")).toBeNull();
+        continue;
+      }
       const others = TRACKER_CATEGORIES[bucket].subcategories.find(
         (s) => s.id === "others",
       );

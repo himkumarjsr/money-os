@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import InviteLinkShare from "@/components/split/InviteLinkShare";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { BackHref } from "@/components/ui/BackLink";
 import { Analytics } from "@/lib/analytics";
 import { clearBodyScrollLocks, lockBodyScroll } from "@/lib/bodyScrollLock";
 import { formatIndian } from "@/lib/formatters";
@@ -374,11 +372,20 @@ function SplitGroupInner() {
         <div className="rounded-3xl bg-[#534AB7] px-4 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)] sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <BackHref
-                href="/split"
-                label="Back"
-                className="text-white [&_span:first-child]:bg-white/15 [&_span:last-child]:text-white/90"
-              />
+              <button
+                type="button"
+                onClick={() => router.replace("/split")}
+                aria-label="Back"
+                className="inline-flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-white"
+              >
+                <span
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-base font-bold leading-none"
+                  aria-hidden
+                >
+                  ←
+                </span>
+                <span className="text-white/90">Back</span>
+              </button>
               <div className="mt-3 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-xl ring-1 ring-white/20">
                   {group?.emoji ? (
@@ -456,13 +463,14 @@ function SplitGroupInner() {
               Settle up
             </button>
             {groupId ? (
-              <Link
-                href={`/split/${groupId}/add-expense`}
+              <button
+                type="button"
                 data-testid="add-expense-link"
+                onClick={() => router.replace(`/split/${groupId}/add-expense`)}
                 className="flex h-12 min-h-[44px] items-center justify-center rounded-2xl bg-white text-sm font-extrabold text-[#534AB7] shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
               >
                 + Add expense
-              </Link>
+              </button>
             ) : (
               <span className="flex h-12 min-h-[44px] items-center justify-center rounded-2xl bg-white/70 text-sm font-extrabold text-[#534AB7]">
                 + Add expense
@@ -643,12 +651,17 @@ function SplitGroupInner() {
                           </div>
                           {isExpenseCreator && groupId ? (
                             <div className="mt-2 flex gap-1.5">
-                              <Link
-                                href={`/split/${groupId}/add-expense?edit=${e.id}`}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  router.replace(
+                                    `/split/${groupId}/add-expense?edit=${e.id}`,
+                                  )
+                                }
                                 className="rounded-md bg-[#EEEDFE] px-2 py-1 text-[11px] font-bold text-[#534AB7]"
                               >
                                 Edit
-                              </Link>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => setDeletingExpenseId(e.id)}

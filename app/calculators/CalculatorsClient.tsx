@@ -2,7 +2,6 @@
 
 import { lazyCalculatorsById } from "@/components/calculators/lazy-calculators";
 import { AppIcon } from "@/components/ui/AppIcon";
-import BackLink from "@/components/ui/BackLink";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { cn } from "@/lib/cn";
 import { trackToolOpen } from "@/lib/gtag";
@@ -29,6 +28,7 @@ export default function CalculatorsClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const fromHome = searchParams?.get("from") === "home";
   const initialCategory = findCategoryForCalc(initialCalcId);
   const [category, setCategory] = useState<Cat>(initialCategory);
   const activeCat = useMemo(
@@ -38,6 +38,8 @@ export default function CalculatorsClient({
   const [calcId, setCalcId] = useState(initialCalcId);
   const [sheetOpen, setSheetOpen] = useState(false);
   const lastDeepLinkCalc = useRef<string | null>(null);
+  /** Once user picks a calc from the hub list, close should stay on calculators. */
+  const openedFromHub = useRef(false);
 
   const activeItem = useMemo(() => {
     const item = activeCat.items.find((i) => i.id === calcId);
@@ -48,23 +50,34 @@ export default function CalculatorsClient({
     lazyCalculatorsById[activeItem.id] ??
     lazyCalculatorsById[activeCat.items[0].id];
 
-  const updateCalcInUrl = useCallback(
-    (nextCalcId: string) => {
-      if (urlBaseForTaxCanonical) {
-        if (nextCalcId === "tax-regime") {
-          router.replace(urlBaseForTaxCanonical, { scroll: false });
-          return;
-        }
-        router.replace(`/calculators?calc=${encodeURIComponent(nextCalcId)}`, {
-          scroll: false,
-        });
-        return;
+  const goHomeFast = useCallback(() => {
+    router.replace("/");
+  }, [router]);
+
+  const buildCalcUrl = useCallback(
+    (nextCalcId: string, keepFromHome: boolean) => {
+      if (urlBaseForTaxCanonical && nextCalcId === "tax-regime") {
+        return keepFromHome
+          ? `${urlBaseForTaxCanonical}?from=home`
+          : urlBaseForTaxCanonical;
       }
-      const next = new URLSearchParams(searchParams?.toString() ?? "");
+      const base =
+        urlBaseForTaxCanonical && nextCalcId !== "tax-regime"
+          ? "/calculators"
+          : pathname || "/calculators";
+      const next = new URLSearchParams();
       next.set("calc", nextCalcId);
-      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+      if (keepFromHome) next.set("from", "home");
+      return `${base}?${next.toString()}`;
     },
-    [pathname, router, searchParams, urlBaseForTaxCanonical],
+    [pathname, urlBaseForTaxCanonical],
+  );
+
+  const updateCalcInUrl = useCallback(
+    (nextCalcId: string, keepFromHome = false) => {
+      router.replace(buildCalcUrl(nextCalcId, keepFromHome), { scroll: false });
+    },
+    [buildCalcUrl, router],
   );
 
   useEffect(() => {
@@ -93,15 +106,30 @@ export default function CalculatorsClient({
 
   useEffect(() => {
     if (urlBaseForTaxCanonical && calcId === "tax-regime") {
-      if (pathname === urlBaseForTaxCanonical) return;
-      router.replace(urlBaseForTaxCanonical, { scroll: false });
+      const expected = fromHome
+        ? `${urlBaseForTaxCanonical}?from=home`
+        : urlBaseForTaxCanonical;
+      const current = `${pathname}${searchParams?.toString() ? `?${searchParams}` : ""}`;
+      if (
+        pathname === urlBaseForTaxCanonical &&
+        (fromHome
+          ? searchParams?.get("from") === "home"
+          : !searchParams?.get("from"))
+      ) {
+        return;
+      }
+      if (current !== expected) {
+        router.replace(expected, { scroll: false });
+      }
       return;
     }
     const currentCalc = searchParams?.get("calc");
     if (currentCalc === calcId) return;
-    updateCalcInUrl(calcId);
+    // Preserve from=home only for the initial deep-link session, not hub picks.
+    updateCalcInUrl(calcId, fromHome && !openedFromHub.current);
   }, [
     calcId,
+    fromHome,
     pathname,
     router,
     searchParams,
@@ -109,12 +137,56 @@ export default function CalculatorsClient({
     urlBaseForTaxCanonical,
   ]);
 
+  const selectCalcFromHub = (nextCalcId: string, openSheet: boolean) => {
+    openedFromHub.current = true;
+    setCategory(findCategoryForCalc(nextCalcId));
+    setCalcId(nextCalcId);
+    updateCalcInUrl(nextCalcId, false);
+    if (openSheet) setSheetOpen(true);
+  };
+
+  const handleSheetClose = () => {
+    setSheetOpen(false);
+    // Home deep-link: closing the calculator returns to home, not the hub.
+    if (fromHome && !openedFromHub.current) {
+      goHomeFast();
+      return;
+    }
+    // Hub browse: stay on calculators list without calc query noise optional.
+  };
+
+  const handleBack = () => {
+    if (sheetOpen) {
+      handleSheetClose();
+      return;
+    }
+    if (fromHome && !openedFromHub.current) {
+      goHomeFast();
+      return;
+    }
+    // Fast path — avoid slow history.back() on this heavy page.
+    goHomeFast();
+  };
+
   return (
     <div className="min-h-0 bg-white text-slate-900 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">
       <header className="border-b border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            <BackLink fallbackHref="/" label="Back" />
+            <button
+              type="button"
+              onClick={handleBack}
+              aria-label="Back"
+              className="inline-flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-[#534AB7]"
+            >
+              <span
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#EEEDFE] text-base font-bold leading-none"
+                aria-hidden
+              >
+                ←
+              </span>
+              <span>Back</span>
+            </button>
             <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
               Calculators
             </h1>
@@ -136,10 +208,7 @@ export default function CalculatorsClient({
               key={c.id}
               type="button"
               onClick={() => {
-                const nextCalc = c.items[0].id;
-                setCategory(c.id);
-                setCalcId(nextCalc);
-                updateCalcInUrl(nextCalc);
+                selectCalcFromHub(c.items[0].id, false);
               }}
               className={cn(
                 "whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition",
@@ -164,10 +233,7 @@ export default function CalculatorsClient({
               <li key={item.id}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setCalcId(item.id);
-                    updateCalcInUrl(item.id);
-                  }}
+                  onClick={() => selectCalcFromHub(item.id, false)}
                   className={cn(
                     "w-full rounded-2xl border px-4 py-3 text-left transition",
                     calcId === item.id
@@ -213,11 +279,7 @@ export default function CalculatorsClient({
             <li key={item.id}>
               <button
                 type="button"
-                onClick={() => {
-                  setCalcId(item.id);
-                  updateCalcInUrl(item.id);
-                  setSheetOpen(true);
-                }}
+                onClick={() => selectCalcFromHub(item.id, true)}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left"
               >
                 <span className="block text-sm font-semibold text-slate-900">
@@ -234,7 +296,7 @@ export default function CalculatorsClient({
 
       <BottomSheet
         isOpen={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+        onClose={handleSheetClose}
         title={activeItem.title}
         fullscreen
         closeOnBackdrop={false}

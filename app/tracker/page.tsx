@@ -17,6 +17,7 @@ import {
 } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Analytics } from "@/lib/analytics";
+import { msUntilNextLocalMidnight } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
@@ -187,6 +188,54 @@ function TrackerContent() {
   const fetchReqId = useRef(0);
   /** Hard fetches that are still in flight — soft must not clear the spinner early. */
   const hardInFlight = useRef(0);
+  const selectedCalRef = useRef({ month: selectedMonth, year: selectedYear });
+  selectedCalRef.current = { month: selectedMonth, year: selectedYear };
+  const clockCalRef = useRef({
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
+  });
+
+  // Follow the device calendar when the user is on "this month" past midnight.
+  useEffect(() => {
+    let midnightTimer = 0;
+    const syncCalendar = () => {
+      const now = new Date();
+      const nextMonth = now.getMonth();
+      const nextYear = now.getFullYear();
+      const prevClock = clockCalRef.current;
+      if (prevClock.month === nextMonth && prevClock.year === nextYear) {
+        window.clearTimeout(midnightTimer);
+        midnightTimer = window.setTimeout(
+          syncCalendar,
+          msUntilNextLocalMidnight(),
+        );
+        return;
+      }
+      const { month: m, year: y } = selectedCalRef.current;
+      const followingClock = m === prevClock.month && y === prevClock.year;
+      clockCalRef.current = { month: nextMonth, year: nextYear };
+      if (followingClock) {
+        setSelectedMonth(nextMonth);
+        setSelectedYear(nextYear);
+      }
+      window.clearTimeout(midnightTimer);
+      midnightTimer = window.setTimeout(
+        syncCalendar,
+        msUntilNextLocalMidnight(),
+      );
+    };
+    syncCalendar();
+    const onVis = () => {
+      if (document.visibilityState === "visible") syncCalendar();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", syncCalendar);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", syncCalendar);
+      window.clearTimeout(midnightTimer);
+    };
+  }, []);
 
   useEffect(() => {
     // Already known from localStorage — skip the DB round-trip flash.
