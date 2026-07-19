@@ -14,14 +14,17 @@ import { AppIcon } from "@/components/ui/AppIcon";
 
 type JoinStatus = "loading" | "success" | "error";
 
-async function joinWithRetry(token: string, attempts = 3) {
+async function joinWithRetry(
+  payload: { token?: string; code?: string },
+  attempts = 3,
+) {
   let lastError = "Could not join group";
   for (let i = 0; i < attempts; i++) {
     const response = await fetch("/api/split/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ token }),
+      body: JSON.stringify(payload),
     });
     const result = (await response.json()) as {
       success?: boolean;
@@ -35,7 +38,6 @@ async function joinWithRetry(token: string, attempts = 3) {
     }
 
     lastError = result.error ?? lastError;
-    // Session cookie may lag right after OAuth — retry briefly.
     if (response.status === 401 && i < attempts - 1) {
       await new Promise((r) => setTimeout(r, 400 * (i + 1)));
       continue;
@@ -49,31 +51,36 @@ export default function JoinSplitGroupClient() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params?.get("token") ?? null;
+  const code = params?.get("code") ?? null;
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [status, setStatus] = useState<JoinStatus>("loading");
   const [message, setMessage] = useState("");
   const [groupName, setGroupName] = useState("");
   const joinInFlight = useRef(false);
-  const joinedToken = useRef<string | null>(null);
+  const joinedKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!hasInitialized) return;
-    if (!token) {
+    if (!token && !code) {
       setStatus("error");
       setMessage("Invalid invite link");
       return;
     }
-    if (joinedToken.current === token || joinInFlight.current) return;
+
+    const joinKey = token ? `token:${token}` : `code:${code}`;
+    if (joinedKey.current === joinKey || joinInFlight.current) return;
 
     const process = async () => {
       const authenticated = await resolveAuthenticated();
       if (!authenticated) {
-        saveSplitInviteToken(token);
+        if (token) saveSplitInviteToken(token);
         const currentUrl =
           typeof window !== "undefined"
             ? window.location.pathname + window.location.search
-            : `/split/join?token=${encodeURIComponent(token)}`;
+            : token
+              ? `/split/join?token=${encodeURIComponent(token)}`
+              : `/split/join?code=${encodeURIComponent(code!)}`;
         saveSplitInviteRedirect(currentUrl);
         router.replace(`/login?next=${encodeURIComponent(currentUrl)}`);
         return;
@@ -83,8 +90,8 @@ export default function JoinSplitGroupClient() {
       setStatus("loading");
 
       try {
-        const result = await joinWithRetry(token);
-        joinedToken.current = token;
+        const result = await joinWithRetry(token ? { token } : { code: code! });
+        joinedKey.current = joinKey;
         setGroupName(result.groupName ?? "group");
 
         const authUser = useAuthStore.getState().user;
@@ -107,7 +114,7 @@ export default function JoinSplitGroupClient() {
     };
 
     void process();
-  }, [hasInitialized, isLoggedIn, router, token]);
+  }, [hasInitialized, isLoggedIn, router, token, code]);
 
   return (
     <div className="min-h-dvh bg-[#F7F7F4] px-6 py-10">

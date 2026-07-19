@@ -63,6 +63,23 @@ describe("computeSplitShares", () => {
     expect(ok.shares).toHaveLength(3);
   });
 
+  it("shares split divides proportionally (2:1)", () => {
+    const { shares, error } = computeSplitShares({
+      amount: 3000,
+      splitType: "shares",
+      includedMembers: members.slice(0, 2),
+      shareCounts: { "a@x.com": 2, "b@x.com": 1 },
+    });
+    expect(error).toBeNull();
+    expect(shares).toHaveLength(2);
+    const byEmail = Object.fromEntries(
+      shares.map((s) => [s.email, s.share_amount]),
+    );
+    expect(byEmail["a@x.com"]).toBe(2000);
+    expect(byEmail["b@x.com"]).toBe(1000);
+    expect(shares.reduce((s, x) => s + x.share_amount, 0)).toBe(3000);
+  });
+
   it("percentage split requires 100%", () => {
     const bad = computeSplitShares({
       amount: 200,

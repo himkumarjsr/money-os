@@ -54,7 +54,8 @@ export async function GET(req: NextRequest) {
         .select(
           "amount, paid_by_email, paid_by_name, shares:split_expense_shares(email, display_name, share_amount)",
         )
-        .eq("group_id", groupId),
+        .eq("group_id", groupId)
+        .or("is_deleted.eq.false,is_deleted.is.null"),
       admin
         .from("split_settlements")
         .select("from_email, to_email, amount")

@@ -50,6 +50,9 @@ export async function POST(req: NextRequest) {
       "Member";
 
     const admin = getSupabaseAdmin();
+    const inviteCode = Array.from({ length: 8 }, () =>
+      "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".charAt(Math.floor(Math.random() * 32)),
+    ).join("");
 
     const { data: group, error: groupError } = await admin
       .from("split_groups")
@@ -58,6 +61,7 @@ export async function POST(req: NextRequest) {
         emoji,
         group_type: groupType,
         created_by: user.id,
+        invite_code: inviteCode,
       })
       .select("id")
       .single();

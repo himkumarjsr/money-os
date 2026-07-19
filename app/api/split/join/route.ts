@@ -7,15 +7,54 @@ import {
 
 type JoinBody = {
   token?: string;
+  code?: string;
 };
+
+async function activateMember(input: {
+  admin: ReturnType<typeof getSupabaseAdmin>;
+  groupId: string;
+  userId: string;
+  email: string;
+  displayName: string;
+}) {
+  const now = new Date().toISOString();
+  const { data: existing } = await input.admin
+    .from("split_group_members")
+    .select("id, status")
+    .eq("group_id", input.groupId)
+    .eq("email", input.email)
+    .maybeSingle();
+
+  if (existing?.status === "active") {
+    return { alreadyActive: true as const };
+  }
+
+  const { error } = await input.admin.from("split_group_members").upsert(
+    {
+      group_id: input.groupId,
+      user_id: input.userId,
+      email: input.email,
+      display_name: input.displayName,
+      status: "active",
+      role: "member",
+      joined_at: now,
+      left_at: null,
+    },
+    { onConflict: "group_id,email" },
+  );
+  if (error) throw error;
+  return { alreadyActive: false as const };
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as JoinBody;
     const token = body.token?.trim();
-    if (!token) {
+    const code = body.code?.trim().toUpperCase();
+
+    if (!token && !code) {
       return NextResponse.json(
-        { error: "Missing invite token" },
+        { error: "Missing invite token or code" },
         { status: 400 },
       );
     }
@@ -38,10 +77,49 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = getSupabaseAdmin();
+    const displayName =
+      user.user_metadata?.name || userEmail.split("@")[0] || "Member";
+
+    // ── Join by group invite_code ──────────────────────────────────
+    if (code && !token) {
+      const { data: group, error: groupErr } = await admin
+        .from("split_groups")
+        .select("id, name, is_active")
+        .eq("invite_code", code)
+        .maybeSingle();
+      if (groupErr) throw groupErr;
+      if (!group || group.is_active === false) {
+        return NextResponse.json(
+          { error: "Group not found for this invite code" },
+          { status: 404 },
+        );
+      }
+
+      await activateMember({
+        admin,
+        groupId: group.id,
+        userId: user.id,
+        email: userEmail,
+        displayName,
+      });
+
+      await admin
+        .from("split_groups")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", group.id);
+
+      return NextResponse.json({
+        success: true,
+        groupId: group.id,
+        groupName: group.name ?? "Split",
+      });
+    }
+
+    // ── Join by invitation token ───────────────────────────────────
     const { data: invite, error: inviteErr } = await admin
       .from("split_invitations")
       .select("id,group_id,group_name,invited_email,status,expires_at")
-      .eq("token", token)
+      .eq("token", token!)
       .single();
 
     if (inviteErr || !invite) {
@@ -73,19 +151,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid invite" }, { status: 400 });
     }
 
-    const displayName =
-      user.user_metadata?.name || userEmail.split("@")[0] || "Member";
     const now = new Date().toISOString();
 
     if (openInvite) {
-      const { data: existing } = await admin
-        .from("split_group_members")
-        .select("id, status")
-        .eq("group_id", invite.group_id)
-        .eq("email", userEmail)
-        .maybeSingle();
-
-      if (existing?.status === "active") {
+      const result = await activateMember({
+        admin,
+        groupId: invite.group_id,
+        userId: user.id,
+        email: userEmail,
+        displayName,
+      });
+      if (result.alreadyActive) {
         return NextResponse.json({
           success: true,
           groupId: invite.group_id,
@@ -93,23 +169,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const { error: upsertErr } = await admin
-        .from("split_group_members")
-        .upsert(
-          {
-            group_id: invite.group_id,
-            user_id: user.id,
-            email: userEmail,
-            display_name: displayName,
-            status: "active",
-            role: "member",
-            joined_at: now,
-          },
-          { onConflict: "group_id,email" },
-        );
-      if (upsertErr) throw upsertErr;
-
-      // Keep open invite pending so the same link can be reused.
       return NextResponse.json({
         success: true,
         groupId: invite.group_id,
@@ -132,11 +191,11 @@ export async function POST(req: NextRequest) {
           display_name: displayName,
           status: "active",
           joined_at: now,
+          left_at: null,
         })
         .eq("id", existingMember.id);
       if (memberErr) throw memberErr;
     } else {
-      // Invite email row may be missing — still admit the invited user.
       const { error: insertErr } = await admin
         .from("split_group_members")
         .upsert(
@@ -148,6 +207,7 @@ export async function POST(req: NextRequest) {
             status: "active",
             role: "member",
             joined_at: now,
+            left_at: null,
           },
           { onConflict: "group_id,email" },
         );
@@ -159,9 +219,7 @@ export async function POST(req: NextRequest) {
         .from("split_invitations")
         .update({ status: "accepted" })
         .eq("id", invite.id);
-      if (acceptErr) {
-        throw acceptErr;
-      }
+      if (acceptErr) throw acceptErr;
     }
 
     return NextResponse.json({

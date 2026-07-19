@@ -29,6 +29,7 @@ export type SplitGroupMember = {
   status: "pending" | "active" | "left" | string;
   invited_by?: string | null;
   joined_at?: string | null;
+  left_at?: string | null;
   created_at?: string;
 };
 
@@ -61,10 +62,25 @@ export type SplitExpense = {
   notes?: string | null;
   receipt_url?: string | null;
   is_settlement: boolean;
+  is_deleted?: boolean;
   created_by: string | null;
   created_at?: string;
   updated_at?: string;
   shares?: SplitExpenseShare[];
+};
+
+export type SplitSettlement = {
+  id: string;
+  group_id: string;
+  from_email: string;
+  from_name?: string | null;
+  to_email: string;
+  to_name?: string | null;
+  amount: number;
+  payment_method?: string | null;
+  status: string;
+  completed_at?: string | null;
+  created_at?: string;
 };
 
 export type SplitBalanceEdge = {
@@ -75,7 +91,7 @@ export type SplitBalanceEdge = {
   amount: number;
 };
 
-type SplitType = "equal" | "exact" | "percentage";
+type SplitType = "equal" | "exact" | "percentage" | "shares";
 
 type CreateGroupInput = {
   name: string;
@@ -95,23 +111,40 @@ type AddExpenseInput = {
   paidByName: string;
   paidByUserId?: string | null;
   splitType: SplitType;
-  expenseDate: string; // YYYY-MM-DD
+  expenseDate: string;
   notes?: string;
   includedMembers: Array<
     Pick<SplitGroupMember, "email" | "display_name" | "user_id">
   >;
-  exactAmounts?: Record<string, number>; // email -> amount
-  percentages?: Record<string, number>; // email -> pct
+  exactAmounts?: Record<string, number>;
+  percentages?: Record<string, number>;
+  shareCounts?: Record<string, number>;
   createdBy: string;
+};
+
+type EditExpenseInput = {
+  expenseId: string;
+  groupId: string;
+  title: string;
+  amount: number;
+  category: string;
+  expenseDate: string;
+  notes?: string | null;
+  splitType: SplitType;
+  includedMembers: Array<
+    Pick<SplitGroupMember, "email" | "display_name" | "user_id">
+  >;
+  exactAmounts?: Record<string, number>;
+  percentages?: Record<string, number>;
+  shareCounts?: Record<string, number>;
 };
 
 type SplitStore = {
   groups: SplitGroup[];
   activeGroup: SplitGroup | null;
   expenses: SplitExpense[];
-  /** Minimal settle-up transfers (debt-simplified). */
+  settlements: SplitSettlement[];
   balances: SplitBalanceEdge[];
-  /** Per-member net balance (+ owed to them, − they owe). */
   netBalances: NetBalance[];
   loading: boolean;
   lastFetched: Record<string, number>;
@@ -140,18 +173,25 @@ type SplitStore = {
     error?: string;
   }>;
   addExpense: (input: AddExpenseInput) => Promise<{ error?: string }>;
+  editExpense: (input: EditExpenseInput) => Promise<{ error?: string }>;
   settleUp: (input: {
     groupId: string;
     toEmail: string;
     amount: number;
     userId: string;
     userEmail: string;
+    paymentMethod?: string;
+    notes?: string;
   }) => Promise<{ error?: string }>;
   deleteGroup: (groupId: string) => Promise<boolean>;
   deleteExpense: (
     groupId: string,
     expenseId: string,
   ) => Promise<{ error?: string }>;
+  leaveGroup: (
+    groupId: string,
+    targetEmail?: string,
+  ) => Promise<{ success: boolean; error?: string; amount?: number }>;
   clearActive: () => void;
 };
 
@@ -167,8 +207,8 @@ function inferMyNetBalance(myEmail: string, balances: SplitBalanceEdge[]) {
   for (const b of balances) {
     const amt = Number(b.amount ?? 0);
     if (!Number.isFinite(amt) || amt <= 0) continue;
-    if (b.to_email?.toLowerCase() === me) net += amt; // others owe me
-    if (b.from_email?.toLowerCase() === me) net -= amt; // I owe others
+    if (b.to_email?.toLowerCase() === me) net += amt;
+    if (b.from_email?.toLowerCase() === me) net -= amt;
   }
   return round2(net);
 }
@@ -177,13 +217,20 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   groups: [],
   activeGroup: null,
   expenses: [],
+  settlements: [],
   balances: [],
   netBalances: [],
   loading: false,
   lastFetched: {},
 
   clearActive: () =>
-    set({ activeGroup: null, expenses: [], balances: [], netBalances: [] }),
+    set({
+      activeGroup: null,
+      expenses: [],
+      settlements: [],
+      balances: [],
+      netBalances: [],
+    }),
 
   fetchGroups: async (userId, userEmail, forceRefresh = false) => {
     const email = (userEmail ?? "").toLowerCase().trim();
@@ -244,37 +291,84 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     set({
       loading: true,
       ...(prev?.id !== groupId
-        ? { activeGroup: null, expenses: [], balances: [], netBalances: [] }
+        ? {
+            activeGroup: null,
+            expenses: [],
+            settlements: [],
+            balances: [],
+            netBalances: [],
+          }
         : {}),
     });
     try {
       const supabase = getSupabase();
-      const [groupRes, membersRes, expensesRes] = await Promise.all([
-        supabase.from("split_groups").select("*").eq("id", groupId).single(),
-        supabase
-          .from("split_group_members")
-          .select("*")
-          .eq("group_id", groupId)
-          .in("status", ["active", "pending"]),
-        supabase
-          .from("split_expenses")
-          .select(`*, shares:split_expense_shares(*)`)
-          .eq("group_id", groupId)
-          .order("expense_date", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(100),
-      ]);
+      const [groupRes, membersRes, expensesRes, settlementsRes] =
+        await Promise.all([
+          supabase.from("split_groups").select("*").eq("id", groupId).single(),
+          supabase
+            .from("split_group_members")
+            .select("*")
+            .eq("group_id", groupId)
+            .in("status", ["active", "pending"]),
+          supabase
+            .from("split_expenses")
+            .select(`*, shares:split_expense_shares(*)`)
+            .eq("group_id", groupId)
+            .or("is_deleted.eq.false,is_deleted.is.null")
+            .order("expense_date", { ascending: false })
+            .order("created_at", { ascending: false })
+            .limit(100),
+          supabase
+            .from("split_settlements")
+            .select("*")
+            .eq("group_id", groupId)
+            .eq("status", "completed")
+            .order("completed_at", { ascending: false })
+            .limit(50),
+        ]);
 
       if (groupRes.error) throw groupRes.error;
       if (membersRes.error) throw membersRes.error;
       if (expensesRes.error) throw expensesRes.error;
+      // Settlements are optional for older schemas — don't fail the whole page.
+      if (settlementsRes.error) {
+        console.warn("settlements fetch:", settlementsRes.error);
+      }
 
       const group = groupRes.data as SplitGroup;
       const members = (membersRes.data as SplitGroupMember[]) ?? [];
       const expenses = (expensesRes.data as SplitExpense[]) ?? [];
+      const settlements = (settlementsRes.data as SplitSettlement[]) ?? [];
 
       let balancesData: SplitBalanceEdge[] = [];
       let netData: NetBalance[] = [];
+
+      // Prefer fixed RPC when available; fall back to balances API.
+      try {
+        const { data: rpcResult, error: rpcErr } = await supabase.rpc(
+          "get_split_balances",
+          { p_group_id: groupId },
+        );
+        if (!rpcErr && Array.isArray(rpcResult) && rpcResult.length >= 0) {
+          // RPC may return edges or nets depending on SQL — normalize both shapes.
+          const rows = rpcResult as Array<Record<string, unknown>>;
+          const looksLikeEdges = rows.some(
+            (r) => "from_email" in r && "to_email" in r,
+          );
+          if (looksLikeEdges) {
+            balancesData = rows.map((r) => ({
+              from_email: String(r.from_email ?? ""),
+              from_name: String(r.from_name ?? r.from_email ?? ""),
+              to_email: String(r.to_email ?? ""),
+              to_name: String(r.to_name ?? r.to_email ?? ""),
+              amount: Number(r.amount ?? 0),
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn("Balances RPC:", err);
+      }
+
       try {
         const res = await fetch(
           `/api/split/balances?groupId=${encodeURIComponent(groupId)}`,
@@ -286,7 +380,10 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
             edges?: SimplifiedEdge[];
           };
           netData = json.net ?? [];
-          balancesData = (json.edges as SplitBalanceEdge[]) ?? [];
+          // Prefer API edges (settlement-aware) over RPC when both exist.
+          if (json.edges?.length || !balancesData.length) {
+            balancesData = (json.edges as SplitBalanceEdge[]) ?? [];
+          }
         } else {
           console.warn("Balances API error:", res.status);
         }
@@ -295,8 +392,12 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       }
 
       set({
-        activeGroup: { ...group, members },
+        activeGroup: {
+          ...group,
+          members: members.filter((m) => m.status !== "left"),
+        },
         expenses,
+        settlements,
         balances: balancesData,
         netBalances: netData,
         loading: false,
@@ -391,6 +492,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
           includedMembers: input.includedMembers,
           exactAmounts: input.exactAmounts,
           percentages: input.percentages,
+          shareCounts: input.shareCounts,
         }),
       });
 
@@ -419,6 +521,47 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     }
   },
 
+  editExpense: async (input) => {
+    try {
+      const res = await fetch(`/api/split/expenses/${input.expenseId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: input.title,
+          amount: input.amount,
+          category: input.category,
+          expenseDate: input.expenseDate,
+          notes: input.notes,
+          splitType: input.splitType,
+          includedMembers: input.includedMembers,
+          exactAmounts: input.exactAmounts,
+          percentages: input.percentages,
+          shareCounts: input.shareCounts,
+        }),
+      });
+      const json = (await res.json()) as {
+        expense?: SplitExpense;
+        error?: string;
+      };
+      if (!res.ok) return { error: json.error ?? "Could not update expense" };
+
+      set((state) => ({
+        expenses: state.expenses.map((e) =>
+          e.id === input.expenseId ? { ...e, ...json.expense } : e,
+        ),
+        lastFetched: {},
+      }));
+      await get().fetchGroupDetail(input.groupId);
+      return {};
+    } catch (err: unknown) {
+      console.error("editExpense error:", err);
+      return {
+        error: err instanceof Error ? err.message : "Could not update expense",
+      };
+    }
+  },
+
   settleUp: async (input) => {
     try {
       const res = await fetch("/api/split/settle", {
@@ -429,7 +572,8 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
           groupId: input.groupId,
           toEmail: input.toEmail,
           amount: input.amount,
-          paymentMethod: "other",
+          paymentMethod: input.paymentMethod || "other",
+          notes: input.notes,
         }),
       });
       const json = (await res.json()) as { error?: string };
@@ -463,6 +607,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         activeGroup:
           state.activeGroup?.id === groupId ? null : state.activeGroup,
         expenses: state.activeGroup?.id === groupId ? [] : state.expenses,
+        settlements: state.activeGroup?.id === groupId ? [] : state.settlements,
         balances: state.activeGroup?.id === groupId ? [] : state.balances,
         netBalances: state.activeGroup?.id === groupId ? [] : state.netBalances,
         lastFetched: {},
@@ -496,6 +641,36 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       };
     }
   },
+
+  leaveGroup: async (groupId, targetEmail) => {
+    try {
+      const url = targetEmail
+        ? `/api/split/members?groupId=${encodeURIComponent(groupId)}&email=${encodeURIComponent(targetEmail)}`
+        : `/api/split/members?groupId=${encodeURIComponent(groupId)}`;
+      const res = await fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        amount?: number;
+      };
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data.error ?? "Could not leave group",
+          amount: data.amount,
+        };
+      }
+      set({ lastFetched: {} });
+      return { success: true };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Could not leave group",
+      };
+    }
+  },
 }));
 
 export function getMyBalanceFromEdges(
@@ -505,7 +680,6 @@ export function getMyBalanceFromEdges(
   return inferMyNetBalance(myEmail, edges);
 }
 
-/** Precise net for a member from server-computed net balances. */
 export function getMyNetBalance(myEmail: string, net: NetBalance[]) {
   const me = (myEmail ?? "").toLowerCase();
   const found = net.find((n) => n.email === me);
