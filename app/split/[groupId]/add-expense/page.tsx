@@ -346,14 +346,19 @@ function AddSplitExpenseInner() {
     splittableMembers.length > 0 &&
     includedMembers.length > 0;
 
-  // Clear any leftover body scroll-lock from prior modals (create/invite sheets).
+  // Clear leftover modal scroll-locks so the document can scroll this long form.
   useEffect(() => {
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
+    const unlock = () => {
+      document.body.style.removeProperty("overflow");
+      document.documentElement.style.removeProperty("overflow");
+    };
+    unlock();
+    const t = window.setTimeout(unlock, 0);
+    return () => window.clearTimeout(t);
   }, []);
 
   return (
-    <div className="w-full bg-[#F7F7F4] px-4 py-8 pb-36 touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
+    <div className="w-full bg-[#F7F7F4] px-4 py-8 pb-40 sm:px-6">
       <div className="mx-auto max-w-2xl">
         <div className="rounded-3xl bg-[#534AB7] px-6 py-5 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-center justify-between gap-4">

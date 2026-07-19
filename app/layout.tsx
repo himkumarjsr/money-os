@@ -318,7 +318,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans min-h-dvh flex flex-col bg-white antialiased">
+      <body className="font-sans min-h-dvh bg-white antialiased">
         <Script
           id="microsoft-clarity"
           strategy="afterInteractive"
@@ -352,10 +352,12 @@ export default function RootLayout({
             <FinancialStoreAuthSync />
             <GlobalNavbar />
             <RenewalReminderBanner />
-            <main
-              id="main-content"
-              className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain"
-            >
+            {/*
+              Do NOT use min-h-0 / overflow-y-auto here. That pattern needs a fixed
+              viewport height on body; with min-h-dvh it clips tall pages (e.g.
+              Split add-expense) so the window cannot scroll.
+            */}
+            <main id="main-content" className="relative w-full">
               {children}
             </main>
             <MorningTipPopup />
