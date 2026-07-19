@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import InviteLinkShare from "@/components/split/InviteLinkShare";
@@ -8,6 +9,7 @@ import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BackHref } from "@/components/ui/BackLink";
 import { Analytics } from "@/lib/analytics";
+import { clearBodyScrollLocks, lockBodyScroll } from "@/lib/bodyScrollLock";
 import { formatIndian } from "@/lib/formatters";
 import { getSupabase } from "@/lib/supabase";
 import type { TrackerIconName } from "@/lib/tracker-categories";
@@ -138,6 +140,11 @@ function SplitGroupInner() {
     };
   }, [fetchGroupDetail, groupId, isLoggedIn]);
 
+  // Ensure document scroll works on enter (clears stuck modal locks).
+  useEffect(() => {
+    clearBodyScrollLocks();
+  }, []);
+
   // Lock page scroll while modals are open (critical for iOS PWA).
   useEffect(() => {
     const locked =
@@ -146,11 +153,7 @@ function SplitGroupInner() {
       showDeleteConfirm ||
       Boolean(deletingExpenseId);
     if (!locked) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return lockBodyScroll();
   }, [inviteOpen, settleOpen, showDeleteConfirm, deletingExpenseId]);
 
   const siteUrl =
@@ -366,7 +369,7 @@ function SplitGroupInner() {
     tone === "owed" ? "#1D9E75" : tone === "owe" ? "#E24B4A" : "#9B9A94";
 
   return (
-    <main className="min-h-dvh overflow-x-hidden overscroll-y-contain bg-[#F7F7F4] px-4 py-8 pb-24 touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
+    <div className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6">
       <div className="mx-auto max-w-3xl min-w-0">
         <div className="rounded-3xl bg-[#534AB7] px-4 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)] sm:px-6">
           <div className="flex items-start justify-between gap-4">
@@ -452,15 +455,19 @@ function SplitGroupInner() {
             >
               Settle up
             </button>
-            <button
-              type="button"
-              onClick={() =>
-                groupId && router.push(`/split/${groupId}/add-expense`)
-              }
-              className="h-12 rounded-2xl bg-white text-sm font-extrabold text-[#534AB7] shadow-[0_10px_30px_rgba(0,0,0,0.12)] min-h-[44px]"
-            >
-              + Add expense
-            </button>
+            {groupId ? (
+              <Link
+                href={`/split/${groupId}/add-expense`}
+                data-testid="add-expense-link"
+                className="flex h-12 min-h-[44px] items-center justify-center rounded-2xl bg-white text-sm font-extrabold text-[#534AB7] shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
+              >
+                + Add expense
+              </Link>
+            ) : (
+              <span className="flex h-12 min-h-[44px] items-center justify-center rounded-2xl bg-white/70 text-sm font-extrabold text-[#534AB7]">
+                + Add expense
+              </span>
+            )}
           </div>
         </div>
 
@@ -634,20 +641,14 @@ function SplitGroupInner() {
                               ₹{formatIndian(Math.round(myShare))}
                             </span>
                           </div>
-                          {isExpenseCreator ? (
+                          {isExpenseCreator && groupId ? (
                             <div className="mt-2 flex gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  groupId &&
-                                  router.push(
-                                    `/split/${groupId}/add-expense?edit=${e.id}`,
-                                  )
-                                }
+                              <Link
+                                href={`/split/${groupId}/add-expense?edit=${e.id}`}
                                 className="rounded-md bg-[#EEEDFE] px-2 py-1 text-[11px] font-bold text-[#534AB7]"
                               >
                                 Edit
-                              </button>
+                              </Link>
                               <button
                                 type="button"
                                 onClick={() => setDeletingExpenseId(e.id)}
@@ -1028,16 +1029,26 @@ function SplitGroupInner() {
       ) : null}
 
       {deletingExpenseId ? (
-        <>
+        <div
+          className="fixed inset-0 z-[990] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setDeletingExpenseId(null)}
+          role="presentation"
+        >
           <div
-            onClick={() => setDeletingExpenseId(null)}
-            className="fixed inset-0 z-[990] bg-black/40"
-          />
-          <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto w-full max-w-[480px] rounded-t-[20px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+40px)] pt-6">
-            <div className="mx-auto mb-5 h-1 w-10 rounded bg-[#E8E6F0]" />
+            className="w-full max-w-sm rounded-3xl bg-white px-5 py-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-expense-title"
+          >
             <div className="mb-5 text-center">
-              <div className="mb-3 text-4xl">🗑️</div>
-              <div className="mb-2 text-[17px] font-extrabold text-[#111110]">
+              <div className="mb-3 text-4xl" aria-hidden>
+                🗑️
+              </div>
+              <div
+                id="delete-expense-title"
+                className="mb-2 text-[17px] font-extrabold text-[#111110]"
+              >
                 Delete this expense?
               </div>
               <div className="text-[13px] text-[#9B9A94]">
@@ -1062,24 +1073,32 @@ function SplitGroupInner() {
               </button>
             </div>
           </div>
-        </>
+        </div>
       ) : null}
 
       {showDeleteConfirm ? (
-        <>
+        <div
+          className="fixed inset-0 z-[990] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowDeleteConfirm(false)}
+          role="presentation"
+        >
           <div
-            onClick={() => setShowDeleteConfirm(false)}
-            className="fixed inset-0 z-[990] bg-black/50"
-          />
-          <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto w-full max-w-[480px] rounded-t-[20px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+40px)] pt-6">
-            <div className="mx-auto mb-5 h-1 w-10 rounded bg-[#E8E6F0]" />
+            className="w-full max-w-sm rounded-3xl bg-white px-5 py-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-group-title"
+          >
             <div className="mb-5 text-center">
               <div className="mb-3 flex justify-center">
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FDEDED]">
                   <AppIcon name="trash" size={26} color="#E24B4A" />
                 </span>
               </div>
-              <div className="mb-2 text-[18px] font-extrabold text-[#111110]">
+              <div
+                id="delete-group-title"
+                className="mb-2 text-[18px] font-extrabold text-[#111110]"
+              >
                 {`Delete "${group?.name}"?`}
               </div>
               <div className="text-sm leading-6 text-[#9B9A94]">
@@ -1105,8 +1124,8 @@ function SplitGroupInner() {
               </button>
             </div>
           </div>
-        </>
+        </div>
       ) : null}
-    </main>
+    </div>
   );
 }

@@ -55,6 +55,8 @@ export function BackHref({
   return (
     <Link
       href={href}
+      aria-label={label}
+      data-testid="back-href"
       className={`inline-flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-[#534AB7] ${className}`}
     >
       <span
