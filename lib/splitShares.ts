@@ -27,6 +27,35 @@ function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Equal split in paise so every share differs by at most ₹0.01 and
+ * amounts always sum exactly to the expense total.
+ */
+function equalShares(
+  total: number,
+  members: SplitShareMember[],
+): SplitShareRow[] {
+  const n = members.length;
+  const centsTotal = Math.round(total * 100);
+  const base = Math.floor(centsTotal / n);
+  let remainder = centsTotal - base * n;
+
+  return members.map((m) => {
+    const extra = remainder > 0 ? 1 : 0;
+    if (remainder > 0) remainder -= 1;
+    const shareCents = base + extra;
+    const shareAmount = shareCents / 100;
+    return {
+      user_id: m.user_id ?? null,
+      email: m.email.toLowerCase().trim(),
+      display_name: m.display_name,
+      share_amount: shareAmount,
+      share_percentage: round2((shareCents / centsTotal) * 100),
+      is_settled: false,
+    };
+  });
+}
+
 export function computeSplitShares(input: ComputeSplitSharesInput): {
   shares: SplitShareRow[];
   error: string | null;
@@ -42,18 +71,17 @@ export function computeSplitShares(input: ComputeSplitSharesInput): {
   }
 
   if (input.splitType === "equal") {
-    const per = round2(total / members.length);
-    const shares = members.map((m, idx) => ({
-      user_id: m.user_id ?? null,
-      email: m.email.toLowerCase(),
-      display_name: m.display_name,
-      share_amount:
-        idx === members.length - 1
-          ? round2(total - per * (members.length - 1))
-          : per,
-      share_percentage: null as number | null,
-      is_settled: false,
-    }));
+    const shares = equalShares(total, members);
+    const sum = round2(shares.reduce((s, x) => s + x.share_amount, 0));
+    if (sum !== total) {
+      return { shares: [], error: "Equal split failed to balance." };
+    }
+    // Max-min difference must be ≤ 1 paise for a fair equal split.
+    const amounts = shares.map((s) => s.share_amount);
+    const spread = round2(Math.max(...amounts) - Math.min(...amounts));
+    if (spread > 0.01) {
+      return { shares: [], error: "Equal split is not even." };
+    }
     return { shares, error: null };
   }
 
@@ -63,7 +91,7 @@ export function computeSplitShares(input: ComputeSplitSharesInput): {
       const v = Number(exact[m.email.toLowerCase()] ?? exact[m.email] ?? 0);
       return {
         user_id: m.user_id ?? null,
-        email: m.email.toLowerCase(),
+        email: m.email.toLowerCase().trim(),
         display_name: m.display_name,
         share_amount: round2(Math.max(0, v)),
         share_percentage: null as number | null,
@@ -92,26 +120,24 @@ export function computeSplitShares(input: ComputeSplitSharesInput): {
         error: `Percentages must add to 100 (currently ${pctSum}).`,
       };
     }
+
+    // Allocate in paise from percentages for exact total.
+    const centsTotal = Math.round(total * 100);
+    let assigned = 0;
     const shares = members.map((m, idx) => {
       const pct = Number(pcts[idx] ?? 0);
-      const amt =
-        idx === members.length - 1
-          ? round2(
-              total -
-                members
-                  .slice(0, -1)
-                  .reduce(
-                    (s, _mm, ii) =>
-                      s + round2(total * (Number(pcts[ii] ?? 0) / 100)),
-                    0,
-                  ),
-            )
-          : round2(total * (pct / 100));
+      let shareCents: number;
+      if (idx === members.length - 1) {
+        shareCents = centsTotal - assigned;
+      } else {
+        shareCents = Math.round((centsTotal * pct) / 100);
+        assigned += shareCents;
+      }
       return {
         user_id: m.user_id ?? null,
-        email: m.email.toLowerCase(),
+        email: m.email.toLowerCase().trim(),
         display_name: m.display_name,
-        share_amount: amt,
+        share_amount: shareCents / 100,
         share_percentage: pct,
         is_settled: false,
       };
@@ -135,22 +161,23 @@ export function computeSplitShares(input: ComputeSplitSharesInput): {
       };
     }
 
+    const centsTotal = Math.round(total * 100);
     let assigned = 0;
     const shares = members.map((m, idx) => {
       const shareCount = counts[idx] ?? 0;
       const pct = (shareCount / totalShares) * 100;
-      let amt: number;
+      let shareCents: number;
       if (idx === members.length - 1) {
-        amt = round2(total - assigned);
+        shareCents = centsTotal - assigned;
       } else {
-        amt = round2(total * (shareCount / totalShares));
-        assigned = round2(assigned + amt);
+        shareCents = Math.round((centsTotal * shareCount) / totalShares);
+        assigned += shareCents;
       }
       return {
         user_id: m.user_id ?? null,
-        email: m.email.toLowerCase(),
+        email: m.email.toLowerCase().trim(),
         display_name: m.display_name,
-        share_amount: amt,
+        share_amount: shareCents / 100,
         share_percentage: round2(pct),
         is_settled: false,
       };

@@ -1,19 +1,14 @@
 "use client";
 
-import {
-  Suspense,
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-  useRef,
-} from "react";
+import { Suspense, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import { BackHref } from "@/components/ui/BackLink";
 import { Analytics } from "@/lib/analytics";
+import { formatIndian } from "@/lib/formatters";
+import { computeSplitShares } from "@/lib/splitShares";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore, type SplitGroupMember } from "@/store/splitStore";
-import { formatIndian } from "@/lib/formatters";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import type { TrackerIconName } from "@/lib/tracker-categories";
 
@@ -185,13 +180,7 @@ function AddSplitExpenseInner() {
     setShareCounts(shares);
   }, [editExpenseId, detailReady, expenses, splittableMembers]);
 
-  const handleBack = useCallback(() => {
-    if (groupId) {
-      router.push(`/split/${groupId}`);
-      return;
-    }
-    router.push("/split");
-  }, [groupId, router]);
+  const backHref = groupId ? `/split/${groupId}` : "/split";
 
   const includedMembers = useMemo(() => {
     return splittableMembers
@@ -202,6 +191,26 @@ function AddSplitExpenseInner() {
         user_id: m.user_id,
       }));
   }, [includedEmails, splittableMembers]);
+
+  /** Live share preview — same engine as the API (esp. equal). */
+  const previewShares = useMemo(() => {
+    if (!amountRaw || amountRaw <= 0 || includedMembers.length === 0) {
+      return null;
+    }
+    const shareCountNums: Record<string, number> = {};
+    for (const m of includedMembers) {
+      const key = m.email.toLowerCase();
+      shareCountNums[key] = parseFloat(shareCounts[key] || "1") || 1;
+    }
+    return computeSplitShares({
+      amount: amountRaw,
+      splitType,
+      includedMembers,
+      exactAmounts: splitType === "exact" ? exactMap : undefined,
+      percentages: splitType === "percentage" ? pctMap : undefined,
+      shareCounts: splitType === "shares" ? shareCountNums : undefined,
+    });
+  }, [amountRaw, exactMap, includedMembers, pctMap, shareCounts, splitType]);
 
   const paidBy = useMemo(() => {
     const e = paidByEmail.toLowerCase();
@@ -224,7 +233,17 @@ function AddSplitExpenseInner() {
 
   const toggleIncluded = (email: string) => {
     const key = email.toLowerCase();
-    setIncludedEmails((prev) => ({ ...prev, [key]: !prev[key] }));
+    setIncludedEmails((prev) => {
+      const nextOn = !prev[key];
+      // Keep at least one person in the split.
+      if (!nextOn) {
+        const othersOn = Object.entries(prev).some(
+          ([k, on]) => k !== key && on,
+        );
+        if (!othersOn) return prev;
+      }
+      return { ...prev, [key]: nextOn };
+    });
   };
 
   const handleSubmit = async () => {
@@ -358,17 +377,15 @@ function AddSplitExpenseInner() {
   }, []);
 
   return (
-    <div className="w-full bg-[#F7F7F4] px-4 py-8 pb-40 sm:px-6">
+    <div className="w-full bg-[#F7F7F4] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+9rem)] sm:px-6 md:pb-28">
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-3xl bg-[#534AB7] px-6 py-5 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
+        <div className="relative z-10 rounded-3xl bg-[#534AB7] px-6 py-5 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="text-sm font-bold text-white/90 hover:text-white min-h-[44px] min-w-[44px] text-left"
-            >
-              ← Back
-            </button>
+            <BackHref
+              href={backHref}
+              label="Back"
+              className="min-h-[44px] text-white [&_span:first-child]:bg-white/15 [&_span:last-child]:text-white/90"
+            />
             <div className="text-xs font-semibold text-white/75">
               {editExpenseId ? "Edit expense" : "Add expense"}
             </div>
@@ -460,16 +477,33 @@ function AddSplitExpenseInner() {
                 }}
               />
             </div>
-            {amountRaw > 0 && includedMembers.length > 0 ? (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#534AB7",
-                  opacity: 0.7,
-                  marginTop: 4,
-                }}
-              >
-                ₹{(amountRaw / includedMembers.length).toFixed(0)} each
+            {previewShares?.shares?.length && !previewShares.error ? (
+              <div className="mt-3 space-y-1 text-left">
+                {splitType === "equal" ? (
+                  <div className="mb-1 text-center text-xs font-semibold text-[#534AB7]">
+                    {`Equal split · ${includedMembers.length} people · sums to ₹${formatIndian(Math.round(amountRaw))}`}
+                  </div>
+                ) : null}
+                {previewShares.shares.map((s) => (
+                  <div
+                    key={s.email}
+                    className="flex items-center justify-between text-xs font-semibold text-[#534AB7]"
+                  >
+                    <span className="truncate opacity-80">
+                      {s.display_name}
+                    </span>
+                    <span>
+                      {`₹${s.share_amount.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : previewShares?.error ? (
+              <div className="mt-2 text-center text-xs font-semibold text-[#E24B4A]">
+                {previewShares.error}
               </div>
             ) : null}
           </div>
@@ -736,8 +770,9 @@ function AddSplitExpenseInner() {
         </div>
       </div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[#F7F7F4] via-[#F7F7F4] to-transparent px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-8 md:pb-6">
-        <div className="pointer-events-auto mx-auto max-w-2xl">
+      {/* Fixed sticky CTA — sits above mobile bottom nav (z-[55]). */}
+      <div className="fixed inset-x-0 bottom-0 z-[60] border-t border-[#E8E6F0] bg-white/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+5.25rem)] shadow-[0_-8px_24px_rgba(30,30,60,0.08)] backdrop-blur-md sm:px-6 md:pb-[calc(env(safe-area-inset-bottom)+16px)]">
+        <div className="mx-auto max-w-2xl">
           <button
             type="button"
             disabled={!canSubmit}
