@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { localISODate } from "@/lib/localDate";
 import { getUniversalBucketRows } from "@/lib/universal-buckets";
 
 const PURPLE = [83, 74, 183] as const;
@@ -53,7 +54,11 @@ function drawPieChart(
     doc.rect(x + radius + 10, legendY + i * 14 - 4, 8, 8, "F");
     doc.setFontSize(9);
     doc.setTextColor(...GREY);
-    doc.text(`${segment.label}: ₹${segment.value.toLocaleString("en-IN")}`, x + radius + 22, legendY + i * 14);
+    doc.text(
+      `${segment.label}: ₹${segment.value.toLocaleString("en-IN")}`,
+      x + radius + 22,
+      legendY + i * 14,
+    );
   });
 }
 
@@ -119,7 +124,11 @@ export async function downloadOptimizerPDF(
     y += 1;
   };
 
-  const addHeading = (text: string, size = 14, color: readonly [number, number, number] = PURPLE) => {
+  const addHeading = (
+    text: string,
+    size = 14,
+    color: readonly [number, number, number] = PURPLE,
+  ) => {
     if (y > H - 30) newPage();
     y += 4;
     addText(text, size, color, true);
@@ -128,7 +137,11 @@ export async function downloadOptimizerPDF(
     y += 6;
   };
 
-  const addSmallTable = (headers: string[], rows: string[][], colWidths: number[]) => {
+  const addSmallTable = (
+    headers: string[],
+    rows: string[][],
+    colWidths: number[],
+  ) => {
     if (y > H - 30) newPage();
     doc.setFillColor(240, 239, 248);
     doc.rect(M, y - 4, UW, 8, "F");
@@ -175,13 +188,16 @@ export async function downloadOptimizerPDF(
     r: number,
     slices: Array<{ value: number; color: [number, number, number] }>,
   ) => {
-    const total = Math.max(1, slices.reduce((s, sl) => s + Math.max(0, sl.value), 0));
+    const total = Math.max(
+      1,
+      slices.reduce((s, sl) => s + Math.max(0, sl.value), 0),
+    );
     let startAngle = -Math.PI / 2;
     slices.forEach((slice) => {
       const value = Math.max(0, slice.value);
       if (value <= 0) return;
       const sweep = (value / total) * Math.PI * 2;
-      const segments = Math.max(6, Math.ceil(((sweep * 180) / Math.PI) / 4));
+      const segments = Math.max(6, Math.ceil((sweep * 180) / Math.PI / 4));
       doc.setFillColor(slice.color[0], slice.color[1], slice.color[2]);
       for (let i = 0; i < segments; i++) {
         const a1 = startAngle + (sweep * i) / segments;
@@ -224,13 +240,18 @@ export async function downloadOptimizerPDF(
     (profile?.spouseIncome || 0) +
     (profile?.otherIncome || 0);
   const bucketRowsForSummary = getUniversalBucketRows(profile);
-  const totalOutflow = bucketRowsForSummary.reduce((sum, row) => sum + (row.actual || 0), 0);
+  const totalOutflow = bucketRowsForSummary.reduce(
+    (sum, row) => sum + (row.actual || 0),
+    0,
+  );
   const amountLeftInHand = Math.round(monthlyIncome - totalOutflow);
   const buildPhases = () => {
     const surplus = priorityPlan?.monthlySurplus || 0;
     const debts = priorityPlan?.debts || [];
     const priorities = priorityPlan?.priorities || [];
-    const criticals = priorities.filter((p: any) => p.urgency === "critical" && p.status !== "complete");
+    const criticals = priorities.filter(
+      (p: any) => p.urgency === "critical" && p.status !== "complete",
+    );
     return [
       {
         phase: 1,
@@ -238,7 +259,9 @@ export async function downloadOptimizerPDF(
         subtitle: "First two weekends",
         tasks: [
           criticals[0]?.actionThisWeek || "Open liquid mutual fund account",
-          debts[0] ? `Get quotes to close ${debts[0].type}` : "Review monthly spending buckets",
+          debts[0]
+            ? `Get quotes to close ${debts[0].type}`
+            : "Review monthly spending buckets",
           "Set up Parag Parikh or HDFC liquid fund",
         ],
         outcomes: ["Safety baseline created"],
@@ -295,7 +318,11 @@ export async function downloadOptimizerPDF(
   doc.setFont("helvetica", "normal");
   doc.setTextColor(175, 169, 236);
   doc.text(
-    new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+    new Date().toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
     M,
     30,
   );
@@ -303,7 +330,8 @@ export async function downloadOptimizerPDF(
   y = 60;
 
   const score = analysis?.overallScore || 0;
-  const scoreColor: readonly [number, number, number] = score < 40 ? RED : score < 70 ? AMBER : GREEN;
+  const scoreColor: readonly [number, number, number] =
+    score < 40 ? RED : score < 70 ? AMBER : GREEN;
   doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
   doc.roundedRect(M, y, UW, 28, 3, 3, "F");
   doc.setFontSize(28);
@@ -313,15 +341,25 @@ export async function downloadOptimizerPDF(
   doc.setFontSize(13);
   doc.setTextColor(255, 255, 255);
   doc.text("Financial Health Score", M + 50, y + 12);
-  const scoreLabel = score < 40 ? "Needs urgent attention" : score < 70 ? "On track" : "Doing well";
+  const scoreLabel =
+    score < 40
+      ? "Needs urgent attention"
+      : score < 70
+        ? "On track"
+        : "Doing well";
   doc.setFontSize(11);
   doc.text(scoreLabel, M + 50, y + 21);
   y += 36;
-  const needsPie = bucketRowsForSummary.find((b) => b.key === "needs")?.actual || 0;
-  const wantsPie = bucketRowsForSummary.find((b) => b.key === "wants")?.actual || 0;
-  const securityPie = bucketRowsForSummary.find((b) => b.key === "security")?.actual || 0;
-  const loansPie = bucketRowsForSummary.find((b) => b.key === "loans")?.actual || 0;
-  const investPie = bucketRowsForSummary.find((b) => b.key === "investment")?.actual || 0;
+  const needsPie =
+    bucketRowsForSummary.find((b) => b.key === "needs")?.actual || 0;
+  const wantsPie =
+    bucketRowsForSummary.find((b) => b.key === "wants")?.actual || 0;
+  const securityPie =
+    bucketRowsForSummary.find((b) => b.key === "security")?.actual || 0;
+  const loansPie =
+    bucketRowsForSummary.find((b) => b.key === "loans")?.actual || 0;
+  const investPie =
+    bucketRowsForSummary.find((b) => b.key === "investment")?.actual || 0;
   drawPieChart(M + 22, y + 20, 16, [
     { value: needsPie, color: [83, 74, 183] },
     { value: loansPie, color: [226, 75, 74] },
@@ -369,7 +407,10 @@ export async function downloadOptimizerPDF(
     [
       ["Total Income", fmt(monthlyIncome)],
       ["Total Outflow", fmt(totalOutflow)],
-      ["Left in hand", `${fmt(Math.abs(amountLeftInHand))} ${amountLeftInHand >= 0 ? "(available to invest)" : "(overspending)"}`],
+      [
+        "Left in hand",
+        `${fmt(Math.abs(amountLeftInHand))} ${amountLeftInHand >= 0 ? "(available to invest)" : "(overspending)"}`,
+      ],
       ["Net Worth", fmt(calcNetWorth)],
     ],
     [120, 60],
@@ -405,7 +446,11 @@ export async function downloadOptimizerPDF(
       fmt(bucket.actual ?? bucket.actualAmount ?? 0),
       bucket.status || "—",
     ]);
-    addSmallTable(["Category", "Cap%", "Cap₹", "Actual₹", "Status"], bucketRows, [35, 20, 35, 35, 25]);
+    addSmallTable(
+      ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
+      bucketRows,
+      [35, 20, 35, 35, 25],
+    );
   } else {
     const fallbackBuckets = getUniversalBucketRows(profile).map((row) => [
       row.label,
@@ -414,7 +459,11 @@ export async function downloadOptimizerPDF(
       fmt(row.actual),
       row.status,
     ]);
-    addSmallTable(["Category", "Cap%", "Cap₹", "Actual₹", "Status"], fallbackBuckets, [35, 20, 35, 35, 25]);
+    addSmallTable(
+      ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
+      fallbackBuckets,
+      [35, 20, 35, 35, 25],
+    );
   }
 
   if (priorityPlan?.surplusBreakdown) {
@@ -424,11 +473,26 @@ export async function downloadOptimizerPDF(
       ["Item", "Amount"],
       [
         ["Monthly income", fmt(priorityPlan.surplusBreakdown.totalIncome || 0)],
-        ["Living expenses (needs)", `-${fmt(priorityPlan.surplusBreakdown.needsActual || 0)}`],
-        ["Loan EMIs", `-${fmt(priorityPlan.surplusBreakdown.loansActual || 0)}`],
-        ["Insurance premiums", `-${fmt(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0)}`],
-        ["Lifestyle / wants", `-${fmt(priorityPlan.surplusBreakdown.wantsActual || 0)}`],
-        ["Surplus available", fmt(priorityPlan.surplusBreakdown.netSurplus || 0)],
+        [
+          "Living expenses (needs)",
+          `-${fmt(priorityPlan.surplusBreakdown.needsActual || 0)}`,
+        ],
+        [
+          "Loan EMIs",
+          `-${fmt(priorityPlan.surplusBreakdown.loansActual || 0)}`,
+        ],
+        [
+          "Insurance premiums",
+          `-${fmt(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0)}`,
+        ],
+        [
+          "Lifestyle / wants",
+          `-${fmt(priorityPlan.surplusBreakdown.wantsActual || 0)}`,
+        ],
+        [
+          "Surplus available",
+          fmt(priorityPlan.surplusBreakdown.netSurplus || 0),
+        ],
       ],
       [120, 60],
     );
@@ -445,12 +509,42 @@ export async function downloadOptimizerPDF(
     addSmallTable(
       ["Category", "Amount/Month", "% Income", "Notes"],
       [
-        ["Monthly income", fmt(priorityPlan.surplusBreakdown.totalIncome || 0), "100%", "Take-home salary + other income"],
-        ["Less: Living expenses", `-${fmt(priorityPlan.surplusBreakdown.needsActual || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.needsActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Needs bucket"],
-        ["Less: Loan EMIs", `-${fmt(priorityPlan.surplusBreakdown.loansActual || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.loansActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "All EMIs (deduped)"],
-        ["Less: Insurance", `-${fmt(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.existingInsurancePremiums || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Protection premiums"],
-        ["Less: Wants", `-${fmt(priorityPlan.surplusBreakdown.wantsActual || 0)}`, `${Math.round(((priorityPlan.surplusBreakdown.wantsActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Lifestyle bucket"],
-        ["= Your surplus", fmt(priorityPlan.surplusBreakdown.netSurplus || 0), `${Math.round(((priorityPlan.surplusBreakdown.netSurplus || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`, "Available for priorities"],
+        [
+          "Monthly income",
+          fmt(priorityPlan.surplusBreakdown.totalIncome || 0),
+          "100%",
+          "Take-home salary + other income",
+        ],
+        [
+          "Less: Living expenses",
+          `-${fmt(priorityPlan.surplusBreakdown.needsActual || 0)}`,
+          `${Math.round(((priorityPlan.surplusBreakdown.needsActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`,
+          "Needs bucket",
+        ],
+        [
+          "Less: Loan EMIs",
+          `-${fmt(priorityPlan.surplusBreakdown.loansActual || 0)}`,
+          `${Math.round(((priorityPlan.surplusBreakdown.loansActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`,
+          "All EMIs (deduped)",
+        ],
+        [
+          "Less: Insurance",
+          `-${fmt(priorityPlan.surplusBreakdown.existingInsurancePremiums || 0)}`,
+          `${Math.round(((priorityPlan.surplusBreakdown.existingInsurancePremiums || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`,
+          "Protection premiums",
+        ],
+        [
+          "Less: Wants",
+          `-${fmt(priorityPlan.surplusBreakdown.wantsActual || 0)}`,
+          `${Math.round(((priorityPlan.surplusBreakdown.wantsActual || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`,
+          "Lifestyle bucket",
+        ],
+        [
+          "= Your surplus",
+          fmt(priorityPlan.surplusBreakdown.netSurplus || 0),
+          `${Math.round(((priorityPlan.surplusBreakdown.netSurplus || 0) / Math.max(priorityPlan.surplusBreakdown.totalIncome || 1, 1)) * 100)}%`,
+          "Available for priorities",
+        ],
       ],
       [58, 35, 20, 67],
     );
@@ -458,24 +552,31 @@ export async function downloadOptimizerPDF(
   addText("How your surplus gets deployed", 11, DARK, true);
   addSmallTable(
     ["Step", "Purpose", "Monthly", "When", "Surplus left"],
-    (priorityPlan?.priorities || []).slice(0, 4).map((p: any, idx: number) => [
-      `Step ${idx + 1}`,
-      p.title,
-      fmt(p.monthlyContribution || 0),
-      idx === 0 ? "Month 1+" : "Month 2+",
-      fmt(p.surplusAfterThis || 0),
-    ]),
+    (priorityPlan?.priorities || [])
+      .slice(0, 4)
+      .map((p: any, idx: number) => [
+        `Step ${idx + 1}`,
+        p.title,
+        fmt(p.monthlyContribution || 0),
+        idx === 0 ? "Month 1+" : "Month 2+",
+        fmt(p.surplusAfterThis || 0),
+      ]),
     [20, 70, 28, 25, 37],
   );
 
   newPage();
   addHeading("PRIORITY STEPS — DETAILED PLAN");
-  addText(explanations?.overallSummary || "Follow these priorities in order.", 10, GREY);
+  addText(
+    explanations?.overallSummary || "Follow these priorities in order.",
+    10,
+    GREY,
+  );
   y += 4;
   const priorities = priorityPlan?.priorities || [];
   priorities.forEach((p: any, i: number) => {
     if (y > H - 50) newPage();
-    const urgencyColor: readonly [number, number, number] = p.urgency === "critical" ? RED : p.urgency === "high" ? AMBER : GREEN;
+    const urgencyColor: readonly [number, number, number] =
+      p.urgency === "critical" ? RED : p.urgency === "high" ? AMBER : GREEN;
     doc.setFillColor(urgencyColor[0], urgencyColor[1], urgencyColor[2]);
     doc.rect(M, y - 3, 3, 20, "F");
     doc.setFillColor(245, 244, 253);
@@ -529,7 +630,11 @@ export async function downloadOptimizerPDF(
       doc.text("This week: ", M + 3, y + 6);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(8, 80, 65);
-      doc.text(doc.splitTextToSize(p.actionThisWeek, UW - 30)[0], M + 25, y + 6);
+      doc.text(
+        doc.splitTextToSize(p.actionThisWeek, UW - 30)[0],
+        M + 25,
+        y + 6,
+      );
       y += 14;
     }
     y += 4;
@@ -562,15 +667,30 @@ export async function downloadOptimizerPDF(
       [35, 15, 25, 25, 20, 15],
     );
     const totalInterestSavedEstimate = debts.reduce(
-      (sum: number, d: any) => sum + Math.max(0, Number(d.extraEMIRecommended || 0) * Math.max(0, Number(d.monthsToClearWithExtra || 0)) * 0.35),
+      (sum: number, d: any) =>
+        sum +
+        Math.max(
+          0,
+          Number(d.extraEMIRecommended || 0) *
+            Math.max(0, Number(d.monthsToClearWithExtra || 0)) *
+            0.35,
+        ),
       0,
     );
-    addText(`Estimated interest saved by debt priority order: ${fmt(totalInterestSavedEstimate)}`, 9, GREEN, true);
+    addText(
+      `Estimated interest saved by debt priority order: ${fmt(totalInterestSavedEstimate)}`,
+      9,
+      GREEN,
+      true,
+    );
   }
 
   newPage();
   addHeading("12-MONTH ACTION PLAN");
-  if (Array.isArray(optimizerData?.keySnapshot) && optimizerData.keySnapshot.length > 0) {
+  if (
+    Array.isArray(optimizerData?.keySnapshot) &&
+    optimizerData.keySnapshot.length > 0
+  ) {
     addText("Your numbers at a glance:", 11, DARK, true);
     y += 2;
     optimizerData.keySnapshot.forEach((line: string) => {
@@ -586,9 +706,14 @@ export async function downloadOptimizerPDF(
       : buildPhases();
   phases.forEach((phase: any) => {
     if (y > H - 60) newPage();
-    const phaseColor: readonly [number, number, number] = Array.isArray(phase.color) && phase.color.length === 3
-      ? [Number(phase.color[0]) || PURPLE[0], Number(phase.color[1]) || PURPLE[1], Number(phase.color[2]) || PURPLE[2]]
-      : PURPLE;
+    const phaseColor: readonly [number, number, number] =
+      Array.isArray(phase.color) && phase.color.length === 3
+        ? [
+            Number(phase.color[0]) || PURPLE[0],
+            Number(phase.color[1]) || PURPLE[1],
+            Number(phase.color[2]) || PURPLE[2],
+          ]
+        : PURPLE;
     doc.setFillColor(phaseColor[0], phaseColor[1], phaseColor[2]);
     doc.rect(M, y, UW, 14, "F");
     doc.setFontSize(12);
@@ -635,7 +760,15 @@ export async function downloadOptimizerPDF(
   if (firstGoal) {
     addSmallTable(
       ["Goal", "Target", "Saved", "Monthly needed", "Timeline"],
-      [[firstGoal.goalType, fmt(firstGoal.targetAmount), fmt(firstGoal.currentSaved), fmt(firstGoal.monthlyRequired), `${firstGoal.yearsToGoal}y`]],
+      [
+        [
+          firstGoal.goalType,
+          fmt(firstGoal.targetAmount),
+          fmt(firstGoal.currentSaved),
+          fmt(firstGoal.monthlyRequired),
+          `${firstGoal.yearsToGoal}y`,
+        ],
+      ],
       [35, 35, 35, 40, 30],
     );
     addText(`Instrument: ${firstGoal.instrument || "—"}`, 10, DARK);
@@ -646,34 +779,47 @@ export async function downloadOptimizerPDF(
   newPage();
   addHeading("YOUR 12-MONTH CHECKLIST");
   const checklistRows: string[][] = [];
-  (priorityPlan?.priorities || []).slice(0, 6).forEach((p: any, idx: number) => {
-    checklistRows.push([
-      String(idx + 1),
-      idx === 0 ? "Month 1, Week 1" : `Month ${Math.min(12, idx + 1)}`,
-      p.actionThisWeek || p.title,
-      "□",
-    ]);
-  });
+  (priorityPlan?.priorities || [])
+    .slice(0, 6)
+    .forEach((p: any, idx: number) => {
+      checklistRows.push([
+        String(idx + 1),
+        idx === 0 ? "Month 1, Week 1" : `Month ${Math.min(12, idx + 1)}`,
+        p.actionThisWeek || p.title,
+        "□",
+      ]);
+    });
   if (checklistRows.length > 0) {
-    addSmallTable(["#", "When", "Action", "Done?"], checklistRows, [10, 32, 128, 10]);
+    addSmallTable(
+      ["#", "When", "Action", "Done?"],
+      checklistRows,
+      [10, 32, 128, 10],
+    );
   } else {
     addText("Checklist will populate after generating priorities.", 10, GREY);
   }
 
   newPage();
   addHeading("Monthly Allocation");
-  if (priorityPlan?.allocationPlan?.length > 0 || priorityPlan?.debts?.length > 0 || priorityPlan?.priorities?.length > 0) {
+  if (
+    priorityPlan?.allocationPlan?.length > 0 ||
+    priorityPlan?.debts?.length > 0 ||
+    priorityPlan?.priorities?.length > 0
+  ) {
     const chartItems = [
       ...(priorityPlan?.debts?.slice(0, 1).map((d: any) => ({
         label: "Debt repayment",
         value: d.emi || 0,
         color: "#E24B4A",
       })) || []),
-      ...(priorityPlan?.priorities?.filter((p: any) => p.monthlyContribution > 0).slice(0, 4).map((p: any, i: number) => ({
-        label: p.title.slice(0, 20),
-        value: p.monthlyContribution,
-        color: ["#534AB7", "#1D9E75", "#BA7517", "#6366F1"][i % 4],
-      })) || []),
+      ...(priorityPlan?.priorities
+        ?.filter((p: any) => p.monthlyContribution > 0)
+        .slice(0, 4)
+        .map((p: any, i: number) => ({
+          label: p.title.slice(0, 20),
+          value: p.monthlyContribution,
+          color: ["#534AB7", "#1D9E75", "#BA7517", "#6366F1"][i % 4],
+        })) || []),
     ].filter((item) => item.value > 0);
     if (chartItems.length > 0) {
       addText("Monthly surplus allocation", 11, DARK, true);
@@ -733,7 +879,11 @@ export async function downloadOptimizerPDF(
     GREY,
   );
   y += 8;
-  addText(`Generated on ${new Date().toLocaleDateString("en-IN")} · finkoin.com`, 9, GREY);
+  addText(
+    `Generated on ${new Date().toLocaleDateString("en-IN")} · finkoin.com`,
+    9,
+    GREY,
+  );
 
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
@@ -744,7 +894,11 @@ export async function downloadOptimizerPDF(
     doc.text("Educational only. Not SEBI advice.", M, H - 8);
   }
 
-  const safeUser = userName.replace(/[^a-zA-Z0-9-_ ]/g, "").trim().replace(/\s+/g, "-") || "User";
-  const fileName = `Finkoin-Report-${safeUser}-${new Date().toISOString().split("T")[0]}.pdf`;
+  const safeUser =
+    userName
+      .replace(/[^a-zA-Z0-9-_ ]/g, "")
+      .trim()
+      .replace(/\s+/g, "-") || "User";
+  const fileName = `Finkoin-Report-${safeUser}-${localISODate()}.pdf`;
   doc.save(fileName);
 }

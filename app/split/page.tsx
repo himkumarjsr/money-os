@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import InviteLinkShare from "@/components/split/InviteLinkShare";
 import { AppIcon } from "@/components/ui/AppIcon";
-import BackLink from "@/components/ui/BackLink";
 import { Analytics } from "@/lib/analytics";
 import { clearBodyScrollLocks, lockBodyScroll } from "@/lib/bodyScrollLock";
 import { getSupabase } from "@/lib/supabase";
@@ -206,7 +205,20 @@ function SplitHomeInner() {
     <div className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6">
       <div className="mx-auto max-w-3xl min-w-0">
         <div className="mb-4">
-          <BackLink fallbackHref="/" label="Back" />
+          <button
+            type="button"
+            onClick={() => router.replace("/")}
+            aria-label="Back"
+            className="inline-flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-[#534AB7]"
+          >
+            <span
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#EEEDFE] text-base font-bold leading-none"
+              aria-hidden
+            >
+              ←
+            </span>
+            <span>Back</span>
+          </button>
         </div>
         <div className="rounded-3xl bg-[#534AB7] px-6 py-6 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-start justify-between gap-4">

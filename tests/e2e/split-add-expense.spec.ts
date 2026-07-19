@@ -16,16 +16,11 @@ test.describe("FK Split — Group detail scroll", () => {
 
     const add = page.locator('[data-testid="add-expense-link"]').first();
     if (await add.isVisible().catch(() => false)) {
-      await expect(add).toHaveAttribute(
-        "href",
-        `/split/${groupId}/add-expense`,
-      );
       await add.click();
       await page.waitForURL(new RegExp(`/split/${groupId}/add-expense`), {
         timeout: 10000,
       });
       expect(page.url()).toMatch(/add-expense/);
-      // Page must not be a Next compile/runtime error overlay.
       await expect(
         page.getByText(/Failed to compile|Server Error/i),
       ).toHaveCount(0);

@@ -244,7 +244,6 @@ export const TRACKER_CATEGORIES = {
       { id: "dividend", label: "Dividend / interest", icon: "chart" as const },
       { id: "bonus", label: "Bonus", icon: "gift" as const },
       { id: "other_income", label: "Other income", icon: "other" as const },
-      { id: "others", label: "Others", icon: "other" as const },
     ],
   },
 } as const satisfies Record<string, TrackerBucket>;

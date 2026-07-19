@@ -2,7 +2,15 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { localISODate, localYesterdayISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
+
+/** Normalize DB/API date values to YYYY-MM-DD for streak comparisons. */
+function asISODate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? null;
+}
 
 interface GamificationState {
   fkBalance: number;
@@ -16,7 +24,12 @@ interface GamificationState {
   earnedActions: string[];
   toastMessage: string | null;
   fetchGamification: (userId: string) => Promise<void>;
-  addFK: (userId: string, amount: number, reason: string, referenceId?: string) => Promise<boolean>;
+  addFK: (
+    userId: string,
+    amount: number,
+    reason: string,
+    referenceId?: string,
+  ) => Promise<boolean>;
   subscribeToRealtime: (userId: string) => () => void;
   updateLoginStreak: (userId: string) => Promise<void>;
   earnTokens: (amount: number, label: string) => void;
@@ -51,7 +64,11 @@ export const useGamificationStore = create<GamificationState>()(
 
         try {
           const supabase = getSupabase();
-          const { data, error } = await supabase.from("gamification").select("*").eq("user_id", userId).maybeSingle();
+          const { data, error } = await supabase
+            .from("gamification")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle();
           if (error) {
             console.error("fetchGamification error:", error);
             return;
@@ -63,23 +80,30 @@ export const useGamificationStore = create<GamificationState>()(
               fkBalance: fk,
               totalEarned: Number(data.total_earned ?? 0),
               streakDays: Number(data.streak_days ?? 0),
-              lastLoginDate: (data.last_login_date as string | null) ?? null,
-              badges: Array.isArray(data.badges) ? (data.badges as string[]) : [],
+              lastLoginDate: asISODate(data.last_login),
+              badges: Array.isArray(data.badges)
+                ? (data.badges as string[])
+                : [],
               lastFetched: new Date().toISOString(),
             });
             try {
-              await supabase.from("users").update({ fk_balance: fk }).eq("id", userId);
+              await supabase
+                .from("users")
+                .update({ fk_balance: fk })
+                .eq("id", userId);
             } catch {
               /* ignore legacy users.fk_balance sync */
             }
           } else {
-            const { error: insertError } = await supabase.from("gamification").insert({
-              user_id: userId,
-              fk_balance: 0,
-              total_earned: 0,
-              streak_days: 0,
-              badges: [],
-            });
+            const { error: insertError } = await supabase
+              .from("gamification")
+              .insert({
+                user_id: userId,
+                fk_balance: 0,
+                total_earned: 0,
+                streak_days: 0,
+                badges: [],
+              });
             if (insertError) {
               console.error("fetchGamification insert error:", insertError);
               return;
@@ -93,7 +117,10 @@ export const useGamificationStore = create<GamificationState>()(
               lastFetched: new Date().toISOString(),
             });
             try {
-              await supabase.from("users").update({ fk_balance: 0 }).eq("id", userId);
+              await supabase
+                .from("users")
+                .update({ fk_balance: 0 })
+                .eq("id", userId);
             } catch {
               /* ignore */
             }
@@ -123,7 +150,8 @@ export const useGamificationStore = create<GamificationState>()(
           set((state) => ({
             fkBalance: state.fkBalance + amount,
             totalEarned: state.totalEarned + amount,
-            toastMessage: amount > 0 ? `+${amount} FK earned! 🎉` : state.toastMessage,
+            toastMessage:
+              amount > 0 ? `+${amount} FK earned! 🎉` : state.toastMessage,
           }));
 
           const { data: current, error: currentError } = await supabase
@@ -138,31 +166,38 @@ export const useGamificationStore = create<GamificationState>()(
           const newBalance = Number(current?.fk_balance ?? 0) + amount;
           const newTotal = Number(current?.total_earned ?? 0) + amount;
 
-          const { error: upsertError } = await supabase.from("gamification").upsert(
-            {
-              user_id: userId,
-              fk_balance: newBalance,
-              total_earned: newTotal,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id" },
-          );
+          const { error: upsertError } = await supabase
+            .from("gamification")
+            .upsert(
+              {
+                user_id: userId,
+                fk_balance: newBalance,
+                total_earned: newTotal,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id" },
+            );
           if (upsertError) {
             throw upsertError;
           }
 
           try {
-            await supabase.from("users").update({ fk_balance: newBalance }).eq("id", userId);
+            await supabase
+              .from("users")
+              .update({ fk_balance: newBalance })
+              .eq("id", userId);
           } catch {
             /* ignore legacy users.fk_balance sync */
           }
 
-          const { error: txnError } = await supabase.from("fk_transactions").insert({
-            user_id: userId,
-            amount,
-            reason,
-            reference_id: referenceId ?? null,
-          });
+          const { error: txnError } = await supabase
+            .from("fk_transactions")
+            .insert({
+              user_id: userId,
+              amount,
+              reason,
+              reference_id: referenceId ?? null,
+            });
           if (txnError) {
             throw txnError;
           }
@@ -195,15 +230,17 @@ export const useGamificationStore = create<GamificationState>()(
                 fk_balance?: number | null;
                 total_earned?: number | null;
                 streak_days?: number | null;
-                last_login_date?: string | null;
+                last_login?: string | null;
                 badges?: unknown;
               };
               set({
                 fkBalance: Number(data.fk_balance ?? 0),
                 totalEarned: Number(data.total_earned ?? 0),
                 streakDays: Number(data.streak_days ?? 0),
-                lastLoginDate: data.last_login_date ?? null,
-                badges: Array.isArray(data.badges) ? (data.badges as string[]) : [],
+                lastLoginDate: asISODate(data.last_login),
+                badges: Array.isArray(data.badges)
+                  ? (data.badges as string[])
+                  : [],
                 lastFetched: new Date().toISOString(),
               });
             },
@@ -215,44 +252,51 @@ export const useGamificationStore = create<GamificationState>()(
         };
       },
       updateLoginStreak: async (userId) => {
-        const today = new Date().toISOString().split("T")[0];
+        const today = localISODate();
         const supabase = getSupabase();
 
         const { data: gRow, error: readErr } = await supabase
           .from("gamification")
-          .select("last_login_date, streak_days")
+          .select("last_login, streak_days")
           .eq("user_id", userId)
           .maybeSingle();
         if (readErr) {
-          console.error("updateLoginStreak read error:", readErr);
+          console.error(
+            "updateLoginStreak read error:",
+            readErr.message ?? JSON.stringify(readErr),
+          );
           return;
         }
 
-        if (gRow?.last_login_date === today) {
+        const lastLogin = asISODate(gRow?.last_login);
+        if (lastLogin === today) {
           set({
-            streakDays: Number(gRow.streak_days ?? 0),
+            streakDays: Number(gRow?.streak_days ?? 0),
             lastLoginDate: today,
             lastFetched: null,
           });
           return;
         }
 
-        const last = gRow?.last_login_date ?? null;
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-        const isConsecutive = last === yesterday;
-        const newStreak = isConsecutive ? Number(gRow?.streak_days ?? 0) + 1 : 1;
+        const yesterday = localYesterdayISODate();
+        const isConsecutive = lastLogin === yesterday;
+        const newStreak = isConsecutive
+          ? Number(gRow?.streak_days ?? 0) + 1
+          : 1;
 
         const { error } = await supabase.from("gamification").upsert(
           {
             user_id: userId,
             streak_days: newStreak,
-            last_login_date: today,
-            updated_at: new Date().toISOString(),
+            last_login: today,
           },
           { onConflict: "user_id" },
         );
         if (error) {
-          console.error("updateLoginStreak error:", error);
+          console.error(
+            "updateLoginStreak error:",
+            error.message ?? JSON.stringify(error),
+          );
           return;
         }
 
@@ -282,7 +326,9 @@ export const useGamificationStore = create<GamificationState>()(
         })),
       awardBadge: (badgeId) =>
         set((s) => ({
-          badges: s.badges.includes(badgeId) ? s.badges : [...s.badges, badgeId],
+          badges: s.badges.includes(badgeId)
+            ? s.badges
+            : [...s.badges, badgeId],
         })),
       hasEarnedAction: (key) => get().earnedActions.includes(key),
       markEarnedAction: (key) =>
@@ -309,4 +355,3 @@ export const useGamificationStore = create<GamificationState>()(
     },
   ),
 );
-

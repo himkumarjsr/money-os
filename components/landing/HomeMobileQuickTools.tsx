@@ -10,16 +10,31 @@ const TOOLS: Array<{
   href: string;
   icon: AppIconName;
 }> = [
-  { id: "sip", label: "SIP", href: "/calculators?calc=sip", icon: "trending" },
-  { id: "swp", label: "SWP", href: "/calculators?calc=swp", icon: "wallet" },
+  {
+    id: "sip",
+    label: "SIP",
+    href: "/calculators?calc=sip&from=home",
+    icon: "trending",
+  },
+  {
+    id: "swp",
+    label: "SWP",
+    href: "/calculators?calc=swp&from=home",
+    icon: "wallet",
+  },
   { id: "split", label: "Split", href: "/split", icon: "users" },
   {
     id: "tax",
     label: "Tax",
-    href: "/calculators/tax-regime-2026",
+    href: "/calculators/tax-regime-2026?from=home",
     icon: "receipt",
   },
-  { id: "emi", label: "EMI", href: "/calculators?calc=emi", icon: "bank" },
+  {
+    id: "emi",
+    label: "EMI",
+    href: "/calculators?calc=emi&from=home",
+    icon: "bank",
+  },
   {
     id: "portfolio",
     label: "Portfolio",

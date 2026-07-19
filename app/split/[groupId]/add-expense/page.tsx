@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { Analytics } from "@/lib/analytics";
 import { formatIndian } from "@/lib/formatters";
+import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
 import { computeSplitShares } from "@/lib/splitShares";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore, type SplitGroupMember } from "@/store/splitStore";
@@ -40,14 +41,6 @@ const CATEGORY_OPTIONS: {
   { key: "medical", label: "Medical", icon: "pill" },
   { key: "other", label: "Other", icon: "package" },
 ];
-
-function todayISODate() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
 
 export default function AddSplitExpensePage() {
   return (
@@ -115,7 +108,8 @@ function AddSplitExpenseInner() {
   const [paidByEmail, setPaidByEmail] = useState("");
   const [splitType, setSplitType] = useState<SplitType>("equal");
   const [category, setCategory] = useState<string>("food");
-  const [expenseDate, setExpenseDate] = useState(todayISODate());
+  const [expenseDate, setExpenseDate] = useState(() => localISODate());
+  const [today, setToday] = useState(() => localISODate());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<
@@ -156,20 +150,55 @@ function AddSplitExpenseInner() {
       .finally(() => setDetailReady(true));
   }, [fetchGroupDetail, groupId]);
 
+  // Keep expense date on the device's local calendar day (not UTC).
+  useEffect(() => {
+    let midnightTimer = 0;
+    const syncToday = () => {
+      const next = localISODate();
+      setToday((prevToday) => {
+        if (!editExpenseId) {
+          setExpenseDate((prevDate) =>
+            !prevDate || prevDate === prevToday ? next : prevDate,
+          );
+        }
+        return next;
+      });
+      window.clearTimeout(midnightTimer);
+      midnightTimer = window.setTimeout(syncToday, msUntilNextLocalMidnight());
+    };
+    syncToday();
+    const onVis = () => {
+      if (document.visibilityState === "visible") syncToday();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", syncToday);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", syncToday);
+      window.clearTimeout(midnightTimer);
+    };
+  }, [editExpenseId]);
+
+  // Init included members / default payer only when the member set changes —
+  // do NOT depend on `splittableMembers` array identity (new every render),
+  // or Paid by keeps resetting after the user changes it.
   useEffect(() => {
     if (!memberKey) return;
     if (editExpenseId && hydratedEdit.current === editExpenseId) return;
+
+    const emails = memberKey.split("|").filter(Boolean);
     const init: Record<string, boolean> = {};
-    for (const m of splittableMembers) init[m.email.toLowerCase()] = true;
+    for (const email of emails) init[email] = true;
     setIncludedEmails(init);
 
     const me = (user?.email ?? "").toLowerCase();
-    const defaultPaid =
-      splittableMembers.find((m) => m.email.toLowerCase() === me)?.email ??
-      splittableMembers[0]?.email ??
-      "";
-    setPaidByEmail(defaultPaid);
-  }, [memberKey, splittableMembers, user?.email, editExpenseId]);
+    setPaidByEmail((prev) => {
+      if (prev && emails.includes(prev.toLowerCase()))
+        return prev.toLowerCase();
+      if (me && emails.includes(me)) return me;
+      return emails[0] ?? "";
+    });
+  }, [memberKey, user?.email, editExpenseId]);
 
   useEffect(() => {
     if (!editExpenseId || !detailReady) return;
@@ -179,9 +208,9 @@ function AddSplitExpenseInner() {
     hydratedEdit.current = editExpenseId;
     setAmountRaw(Number(expense.amount) || 0);
     setTitle(expense.title || "");
-    setPaidByEmail(expense.paid_by_email || "");
+    setPaidByEmail((expense.paid_by_email || "").toLowerCase());
     setCategory(expense.category || "food");
-    setExpenseDate(expense.expense_date || todayISODate());
+    setExpenseDate(expense.expense_date || localISODate());
     setNotes(expense.notes || "");
     const st = expense.split_type;
     if (
@@ -356,52 +385,63 @@ function AddSplitExpenseInner() {
     }
 
     setBusy(true);
-    const payload = {
-      groupId,
-      title: title.trim(),
-      amount: amountRaw,
-      category,
-      paidByEmail: paidByEmail.toLowerCase(),
-      paidByName: paidBy?.display_name ?? paidByEmail.split("@")[0] ?? "Member",
-      paidByUserId: paidBy?.user_id ?? null,
-      splitType,
-      expenseDate,
-      notes: notes.trim() ? notes.trim() : undefined,
-      includedMembers,
-      exactAmounts: splitType === "exact" ? exactMap : undefined,
-      percentages: splitType === "percentage" ? pctMap : undefined,
-      shareCounts: splitType === "shares" ? shareCountNums : undefined,
-      createdBy,
-    };
-
-    const res = editExpenseId
-      ? await editExpense({
-          expenseId: editExpenseId,
-          groupId,
-          title: payload.title,
-          amount: payload.amount,
-          category: payload.category,
-          expenseDate: payload.expenseDate,
-          notes: payload.notes ?? null,
-          splitType: payload.splitType,
-          includedMembers: payload.includedMembers,
-          exactAmounts: payload.exactAmounts,
-          percentages: payload.percentages,
-          shareCounts: payload.shareCounts,
-        })
-      : await addExpense(payload);
-    setBusy(false);
-
-    if (res.error) {
-      setFieldErrors({ form: res.error });
-      return;
-    }
     try {
-      if (!editExpenseId) Analytics.splitExpenseAdded();
-    } catch {
-      // Never block return navigation on analytics.
+      const payload = {
+        groupId,
+        title: title.trim(),
+        amount: amountRaw,
+        category,
+        paidByEmail: paidByEmail.toLowerCase(),
+        paidByName:
+          paidBy?.display_name ?? paidByEmail.split("@")[0] ?? "Member",
+        paidByUserId: paidBy?.user_id ?? null,
+        splitType,
+        expenseDate,
+        notes: notes.trim() ? notes.trim() : undefined,
+        includedMembers,
+        exactAmounts: splitType === "exact" ? exactMap : undefined,
+        percentages: splitType === "percentage" ? pctMap : undefined,
+        shareCounts: splitType === "shares" ? shareCountNums : undefined,
+        createdBy,
+      };
+
+      const res = editExpenseId
+        ? await editExpense({
+            expenseId: editExpenseId,
+            groupId,
+            title: payload.title,
+            amount: payload.amount,
+            category: payload.category,
+            expenseDate: payload.expenseDate,
+            notes: payload.notes ?? null,
+            splitType: payload.splitType,
+            includedMembers: payload.includedMembers,
+            exactAmounts: payload.exactAmounts,
+            percentages: payload.percentages,
+            shareCounts: payload.shareCounts,
+          })
+        : await addExpense(payload);
+
+      if (res.error) {
+        setFieldErrors({ form: res.error });
+        return;
+      }
+      try {
+        if (!editExpenseId) Analytics.splitExpenseAdded();
+      } catch {
+        // Never block return navigation on analytics.
+      }
+      // Navigate immediately so the UI never looks hung after a successful save.
+      goToGroupExpenses();
+    } catch (err: unknown) {
+      setFieldErrors({
+        form: err instanceof Error ? err.message : "Could not save. Try again.",
+      });
+    } finally {
+      setBusy(false);
+      document.body.style.removeProperty("overflow");
+      document.documentElement.style.removeProperty("overflow");
     }
-    goToGroupExpenses();
   };
 
   const canSubmit =
@@ -565,21 +605,24 @@ function AddSplitExpenseInner() {
                 Paid by
               </label>
               <select
-                value={paidByEmail}
+                value={paidByEmail.toLowerCase()}
                 onChange={(e) => {
                   clearFieldError("paidBy");
-                  setPaidByEmail(e.target.value);
+                  setPaidByEmail(e.target.value.toLowerCase());
                 }}
                 aria-invalid={Boolean(fieldErrors.paidBy)}
                 className={`mt-1 h-11 w-full rounded-xl border bg-white px-3 text-base outline-none ${
                   fieldErrors.paidBy ? FIELD_ERROR_INPUT : FIELD_OK_INPUT
                 }`}
               >
-                {splittableMembers.map((m) => (
-                  <option key={m.email} value={m.email}>
-                    {m.display_name} ({m.email})
-                  </option>
-                ))}
+                {splittableMembers.map((m) => {
+                  const email = m.email.toLowerCase();
+                  return (
+                    <option key={email} value={email}>
+                      {m.display_name} ({email})
+                    </option>
+                  );
+                })}
               </select>
               {fieldErrors.paidBy ? (
                 <p className="mt-1.5 text-xs font-semibold text-[#E24B4A]">
@@ -858,6 +901,7 @@ function AddSplitExpenseInner() {
               <input
                 type="date"
                 value={expenseDate}
+                max={today}
                 onChange={(e) => setExpenseDate(e.target.value)}
                 className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] bg-white px-3 text-base outline-none focus:border-[#534AB7]"
               />

@@ -19,7 +19,9 @@ type Slide =
       key: "tax";
       title: string;
       subtitle: string;
-      href: "/calculators/tax-regime-2026";
+      href:
+        | "/calculators/tax-regime-2026"
+        | "/calculators/tax-regime-2026?from=home";
       cta: string;
     }
   | {
@@ -51,7 +53,7 @@ const SLIDES: Slide[] = [
     title: "New vs old tax regime",
     subtitle:
       "Compare regimes with HRA, 80C, NPS — built for FY 2025-26 planning.",
-    href: "/calculators/tax-regime-2026",
+    href: "/calculators/tax-regime-2026?from=home",
     cta: "Open calculator",
   },
   {
