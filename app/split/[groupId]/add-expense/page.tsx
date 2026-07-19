@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
-import { BackHref } from "@/components/ui/BackLink";
 import { Analytics } from "@/lib/analytics";
 import { formatIndian } from "@/lib/formatters";
 import { computeSplitShares } from "@/lib/splitShares";
@@ -13,6 +12,19 @@ import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import type { TrackerIconName } from "@/lib/tracker-categories";
 
 type SplitType = "equal" | "exact" | "percentage" | "shares";
+type FieldKey =
+  | "amount"
+  | "title"
+  | "paidBy"
+  | "members"
+  | "exact"
+  | "percentage"
+  | "shares"
+  | "form";
+
+const FIELD_ERROR_INPUT =
+  "border-[#E24B4A] bg-[#FDEDED] focus:border-[#E24B4A] focus:shadow-[0_0_0_3px_rgba(226,75,74,0.15)]";
+const FIELD_OK_INPUT = "border-[#E8E6F0] focus:border-[#534AB7]";
 
 const CATEGORY_OPTIONS: {
   key: string;
@@ -56,9 +68,20 @@ export default function AddSplitExpensePage() {
 function AddSplitExpenseInner() {
   const params = useParams<{ groupId: string }>();
   const searchParams = useSearchParams();
-  const groupId = params?.groupId;
+  const rawGroupId = params?.groupId;
+  const groupId = Array.isArray(rawGroupId)
+    ? rawGroupId[0]
+    : (rawGroupId ?? "");
   const editExpenseId = searchParams?.get("edit") ?? null;
   const router = useRouter();
+
+  const goToGroupExpenses = () => {
+    if (!groupId) {
+      router.replace("/split");
+      return;
+    }
+    router.replace(`/split/${groupId}`);
+  };
 
   const user = useAuthStore((s) => s.user);
   const userId = useAuthStore((s) => s.userId);
@@ -95,7 +118,18 @@ function AddSplitExpenseInner() {
   const [expenseDate, setExpenseDate] = useState(todayISODate());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<FieldKey, string>>
+  >({});
+
+  const clearFieldError = (key: FieldKey) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   const [includedEmails, setIncludedEmails] = useState<Record<string, boolean>>(
     {},
@@ -180,8 +214,6 @@ function AddSplitExpenseInner() {
     setShareCounts(shares);
   }, [editExpenseId, detailReady, expenses, splittableMembers]);
 
-  const backHref = groupId ? `/split/${groupId}` : "/split";
-
   const includedMembers = useMemo(() => {
     return splittableMembers
       .filter((m) => includedEmails[m.email.toLowerCase()])
@@ -247,39 +279,31 @@ function AddSplitExpenseInner() {
   };
 
   const handleSubmit = async () => {
-    setFormError("");
+    const nextErrors: Partial<Record<FieldKey, string>> = {};
     if (!groupId) return;
     if (!isLoggedIn || !createdBy) {
-      setFormError("Sign in again to add expenses.");
-      return;
-    }
-    if (!title.trim()) {
-      setFormError("Enter a description.");
-      return;
-    }
-    if (!paidByEmail) {
-      setFormError("Choose who paid.");
-      return;
+      nextErrors.form = "Sign in again to add expenses.";
     }
     if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-      setFormError("Enter a valid amount.");
-      return;
+      nextErrors.amount = "Enter a valid amount.";
+    }
+    if (!title.trim()) {
+      nextErrors.title = "Enter a description.";
+    }
+    if (!paidByEmail) {
+      nextErrors.paidBy = "Choose who paid.";
     }
     if (includedMembers.length === 0) {
-      setFormError("Select at least one member to split with.");
-      return;
+      nextErrors.members = "Select at least one member to split with.";
     }
-    if (splitType === "exact") {
+    if (splitType === "exact" && !nextErrors.amount) {
       const total = includedMembers.reduce(
         (s, m) => s + Number(exactMap[m.email.toLowerCase()] ?? 0),
         0,
       );
       const diff = Math.abs(total - Number(amountRaw || 0));
       if (diff > 0.01) {
-        setFormError(
-          `Exact amounts must add up to ₹${formatIndian(Math.round(amountRaw))}. Current total: ₹${formatIndian(Math.round(total))}`,
-        );
-        return;
+        nextErrors.exact = `Must total ₹${formatIndian(Math.round(amountRaw))} (now ₹${formatIndian(Math.round(total))}).`;
       }
     }
     if (splitType === "percentage") {
@@ -288,10 +312,7 @@ function AddSplitExpenseInner() {
         0,
       );
       if (Math.abs(totalPct - 100) > 0.01) {
-        setFormError(
-          `Percentages must add up to 100%. Current total: ${totalPct}%`,
-        );
-        return;
+        nextErrors.percentage = `Must add to 100% (now ${totalPct}%).`;
       }
     }
     if (splitType === "shares") {
@@ -301,9 +322,31 @@ function AddSplitExpenseInner() {
         0,
       );
       if (totalShares <= 0) {
-        setFormError("Enter a positive share count for at least one member.");
-        return;
+        nextErrors.shares =
+          "Enter a positive share count for at least one member.";
       }
+    }
+
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      const firstKey = (
+        [
+          "amount",
+          "title",
+          "paidBy",
+          "members",
+          "exact",
+          "percentage",
+          "shares",
+          "form",
+        ] as FieldKey[]
+      ).find((k) => nextErrors[k]);
+      if (firstKey) {
+        document
+          .getElementById(`add-expense-field-${firstKey}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
     }
 
     const shareCountNums: Record<string, number> = {};
@@ -350,11 +393,15 @@ function AddSplitExpenseInner() {
     setBusy(false);
 
     if (res.error) {
-      setFormError(res.error);
+      setFieldErrors({ form: res.error });
       return;
     }
-    if (!editExpenseId) Analytics.splitExpenseAdded();
-    router.push(`/split/${groupId}`);
+    try {
+      if (!editExpenseId) Analytics.splitExpenseAdded();
+    } catch {
+      // Never block return navigation on analytics.
+    }
+    goToGroupExpenses();
   };
 
   const canSubmit =
@@ -377,15 +424,25 @@ function AddSplitExpenseInner() {
   }, []);
 
   return (
-    <div className="w-full bg-[#F7F7F4] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+9rem)] sm:px-6 md:pb-28">
+    <div className="w-full bg-[#F7F7F4] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:px-6 md:pb-16">
       <div className="mx-auto max-w-2xl">
         <div className="relative z-10 rounded-3xl bg-[#534AB7] px-6 py-5 text-white shadow-[0_14px_50px_rgba(83,74,183,0.25)]">
           <div className="flex items-center justify-between gap-4">
-            <BackHref
-              href={backHref}
-              label="Back"
-              className="min-h-[44px] text-white [&_span:first-child]:bg-white/15 [&_span:last-child]:text-white/90"
-            />
+            <button
+              type="button"
+              onClick={goToGroupExpenses}
+              data-testid="back-href"
+              aria-label="Back"
+              className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-white"
+            >
+              <span
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-base font-bold leading-none"
+                aria-hidden
+              >
+                ←
+              </span>
+              <span className="text-white/90">Back</span>
+            </button>
             <div className="text-xs font-semibold text-white/75">
               {editExpenseId ? "Edit expense" : "Add expense"}
             </div>
@@ -417,66 +474,37 @@ function AddSplitExpenseInner() {
           ) : null}
 
           <div
-            style={{
-              background: "#EEEDFE",
-              borderRadius: 16,
-              padding: "24px 20px",
-              textAlign: "center",
-              marginBottom: 16,
-              width: "100%",
-              boxSizing: "border-box",
-            }}
+            id="add-expense-field-amount"
+            className={`mb-4 box-border w-full rounded-2xl px-5 py-6 text-center ${
+              fieldErrors.amount
+                ? "bg-[#FDEDED] ring-2 ring-[#E24B4A]"
+                : "bg-[#EEEDFE]"
+            }`}
           >
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#534AB7",
-                marginBottom: 8,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
+            <div className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-[#534AB7]">
               Total Amount
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: "#534AB7",
-                }}
-              >
-                ₹
-              </span>
+            <div className="flex items-center justify-center gap-1">
+              <span className="text-[28px] font-bold text-[#534AB7]">₹</span>
               <input
                 type="number"
                 inputMode="decimal"
                 value={amountRaw || ""}
-                onChange={(e) => setAmountRaw(Number(e.target.value) || 0)}
+                onChange={(e) => {
+                  clearFieldError("amount");
+                  setAmountRaw(Number(e.target.value) || 0);
+                }}
                 placeholder="0"
                 autoFocus
-                style={{
-                  fontSize: 52,
-                  fontWeight: 800,
-                  color: "#534AB7",
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
-                  textAlign: "center",
-                  width: "80%",
-                  fontFamily: "inherit",
-                  caretColor: "#534AB7",
-                }}
+                aria-invalid={Boolean(fieldErrors.amount)}
+                className="w-[80%] bg-transparent text-center text-[52px] font-extrabold text-[#534AB7] caret-[#534AB7] outline-none"
               />
             </div>
+            {fieldErrors.amount ? (
+              <p className="mt-2 text-xs font-semibold text-[#E24B4A]">
+                {fieldErrors.amount}
+              </p>
+            ) : null}
             {previewShares?.shares?.length && !previewShares.error ? (
               <div className="mt-3 space-y-1 text-left">
                 {splitType === "equal" ? (
@@ -508,27 +536,44 @@ function AddSplitExpenseInner() {
             ) : null}
           </div>
 
-          <div className="mt-2">
+          <div id="add-expense-field-title" className="mt-2">
             <label className="text-xs font-semibold text-[#5F5E5A]">
               Description
             </label>
             <input
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                clearFieldError("title");
+                setTitle(e.target.value);
+              }}
               placeholder="Beach shack drinks"
-              className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] px-3 text-base outline-none focus:border-[#534AB7]"
+              aria-invalid={Boolean(fieldErrors.title)}
+              className={`mt-1 h-11 w-full rounded-xl border px-3 text-base outline-none ${
+                fieldErrors.title ? FIELD_ERROR_INPUT : FIELD_OK_INPUT
+              }`}
             />
+            {fieldErrors.title ? (
+              <p className="mt-1.5 text-xs font-semibold text-[#E24B4A]">
+                {fieldErrors.title}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
+            <div id="add-expense-field-paidBy">
               <label className="text-xs font-semibold text-[#5F5E5A]">
                 Paid by
               </label>
               <select
                 value={paidByEmail}
-                onChange={(e) => setPaidByEmail(e.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-[#E8E6F0] bg-white px-3 text-base outline-none focus:border-[#534AB7]"
+                onChange={(e) => {
+                  clearFieldError("paidBy");
+                  setPaidByEmail(e.target.value);
+                }}
+                aria-invalid={Boolean(fieldErrors.paidBy)}
+                className={`mt-1 h-11 w-full rounded-xl border bg-white px-3 text-base outline-none ${
+                  fieldErrors.paidBy ? FIELD_ERROR_INPUT : FIELD_OK_INPUT
+                }`}
               >
                 {splittableMembers.map((m) => (
                   <option key={m.email} value={m.email}>
@@ -536,6 +581,11 @@ function AddSplitExpenseInner() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.paidBy ? (
+                <p className="mt-1.5 text-xs font-semibold text-[#E24B4A]">
+                  {fieldErrors.paidBy}
+                </p>
+              ) : null}
             </div>
 
             <div>
@@ -569,7 +619,12 @@ function AddSplitExpenseInner() {
             </div>
           </div>
 
-          <div className="mt-4">
+          <div
+            id="add-expense-field-members"
+            className={`mt-4 rounded-2xl p-1 ${
+              fieldErrors.members ? "ring-2 ring-[#E24B4A]" : ""
+            }`}
+          >
             <label className="text-xs font-semibold text-[#5F5E5A]">
               Split among
             </label>
@@ -580,7 +635,10 @@ function AddSplitExpenseInner() {
                   <button
                     key={m.email}
                     type="button"
-                    onClick={() => toggleIncluded(m.email)}
+                    onClick={() => {
+                      clearFieldError("members");
+                      toggleIncluded(m.email);
+                    }}
                     className={`rounded-full px-3 py-2 text-xs font-bold min-h-[44px] ${
                       on
                         ? "bg-[#534AB7] text-white"
@@ -592,13 +650,26 @@ function AddSplitExpenseInner() {
                 );
               })}
             </div>
-            <div className="mt-2 text-xs text-[#9B9A94]">
-              {includedMembers.length} selected
-            </div>
+            {fieldErrors.members ? (
+              <p className="mt-2 text-xs font-semibold text-[#E24B4A]">
+                {fieldErrors.members}
+              </p>
+            ) : (
+              <div className="mt-2 text-xs text-[#9B9A94]">
+                {includedMembers.length} selected
+              </div>
+            )}
           </div>
 
           {splitType === "exact" ? (
-            <div className="mt-5 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
+            <div
+              id="add-expense-field-exact"
+              className={`mt-5 rounded-2xl border bg-[#FAFAFE] p-4 ${
+                fieldErrors.exact
+                  ? "border-[#E24B4A] ring-2 ring-[#E24B4A]/40"
+                  : "border-[#E8E6F0]"
+              }`}
+            >
               <div className="text-xs font-bold uppercase tracking-wide text-[#9B9A94]">
                 Exact amounts
               </div>
@@ -614,27 +685,43 @@ function AddSplitExpenseInner() {
                     <input
                       inputMode="decimal"
                       value={String(exactMap[m.email.toLowerCase()] ?? "")}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        clearFieldError("exact");
                         setExactMap((prev) => ({
                           ...prev,
                           [m.email.toLowerCase()]: Number(e.target.value) || 0,
-                        }))
-                      }
+                        }));
+                      }}
                       placeholder="0"
-                      className="h-11 w-[140px] rounded-xl border border-[#E8E6F0] bg-white px-3 text-right text-base font-bold outline-none focus:border-[#534AB7]"
+                      className={`h-11 w-[140px] rounded-xl border bg-white px-3 text-right text-base font-bold outline-none ${
+                        fieldErrors.exact ? FIELD_ERROR_INPUT : FIELD_OK_INPUT
+                      }`}
                     />
                   </div>
                 ))}
               </div>
-              <div className="mt-3 text-xs font-semibold text-[#5F5E5A]">
-                Total: ₹{formatIndian(Math.round(exactSum))} / ₹
-                {formatIndian(Math.round(amountRaw || 0))}
-              </div>
+              {fieldErrors.exact ? (
+                <p className="mt-3 text-xs font-semibold text-[#E24B4A]">
+                  {fieldErrors.exact}
+                </p>
+              ) : (
+                <div className="mt-3 text-xs font-semibold text-[#5F5E5A]">
+                  Total: ₹{formatIndian(Math.round(exactSum))} / ₹
+                  {formatIndian(Math.round(amountRaw || 0))}
+                </div>
+              )}
             </div>
           ) : null}
 
           {splitType === "shares" ? (
-            <div className="mt-5 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
+            <div
+              id="add-expense-field-shares"
+              className={`mt-5 rounded-2xl border bg-[#FAFAFE] p-4 ${
+                fieldErrors.shares
+                  ? "border-[#E24B4A] ring-2 ring-[#E24B4A]/40"
+                  : "border-[#E8E6F0]"
+              }`}
+            >
               <div className="text-xs font-bold uppercase tracking-wide text-[#9B9A94]">
                 Share counts
               </div>
@@ -655,22 +742,37 @@ function AddSplitExpenseInner() {
                       type="number"
                       inputMode="numeric"
                       value={shareCounts[m.email.toLowerCase()] ?? "1"}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        clearFieldError("shares");
                         setShareCounts((prev) => ({
                           ...prev,
                           [m.email.toLowerCase()]: e.target.value,
-                        }))
-                      }
-                      className="h-11 w-[80px] rounded-xl border border-[#E8E6F0] bg-white px-3 text-right text-base font-bold text-[#534AB7] outline-none focus:border-[#534AB7]"
+                        }));
+                      }}
+                      className={`h-11 w-[80px] rounded-xl border bg-white px-3 text-right text-base font-bold text-[#534AB7] outline-none ${
+                        fieldErrors.shares ? FIELD_ERROR_INPUT : FIELD_OK_INPUT
+                      }`}
                     />
                   </div>
                 ))}
               </div>
+              {fieldErrors.shares ? (
+                <p className="mt-3 text-xs font-semibold text-[#E24B4A]">
+                  {fieldErrors.shares}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
           {splitType === "percentage" ? (
-            <div className="mt-5 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
+            <div
+              id="add-expense-field-percentage"
+              className={`mt-5 rounded-2xl border bg-[#FAFAFE] p-4 ${
+                fieldErrors.percentage
+                  ? "border-[#E24B4A] ring-2 ring-[#E24B4A]/40"
+                  : "border-[#E8E6F0]"
+              }`}
+            >
               <div className="text-xs font-bold uppercase tracking-wide text-[#9B9A94]">
                 Percentages
               </div>
@@ -687,15 +789,20 @@ function AddSplitExpenseInner() {
                       <input
                         inputMode="decimal"
                         value={String(pctMap[m.email.toLowerCase()] ?? "")}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          clearFieldError("percentage");
                           setPctMap((prev) => ({
                             ...prev,
                             [m.email.toLowerCase()]:
                               Number(e.target.value) || 0,
-                          }))
-                        }
+                          }));
+                        }}
                         placeholder="0"
-                        className="h-11 w-[110px] rounded-xl border border-[#E8E6F0] bg-white px-3 text-right text-base font-bold outline-none focus:border-[#534AB7]"
+                        className={`h-11 w-[110px] rounded-xl border bg-white px-3 text-right text-base font-bold outline-none ${
+                          fieldErrors.percentage
+                            ? FIELD_ERROR_INPUT
+                            : FIELD_OK_INPUT
+                        }`}
                       />
                       <span className="text-sm font-bold text-[#9B9A94]">
                         %
@@ -704,9 +811,15 @@ function AddSplitExpenseInner() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 text-xs font-semibold text-[#5F5E5A]">
-                Total: {pctSum}% / 100%
-              </div>
+              {fieldErrors.percentage ? (
+                <p className="mt-3 text-xs font-semibold text-[#E24B4A]">
+                  {fieldErrors.percentage}
+                </p>
+              ) : (
+                <div className="mt-3 text-xs font-semibold text-[#5F5E5A]">
+                  Total: {pctSum}% / 100%
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -762,22 +875,20 @@ function AddSplitExpenseInner() {
             </div>
           </div>
 
-          {formError ? (
-            <p className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]">
-              {formError}
+          {fieldErrors.form ? (
+            <p
+              id="add-expense-field-form"
+              className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]"
+            >
+              {fieldErrors.form}
             </p>
           ) : null}
-        </div>
-      </div>
 
-      {/* Fixed sticky CTA — sits above mobile bottom nav (z-[55]). */}
-      <div className="fixed inset-x-0 bottom-0 z-[60] border-t border-[#E8E6F0] bg-white/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+5.25rem)] shadow-[0_-8px_24px_rgba(30,30,60,0.08)] backdrop-blur-md sm:px-6 md:pb-[calc(env(safe-area-inset-bottom)+16px)]">
-        <div className="mx-auto max-w-2xl">
           <button
             type="button"
             disabled={!canSubmit}
             onClick={() => void handleSubmit()}
-            className="min-h-[48px] w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50"
+            className="mt-6 min-h-[48px] w-full rounded-2xl bg-[#534AB7] px-4 py-3 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(83,74,183,0.25)] disabled:opacity-50"
           >
             {busy
               ? editExpenseId

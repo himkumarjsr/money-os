@@ -41,8 +41,10 @@
     color-scheme: light;
     @apply antialiased;
     -webkit-tap-highlight-color: transparent;
-    /* Document scrolls on the window — do not lock html/body height. */
-    overflow-x: hidden;
+    /*
+      Document scrolls on the window. Avoid overflow-x:hidden on html —
+      on iOS Safari it can turn the root into a broken scrollport.
+    */
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -50,7 +52,8 @@
 
   body {
     @apply min-h-dvh bg-surface text-[color:var(--color-text)] transition-colors;
-    overflow-x: hidden;
+    /* clip does not force overflow-y to compute as auto (unlike hidden). */
+    overflow-x: clip;
     overflow-y: visible;
   }
 

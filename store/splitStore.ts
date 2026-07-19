@@ -510,7 +510,12 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       } else {
         set({ lastFetched: {} });
       }
-      await get().fetchGroupDetail(input.groupId);
+      // Refresh balances in the background — don't block success navigation.
+      void get()
+        .fetchGroupDetail(input.groupId)
+        .catch((err: unknown) => {
+          console.error("addExpense refresh error:", err);
+        });
 
       return {};
     } catch (err: unknown) {
@@ -552,7 +557,11 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         ),
         lastFetched: {},
       }));
-      await get().fetchGroupDetail(input.groupId);
+      void get()
+        .fetchGroupDetail(input.groupId)
+        .catch((err: unknown) => {
+          console.error("editExpense refresh error:", err);
+        });
       return {};
     } catch (err: unknown) {
       console.error("editExpense error:", err);

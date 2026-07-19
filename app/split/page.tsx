@@ -8,6 +8,7 @@ import InviteLinkShare from "@/components/split/InviteLinkShare";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BackLink from "@/components/ui/BackLink";
 import { Analytics } from "@/lib/analytics";
+import { clearBodyScrollLocks, lockBodyScroll } from "@/lib/bodyScrollLock";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
@@ -76,12 +77,12 @@ function SplitHomeInner() {
   }, [email, fetchGroups, isLoggedIn, userId]);
 
   useEffect(() => {
+    clearBodyScrollLocks();
+  }, []);
+
+  useEffect(() => {
     if (!createOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return lockBodyScroll();
   }, [createOpen]);
 
   useEffect(() => {
@@ -202,7 +203,7 @@ function SplitHomeInner() {
   };
 
   return (
-    <main className="min-h-dvh overflow-x-hidden overscroll-y-contain bg-[#F7F7F4] px-4 py-8 pb-[90px] touch-pan-y [-webkit-overflow-scrolling:touch] sm:px-6">
+    <div className="min-h-dvh bg-[#F7F7F4] px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6">
       <div className="mx-auto max-w-3xl min-w-0">
         <div className="mb-4">
           <BackLink fallbackHref="/" label="Back" />
@@ -446,6 +447,6 @@ function SplitHomeInner() {
           </div>
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

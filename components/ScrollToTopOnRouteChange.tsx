@@ -1,5 +1,6 @@
 "use client";
 
+import { clearBodyScrollLocks } from "@/lib/bodyScrollLock";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,8 +10,7 @@ export default function ScrollToTopOnRouteChange() {
 
   useEffect(() => {
     // Clear leftover modal scroll-locks that would block document scroll.
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
+    clearBodyScrollLocks();
 
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     document.documentElement.scrollTop = 0;
