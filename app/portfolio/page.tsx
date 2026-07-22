@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BackLink from "@/components/ui/BackLink";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { useAuthStore } from "@/store/authStore";
 import { usePortfolioStore, type PortfolioFund } from "@/store/portfolioStore";
 import { useGamificationStore } from "@/store/gamificationStore";
@@ -52,6 +54,22 @@ const fallbackFunds: PortfolioFund[] = [
 ];
 
 export default function PortfolioPage() {
+  return (
+    <Suspense
+      fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
+    >
+      <PortfolioPageInner />
+    </Suspense>
+  );
+}
+
+function PortfolioPageInner() {
+  const searchParams = useSearchParams();
+  const fromHome = searchParams?.get("from") === "home";
+  const homeBackProps = fromHome
+    ? { forceHref: "/", replace: true as const }
+    : {};
+
   const tier = useAuthStore((s) => s.user?.subscriptionTier ?? "free");
   const setLastAnalysis = usePortfolioStore((s) => s.setLastAnalysis);
   const lastAnalysis = usePortfolioStore((s) => s.lastAnalysis);
@@ -74,7 +92,7 @@ export default function PortfolioPage() {
     return (
       <div className="min-h-dvh bg-white px-4 py-12 pb-28 md:pb-12">
         <div className="mx-auto max-w-xl">
-          <BackLink fallbackHref="/" label="Back" />
+          <BackLink fallbackHref="/" label="Back" {...homeBackProps} />
           <div className="mt-3 rounded-2xl border border-slate-200 p-6">
             <AppIcon name="lock" size={28} color="#534AB7" />
             <h1 className="mt-2 text-2xl font-semibold">
@@ -98,7 +116,7 @@ export default function PortfolioPage() {
   return (
     <div className="min-h-dvh bg-white px-4 py-10 pb-28 md:pb-10">
       <div className="mx-auto max-w-4xl">
-        <BackLink fallbackHref="/" label="Back" />
+        <BackLink fallbackHref="/" label="Back" {...homeBackProps} />
         <h1 className="mt-3 text-3xl font-semibold">MF Portfolio Analysis</h1>
         <div className="mt-6 rounded-2xl border border-slate-200 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -138,7 +156,11 @@ export default function PortfolioPage() {
             }}
             className="mt-4 rounded-xl bg-[#534AB7] px-4 py-2 font-semibold text-white disabled:opacity-50"
           >
-            {loading ? "Analysing..." : "Analyse my portfolio →"}
+            {loading ? (
+              <BrandPageLoader bare size="xs" inline label="Analysing…" />
+            ) : (
+              "Analyse my portfolio →"
+            )}
           </button>
         </div>
 

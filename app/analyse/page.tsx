@@ -2,6 +2,7 @@
 
 import ConsentModal from "@/components/analyse/ConsentModal";
 import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-form";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { getSupabase, isConfigured } from "@/lib/supabase";
@@ -130,35 +131,19 @@ export default function AnalysePage() {
   };
 
   const handleDecline = () => {
-    router.push("/");
+    router.replace("/");
   };
 
   if (isLoggedIn && user?.id) {
     // fall through — persisted session is enough to render
   } else if (!hasInitialized) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
-        <p className="text-sm">Loading…</p>
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   } else if (!isLoggedIn || !user?.id) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-white px-4 text-slate-600">
-        <div
-          className="h-9 w-9 animate-spin rounded-full border-2 border-[#534AB7] border-t-transparent"
-          aria-hidden
-        />
-        <p className="text-sm">Opening sign up…</p>
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Opening sign up…" />;
   }
 
   if (!consentChecked) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
-        <p className="text-sm">Loading…</p>
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   return (

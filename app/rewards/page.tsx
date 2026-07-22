@@ -2,6 +2,7 @@
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
@@ -56,9 +57,12 @@ export default function RewardsPage() {
         </p>
 
         {loading ? (
-          <div className="mt-10 flex justify-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-          </div>
+          <BrandPageLoader
+            fullScreen={false}
+            size="sm"
+            minHeight={160}
+            label="Loading…"
+          />
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <StatCard

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import InviteLinkShare from "@/components/split/InviteLinkShare";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
 import { clearBodyScrollLocks, lockBodyScroll } from "@/lib/bodyScrollLock";
 import { getSupabase } from "@/lib/supabase";
@@ -271,8 +272,13 @@ function SplitHomeInner() {
 
         <div className="mt-3 space-y-3">
           {loading ? (
-            <div className="rounded-2xl border border-[#E8E6F0] bg-white p-10 text-center text-sm text-[#9B9A94]">
-              Loading your groups...
+            <div className="overflow-hidden rounded-2xl border border-[#E8E6F0] bg-white">
+              <BrandPageLoader
+                fullScreen={false}
+                size="sm"
+                minHeight={140}
+                label="Loading…"
+              />
             </div>
           ) : null}
 

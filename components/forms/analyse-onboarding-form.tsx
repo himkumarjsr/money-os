@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import NumberInput from "../ui/NumberInput";
@@ -1260,7 +1261,7 @@ export function AnalyseOnboardingForm() {
               goBack();
               return;
             }
-            router.push("/");
+            router.replace("/");
           }}
           className="text-sm font-medium text-[#534AB7] hover:underline"
         >
@@ -3243,18 +3244,12 @@ export function AnalyseOnboardingForm() {
                 }}
               >
                 {isSubmitting ? (
-                  <>
-                    <span
-                      className="inline-block rounded-full border-2 border-white border-t-transparent"
-                      style={{
-                        width: 16,
-                        height: 16,
-                        animation: "spin 1s linear infinite",
-                      }}
-                      aria-hidden
-                    />
-                    Analysing your finances...
-                  </>
+                  <BrandPageLoader
+                    bare
+                    size="xs"
+                    inline
+                    label="Analysing your finances…"
+                  />
                 ) : (
                   "Analyse my finances →"
                 )}

@@ -7,6 +7,7 @@ import ExpenseTable, {
 } from "@/components/tracker/ExpenseTable";
 import MonthSummary from "@/components/tracker/MonthSummary";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -167,19 +168,11 @@ function TrackerMonthContent() {
     : undefined;
 
   if (!parsed) {
-    return (
-      <div className="flex h-[40vh] items-center justify-center text-sm text-[#111110]">
-        Redirecting…
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   if (hasConsent === null) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   if (!hasConsent) {
@@ -347,17 +340,13 @@ function TrackerMonthContent() {
           </span>
         </div>
         {loading ? (
-          <div
-            style={{
-              padding: "12px 16px",
-              textAlign: "center",
-              color: "#9B9A94",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            Updating…
-          </div>
+          <BrandPageLoader
+            fullScreen={false}
+            size="xs"
+            minHeight="auto"
+            inline
+            label="Updating…"
+          />
         ) : null}
         <ExpenseTable
           transactions={transactions}

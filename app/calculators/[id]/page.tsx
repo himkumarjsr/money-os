@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Analytics } from "@/lib/analytics";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 
 export default function CalculatorTrackPage() {
   const params = useParams<{ id: string }>();
@@ -18,7 +19,5 @@ export default function CalculatorTrackPage() {
     router.replace(`/calculators?calc=${encodeURIComponent(calc)}`);
   }, [params?.id, router]);
 
-  return (
-    <div className="p-6 text-sm text-slate-600">Loading calculator...</div>
-  );
+  return <BrandPageLoader fullScreen={false} label="Loading…" />;
 }

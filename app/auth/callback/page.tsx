@@ -4,6 +4,7 @@ import { applyPendingReferralRewards } from "@/lib/referralRewards";
 import { peekPostLoginPath, sanitizeAppPath } from "@/lib/splitAuthRedirect";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
@@ -66,33 +67,12 @@ function AuthCallbackContent() {
     };
   }, [router, initAuth]);
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        flexDirection: "column",
-        gap: 16,
-      }}
-    >
-      <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-      <p style={{ fontSize: 14, color: "#9B9A94" }}>Completing login…</p>
-    </div>
-  );
+  return <BrandPageLoader label="Completing login…" />;
 }
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-white">
-          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-          <p className="text-sm text-[#9B9A94]">Loading…</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<BrandPageLoader label="Loading…" />}>
       <AuthCallbackContent />
     </Suspense>
   );

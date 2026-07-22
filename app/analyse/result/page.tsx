@@ -3,6 +3,7 @@
 import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
 import { PaywallModal } from "@/components/analyse/paywall-modal";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
@@ -97,37 +98,7 @@ export default function AnalyseResultPage() {
   }, [showPaymentModal]);
 
   if (!hasHydrated) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            border: "3px solid #534AB7",
-            borderTop: "3px solid transparent",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-          }}
-        />
-        <p
-          style={{
-            color: "#9B9A94",
-            fontSize: 14,
-          }}
-        >
-          Loading your analysis...
-        </p>
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   if (!result || !lastSubmission || !priorityPlan) {

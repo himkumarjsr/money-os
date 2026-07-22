@@ -146,13 +146,13 @@ export default function CalculatorsClient({
   };
 
   const handleSheetClose = () => {
-    setSheetOpen(false);
-    // Home deep-link: closing the calculator returns to home, not the hub.
+    // Quick Tools / home deep-link: leave while the sheet is still up so the
+    // hub never flashes underneath during the close animation + route change.
     if (fromHome && !openedFromHub.current) {
       goHomeFast();
       return;
     }
-    // Hub browse: stay on calculators list without calc query noise optional.
+    setSheetOpen(false);
   };
 
   const handleBack = () => {
@@ -168,9 +168,20 @@ export default function CalculatorsClient({
     goHomeFast();
   };
 
+  // While the Quick Tools sheet is open, hide the hub list under it so close
+  // never flashes Calculators before landing on home.
+  const hideHubForHomeDeepLink =
+    fromHome && !openedFromHub.current && sheetOpen;
+
   return (
     <div className="min-h-0 bg-white text-slate-900 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">
-      <header className="border-b border-slate-200">
+      <header
+        className={cn(
+          "border-b border-slate-200",
+          // Quick Tools: fullscreen sheet covers this; keep desktop chrome only.
+          hideHubForHomeDeepLink && "hidden md:block",
+        )}
+      >
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <button
@@ -270,29 +281,32 @@ export default function CalculatorsClient({
         </section>
       </div>
 
-      <div className="mx-auto px-4 py-6 md:hidden">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {activeCat.label}
-        </p>
-        <ul className="mt-3 space-y-2">
-          {activeCat.items.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => selectCalcFromHub(item.id, true)}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left"
-              >
-                <span className="block text-sm font-semibold text-slate-900">
-                  {item.title}
-                </span>
-                <span className="mt-0.5 block text-xs text-slate-500">
-                  {item.blurb}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Hide list under sheet for Quick Tools so close never flashes the hub. */}
+      {!hideHubForHomeDeepLink ? (
+        <div className="mx-auto px-4 py-6 md:hidden">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {activeCat.label}
+          </p>
+          <ul className="mt-3 space-y-2">
+            {activeCat.items.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => selectCalcFromHub(item.id, true)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left"
+                >
+                  <span className="block text-sm font-semibold text-slate-900">
+                    {item.title}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    {item.blurb}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <BottomSheet
         isOpen={sheetOpen}

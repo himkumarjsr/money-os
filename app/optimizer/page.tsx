@@ -2,6 +2,7 @@
 
 import { FinkoinAiPlanView } from "@/components/finkoin/finkoin-ai-plan-view";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import { getAIFixPlan, type FinkoinAIPlan } from "@/lib/aiService";
 import { monthlyTotalIncome } from "@/lib/financialEngine";
@@ -82,11 +83,7 @@ export default function OptimizerPage() {
   }, [lastSubmission, analysisResult, persistedAiPlan]);
 
   if (!hasHydrated || !lastSubmission) {
-    return (
-      <main className="mx-auto min-h-[50vh] max-w-6xl px-4 py-16 text-center text-slate-600">
-        Loading your optimizer…
-      </main>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   if (!analysisResult) {
@@ -513,9 +510,12 @@ export default function OptimizerPage() {
       ) : null}
 
       {aiLoading ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
-          Generating your full personalised plan…
-        </div>
+        <BrandPageLoader
+          fullScreen={false}
+          size="sm"
+          minHeight={120}
+          label="Loading…"
+        />
       ) : aiPlan ? (
         <FinkoinAiPlanView
           plan={aiPlan}
