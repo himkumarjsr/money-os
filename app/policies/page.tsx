@@ -1,4 +1,5 @@
 import PolicyVaultClient from "@/components/policies/PolicyVaultClient";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -10,11 +11,7 @@ export const metadata: Metadata = {
 export default function PoliciesPage() {
   return (
     <Suspense
-      fallback={
-        <div className="flex min-h-[50vh] items-center justify-center bg-[#F7F7F4] text-sm text-slate-500">
-          Loading…
-        </div>
-      }
+      fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
     >
       <PolicyVaultClient />
     </Suspense>

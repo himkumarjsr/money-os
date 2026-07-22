@@ -22,7 +22,12 @@ const TOOLS: Array<{
     href: "/calculators?calc=swp&from=home",
     icon: "wallet",
   },
-  { id: "split", label: "Split", href: "/split", icon: "users" },
+  {
+    id: "split",
+    label: "Split",
+    href: "/split?from=home",
+    icon: "users",
+  },
   {
     id: "tax",
     label: "Tax",
@@ -38,10 +43,15 @@ const TOOLS: Array<{
   {
     id: "portfolio",
     label: "Portfolio",
-    href: "/portfolio",
+    href: "/portfolio?from=home",
     icon: "briefcase",
   },
-  { id: "analyse", label: "Analyse", href: "/analyse", icon: "chart" },
+  {
+    id: "analyse",
+    label: "Analyse",
+    href: "/analyse?from=home",
+    icon: "chart",
+  },
 ];
 
 /** Full-width quick tools — shown below the home banner on mobile only. */

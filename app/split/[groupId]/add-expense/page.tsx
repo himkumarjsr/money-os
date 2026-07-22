@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
 import { formatIndian } from "@/lib/formatters";
 import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
@@ -46,11 +47,7 @@ export default function AddSplitExpensePage() {
   return (
     <ProtectedGate>
       <Suspense
-        fallback={
-          <div className="bg-[#F7F7F4] px-4 py-8">
-            <p className="text-sm text-[#9B9A94]">Loading…</p>
-          </div>
-        }
+        fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
       >
         <AddSplitExpenseInner />
       </Suspense>
@@ -497,9 +494,12 @@ function AddSplitExpenseInner() {
 
         <div className="mt-5 rounded-3xl border border-[#E8E6F0] bg-white p-6 shadow-sm">
           {!groupLoaded || storeLoading ? (
-            <p className="mt-4 text-sm text-[#9B9A94]">
-              Loading group members…
-            </p>
+            <BrandPageLoader
+              fullScreen={false}
+              size="sm"
+              minHeight={80}
+              label="Loading…"
+            />
           ) : null}
           {loadError ? (
             <p className="mt-4 rounded-xl border border-[#F5D0D0] bg-[#FDEDED] px-3 py-2 text-sm text-[#991B1B]">

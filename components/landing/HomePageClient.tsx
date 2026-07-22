@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
 import HomeMobileQuickTools from "@/components/landing/HomeMobileQuickTools";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { TrackImpression } from "@/components/TrackImpression";
 import { m, useScroll, useSpring, useTransform } from "framer-motion";
 import dynamic from "next/dynamic";
@@ -10,9 +11,11 @@ import dynamic from "next/dynamic";
 const HomePageBelowFold = dynamic(() => import("./HomePageBelowFold"), {
   ssr: true,
   loading: () => (
-    <div
-      className="relative z-10 min-h-[48vh] animate-pulse bg-gradient-to-b from-white/40 to-violet-50/20"
-      aria-hidden
+    <BrandPageLoader
+      fullScreen={false}
+      size="sm"
+      minHeight="48vh"
+      label="Loading…"
     />
   ),
 });

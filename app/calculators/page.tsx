@@ -1,3 +1,4 @@
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import CalculatorsClient from "./CalculatorsClient";
@@ -19,7 +20,11 @@ const SEO_COPY: Record<
     title: "SIP Calculator India - Mutual Fund Returns Calculator | Finkoin",
     description:
       "Use Finkoin SIP calculator India to estimate monthly mutual fund returns, total invested amount, and projected wealth over time.",
-    keywords: ["SIP calculator India", "mutual fund calculator", "SIP return calculator"],
+    keywords: [
+      "SIP calculator India",
+      "mutual fund calculator",
+      "SIP return calculator",
+    ],
     faq: [
       {
         q: "What is SIP calculator?",
@@ -77,7 +82,11 @@ const SEO_COPY: Record<
     title: "EMI Calculator - Loan EMI Calculator Online | Finkoin",
     description:
       "Estimate your loan EMI instantly with Finkoin's EMI calculator. Compare monthly installments, interest outgo, and repayment duration.",
-    keywords: ["EMI calculator", "loan EMI calculator", "home loan EMI calculator"],
+    keywords: [
+      "EMI calculator",
+      "loan EMI calculator",
+      "home loan EMI calculator",
+    ],
     faq: [
       {
         q: "What is EMI calculator?",
@@ -130,14 +139,20 @@ type PageProps = {
   searchParams?: { calc?: string | string[] };
 };
 
-export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
-  const calcParam = Array.isArray(searchParams?.calc) ? searchParams?.calc[0] : searchParams?.calc;
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const calcParam = Array.isArray(searchParams?.calc)
+    ? searchParams?.calc[0]
+    : searchParams?.calc;
   const activeItem = getItemById(calcParam);
   const seo = getSeoForCalc(activeItem.id);
 
   if (!calcParam) {
     return {
-      title: { absolute: "Free Financial Calculators for India 2026 | Finkoin" },
+      title: {
+        absolute: "Free Financial Calculators for India 2026 | Finkoin",
+      },
       description: seo.description,
       keywords: seo.keywords,
       alternates: { canonical: "/calculators" },
@@ -147,7 +162,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         url: `${siteUrl}/calculators`,
         siteName: "Finkoin",
         type: "website",
-        images: [{ url: `${siteUrl}/og/og-home.png`, width: 1200, height: 630, alt: "Finkoin calculators" }],
+        images: [
+          {
+            url: `${siteUrl}/og/og-home.png`,
+            width: 1200,
+            height: 630,
+            alt: "Finkoin calculators",
+          },
+        ],
       },
       twitter: {
         card: "summary_large_image",
@@ -160,13 +182,16 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
   if (activeItem.id === "tax-regime") {
     return {
-      title: { absolute: "Tax Regime Calculator 2026 — Old vs New Regime | Finkoin" },
+      title: {
+        absolute: "Tax Regime Calculator 2026 — Old vs New Regime | Finkoin",
+      },
       description: seo.description,
       keywords: seo.keywords,
       alternates: { canonical: "/calculators/tax-regime-2026" },
       openGraph: {
         title: "Tax Regime Calculator 2026 — Old vs New | Finkoin",
-        description: "Free. Compare old and new tax regime. All deductions included.",
+        description:
+          "Free. Compare old and new tax regime. All deductions included.",
         url: `${siteUrl}/calculators/tax-regime-2026`,
         siteName: "Finkoin",
         type: "website",
@@ -182,7 +207,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       twitter: {
         card: "summary_large_image",
         title: "Tax Regime Calculator 2026 — Old vs New | Finkoin",
-        description: "Free. Compare old and new tax regime. All deductions included.",
+        description:
+          "Free. Compare old and new tax regime. All deductions included.",
         images: [`${siteUrl}/og/og-tax-calculator.png`],
       },
     };
@@ -198,7 +224,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 export default async function CalculatorsPage({ searchParams }: PageProps) {
-  const calc = Array.isArray(searchParams?.calc) ? searchParams?.calc[0] : searchParams?.calc;
+  const calc = Array.isArray(searchParams?.calc)
+    ? searchParams?.calc[0]
+    : searchParams?.calc;
   const active = getItemById(calc);
   const seo = getSeoForCalc(active.id);
   const pageUrl =
@@ -213,7 +241,8 @@ export default async function CalculatorsPage({ searchParams }: PageProps) {
         ? {
             "@type": "WebApplication",
             name: "Finkoin Tax Regime Calculator 2026",
-            description: "Free calculator to compare old and new tax regime for FY 2025-26",
+            description:
+              "Free calculator to compare old and new tax regime for FY 2025-26",
             url: pageUrl,
             applicationCategory: "FinanceApplication",
             operatingSystem: "Web",
@@ -231,7 +260,10 @@ export default async function CalculatorsPage({ searchParams }: PageProps) {
           }
         : {
             "@type": "SoftwareApplication",
-            name: active.title === "SIP" ? "SIP Calculator India" : `${active.title} Calculator`,
+            name:
+              active.title === "SIP"
+                ? "SIP Calculator India"
+                : `${active.title} Calculator`,
             description: seo.description,
             url: pageUrl,
             applicationCategory: "FinanceApplication",
@@ -253,13 +285,12 @@ export default async function CalculatorsPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Suspense
-        fallback={
-          <div className="flex min-h-dvh items-center justify-center bg-white text-sm text-slate-600">
-            Loading calculators…
-          </div>
-        }
+        fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
       >
         <CalculatorsClient initialCalcId={active.id} />
       </Suspense>

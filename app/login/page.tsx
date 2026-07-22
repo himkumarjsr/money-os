@@ -1,6 +1,7 @@
 "use client";
 
 import { AppIcon } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { peekPostLoginPath, sanitizeAppPath } from "@/lib/splitAuthRedirect";
 import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
@@ -580,13 +581,15 @@ function LoginContent() {
             transition: "background 0.15s",
           }}
         >
-          {submitting
-            ? "Please wait..."
-            : mode === "login"
-              ? "Log in"
-              : mode === "signup"
-                ? "Create my account"
-                : "Send reset link"}
+          {submitting ? (
+            <BrandPageLoader bare size="xs" inline label="Please wait…" />
+          ) : mode === "login" ? (
+            "Log in"
+          ) : mode === "signup" ? (
+            "Create my account"
+          ) : (
+            "Send reset link"
+          )}
         </button>
 
         {mode === "reset" ? (
@@ -734,13 +737,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA]">
-          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-        </div>
-      }
-    >
+    <Suspense fallback={<BrandPageLoader label="Loading…" />}>
       <LoginContent />
     </Suspense>
   );

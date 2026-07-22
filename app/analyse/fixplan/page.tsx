@@ -7,6 +7,7 @@ import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -311,12 +312,7 @@ export default function FixPlanPage() {
   );
 
   if (!hasInitialized) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#F7F7F4]">
-        <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-        <p className="text-sm text-[#9B9A94]">Loading…</p>
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   const handleDownloadPDF = async () => {
@@ -436,22 +432,10 @@ export default function FixPlanPage() {
 
   if (aiLoading) {
     return (
-      <div className="min-h-dvh bg-gradient-to-br from-[#534AB7] to-[#6E62D7] p-6">
-        <div className="mx-auto flex min-h-[70dvh] max-w-3xl flex-col items-center justify-center text-white">
-          <div className="mb-5 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-white/20 text-2xl font-bold">
-            FK
-          </div>
-          <p className="text-2xl font-bold">
-            Building your personalised plan...
-          </p>
-          <p className="mt-3 text-sm text-white/90">
-            {LOADING_MESSAGES[messageIndex]}
-          </p>
-          <div className="mt-6 h-1.5 w-full max-w-xl overflow-hidden rounded-full bg-white/20">
-            <div className="h-full w-[90%] animate-pulse rounded-full bg-white" />
-          </div>
-        </div>
-      </div>
+      <BrandPageLoader
+        fullScreen={false}
+        label={LOADING_MESSAGES[messageIndex] || "Loading…"}
+      />
     );
   }
 

@@ -16,6 +16,7 @@ import {
   TrackerIcon,
 } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
 import { msUntilNextLocalMidnight } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
@@ -435,11 +436,7 @@ function TrackerContent() {
   );
 
   if (hasConsent === null) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   if (!hasConsent) {
@@ -887,17 +884,13 @@ function TrackerContent() {
       ) : null}
 
       {loading ? (
-        <div
-          style={{
-            padding: "8px 0 12px",
-            textAlign: "center",
-            color: "#9B9A94",
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          Updating…
-        </div>
+        <BrandPageLoader
+          fullScreen={false}
+          size="xs"
+          minHeight="auto"
+          inline
+          label="Updating…"
+        />
       ) : null}
 
       <div

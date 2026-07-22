@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupabase } from "@/lib/supabase";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -51,21 +52,23 @@ export default function UpdatePasswordPage() {
   };
 
   if (!sessionReady) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#FAFAFA]">
-        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-        <p className="text-sm text-[#9B9A94]">Verifying reset link…</p>
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Verifying reset link…" />;
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F7F7F4] px-4 py-10">
       <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-lg">
-        <h1 className="text-2xl font-extrabold text-[#111110]">Choose a new password</h1>
-        <p className="mt-2 text-sm text-[#9B9A94]">Use at least 6 characters.</p>
+        <h1 className="text-2xl font-extrabold text-[#111110]">
+          Choose a new password
+        </h1>
+        <p className="mt-2 text-sm text-[#9B9A94]">
+          Use at least 6 characters.
+        </p>
 
-        <label className="mt-6 block text-sm font-semibold text-[#5F5E5A]" htmlFor="pw">
+        <label
+          className="mt-6 block text-sm font-semibold text-[#5F5E5A]"
+          htmlFor="pw"
+        >
           New password
         </label>
         <input
@@ -76,7 +79,10 @@ export default function UpdatePasswordPage() {
           className="mt-2 h-12 w-full rounded-xl border border-[#E8E6F0] px-4 text-sm outline-none focus:border-[#534AB7]"
         />
 
-        <label className="mt-4 block text-sm font-semibold text-[#5F5E5A]" htmlFor="pw2">
+        <label
+          className="mt-4 block text-sm font-semibold text-[#5F5E5A]"
+          htmlFor="pw2"
+        >
           Confirm password
         </label>
         <input
@@ -88,7 +94,9 @@ export default function UpdatePasswordPage() {
         />
 
         {error ? (
-          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900">{error}</p>
+          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900">
+            {error}
+          </p>
         ) : null}
 
         <button

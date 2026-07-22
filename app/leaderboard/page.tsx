@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useGamificationStore } from "@/store/gamificationStore";
@@ -259,16 +260,12 @@ function LeaderboardContent() {
         </div>
 
         {loading ? (
-          <div
-            style={{
-              padding: "32px",
-              textAlign: "center",
-              color: "#9B9A94",
-              fontSize: 14,
-            }}
-          >
-            Loading...
-          </div>
+          <BrandPageLoader
+            fullScreen={false}
+            size="sm"
+            minHeight={120}
+            label="Loading…"
+          />
         ) : (
           entries.map((entry, i) => {
             const isMe = entry.user_id === user?.id;

@@ -1,6 +1,7 @@
 "use client";
 
 import { AppIcon } from "@/components/ui/AppIcon";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -187,16 +188,12 @@ export default function NotificationBell() {
             }}
           >
             {loading ? (
-              <div
-                style={{
-                  padding: "32px 16px",
-                  textAlign: "center",
-                  color: "#9B9A94",
-                  fontSize: 14,
-                }}
-              >
-                Loading...
-              </div>
+              <BrandPageLoader
+                fullScreen={false}
+                size="sm"
+                minHeight={80}
+                label="Loading…"
+              />
             ) : notifications.length === 0 ? (
               <div style={{ padding: "40px 16px", textAlign: "center" }}>
                 <div

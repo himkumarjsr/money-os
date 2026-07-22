@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import CalculatorsClient from "../CalculatorsClient";
 import { SITE_URL } from "@/lib/seo";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
+import TaxExploreMore from "./TaxExploreMore";
 
 const canonicalPath = "/calculators/tax-regime-2026";
 const pageUrl = `${SITE_URL}${canonicalPath}`;
@@ -125,47 +126,16 @@ export default function TaxRegime2026Page() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <Suspense
-        fallback={
-          <div className="flex min-h-dvh items-center justify-center bg-white text-sm text-slate-600">
-            Loading calculator…
-          </div>
-        }
+        fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
       >
         <CalculatorsClient
           initialCalcId="tax-regime"
           urlBaseForTaxCanonical="/calculators/tax-regime-2026"
         />
       </Suspense>
-      <section className="mx-auto max-w-6xl border-t border-slate-200 px-4 py-8 sm:px-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Explore more
-        </h2>
-        <ul className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-[#534AB7]">
-          <li>
-            <Link href="/analyse" className="hover:underline">
-              Financial health check
-            </Link>
-          </li>
-          <li>
-            <Link href="/learn" className="hover:underline">
-              Learn personal finance
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/blog/80c-deductions-guide-2026"
-              className="hover:underline"
-            >
-              80C deductions guide 2026
-            </Link>
-          </li>
-          <li>
-            <Link href="/calculators?calc=sip" className="hover:underline">
-              SIP calculator
-            </Link>
-          </li>
-        </ul>
-      </section>
+      <Suspense fallback={null}>
+        <TaxExploreMore />
+      </Suspense>
     </>
   );
 }

@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Theme progress bar on client navigations (hard refresh uses app/loading.tsx).
+ * Thin top progress on client navigations.
+ * Full-page loads use BrandPageLoader via app/loading.tsx / Suspense fallbacks.
  */
 export default function RouteChangeLoader() {
   const pathname = usePathname();

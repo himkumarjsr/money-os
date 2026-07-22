@@ -1,6 +1,7 @@
 "use client";
 
 import BottomSheet from "@/components/ui/BottomSheet";
+import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { formatIndian, handleMoneyInput } from "@/lib/formatters";
@@ -364,12 +365,7 @@ export default function PolicyVaultClient() {
   }, [form.premiumAmount, form.premiumFrequency]);
 
   if (!hasInitialized || !authChecked) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 bg-[#F7F7F4]">
-        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#534AB7] border-t-transparent" />
-        <p className="text-sm text-[#9B9A94]">Loading…</p>
-      </div>
-    );
+    return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
   return (
@@ -427,9 +423,12 @@ export default function PolicyVaultClient() {
             </Link>
           </div>
         ) : loading ? (
-          <p className="text-center text-sm text-slate-500">
-            Loading policies…
-          </p>
+          <BrandPageLoader
+            fullScreen={false}
+            size="sm"
+            minHeight={120}
+            label="Loading…"
+          />
         ) : policies.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-5 rounded-2xl border border-[#F0EFF8] bg-white px-6 py-14 text-center shadow-sm">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#EEEDFE] text-[#534AB7]">
