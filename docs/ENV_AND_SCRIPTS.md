@@ -43,13 +43,17 @@ Copy [`.env.example`](../.env.example) → `.env.local`. Never commit secrets.
 | `NEXT_PUBLIC_AI_TIMEOUT_MS`      | AI timeout         |
 | `NEXT_PUBLIC_FINKOIN_AGENT_CODE` | Agent / promo code |
 
-### Analytics / PWA
+### Analytics / PWA / Web Push
 
-| Variable                                | Purpose            |
-| --------------------------------------- | ------------------ |
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID`         | GA4                |
-| `NEXT_PUBLIC_CLARITY_ID`                | Microsoft Clarity  |
-| `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY` | Web push (if used) |
+| Variable                                | Purpose                                     |
+| --------------------------------------- | ------------------------------------------- |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID`         | GA4                                         |
+| `NEXT_PUBLIC_CLARITY_ID`                | Microsoft Clarity                           |
+| `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY` | Web Push public VAPID (client subscribe)    |
+| `WEB_PUSH_VAPID_PRIVATE_KEY`            | Web Push private VAPID (**server-only**)    |
+| `WEB_PUSH_VAPID_SUBJECT`                | Optional mailto:/https contact for push svc |
+
+Generate: `npx web-push generate-vapid-keys`. Requires Supabase table `push_subscriptions` (`035_push_subscriptions.sql`).
 
 ### Email / cron
 

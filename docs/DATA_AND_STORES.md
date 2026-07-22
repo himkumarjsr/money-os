@@ -47,6 +47,7 @@ Pure calculation engines (portable): `financialEngine`, `priorityEngine`, `split
 | `006_app_feedback.sql` / `007_*`               | `app_feedback` (+ answers/recommend)                                                          |
 | `008_notification_preferences.sql`             | `notification_preferences`, `finance_tips`                                                    |
 | `009_notification_preferences_declined_at.sql` | `declined_at`                                                                                 |
+| `035_push_subscriptions.sql`                   | `push_subscriptions` (device Web Push endpoints for daily tip OS alerts)                      |
 
 ### Manual SQL (`supabase/manual/`) — apply in SQL editor
 
@@ -69,6 +70,7 @@ Documented in `FINKOIN_SYSTEM.md` §34. Must exist in the live Supabase project:
 **Tips / inbox**
 
 - `user_notifications`, `user_tip_history`
+- `push_subscriptions` (Web Push endpoint + keys per device; required for OS tip alerts)
 - RPC `get_next_tip_for_user` (and related tip plumbing)
 
 Writes for Split often use the **service-role** admin client in API routes. Reads in the store use the **user** client → RLS must allow member reads or the UI breaks.

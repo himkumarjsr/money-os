@@ -19,6 +19,7 @@ export default function NotificationBell() {
 
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isLoggedIn || !user?.id) return;
@@ -60,6 +61,32 @@ export default function NotificationBell() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
+
+  // Keep absolute dropdown inside the viewport (no position:fixed).
+  useEffect(() => {
+    if (!open) return;
+    const el = dropdownRef.current;
+    if (!el) return;
+
+    const clamp = () => {
+      el.style.transform = "";
+      const rect = el.getBoundingClientRect();
+      const pad = 12;
+      let shift = 0;
+      if (rect.left < pad) shift = pad - rect.left;
+      if (rect.right + shift > window.innerWidth - pad) {
+        shift -= rect.right + shift - (window.innerWidth - pad);
+      }
+      el.style.transform = shift ? `translateX(${shift}px)` : "";
+    };
+
+    clamp();
+    window.addEventListener("resize", clamp);
+    return () => {
+      window.removeEventListener("resize", clamp);
+      el.style.transform = "";
+    };
+  }, [open, loading, notifications.length]);
 
   const handleOpen = async () => {
     const isOpening = !open;
@@ -133,11 +160,12 @@ export default function NotificationBell() {
 
       {open && (
         <div
+          ref={dropdownRef}
           style={{
             position: "absolute",
             top: 44,
             right: 0,
-            width: "min(320px, 90vw)",
+            width: "min(320px, calc(100vw - 24px))",
             background: "white",
             borderRadius: 16,
             boxShadow: "0 8px 40px rgba(0,0,0,0.12)",

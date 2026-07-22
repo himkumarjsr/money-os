@@ -4,6 +4,12 @@ import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { getSupabase } from "@/lib/supabase";
+import {
+  disableWebPush,
+  enableWebPush,
+  getWebPushPublicKey,
+  isWebPushSupported,
+} from "@/lib/webPushClient";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
@@ -50,8 +56,16 @@ function SettingsInner() {
   });
   const [notifSavingKey, setNotifSavingKey] = useState<string | null>(null);
   const [emailConsent, setEmailConsent] = useState(false);
+  const [pushConsent, setPushConsent] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const [pushSupported, setPushSupported] = useState(false);
   const [loadingPref, setLoadingPref] = useState(true);
   const [savingPref, setSavingPref] = useState(false);
+
+  useEffect(() => {
+    setPushSupported(isWebPushSupported() && Boolean(getWebPushPublicKey()));
+  }, []);
 
   useEffect(() => {
     setName(user?.name ?? "");
@@ -72,6 +86,7 @@ function SettingsInner() {
         .maybeSingle();
       if (data) {
         setEmailConsent(Boolean(data.email_consent));
+        setPushConsent(Boolean(data.push_consent));
         setNotifPrefs({
           morning_tips: Boolean(data.morning_tips),
           weekly_summary: Boolean(data.weekly_summary),
@@ -79,6 +94,7 @@ function SettingsInner() {
         });
       } else {
         setEmailConsent(false);
+        setPushConsent(false);
         setNotifPrefs({
           morning_tips: false,
           weekly_summary: false,
@@ -124,6 +140,37 @@ function SettingsInner() {
       "finkoin_notif_consent",
       newValue ? "accepted" : "declined",
     );
+  };
+
+  const togglePushConsent = async () => {
+    if (!user?.id || pushBusy || loadingPref) return;
+    setPushBusy(true);
+    setPushMessage(null);
+    const turningOn = !pushConsent;
+
+    if (turningOn) {
+      const result = await enableWebPush();
+      if (!result.ok) {
+        const msg =
+          result.reason === "denied"
+            ? "Notification permission was blocked. Enable it in browser/site settings."
+            : result.reason === "missing_vapid"
+              ? "Push is not configured on this environment yet."
+              : result.reason === "unsupported"
+                ? "This browser/device does not support Web Push. On iPhone, add Finkoin to Home Screen first."
+                : "Could not enable push notifications. Try again.";
+        setPushMessage(msg);
+        setPushBusy(false);
+        return;
+      }
+      setPushConsent(true);
+      setPushMessage("Device push enabled for daily tips.");
+    } else {
+      await disableWebPush();
+      setPushConsent(false);
+      setPushMessage("Device push turned off.");
+    }
+    setPushBusy(false);
   };
 
   const updatePref = async (key: "payment_alerts", value: boolean) => {
@@ -369,9 +416,51 @@ function SettingsInner() {
           <div className="bg-[#F7F7F4] px-4 py-[14px]">
             <p className="text-[11px] leading-relaxed text-[#9B9A94]">
               {emailConsent
-                ? `✓ Subscribed — tips sent to ${user?.email ?? "your email"}`
-                : "Not subscribed — toggle to receive daily tips"}
+                ? `✓ Email subscribed — tips sent to ${user?.email ?? "your email"}`
+                : "Not subscribed — toggle to receive daily tip emails"}
             </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 border-t border-[#F7F7F4] px-4 py-[14px]">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-[#111110]">
+                Device push notifications
+              </div>
+              <div className="mt-0.5 text-xs text-[#9B9A94]">
+                OS alert at 8:30 AM even when the app is closed
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label={
+                pushConsent
+                  ? "Turn off device push notifications"
+                  : "Turn on device push notifications"
+              }
+              disabled={loadingPref || pushBusy || !pushSupported}
+              onClick={() => void togglePushConsent()}
+              className="relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-50"
+              style={{ background: pushConsent ? "#534AB7" : "#E8E6F0" }}
+            >
+              <span
+                className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-sm transition-[left] duration-200"
+                style={{ left: pushConsent ? 23 : 3 }}
+              />
+            </button>
+          </div>
+          <div className="bg-[#F7F7F4] px-4 py-[14px]">
+            <p className="text-[11px] leading-relaxed text-[#9B9A94]">
+              {!pushSupported
+                ? "Push needs a supporting browser. On iPhone: Add to Home Screen, then enable here."
+                : pushConsent
+                  ? "✓ Device push on — you’ll get an OS notification with each tip"
+                  : "Off — enable to get tips as phone notifications"}
+            </p>
+            {pushMessage ? (
+              <p className="mt-1 text-[11px] font-medium text-[#534AB7]">
+                {pushMessage}
+              </p>
+            ) : null}
           </div>
         </div>
 

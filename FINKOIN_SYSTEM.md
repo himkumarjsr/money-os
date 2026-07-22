@@ -166,7 +166,9 @@ It is built for Indian users who want structured budgeting, insurance and debt c
 | CRON_SECRET                                                    | Yes (cron tip delivery)               | Bearer secret for `GET/POST /api/notifications/deliver-tip` (Vercel cron)                                      | Generate a long random string                 |
 | NEXT_PUBLIC_DEBUG_AI                                           | Optional                              | AI debug logging in client service                                                                             | Internal config                               |
 | NEXT_PUBLIC_AI_TIMEOUT_MS                                      | Optional                              | Client-side AI timeout override                                                                                | Internal config                               |
-| NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY                          | Optional                              | Web push public key (if push enabled)                                                                          | Internal config                               |
+| NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY                          | Yes (device push tips)                | Web Push **public** VAPID key (browser subscribe). Generate with `npx web-push generate-vapid-keys`            | Same command; also `.env.local` / Vercel      |
+| WEB_PUSH_VAPID_PRIVATE_KEY                                     | Yes (device push tips)                | Web Push **private** VAPID key — **server-only**, never `NEXT_PUBLIC_`                                         | Same generate command                         |
+| WEB_PUSH_VAPID_SUBJECT                                         | Optional                              | Contact for push services (`mailto:support@finkoin.com` or https URL)                                          | Default mailto in code                        |
 | NEXT_PUBLIC_FEEDBACK_GOOGLE_FORM_URL                           | Optional                              | When set, Feedback button opens Google Form only (no DB write)                                                 | Google Forms                                  |
 | GOOGLE*FEEDBACK_FORM_RESPONSE_URL / `GOOGLE_FEEDBACK_ENTRY*\*` | Optional (server)                     | Mirror in-app wizard answers to a Google Form                                                                  | Google Forms HTML / prefilled link            |
 
@@ -409,6 +411,10 @@ Complete inventory with one-line purpose per file:
 - `store/notificationStore.ts`: fetch/mark notification state backed by `user_notifications`.
 - `components/NotificationBell.tsx`: realtime inbox dropdown with unread badge and mark-all-read behavior.
 - `components/MorningTipPopup.tsx`: once-per-day IST tip popup (6 AM–11 PM) using notification store + localStorage suppression key.
+- `components/PushPermissionPrompt.tsx`: one-time post-login **Allow notifications** prompt → Web Push subscribe.
+- `lib/webPush.ts` / `lib/webPushClient.ts`: server send + client subscribe; `app/api/notifications/push-subscribe`.
+- `worker/index.js` (+ `public/sw-push.js` for dev): SW `push` / `notificationclick` handlers.
+- `supabase/migrations/035_push_subscriptions.sql`: device push endpoints for OS tip alerts.
 - `components/FeedbackWidget.tsx`: lightweight feedback capture widget posting to `/api/feedback`.
 - `components/FeedbackPopupManager.tsx`: delayed page-context feedback popup manager on tracked routes.
 - `components/ClarityScript.tsx`: client-side Clarity bootstrap (guarded by `NEXT_PUBLIC_CLARITY_ID`).
@@ -2692,11 +2698,35 @@ Analytics helper (`lib/analytics.ts`):
 
 ### 30.12 Cron notification trigger (deployment schedule)
 
-Source: `vercel.json`.
+Source: `vercel.json` + `app/api/notifications/deliver-tip/route.ts`.
 
 1. Vercel cron runs path `/api/notifications/deliver-tip`.
-2. Schedule: `0 3 * * *` (UTC) = 08:30 IST daily.
-3. Intended downstream effect: daily insertion of rows in `user_notifications` for eligible users.
+2. Schedule: `0 3 * * *` (UTC) = **08:30 IST** daily.
+3. For each user without a tip today:
+   - RPC `get_next_tip_for_user` → insert `user_notifications` + `user_tip_history`.
+   - If Web Push is configured and the user has rows in **`push_subscriptions`**, send an OS notification via `web-push` (`lib/webPush.ts`).
+   - Expired endpoints (HTTP 404/410) are deleted from `push_subscriptions`.
+4. In-app: Realtime / bell / morning popup still show the same tip when the user opens the app.
+
+### 30.13 Device Web Push (OS notifications)
+
+**Why Supabase:** browsers give each device a unique push **endpoint**. Cron cannot notify phones without storing those endpoints — that is what `push_subscriptions` is for (`035_push_subscriptions.sql`).
+
+**Setup**
+
+1. Generate keys: `npx web-push generate-vapid-keys`
+2. Set `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY` (and optional `WEB_PUSH_VAPID_SUBJECT`) in `.env.local` + Vercel.
+3. Run migration `035_push_subscriptions.sql` on Supabase.
+4. Redeploy (production `next-pwa` SW merges `worker/index.js` push handlers).
+
+**User flow**
+
+1. Logged-in user sees `PushPermissionPrompt` (~2.5s after load) unless already enabled / denied / dismissed &lt;14 days.
+2. **Allow notifications** → browser permission → `pushManager.subscribe` → `POST /api/notifications/push-subscribe`.
+3. Settings → **Device push notifications** can enable/disable the same path.
+4. iOS: Add to Home Screen (16.4+) required for Web Push; Android Chrome / installed PWA works normally.
+
+**Local keys:** `finkoin_push_enabled`, `finkoin_push_prompt_dismissed`.
 
 ---
 
