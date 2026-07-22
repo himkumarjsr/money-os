@@ -89,7 +89,7 @@ async function handleDeliverTip(req: NextRequest) {
   const startTime = Date.now();
 
   try {
-    console.log("deliver-tip: START", new Date().toISOString());
+    console.info("deliver-tip: START", new Date().toISOString());
 
     const { data: users, error: usersErr } = await supabaseAdmin
       .from("users")
@@ -104,7 +104,7 @@ async function handleDeliverTip(req: NextRequest) {
       return NextResponse.json({ message: "No users found" });
     }
 
-    console.log(`deliver-tip: ${users.length} users`);
+    console.info(`deliver-tip: ${users.length} users`);
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -220,7 +220,7 @@ async function handleDeliverTip(req: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`deliver-tip: DONE in ${duration}ms`, {
+    console.info(`deliver-tip: DONE in ${duration}ms`, {
       delivered,
       skipped,
       errors,
