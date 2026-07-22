@@ -61,9 +61,10 @@ Browser (Next.js App Router + Zustand + PWA)
 ### Notification Flow
 
 1. Vercel cron → `/api/notifications/deliver-tip` (`CRON_SECRET` / Vercel cron header)
-2. RPC `get_next_tip_for_user` → insert `user_notifications`
-3. Client: `NotificationBell` + `MorningTipPopup` (IST once/day)
-4. Optional email: `/api/notifications/send-daily-tip` via Resend
+2. RPC `get_next_tip_for_user` → insert `user_notifications` (+ history)
+3. If VAPID configured: Web Push to `push_subscriptions` (device OS alert)
+4. Client: `NotificationBell` + `MorningTipPopup` (IST once/day); `PushPermissionPrompt` / Settings to subscribe
+5. Optional email: `/api/notifications/send-daily-tip` via Resend
 
 ### Payment Flow
 

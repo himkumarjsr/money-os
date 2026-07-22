@@ -5,6 +5,8 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  // Merges worker/index.js (Web Push handlers) into generated sw.js
+  customWorkerDir: "worker",
   fallbacks: {
     document: "/offline",
   },

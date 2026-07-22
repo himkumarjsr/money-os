@@ -52,14 +52,17 @@ Open invites use marker email `__open__@finkoin.invite` (`lib/splitInvite.ts`). 
 
 ## Notifications / tips
 
-| Method   | Path                                | Auth                               | Role                                               |
-| -------- | ----------------------------------- | ---------------------------------- | -------------------------------------------------- |
-| GET/POST | `/api/notifications/deliver-tip`    | Cron (`CRON_SECRET` / Vercel cron) | RPC `get_next_tip_for_user` → `user_notifications` |
-| GET/POST | `/api/notifications/send-daily-tip` | Server / Resend path               | Optional email tip                                 |
-| POST     | `/api/notifications/welcome-tip`    | Session / server                   | Welcome tip seed                                   |
-| POST     | `/api/notifications/send-test-tip`  | Dev/admin helper                   | Test tip delivery                                  |
+| Method      | Path                                | Auth                               | Role                                                                  |
+| ----------- | ----------------------------------- | ---------------------------------- | --------------------------------------------------------------------- |
+| GET/POST    | `/api/notifications/deliver-tip`    | Cron (`CRON_SECRET` / Vercel cron) | RPC tip → `user_notifications` + **Web Push** to `push_subscriptions` |
+| POST/DELETE | `/api/notifications/push-subscribe` | Session                            | Upsert/delete device Web Push subscription + `push_consent`           |
+| GET/POST    | `/api/notifications/send-daily-tip` | Server / Resend path               | Optional email tip                                                    |
+| POST        | `/api/notifications/welcome-tip`    | Session / server                   | Welcome tip seed                                                      |
+| POST        | `/api/notifications/send-test-tip`  | Dev/admin helper                   | Test tip email                                                        |
 
-Vercel cron (see `vercel.json`): typically `0 3 * * *` → deliver-tip.
+Vercel cron (see `vercel.json`): typically `0 3 * * *` → deliver-tip (08:30 IST).
+
+**Device push:** client `lib/webPushClient.ts` + SW handlers (`worker/index.js`); server `lib/webPush.ts`. User prompt: `components/PushPermissionPrompt.tsx`. Settings toggle under Notifications.
 
 ---
 
