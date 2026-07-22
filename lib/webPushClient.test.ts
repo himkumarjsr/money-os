@@ -7,9 +7,9 @@ function installPushApis() {
     writable: true,
     value: function PushManager() {},
   });
-  // @ts-expect-error test stub
   globalThis.Notification =
-    globalThis.Notification || function Notification() {};
+    globalThis.Notification ||
+    (function Notification() {} as unknown as typeof Notification);
   Object.defineProperty(window, "Notification", {
     configurable: true,
     writable: true,
