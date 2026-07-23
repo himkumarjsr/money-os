@@ -1,5 +1,7 @@
 "use client";
 
+import FieldTooltip from "@/components/ui/FieldTooltip";
+
 const MONTHS = [
   "January",
   "February",
@@ -14,8 +16,6 @@ const MONTHS = [
   "November",
   "December",
 ] as const;
-
-const COMMON_DAYS = [1, 2, 3, 5, 7, 10, 15, 20, 25, 28] as const;
 
 export function MonthDaySelects({
   month,
@@ -34,8 +34,9 @@ export function MonthDaySelects({
 }) {
   return (
     <div className="mt-4 space-y-2">
-      <label className="block text-sm font-semibold text-[#5F5E5A]">
-        {label}
+      <label className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5F5E5A]">
+        <span>{label}</span>
+        {hint ? <FieldTooltip text={hint} /> : null}
       </label>
       <div className="flex gap-2.5">
         <select
@@ -67,11 +68,11 @@ export function MonthDaySelects({
           ))}
         </select>
       </div>
-      {hint ? <p className="text-[11px] text-[#9B9A94]">{hint}</p> : null}
     </div>
   );
 }
 
+/** Calendar date picker; stores only day-of-month (1–31) for recurring EMI. */
 export function DayOfMonthPicker({
   value,
   onChange,
@@ -83,61 +84,81 @@ export function DayOfMonthPicker({
   label: string;
   hint?: string;
 }) {
-  const isOther =
-    value != null &&
-    value > 0 &&
-    !(COMMON_DAYS as readonly number[]).includes(value);
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const dateValue =
+    value && value >= 1 && value <= 31
+      ? `${y}-${m}-${String(value).padStart(2, "0")}`
+      : "";
 
   return (
     <div className="mt-3 space-y-2">
-      <label className="block text-sm font-semibold text-[#5F5E5A]">
-        {label}
+      <label className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5F5E5A]">
+        <span>{label}</span>
+        {hint ? <FieldTooltip text={hint} /> : null}
       </label>
-      <div className="flex flex-wrap gap-2">
-        {COMMON_DAYS.map((day) => {
-          const active = value === day;
-          return (
-            <button
-              key={day}
-              type="button"
-              onClick={() => onChange(day)}
-              className={`h-12 w-12 rounded-xl border-[1.5px] text-sm font-semibold transition ${
-                active
-                  ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
-                  : "border-[#E8E6F0] bg-white text-[#5F5E5A]"
-              }`}
-            >
-              {day}
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-[#9B9A94]">Other day</span>
-        <input
-          type="number"
-          min={1}
-          max={31}
-          inputMode="numeric"
-          placeholder="1–31"
-          value={isOther ? value : ""}
-          onChange={(e) => {
-            const raw = e.target.value;
-            if (!raw) {
-              onChange(undefined);
-              return;
-            }
-            const n = Math.min(31, Math.max(1, parseInt(raw, 10) || 0));
-            onChange(n || undefined);
-          }}
-          className={`h-12 w-24 rounded-xl border-[1.5px] px-3 text-sm font-semibold outline-none ${
-            isOther
-              ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
-              : "border-[#E8E6F0] bg-white text-[#5F5E5A]"
-          }`}
-        />
-      </div>
-      {hint ? <p className="text-[11px] text-[#9B9A94]">{hint}</p> : null}
+      <input
+        type="date"
+        value={dateValue}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (!raw) {
+            onChange(undefined);
+            return;
+          }
+          const day = Number(raw.split("-")[2] || 0);
+          onChange(day >= 1 && day <= 31 ? day : undefined);
+        }}
+        className="h-12 w-full rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none focus:border-[#534AB7]"
+      />
+      {value ? (
+        <p className="text-[12px] text-[#534AB7]">
+          Debit day each month: <strong>{value}</strong>
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+/** Premium due date: day picker for monthly, month+day for yearly. */
+export function PremiumDueFields({
+  frequency,
+  month,
+  day,
+  onMonth,
+  onDay,
+  monthlyLabel = "Which date is the premium debited? (optional)",
+  yearlyLabel = "When is your premium due each year? (optional)",
+  hint = "We'll remind you before the due date so you can keep the amount ready",
+}: {
+  frequency?: "monthly" | "yearly";
+  month?: number;
+  day?: number;
+  onMonth: (m: number | undefined) => void;
+  onDay: (d: number | undefined) => void;
+  monthlyLabel?: string;
+  yearlyLabel?: string;
+  hint?: string;
+}) {
+  if (frequency === "yearly") {
+    return (
+      <MonthDaySelects
+        label={yearlyLabel}
+        hint={hint}
+        month={month}
+        day={day}
+        onMonth={onMonth}
+        onDay={onDay}
+      />
+    );
+  }
+  return (
+    <DayOfMonthPicker
+      label={monthlyLabel}
+      hint={hint}
+      value={day}
+      onChange={onDay}
+    />
   );
 }

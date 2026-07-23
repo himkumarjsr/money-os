@@ -56,7 +56,9 @@ export type RealEmergencyFundBreakdown = {
   monthsCovered: number;
 };
 
-export function computeRealEmergencyFund(data: FinancialProfile): RealEmergencyFundBreakdown {
+export function computeRealEmergencyFund(
+  data: FinancialProfile,
+): RealEmergencyFundBreakdown {
   const bucketActuals = getUniversalBucketActuals(data);
   const monthlyExpenses = bucketActuals.needs;
   const sav = n(data.savingsAccountBalance);
@@ -69,7 +71,8 @@ export function computeRealEmergencyFund(data: FinancialProfile): RealEmergencyF
   const fdCounted = fd * 0.7;
   const otherCounted = oth * 0.5;
   const legacyCounted = legacy * 1.0;
-  const realTotal = savingsCounted + liquidCounted + fdCounted + otherCounted + legacyCounted;
+  const realTotal =
+    savingsCounted + liquidCounted + fdCounted + otherCounted + legacyCounted;
   const monthsCovered = monthlyExpenses > 0 ? realTotal / monthlyExpenses : 0;
   console.log("=== EMERGENCY FUND CALC ===", {
     savings: data.savingsAccountBalance,
@@ -126,11 +129,36 @@ export type AnalysisResult = {
   totalLiabilities: number;
   netWorth: number;
   universalBuckets: {
-    needs: { capPercent: number; capAmount: number; actual: number; status: string };
-    wants: { capPercent: number; capAmount: number; actual: number; status: string };
-    security: { capPercent: number; capAmount: number; actual: number; status: string };
-    loans: { capPercent: number; capAmount: number; actual: number; status: string };
-    investment: { capPercent: number; capAmount: number; actual: number; status: string };
+    needs: {
+      capPercent: number;
+      capAmount: number;
+      actual: number;
+      status: string;
+    };
+    wants: {
+      capPercent: number;
+      capAmount: number;
+      actual: number;
+      status: string;
+    };
+    security: {
+      capPercent: number;
+      capAmount: number;
+      actual: number;
+      status: string;
+    };
+    loans: {
+      capPercent: number;
+      capAmount: number;
+      actual: number;
+      status: string;
+    };
+    investment: {
+      capPercent: number;
+      capAmount: number;
+      actual: number;
+      status: string;
+    };
   };
 };
 
@@ -141,7 +169,11 @@ function n(v: number | undefined): number {
 /** Suggested medical emergency corpus (beyond health insurance) by city, age, and dependants. */
 function medicalEmergencyTargetLiquid(data: FinancialProfile): number {
   let target =
-    data.cityTier === "metro" ? 3_00_000 : data.cityTier === "tier2" ? 2_50_000 : 2_00_000;
+    data.cityTier === "metro"
+      ? 3_00_000
+      : data.cityTier === "tier2"
+        ? 2_50_000
+        : 2_00_000;
   if (data.selfAge >= 45) target += 50_000;
   if (data.lifeStage === "kids") target += 50_000;
   return target;
@@ -225,7 +257,13 @@ export function calculateTermNeeded(data: FinancialProfile): number {
     n(data.fdValue) +
     customInvestmentTotal;
   const ageMultiplier =
-    data.selfAge < 30 ? 1.2 : data.selfAge < 40 ? 1 : data.selfAge < 50 ? 0.8 : 0.6;
+    data.selfAge < 30
+      ? 1.2
+      : data.selfAge < 40
+        ? 1
+        : data.selfAge < 50
+          ? 0.8
+          : 0.6;
   const dependentCount =
     (data.lifeStage !== "bachelor" ? 1 : 0) +
     n(data.numberOfKids) +
@@ -298,7 +336,8 @@ function buildIssues(params: {
         severityScore: 100,
         severity: "critical",
         code: "income_zero",
-        message: "Add your income details so the meter and bucket caps can start working.",
+        message:
+          "Add your income details so the meter and bucket caps can start working.",
       },
     ];
   }
@@ -339,7 +378,8 @@ function buildIssues(params: {
   }
 
   if (emergencyFundGap > 0) {
-    const emergencySeverity: IssueSeverity = monthsCoveredEmergency >= 3 ? "warning" : "critical";
+    const emergencySeverity: IssueSeverity =
+      monthsCoveredEmergency >= 3 ? "warning" : "critical";
     issues.push({
       severityScore: emergencySeverity === "critical" ? 80 : 55,
       severity: emergencySeverity,
@@ -377,7 +417,8 @@ function buildIssues(params: {
       severityScore: 85,
       severity: "critical",
       code: "investment_missing",
-      message: "No monthly investing detected. Start a SIP to avoid long-term wealth stagnation.",
+      message:
+        "No monthly investing detected. Start a SIP to avoid long-term wealth stagnation.",
     });
   } else if (savingsRate < 10) {
     issues.push({
@@ -400,7 +441,8 @@ function buildIssues(params: {
       severityScore: 92,
       severity: "critical",
       code: "term_missing",
-      message: "You have no term insurance. Your family has zero protection if income stops.",
+      message:
+        "You have no term insurance. Your family has zero protection if income stops.",
     });
   } else if (termCover < termNeeded) {
     issues.push({
@@ -454,7 +496,9 @@ function buildPlanSteps(
       `Start with ${first.label.toLowerCase()}: reduce it from ${fmt(first.actual)}/mo toward the ${fmt(first.capAmount)} cap.`,
     );
   } else {
-    push("All five core buckets are within cap right now. Keep future income growth from spilling into wants by default.");
+    push(
+      "All five core buckets are within cap right now. Keep future income growth from spilling into wants by default.",
+    );
   }
 
   if (emergencyFundGap > 0) {
@@ -462,7 +506,9 @@ function buildPlanSteps(
       `Best place for emergency fund: savings account for the first ₹50,000, then liquid mutual fund for the rest. Avoid FD for emergency fund — penalty if you need money urgently. Then build toward ${fmt(emergencyFundTarget)} (~${fmt(Math.ceil(emergencyFundGap / 12))}/mo for ~12 months closes the gap).`,
     );
   } else {
-    push(`Keep at least ${fmt(emergencyFundTarget)} accessible (savings + liquid MF weighted for speed) as your emergency reserve.`);
+    push(
+      `Keep at least ${fmt(emergencyFundTarget)} accessible (savings + liquid MF weighted for speed) as your emergency reserve.`,
+    );
   }
 
   const actionableSecurityItems = securityChecklist.filter(
@@ -484,13 +530,19 @@ function buildPlanSteps(
 
   switch (profile.primaryGoal) {
     case "clear_debt":
-      push("Make debt payoff your default surplus use until the loan bucket falls well below the 40% cap.");
+      push(
+        "Make debt payoff your default surplus use until the loan bucket falls well below the 40% cap.",
+      );
       break;
     case "build_emergency_fund":
-      push("Route new surplus into liquid reserves first, then restart longer-term investing once the safety buffer is complete.");
+      push(
+        "Route new surplus into liquid reserves first, then restart longer-term investing once the safety buffer is complete.",
+      );
       break;
     case "kids_education":
-      push("Create a dedicated child education corpus so that school expenses and long-term goals do not compete with each other.");
+      push(
+        "Create a dedicated child education corpus so that school expenses and long-term goals do not compete with each other.",
+      );
       break;
     case "build_insurance_premium_fund":
       push(
@@ -498,7 +550,9 @@ function buildPlanSteps(
       );
       break;
     default:
-      push(`Keep redirecting surplus toward your primary goal: ${goalLabel(profile.primaryGoal)}.`);
+      push(
+        `Keep redirecting surplus toward your primary goal: ${goalLabel(profile.primaryGoal)}.`,
+      );
       break;
   }
 
@@ -508,7 +562,9 @@ function buildPlanSteps(
   );
 
   while (steps.length < 7) {
-    push("Review the meter after every salary hike or major family change so the bucket mix stays intentional.");
+    push(
+      "Review the meter after every salary hike or major family change so the bucket mix stays intentional.",
+    );
   }
 
   return steps.slice(0, 7);
@@ -592,12 +648,19 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const monthlyInvesting = bucketActuals.investment;
   const monthlyLoans = bucketActuals.loans;
   const monthlyExpenses = bucketActuals.needs;
-  const savingsRate = totalIncome > 0 ? (monthlyInvesting / totalIncome) * 100 : 0;
+  const savingsRate =
+    totalIncome > 0 ? (monthlyInvesting / totalIncome) * 100 : 0;
   const debtRatio = totalIncome > 0 ? (monthlyLoans / totalIncome) * 100 : 0;
   const untrackedCash = getUnallocatedIncome(data);
 
   const emergencyFundMonthsMin =
-    data.lifeStage === "bachelor" ? 3 : data.lifeStage === "married" ? 6 : data.lifeStage === "kids" ? 9 : 6;
+    data.lifeStage === "bachelor"
+      ? 3
+      : data.lifeStage === "married"
+        ? 6
+        : data.lifeStage === "kids"
+          ? 9
+          : 6;
   const emergencyFundMonthsMax =
     data.lifeStage === "bachelor" ? 6 : data.lifeStage === "married" ? 9 : 12;
   const emergencyFundTargetMin = monthlyExpenses * emergencyFundMonthsMin;
@@ -612,7 +675,10 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     });
   }
   const emergencyFundCurrent = er.realTotal;
-  const emergencyFundGap = Math.max(0, emergencyFundTargetMax - emergencyFundCurrent);
+  const emergencyFundGap = Math.max(
+    0,
+    emergencyFundTargetMax - emergencyFundCurrent,
+  );
 
   const termNeeded = calculateTermNeeded(data);
   console.log("=== TERM INSURANCE CALC ===", {
@@ -624,20 +690,29 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     savings: data.savingsAccountBalance,
     fd: data.fdValue,
     epf: data.epfBalance,
-    equity: data.totalEquityValue || (data.mfValue || 0) + (data.indianStocksValue || 0),
+    equity:
+      data.totalEquityValue ||
+      (data.mfValue || 0) + (data.indianStocksValue || 0),
     home: data.homeMarketValue,
     car: data.carMarketValue,
     gold: data.goldValue,
     nsc: data.nscDepositAmount,
   });
   const minimumReasonableTermCover = 50_00_000;
-  const termAdequacyFloor = Math.max(minimumReasonableTermCover, termNeeded * 0.5);
+  const termAdequacyFloor = Math.max(
+    minimumReasonableTermCover,
+    termNeeded * 0.5,
+  );
   const healthTarget = data.lifeStage === "bachelor" ? 5_00_000 : 10_00_000;
-  const healthInsuranceGap = Math.max(0, healthTarget - n(data.healthInsuranceSumInsured));
+  const healthInsuranceGap = Math.max(
+    0,
+    healthTarget - n(data.healthInsuranceSumInsured),
+  );
 
   const securityChecklist: SecurityItem[] = [];
 
-  const liquidForPremiums = n(data.savingsAccountBalance) + n(data.liquidMFValue);
+  const liquidForPremiums =
+    n(data.savingsAccountBalance) + n(data.liquidMFValue);
   const monthlyPremiumsAll = monthlyInsuranceTotal(data);
   const hasAnyInsuranceProduct =
     data.hasHealthInsurance ||
@@ -645,7 +720,8 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     n(data.carInsurancePremiumMonthly) > 0 ||
     n(data.bikeInsurancePremiumMonthly) > 0 ||
     n(data.otherInsurancePremiumMonthly) > 0;
-  const premiumReserveTarget = monthlyPremiumsAll > 0 ? monthlyPremiumsAll * 12 : 0;
+  const premiumReserveTarget =
+    monthlyPremiumsAll > 0 ? monthlyPremiumsAll * 12 : 0;
 
   const medEmergencyTarget = medicalEmergencyTargetLiquid(data);
   const medEmergencyCurrent = n(data.medicalEmergencyFund);
@@ -670,9 +746,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     efStatus = "warning";
     efDetail = `${monthsCov.toFixed(1)} months covered — good start`;
     efAction =
-      gapTo6 > 0
-        ? `Build to 6 months — need ${fmt(gapTo6)} more`
-        : undefined;
+      gapTo6 > 0 ? `Build to 6 months — need ${fmt(gapTo6)} more` : undefined;
   } else {
     efStatus = "ok";
     efDetail = `${monthsCov.toFixed(1)} months covered — excellent. Well done — this is fully funded`;
@@ -697,7 +771,11 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   // 2. Medical insurance
   securityChecklist.push({
     label: "Medical insurance",
-    status: !data.hasHealthInsurance ? "critical" : healthInsuranceGap > 0 ? "warning" : "ok",
+    status: !data.hasHealthInsurance
+      ? "critical"
+      : healthInsuranceGap > 0
+        ? "warning"
+        : "ok",
     detail: data.hasHealthInsurance
       ? `₹${(n(data.healthInsuranceSumInsured) / 100000).toFixed(0)}L sum insured`
       : "No family floater recorded",
@@ -753,14 +831,17 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     securityChecklist.push({
       label: "Insurance premium reserve (~12 months)",
       status: "na",
-      detail: "Once you add health or term (and motor) policies, we’ll size a liquid reserve so renewals don’t stress monthly cash flow.",
+      detail:
+        "Once you add health or term (and motor) policies, we’ll size a liquid reserve so renewals don’t stress monthly cash flow.",
     });
   } else if (monthlyPremiumsAll <= 0) {
     securityChecklist.push({
       label: "Insurance premium reserve (~12 months)",
       status: "warning",
-      detail: "Policies are on but premium amounts look incomplete — enter premiums to target a 12-month cushion in savings / liquid MF.",
-      actionNeeded: "Update premium fields in the analyse flow so we can calculate your reserve target.",
+      detail:
+        "Policies are on but premium amounts look incomplete — enter premiums to target a 12-month cushion in savings / liquid MF.",
+      actionNeeded:
+        "Update premium fields in the analyse flow so we can calculate your reserve target.",
     });
   } else {
     securityChecklist.push({
@@ -782,7 +863,9 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   // 6. SSY — girl child under 10
   const hasGirlChild =
     data.kidsGenders?.includes("girl") &&
-    data.kidsAges?.some((age, index) => data.kidsGenders?.[index] === "girl" && age < 10);
+    data.kidsAges?.some(
+      (age, index) => data.kidsGenders?.[index] === "girl" && age < 10,
+    );
   if (hasGirlChild) {
     securityChecklist.push({
       label: "SSY — girl child under 10",
@@ -798,21 +881,46 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     });
   }
 
-  // 7. NSC — one-time certificate / holding (not monthly SIP)
-  if (data.investsInNsc) {
-    const nscPrincipal =
+  // 7. Post office / NSC holdings (lump-sum — not monthly SIP)
+  const postOfficeRows = (
+    data as FinancialProfile & {
+      postOfficeSchemes?: Array<{
+        scheme?: string;
+        amount?: number;
+      }>;
+      hasPostOfficeSchemes?: boolean;
+    }
+  ).postOfficeSchemes;
+  const hasPostOffice =
+    Boolean(
+      (data as FinancialProfile & { hasPostOfficeSchemes?: boolean })
+        .hasPostOfficeSchemes,
+    ) ||
+    (postOfficeRows?.length ?? 0) > 0 ||
+    Boolean(data.investsInNsc);
+
+  if (hasPostOffice) {
+    const schemeTotal =
+      (postOfficeRows ?? []).reduce((sum, row) => sum + n(row.amount), 0) ||
       n(data.nscDepositAmount) +
-      n((data as FinancialProfile & { nscMonthly?: number }).nscMonthly);
+        n((data as FinancialProfile & { nscMonthly?: number }).nscMonthly);
+    const hasNsc =
+      Boolean(data.investsInNsc) ||
+      (postOfficeRows ?? []).some(
+        (row) => row.scheme === "nsc" && n(row.amount) > 0,
+      );
     securityChecklist.push({
-      label: "NSC (National Savings Certificate)",
-      status: nscPrincipal > 0 ? "ok" : "warning",
+      label: hasNsc
+        ? "Post office schemes (incl. NSC)"
+        : "Post office savings schemes",
+      status: schemeTotal > 0 ? "ok" : "warning",
       detail:
-        nscPrincipal > 0
-          ? `${fmt(nscPrincipal)} held in NSC · one-time / certificate principal (80C eligible, guaranteed post-office slice)`
-          : "You marked NSC — add the amount you hold or your one-time deposit.",
+        schemeTotal > 0
+          ? `${fmt(schemeTotal)} held in post office / national savings schemes`
+          : "You marked post office schemes — add the amounts you hold.",
       actionNeeded:
-        nscPrincipal === 0
-          ? "Enter your NSC amount in the Assets step (one-time deposit, not monthly)."
+        schemeTotal === 0
+          ? "Enter your post office scheme holdings in the Assets step."
           : undefined,
     });
   }
@@ -847,11 +955,18 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
 
   if (n(data.parentsSupport) > 0) {
     const parentsInsuranceNeeded =
-      data.cityTier === "metro" ? 10_00_000 : data.cityTier === "tier2" ? 7_00_000 : 5_00_000;
+      data.cityTier === "metro"
+        ? 10_00_000
+        : data.cityTier === "tier2"
+          ? 7_00_000
+          : 5_00_000;
     const hasParentsMedical = n(data.parentsHealthInsuranceSumInsured) > 0;
-    const parentsInsuranceCovered = hasParentsMedical ? n(data.parentsHealthInsuranceSumInsured) : 0;
+    const parentsInsuranceCovered = hasParentsMedical
+      ? n(data.parentsHealthInsuranceSumInsured)
+      : 0;
     const parentsLiquidForMedical = n(data.parentsEmergencyCash);
-    const parentsMedicalCovered = parentsInsuranceCovered + parentsLiquidForMedical;
+    const parentsMedicalCovered =
+      parentsInsuranceCovered + parentsLiquidForMedical;
 
     securityChecklist.push({
       label: "Parents medical coverage",
@@ -875,7 +990,8 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         label: "Parents in different city",
         status: "warning",
         detail: `Parents in ${data.parentsCity} · You are in ${data.cityTier}. Medical emergencies require immediate travel funds.`,
-        actionNeeded: "Keep ₹50,000 specifically for emergency travel to parents location. Add this to bereavement fund.",
+        actionNeeded:
+          "Keep ₹50,000 specifically for emergency travel to parents location. Add this to bereavement fund.",
       });
     }
   }
@@ -953,7 +1069,8 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const emergencyCorpusTotal =
     savingsVal * 1.0 + liquidMFVal * 0.95 + fdVal * 0.7 + otherLiquidVal * 0.5;
   const needsMonthly = bucketActuals?.needs || 0;
-  const monthsCovered = needsMonthly > 0 ? emergencyCorpusTotal / needsMonthly : 0;
+  const monthsCovered =
+    needsMonthly > 0 ? emergencyCorpusTotal / needsMonthly : 0;
   const totalAssets =
     savingsVal +
     fdVal +
@@ -971,7 +1088,22 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     (data.homeMarketValue || 0) +
     (data.carMarketValue || 0) +
     (data.goldValue || 0) +
-    (data.nscDepositAmount || 0) +
+    (() => {
+      const schemes = (
+        data as FinancialProfile & {
+          hasPostOfficeSchemes?: boolean;
+          postOfficeSchemes?: Array<{ amount?: number }>;
+        }
+      ).postOfficeSchemes;
+      if (
+        (data as FinancialProfile & { hasPostOfficeSchemes?: boolean })
+          .hasPostOfficeSchemes &&
+        (schemes?.length ?? 0) > 0
+      ) {
+        return schemes!.reduce((sum, row) => sum + (row.amount || 0), 0);
+      }
+      return data.nscDepositAmount || 0;
+    })() +
     (data.otherAssets || 0) +
     (data.customInvestments || []).reduce(
       (sum: number, inv: any) => sum + (inv.currentValue || 0),
@@ -989,11 +1121,18 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         loan.loanType === "car_loan" ||
         loan.loanType === "bike_loan";
       if (alreadyCounted) return sum;
-      return sum + (loan.outstandingAmount || (loan.monthlyEMI || 0) * (loan.remainingMonths || 18));
+      return (
+        sum +
+        (loan.outstandingAmount ||
+          (loan.monthlyEMI || 0) * (loan.remainingMonths || 18))
+      );
     }, 0);
   const netWorth = totalAssets - totalLiabilities;
   if (process.env.NODE_ENV === "development") {
-    console.log("ISSUES:", issues.map((i) => `${i.code}: ${i.severity}`));
+    console.log(
+      "ISSUES:",
+      issues.map((i) => `${i.code}: ${i.severity}`),
+    );
   }
 
   return {
@@ -1033,34 +1172,41 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     netWorth,
     universalBuckets: {
       needs: {
-        capPercent: bucketRows.find((r) => r.key === "needs")?.capPercent ?? 0.3,
+        capPercent:
+          bucketRows.find((r) => r.key === "needs")?.capPercent ?? 0.3,
         capAmount: bucketRows.find((r) => r.key === "needs")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "needs")?.actual ?? 0,
         status: bucketRows.find((r) => r.key === "needs")?.status ?? "good",
       },
       wants: {
-        capPercent: bucketRows.find((r) => r.key === "wants")?.capPercent ?? 0.05,
+        capPercent:
+          bucketRows.find((r) => r.key === "wants")?.capPercent ?? 0.05,
         capAmount: bucketRows.find((r) => r.key === "wants")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "wants")?.actual ?? 0,
         status: bucketRows.find((r) => r.key === "wants")?.status ?? "good",
       },
       security: {
-        capPercent: bucketRows.find((r) => r.key === "security")?.capPercent ?? 0.05,
+        capPercent:
+          bucketRows.find((r) => r.key === "security")?.capPercent ?? 0.05,
         capAmount: bucketRows.find((r) => r.key === "security")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "security")?.actual ?? 0,
         status: bucketRows.find((r) => r.key === "security")?.status ?? "good",
       },
       loans: {
-        capPercent: bucketRows.find((r) => r.key === "loans")?.capPercent ?? 0.4,
+        capPercent:
+          bucketRows.find((r) => r.key === "loans")?.capPercent ?? 0.4,
         capAmount: bucketRows.find((r) => r.key === "loans")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "loans")?.actual ?? 0,
         status: bucketRows.find((r) => r.key === "loans")?.status ?? "good",
       },
       investment: {
-        capPercent: bucketRows.find((r) => r.key === "investment")?.capPercent ?? 0.2,
-        capAmount: bucketRows.find((r) => r.key === "investment")?.capAmount ?? 0,
+        capPercent:
+          bucketRows.find((r) => r.key === "investment")?.capPercent ?? 0.2,
+        capAmount:
+          bucketRows.find((r) => r.key === "investment")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "investment")?.actual ?? 0,
-        status: bucketRows.find((r) => r.key === "investment")?.status ?? "good",
+        status:
+          bucketRows.find((r) => r.key === "investment")?.status ?? "good",
       },
     },
   };

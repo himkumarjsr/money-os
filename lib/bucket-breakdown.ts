@@ -1,4 +1,7 @@
-import type { BucketProfileInput, UniversalBucketKey } from "@/lib/universal-buckets";
+import type {
+  BucketProfileInput,
+  UniversalBucketKey,
+} from "@/lib/universal-buckets";
 import { toMonthlyEquivalent } from "@/lib/analyse-form-schema";
 
 /**
@@ -15,7 +18,10 @@ function healthPremiumMonthly(data: BucketProfileInput): number {
   }
   if (data.hasHealthInsurance) {
     return n(
-      toMonthlyEquivalent(data.healthInsurancePremiumInput, data.healthInsurancePremiumFrequency),
+      toMonthlyEquivalent(
+        data.healthInsurancePremiumInput,
+        data.healthInsurancePremiumFrequency,
+      ),
     );
   }
   return 0;
@@ -27,7 +33,10 @@ function termPremiumMonthly(data: BucketProfileInput): number {
   }
   if (data.hasTermInsurance) {
     return n(
-      toMonthlyEquivalent(data.termInsurancePremiumInput, data.termInsurancePremiumFrequency),
+      toMonthlyEquivalent(
+        data.termInsurancePremiumInput,
+        data.termInsurancePremiumFrequency,
+      ),
     );
   }
   return 0;
@@ -38,7 +47,10 @@ function carPremiumMonthly(data: BucketProfileInput): number {
     return n(data.carInsurancePremiumMonthly);
   }
   return n(
-    toMonthlyEquivalent(data.carInsurancePremiumInput, data.carInsurancePremiumFrequency),
+    toMonthlyEquivalent(
+      data.carInsurancePremiumInput,
+      data.carInsurancePremiumFrequency,
+    ),
   );
 }
 
@@ -47,8 +59,16 @@ function bikePremiumMonthly(data: BucketProfileInput): number {
     return n(data.bikeInsurancePremiumMonthly);
   }
   return n(
-    toMonthlyEquivalent(data.bikeInsurancePremiumInput, data.bikeInsurancePremiumFrequency),
+    toMonthlyEquivalent(
+      data.bikeInsurancePremiumInput,
+      data.bikeInsurancePremiumFrequency,
+    ),
   );
+}
+
+function loanLabel(base: string, lender?: string): string {
+  const name = lender?.trim();
+  return name ? `${base} (${name})` : base;
 }
 
 export function getBucketBreakdown(
@@ -56,65 +76,100 @@ export function getBucketBreakdown(
   profile: BucketProfileInput,
 ): { label: string; value: number }[] {
   const items: { label: string; value: number }[] = [];
+  const kids = profile.lifeStage === "kids";
 
   if (category === "needs") {
-    if (n(profile.rentAmount) > 0) items.push({ label: "Rent", value: n(profile.rentAmount) });
-    if (n(profile.rentMaintenanceMonthly) > 0) {
-      items.push({ label: "Rent maintenance", value: n(profile.rentMaintenanceMonthly) });
+    const foodActual =
+      n(profile.foodTotal) > 0
+        ? n(profile.foodTotal)
+        : n(profile.vegetables) + n(profile.grocery) + n(profile.medicine);
+    const transportActual =
+      n(profile.transportTotal) > 0
+        ? n(profile.transportTotal)
+        : n(profile.fuel) + n(profile.cabMetro);
+    const utilityActual =
+      n(profile.utilityTotal) > 0
+        ? n(profile.utilityTotal)
+        : n(profile.electricity) +
+          n(profile.internet) +
+          n(profile.gas) +
+          n(profile.water);
+    const domesticActual =
+      n(profile.domesticHelpTotal) > 0
+        ? n(profile.domesticHelpTotal)
+        : n(profile.houseHelpMonthly) + n(profile.cookHelpMonthly);
+
+    if (n(profile.rentAmount) > 0) {
+      items.push({ label: "Rent", value: n(profile.rentAmount) });
+      if (n(profile.rentMaintenanceMonthly) > 0) {
+        items.push({
+          label: "Rent maintenance",
+          value: n(profile.rentMaintenanceMonthly),
+        });
+      }
     }
-    if (n(profile.homeLoanEMI) > 0) {
-      items.push({ label: "Home loan EMI", value: n(profile.homeLoanEMI) });
+    if (foodActual > 0) {
+      items.push({ label: "Food and daily essentials", value: foodActual });
     }
-    if (n(profile.secondPropertyEMI) > 0) {
-      items.push({ label: "Second property EMI", value: n(profile.secondPropertyEMI) });
+    if (transportActual > 0) {
+      items.push({ label: "Transport", value: transportActual });
     }
-    if (n(profile.vegetables) > 0) {
-      items.push({ label: "Vegetables", value: n(profile.vegetables) });
+    if (utilityActual > 0) {
+      items.push({ label: "Utilities", value: utilityActual });
     }
-    if (n(profile.grocery) > 0) {
-      items.push({ label: "Groceries", value: n(profile.grocery) });
+    if (domesticActual > 0) {
+      items.push({ label: "Domestic help", value: domesticActual });
     }
-    if (n(profile.medicine) > 0) {
-      items.push({ label: "Medicine", value: n(profile.medicine) });
+    if (kids && n(profile.kidsSchoolFees) > 0) {
+      items.push({
+        label: "Kids school fees",
+        value: n(profile.kidsSchoolFees),
+      });
     }
-    if (n(profile.electricity) > 0) {
-      items.push({ label: "Electricity", value: n(profile.electricity) });
-    }
-    if (n(profile.internet) > 0) {
-      items.push({ label: "Internet and mobile", value: n(profile.internet) });
-    }
-    if (n(profile.gas) > 0) items.push({ label: "Gas", value: n(profile.gas) });
-    if (n(profile.water) > 0) items.push({ label: "Water", value: n(profile.water) });
-    if (n(profile.fuel) > 0) items.push({ label: "Fuel", value: n(profile.fuel) });
-    if (n(profile.cabMetro) > 0) {
-      items.push({ label: "Cab / metro", value: n(profile.cabMetro) });
-    }
-    if (n(profile.entertainment) > 0) {
-      items.push({ label: "Entertainment", value: n(profile.entertainment) });
-    }
-    if (n(profile.kidsSchoolFees) > 0) {
-      items.push({ label: "Kids school fees", value: n(profile.kidsSchoolFees) });
+    if (kids && n(profile.kidsActivities) > 0) {
+      items.push({
+        label: "Kids activities",
+        value: n(profile.kidsActivities),
+      });
     }
     if (n(profile.parentsSupport) > 0) {
-      items.push({ label: "Parents support", value: n(profile.parentsSupport) });
-    }
-    if (n(profile.personalCare) > 0) {
-      items.push({ label: "Personal care", value: n(profile.personalCare) });
-    }
-    if (n(profile.kidsActivities) > 0) {
-      items.push({ label: "Kids activities", value: n(profile.kidsActivities) });
-    }
-    if (n(profile.houseHelpMonthly) > 0) {
-      items.push({ label: "House help", value: n(profile.houseHelpMonthly) });
-    }
-    if (n(profile.cookHelpMonthly) > 0) {
-      items.push({ label: "Cook help", value: n(profile.cookHelpMonthly) });
+      items.push({
+        label: "Parents support",
+        value: n(profile.parentsSupport),
+      });
     }
   }
 
   if (category === "wants") {
-    if (n(profile.shopping) > 0) {
-      items.push({ label: "Shopping", value: n(profile.shopping) });
+    const lifestyleActual =
+      n(profile.lifestyleTotal) > 0
+        ? n(profile.lifestyleTotal)
+        : n(profile.entertainment) +
+          n(profile.shopping) +
+          n(profile.personalCare);
+    if (lifestyleActual > 0) {
+      if (n(profile.lifestyleTotal) > 0) {
+        items.push({
+          label: "Lifestyle (shopping, entertainment, personal care)",
+          value: lifestyleActual,
+        });
+      } else {
+        if (n(profile.entertainment) > 0) {
+          items.push({
+            label: "Entertainment",
+            value: n(profile.entertainment),
+          });
+        }
+        if (n(profile.shopping) > 0) {
+          items.push({ label: "Shopping", value: n(profile.shopping) });
+        }
+        if (n(profile.personalCare) > 0) {
+          items.push({
+            label: "Personal care",
+            value: n(profile.personalCare),
+          });
+        }
+      }
     }
   }
 
@@ -135,47 +190,126 @@ export function getBucketBreakdown(
         label: "Other insurance premium",
         value: n(profile.otherInsurancePremiumMonthly),
       });
-    } else if (profile.hasOtherInsurance && (profile.otherInsurancePremiums?.length ?? 0) > 0) {
+    } else if (
+      profile.hasOtherInsurance &&
+      (profile.otherInsurancePremiums?.length ?? 0) > 0
+    ) {
       (profile.otherInsurancePremiums ?? []).forEach((p, i) => {
-        const amt = p.premiumAmount ?? (p as { premiumInput?: number }).premiumInput;
+        const amt =
+          p.premiumAmount ?? (p as { premiumInput?: number }).premiumInput;
         const v = n(toMonthlyEquivalent(amt, p.frequency));
         if (v > 0) {
           items.push({
-            label: p.policyName?.trim() ? p.policyName : `Other insurance (${i + 1})`,
+            label: p.policyName?.trim()
+              ? p.policyName
+              : `Other insurance (${i + 1})`,
             value: v,
           });
         }
       });
     }
-    if (n(profile.ssy) > 0) items.push({ label: "SSY contribution", value: n(profile.ssy) });
   }
 
   if (category === "loans") {
+    if (n(profile.homeLoanEMI) > 0) {
+      items.push({
+        label: loanLabel("Home loan EMI", profile.homeLoanLenderName),
+        value: n(profile.homeLoanEMI),
+      });
+    }
+    if (n(profile.secondPropertyEMI) > 0) {
+      items.push({
+        label: "Second property EMI",
+        value: n(profile.secondPropertyEMI),
+      });
+    }
     if (n(profile.carLoanEMI) > 0) {
-      items.push({ label: "Car loan EMI", value: n(profile.carLoanEMI) });
+      items.push({
+        label: loanLabel("Car loan EMI", profile.carLoanLenderName),
+        value: n(profile.carLoanEMI),
+      });
     }
     if (n(profile.bikeEMI) > 0) {
-      items.push({ label: "Bike loan EMI", value: n(profile.bikeEMI) });
+      items.push({
+        label: loanLabel("Bike loan EMI", profile.bikeLoanLenderName),
+        value: n(profile.bikeEMI),
+      });
     }
     if (n(profile.personalLoanEMI) > 0) {
-      items.push({ label: "Personal loan EMI", value: n(profile.personalLoanEMI) });
+      items.push({
+        label: loanLabel("Personal loan EMI", profile.personalLoanLenderName),
+        value: n(profile.personalLoanEMI),
+      });
     }
     if (n(profile.creditCardBillMonthly) > 0) {
-      items.push({ label: "Credit card payment", value: n(profile.creditCardBillMonthly) });
+      items.push({
+        label: "Credit card payment",
+        value: n(profile.creditCardBillMonthly),
+      });
     }
-    for (const ob of profile.additionalObligations ?? []) {
-      if (n(ob.monthlyAmount) > 0) {
-        const label = ob.type?.trim() ? `${ob.type}` : "Other obligation";
-        items.push({ label, value: n(ob.monthlyAmount) });
-      }
+    const deduped = Array.from(
+      new Map(
+        (profile.additionalObligations ?? [])
+          .filter((row) => n(row.monthlyAmount) > 0)
+          .map((row) => {
+            const key = [
+              String(row.type || "other")
+                .toLowerCase()
+                .trim(),
+              String(row.lenderName || "")
+                .toLowerCase()
+                .trim(),
+              Math.round(n(row.monthlyAmount)),
+            ].join("|");
+            return [key, row] as const;
+          }),
+      ).values(),
+    );
+    for (const ob of deduped) {
+      const base = ob.type?.trim() ? ob.type : "Other obligation";
+      items.push({
+        label: loanLabel(base, ob.lenderName),
+        value: n(ob.monthlyAmount),
+      });
     }
   }
 
   if (category === "investment") {
-    if (n(profile.monthlySIP) > 0) items.push({ label: "Monthly SIP", value: n(profile.monthlySIP) });
-    if (n(profile.monthlyRD) > 0) items.push({ label: "Monthly RD", value: n(profile.monthlyRD) });
+    if (n(profile.monthlySIP) > 0) {
+      items.push({ label: "Monthly SIP", value: n(profile.monthlySIP) });
+    }
+    if (n(profile.monthlyRD) > 0) {
+      items.push({ label: "Monthly RD", value: n(profile.monthlyRD) });
+    }
     if (n(profile.monthlyNPSContribution) > 0) {
-      items.push({ label: "NPS contribution", value: n(profile.monthlyNPSContribution) });
+      items.push({
+        label: "NPS contribution",
+        value: n(profile.monthlyNPSContribution),
+      });
+    }
+    if (n(profile.monthlyPPFContribution) > 0) {
+      items.push({
+        label: "PPF contribution",
+        value: n(profile.monthlyPPFContribution),
+      });
+    }
+    if (n(profile.monthlyEPFContribution) > 0) {
+      items.push({
+        label: "EPF contribution (employee)",
+        value: n(profile.monthlyEPFContribution),
+      });
+    }
+    if (n(profile.ssy) > 0) {
+      items.push({ label: "SSY contribution", value: n(profile.ssy) });
+    }
+    for (const row of profile.customInvestments ?? []) {
+      const v = n(row.monthlyContribution);
+      if (v > 0) {
+        items.push({
+          label: row.label?.trim() ? row.label : "Other investment",
+          value: v,
+        });
+      }
     }
   }
 

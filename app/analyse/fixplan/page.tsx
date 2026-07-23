@@ -30,6 +30,10 @@ export default function FixPlanPage() {
   const router = useRouter();
   const hasLoadedRef = useRef(false);
   const lastLoadKeyRef = useRef<string | null>(null);
+  const loadFixPlanRef = useRef<
+    ((forceRefresh?: boolean) => Promise<void>) | null
+  >(null);
+  const hasPlanRef = useRef(false);
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
@@ -129,7 +133,8 @@ export default function FixPlanPage() {
         }
 
         console.log("Calling AI (cache miss)...");
-        setAiLoading(true);
+        // Keep existing plan visible on silent retries; only show loader on first load.
+        if (!hasPlanRef.current) setAiLoading(true);
         try {
           const response = await fetch("/api/ai/analyse", {
             method: "POST",
@@ -220,6 +225,9 @@ export default function FixPlanPage() {
     [profile, result, user?.id],
   );
 
+  loadFixPlanRef.current = loadFixPlan;
+  hasPlanRef.current = Boolean(aiPlan);
+
   useEffect(() => {
     if (!hasInitialized) return;
 
@@ -253,14 +261,14 @@ export default function FixPlanPage() {
         }
       }
       if (!profile || !result) return;
-      const loadKey = `${hashProfile(profile)}:${String((result as any)?.overallScore ?? "")}`;
+      const loadKey = `${hashProfile(profile)}:${String((result as { overallScore?: number })?.overallScore ?? "")}`;
       if (lastLoadKeyRef.current !== loadKey) {
         lastLoadKeyRef.current = loadKey;
         hasLoadedRef.current = false;
       }
       if (hasLoadedRef.current) return;
       hasLoadedRef.current = true;
-      if (!cancelled) void loadFixPlan();
+      if (!cancelled) void loadFixPlanRef.current?.(false);
     })();
 
     return () => {
@@ -274,17 +282,16 @@ export default function FixPlanPage() {
     router,
     profile,
     result,
-    loadFixPlan,
   ]);
 
   useEffect(() => {
-    if (aiPlan?.isFallback) {
-      const timer = setTimeout(async () => {
-        await loadFixPlan(true);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [aiPlan?.isFallback, loadFixPlan]);
+    // Silent background retry for fallback plans — do not remount the loading screen.
+    if (!aiPlan?.isFallback) return;
+    const timer = setTimeout(() => {
+      void loadFixPlanRef.current?.(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [aiPlan?.isFallback]);
 
   const lastSubmission = profile;
   const aiData = aiPlan;

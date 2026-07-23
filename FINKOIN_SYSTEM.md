@@ -63,7 +63,7 @@ Canonical site: **https://www.finkoin.com**
 
 ## TEST STATUS
 
-Last run: 2026-07-23T09:26:53Z
+Last run: 2026-07-23T04:07:30.721Z
 Unit tests: 349/349 passing
 Failed: 0
 
@@ -78,20 +78,6 @@ Living docs:
 - `docs/DESIGN_SYSTEM.md`
 - `docs/ENV_AND_SCRIPTS.md`
 - `docs/TESTING.md`
-
-**Financial calendar (2026-07-23):**
-
-- `financial_obligations` table ✓
-- `obligation_checklist` table ✓
-- `generate_monthly_checklist()` function ✓
-- `ObligationStore` (`store/obligationStore.ts`) ✓
-- Monthly checklist in tracker ✓
-- Health check date collection (renewal / EMI / SIP days) ✓
-- Tracker learning pattern (suggest obligation from expense) ✓
-- Obligation reminder cron (`/api/obligations/reminders`) ✓
-- Migration mirror: `supabase/migrations/036_financial_obligations.sql` ✓
-
-Do **not** push to production until UAT checklist (health-check sync → checklist → mark paid → add manual → learn → reminder API) passes.
 
 ## 1. PRODUCT OVERVIEW
 

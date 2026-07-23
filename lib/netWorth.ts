@@ -31,11 +31,15 @@ export function buildNetWorth(values: Partial<AnalyseFormValues>) {
     values.carMarketValue,
     values.goldValue,
     values.otherAssets,
-    values.nscDepositAmount,
+    ...(values.hasPostOfficeSchemes &&
+    (values.postOfficeSchemes?.length ?? 0) > 0
+      ? (values.postOfficeSchemes ?? []).map((row) => row.amount)
+      : [values.nscDepositAmount]),
   ]);
 
   const personalLoanLiability =
-    values.personalLoanOutstanding != null && Number(values.personalLoanOutstanding) > 0
+    values.personalLoanOutstanding != null &&
+    Number(values.personalLoanOutstanding) > 0
       ? Number(values.personalLoanOutstanding)
       : 0;
 
@@ -65,16 +69,23 @@ export function buildNetWorth(values: Partial<AnalyseFormValues>) {
   };
 }
 
-export function getNetWorthStanding(age: number | undefined, netWorth: number): string | null {
+export function getNetWorthStanding(
+  age: number | undefined,
+  netWorth: number,
+): string | null {
   if (!age) return null;
   const band = ageBenchmarks.find((item) => age >= item.min && age < item.max);
   if (!band) return null;
   const median = (band.low + band.high) / 2;
 
-  if (netWorth >= band.high * 2) return "Your net worth puts you in the top 10% of Indians your age.";
-  if (netWorth >= band.high) return "Your net worth puts you in the top 25% of Indians your age.";
-  if (netWorth >= median) return "Your net worth puts you in the top 40% of Indians your age.";
-  if (netWorth >= band.low) return "Your net worth puts you around the middle 50% of Indians your age.";
+  if (netWorth >= band.high * 2)
+    return "Your net worth puts you in the top 10% of Indians your age.";
+  if (netWorth >= band.high)
+    return "Your net worth puts you in the top 25% of Indians your age.";
+  if (netWorth >= median)
+    return "Your net worth puts you in the top 40% of Indians your age.";
+  if (netWorth >= band.low)
+    return "Your net worth puts you around the middle 50% of Indians your age.";
   return "Your net worth puts you in the bottom 50% of Indians your age.";
 }
 

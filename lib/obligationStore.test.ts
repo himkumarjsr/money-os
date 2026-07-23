@@ -52,7 +52,10 @@ vi.mock("@/lib/supabase", () => ({
                   }),
                 }),
             }),
-          upsert: async () => ({ error: null }),
+          upsert: (...args: unknown[]) => {
+            upsert(...args);
+            return Promise.resolve({ error: null });
+          },
           update: () =>
             chain({
               eq: async () => ({ error: null }),
@@ -155,6 +158,7 @@ describe("useObligationStore", () => {
     const { useObligationStore } = await import("@/store/obligationStore");
     await useObligationStore.getState().syncFromHealthCheck("u1", {
       termInsurancePremiumInput: 7200,
+      termInsurancePremiumFrequency: "yearly",
       termInsuranceRenewalMonth: 4,
       termInsuranceRenewalDay: 15,
       homeLoanEMI: 22000,
@@ -163,5 +167,22 @@ describe("useObligationStore", () => {
       sipAutoDebitDay: 1,
     });
     expect(rpc).toHaveBeenCalled();
+  });
+
+  it("syncFromHealthCheck respects monthly premium frequency", async () => {
+    upsert.mockClear();
+    const { useObligationStore } = await import("@/store/obligationStore");
+    await useObligationStore.getState().syncFromHealthCheck("u1", {
+      healthInsurancePremiumInput: 1500,
+      healthInsurancePremiumFrequency: "monthly",
+      healthInsuranceRenewalDay: 10,
+    });
+    expect(upsert).toHaveBeenCalled();
+    const payload = upsert.mock.calls[0]?.[0] as {
+      frequency?: string;
+      amount?: number;
+    };
+    expect(payload?.frequency).toBe("monthly");
+    expect(payload?.amount).toBe(1500);
   });
 });

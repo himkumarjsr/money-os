@@ -10,62 +10,42 @@ describe("getBucketBreakdown", () => {
     expect(getBucketBreakdown("investment", {})).toEqual([]);
   });
 
-  it("includes positive needs line items only", () => {
+  it("includes positive needs line items matching universal buckets", () => {
     const items = getBucketBreakdown("needs", {
+      lifeStage: "kids",
       rentAmount: 20000,
       rentMaintenanceMonthly: 2000,
-      homeLoanEMI: 15000,
-      secondPropertyEMI: 8000,
-      vegetables: 0,
-      grocery: 5000,
-      medicine: -10,
-      electricity: NaN as unknown as number,
-      internet: 800,
-      gas: 400,
-      water: 300,
-      fuel: 2000,
-      cabMetro: 1500,
-      entertainment: 1000,
+      foodTotal: 8000,
+      transportTotal: 3500,
+      utilityTotal: 1500,
+      domesticHelpTotal: 7500,
       kidsSchoolFees: 12000,
-      parentsSupport: 5000,
-      personalCare: 700,
       kidsActivities: 2500,
-      houseHelpMonthly: 4000,
-      cookHelpMonthly: 3500,
+      parentsSupport: 5000,
     });
-    const labels = items.map((i) => i.label);
-    expect(labels).toEqual(
-      expect.arrayContaining([
-        "Rent",
-        "Rent maintenance",
-        "Home loan EMI",
-        "Second property EMI",
-        "Groceries",
-        "Internet and mobile",
-        "Gas",
-        "Water",
-        "Fuel",
-        "Cab / metro",
-        "Entertainment",
-        "Kids school fees",
-        "Parents support",
-        "Personal care",
-        "Kids activities",
-        "House help",
-        "Cook help",
-      ]),
-    );
-    expect(labels).not.toContain("Vegetables");
-    expect(labels).not.toContain("Medicine");
-    expect(labels).not.toContain("Electricity");
-    expect(items.find((i) => i.label === "Rent")?.value).toBe(20000);
+    expect(items).toEqual([
+      { label: "Rent", value: 20000 },
+      { label: "Rent maintenance", value: 2000 },
+      { label: "Food and daily essentials", value: 8000 },
+      { label: "Transport", value: 3500 },
+      { label: "Utilities", value: 1500 },
+      { label: "Domestic help", value: 7500 },
+      { label: "Kids school fees", value: 12000 },
+      { label: "Kids activities", value: 2500 },
+      { label: "Parents support", value: 5000 },
+    ]);
   });
 
-  it("includes shopping under wants", () => {
+  it("includes lifestyle under wants", () => {
+    expect(getBucketBreakdown("wants", { lifestyleTotal: 4000 })).toEqual([
+      {
+        label: "Lifestyle (shopping, entertainment, personal care)",
+        value: 4000,
+      },
+    ]);
     expect(getBucketBreakdown("wants", { shopping: 3000 })).toEqual([
       { label: "Shopping", value: 3000 },
     ]);
-    expect(getBucketBreakdown("wants", { shopping: 0 })).toEqual([]);
   });
 
   it("builds security from monthly premiums when provided", () => {
@@ -75,7 +55,6 @@ describe("getBucketBreakdown", () => {
       carInsurancePremiumMonthly: 400,
       bikeInsurancePremiumMonthly: 100,
       otherInsurancePremiumMonthly: 50,
-      ssy: 500,
     });
     expect(items).toEqual(
       expect.arrayContaining([
@@ -84,9 +63,9 @@ describe("getBucketBreakdown", () => {
         { label: "Car insurance premium", value: 400 },
         { label: "Bike insurance premium", value: 100 },
         { label: "Other insurance premium", value: 50 },
-        { label: "SSY contribution", value: 500 },
       ]),
     );
+    expect(items.find((i) => i.label.includes("SSY"))).toBeUndefined();
   });
 
   it("converts yearly health premium input when monthly missing", () => {
@@ -139,7 +118,6 @@ describe("getBucketBreakdown", () => {
         { premiumAmount: 0, frequency: "monthly" },
       ],
     });
-    // Uses trimmed name only for emptiness check; label keeps original string.
     expect(items).toEqual([
       { label: "  Accidental  ", value: 200 },
       { label: "Other insurance (2)", value: 300 },
@@ -148,6 +126,8 @@ describe("getBucketBreakdown", () => {
 
   it("builds loans breakdown including obligations", () => {
     const items = getBucketBreakdown("loans", {
+      homeLoanEMI: 15000,
+      homeLoanLenderName: "HDFC",
       carLoanEMI: 8000,
       bikeEMI: 2000,
       personalLoanEMI: 3000,
@@ -159,6 +139,7 @@ describe("getBucketBreakdown", () => {
       ] as never,
     });
     expect(items).toEqual([
+      { label: "Home loan EMI (HDFC)", value: 15000 },
       { label: "Car loan EMI", value: 8000 },
       { label: "Bike loan EMI", value: 2000 },
       { label: "Personal loan EMI", value: 3000 },
@@ -174,11 +155,26 @@ describe("getBucketBreakdown", () => {
         monthlySIP: 10000,
         monthlyRD: 2000,
         monthlyNPSContribution: 1500,
+        monthlyPPFContribution: 500,
+        monthlyEPFContribution: 2000,
+        ssy: 1000,
+        customInvestments: [
+          {
+            label: "Gold SIP",
+            monthlyContribution: 300,
+            currentValue: 0,
+            type: "other",
+          },
+        ],
       }),
     ).toEqual([
       { label: "Monthly SIP", value: 10000 },
       { label: "Monthly RD", value: 2000 },
       { label: "NPS contribution", value: 1500 },
+      { label: "PPF contribution", value: 500 },
+      { label: "EPF contribution (employee)", value: 2000 },
+      { label: "SSY contribution", value: 1000 },
+      { label: "Gold SIP", value: 300 },
     ]);
   });
 });

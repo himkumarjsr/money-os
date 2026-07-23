@@ -65,6 +65,31 @@ export type PremiumFrequency = (typeof PREMIUM_FREQUENCY_VALUES)[number];
 export const KID_GENDER_VALUES = ["boy", "girl"] as const;
 export type KidGender = (typeof KID_GENDER_VALUES)[number];
 
+/** India Post / National Savings schemes (lump-sum or balance holdings). */
+export const POST_OFFICE_SCHEME_VALUES = [
+  "savings_account",
+  "recurring_deposit",
+  "time_deposit",
+  "nsc",
+  "kvp",
+  "mis",
+  "scss",
+  "mssc",
+  "other",
+] as const;
+export type PostOfficeSchemeId = (typeof POST_OFFICE_SCHEME_VALUES)[number];
+export const POST_OFFICE_SCHEME_LABELS: Record<PostOfficeSchemeId, string> = {
+  savings_account: "Post Office Savings Account",
+  recurring_deposit: "National Savings Recurring Deposit (RD)",
+  time_deposit: "Post Office Time Deposit (TD)",
+  nsc: "National Savings Certificate (NSC)",
+  kvp: "Kisan Vikas Patra (KVP)",
+  mis: "Monthly Income Scheme (MIS)",
+  scss: "Senior Citizen Savings Scheme (SCSS)",
+  mssc: "Mahila Samman Savings Certificate",
+  other: "Other post office scheme",
+};
+
 export const ADDITIONAL_OBLIGATION_TYPE_VALUES = [
   "Personal Loan",
   "Marriage Loan",
@@ -226,9 +251,13 @@ export interface FinancialProfile {
   carInsurancePremiumMonthly?: number;
   carInsurancePremiumInput?: number;
   carInsurancePremiumFrequency?: PremiumFrequency;
+  carInsuranceRenewalMonth?: number;
+  carInsuranceRenewalDay?: number;
   bikeInsurancePremiumMonthly?: number;
   bikeInsurancePremiumInput?: number;
   bikeInsurancePremiumFrequency?: PremiumFrequency;
+  bikeInsuranceRenewalMonth?: number;
+  bikeInsuranceRenewalDay?: number;
   otherInsurancePremiumMonthly?: number;
   otherInsurancePremiumInput?: number;
   otherInsurancePremiumFrequency?: PremiumFrequency;
@@ -246,6 +275,8 @@ export interface FinancialProfile {
     monthlyAmount?: number;
     maturityAmount?: number;
     maturityYear?: number;
+    renewalMonth?: number;
+    renewalDay?: number;
   }>;
 
   savingsAccountBalance: number;
@@ -294,6 +325,14 @@ export interface FinancialProfile {
   nscMaturityYear?: number;
   /** When false, NSC is hidden in the form and not scored in the safety net. */
   investsInNsc?: boolean;
+  /** Any India Post / national savings scheme holdings. */
+  hasPostOfficeSchemes?: boolean;
+  postOfficeSchemes?: Array<{
+    id?: string;
+    scheme: PostOfficeSchemeId;
+    amount: number;
+    maturityYear?: number;
+  }>;
   odLimit?: number;
   odUsed?: number;
   odInterestRate?: number;
@@ -439,6 +478,15 @@ const otherInsurancePremiumSchema = z.object({
   frequency: premiumFrequencySchema.default("monthly"),
   maturityAmount: optionalMoney,
   maturityYear: optionalWholeNumber,
+  renewalMonth: optionalWholeNumber,
+  renewalDay: optionalWholeNumber,
+});
+
+const postOfficeSchemeSchema = z.object({
+  id: z.string().optional(),
+  scheme: z.enum(POST_OFFICE_SCHEME_VALUES).default("nsc"),
+  amount: optionalMoney.default(0),
+  maturityYear: optionalWholeNumber,
 });
 
 const customInvestmentSchema = z.object({
@@ -567,8 +615,12 @@ const formShape = {
   termInsuranceRenewalDay: optionalWholeNumber,
   carInsurancePremiumInput: optionalMoney,
   carInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  carInsuranceRenewalMonth: optionalWholeNumber,
+  carInsuranceRenewalDay: optionalWholeNumber,
   bikeInsurancePremiumInput: optionalMoney,
   bikeInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  bikeInsuranceRenewalMonth: optionalWholeNumber,
+  bikeInsuranceRenewalDay: optionalWholeNumber,
   hasOtherInsurance: z.boolean().default(false),
   otherInsurancePremiumInput: optionalMoney,
   otherInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
@@ -615,6 +667,8 @@ const formShape = {
   nscDepositAmount: optionalMoney,
   nscMaturityYear: optionalWholeNumber,
   investsInNsc: z.boolean().optional().default(false),
+  hasPostOfficeSchemes: z.boolean().optional().default(false),
+  postOfficeSchemes: z.array(postOfficeSchemeSchema).max(8).default([]),
 
   primaryGoal: z.string().min(1, "Choose a primary goal"),
   retirementTargetCorpus: optionalMoney,
@@ -886,8 +940,12 @@ export const step5Schema = baseFormSchema
     termInsurancePremiumTillYear: true,
     carInsurancePremiumInput: true,
     carInsurancePremiumFrequency: true,
+    carInsuranceRenewalMonth: true,
+    carInsuranceRenewalDay: true,
     bikeInsurancePremiumInput: true,
     bikeInsurancePremiumFrequency: true,
+    bikeInsuranceRenewalMonth: true,
+    bikeInsuranceRenewalDay: true,
     hasOtherInsurance: true,
     otherInsurancePremiumInput: true,
     otherInsurancePremiumFrequency: true,
@@ -991,6 +1049,8 @@ export const step6Schema = baseFormSchema
     nscDepositAmount: true,
     nscMaturityYear: true,
     investsInNsc: true,
+    hasPostOfficeSchemes: true,
+    postOfficeSchemes: true,
     bereavementFund: true,
   })
   .superRefine((data, ctx) => {
@@ -1217,19 +1277,27 @@ function migrateLegacyAnalysePartial(
 
   const unified = out.unifiedLoans;
   if (Array.isArray(unified)) {
-    out.unifiedLoans = (unified as Record<string, unknown>[]).map((row) => ({
-      id: row.id,
-      loanType: (row.loanType ?? "other") as UnifiedLoanType,
-      lenderName: (row.lenderName ?? "") as string,
-      monthlyEMI: row.monthlyEMI ?? 0,
-      outstandingAmount: row.outstandingAmount ?? 0,
-      interestRate: row.interestRate ?? 0,
-      remainingMonths: row.remainingMonths ?? 0,
-      odLimit: row.odLimit ?? 0,
-      odUsed: row.odUsed ?? 0,
-      odInterestOnlyYears: row.odInterestOnlyYears ?? 0,
-      emiDay: row.emiDay == null ? undefined : Number(row.emiDay),
-    }));
+    out.unifiedLoans = (unified as Record<string, unknown>[]).map((row) => {
+      const loanType = (row.loanType ?? "other") as UnifiedLoanType;
+      const outstanding = Number(row.outstandingAmount ?? 0) || 0;
+      return {
+        id: row.id,
+        loanType,
+        lenderName: (row.lenderName ?? "") as string,
+        monthlyEMI: row.monthlyEMI ?? 0,
+        outstandingAmount: outstanding,
+        interestRate: row.interestRate ?? 0,
+        remainingMonths: row.remainingMonths ?? 0,
+        odLimit: row.odLimit ?? 0,
+        // OD "amount used" is the same as outstanding — keep one source of truth.
+        odUsed:
+          loanType === "overdraft"
+            ? outstanding || Number(row.odUsed ?? 0) || 0
+            : Number(row.odUsed ?? 0) || 0,
+        odInterestOnlyYears: row.odInterestOnlyYears ?? 0,
+        emiDay: row.emiDay == null ? undefined : Number(row.emiDay),
+      };
+    });
   }
 
   const legacyPrem = out.otherInsurancePolicies as
@@ -1422,18 +1490,25 @@ export function financialProfileToFormValues(
   };
 
   const unifiedLoans: NonNullable<AnalyseFormValues["unifiedLoans"]> =
-    (p.unifiedLoans ?? []).map((loan) => ({
-      id: loan.id ?? newAnalyseRowId(),
-      loanType: loan.loanType,
-      lenderName: loan.lenderName ?? "",
-      monthlyEMI: loan.monthlyEMI ?? 0,
-      outstandingAmount: loan.outstandingAmount ?? 0,
-      interestRate: loan.interestRate ?? 0,
-      remainingMonths: loan.remainingMonths ?? 0,
-      odLimit: loan.odLimit ?? 0,
-      odUsed: loan.odUsed ?? 0,
-      odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
-    })) ?? [];
+    (p.unifiedLoans ?? []).map((loan) => {
+      const outstanding = loan.outstandingAmount ?? 0;
+      return {
+        id: loan.id ?? newAnalyseRowId(),
+        loanType: loan.loanType,
+        lenderName: loan.lenderName ?? "",
+        monthlyEMI: loan.monthlyEMI ?? 0,
+        outstandingAmount: outstanding,
+        interestRate: loan.interestRate ?? 0,
+        remainingMonths: loan.remainingMonths ?? 0,
+        odLimit: loan.odLimit ?? 0,
+        odUsed:
+          loan.loanType === "overdraft"
+            ? outstanding || loan.odUsed || 0
+            : (loan.odUsed ?? 0),
+        odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
+        emiDay: loan.emiDay,
+      };
+    }) ?? [];
 
   if (unifiedLoans.length === 0) {
     if ((p.homeLoanEMI ?? 0) > 0) {
@@ -1588,9 +1663,13 @@ export function financialProfileToFormValues(
     carInsurancePremiumInput:
       p.carInsurancePremiumInput ?? p.carInsurancePremiumMonthly ?? 0,
     carInsurancePremiumFrequency: p.carInsurancePremiumFrequency ?? "monthly",
+    carInsuranceRenewalMonth: p.carInsuranceRenewalMonth,
+    carInsuranceRenewalDay: p.carInsuranceRenewalDay,
     bikeInsurancePremiumInput:
       p.bikeInsurancePremiumInput ?? p.bikeInsurancePremiumMonthly ?? 0,
     bikeInsurancePremiumFrequency: p.bikeInsurancePremiumFrequency ?? "monthly",
+    bikeInsuranceRenewalMonth: p.bikeInsuranceRenewalMonth,
+    bikeInsuranceRenewalDay: p.bikeInsuranceRenewalDay,
     hasOtherInsurance: hasOther,
     otherInsurancePremiums: otherPolicies.map((row) => {
       const r = row as {
@@ -1602,6 +1681,8 @@ export function financialProfileToFormValues(
         monthlyAmount?: number;
         maturityAmount?: number;
         maturityYear?: number;
+        renewalMonth?: number;
+        renewalDay?: number;
       };
       return {
         id: r.id ?? newAnalyseRowId(),
@@ -1610,6 +1691,8 @@ export function financialProfileToFormValues(
         frequency: r.frequency ?? "monthly",
         maturityAmount: r.maturityAmount ?? 0,
         maturityYear: r.maturityYear ?? 0,
+        renewalMonth: r.renewalMonth,
+        renewalDay: r.renewalDay,
       };
     }),
     otherInsurancePremiumInput:
@@ -1658,6 +1741,31 @@ export function financialProfileToFormValues(
       (p as FinancialProfile & { nscMonthly?: number }).nscMonthly ??
       0,
     nscMaturityYear: p.nscMaturityYear ?? 0,
+    hasPostOfficeSchemes: Boolean(
+      p.hasPostOfficeSchemes ||
+      p.investsInNsc ||
+      (p.postOfficeSchemes?.length ?? 0) > 0,
+    ),
+    postOfficeSchemes:
+      p.postOfficeSchemes && p.postOfficeSchemes.length > 0
+        ? p.postOfficeSchemes
+        : p.investsInNsc &&
+            (p.nscDepositAmount ??
+              (p as FinancialProfile & { nscMonthly?: number }).nscMonthly ??
+              0) > 0
+          ? [
+              {
+                id: newAnalyseRowId(),
+                scheme: "nsc" as const,
+                amount:
+                  p.nscDepositAmount ??
+                  (p as FinancialProfile & { nscMonthly?: number })
+                    .nscMonthly ??
+                  0,
+                maturityYear: p.nscMaturityYear,
+              },
+            ]
+          : [],
     primaryGoal: p.primaryGoal?.trim() ? p.primaryGoal : "grow_wealth",
     retirementTargetCorpus: p.retirementTargetCorpus,
     retirementAge: p.retirementAge ?? 0,
@@ -2059,6 +2167,8 @@ export function normalizeAnalyseFormValues(
     carInsurancePremiumInput: form.carInsurancePremiumInput,
     carInsurancePremiumFrequency:
       form.carInsurancePremiumFrequency ?? "monthly",
+    carInsuranceRenewalMonth: form.carInsuranceRenewalMonth,
+    carInsuranceRenewalDay: form.carInsuranceRenewalDay,
     bikeInsurancePremiumMonthly: toMonthlyEquivalent(
       form.bikeInsurancePremiumInput,
       form.bikeInsurancePremiumFrequency,
@@ -2066,6 +2176,8 @@ export function normalizeAnalyseFormValues(
     bikeInsurancePremiumInput: form.bikeInsurancePremiumInput,
     bikeInsurancePremiumFrequency:
       form.bikeInsurancePremiumFrequency ?? "monthly",
+    bikeInsuranceRenewalMonth: form.bikeInsuranceRenewalMonth,
+    bikeInsuranceRenewalDay: form.bikeInsuranceRenewalDay,
     hasOtherInsurance: form.hasOtherInsurance ?? false,
     otherInsurancePremiums: form.hasOtherInsurance
       ? (form.otherInsurancePremiums ?? []).map((row) => {
@@ -2077,6 +2189,8 @@ export function normalizeAnalyseFormValues(
             frequency?: PremiumFrequency;
             maturityAmount?: number;
             maturityYear?: number;
+            renewalMonth?: number;
+            renewalDay?: number;
           };
           const amount = r.premiumAmount ?? r.premiumInput;
           const freq = r.frequency ?? "monthly";
@@ -2088,6 +2202,8 @@ export function normalizeAnalyseFormValues(
             monthlyAmount: toMonthlyEquivalent(amount, freq) ?? 0,
             maturityAmount: r.maturityAmount ?? 0,
             maturityYear: r.maturityYear ?? 0,
+            renewalMonth: r.renewalMonth,
+            renewalDay: r.renewalDay,
           };
         })
       : [],
@@ -2161,14 +2277,51 @@ export function normalizeAnalyseFormValues(
     monthlyNPSContribution: form.monthlyNPSContribution,
     monthlyEPFContribution: form.monthlyEPFContribution ?? 0,
     ssy: form.ssy,
-    nscDepositAmount: form.investsInNsc
-      ? (form.nscDepositAmount ??
-        (form as Partial<AnalyseFormValues> & { nscMonthly?: number })
-          .nscMonthly ??
-        0)
-      : 0,
-    nscMaturityYear: form.investsInNsc ? form.nscMaturityYear : undefined,
-    investsInNsc: form.investsInNsc ?? false,
+    hasPostOfficeSchemes: form.hasPostOfficeSchemes ?? false,
+    postOfficeSchemes: form.hasPostOfficeSchemes
+      ? (form.postOfficeSchemes ?? [])
+          .filter((row) => (row.amount ?? 0) > 0)
+          .map((row) => ({
+            id: row.id ?? newAnalyseRowId(),
+            scheme: row.scheme ?? "other",
+            amount: row.amount ?? 0,
+            maturityYear: row.maturityYear,
+          }))
+      : [],
+    nscDepositAmount: (() => {
+      if (form.hasPostOfficeSchemes) {
+        const nscTotal = (form.postOfficeSchemes ?? [])
+          .filter((row) => row.scheme === "nsc")
+          .reduce((sum, row) => sum + (row.amount ?? 0), 0);
+        if (nscTotal > 0) return nscTotal;
+      }
+      if (form.investsInNsc) {
+        return (
+          form.nscDepositAmount ??
+          (form as Partial<AnalyseFormValues> & { nscMonthly?: number })
+            .nscMonthly ??
+          0
+        );
+      }
+      return 0;
+    })(),
+    nscMaturityYear: (() => {
+      if (form.hasPostOfficeSchemes) {
+        const nscRow = (form.postOfficeSchemes ?? []).find(
+          (row) => row.scheme === "nsc" && (row.amount ?? 0) > 0,
+        );
+        if (nscRow) return nscRow.maturityYear;
+      }
+      return form.investsInNsc ? form.nscMaturityYear : undefined;
+    })(),
+    investsInNsc: (() => {
+      if (form.hasPostOfficeSchemes) {
+        return (form.postOfficeSchemes ?? []).some(
+          (row) => row.scheme === "nsc" && (row.amount ?? 0) > 0,
+        );
+      }
+      return form.investsInNsc ?? false;
+    })(),
 
     primaryGoal: form.primaryGoal ?? "",
     retirementTargetCorpus: form.retirementTargetCorpus,
@@ -2262,8 +2415,12 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   termInsuranceRenewalDay: undefined,
   carInsurancePremiumInput: 0,
   carInsurancePremiumFrequency: "monthly",
+  carInsuranceRenewalMonth: undefined,
+  carInsuranceRenewalDay: undefined,
   bikeInsurancePremiumInput: 0,
   bikeInsurancePremiumFrequency: "monthly",
+  bikeInsuranceRenewalMonth: undefined,
+  bikeInsuranceRenewalDay: undefined,
   hasOtherInsurance: false,
   otherInsurancePremiumInput: 0,
   otherInsurancePremiumFrequency: "monthly",
@@ -2289,6 +2446,8 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   nscDepositAmount: 0,
   nscMaturityYear: 0,
   investsInNsc: false,
+  hasPostOfficeSchemes: false,
+  postOfficeSchemes: [],
   savingsAccountBalance: 0,
   fdValue: 0,
   fdRate: 0,

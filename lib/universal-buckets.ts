@@ -254,14 +254,19 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.creditCardBillMonthly) +
     additionalEmiTotal;
 
-  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY deposits.
+  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY + custom.
+  const customMonthly = (data.customInvestments ?? []).reduce(
+    (sum, row) => sum + n(row.monthlyContribution),
+    0,
+  );
   const investmentActual =
     n(data.monthlySIP) +
     n(data.monthlyRD) +
     n(data.monthlyNPSContribution) +
     n(data.monthlyPPFContribution) +
     n(data.monthlyEPFContribution) +
-    n(data.ssy);
+    n(data.ssy) +
+    customMonthly;
 
   return {
     needs: needsActual,

@@ -17,6 +17,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import FieldTooltip from "@/components/ui/FieldTooltip";
 
 type MoneyInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   id: string;
@@ -31,8 +32,6 @@ type MoneyInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   min?: number | string;
   max?: number | string;
 };
-
-const FIELD_HELPER = "text-xs text-slate-500";
 
 const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
   function MoneyInput(
@@ -150,15 +149,18 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
         <div className="mb-1.5 flex items-start justify-between gap-2">
           <label
             htmlFor={id}
-            className="min-w-0 flex-1 text-sm font-medium text-[#5F5E5A]"
+            className="inline-flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-sm font-medium text-[#5F5E5A]"
           >
-            {label}
-            {required ? <span className="text-[#E24B4A]"> *</span> : null}
-            {optional ? (
-              <span className="ml-1.5 text-[11px] font-normal text-[#9B9A94]">
-                optional
-              </span>
-            ) : null}
+            <span>
+              {label}
+              {required ? <span className="text-[#E24B4A]"> *</span> : null}
+              {optional ? (
+                <span className="ml-1.5 text-[11px] font-normal text-[#9B9A94]">
+                  optional
+                </span>
+              ) : null}
+            </span>
+            {helperText ? <FieldTooltip text={helperText} /> : null}
           </label>
           {labelAction ? (
             <span className="shrink-0 pt-0.5">{labelAction}</span>
@@ -211,9 +213,6 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
 
         {words ? (
           <div className="mt-1 pl-1 text-xs text-[#9B9A94]">₹{words}</div>
-        ) : null}
-        {helperText ? (
-          <p className={`${FIELD_HELPER} mt-1 pl-1`}>{helperText}</p>
         ) : null}
         {error ? <p className="mt-1 text-sm text-[#E24B4A]">{error}</p> : null}
       </div>

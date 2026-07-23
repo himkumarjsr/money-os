@@ -27,6 +27,7 @@ import {
   previousCalendarMonth,
 } from "@/lib/trackerSafetyPulse";
 import { useAuthStore } from "@/store/authStore";
+import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -127,6 +128,9 @@ function SectionPrivacyEye({
 
 function TrackerContent() {
   const user = useAuthStore((s) => s.user);
+  const lastSubmission = useFinancialStore((s) => s.lastSubmission);
+  const analyseResult = useFinancialStore((s) => s.result);
+  const analyseCompleted = Boolean(lastSubmission && analyseResult);
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
       if (
@@ -216,6 +220,15 @@ function TrackerContent() {
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
   });
+
+  // When analyse is done, keep obligations in sync with health-check data.
+  useEffect(() => {
+    if (!user?.id || !analyseCompleted || !lastSubmission) return;
+    void useObligationStore
+      .getState()
+      .syncFromHealthCheck(user.id, lastSubmission)
+      .catch(() => {});
+  }, [user?.id, analyseCompleted, lastSubmission]);
 
   // Follow the device calendar when the user is on "this month" past midnight.
   useEffect(() => {
@@ -1157,6 +1170,7 @@ function TrackerContent() {
       {user?.id ? (
         <ObligationsChecklist
           userId={user.id}
+          analyseCompleted={analyseCompleted}
           learnedSuggestion={learnedObligation}
           onDismissLearn={() => setLearnedObligation(null)}
         />

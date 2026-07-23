@@ -14,14 +14,27 @@ test.describe("Health Check Flow", () => {
   });
 
   test("CTA navigates toward analyse", async ({ page }) => {
+    // Prefer an explicit analyse href — generic "start/check" names can match
+    // other home cards and leave the URL unchanged.
+    const analyseHref = page.locator('a[href^="/analyse"]').first();
+    if (await analyseHref.isVisible().catch(() => false)) {
+      await Promise.all([
+        page.waitForURL(/\/(analyse|login)/, { timeout: 10_000 }),
+        analyseHref.click(),
+      ]);
+      return;
+    }
+
     const cta = page
       .getByRole("link", {
-        name: /check|health|analyse|analyze|start|score/i,
+        name: /guided checkup|health check|start analysis/i,
       })
       .first();
     if (await cta.isVisible().catch(() => false)) {
-      await cta.click();
-      await expect(page).toHaveURL(/\/(analyse|login)/);
+      await Promise.all([
+        page.waitForURL(/\/(analyse|login)/, { timeout: 10_000 }),
+        cta.click(),
+      ]);
     } else {
       await page.goto("/analyse");
       await expect(page).toHaveURL(/\/(analyse|login)/);
