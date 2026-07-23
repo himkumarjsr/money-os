@@ -5,6 +5,10 @@ import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import AnalyseAdvisorModal from "@/components/analyse/AnalyseAdvisorModal";
+import {
+  DayOfMonthPicker,
+  MonthDaySelects,
+} from "@/components/forms/ObligationDateFields";
 import NumberInput from "../ui/NumberInput";
 import {
   CITY_TIER_LABELS,
@@ -45,8 +49,8 @@ import {
 } from "@/lib/userAnalyseSnapshot";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuthStore } from "@/store/authStore";
-
 import { useFinancialStore } from "@/store/financialStore";
+import { useObligationStore } from "@/store/obligationStore";
 import { AnimatePresence, m } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -1177,6 +1181,10 @@ export function AnalyseOnboardingForm() {
           if (error) console.warn("Snapshot save failed:", error.message);
           else invalidateProfileMonthlySalaryCache(uid);
         });
+        void useObligationStore
+          .getState()
+          .syncFromHealthCheck(uid, savedProfile)
+          .catch((err) => console.warn("Obligation sync failed:", err));
       }
 
       router.push("/analyse/result");
@@ -1759,6 +1767,36 @@ export function AnalyseOnboardingForm() {
                                   />
                                 )}
                               />
+                              {(watch(`unifiedLoans.${index}.monthlyEMI`) ??
+                                0) > 0 ? (
+                                <DayOfMonthPicker
+                                  label="Which date is this EMI debited? (optional)"
+                                  hint="We'll remind you a few days before"
+                                  value={
+                                    watch(
+                                      `unifiedLoans.${index}.emiDay` as const,
+                                    ) || undefined
+                                  }
+                                  onChange={(day) => {
+                                    setValue(
+                                      `unifiedLoans.${index}.emiDay` as const,
+                                      day,
+                                    );
+                                    const loanType = watch(
+                                      `unifiedLoans.${index}.loanType` as const,
+                                    );
+                                    if (loanType === "home_loan") {
+                                      setValue("homeLoanEMIDay", day);
+                                    } else if (loanType === "car_loan") {
+                                      setValue("carLoanEMIDay", day);
+                                    } else if (loanType === "personal_loan") {
+                                      setValue("personalLoanEMIDay", day);
+                                    } else if (loanType === "education_loan") {
+                                      setValue("educationLoanEMIDay", day);
+                                    }
+                                  }}
+                                />
+                              ) : null}
                               <Controller
                                 control={control}
                                 name={`unifiedLoans.${index}.outstandingAmount`}
@@ -1958,6 +1996,15 @@ export function AnalyseOnboardingForm() {
                             error={errors.creditCardBillMonthly?.message}
                             {...bindMoneyField("creditCardBillMonthly")}
                           />
+                          {(watch("creditCardBillMonthly") ?? 0) > 0 ? (
+                            <DayOfMonthPicker
+                              label="Which date is your credit-card bill usually due? (optional)"
+                              value={watch("creditCardBillDay") || undefined}
+                              onChange={(day) =>
+                                setValue("creditCardBillDay", day)
+                              }
+                            />
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -2218,6 +2265,28 @@ export function AnalyseOnboardingForm() {
                               {...bindMoneyField("healthInsurancePremiumInput")}
                             />
                           </PremiumField>
+                          {(watch("healthInsurancePremiumInput") ?? 0) > 0 ? (
+                            <div className="sm:col-span-2">
+                              <MonthDaySelects
+                                label="When is your health insurance renewal? (optional)"
+                                hint="We will remind you 7 days before to keep this amount ready"
+                                month={
+                                  watch("healthInsuranceRenewalMonth") ||
+                                  undefined
+                                }
+                                day={
+                                  watch("healthInsuranceRenewalDay") ||
+                                  undefined
+                                }
+                                onMonth={(m) =>
+                                  setValue("healthInsuranceRenewalMonth", m)
+                                }
+                                onDay={(d) =>
+                                  setValue("healthInsuranceRenewalDay", d)
+                                }
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -2283,6 +2352,27 @@ export function AnalyseOnboardingForm() {
                             step={1}
                             helper="Which year does your term end?"
                           />
+                          {(watch("termInsurancePremiumInput") ?? 0) > 0 ? (
+                            <div className="sm:col-span-2">
+                              <MonthDaySelects
+                                label="When is your term insurance renewal? (optional)"
+                                hint="We will remind you 7 days before to keep this amount ready"
+                                month={
+                                  watch("termInsuranceRenewalMonth") ||
+                                  undefined
+                                }
+                                day={
+                                  watch("termInsuranceRenewalDay") || undefined
+                                }
+                                onMonth={(m) =>
+                                  setValue("termInsuranceRenewalMonth", m)
+                                }
+                                onDay={(d) =>
+                                  setValue("termInsuranceRenewalDay", d)
+                                }
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -2815,6 +2905,29 @@ export function AnalyseOnboardingForm() {
                             error={errors.monthlySIP?.message}
                             {...bindMoneyField("monthlySIP")}
                           />
+                          {(watch("monthlySIP") ?? 0) > 0 ? (
+                            <div className="sm:col-span-2">
+                              <DayOfMonthPicker
+                                label="Which date is your SIP auto-debited? (optional)"
+                                value={watch("sipAutoDebitDay") || undefined}
+                                onChange={(day) =>
+                                  setValue("sipAutoDebitDay", day)
+                                }
+                              />
+                            </div>
+                          ) : null}
+                          {(watch("monthlyPPFContribution") ?? 0) > 0 ||
+                          (watch("ppfBalance") ?? 0) > 0 ? (
+                            <div className="sm:col-span-2">
+                              <DayOfMonthPicker
+                                label="Which date do you deposit to PPF? (optional)"
+                                value={watch("ppfDepositDay") || undefined}
+                                onChange={(day) =>
+                                  setValue("ppfDepositDay", day)
+                                }
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                       <div className="space-y-4 rounded-2xl border border-slate-200 p-4">

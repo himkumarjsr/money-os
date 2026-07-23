@@ -63,8 +63,8 @@ Canonical site: **https://www.finkoin.com**
 
 ## TEST STATUS
 
-Last run: 2026-07-19T18:50:58.629Z
-Unit tests: 320/320 passing
+Last run: 2026-07-23T09:26:53Z
+Unit tests: 349/349 passing
 Failed: 0
 
 Living docs:
@@ -79,6 +79,20 @@ Living docs:
 - `docs/ENV_AND_SCRIPTS.md`
 - `docs/TESTING.md`
 
+**Financial calendar (2026-07-23):**
+
+- `financial_obligations` table ✓
+- `obligation_checklist` table ✓
+- `generate_monthly_checklist()` function ✓
+- `ObligationStore` (`store/obligationStore.ts`) ✓
+- Monthly checklist in tracker ✓
+- Health check date collection (renewal / EMI / SIP days) ✓
+- Tracker learning pattern (suggest obligation from expense) ✓
+- Obligation reminder cron (`/api/obligations/reminders`) ✓
+- Migration mirror: `supabase/migrations/036_financial_obligations.sql` ✓
+
+Do **not** push to production until UAT checklist (health-check sync → checklist → mark paid → add manual → learn → reminder API) passes.
+
 ## 1. PRODUCT OVERVIEW
 
 Finkoin is a Next.js web app for Indian personal finance planning, analysis, and guided action.  
@@ -90,18 +104,18 @@ It is built for Indian users who want structured budgeting, insurance and debt c
 
 **Major product surfaces:**
 
-| Surface            | Route(s)                                            | Outcome for user                                    |
-| ------------------ | --------------------------------------------------- | --------------------------------------------------- |
-| Landing / PWA home | `/`                                                 | Health-check CTA, hero carousel, mobile quick tools |
-| Analyse            | `/analyse` → `/analyse/result` → `/analyse/fixplan` | Score, checklist, buckets, AI fix plan              |
-| Calculators        | `/calculators`, `/calculators/tax-regime-2026`      | SIP/SWP/EMI/tax/FIRE/PPF/etc.                       |
-| Tracker            | `/tracker`, `/tracker/[month]`                      | Monthly spend + Month Safety Pulse                  |
-| Split              | `/split`, `/split/[groupId]`, `/split/join`         | Groups, open invite links, settle-up                |
-| Profile / assets   | `/profile`, `/investments`                          | Editable assets synced app-wide                     |
-| Rewards / refer    | `/rewards`, `/refer`, `/leaderboard`                | FK gamification                                     |
-| Policies           | `/policies`, `/insurance`                           | Policy vault + marketplace shell                    |
-| Learn / blog       | `/learn`, `/blog`                                   | Education + SEO content                             |
-| Legal              | `/legal/*`                                          | Privacy, terms, refund, disclaimer                  |
+| Surface            | Route(s)                                            | Outcome for user                                                         |
+| ------------------ | --------------------------------------------------- | ------------------------------------------------------------------------ |
+| Landing / PWA home | `/`                                                 | Health-check CTA, hero carousel, mobile quick tools                      |
+| Analyse            | `/analyse` → `/analyse/result` → `/analyse/fixplan` | Score, checklist, buckets, AI fix plan                                   |
+| Calculators        | `/calculators`, `/calculators/tax-regime-2026`      | SIP/SWP/EMI/tax/FIRE/PPF/etc.                                            |
+| Tracker            | `/tracker`, `/tracker/[month]`                      | Monthly spend + Month Safety Pulse + **financial obligations checklist** |
+| Split              | `/split`, `/split/[groupId]`, `/split/join`         | Groups, open invite links, settle-up                                     |
+| Profile / assets   | `/profile`, `/investments`                          | Editable assets synced app-wide                                          |
+| Rewards / refer    | `/rewards`, `/refer`, `/leaderboard`                | FK gamification                                                          |
+| Policies           | `/policies`, `/insurance`                           | Policy vault + marketplace shell                                         |
+| Learn / blog       | `/learn`, `/blog`                                   | Education + SEO content                                                  |
+| Legal              | `/legal/*`                                          | Privacy, terms, refund, disclaimer                                       |
 
 **Auth:** Supabase (email + Google OAuth + optional phone OTP helpers). **Not Firebase.**  
 **Payments:** Razorpay. **Email:** Resend (split invites + tips). **Analytics:** GA4 + Microsoft Clarity (optional env).
@@ -163,7 +177,7 @@ It is built for Indian users who want structured budgeting, insurance and debt c
 | NEXT_PUBLIC_CLARITY_ID                                         | Optional                              | Microsoft Clarity project ID loaded by `components/ClarityScript.tsx`                                          | Clarity project settings                      |
 | RESEND_API_KEY                                                 | Optional (split invites + tip emails) | Resend API key for split invite emails and notification tip emails                                             | [Resend dashboard](https://resend.com)        |
 | EMAIL_FROM                                                     | Optional (emails)                     | Sender identity (e.g. `tips@finkoin.com` / verified domain)                                                    | Verified sender/domain in Resend              |
-| CRON_SECRET                                                    | Yes (cron tip delivery)               | Bearer secret for `GET/POST /api/notifications/deliver-tip` (Vercel cron)                                      | Generate a long random string                 |
+| CRON_SECRET                                                    | Yes (cron tip + obligation reminders) | Bearer secret for tip + `/api/obligations/reminders` (Vercel cron)                                             | Generate a long random string                 |
 | NEXT_PUBLIC_DEBUG_AI                                           | Optional                              | AI debug logging in client service                                                                             | Internal config                               |
 | NEXT_PUBLIC_AI_TIMEOUT_MS                                      | Optional                              | Client-side AI timeout override                                                                                | Internal config                               |
 | NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY                          | Yes (device push tips)                | Web Push **public** VAPID key (browser subscribe). Generate with `npx web-push generate-vapid-keys`            | Same command; also `.env.local` / Vercel      |
@@ -237,11 +251,17 @@ Complete inventory with one-line purpose per file:
 | `app/portfolio/page.tsx`                                  | Portfolio analysis page                                                                                                                                                                                                                                                                                                                             |
 | `app/investments/page.tsx`                                | Investments placeholder page                                                                                                                                                                                                                                                                                                                        |
 | `app/goals/page.tsx`                                      | Goals placeholder page                                                                                                                                                                                                                                                                                                                              |
-| `app/tracker/page.tsx`                                    | Expense tracker home: month nav, privacy eye flip, bucket cards, **Month Safety Pulse**                                                                                                                                                                                                                                                             |
+| `app/tracker/page.tsx`                                    | Expense tracker home: month nav, privacy eye flip, bucket cards, **obligations checklist**, **Month Safety Pulse**                                                                                                                                                                                                                                  |
 | `app/tracker/[month]/page.tsx`                            | Historical month detail (`YYYY-MM`) with table + summary bars                                                                                                                                                                                                                                                                                       |
 | `components/tracker/MonthSafetyPulse.tsx`                 | Safe/Tight/Over coaching card (MoM + one action)                                                                                                                                                                                                                                                                                                    |
 | `components/tracker/TrackerIcons.tsx`                     | Purple stroke SVG icons for tracker categories/types                                                                                                                                                                                                                                                                                                |
 | `components/tracker/AddExpenseModal.tsx`                  | Add/edit expense sheet with bucket + type picker                                                                                                                                                                                                                                                                                                    |
+| `components/tracker/ObligationsChecklist.tsx`             | This-month obligations card + add modal + learn suggestion                                                                                                                                                                                                                                                                                          |
+| `components/tracker/AddObligationForm.tsx`                | Manual obligation create sheet                                                                                                                                                                                                                                                                                                                      |
+| `components/forms/ObligationDateFields.tsx`               | Shared month/day + day-of-month pickers for analyse + advisor                                                                                                                                                                                                                                                                                       |
+| `store/obligationStore.ts`                                | Zustand: obligations CRUD, monthly checklist, sync from health check                                                                                                                                                                                                                                                                                |
+| `app/api/obligations/reminders/route.ts`                  | Cron: insert `user_notifications` when remind_days_before matches                                                                                                                                                                                                                                                                                   |
+| `supabase/migrations/036_financial_obligations.sql`       | `financial_obligations`, `obligation_checklist`, `generate_monthly_checklist()`                                                                                                                                                                                                                                                                     |
 | `components/tracker/ExpenseTable.tsx`                     | Month expense table rows                                                                                                                                                                                                                                                                                                                            |
 | `components/tracker/MonthSummary.tsx`                     | Bucket progress bars for month detail                                                                                                                                                                                                                                                                                                               |
 | `components/tracker/TrackerConsent.tsx`                   | Tracker data-consent gate                                                                                                                                                                                                                                                                                                                           |
@@ -423,7 +443,8 @@ Complete inventory with one-line purpose per file:
 - `.husky/pre-push`: runs `tsc --noEmit`; additionally runs `npm run build` only on `production` branch.
 - `package.json`: lint-staged currently runs `eslint --fix` + `prettier --write` for TS/TSX; Prettier for JSON/MD/CSS.
 - `eslint.config.mjs`: stricter lint rules scoped to split paths (`app/split/**/*`, `app/api/split/**/*`, `store/splitStore.ts`).
-- `vercel.json`: daily cron for `/api/notifications/deliver-tip` at `0 3 * * *` UTC.
+- `vercel.json`: daily crons at `0 3 * * *` UTC for `/api/notifications/deliver-tip` and `/api/obligations/reminders`.
+- Financial calendar: `store/obligationStore.ts`, tracker checklist UI, analyse date fields, migration `036_financial_obligations.sql`.
 
 ### 4.y Incremental inventory updates (2026-07-18 — open invites, profile assets, home mobile)
 
@@ -520,6 +541,48 @@ Purpose: Persisted analyse snapshots from client for restore/hydration.
 RLS: own-row policies (from migrations).
 
 Note: `payload` is `jsonb` and stores the full snapshot blob; loan schema changes are backward compatible without table column changes.
+
+### Table: financial_obligations
+
+Purpose: Recurring money obligations (EMI, insurance premium, SIP, rent, etc.) for the financial calendar.
+
+| Column             | Type        | Description                                                     |
+| ------------------ | ----------- | --------------------------------------------------------------- |
+| id                 | uuid        | PK                                                              |
+| user_id            | uuid        | Owner (`auth.users`)                                            |
+| title              | text        | Display title                                                   |
+| category           | text        | e.g. `loan_emi`, `insurance_life`, `investment_sip`             |
+| amount             | numeric     | Expected amount                                                 |
+| frequency          | text        | `monthly` / `quarterly` / `half_yearly` / `yearly` / `one_time` |
+| due_day            | int         | Day of month (1–31)                                             |
+| due_month          | int         | Month for yearly (1–12)                                         |
+| due_date           | date        | Optional one-time date                                          |
+| source             | text        | `health_check` / `manual` / `tracker_learned`                   |
+| is_active          | boolean     | Soft-delete flag                                                |
+| remind_days_before | int         | Days before due for reminder                                    |
+| notes              | text        | Optional                                                        |
+| created_at         | timestamptz | Created                                                         |
+| updated_at         | timestamptz | Updated                                                         |
+
+Unique: `(user_id, title, category)`. RLS: own-row. Realtime enabled in Supabase.
+
+### Table: obligation_checklist
+
+Purpose: Per-month instance of an obligation (pending / paid / skipped / auto_debit).
+
+| Column          | Type        | Description                           |
+| --------------- | ----------- | ------------------------------------- |
+| id              | uuid        | PK                                    |
+| user_id         | uuid        | Owner                                 |
+| obligation_id   | uuid        | FK → `financial_obligations`          |
+| checklist_month | date        | First of month                        |
+| expected_amount | numeric     | Snapshot amount                       |
+| status          | text        | pending / paid / skipped / auto_debit |
+| paid_at         | timestamptz | When marked paid                      |
+| paid_amount     | numeric     | Amount paid                           |
+| created_at      | timestamptz | Created                               |
+
+Unique: `(user_id, obligation_id, checklist_month)`. RPC: `generate_monthly_checklist(p_user_id, p_month)`.
 
 ### Table: user_policies
 
@@ -775,6 +838,22 @@ Persisted: No
 
 State: `notifications`, `unreadCount`, `loading`  
 Actions: `fetchNotifications`, `markAllRead`, `markPopupShown`, `getTodayUnshownPopup`
+
+### obligationStore
+
+File: `store/obligationStore.ts`  
+Persisted: No
+
+State: `obligations`, `checklist`, `currentMonth`, `loading`, `totalObligated`, `totalPaid`, `totalPending`
+
+Actions:
+
+- `fetchObligations(userId)`
+- `fetchChecklist(userId, month?)`
+- `addObligation` / `updateObligation` / `deleteObligation` (soft)
+- `markPaid` / `markSkipped`
+- `generateChecklist` → RPC `generate_monthly_checklist`
+- `syncFromHealthCheck(userId, submission)` — upserts from analyse premiums/EMIs/SIP/CC/PPF + date fields, then generates checklist
 
 ### portfolioStore
 
@@ -1090,6 +1169,13 @@ Self-leave or admin/creator remove. Sets `status=left` + `left_at`. Blocked when
 
 Auth + membership. Records settlement amount in `split_settlements` (amount-accurate; `payment_method`; blocks self-settlement). Rate-limited 60/hr.
 
+### GET|POST `/api/obligations/reminders`
+
+File: `app/api/obligations/reminders/route.ts`  
+Auth: `Authorization: Bearer CRON_SECRET` or `x-vercel-cron: 1`.
+
+Scans active `financial_obligations` and inserts `user_notifications` (`category: obligation_reminder`) when due in exactly `remind_days_before` days. Cron in `vercel.json` at `0 3 * * *` UTC.
+
 ## 11. RAG SYSTEM
 
 ### How it works
@@ -1235,7 +1321,10 @@ On submit:
 3. Run deterministic analysis (`setFullAnalysis`)
 4. Fetch AI plan via `getAIFixPlan`
 5. Save snapshot to Supabase (if logged in)
-6. Navigate to `/analyse/result`
+6. **`syncFromHealthCheck`** → upsert `financial_obligations` from premiums / EMIs / SIP / CC / PPF + optional date fields, then `generate_monthly_checklist`
+7. Navigate to `/analyse/result`
+
+Date fields (optional) collected after amounts: insurance renewal month/day, per-loan `emiDay` / legacy EMI day fields, SIP auto-debit day, PPF deposit day, credit-card bill day.
 
 ### `/analyse/result`
 
@@ -1282,6 +1371,7 @@ On submit:
 - Consent gate (`TrackerConsent` + `finkoin_tracker_consent` / `tracker_consent` table).
 - Loads current-month + previous-month `expense_transactions` in parallel.
 - Summary card: income / spent / left with privacy eye (180° flip); bucket cards with purple icons and % caps.
+- **Financial calendar / obligations** (`ObligationsChecklist` + `obligationStore`): after income section — monthly checklist, mark paid/skip, add obligation modal; empty-state CTA. Expense descriptions matching EMI/SIP/insurance/rent keywords can suggest “Add to obligations?”.
 - **Month Safety Pulse** (`computeMonthSafetyPulse` → `MonthSafetyPulse`): Safe/Tight/Over, MoM spent delta, top movers, one action, daily safe spend when viewing the current calendar month. Amounts masked when eye is off.
 - Add/edit via `AddExpenseModal`; soft refetch while modal open / on visibility to avoid PWA tap lock.
 
@@ -2197,7 +2287,7 @@ _Tests:_
 
 ### 2026-05-07
 
-- **Google Analytics 4:** Optional **`NEXT_PUBLIC_GA_MEASUREMENT_ID`**. **`components/GoogleAnalytics.tsx`** loads gtag (`send_page_view: false`), sends SPA **`page_path`** + enriched **`gtag('config')`** on route/auth changes, sets **`user_id`** when logged in, refreshes **`user_properties`** (**`app_surface`**, **`device_category`**, **`timezone`**, **`language`**). **`lib/analyticsContext.ts`** adds **`app_surface`** (**`pwa`** vs **`browser`** via display-mode / iOS standalone), viewport, referrer hostname, optional **`connection_type`**. **`lib/gtag.ts`** merges context into **every** event. **`AnalyticsBehavior`**: **`scroll_depth`** at 25/50/75/90% (sessionStorage per path). **`TrackImpression`**: viewport **`element_impression`** for home sections. **Instrumented:** hero **`cta_click`** + **`carousel_select`**; home below-fold **`cta_click`**; **`nav_click`** (delegated, zones: **`header_bar`**, **`mobile_sheet`**, **`bottom_nav`**, **`profile_menu`**); **`CalculatorsClient`** **`tool_open`**; **`FeedbackModal`** **`feedback_open`** / **`feedback_submit`**; **`share`** from **`ShareButton`**, **`/refer`** + **`/profile`** copy/WhatsApp; **`profile`** / **`refer`** pages call **`trackShare`**. **`types/gtag.d.ts`** for **`window.gtag`**. Register custom dimensions in GA4 Admin as needed.
+- **Google Analytics 4:** Optional **`NEXT_PUBLIC_GA_MEASUREMENT_ID`**. **`components/GoogleAnalytics.tsx`** loads gtag (`send_page_view: false`), sends SPA **`page_path`** + enriched **`gtag('config')`** on route/auth changes, sets **`user_id`** when logged in, refreshes **`user_properties`** (**`app_surface`**, **`device_category`**, **`timezone`**, **`language`**). **`lib/analyticsContext.ts`** adds **`app_surface`** (**`pwa`** vs **`browser`** via display-mode / iOS standalone), viewport, referrer hostname, optional **`connection_type`**. **`lib/gtag.ts`** merges context into **every** event. **`AnalyticsBehavior`**: **`scroll_depth`** at 25/50/75/90% (sessionStorage per path). **`TrackImpression`**: viewport **`element_impression`** for home sections. **Instrumented:** hero **`cta_click`** + **`carousel_select`**; home below-fold **`cta_click`**; **`nav_click`** (delegated, zones: **`header_bar`**, **`bottom_nav`**, **`profile_menu`**); **`CalculatorsClient`** **`tool_open`**; **`FeedbackModal`** **`feedback_open`** / **`feedback_submit`**; **`share`** from **`ShareButton`**, **`/refer`** + **`/profile`** copy/WhatsApp; **`profile`** / **`refer`** pages call **`trackShare`**. **`types/gtag.d.ts`** for **`window.gtag`**. Register custom dimensions in GA4 Admin as needed.
 - **Marketing / landing:** Homepage hero repositioned as **financial advisor** journey ( **`HomeHeroCarousel`**, **`HomePageBelowFold`** “Meet your finance advisor” card); carousel container padding / **`min-h`** tuned for mobile.
 - **Tax regime calculator:** Meal voucher **Rule 3** exemption inputs (monthly benefit × working days × **₹50 vs ₹200** per-meal cap toggle); persisted in autosave schema; salary net of **`mealVoucherExemptionAnnual`**. **`<details>`** steps for additional income / deductions / results; **Step 5 Results** default-open on mobile; mobile **Category | Old | New** table (desktop dual-panel unchanged). **ITR-1/2/3/4** suggestion block from filled data. Removed Indian MF dividend line item; dividends use Indian + foreign only. **`buildMissedDeductionAlerts`** respects **`encourageDeductionInvestment`** when new regime wins so users aren’t pushed into irrelevant 80C tips. Personal CA flow: **`unlockPageScroll`** / effects fix body scroll lock. Minor results chrome (softer borders).
 - **SEO & structured data:** **`lib/seo.ts`** / **`app/sitemap.ts`** strip trailing slash from base URL (fixes **`//`** in OG/canonical URLs). **`app/calculators/page.tsx`** emits tax-specific **`WebApplication`** JSON-LD when **`tax-regime`** is active (aligned with **`/calculators/tax-regime-2026`**). Learn **`know-taxation-in-india-old-vs-new-slabs-interest-rates`** + blog **`know-taxation-in-india`** educational content.
@@ -2698,15 +2788,17 @@ Analytics helper (`lib/analytics.ts`):
 
 ### 30.12 Cron notification trigger (deployment schedule)
 
-Source: `vercel.json` + `app/api/notifications/deliver-tip/route.ts`.
+Source: `vercel.json` + `app/api/notifications/deliver-tip/route.ts` + `app/api/obligations/reminders/route.ts`.
 
-1. Vercel cron runs path `/api/notifications/deliver-tip`.
+1. Vercel cron runs path `/api/notifications/deliver-tip` and `/api/obligations/reminders`.
 2. Schedule: `0 3 * * *` (UTC) = **08:30 IST** daily.
 3. For each user without a tip today:
    - RPC `get_next_tip_for_user` → insert `user_notifications` + `user_tip_history`.
    - If Web Push is configured and the user has rows in **`push_subscriptions`**, send an OS notification via `web-push` (`lib/webPush.ts`).
    - Expired endpoints (HTTP 404/410) are deleted from `push_subscriptions`.
-4. In-app: Realtime / bell / morning popup still show the same tip when the user opens the app.
+4. Obligation reminders: scan active `financial_obligations` where `due_day - today === remind_days_before` (monthly; yearly also matches `due_month`) → insert `user_notifications` with `category: obligation_reminder`.
+5. Auth: `Authorization: Bearer CRON_SECRET` or `x-vercel-cron: 1`.
+6. In-app: Realtime / bell / morning popup still show tips when the user opens the app.
 
 ### 30.13 Device Web Push (OS notifications)
 

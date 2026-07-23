@@ -5,6 +5,7 @@ import FeedbackWidget from "@/components/FeedbackWidget";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import CreditCardBillReminder from "@/components/tracker/CreditCardBillReminder";
 import MonthSafetyPulse from "@/components/tracker/MonthSafetyPulse";
+import ObligationsChecklist from "@/components/tracker/ObligationsChecklist";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import {
   TRACKER_CATEGORIES,
@@ -26,7 +27,22 @@ import {
   previousCalendarMonth,
 } from "@/lib/trackerSafetyPulse";
 import { useAuthStore } from "@/store/authStore";
+import { useObligationStore } from "@/store/obligationStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+const OBLIGATION_HINTS: Record<string, string> = {
+  insurance: "insurance_life",
+  lic: "insurance_life",
+  "health insurance": "insurance_health",
+  emi: "loan_emi",
+  "home loan": "loan_emi",
+  "car loan": "loan_emi",
+  sip: "investment_sip",
+  "mutual fund": "investment_sip",
+  ppf: "investment_ppf",
+  "credit card": "credit_card",
+  rent: "rent",
+};
 
 export type TrackerTransaction = {
   id: string;
@@ -142,6 +158,11 @@ function TrackerContent() {
     description?: string;
     paymentMethod?: string;
   }>({});
+  const [learnedObligation, setLearnedObligation] = useState<{
+    title: string;
+    category: string;
+    amount: number;
+  } | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
@@ -1133,6 +1154,14 @@ function TrackerContent() {
         ) : null}
       </div>
 
+      {user?.id ? (
+        <ObligationsChecklist
+          userId={user.id}
+          learnedSuggestion={learnedObligation}
+          onDismissLearn={() => setLearnedObligation(null)}
+        />
+      ) : null}
+
       {buckets.map((bucketKey) => {
         const cat = TRACKER_CATEGORIES[bucketKey];
         const bucketTxns = transactions.filter((t) => t.bucket === bucketKey);
@@ -1571,10 +1600,34 @@ function TrackerContent() {
             setEditingExpense(null);
             setModalDefaults({});
           }}
-          onSaved={() => {
+          onSaved={(saved) => {
             if (!editingExpense) {
               const trackedBucket = defaultBucket || "unknown";
               Analytics.trackerExpenseAdded(trackedBucket);
+            }
+            if (saved && !saved.isEdit && user?.id) {
+              const desc = (saved.description || "").toLowerCase();
+              const matched = Object.entries(OBLIGATION_HINTS).find(([kw]) =>
+                desc.includes(kw),
+              );
+              if (matched) {
+                void (async () => {
+                  await useObligationStore.getState().fetchObligations(user.id);
+                  const { obligations } = useObligationStore.getState();
+                  const alreadyExists = obligations.some(
+                    (o) =>
+                      o.category === matched[1] &&
+                      Math.abs(o.amount - saved.amount) < 100,
+                  );
+                  if (!alreadyExists) {
+                    setLearnedObligation({
+                      title: saved.description || saved.category,
+                      category: matched[1],
+                      amount: saved.amount,
+                    });
+                  }
+                })();
+              }
             }
             setShowAddModal(false);
             setDefaultBucket("");

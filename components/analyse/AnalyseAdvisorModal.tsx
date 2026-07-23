@@ -14,6 +14,10 @@ import {
   type LifeStage,
   type PrimaryGoal,
 } from "@/lib/analyse-form-schema";
+import {
+  DayOfMonthPicker,
+  MonthDaySelects,
+} from "@/components/forms/ObligationDateFields";
 import { clearBodyScrollLocks, lockBodyScroll } from "@/lib/bodyScrollLock";
 import { formatIndian } from "@/lib/formatters";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -367,6 +371,13 @@ export default function AnalyseAdvisorModal({
   const retirementTargetCorpus = watch("retirementTargetCorpus");
   const emergencyFundTarget = watch("emergencyFundTarget");
   const carPurchaseTarget = watch("carPurchaseTarget");
+  const healthRenewalMonth = watch("healthInsuranceRenewalMonth");
+  const healthRenewalDay = watch("healthInsuranceRenewalDay");
+  const termRenewalMonth = watch("termInsuranceRenewalMonth");
+  const termRenewalDay = watch("termInsuranceRenewalDay");
+  const homeLoanEMIDay = watch("homeLoanEMIDay");
+  const creditCardBillDay = watch("creditCardBillDay");
+  const sipAutoDebitDay = watch("sipAutoDebitDay");
 
   const steps = useMemo(() => {
     return BASE_STEPS.filter((s) => {
@@ -802,12 +813,23 @@ export default function AnalyseAdvisorModal({
               />
             ) : null}
             {current.id === "ccAmount" ? (
-              <AdvisorMoney
-                id="adv-cc"
-                label="Monthly card payment"
-                amount={Number(creditCardBillMonthly) || 0}
-                onAmount={(n) => setMoney("creditCardBillMonthly", n)}
-              />
+              <div className="space-y-1">
+                <AdvisorMoney
+                  id="adv-cc"
+                  label="Monthly card payment"
+                  amount={Number(creditCardBillMonthly) || 0}
+                  onAmount={(n) => setMoney("creditCardBillMonthly", n)}
+                />
+                {(Number(creditCardBillMonthly) || 0) > 0 ? (
+                  <DayOfMonthPicker
+                    label="Bill due day (optional)"
+                    value={creditCardBillDay || undefined}
+                    onChange={(day) =>
+                      setValue("creditCardBillDay", day, { shouldDirty: true })
+                    }
+                  />
+                ) : null}
+              </div>
             ) : null}
             {current.id === "food" ? (
               <AdvisorMoney
@@ -854,22 +876,46 @@ export default function AnalyseAdvisorModal({
               />
             ) : null}
             {current.id === "monthlySip" ? (
-              <AdvisorMoney
-                id="adv-sip"
-                label="Monthly SIP"
-                amount={Number(monthlySIP) || 0}
-                onAmount={(n) => setMoney("monthlySIP", n)}
-                optional
-              />
+              <div className="space-y-1">
+                <AdvisorMoney
+                  id="adv-sip"
+                  label="Monthly SIP"
+                  amount={Number(monthlySIP) || 0}
+                  onAmount={(n) => setMoney("monthlySIP", n)}
+                  optional
+                />
+                {(Number(monthlySIP) || 0) > 0 ? (
+                  <DayOfMonthPicker
+                    label="SIP auto-debit day (optional)"
+                    value={sipAutoDebitDay || undefined}
+                    onChange={(day) =>
+                      setValue("sipAutoDebitDay", day, { shouldDirty: true })
+                    }
+                    hint="We’ll remind you before the debit"
+                  />
+                ) : null}
+              </div>
             ) : null}
 
             {current.id === "emiAmount" ? (
-              <AdvisorMoney
-                id="adv-emi"
-                label="Total EMIs / month"
-                amount={emiTotal}
-                onAmount={setEmiTotal}
-              />
+              <div className="space-y-1">
+                <AdvisorMoney
+                  id="adv-emi"
+                  label="Total EMIs / month"
+                  amount={emiTotal}
+                  onAmount={setEmiTotal}
+                />
+                {emiTotal > 0 ? (
+                  <DayOfMonthPicker
+                    label="Typical EMI debit day (optional)"
+                    value={homeLoanEMIDay || undefined}
+                    onChange={(day) =>
+                      setValue("homeLoanEMIDay", day, { shouldDirty: true })
+                    }
+                    hint="Used for calendar reminders"
+                  />
+                ) : null}
+              </div>
             ) : null}
 
             {current.id === "emergencyCash" ? (
@@ -977,6 +1023,44 @@ export default function AnalyseAdvisorModal({
                     )
                   }
                 />
+                {current.id === "healthCover" &&
+                (Number(healthPremium) || 0) > 0 ? (
+                  <MonthDaySelects
+                    label="When is your health insurance renewal? (optional)"
+                    month={healthRenewalMonth || undefined}
+                    day={healthRenewalDay || undefined}
+                    onMonth={(m) =>
+                      setValue("healthInsuranceRenewalMonth", m, {
+                        shouldDirty: true,
+                      })
+                    }
+                    onDay={(d) =>
+                      setValue("healthInsuranceRenewalDay", d, {
+                        shouldDirty: true,
+                      })
+                    }
+                    hint="We’ll remind you before renewal"
+                  />
+                ) : null}
+                {current.id === "termCover" &&
+                (Number(termPremium) || 0) > 0 ? (
+                  <MonthDaySelects
+                    label="When is your term insurance renewal? (optional)"
+                    month={termRenewalMonth || undefined}
+                    day={termRenewalDay || undefined}
+                    onMonth={(m) =>
+                      setValue("termInsuranceRenewalMonth", m, {
+                        shouldDirty: true,
+                      })
+                    }
+                    onDay={(d) =>
+                      setValue("termInsuranceRenewalDay", d, {
+                        shouldDirty: true,
+                      })
+                    }
+                    hint="We’ll remind you before renewal"
+                  />
+                ) : null}
               </div>
             ) : null}
 
