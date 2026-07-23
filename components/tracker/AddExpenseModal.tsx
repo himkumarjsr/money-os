@@ -28,7 +28,13 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 interface AddExpenseModalProps {
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (saved?: {
+    amount: number;
+    category: string;
+    description: string;
+    date: string;
+    isEdit: boolean;
+  }) => void;
   defaultDate?: string;
   defaultBucket?: string;
   defaultSubcategory?: string;
@@ -301,7 +307,13 @@ export default function AddExpenseModal({
         return;
       }
 
-      onSaved();
+      onSaved({
+        amount: Number(payload.amount),
+        category: String(payload.category ?? ""),
+        description: String(payload.description ?? ""),
+        date: String(payload.date ?? ""),
+        isEdit: Boolean(editExpense?.id),
+      });
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Could not save. Please try again.",

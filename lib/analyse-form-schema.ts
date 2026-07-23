@@ -133,6 +133,14 @@ export interface FinancialProfile {
   bikeOutstanding?: number;
   /** Typical monthly payment toward credit cards (full pay-off or rolling balance). */
   creditCardBillMonthly?: number;
+  /** Optional EMI / bill debit day of month (1–31) for calendar reminders. */
+  homeLoanEMIDay?: number;
+  carLoanEMIDay?: number;
+  personalLoanEMIDay?: number;
+  educationLoanEMIDay?: number;
+  creditCardBillDay?: number;
+  sipAutoDebitDay?: number;
+  ppfDepositDay?: number;
   additionalObligations: Array<{
     id?: string;
     type: string;
@@ -153,6 +161,8 @@ export interface FinancialProfile {
     odLimit?: number;
     odUsed?: number;
     odInterestOnlyYears?: number;
+    /** Day of month EMI is typically debited (1–31). */
+    emiDay?: number;
   }>;
 
   /** @deprecated Use `foodTotal`; kept for backward compatibility. */
@@ -202,12 +212,17 @@ export interface FinancialProfile {
   /** Raw premium as entered (e.g. yearly amount stays yearly in the wizard). */
   healthInsurancePremiumInput?: number;
   healthInsurancePremiumFrequency?: PremiumFrequency;
+  /** Optional renewal calendar (1–12 / 1–31) for obligation reminders. */
+  healthInsuranceRenewalMonth?: number;
+  healthInsuranceRenewalDay?: number;
   hasTermInsurance: boolean;
   termInsuranceSumAssured?: number;
   termInsurancePremiumMonthly?: number;
   termInsurancePremiumInput?: number;
   termInsurancePremiumFrequency?: PremiumFrequency;
   termInsurancePremiumTillYear?: number;
+  termInsuranceRenewalMonth?: number;
+  termInsuranceRenewalDay?: number;
   carInsurancePremiumMonthly?: number;
   carInsurancePremiumInput?: number;
   carInsurancePremiumFrequency?: PremiumFrequency;
@@ -396,6 +411,7 @@ const unifiedLoanSchema = z.object({
   odLimit: optionalMoney,
   odUsed: optionalMoney,
   odInterestOnlyYears: optionalWholeNumber,
+  emiDay: optionalWholeNumber,
 });
 
 /** Coerce legacy loanType labels so Next isn't blocked by invisible enum errors. */
@@ -489,6 +505,13 @@ const formShape = {
   bikeLoanRemainingMonths: optionalWholeNumber,
   bikeOutstanding: optionalMoney,
   creditCardBillMonthly: optionalMoney,
+  homeLoanEMIDay: optionalWholeNumber,
+  carLoanEMIDay: optionalWholeNumber,
+  personalLoanEMIDay: optionalWholeNumber,
+  educationLoanEMIDay: optionalWholeNumber,
+  creditCardBillDay: optionalWholeNumber,
+  sipAutoDebitDay: optionalWholeNumber,
+  ppfDepositDay: optionalWholeNumber,
   additionalObligations: z.preprocess(
     sanitizeAdditionalObligationsInput,
     z.array(additionalObligationSchema).max(6),
@@ -533,11 +556,15 @@ const formShape = {
   healthInsuranceSumInsured: optionalMoney,
   healthInsurancePremiumInput: optionalMoney,
   healthInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
+  healthInsuranceRenewalMonth: optionalWholeNumber,
+  healthInsuranceRenewalDay: optionalWholeNumber,
   hasTermInsurance: z.boolean(),
   termInsuranceSumAssured: optionalMoney,
   termInsurancePremiumInput: optionalMoney,
   termInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
   termInsurancePremiumTillYear: optionalWholeNumber,
+  termInsuranceRenewalMonth: optionalWholeNumber,
+  termInsuranceRenewalDay: optionalWholeNumber,
   carInsurancePremiumInput: optionalMoney,
   carInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
   bikeInsurancePremiumInput: optionalMoney,
@@ -1201,6 +1228,7 @@ function migrateLegacyAnalysePartial(
       odLimit: row.odLimit ?? 0,
       odUsed: row.odUsed ?? 0,
       odInterestOnlyYears: row.odInterestOnlyYears ?? 0,
+      emiDay: row.emiDay == null ? undefined : Number(row.emiDay),
     }));
   }
 
@@ -1932,6 +1960,13 @@ export function normalizeAnalyseFormValues(
       firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths,
     bikeOutstanding: form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
+    homeLoanEMIDay: form.homeLoanEMIDay,
+    carLoanEMIDay: form.carLoanEMIDay,
+    personalLoanEMIDay: form.personalLoanEMIDay,
+    educationLoanEMIDay: form.educationLoanEMIDay,
+    creditCardBillDay: form.creditCardBillDay,
+    sipAutoDebitDay: form.sipAutoDebitDay,
+    ppfDepositDay: form.ppfDepositDay,
     additionalObligations: resolvedAdditionalObligations,
     odLimit: form.odLimit,
     odUsed: form.odUsed,
@@ -1986,6 +2021,12 @@ export function normalizeAnalyseFormValues(
     healthInsurancePremiumFrequency: form.hasHealthInsurance
       ? (form.healthInsurancePremiumFrequency ?? "monthly")
       : undefined,
+    healthInsuranceRenewalMonth: form.hasHealthInsurance
+      ? form.healthInsuranceRenewalMonth
+      : undefined,
+    healthInsuranceRenewalDay: form.hasHealthInsurance
+      ? form.healthInsuranceRenewalDay
+      : undefined,
     hasTermInsurance: form.hasTermInsurance ?? false,
     termInsuranceSumAssured: form.hasTermInsurance
       ? form.termInsuranceSumAssured
@@ -2004,6 +2045,12 @@ export function normalizeAnalyseFormValues(
       : undefined,
     termInsurancePremiumTillYear: form.hasTermInsurance
       ? form.termInsurancePremiumTillYear
+      : undefined,
+    termInsuranceRenewalMonth: form.hasTermInsurance
+      ? form.termInsuranceRenewalMonth
+      : undefined,
+    termInsuranceRenewalDay: form.hasTermInsurance
+      ? form.termInsuranceRenewalDay
       : undefined,
     carInsurancePremiumMonthly: toMonthlyEquivalent(
       form.carInsurancePremiumInput,
@@ -2188,6 +2235,13 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   bikeLoanRemainingMonths: 0,
   bikeOutstanding: 0,
   creditCardBillMonthly: 0,
+  homeLoanEMIDay: undefined,
+  carLoanEMIDay: undefined,
+  personalLoanEMIDay: undefined,
+  educationLoanEMIDay: undefined,
+  creditCardBillDay: undefined,
+  sipAutoDebitDay: undefined,
+  ppfDepositDay: undefined,
   odLimit: 0,
   odUsed: 0,
   odInterestRate: 0,
@@ -2197,11 +2251,15 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   healthInsuranceSumInsured: 0,
   healthInsurancePremiumInput: 0,
   healthInsurancePremiumFrequency: "monthly",
+  healthInsuranceRenewalMonth: undefined,
+  healthInsuranceRenewalDay: undefined,
   hasTermInsurance: false,
   termInsuranceSumAssured: 0,
   termInsurancePremiumInput: 0,
   termInsurancePremiumFrequency: "monthly",
   termInsurancePremiumTillYear: 0,
+  termInsuranceRenewalMonth: undefined,
+  termInsuranceRenewalDay: undefined,
   carInsurancePremiumInput: 0,
   carInsurancePremiumFrequency: "monthly",
   bikeInsurancePremiumInput: 0,
