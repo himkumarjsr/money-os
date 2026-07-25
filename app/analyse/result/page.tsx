@@ -13,6 +13,7 @@ import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { supabase } from "@/lib/supabase";
 import { analyseFinances, monthlyTotalIncome } from "@/lib/financialEngine";
 import { getUniversalBucketActuals } from "@/lib/universal-buckets";
+import { getBucketBreakdown } from "@/lib/bucket-breakdown";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
@@ -181,46 +182,6 @@ export default function AnalyseResultPage() {
       goldValue: lastSubmission?.goldValue,
     });
   }
-  const foodActual =
-    (lastSubmission?.foodTotal || 0) > 0
-      ? lastSubmission?.foodTotal || 0
-      : (lastSubmission?.vegetables || 0) +
-        (lastSubmission?.grocery || 0) +
-        (lastSubmission?.medicine || 0);
-  const transportActual =
-    (lastSubmission?.transportTotal || 0) > 0
-      ? lastSubmission?.transportTotal || 0
-      : (lastSubmission?.fuel || 0) + (lastSubmission?.cabMetro || 0);
-  const utilityActual =
-    (lastSubmission?.utilityTotal || 0) > 0
-      ? lastSubmission?.utilityTotal || 0
-      : (lastSubmission?.electricity || 0) +
-        (lastSubmission?.internet || 0) +
-        (lastSubmission?.gas || 0) +
-        (lastSubmission?.water || 0);
-  const domesticActual =
-    (lastSubmission?.domesticHelpTotal || 0) > 0
-      ? lastSubmission?.domesticHelpTotal || 0
-      : (lastSubmission?.houseHelpMonthly || 0) +
-        (lastSubmission?.cookHelpMonthly || 0);
-  const dedupedAdditionalObligations = Array.from(
-    new Map(
-      ((profile.additionalObligations || []) as any[])
-        .filter((o) => (o?.monthlyAmount || 0) > 0)
-        .map((o) => {
-          const key = [
-            String(o?.type || "other")
-              .toLowerCase()
-              .trim(),
-            String(o?.lenderName || "")
-              .toLowerCase()
-              .trim(),
-            Math.round(Number(o?.monthlyAmount || 0)),
-          ].join("|");
-          return [key, o] as const;
-        }),
-    ).values(),
-  );
 
   const bucketActuals = getUniversalBucketActuals(profile);
   const income = monthlyTotalIncome(profile);
@@ -231,56 +192,13 @@ export default function AnalyseResultPage() {
   const lifestyleActual = bucketActuals.wants;
   const needsMonthly = bucketActuals.needs;
 
-  const needsExpandedItems = [
-    { label: "Rent", value: profile.rentAmount },
-    { label: "Rent maintenance", value: profile.rentMaintenanceMonthly },
-    { label: "Food and daily essentials", value: foodActual },
-    { label: "Transport", value: transportActual },
-    { label: "Utilities", value: utilityActual },
-    { label: "Domestic help", value: domesticActual },
-    { label: "Kids school", value: profile.kidsSchoolFees },
-    { label: "Kids activities", value: profile.kidsActivities },
-    { label: "Parents support", value: profile.parentsSupport },
-  ].filter((item) => (item.value || 0) > 0);
-
-  const getLoanLabel = (baseName: string, lenderName?: string) => {
-    if (lenderName && lenderName.trim())
-      return `${baseName} (${lenderName.trim()})`;
-    return baseName;
-  };
-
-  const loanExpandedItems = [
-    {
-      label: getLoanLabel("Home loan EMI", profile.homeLoanLenderName),
-      value: profile.homeLoanEMI,
-    },
-    {
-      label: getLoanLabel("Car loan EMI", profile.carLoanLenderName),
-      value: profile.carLoanEMI,
-    },
-    {
-      label: getLoanLabel("Bike loan EMI", profile.bikeLoanLenderName),
-      value: profile.bikeEMI,
-    },
-    {
-      label: getLoanLabel("Personal loan EMI", profile.personalLoanLenderName),
-      value: profile.personalLoanEMI,
-    },
-    { label: "Credit card", value: profile.creditCardBillMonthly },
-    ...(dedupedAdditionalObligations.map((o: any) => ({
-      label: o.lenderName
-        ? `${o.type} (${o.lenderName})`
-        : o.type || "Other loan",
-      value: o.monthlyAmount,
-    })) as { label: string; value: number }[]),
-  ].filter((item) => (item.value || 0) > 0);
-
-  if (process.env.NODE_ENV === "development") {
-    console.log("LENDER NAMES:", {
-      personal: profile.personalLoanLenderName,
-      additional: profile.additionalObligations?.map((o: any) => o.lenderName),
-    });
-  }
+  const bucketExpandedItems = {
+    needs: getBucketBreakdown("needs", profile),
+    wants: getBucketBreakdown("wants", profile),
+    security: getBucketBreakdown("security", profile),
+    loans: getBucketBreakdown("loans", profile),
+    investment: getBucketBreakdown("investment", profile),
+  } as const;
 
   const totalIncome = income;
   const totalExpenses =
@@ -329,7 +247,7 @@ export default function AnalyseResultPage() {
       capPercent: 20,
       actual: investmentActual,
       capAmount: income * 0.2,
-      details: "SIP, RD, NPS, PPF, EPF and SSY contributions",
+      details: "SIP, RD, NPS, PPF, EPF, SSY and other monthly contributions",
     },
   ];
 
@@ -668,14 +586,11 @@ export default function AnalyseResultPage() {
                     : status === "Warning"
                       ? "bg-[#FFF4E5] text-[#92400E]"
                       : "bg-[#DCFCE7] text-[#166534]";
-                const expandable = b.key === "needs" || b.key === "loans";
                 const isOpen = expandedRows.includes(b.key);
                 const items =
-                  b.key === "needs"
-                    ? needsExpandedItems
-                    : b.key === "loans"
-                      ? loanExpandedItems
-                      : [];
+                  bucketExpandedItems[
+                    b.key as keyof typeof bucketExpandedItems
+                  ] ?? [];
                 const total = items.reduce(
                   (sum, item) => sum + (item.value || 0),
                   0,
@@ -683,31 +598,25 @@ export default function AnalyseResultPage() {
                 return (
                   <div
                     key={`m-${b.key}`}
-                    role={expandable ? "button" : undefined}
-                    tabIndex={expandable ? 0 : undefined}
-                    className={`rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4 ${expandable ? "cursor-pointer active:bg-[#F3F2FB]" : ""}`}
-                    onClick={expandable ? () => toggleRow(b.key) : undefined}
-                    onKeyDown={
-                      expandable
-                        ? (e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              toggleRow(b.key);
-                            }
-                          }
-                        : undefined
-                    }
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4 active:bg-[#F3F2FB]"
+                    onClick={() => toggleRow(b.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleRow(b.key);
+                      }
+                    }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 font-semibold text-[#111110]">
-                          {expandable ? (
-                            <span
-                              className={`inline-block text-[#534AB7] transition-transform ${isOpen ? "rotate-90" : ""}`}
-                            >
-                              ▸
-                            </span>
-                          ) : null}
+                          <span
+                            className={`inline-block text-[#534AB7] transition-transform ${isOpen ? "rotate-90" : ""}`}
+                          >
+                            ▸
+                          </span>
                           <span>{b.label}</span>
                         </div>
                         <p className="mt-1 text-xs leading-snug text-[#5F5E5A]">
@@ -746,8 +655,13 @@ export default function AnalyseResultPage() {
                         </dd>
                       </div>
                     </dl>
-                    {expandable && isOpen ? (
+                    {isOpen ? (
                       <div className="mt-3 border-t border-[#E8E6F0] pt-3">
+                        {items.length === 0 ? (
+                          <p className="py-1.5 text-[13px] text-[#9B9A94]">
+                            No line items in this category yet.
+                          </p>
+                        ) : null}
                         {items.map((item) => (
                           <div
                             key={item.label}
@@ -764,12 +678,14 @@ export default function AnalyseResultPage() {
                             </span>
                           </div>
                         ))}
-                        <div className="mt-2 flex justify-between border-t border-[#E8E6F0] pt-2 text-[13px] font-bold text-[#111110]">
-                          <span>Total</span>
-                          <span className="tabular-nums">
-                            ₹{Math.round(total).toLocaleString("en-IN")}
-                          </span>
-                        </div>
+                        {items.length > 0 ? (
+                          <div className="mt-2 flex justify-between border-t border-[#E8E6F0] pt-2 text-[13px] font-bold text-[#111110]">
+                            <span>Total</span>
+                            <span className="tabular-nums">
+                              ₹{Math.round(total).toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -813,14 +729,11 @@ export default function AnalyseResultPage() {
                         : b.actual > b.capAmount
                           ? "Warning"
                           : "Good";
-                    const expandable = b.key === "needs" || b.key === "loans";
                     const isOpen = expandedRows.includes(b.key);
                     const items =
-                      b.key === "needs"
-                        ? needsExpandedItems
-                        : b.key === "loans"
-                          ? loanExpandedItems
-                          : [];
+                      bucketExpandedItems[
+                        b.key as keyof typeof bucketExpandedItems
+                      ] ?? [];
                     const total = items.reduce(
                       (sum, item) => sum + (item.value || 0),
                       0,
@@ -828,20 +741,16 @@ export default function AnalyseResultPage() {
                     return (
                       <Fragment key={b.key}>
                         <tr
-                          className={`border-t border-[#EFEDE7] ${expandable ? "cursor-pointer hover:bg-[#FAFAFE]" : ""}`}
-                          onClick={
-                            expandable ? () => toggleRow(b.key) : undefined
-                          }
+                          className="cursor-pointer border-t border-[#EFEDE7] hover:bg-[#FAFAFE]"
+                          onClick={() => toggleRow(b.key)}
                         >
                           <td className="px-3 py-2 font-medium text-[#111110]">
                             <span className="inline-flex items-center gap-2">
-                              {expandable ? (
-                                <span
-                                  className={`text-[#534AB7] transition-transform ${isOpen ? "rotate-90" : ""}`}
-                                >
-                                  ▸
-                                </span>
-                              ) : null}
+                              <span
+                                className={`text-[#534AB7] transition-transform ${isOpen ? "rotate-90" : ""}`}
+                              >
+                                ▸
+                              </span>
                               <span>{b.label}</span>
                             </span>
                           </td>
@@ -856,12 +765,17 @@ export default function AnalyseResultPage() {
                           </td>
                           <td className="px-3 py-2 font-semibold">{status}</td>
                         </tr>
-                        {expandable && isOpen ? (
+                        {isOpen ? (
                           <tr>
                             <td
                               colSpan={5}
                               className="border-t border-[#E8E6F0] bg-[#F7F7F4] px-4 py-2"
                             >
+                              {items.length === 0 ? (
+                                <p className="py-1 text-[13px] text-[#9B9A94]">
+                                  No line items in this category yet.
+                                </p>
+                              ) : null}
                               {items.map((item) => (
                                 <div
                                   key={item.label}
@@ -876,12 +790,14 @@ export default function AnalyseResultPage() {
                                   </span>
                                 </div>
                               ))}
-                              <div className="flex justify-between py-1 text-[13px] font-bold text-[#111110]">
-                                <span>Total</span>
-                                <span className="tabular-nums">
-                                  ₹{Math.round(total).toLocaleString("en-IN")}
-                                </span>
-                              </div>
+                              {items.length > 0 ? (
+                                <div className="flex justify-between py-1 text-[13px] font-bold text-[#111110]">
+                                  <span>Total</span>
+                                  <span className="tabular-nums">
+                                    ₹{Math.round(total).toLocaleString("en-IN")}
+                                  </span>
+                                </div>
+                              ) : null}
                             </td>
                           </tr>
                         ) : null}

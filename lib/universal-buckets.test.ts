@@ -192,6 +192,16 @@ describe("getUniversalBucketActuals", () => {
       }).investment,
     ).toBe(15500);
   });
+
+  it("includes customInvestments monthlyContribution in investment", () => {
+    const actuals = getUniversalBucketActuals({
+      monthlySIP: 5000,
+      customInvestments: [
+        { label: "SGB", monthlyContribution: 2000, currentValue: 50000 },
+      ],
+    } as never);
+    expect(actuals.investment).toBe(7000);
+  });
 });
 
 describe("getUniversalBucketRows", () => {

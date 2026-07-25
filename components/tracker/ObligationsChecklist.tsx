@@ -46,13 +46,17 @@ export default function ObligationsChecklist({
   userId,
   learnedSuggestion,
   onDismissLearn,
+  analyseCompleted = false,
 }: {
   userId: string;
   learnedSuggestion?: Learned | null;
   onDismissLearn?: () => void;
+  /** True when health check already submitted — hide "set up calendar" empty CTA. */
+  analyseCompleted?: boolean;
 }) {
   const {
     checklist,
+    obligations,
     totalObligated,
     totalPaid,
     totalPending,
@@ -77,6 +81,9 @@ export default function ObligationsChecklist({
       setShowAdd(false);
     }
   };
+
+  const hasObligationData = checklist.length > 0 || obligations.length > 0;
+  const showSetupEmpty = !hasObligationData && !analyseCompleted;
 
   return (
     <>
@@ -261,7 +268,7 @@ export default function ObligationsChecklist({
             </div>
           </div>
         </div>
-      ) : (
+      ) : showSetupEmpty ? (
         <div className="my-4 flex items-start gap-3 rounded-[14px] bg-[#EEEDFE] p-4">
           <div className="shrink-0 text-2xl">💡</div>
           <div>
@@ -281,7 +288,20 @@ export default function ObligationsChecklist({
             </button>
           </div>
         </div>
-      )}
+      ) : analyseCompleted && !hasObligationData ? (
+        <div className="my-3 flex items-center justify-between rounded-xl border border-[#E8E6F0] bg-white px-4 py-3">
+          <div className="text-[13px] text-[#5F5E5A]">
+            No obligations due this month yet
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="bg-transparent text-[13px] font-semibold text-[#534AB7]"
+          >
+            + Add
+          </button>
+        </div>
+      ) : null}
 
       {showAdd ? (
         <>

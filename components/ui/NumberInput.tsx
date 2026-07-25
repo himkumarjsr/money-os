@@ -1,5 +1,6 @@
 "use client";
 
+import FieldTooltip from "@/components/ui/FieldTooltip";
 import { useEffect, useRef, useState } from "react";
 
 interface NumberInputProps {
@@ -63,14 +64,17 @@ export default function NumberInput({
       {label ? (
         <label
           style={{
-            display: "block",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
             fontSize: 14,
             fontWeight: 500,
             color: "#5F5E5A",
             marginBottom: 6,
           }}
         >
-          {label}
+          <span>{label}</span>
+          {helper ? <FieldTooltip text={helper} /> : null}
         </label>
       ) : null}
 
@@ -78,21 +82,14 @@ export default function NumberInput({
         style={{
           display: "flex",
           alignItems: "center",
+          gap: 8,
+          width: "100%",
+          minHeight: 52,
+          borderRadius: 12,
           border: focused ? "1.5px solid #534AB7" : "1.5px solid #E8E6F0",
-          borderRadius: 10,
-          background: disabled ? "#F7F7F4" : "white",
-          height: 48,
-          paddingLeft: 14,
-          paddingRight: 14,
-          gap: 6,
-          boxShadow: focused ? "0 0 0 3px rgba(83,74,183,0.1)" : "none",
-          transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-          cursor: disabled ? "not-allowed" : "text",
-        }}
-        onClick={() => {
-          if (disabled || !inputRef.current) return;
-          inputRef.current.focus();
-          inputRef.current.select();
+          background: focused ? "#FAFAFE" : "white",
+          padding: "0 14px",
+          boxSizing: "border-box",
         }}
       >
         <input
@@ -139,19 +136,6 @@ export default function NumberInput({
           </span>
         ) : null}
       </div>
-
-      {helper ? (
-        <p
-          style={{
-            fontSize: 12,
-            color: "#9B9A94",
-            marginTop: 4,
-            marginBottom: 0,
-          }}
-        >
-          {helper}
-        </p>
-      ) : null}
     </div>
   );
 }

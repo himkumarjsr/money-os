@@ -34,12 +34,24 @@ export interface ChecklistItem {
 export type ObligationSyncProfile = {
   termInsurancePremiumInput?: number;
   termInsurancePremiumMonthly?: number;
+  termInsurancePremiumFrequency?: "monthly" | "yearly";
   termInsuranceRenewalDay?: number;
   termInsuranceRenewalMonth?: number;
   healthInsurancePremiumInput?: number;
   healthInsurancePremiumMonthly?: number;
+  healthInsurancePremiumFrequency?: "monthly" | "yearly";
   healthInsuranceRenewalDay?: number;
   healthInsuranceRenewalMonth?: number;
+  carInsurancePremiumInput?: number;
+  carInsurancePremiumMonthly?: number;
+  carInsurancePremiumFrequency?: "monthly" | "yearly";
+  carInsuranceRenewalDay?: number;
+  carInsuranceRenewalMonth?: number;
+  bikeInsurancePremiumInput?: number;
+  bikeInsurancePremiumMonthly?: number;
+  bikeInsurancePremiumFrequency?: "monthly" | "yearly";
+  bikeInsuranceRenewalDay?: number;
+  bikeInsuranceRenewalMonth?: number;
   homeLoanEMI?: number;
   homeLoanEMIDay?: number;
   carLoanEMI?: number;
@@ -154,10 +166,28 @@ function totals(items: ChecklistItem[]) {
   return { totalObligated, totalPaid, totalPending };
 }
 
-function yearlyPremium(input?: number, monthly?: number): number {
-  if (monthly != null && monthly > 0) return monthly * 12;
-  if (input != null && input > 0) return input;
-  return 0;
+function premiumObligationAmount(
+  input?: number,
+  monthly?: number,
+  frequency?: "monthly" | "yearly",
+): { amount: number; frequency: "monthly" | "yearly" } | null {
+  const freq = frequency === "yearly" ? "yearly" : "monthly";
+  if (freq === "monthly") {
+    const amount =
+      monthly != null && monthly > 0
+        ? monthly
+        : input != null && input > 0
+          ? input
+          : 0;
+    return amount > 0 ? { amount, frequency: "monthly" } : null;
+  }
+  const amount =
+    input != null && input > 0
+      ? input
+      : monthly != null && monthly > 0
+        ? monthly * 12
+        : 0;
+  return amount > 0 ? { amount, frequency: "yearly" } : null;
 }
 
 export const useObligationStore = create<ObligationState>((set, get) => ({
@@ -362,40 +392,94 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     const supabase = getSupabase();
     const obligations: Array<Record<string, unknown>> = [];
 
-    const termPremium = yearlyPremium(
+    const termPremium = premiumObligationAmount(
       submission.termInsurancePremiumInput,
       submission.termInsurancePremiumMonthly,
+      submission.termInsurancePremiumFrequency,
     );
-    if (termPremium > 0) {
+    if (termPremium) {
       obligations.push({
         user_id: userId,
         title: "Term Insurance Premium",
         category: "insurance_life",
-        amount: termPremium,
-        frequency: "yearly",
+        amount: termPremium.amount,
+        frequency: termPremium.frequency,
         due_day: submission.termInsuranceRenewalDay || 1,
-        due_month: submission.termInsuranceRenewalMonth || 1,
+        due_month:
+          termPremium.frequency === "yearly"
+            ? submission.termInsuranceRenewalMonth || 1
+            : null,
         source: "health_check",
-        remind_days_before: 14,
+        remind_days_before: termPremium.frequency === "yearly" ? 14 : 7,
         is_active: true,
       });
     }
 
-    const healthPremium = yearlyPremium(
+    const healthPremium = premiumObligationAmount(
       submission.healthInsurancePremiumInput,
       submission.healthInsurancePremiumMonthly,
+      submission.healthInsurancePremiumFrequency,
     );
-    if (healthPremium > 0) {
+    if (healthPremium) {
       obligations.push({
         user_id: userId,
         title: "Health Insurance Premium",
         category: "insurance_health",
-        amount: healthPremium,
-        frequency: "yearly",
+        amount: healthPremium.amount,
+        frequency: healthPremium.frequency,
         due_day: submission.healthInsuranceRenewalDay || 1,
-        due_month: submission.healthInsuranceRenewalMonth || 1,
+        due_month:
+          healthPremium.frequency === "yearly"
+            ? submission.healthInsuranceRenewalMonth || 1
+            : null,
         source: "health_check",
-        remind_days_before: 14,
+        remind_days_before: healthPremium.frequency === "yearly" ? 14 : 7,
+        is_active: true,
+      });
+    }
+
+    const carPremium = premiumObligationAmount(
+      submission.carInsurancePremiumInput,
+      submission.carInsurancePremiumMonthly,
+      submission.carInsurancePremiumFrequency,
+    );
+    if (carPremium) {
+      obligations.push({
+        user_id: userId,
+        title: "Car Insurance Premium",
+        category: "insurance_vehicle",
+        amount: carPremium.amount,
+        frequency: carPremium.frequency,
+        due_day: submission.carInsuranceRenewalDay || 1,
+        due_month:
+          carPremium.frequency === "yearly"
+            ? submission.carInsuranceRenewalMonth || 1
+            : null,
+        source: "health_check",
+        remind_days_before: carPremium.frequency === "yearly" ? 14 : 7,
+        is_active: true,
+      });
+    }
+
+    const bikePremium = premiumObligationAmount(
+      submission.bikeInsurancePremiumInput,
+      submission.bikeInsurancePremiumMonthly,
+      submission.bikeInsurancePremiumFrequency,
+    );
+    if (bikePremium) {
+      obligations.push({
+        user_id: userId,
+        title: "Two-wheeler Insurance Premium",
+        category: "insurance_vehicle",
+        amount: bikePremium.amount,
+        frequency: bikePremium.frequency,
+        due_day: submission.bikeInsuranceRenewalDay || 1,
+        due_month:
+          bikePremium.frequency === "yearly"
+            ? submission.bikeInsuranceRenewalMonth || 1
+            : null,
+        source: "health_check",
+        remind_days_before: bikePremium.frequency === "yearly" ? 14 : 7,
         is_active: true,
       });
     }
