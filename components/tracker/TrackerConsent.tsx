@@ -4,6 +4,10 @@ import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import type { TrackerIconName } from "@/lib/tracker-categories";
 import { getSupabase } from "@/lib/supabase";
+import {
+  TRACKER_CONSENT_VERSION,
+  setTrackerConsentLocal,
+} from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -51,12 +55,12 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
         user_id: user.id,
         consent_given: true,
         consent_at: new Date().toISOString(),
-        consent_version: "v1",
+        consent_version: TRACKER_CONSENT_VERSION,
       });
       if (error) {
         console.warn("tracker_consent upsert:", error.message);
       }
-      localStorage.setItem("finkoin_tracker_consent", "v1");
+      setTrackerConsentLocal();
       onAccept();
     } finally {
       setSaving(false);
@@ -176,8 +180,9 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
           >
             <AppIcon name="lock" size={16} color="#534AB7" />
             <span>
-              Your expense data is private. Only you can see it. Stored securely
-              and encrypted. Delete anytime from settings.
+              Your expenses and credit-card nicknames, optional last-4 digits,
+              and billing/due dates stay private to your account. Sensitive
+              health-check amounts are encrypted. Delete anytime from settings.
             </span>
           </p>
         </div>
@@ -209,7 +214,7 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
               padding: 0,
             }}
             aria-checked={checked}
-            aria-label="I agree to store expense data for insights"
+            aria-label="I agree to store expense and card data for insights"
             role="checkbox"
           >
             {checked ? (
@@ -228,8 +233,10 @@ export default function TrackerConsent({ onAccept }: { onAccept: () => void }) {
               lineHeight: 1.5,
             }}
           >
-            I understand that Finkoin will store my expense data to show me
-            spending insights. I can delete this data anytime. I agree to the{" "}
+            I understand that Finkoin will store my expense entries and saved
+            card details (nickname, optional last 4, billing/due days) to power
+            spend tracking and bill suggestions. I can delete this data anytime.
+            I agree to the{" "}
             <a
               href="/legal/privacy"
               target="_blank"

@@ -1,15 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/supabase", () => ({
+  getSupabase: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          order: () => Promise.resolve({ data: [], error: null }),
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        }),
+      }),
+      upsert: () => Promise.resolve({ error: null }),
+      delete: () => ({
+        eq: () => ({
+          eq: () => Promise.resolve({ error: null }),
+        }),
+      }),
+    }),
+  }),
+}));
+
 import {
+  buildCreditCardPaySuggestions,
+  countsTowardCashSpend,
   deleteSavedCreditCard,
   dismissCreditCardBillReminder,
   displayPaymentMethod,
   encodeCreditCardPaymentMethod,
   formatCreditCardLabel,
+  getLastStatementWindow,
+  getNextDueDate,
   isCreditCardBillDismissed,
+  isCreditCardCharge,
   isCreditCardPaymentMethod,
   loadSavedCreditCards,
   parseCreditCardPaymentMethod,
   saveCreditCards,
+  suggestDueDayFromBilling,
+  sumCashSpend,
+  sumOnCardsSpend,
   summarizeCreditCardBills,
   upsertSavedCreditCard,
 } from "./trackerCreditCards";
@@ -65,8 +93,97 @@ describe("credit card payment method encoding", () => {
     expect(displayPaymentMethod("netbanking")).toBe("Net banking");
     expect(displayPaymentMethod("cash")).toBe("Cash");
     expect(displayPaymentMethod("wallet")).toBe("Wallet");
-    expect(displayPaymentMethod("cheque")).toBe("cheque");
+    expect(displayPaymentMethod("cheque")).toBe("Cheque");
     expect(displayPaymentMethod(null)).toBe("—");
+  });
+});
+
+describe("cash vs card spend", () => {
+  it("excludes CC charges from cash spend but keeps bill payments", () => {
+    expect(
+      countsTowardCashSpend({
+        bucket: "wants",
+        payment_method: "credit_card::c1::HDFC",
+      }),
+    ).toBe(false);
+    expect(
+      isCreditCardCharge({
+        bucket: "wants",
+        payment_method: "credit_card::c1::HDFC",
+      }),
+    ).toBe(true);
+    expect(
+      countsTowardCashSpend({
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "upi",
+      }),
+    ).toBe(true);
+    expect(
+      isCreditCardCharge({
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "upi",
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardCashSpend({
+        bucket: "needs",
+        payment_method: "upi",
+      }),
+    ).toBe(true);
+  });
+
+  it("sums cash and on-cards totals", () => {
+    const txns = [
+      {
+        amount: 1000,
+        bucket: "needs",
+        payment_method: "upi",
+      },
+      {
+        amount: 500,
+        bucket: "wants",
+        payment_method: "credit_card::c1::HDFC",
+      },
+      {
+        amount: 800,
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "upi",
+      },
+      {
+        amount: 200,
+        bucket: "needs",
+        payment_method: "credit_card::c1::HDFC",
+      },
+    ];
+    expect(sumCashSpend(txns)).toBe(1800);
+    expect(sumOnCardsSpend(txns)).toBe(700);
+  });
+});
+
+describe("statement window + due dates", () => {
+  it("suggests due day ~20 days after billing", () => {
+    expect(suggestDueDayFromBilling(15)).toBe(4); // Jan 15 + 20 = Feb 4
+    expect(suggestDueDayFromBilling(1)).toBe(21);
+  });
+
+  it("computes last statement window ending on/before asOf", () => {
+    const win = getLastStatementWindow(15, new Date(2026, 6, 26)); // Jul 26
+    expect(win).not.toBeNull();
+    expect(win!.end.getFullYear()).toBe(2026);
+    expect(win!.end.getMonth()).toBe(6);
+    expect(win!.end.getDate()).toBe(15);
+    expect(win!.start.getMonth()).toBe(5); // June
+    expect(win!.start.getDate()).toBe(16);
+  });
+
+  it("returns next due date on or after asOf", () => {
+    const due = getNextDueDate(5, new Date(2026, 6, 26));
+    expect(due).not.toBeNull();
+    expect(due!.getMonth()).toBe(7); // Aug
+    expect(due!.getDate()).toBe(5);
   });
 });
 
@@ -87,6 +204,25 @@ describe("saved credit cards localStorage", () => {
     expect(loaded[0].id).toBe(card.id);
   });
 
+  it("stores billing and due days", () => {
+    const card = upsertSavedCreditCard("user-1", {
+      nickname: "HDFC",
+      billingDay: 15,
+      dueDay: 5,
+    });
+    expect(card.billingDay).toBe(15);
+    expect(card.dueDay).toBe(5);
+    expect(loadSavedCreditCards("user-1")[0].dueDay).toBe(5);
+  });
+
+  it("defaults due day from billing day when omitted", () => {
+    const card = upsertSavedCreditCard("user-1", {
+      nickname: "SBI",
+      billingDay: 10,
+    });
+    expect(card.dueDay).toBe(suggestDueDayFromBilling(10));
+  });
+
   it("dedupes by nickname", () => {
     const first = upsertSavedCreditCard("user-1", {
       nickname: "HDFC",
@@ -105,9 +241,11 @@ describe("saved credit cards localStorage", () => {
     const updated = upsertSavedCreditCard("user-1", {
       id: first.id,
       nickname: "New Nick",
+      billingDay: 20,
     });
     expect(updated.id).toBe(first.id);
     expect(updated.nickname).toBe("New Nick");
+    expect(updated.billingDay).toBe(20);
     expect(updated.createdAt).toBe(first.createdAt);
   });
 
@@ -218,6 +356,81 @@ describe("summarizeCreditCardBills", () => {
     expect(bills).toEqual([
       { cardId: "Credit card", label: "Credit card", amount: 150 },
     ]);
+  });
+
+  it("filters by statement window when provided", () => {
+    const bills = summarizeCreditCardBills(
+      [
+        {
+          amount: 100,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-06-20",
+        },
+        {
+          amount: 200,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-07-10",
+        },
+        {
+          amount: 50,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-07-20",
+        },
+      ],
+      {
+        window: {
+          start: new Date(2026, 5, 16),
+          end: new Date(2026, 6, 15),
+        },
+      },
+    );
+    expect(bills).toEqual([
+      {
+        cardId: "c1",
+        label: "HDFC",
+        amount: 300,
+        statementStart: "2026-06-16",
+        statementEnd: "2026-07-15",
+      },
+    ]);
+  });
+});
+
+describe("buildCreditCardPaySuggestions", () => {
+  it("uses per-card statement window and due day", () => {
+    const lines = buildCreditCardPaySuggestions({
+      asOf: new Date(2026, 6, 26),
+      cards: [
+        {
+          id: "c1",
+          nickname: "HDFC",
+          billingDay: 15,
+          dueDay: 5,
+          createdAt: "x",
+        },
+      ],
+      transactions: [
+        {
+          amount: 400,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-07-01",
+        },
+        {
+          amount: 100,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-07-20",
+        },
+      ],
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0].amount).toBe(400);
+    expect(lines[0].dueDay).toBe(5);
+    expect(lines[0].dueDate).toBe("2026-08-05");
   });
 });
 

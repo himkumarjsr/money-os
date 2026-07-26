@@ -26,6 +26,14 @@ import {
   computeMonthSafetyPulse,
   previousCalendarMonth,
 } from "@/lib/trackerSafetyPulse";
+import {
+  hasTrackerConsentLocal,
+  loadCreditCardsMerged,
+  setTrackerConsentLocal,
+  sumCashSpend,
+  sumOnCardsSpend,
+  type SavedCreditCard,
+} from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
@@ -133,10 +141,7 @@ function TrackerContent() {
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
-      if (
-        typeof window !== "undefined" &&
-        localStorage.getItem("finkoin_tracker_consent") === "v1"
-      ) {
+      if (typeof window !== "undefined" && hasTrackerConsentLocal()) {
         return true;
       }
     } catch {
@@ -151,6 +156,7 @@ function TrackerContent() {
   const [previousTransactions, setPreviousTransactions] = useState<
     TrackerTransaction[]
   >([]);
+  const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
   /** Prefer showing the UI shell immediately; soft fetches never blank it. */
   const [loading, setLoading] = useState(false);
   const [expandedBucket, setExpandedBucket] = useState<string | null>("");
@@ -277,8 +283,7 @@ function TrackerContent() {
     if (hasConsent === true) return;
 
     try {
-      const local = localStorage.getItem("finkoin_tracker_consent");
-      if (local === "v1") {
+      if (hasTrackerConsentLocal()) {
         setHasConsent(true);
         return;
       }
@@ -292,18 +297,15 @@ function TrackerContent() {
         const supabase = getSupabase();
         const { data } = await supabase
           .from("tracker_consent")
-          .select("consent_given")
+          .select("consent_given, consent_version")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (data?.consent_given) {
-          try {
-            localStorage.setItem("finkoin_tracker_consent", "v1");
-          } catch {
-            /* ignore */
-          }
+        if (data?.consent_given && data.consent_version === "v2") {
+          setTrackerConsentLocal();
           setHasConsent(true);
         } else {
+          // v1 (or missing version) must re-accept updated card-storage disclaimer
           setHasConsent(false);
         }
       } catch {
@@ -313,6 +315,18 @@ function TrackerContent() {
 
     void checkDB();
   }, [user?.id, hasConsent]);
+
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const cards = await loadCreditCardsMerged(user.id);
+      if (!cancelled) setSavedCards(cards);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasConsent, user?.id, showAddModal]);
 
   const fetchTransactions = useCallback(
     async (opts?: { soft?: boolean }) => {
@@ -490,11 +504,10 @@ function TrackerContent() {
   const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
   const incomeCat = TRACKER_CATEGORIES.income;
   const displayIncome = monthlyIncome || profileMonthlyFromDb;
-  // Purple summary card only: "Spent"/"Left" reflect real cash out, so include
-  // loan prepayment here. Bucket cards, caps, and Safety Pulse still exclude it.
-  const totalSpent = transactions
-    .filter((t) => t.bucket !== "income")
-    .reduce((a, t) => a + Number(t.amount), 0);
+  // Purple summary card: cash out only (excludes CC purchase charges; includes
+  // CC bill payments + loan prepayments). Bucket cards still count CC by category.
+  const totalSpent = sumCashSpend(transactions);
+  const onCardsSpend = sumOnCardsSpend(transactions);
   const remaining = displayIncome - totalSpent;
   const spentPercent =
     displayIncome > 0 ? Math.min((totalSpent / displayIncome) * 100, 100) : 0;
@@ -727,6 +740,21 @@ function TrackerContent() {
           </div>
         </div>
       </div>
+      {onCardsSpend > 0 ? (
+        <div
+          style={{
+            fontSize: 11,
+            opacity: 0.85,
+            marginBottom: 12,
+            letterSpacing: visible ? "normal" : "0.06em",
+          }}
+        >
+          On cards this month:{" "}
+          {visible
+            ? `₹${Math.round(onCardsSpend).toLocaleString("en-IN")}`
+            : "₹••••"}
+        </div>
+      ) : null}
       <div>
         <div
           style={{
@@ -737,7 +765,7 @@ function TrackerContent() {
             marginBottom: 6,
           }}
         >
-          <span>Budget used</span>
+          <span>Cash budget used</span>
           <span>{visible ? `${spentPercent.toFixed(0)}%` : "••%"}</span>
         </div>
         <div
@@ -900,6 +928,8 @@ function TrackerContent() {
       {viewingCurrentMonth ? (
         <CreditCardBillReminder
           previousTransactions={previousTransactions}
+          currentTransactions={transactions}
+          cards={savedCards}
           monthName={currentMonth}
           year={currentYear}
           monthlySalary={profileMonthlyFromDb}

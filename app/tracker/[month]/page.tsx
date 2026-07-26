@@ -9,6 +9,10 @@ import MonthSummary from "@/components/tracker/MonthSummary";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
+import {
+  hasTrackerConsentLocal,
+  setTrackerConsentLocal,
+} from "@/lib/trackerCreditCards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
@@ -33,10 +37,7 @@ function TrackerMonthContent() {
 
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
-      if (
-        typeof window !== "undefined" &&
-        localStorage.getItem("finkoin_tracker_consent") === "v1"
-      ) {
+      if (typeof window !== "undefined" && hasTrackerConsentLocal()) {
         return true;
       }
     } catch {
@@ -67,8 +68,7 @@ function TrackerMonthContent() {
     if (hasConsent === true) return;
 
     try {
-      const local = localStorage.getItem("finkoin_tracker_consent");
-      if (local === "v1") {
+      if (hasTrackerConsentLocal()) {
         setHasConsent(true);
         return;
       }
@@ -82,16 +82,12 @@ function TrackerMonthContent() {
         const supabase = getSupabase();
         const { data } = await supabase
           .from("tracker_consent")
-          .select("consent_given")
+          .select("consent_given, consent_version")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (data?.consent_given) {
-          try {
-            localStorage.setItem("finkoin_tracker_consent", "v1");
-          } catch {
-            /* ignore */
-          }
+        if (data?.consent_given && data.consent_version === "v2") {
+          setTrackerConsentLocal();
           setHasConsent(true);
         } else {
           setHasConsent(false);
