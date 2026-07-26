@@ -78,6 +78,7 @@ export default function ObligationsChecklist({
     const id = await addObligation({ ...data, user_id: userId });
     if (id) {
       await generateChecklist(userId);
+      await useObligationStore.getState().fetchObligations(userId);
       setShowAdd(false);
     }
   };
@@ -115,6 +116,9 @@ export default function ObligationsChecklist({
                       remind_days_before: 7,
                     });
                     await generateChecklist(userId);
+                    await useObligationStore
+                      .getState()
+                      .fetchObligations(userId);
                     onDismissLearn?.();
                   })();
                 }}
@@ -134,7 +138,27 @@ export default function ObligationsChecklist({
         </div>
       ) : null}
 
-      {checklist.length > 0 ? (
+      {showSetupEmpty ? (
+        <div className="my-4 flex items-start gap-3 rounded-[14px] bg-[#EEEDFE] p-4">
+          <div className="shrink-0 text-2xl">💡</div>
+          <div>
+            <div className="mb-1 text-sm font-bold text-[#534AB7]">
+              Set up your financial calendar
+            </div>
+            <div className="mb-2.5 text-[13px] leading-relaxed text-[#534AB7]">
+              Add your EMI dates, insurance renewals and SIP dates. Finkoin will
+              remind you before each one.
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAdd(true)}
+              className="rounded-[10px] bg-[#534AB7] px-4 py-2 text-[13px] font-bold text-white"
+            >
+              Add first obligation
+            </button>
+          </div>
+        </div>
+      ) : (
         <div className="my-4 overflow-hidden rounded-2xl border border-[#E8E6F0] bg-white">
           <div className="bg-[#534AB7] px-4 py-3.5">
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -172,87 +196,95 @@ export default function ObligationsChecklist({
             </div>
           </div>
 
-          {checklist.map((item, i) => {
-            const ob = item.obligation;
-            const isPaid =
-              item.status === "paid" || item.status === "auto_debit";
-            const isSkipped = item.status === "skipped";
-            return (
-              <div
-                key={item.id}
-                className={`flex items-center gap-3 px-4 py-[13px] ${
-                  i < checklist.length - 1 ? "border-b border-[#F7F7F4]" : ""
-                } ${isPaid ? "bg-[#F7FDF9]" : isSkipped ? "bg-[#FAFAFA] opacity-60" : "bg-white"}`}
-              >
-                <button
-                  type="button"
-                  aria-label={isPaid ? "Paid" : "Mark as paid"}
-                  disabled={isPaid || isSkipped}
-                  onClick={() => {
-                    if (!isPaid && !isSkipped) {
-                      void markPaid(item.id, item.expected_amount);
-                    }
-                  }}
-                  className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg border-2 transition ${
-                    isPaid
-                      ? "border-[#1D9E75] bg-[#1D9E75]"
-                      : isSkipped
-                        ? "border-[#E8E6F0] bg-white"
-                        : "border-[#534AB7] bg-white"
-                  }`}
+          {checklist.length > 0 ? (
+            checklist.map((item, i) => {
+              const ob = item.obligation;
+              const isPaid =
+                item.status === "paid" || item.status === "auto_debit";
+              const isSkipped = item.status === "skipped";
+              return (
+                <div
+                  key={item.id}
+                  className={`flex items-center gap-3 px-4 py-[13px] ${
+                    i < checklist.length - 1 ? "border-b border-[#F7F7F4]" : ""
+                  } ${isPaid ? "bg-[#F7FDF9]" : isSkipped ? "bg-[#FAFAFA] opacity-60" : "bg-white"}`}
                 >
-                  {isPaid ? (
-                    <span className="text-sm font-bold leading-none text-white">
-                      ✓
-                    </span>
-                  ) : null}
-                </button>
-                <div className="shrink-0 text-xl">
-                  {CATEGORY_ICON[ob?.category || "other"] || "📌"}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div
-                    className={`mb-0.5 text-sm font-semibold ${
-                      isPaid ? "text-[#1D5C3A]" : "text-[#111110]"
-                    } ${isSkipped ? "line-through" : ""}`}
-                  >
-                    {ob?.title || "Obligation"}
-                  </div>
-                  <div className="text-[11px] text-[#9B9A94]">
-                    {ob?.frequency === "monthly"
-                      ? `Due on ${ob.due_day ?? "—"}th`
-                      : ob?.frequency === "yearly"
-                        ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
-                        : ob?.frequency}
-                    {isPaid && item.paid_at
-                      ? ` · Paid ${new Date(item.paid_at).toLocaleDateString(
-                          "en-IN",
-                          { day: "numeric", month: "short" },
-                        )}`
-                      : null}
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <div
-                    className={`mb-1 text-[15px] font-bold ${
-                      isPaid ? "text-[#1D9E75]" : "text-[#111110]"
+                  <button
+                    type="button"
+                    aria-label={isPaid ? "Paid" : "Mark as paid"}
+                    disabled={isPaid || isSkipped}
+                    onClick={() => {
+                      if (!isPaid && !isSkipped) {
+                        void markPaid(item.id, item.expected_amount);
+                      }
+                    }}
+                    className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg border-2 transition ${
+                      isPaid
+                        ? "border-[#1D9E75] bg-[#1D9E75]"
+                        : isSkipped
+                          ? "border-[#E8E6F0] bg-white"
+                          : "border-[#534AB7] bg-white"
                     }`}
                   >
-                    ₹{(item.expected_amount || 0).toLocaleString("en-IN")}
+                    {isPaid ? (
+                      <span className="text-sm font-bold leading-none text-white">
+                        ✓
+                      </span>
+                    ) : null}
+                  </button>
+                  <div className="shrink-0 text-xl">
+                    {CATEGORY_ICON[ob?.category || "other"] || "📌"}
                   </div>
-                  {!isPaid && !isSkipped ? (
-                    <button
-                      type="button"
-                      onClick={() => void markSkipped(item.id)}
-                      className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={`mb-0.5 text-sm font-semibold ${
+                        isPaid ? "text-[#1D5C3A]" : "text-[#111110]"
+                      } ${isSkipped ? "line-through" : ""}`}
                     >
-                      Skip
-                    </button>
-                  ) : null}
+                      {ob?.title || "Obligation"}
+                    </div>
+                    <div className="text-[11px] text-[#9B9A94]">
+                      {ob?.frequency === "monthly"
+                        ? `Due on ${ob.due_day ?? "—"}th`
+                        : ob?.frequency === "yearly"
+                          ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
+                          : ob?.frequency}
+                      {isPaid && item.paid_at
+                        ? ` · Paid ${new Date(item.paid_at).toLocaleDateString(
+                            "en-IN",
+                            { day: "numeric", month: "short" },
+                          )}`
+                        : null}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div
+                      className={`mb-1 text-[15px] font-bold ${
+                        isPaid ? "text-[#1D9E75]" : "text-[#111110]"
+                      }`}
+                    >
+                      ₹{(item.expected_amount || 0).toLocaleString("en-IN")}
+                    </div>
+                    {!isPaid && !isSkipped ? (
+                      <button
+                        type="button"
+                        onClick={() => void markSkipped(item.id)}
+                        className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
+                      >
+                        Skip
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="px-4 py-4 text-[13px] leading-relaxed text-[#5F5E5A]">
+              {obligations.length > 0
+                ? `${obligations.length} obligation${obligations.length === 1 ? "" : "s"} saved — none due on this month’s checklist yet. Add another or check due dates.`
+                : "No obligations due this month yet. Add EMIs, SIPs, or renewals to track them here."}
+            </div>
+          )}
 
           <div className="flex items-center justify-between border-t border-[#F7F7F4] px-4 py-3">
             <button
@@ -264,44 +296,15 @@ export default function ObligationsChecklist({
               Add obligation
             </button>
             <div className="text-[11px] text-[#9B9A94]">
-              {loading ? "Updating…" : "Tap ☐ to mark as paid"}
+              {loading
+                ? "Updating…"
+                : checklist.length > 0
+                  ? "Tap ☐ to mark as paid"
+                  : "Reminders use due day"}
             </div>
           </div>
         </div>
-      ) : showSetupEmpty ? (
-        <div className="my-4 flex items-start gap-3 rounded-[14px] bg-[#EEEDFE] p-4">
-          <div className="shrink-0 text-2xl">💡</div>
-          <div>
-            <div className="mb-1 text-sm font-bold text-[#534AB7]">
-              Set up your financial calendar
-            </div>
-            <div className="mb-2.5 text-[13px] leading-relaxed text-[#534AB7]">
-              Add your EMI dates, insurance renewals and SIP dates. Finkoin will
-              remind you before each one.
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowAdd(true)}
-              className="rounded-[10px] bg-[#534AB7] px-4 py-2 text-[13px] font-bold text-white"
-            >
-              Add first obligation
-            </button>
-          </div>
-        </div>
-      ) : analyseCompleted && !hasObligationData ? (
-        <div className="my-3 flex items-center justify-between rounded-xl border border-[#E8E6F0] bg-white px-4 py-3">
-          <div className="text-[13px] text-[#5F5E5A]">
-            No obligations due this month yet
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowAdd(true)}
-            className="bg-transparent text-[13px] font-semibold text-[#534AB7]"
-          >
-            + Add
-          </button>
-        </div>
-      ) : null}
+      )}
 
       {showAdd ? (
         <>

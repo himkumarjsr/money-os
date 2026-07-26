@@ -33,6 +33,26 @@ export type CreditCardBillLine = {
   dueDate?: string;
 };
 
+export type CreditCardBillStatus = CreditCardBillLine & {
+  /** CC purchase charges in available history (carry-forward base). */
+  charged: number;
+  /** Cash bill payments (loans → credit_card) matched to this card. */
+  paid: number;
+  /** max(0, charged − paid) — what still needs to leave the bank account. */
+  remaining: number;
+  status: "due" | "paid" | "clear";
+  overdue: boolean;
+};
+
+/** Description prefix used when logging a CC bill payment expense. */
+export function creditCardBillPaymentDescription(
+  label: string,
+  cardId?: string,
+): string {
+  const base = `Pay bill · ${label.trim() || "Credit card"}`;
+  return cardId ? `${base} [#${cardId}]` : base;
+}
+
 const STORAGE_PREFIX = "finkoin_credit_cards_";
 const BILL_DISMISS_PREFIX = "finkoin_cc_bill_dismissed_";
 
@@ -288,6 +308,28 @@ export function getNextDueDate(
   return due;
 }
 
+/** Most recent due date on or before `asOf` (for overdue / carry-forward). */
+export function getMostRecentDueDate(
+  dueDay: number,
+  asOf: Date = new Date(),
+): Date | null {
+  const day = clampDay(dueDay);
+  if (!day) return null;
+  let y = asOf.getFullYear();
+  let m = asOf.getMonth();
+  const asOfDay = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  let due = clampToMonthDay(y, m, day);
+  if (due > asOfDay) {
+    m -= 1;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    }
+    due = clampToMonthDay(y, m, day);
+  }
+  return due;
+}
+
 function txnDateIso(txn: {
   date?: string | null;
   created_at?: string | null;
@@ -420,6 +462,146 @@ export function buildCreditCardPaySuggestions(opts: {
   }
 
   return lines.sort((a, b) => b.amount - a.amount);
+}
+
+/** Cash leaving the account to pay a credit-card bill (not a CC purchase). */
+export function isCreditCardBillPayment(txn: {
+  bucket?: string | null;
+  subcategory?: string | null;
+  category?: string | null;
+}): boolean {
+  if (txn.bucket !== "loans") return false;
+  const sub = txn.subcategory || txn.category;
+  return sub === "credit_card";
+}
+
+export function billPaymentMatchesCard(
+  txn: {
+    description?: string | null;
+    payment_method?: string | null;
+  },
+  card: { id: string; nickname: string; last4?: string },
+): boolean {
+  const desc = (txn.description || "").toLowerCase();
+  const idToken = `[#${card.id}]`.toLowerCase();
+  if (desc.includes(idToken)) return true;
+  const nick = card.nickname.trim().toLowerCase();
+  if (nick && desc.includes(nick)) return true;
+  const label = formatCreditCardLabel(card).toLowerCase();
+  if (label && desc.includes(label)) return true;
+  // Legacy: payment method somehow encoded (rare for bill pays)
+  const parsed = parseCreditCardPaymentMethod(txn.payment_method);
+  if (parsed.cardId && parsed.cardId === card.id) return true;
+  return false;
+}
+
+function sumChargesForCard(transactions: BillTxn[], cardId: string): number {
+  return transactions.reduce((sum, t) => {
+    if (!isCreditCardCharge(t)) return sum;
+    const { cardId: tid } = parseCreditCardPaymentMethod(t.payment_method);
+    if (tid !== cardId) return sum;
+    const n = Number(t.amount);
+    return Number.isFinite(n) && n > 0 ? sum + n : sum;
+  }, 0);
+}
+
+function sumPaymentsForCard(
+  transactions: Array<BillTxn & { description?: string | null }>,
+  card: SavedCreditCard,
+  soleCardFallback: boolean,
+): number {
+  return transactions.reduce((sum, t) => {
+    if (!isCreditCardBillPayment(t)) return sum;
+    const matched = billPaymentMatchesCard(t, card);
+    const hasOtherCardToken = /\[#[^\]]+\]/.test(t.description || "");
+    const attribute = matched || (soleCardFallback && !hasOtherCardToken);
+    if (!attribute) return sum;
+    const n = Number(t.amount);
+    return Number.isFinite(n) && n > 0 ? sum + n : sum;
+  }, 0);
+}
+
+/**
+ * Per-card due status with unpaid carry-forward:
+ * remaining = all CC charges − all matched bill payments in the txn pool.
+ * Paid bills show status "paid"; unpaid stay "due" across months until cleared.
+ */
+export function buildCreditCardBillStatuses(opts: {
+  cards: SavedCreditCard[];
+  transactions: Array<BillTxn & { description?: string | null }>;
+  asOf?: Date;
+}): CreditCardBillStatus[] {
+  const asOf = opts.asOf ?? new Date();
+  const asOfDay = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  const soleCard = opts.cards.length === 1;
+  const suggestions = buildCreditCardPaySuggestions({
+    cards: opts.cards,
+    transactions: opts.transactions,
+    asOf,
+  });
+  const suggestionById = new Map(suggestions.map((s) => [s.cardId, s]));
+
+  const statuses: CreditCardBillStatus[] = opts.cards.map((card) => {
+    const charged = sumChargesForCard(opts.transactions, card.id);
+    const paid = sumPaymentsForCard(opts.transactions, card, soleCard);
+    const remaining = Math.max(0, Math.round((charged - paid) * 100) / 100);
+    const sug = suggestionById.get(card.id);
+    const billingDay = clampDay(card.billingDay);
+    const dueDay =
+      clampDay(card.dueDay) ??
+      (billingDay ? suggestDueDayFromBilling(billingDay) : undefined);
+    const nextDue = dueDay ? getNextDueDate(dueDay, asOf) : null;
+    const lastDue = dueDay ? getMostRecentDueDate(dueDay, asOf) : null;
+
+    let status: CreditCardBillStatus["status"] = "clear";
+    if (remaining > 0) status = "due";
+    else if (charged > 0 || paid > 0) status = "paid";
+
+    return {
+      cardId: card.id,
+      label: formatCreditCardLabel(card),
+      amount:
+        remaining > 0 ? remaining : charged > 0 ? charged : sug?.amount || 0,
+      charged,
+      paid,
+      remaining,
+      status,
+      overdue:
+        remaining > 0 && !!lastDue && lastDue.getTime() < asOfDay.getTime(),
+      billingDay,
+      dueDay,
+      statementStart: sug?.statementStart,
+      statementEnd: sug?.statementEnd,
+      // Show next upcoming due when paid/clear; when overdue keep last due visible
+      dueDate: (() => {
+        if (remaining > 0 && lastDue && lastDue.getTime() < asOfDay.getTime()) {
+          return toIsoDate(lastDue);
+        }
+        return nextDue ? toIsoDate(nextDue) : sug?.dueDate;
+      })(),
+    };
+  });
+
+  // Orphan spend (no saved card id) still shown as due
+  for (const sug of suggestions) {
+    if (opts.cards.some((c) => c.id === sug.cardId)) continue;
+    statuses.push({
+      ...sug,
+      charged: sug.amount,
+      paid: 0,
+      remaining: sug.amount,
+      status: sug.amount > 0 ? "due" : "clear",
+      overdue: false,
+    });
+  }
+
+  return statuses.sort((a, b) => {
+    const rank = (s: CreditCardBillStatus) =>
+      s.status === "due" ? 0 : s.status === "paid" ? 1 : 2;
+    const d = rank(a) - rank(b);
+    if (d !== 0) return d;
+    return b.remaining - a.remaining || b.charged - a.charged;
+  });
 }
 
 function parseStoredCard(raw: unknown): SavedCreditCard | null {

@@ -28,8 +28,10 @@ vi.mock("@/lib/supabase", () => ({
 
 import {
   TRACKER_CONSENT_VERSION,
+  buildCreditCardBillStatuses,
   buildCreditCardPaySuggestions,
   countsTowardCashSpend,
+  creditCardBillPaymentDescription,
   creditCardObligationTitle,
   deleteSavedCreditCard,
   dismissCreditCardBillReminder,
@@ -37,9 +39,11 @@ import {
   encodeCreditCardPaymentMethod,
   formatCreditCardLabel,
   getLastStatementWindow,
+  getMostRecentDueDate,
   getNextDueDate,
   hasTrackerConsentLocal,
   isCreditCardBillDismissed,
+  isCreditCardBillPayment,
   isCreditCardCharge,
   isCreditCardPaymentMethod,
   loadSavedCreditCards,
@@ -442,6 +446,106 @@ describe("buildCreditCardPaySuggestions", () => {
     expect(lines[0].amount).toBe(400);
     expect(lines[0].dueDay).toBe(5);
     expect(lines[0].dueDate).toBe("2026-08-05");
+  });
+});
+
+describe("credit card bill payment + carry-forward status", () => {
+  it("detects bill payments and builds pay description with card id", () => {
+    expect(
+      isCreditCardBillPayment({
+        bucket: "loans",
+        subcategory: "credit_card",
+      }),
+    ).toBe(true);
+    expect(
+      isCreditCardBillPayment({
+        bucket: "wants",
+        subcategory: "credit_card",
+      }),
+    ).toBe(false);
+    expect(creditCardBillPaymentDescription("HDFC", "c1")).toBe(
+      "Pay bill · HDFC [#c1]",
+    );
+  });
+
+  it("marks paid when bill payment covers charges; else carries remaining", () => {
+    const card = {
+      id: "c1",
+      nickname: "HDFC",
+      billingDay: 15,
+      dueDay: 5,
+      createdAt: "x",
+    };
+
+    const due = buildCreditCardBillStatuses({
+      asOf: new Date(2026, 7, 10), // Aug 10 — past Aug 5 due
+      cards: [card],
+      transactions: [
+        {
+          amount: 1000,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-07-01",
+        },
+      ],
+    });
+    expect(due[0].status).toBe("due");
+    expect(due[0].remaining).toBe(1000);
+    expect(due[0].overdue).toBe(true);
+
+    const paid = buildCreditCardBillStatuses({
+      asOf: new Date(2026, 7, 10),
+      cards: [card],
+      transactions: [
+        {
+          amount: 1000,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-07-01",
+        },
+        {
+          amount: 1000,
+          bucket: "loans",
+          subcategory: "credit_card",
+          description: "Pay bill · HDFC [#c1]",
+          payment_method: "upi",
+          date: "2026-08-04",
+        },
+      ],
+    });
+    expect(paid[0].status).toBe("paid");
+    expect(paid[0].remaining).toBe(0);
+    expect(paid[0].paid).toBe(1000);
+
+    const partial = buildCreditCardBillStatuses({
+      asOf: new Date(2026, 7, 10),
+      cards: [card],
+      transactions: [
+        {
+          amount: 1000,
+          bucket: "wants",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-07-01",
+        },
+        {
+          amount: 400,
+          bucket: "loans",
+          subcategory: "credit_card",
+          description: "Pay bill · HDFC [#c1]",
+          payment_method: "upi",
+          date: "2026-08-04",
+        },
+      ],
+    });
+    expect(partial[0].status).toBe("due");
+    expect(partial[0].remaining).toBe(600);
+  });
+
+  it("getMostRecentDueDate is on/before asOf", () => {
+    const d = getMostRecentDueDate(5, new Date(2026, 7, 10));
+    expect(d?.getFullYear()).toBe(2026);
+    expect(d?.getMonth()).toBe(7);
+    expect(d?.getDate()).toBe(5);
   });
 });
 
