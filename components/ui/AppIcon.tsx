@@ -58,7 +58,10 @@ export type AppIconName =
   | "briefcase"
   | "beach"
   | "phone"
-  | "card";
+  | "card"
+  | "chevronDown"
+  | "chevronRight"
+  | "calendar";
 
 const paths: Record<AppIconName, ReactNode> = {
   user: (
@@ -313,6 +316,14 @@ const paths: Record<AppIconName, ReactNode> = {
     <>
       <rect x="3" y="6" width="18" height="12" rx="2" />
       <path d="M3 10h18M7 14h4" />
+    </>
+  ),
+  chevronDown: <path d="M6 9l6 6 6-6" />,
+  chevronRight: <path d="M9 6l6 6-6 6" />,
+  calendar: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 11h18" />
     </>
   ),
 };

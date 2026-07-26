@@ -32,7 +32,13 @@ test.describe("FK Split — Group detail scroll", () => {
 
   test("group page keeps document scroll unlocked", async ({ page }) => {
     await page.goto("/split/e4f46c93-2173-4f08-b19c-29f247712f55");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(2500);
+
+    // Next.js error overlay hides <body> and breaks scroll — fail clearly.
+    await expect(page.getByText(/Server Error|Cannot find module/i)).toHaveCount(
+      0,
+    );
 
     const scroll = await page.evaluate(() => {
       // Force tall content so scroll is measurable even on login shell.
@@ -59,8 +65,12 @@ test.describe("FK Split — Group detail scroll", () => {
 test.describe("FK Split — Add expense UI", () => {
   test("add-expense route does not crash without auth", async ({ page }) => {
     await page.goto("/split/00000000-0000-0000-0000-000000000000/add-expense");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(2000);
-    await expect(page.locator("body")).toBeVisible();
+    // Avoid body.toBeVisible() — Next error overlay sets body visibility:hidden.
+    await expect(page.getByText(/Server Error|Cannot find module/i)).toHaveCount(
+      0,
+    );
     expect(page.url()).toMatch(/\/(split|login)/);
   });
 

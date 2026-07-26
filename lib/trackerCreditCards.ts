@@ -173,9 +173,9 @@ export function isCreditCardCharge(txn: {
 }
 
 /**
- * Purple-card cash out: real money leaving the account this month.
- * Excludes CC purchase charges (debt, not cash yet). Includes CC bill payments
- * and loan prepayments.
+ * Purple-card cash out: day-to-day money leaving the account this month.
+ * Excludes CC purchase charges (debt, not cash yet) and CC bill payments
+ * (tracked in Credit card dues instead). Other loan/EMI cash still counts.
  */
 export function countsTowardCashSpend(txn: {
   bucket?: string | null;
@@ -185,6 +185,7 @@ export function countsTowardCashSpend(txn: {
 }): boolean {
   if (txn.bucket === "income") return false;
   if (isCreditCardCharge(txn)) return false;
+  if (isCreditCardBillPayment(txn)) return false;
   return true;
 }
 
@@ -483,13 +484,15 @@ export function billPaymentMatchesCard(
   card: { id: string; nickname: string; last4?: string },
 ): boolean {
   const desc = (txn.description || "").toLowerCase();
-  const idToken = `[#${card.id}]`.toLowerCase();
-  if (desc.includes(idToken)) return true;
+  const id = card.id.toLowerCase();
+  // Prefer explicit [#cardId] token from Pay prefills
+  const bracket = desc.match(/\[#([^\]]+)\]/);
+  if (bracket?.[1]?.toLowerCase() === id) return true;
+  if (id && desc.includes(id)) return true;
   const nick = card.nickname.trim().toLowerCase();
-  if (nick && desc.includes(nick)) return true;
+  if (nick.length >= 2 && desc.includes(nick)) return true;
   const label = formatCreditCardLabel(card).toLowerCase();
-  if (label && desc.includes(label)) return true;
-  // Legacy: payment method somehow encoded (rare for bill pays)
+  if (label && label !== "credit card" && desc.includes(label)) return true;
   const parsed = parseCreditCardPaymentMethod(txn.payment_method);
   if (parsed.cardId && parsed.cardId === card.id) return true;
   return false;

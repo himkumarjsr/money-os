@@ -3,6 +3,8 @@
 import AddObligationForm, {
   type ObligationFormPayload,
 } from "@/components/tracker/AddObligationForm";
+import CollapsiblePanel from "@/components/tracker/CollapsiblePanel";
+import { AppIcon } from "@/components/ui/AppIcon";
 import { useObligationStore } from "@/store/obligationStore";
 import { useEffect, useState } from "react";
 
@@ -42,17 +44,24 @@ type Learned = {
   amount: number;
 };
 
+type Editing = {
+  id: string;
+  payload: ObligationFormPayload;
+};
+
 export default function ObligationsChecklist({
   userId,
   learnedSuggestion,
   onDismissLearn,
   analyseCompleted = false,
+  defaultOpen = false,
 }: {
   userId: string;
   learnedSuggestion?: Learned | null;
   onDismissLearn?: () => void;
   /** True when health check already submitted — hide "set up calendar" empty CTA. */
   analyseCompleted?: boolean;
+  defaultOpen?: boolean;
 }) {
   const {
     checklist,
@@ -62,12 +71,19 @@ export default function ObligationsChecklist({
     totalPending,
     generateChecklist,
     markPaid,
+    markUnpaid,
     markSkipped,
     addObligation,
+    updateObligation,
+    deleteObligation,
+    resetAllObligations,
     loading,
   } = useObligationStore();
 
+  const [open, setOpen] = useState(defaultOpen);
   const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     void generateChecklist(userId);
@@ -83,14 +99,33 @@ export default function ObligationsChecklist({
     }
   };
 
+  const handleUpdate = async (data: ObligationFormPayload) => {
+    if (!editing) return;
+    await updateObligation(editing.id, {
+      title: data.title,
+      category: data.category,
+      amount: data.amount,
+      frequency: data.frequency,
+      due_day: data.due_day,
+      due_month: data.due_month,
+    });
+    await generateChecklist(userId);
+    await useObligationStore.getState().fetchObligations(userId);
+    setEditing(null);
+  };
+
   const hasObligationData = checklist.length > 0 || obligations.length > 0;
   const showSetupEmpty = !hasObligationData && !analyseCompleted;
+
+  const subtitle = hasObligationData
+    ? `₹${totalPending.toLocaleString("en-IN")} pending · ₹${totalPaid.toLocaleString("en-IN")} paid`
+    : "Add EMIs, SIPs, renewals";
 
   return (
     <>
       {learnedSuggestion ? (
-        <div className="my-2 flex items-start gap-2.5 rounded-xl bg-[#EEEDFE] p-3.5">
-          <div className="shrink-0 text-xl">💡</div>
+        <div className="mb-2 flex items-start gap-2.5 rounded-xl bg-[#EEEDFE] p-3.5">
+          <AppIcon name="bulb" size={20} color="#534AB7" />
           <div className="min-w-0 flex-1">
             <div className="mb-0.5 text-[13px] font-bold text-[#534AB7]">
               Add to your obligations?
@@ -138,187 +173,295 @@ export default function ObligationsChecklist({
         </div>
       ) : null}
 
-      {showSetupEmpty ? (
-        <div className="my-4 flex items-start gap-3 rounded-[14px] bg-[#EEEDFE] p-4">
-          <div className="shrink-0 text-2xl">💡</div>
-          <div>
-            <div className="mb-1 text-sm font-bold text-[#534AB7]">
-              Set up your financial calendar
-            </div>
-            <div className="mb-2.5 text-[13px] leading-relaxed text-[#534AB7]">
-              Add your EMI dates, insurance renewals and SIP dates. Finkoin will
-              remind you before each one.
-            </div>
+      <CollapsiblePanel
+        title="This month’s obligations"
+        subtitle={subtitle}
+        icon="calendar"
+        open={open}
+        onToggle={() => setOpen((v) => !v)}
+        defaultBorder={false}
+        headerRight={
+          hasObligationData ? (
             <button
               type="button"
-              onClick={() => setShowAdd(true)}
-              className="rounded-[10px] bg-[#534AB7] px-4 py-2 text-[13px] font-bold text-white"
+              aria-label="Reset all obligations"
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirmReset(true);
+              }}
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: 6,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+              }}
             >
-              Add first obligation
+              <AppIcon name="trash" size={16} color="#E24B4A" />
             </button>
-          </div>
-        </div>
-      ) : (
-        <div className="my-4 overflow-hidden rounded-2xl border border-[#E8E6F0] bg-white">
-          <div className="bg-[#534AB7] px-4 py-3.5">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <div className="mb-0.5 text-[15px] font-extrabold text-white">
-                  This Month&apos;s Obligations
-                </div>
-                <div className="text-xs text-white/70">
-                  Keep this amount aside
-                </div>
+          ) : null
+        }
+      >
+        {showSetupEmpty ? (
+          <div className="flex items-start gap-3 rounded-[14px] bg-[#EEEDFE] p-3">
+            <AppIcon name="bulb" size={22} color="#534AB7" />
+            <div>
+              <div className="mb-1 text-sm font-bold text-[#534AB7]">
+                Set up your financial calendar
               </div>
-              <div className="text-right">
-                <div className="mb-0.5 text-[11px] text-white/60">
-                  Total to set aside
-                </div>
-                <div className="text-[22px] font-extrabold text-white">
+              <div className="mb-2.5 text-[13px] leading-relaxed text-[#534AB7]">
+                Add EMI dates, insurance renewals and SIPs. Finkoin reminds you
+                before each one. Recurring expenses can also be added
+                automatically when we spot a monthly pattern.
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdd(true)}
+                className="rounded-[10px] bg-[#534AB7] px-4 py-2 text-[13px] font-bold text-white"
+              >
+                Add first obligation
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-[#E8E6F0]">
+            <div className="bg-[#534AB7] px-3.5 py-3">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div className="text-xs text-white/70">Keep this aside</div>
+                <div className="text-right text-[18px] font-extrabold text-white">
                   ₹{totalObligated.toLocaleString("en-IN")}
                 </div>
               </div>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
-              <div
-                className="h-full rounded-full bg-[#90EE90] transition-[width] duration-300"
-                style={{
-                  width:
-                    totalObligated > 0
-                      ? `${Math.min(100, (totalPaid / totalObligated) * 100)}%`
-                      : "0%",
-                }}
-              />
-            </div>
-            <div className="mt-1.5 flex justify-between text-[11px] text-white/70">
-              <span>✓ Paid: ₹{totalPaid.toLocaleString("en-IN")}</span>
-              <span>Pending: ₹{totalPending.toLocaleString("en-IN")}</span>
-            </div>
-          </div>
-
-          {checklist.length > 0 ? (
-            checklist.map((item, i) => {
-              const ob = item.obligation;
-              const isPaid =
-                item.status === "paid" || item.status === "auto_debit";
-              const isSkipped = item.status === "skipped";
-              return (
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
                 <div
-                  key={item.id}
-                  className={`flex items-center gap-3 px-4 py-[13px] ${
-                    i < checklist.length - 1 ? "border-b border-[#F7F7F4]" : ""
-                  } ${isPaid ? "bg-[#F7FDF9]" : isSkipped ? "bg-[#FAFAFA] opacity-60" : "bg-white"}`}
-                >
-                  <button
-                    type="button"
-                    aria-label={isPaid ? "Paid" : "Mark as paid"}
-                    disabled={isPaid || isSkipped}
-                    onClick={() => {
-                      if (!isPaid && !isSkipped) {
-                        void markPaid(item.id, item.expected_amount);
-                      }
-                    }}
-                    className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg border-2 transition ${
-                      isPaid
-                        ? "border-[#1D9E75] bg-[#1D9E75]"
-                        : isSkipped
-                          ? "border-[#E8E6F0] bg-white"
-                          : "border-[#534AB7] bg-white"
-                    }`}
+                  className="h-full rounded-full bg-[#90EE90] transition-[width] duration-300"
+                  style={{
+                    width:
+                      totalObligated > 0
+                        ? `${Math.min(100, (totalPaid / totalObligated) * 100)}%`
+                        : "0%",
+                  }}
+                />
+              </div>
+              <div className="mt-1.5 flex justify-between text-[11px] text-white/70">
+                <span>✓ Paid: ₹{totalPaid.toLocaleString("en-IN")}</span>
+                <span>Pending: ₹{totalPending.toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+
+            {checklist.length > 0 ? (
+              checklist.map((item, i) => {
+                const ob = item.obligation;
+                const isPaid =
+                  item.status === "paid" || item.status === "auto_debit";
+                const isSkipped = item.status === "skipped";
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-2.5 px-3.5 py-3 ${
+                      i < checklist.length - 1
+                        ? "border-b border-[#F7F7F4]"
+                        : ""
+                    } ${isPaid ? "bg-[#F7FDF9]" : isSkipped ? "bg-[#FAFAFA] opacity-60" : "bg-white"}`}
                   >
-                    {isPaid ? (
-                      <span className="text-sm font-bold leading-none text-white">
-                        ✓
-                      </span>
-                    ) : null}
-                  </button>
-                  <div className="shrink-0 text-xl">
-                    {CATEGORY_ICON[ob?.category || "other"] || "📌"}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className={`mb-0.5 text-sm font-semibold ${
-                        isPaid ? "text-[#1D5C3A]" : "text-[#111110]"
-                      } ${isSkipped ? "line-through" : ""}`}
-                    >
-                      {ob?.title || "Obligation"}
-                    </div>
-                    <div className="text-[11px] text-[#9B9A94]">
-                      {ob?.frequency === "monthly"
-                        ? `Due on ${ob.due_day ?? "—"}th`
-                        : ob?.frequency === "yearly"
-                          ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
-                          : ob?.frequency}
-                      {isPaid && item.paid_at
-                        ? ` · Paid ${new Date(item.paid_at).toLocaleDateString(
-                            "en-IN",
-                            { day: "numeric", month: "short" },
-                          )}`
-                        : null}
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div
-                      className={`mb-1 text-[15px] font-bold ${
-                        isPaid ? "text-[#1D9E75]" : "text-[#111110]"
+                    <button
+                      type="button"
+                      aria-label={isPaid ? "Mark as unpaid" : "Mark as paid"}
+                      disabled={isSkipped}
+                      onClick={() => {
+                        if (isSkipped) return;
+                        if (isPaid) void markUnpaid(item.id);
+                        else void markPaid(item.id, item.expected_amount);
+                      }}
+                      className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg border-2 transition ${
+                        isPaid
+                          ? "border-[#1D9E75] bg-[#1D9E75]"
+                          : isSkipped
+                            ? "border-[#E8E6F0] bg-white"
+                            : "border-[#534AB7] bg-white"
                       }`}
                     >
-                      ₹{(item.expected_amount || 0).toLocaleString("en-IN")}
+                      {isPaid ? (
+                        <AppIcon name="check" size={14} color="#FFFFFF" />
+                      ) : null}
+                    </button>
+                    <div className="shrink-0 text-lg">
+                      {CATEGORY_ICON[ob?.category || "other"] || "📌"}
                     </div>
-                    {!isPaid && !isSkipped ? (
-                      <button
-                        type="button"
-                        onClick={() => void markSkipped(item.id)}
-                        className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`mb-0.5 text-sm font-semibold ${
+                          isPaid ? "text-[#1D5C3A]" : "text-[#111110]"
+                        } ${isSkipped ? "line-through" : ""}`}
                       >
-                        Skip
-                      </button>
-                    ) : null}
+                        {ob?.title || "Obligation"}
+                      </div>
+                      <div className="text-[11px] text-[#9B9A94]">
+                        {ob?.frequency === "monthly"
+                          ? `Due on ${ob.due_day ?? "—"}th`
+                          : ob?.frequency === "yearly"
+                            ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
+                            : ob?.frequency}
+                        {isPaid && item.paid_at
+                          ? ` · Paid ${new Date(
+                              item.paid_at,
+                            ).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                            })}`
+                          : null}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div
+                        className={`mb-1 text-[15px] font-bold ${
+                          isPaid ? "text-[#1D9E75]" : "text-[#111110]"
+                        }`}
+                      >
+                        ₹{(item.expected_amount || 0).toLocaleString("en-IN")}
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        {ob ? (
+                          <button
+                            type="button"
+                            aria-label={`Edit ${ob.title}`}
+                            onClick={() =>
+                              setEditing({
+                                id: ob.id,
+                                payload: {
+                                  title: ob.title,
+                                  category: ob.category,
+                                  amount: ob.amount,
+                                  frequency: ob.frequency,
+                                  due_day: ob.due_day ?? null,
+                                  due_month: ob.due_month ?? null,
+                                  source: ob.source,
+                                  is_active: true,
+                                  remind_days_before: ob.remind_days_before,
+                                },
+                              })
+                            }
+                            className="bg-transparent p-0"
+                          >
+                            <AppIcon name="pencil" size={14} color="#534AB7" />
+                          </button>
+                        ) : null}
+                        {!isPaid && !isSkipped ? (
+                          <button
+                            type="button"
+                            onClick={() => void markSkipped(item.id)}
+                            className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
+                          >
+                            Skip
+                          </button>
+                        ) : null}
+                        {ob ? (
+                          <button
+                            type="button"
+                            aria-label={`Remove ${ob.title}`}
+                            onClick={() => {
+                              void (async () => {
+                                await deleteObligation(ob.id);
+                                await generateChecklist(userId);
+                              })();
+                            }}
+                            className="bg-transparent p-0"
+                          >
+                            <AppIcon name="trash" size={14} color="#E24B4A" />
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="px-4 py-4 text-[13px] leading-relaxed text-[#5F5E5A]">
-              {obligations.length > 0
-                ? `${obligations.length} obligation${obligations.length === 1 ? "" : "s"} saved — none due on this month’s checklist yet. Add another or check due dates.`
-                : "No obligations due this month yet. Add EMIs, SIPs, or renewals to track them here."}
-            </div>
-          )}
+                );
+              })
+            ) : (
+              <div className="px-3.5 py-3 text-[13px] leading-relaxed text-[#5F5E5A]">
+                {obligations.length > 0
+                  ? `${obligations.length} obligation${obligations.length === 1 ? "" : "s"} saved — none due on this month’s checklist yet.`
+                  : "No obligations due this month yet."}
+              </div>
+            )}
 
-          <div className="flex items-center justify-between border-t border-[#F7F7F4] px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setShowAdd(true)}
-              className="flex items-center gap-1 bg-transparent text-[13px] font-semibold text-[#534AB7]"
-            >
-              <span className="text-base">+</span>
-              Add obligation
-            </button>
-            <div className="text-[11px] text-[#9B9A94]">
-              {loading
-                ? "Updating…"
-                : checklist.length > 0
-                  ? "Tap ☐ to mark as paid"
-                  : "Reminders use due day"}
+            <div className="flex items-center justify-between border-t border-[#F7F7F4] px-3.5 py-2.5">
+              <button
+                type="button"
+                onClick={() => setShowAdd(true)}
+                className="flex items-center gap-1 bg-transparent text-[13px] font-semibold text-[#534AB7]"
+              >
+                <span className="text-base">+</span>
+                Add obligation
+              </button>
+              <div className="text-[11px] text-[#9B9A94]">
+                {loading ? "Updating…" : "Tap ✓ to undo · pencil to edit"}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </CollapsiblePanel>
 
-      {showAdd ? (
+      {confirmReset ? (
+        <>
+          <button
+            type="button"
+            aria-label="Cancel reset"
+            className="fixed inset-0 z-[990] bg-black/40"
+            onClick={() => setConfirmReset(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto max-w-[480px] rounded-t-[20px] bg-white px-5 pb-10 pt-6">
+            <div className="mb-2 text-[16px] font-extrabold text-[#111110]">
+              Reset all obligations?
+            </div>
+            <p className="mb-5 text-[13px] leading-relaxed text-[#5F5E5A]">
+              This permanently deletes every obligation and this month’s
+              checklist from the database. You can add them again later.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmReset(false)}
+                className="h-12 flex-1 rounded-[12px] border border-[#E8E6F0] bg-white text-[14px] font-bold text-[#5F5E5A]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void (async () => {
+                    await resetAllObligations(userId);
+                    setConfirmReset(false);
+                  })();
+                }}
+                className="h-12 flex-1 rounded-[12px] bg-[#E24B4A] text-[14px] font-bold text-white"
+              >
+                Delete all
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {showAdd || editing ? (
         <>
           <button
             type="button"
             aria-label="Close"
             className="fixed inset-0 z-[990] bg-black/40"
-            onClick={() => setShowAdd(false)}
+            onClick={() => {
+              setShowAdd(false);
+              setEditing(null);
+            }}
           />
           <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-[20px] bg-white px-5 pb-10 pt-6">
             <div className="mx-auto mb-5 h-1 w-10 rounded bg-[#E8E6F0]" />
             <AddObligationForm
-              onSave={handleSave}
-              onClose={() => setShowAdd(false)}
+              initial={editing?.payload}
+              onSave={editing ? handleUpdate : handleSave}
+              onClose={() => {
+                setShowAdd(false);
+                setEditing(null);
+              }}
             />
           </div>
         </>
