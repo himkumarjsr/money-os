@@ -10,6 +10,13 @@ vi.mock("@/lib/supabase", () => ({
         }),
       }),
       upsert: () => Promise.resolve({ error: null }),
+      update: () => ({
+        eq: () => ({
+          eq: () => ({
+            eq: () => Promise.resolve({ error: null }),
+          }),
+        }),
+      }),
       delete: () => ({
         eq: () => ({
           eq: () => Promise.resolve({ error: null }),
@@ -20,8 +27,10 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 import {
+  TRACKER_CONSENT_VERSION,
   buildCreditCardPaySuggestions,
   countsTowardCashSpend,
+  creditCardObligationTitle,
   deleteSavedCreditCard,
   dismissCreditCardBillReminder,
   displayPaymentMethod,
@@ -29,12 +38,14 @@ import {
   formatCreditCardLabel,
   getLastStatementWindow,
   getNextDueDate,
+  hasTrackerConsentLocal,
   isCreditCardBillDismissed,
   isCreditCardCharge,
   isCreditCardPaymentMethod,
   loadSavedCreditCards,
   parseCreditCardPaymentMethod,
   saveCreditCards,
+  setTrackerConsentLocal,
   suggestDueDayFromBilling,
   sumCashSpend,
   sumOnCardsSpend,
@@ -454,5 +465,51 @@ describe("credit card bill dismiss", () => {
       });
     expect(isCreditCardBillDismissed(2026, "July")).toBe(false);
     spy.mockRestore();
+  });
+});
+
+describe("tracker consent local helper", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("only accepts current consent version", () => {
+    expect(hasTrackerConsentLocal()).toBe(false);
+    localStorage.setItem("finkoin_tracker_consent", "v1");
+    expect(hasTrackerConsentLocal()).toBe(false);
+    setTrackerConsentLocal();
+    expect(hasTrackerConsentLocal()).toBe(true);
+    expect(localStorage.getItem("finkoin_tracker_consent")).toBe(
+      TRACKER_CONSENT_VERSION,
+    );
+  });
+});
+
+describe("creditCardObligationTitle", () => {
+  it("prefixes nickname for obligation sync / cron reminders", () => {
+    expect(creditCardObligationTitle("HDFC Millennia")).toBe(
+      "CC · HDFC Millennia",
+    );
+    expect(creditCardObligationTitle("  ")).toBe("CC · Credit card");
+  });
+});
+
+describe("buildCreditCardPaySuggestions orphans", () => {
+  it("includes previous-month spend for unknown cards", () => {
+    const lines = buildCreditCardPaySuggestions({
+      asOf: new Date(2026, 6, 10), // July
+      cards: [],
+      transactions: [
+        {
+          amount: 250,
+          bucket: "wants",
+          payment_method: "credit_card::orphan::Mystery",
+          date: "2026-06-12",
+        },
+      ],
+    });
+    expect(lines.some((l) => l.cardId === "orphan" && l.amount === 250)).toBe(
+      true,
+    );
   });
 });

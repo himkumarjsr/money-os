@@ -551,10 +551,12 @@ export function upsertSavedCreditCard(
 
 export function deleteSavedCreditCard(userId: string, cardId: string): boolean {
   const existing = loadSavedCreditCards(userId);
+  const removed = existing.find((c) => c.id === cardId);
   const next = existing.filter((c) => c.id !== cardId);
   if (next.length === existing.length) return false;
   saveCreditCards(userId, next);
   void deleteCreditCardFromDb(userId, cardId);
+  if (removed) void deactivateCreditCardObligation(userId, removed.nickname);
   return true;
 }
 
@@ -651,6 +653,62 @@ export async function deleteCreditCardFromDb(
       .delete()
       .eq("user_id", userId)
       .eq("id", cardId);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Title used for financial_obligations rows synced from tracker cards. */
+export function creditCardObligationTitle(nickname: string): string {
+  return `CC · ${nickname.trim() || "Credit card"}`;
+}
+
+/**
+ * Upsert a monthly credit-card bill obligation so the daily cron
+ * (`/api/obligations/reminders`) can insert an inbox notification
+ * `remind_days_before` days before `dueDay`.
+ */
+export async function syncCreditCardBillObligation(
+  userId: string,
+  card: { nickname: string; dueDay?: number | null },
+  amount = 0,
+): Promise<void> {
+  if (!userId || !card.dueDay) return;
+  try {
+    const supabase = getSupabase();
+    await supabase.from("financial_obligations").upsert(
+      {
+        user_id: userId,
+        title: creditCardObligationTitle(card.nickname),
+        category: "credit_card",
+        amount: Math.max(0, Math.round(Number(amount) || 0)),
+        frequency: "monthly",
+        due_day: card.dueDay,
+        source: "tracker",
+        remind_days_before: 3,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,title,category" },
+    );
+  } catch {
+    /* optional — table / network */
+  }
+}
+
+export async function deactivateCreditCardObligation(
+  userId: string,
+  nickname: string,
+): Promise<void> {
+  if (!userId || !nickname.trim()) return;
+  try {
+    const supabase = getSupabase();
+    await supabase
+      .from("financial_obligations")
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("title", creditCardObligationTitle(nickname))
+      .eq("category", "credit_card");
   } catch {
     /* ignore */
   }

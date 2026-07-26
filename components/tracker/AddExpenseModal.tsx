@@ -18,6 +18,7 @@ import {
   loadSavedCreditCards,
   parseCreditCardPaymentMethod,
   suggestDueDayFromBilling,
+  syncCreditCardBillObligation,
   upsertSavedCreditCard,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
@@ -269,30 +270,9 @@ export default function AddExpenseModal({
     setNewCardDueDay("");
     setError("");
 
-    // Soft-sync calendar obligation when due day is known
+    // Sync calendar obligation → daily cron inserts inbox notification 3 days before due
     if (card.dueDay) {
-      void (async () => {
-        try {
-          const supabase = getSupabase();
-          await supabase.from("financial_obligations").upsert(
-            {
-              user_id: user.id,
-              title: `CC · ${card.nickname}`,
-              category: "credit_card",
-              amount: 0,
-              frequency: "monthly",
-              due_day: card.dueDay,
-              source: "tracker",
-              remind_days_before: 3,
-              is_active: true,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id,title,category" },
-          );
-        } catch {
-          /* optional */
-        }
-      })();
+      void syncCreditCardBillObligation(user.id, card, 0);
     }
   };
 

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  buildObligationReminderCopy,
+  obligationReminderEmoji,
+  shouldSendObligationReminder,
+} from "@/lib/obligationReminders";
 
 function authorizeRequest(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
@@ -29,8 +34,6 @@ async function handleReminders(req: NextRequest) {
 
   try {
     const today = new Date();
-    const todayDay = today.getDate();
-    const todayMonth = today.getMonth() + 1;
 
     const { data: obligations, error } = await supabaseAdmin
       .from("financial_obligations")
@@ -57,37 +60,18 @@ async function handleReminders(req: NextRequest) {
       remind_days_before?: number | null;
       category?: string | null;
     }>) {
+      if (!shouldSendObligationReminder(ob, today)) continue;
+
       const remindBefore = ob.remind_days_before ?? 7;
-      let shouldRemind = false;
-
-      if (ob.frequency === "monthly") {
-        const daysUntilDue = (ob.due_day || 1) - todayDay;
-        shouldRemind = daysUntilDue === remindBefore;
-      } else if (
-        ob.frequency === "yearly" &&
-        (ob.due_month == null || ob.due_month === todayMonth)
-      ) {
-        const daysUntilDue = (ob.due_day || 1) - todayDay;
-        shouldRemind = daysUntilDue === remindBefore;
-      }
-
-      if (!shouldRemind) continue;
-
-      const emoji = (ob.category || "").startsWith("insurance")
-        ? "🛡️"
-        : (ob.category || "").startsWith("loan")
-          ? "🏦"
-          : (ob.category || "").startsWith("investment")
-            ? "📈"
-            : "📌";
+      const { title, content } = buildObligationReminderCopy(ob, remindBefore);
 
       const { error: insertErr } = await supabaseAdmin
         .from("user_notifications")
         .insert({
           user_id: ob.user_id,
-          title: `${ob.title} due in ${remindBefore} days`,
-          content: `Keep ₹${Number(ob.amount || 0).toLocaleString("en-IN")} ready for your ${ob.title}. Due on day ${ob.due_day || ob.due_month || "—"}.`,
-          emoji,
+          title,
+          content,
+          emoji: obligationReminderEmoji(ob.category),
           category: "obligation_reminder",
           is_read: false,
           shown_as_popup: false,

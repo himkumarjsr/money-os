@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
   buildCreditCardPaySuggestions,
   dismissCreditCardBillReminder,
   isCreditCardBillDismissed,
   summarizeCreditCardBills,
+  syncCreditCardBillObligation,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
+import { useAuthStore } from "@/store/authStore";
 
 type Txn = {
   amount: number;
@@ -52,6 +54,7 @@ export default function CreditCardBillReminder({
   /** Opens add-expense prefilled for paying the bill (loans / credit card). */
   onPayBill?: (amount: number, label: string) => void;
 }) {
+  const userId = useAuthStore((s) => s.user?.id);
   const [dismissed, setDismissed] = useState(() =>
     isCreditCardBillDismissed(year, monthName),
   );
@@ -67,6 +70,17 @@ export default function CreditCardBillReminder({
     // Legacy: no saved cards with dates — previous calendar month totals
     return summarizeCreditCardBills(previousTransactions);
   }, [previousTransactions, currentTransactions, cards]);
+
+  // Keep obligation amounts fresh so cron notifications show ~₹ suggested pay
+  useEffect(() => {
+    if (!userId || cards.length === 0 || bills.length === 0) return;
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    for (const bill of bills) {
+      const card = byId.get(bill.cardId);
+      if (!card?.dueDay || bill.amount <= 0) continue;
+      void syncCreditCardBillObligation(userId, card, bill.amount);
+    }
+  }, [userId, cards, bills]);
 
   const total = bills.reduce((s, b) => s + b.amount, 0);
 
