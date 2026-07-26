@@ -27,7 +27,9 @@ import {
   previousCalendarMonth,
 } from "@/lib/trackerSafetyPulse";
 import {
+  creditCardBillPaymentDescription,
   hasTrackerConsentLocal,
+  isCreditCardPaymentMethod,
   loadCreditCardsMerged,
   setTrackerConsentLocal,
   sumCashSpend,
@@ -156,6 +158,8 @@ function TrackerContent() {
   const [previousTransactions, setPreviousTransactions] = useState<
     TrackerTransaction[]
   >([]);
+  /** Extra prior months for CC unpaid carry-forward (not used by Safety Pulse). */
+  const [ccBillHistory, setCcBillHistory] = useState<TrackerTransaction[]>([]);
   const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
   /** Prefer showing the UI shell immediately; soft fetches never blank it. */
   const [loading, setLoading] = useState(false);
@@ -345,8 +349,9 @@ function TrackerContent() {
       try {
         const supabase = getSupabase();
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
+        const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
 
-        const [currentRes, prevRes] = await Promise.all([
+        const [currentRes, prevRes, prev2Res] = await Promise.all([
           supabase
             .from("expense_transactions")
             .select("*")
@@ -361,6 +366,13 @@ function TrackerContent() {
             .eq("month", prev.monthName)
             .eq("year", prev.year)
             .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", prev2.monthName)
+            .eq("year", prev2.year)
+            .order("date", { ascending: false }),
         ]);
 
         if (fetchReqId.current !== myId) return;
@@ -368,13 +380,17 @@ function TrackerContent() {
           console.warn("tracker fetch:", currentRes.error.message);
         if (prevRes.error)
           console.warn("tracker prev fetch:", prevRes.error.message);
+        const prevRows = (prevRes.data as TrackerTransaction[]) || [];
+        const prev2Rows = (prev2Res.data as TrackerTransaction[]) || [];
         setTransactions((currentRes.data as TrackerTransaction[]) || []);
-        setPreviousTransactions((prevRes.data as TrackerTransaction[]) || []);
+        setPreviousTransactions(prevRows);
+        setCcBillHistory([...prev2Rows, ...prevRows]);
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker fetch failed", e);
         setTransactions([]);
         setPreviousTransactions([]);
+        setCcBillHistory([]);
       } finally {
         if (!soft) {
           hardInFlight.current = Math.max(0, hardInFlight.current - 1);
@@ -925,21 +941,30 @@ function TrackerContent() {
         </button>
       </div>
 
-      {viewingCurrentMonth ? (
+      {viewingCurrentMonth &&
+      (savedCards.length > 0 ||
+        ccBillHistory.some((t) =>
+          isCreditCardPaymentMethod(t.payment_method),
+        ) ||
+        transactions.some(
+          (t) =>
+            (t.bucket === "loans" && t.subcategory === "credit_card") ||
+            isCreditCardPaymentMethod(t.payment_method),
+        )) ? (
         <CreditCardBillReminder
-          previousTransactions={previousTransactions}
+          previousTransactions={ccBillHistory}
           currentTransactions={transactions}
           cards={savedCards}
           monthName={currentMonth}
           year={currentYear}
           monthlySalary={profileMonthlyFromDb}
-          onPayBill={(amount, label) => {
+          onPayBill={(amount, label, cardId) => {
             setEditingExpense(null);
             setDefaultBucket("loans");
             setModalDefaults({
               subcategory: "credit_card",
               amount,
-              description: `Pay bill · ${label}`,
+              description: creditCardBillPaymentDescription(label, cardId),
               paymentMethod: "upi",
             });
             setShowAddModal(true);

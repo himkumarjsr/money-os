@@ -106,10 +106,11 @@ interface ObligationState {
   ) => Promise<void>;
 }
 
-function monthStartIso(month: Date): string {
-  return new Date(month.getFullYear(), month.getMonth(), 1)
-    .toISOString()
-    .split("T")[0]!;
+/** First day of month as local YYYY-MM-01 (avoid UTC shift from toISOString). */
+export function monthStartIso(month: Date): string {
+  const y = month.getFullYear();
+  const m = String(month.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}-01`;
 }
 
 function mapObligation(row: Record<string, unknown>): FinancialObligation {
