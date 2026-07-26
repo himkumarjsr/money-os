@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import CollapsiblePanel from "@/components/tracker/CollapsiblePanel";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
   buildCreditCardBillStatuses,
@@ -8,6 +8,7 @@ import {
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
+import { useEffect, useMemo, useState } from "react";
 
 type Txn = {
   amount: number;
@@ -56,6 +57,7 @@ export default function CreditCardBillReminder({
   cards = [],
   monthlySalary,
   onPayBill,
+  defaultOpen = false,
 }: {
   previousTransactions: Txn[];
   currentTransactions?: Txn[];
@@ -65,8 +67,10 @@ export default function CreditCardBillReminder({
   monthlySalary?: number;
   /** Opens add-expense prefilled for paying the bill (cash out → loans / credit card). */
   onPayBill?: (amount: number, label: string, cardId: string) => void;
+  defaultOpen?: boolean;
 }) {
   const userId = useAuthStore((s) => s.user?.id);
+  const [open, setOpen] = useState(defaultOpen);
 
   const statuses = useMemo(() => {
     const pool = [...previousTransactions, ...currentTransactions];
@@ -76,7 +80,6 @@ export default function CreditCardBillReminder({
     });
   }, [previousTransactions, currentTransactions, cards]);
 
-  // Keep obligation amounts fresh so cron notifications show ~₹ remaining
   useEffect(() => {
     if (!userId || cards.length === 0) return;
     const byId = new Map(cards.map((c) => [c.id, c]));
@@ -91,7 +94,6 @@ export default function CreditCardBillReminder({
     }
   }, [userId, cards, statuses]);
 
-  // Always show when user has saved cards; otherwise only if there is bill activity
   if (cards.length === 0 && statuses.length === 0) return null;
 
   const dueTotal = statuses
@@ -106,75 +108,43 @@ export default function CreditCardBillReminder({
         ? " Pay from your account (UPI / net banking) so interest doesn’t pile up."
         : "";
 
-  return (
-    <section
-      aria-labelledby="cc-bill-reminder-title"
-      style={{
-        marginBottom: 16,
-        borderRadius: 16,
-        border: "1px solid #E8E6F0",
-        background: "linear-gradient(135deg, #EEEDFE 0%, #FFFFFF 70%)",
-        padding: "14px 16px",
-      }}
-    >
-      <div style={{ display: "flex", gap: 10, minWidth: 0 }}>
-        <div
-          aria-hidden
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: "#534AB7",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <AppIcon name="card" size={18} color="#FFFFFF" />
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <h2
-            id="cc-bill-reminder-title"
-            style={{
-              fontSize: 14,
-              fontWeight: 800,
-              color: "#111110",
-              margin: 0,
-            }}
-          >
-            Credit card dues
-          </h2>
-          <p
-            style={{
-              margin: "4px 0 0",
-              fontSize: 13,
-              lineHeight: 1.5,
-              color: "#5F5E5A",
-            }}
-          >
-            {dueTotal > 0 ? (
-              <>
-                Still to pay ~₹
-                <strong style={{ color: "#111110" }}>
-                  {Math.round(dueTotal).toLocaleString("en-IN")}
-                </strong>
-                . Unpaid balances stay here until you mark them paid.
-                {salaryHint}
-              </>
-            ) : paidCount > 0 ? (
-              <>All tracked card bills are paid for now. Nice work.</>
-            ) : (
-              <>
-                No balance due yet. Card spends show up here; paying adds a cash
-                expense (real money out).
-              </>
-            )}
-          </p>
-        </div>
-      </div>
+  const subtitle =
+    dueTotal > 0
+      ? `₹${Math.round(dueTotal).toLocaleString("en-IN")} still to pay`
+      : paidCount > 0
+        ? "All tracked bills paid"
+        : "No balance due yet";
 
-      <ul style={{ listStyle: "none", margin: "12px 0 0", padding: 0 }}>
+  return (
+    <CollapsiblePanel
+      title="Credit card dues"
+      subtitle={subtitle}
+      icon="card"
+      open={open}
+      onToggle={() => setOpen((v) => !v)}
+      defaultBorder={false}
+    >
+      <p
+        style={{
+          margin: "0 0 10px",
+          fontSize: 12,
+          lineHeight: 1.5,
+          color: "#5F5E5A",
+        }}
+      >
+        {dueTotal > 0 ? (
+          <>
+            Unpaid balances stay here until you mark them paid.
+            {salaryHint} Bill payments do not change the purple cash card.
+          </>
+        ) : paidCount > 0 ? (
+          <>All tracked card bills are paid for now. Nice work.</>
+        ) : (
+          <>Card spends show up here; paying logs a cash expense under Loans.</>
+        )}
+      </p>
+
+      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {statuses.map((b) => {
           const isPaid = b.status === "paid";
           const isDue = b.status === "due";
@@ -216,12 +186,12 @@ export default function CreditCardBillReminder({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 14,
-                    fontWeight: 800,
                     flexShrink: 0,
                   }}
                 >
-                  {isPaid ? "✓" : null}
+                  {isPaid ? (
+                    <AppIcon name="check" size={14} color="#FFFFFF" />
+                  ) : null}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div
@@ -244,7 +214,7 @@ export default function CreditCardBillReminder({
                     }}
                   >
                     {isPaid
-                      ? `Paid ₹${Math.round(b.paid).toLocaleString("en-IN")} · logged as cash expense`
+                      ? `Paid ₹${Math.round(b.paid).toLocaleString("en-IN")}`
                       : formatDueLabel(b.dueDate, b.dueDay, b.overdue)}
                     {isDue && b.charged > 0
                       ? ` · Charged ₹${Math.round(b.charged).toLocaleString("en-IN")}${
@@ -257,31 +227,34 @@ export default function CreditCardBillReminder({
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: isPaid
-                      ? "#1D9E75"
-                      : b.overdue
-                        ? "#E24B4A"
-                        : "#111110",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {isPaid
-                    ? "Paid"
-                    : isDue
-                      ? `₹${Math.round(b.remaining).toLocaleString("en-IN")}`
-                      : "—"}
-                </span>
-                {isDue && onPayBill ? (
+                {isPaid ? (
+                  <span
+                    style={{
+                      minHeight: 36,
+                      padding: "0 12px",
+                      borderRadius: 10,
+                      background: "#E1F5EE",
+                      color: "#1D9E75",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <AppIcon name="check" size={14} color="#1D9E75" />
+                    Paid
+                  </span>
+                ) : isDue && onPayBill ? (
                   <button
                     type="button"
                     aria-label={`Pay ₹${Math.round(b.remaining).toLocaleString("en-IN")} for ${b.label}`}
-                    onClick={() => onPayBill(b.remaining, b.label, b.cardId)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPayBill(b.remaining, b.label, b.cardId);
+                    }}
                     style={{
-                      minHeight: 44,
+                      minHeight: 36,
                       padding: "0 14px",
                       borderRadius: 10,
                       border: "none",
@@ -293,14 +266,20 @@ export default function CreditCardBillReminder({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    Pay
+                    Pay ₹{Math.round(b.remaining).toLocaleString("en-IN")}
                   </button>
-                ) : null}
+                ) : (
+                  <span
+                    style={{ fontSize: 13, fontWeight: 700, color: "#9B9A94" }}
+                  >
+                    —
+                  </span>
+                )}
               </div>
             </li>
           );
         })}
       </ul>
-    </section>
+    </CollapsiblePanel>
   );
 }

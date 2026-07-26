@@ -1,6 +1,7 @@
 "use client";
 
 import type { SafetyPulseResult, SafetyStatus } from "@/lib/trackerSafetyPulse";
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 const STATUS_STYLE: Record<
@@ -79,11 +80,14 @@ export default function MonthSafetyPulse({
   pulse,
   previousMonthLabel,
   forceVisible = false,
+  children,
 }: {
   pulse: SafetyPulseResult;
   previousMonthLabel?: string | null;
   /** When true (master "Show all"), amounts are revealed regardless of local eye. */
   forceVisible?: boolean;
+  /** Nested panels (CC dues, obligations) — keep collapsed by default upstream. */
+  children?: ReactNode;
 }) {
   /** Independent of tracker summary eye — hidden by default. */
   const [localVisible, setLocalVisible] = useState(false);
@@ -371,6 +375,30 @@ export default function MonthSafetyPulse({
           <strong style={{ color: "#111110" }}>
             {maskOrShow(pulse.dailySafeSpend, amountsVisible)}
           </strong>
+        </div>
+      ) : null}
+
+      {children ? (
+        <div
+          style={{
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: "1px solid rgba(83,74,183,0.15)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: "#534AB7",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              marginBottom: 8,
+            }}
+          >
+            Bills & calendar
+          </div>
+          {children}
         </div>
       ) : null}
     </section>

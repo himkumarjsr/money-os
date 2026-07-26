@@ -38,16 +38,31 @@ export type ObligationFormPayload = {
 type Props = {
   onSave: (data: ObligationFormPayload) => Promise<void>;
   onClose: () => void;
+  /** When set, form opens in edit mode with these values. */
+  initial?: Partial<ObligationFormPayload> | null;
+  submitLabel?: string;
 };
 
-export default function AddObligationForm({ onSave, onClose }: Props) {
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("loan_emi");
-  const [amount, setAmount] = useState("");
-  const [frequency, setFrequency] = useState("monthly");
-  const [dueDay, setDueDay] = useState("");
-  const [dueMonth, setDueMonth] = useState("");
+export default function AddObligationForm({
+  onSave,
+  onClose,
+  initial,
+  submitLabel,
+}: Props) {
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "loan_emi");
+  const [amount, setAmount] = useState(
+    initial?.amount != null ? String(initial.amount) : "",
+  );
+  const [frequency, setFrequency] = useState(initial?.frequency ?? "monthly");
+  const [dueDay, setDueDay] = useState(
+    initial?.due_day != null ? String(initial.due_day) : "",
+  );
+  const [dueMonth, setDueMonth] = useState(
+    initial?.due_month != null ? String(initial.due_month) : "",
+  );
   const [saving, setSaving] = useState(false);
+  const isEdit = Boolean(initial?.title);
 
   const canSave = Boolean(title.trim() && amount);
 
@@ -75,7 +90,7 @@ export default function AddObligationForm({ onSave, onClose }: Props) {
     <div>
       <div className="mb-5 flex items-start justify-between gap-3">
         <h2 className="text-[17px] font-extrabold text-[#111110]">
-          Add obligation
+          {isEdit ? "Edit obligation" : "Add obligation"}
         </h2>
         <button
           type="button"
@@ -236,7 +251,9 @@ export default function AddObligationForm({ onSave, onClose }: Props) {
             : "bg-[#534AB7] text-white"
         }`}
       >
-        {saving ? "Saving…" : "Save obligation"}
+        {saving
+          ? "Saving…"
+          : submitLabel || (isEdit ? "Update obligation" : "Save obligation")}
       </button>
     </div>
   );

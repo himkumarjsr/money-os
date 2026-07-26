@@ -98,7 +98,10 @@ interface ObligationState {
   ) => Promise<void>;
   deleteObligation: (id: string) => Promise<void>;
   markPaid: (checklistId: string, amount: number) => Promise<void>;
+  markUnpaid: (checklistId: string) => Promise<void>;
   markSkipped: (checklistId: string) => Promise<void>;
+  /** Hard-delete all obligations + checklist rows for the user. */
+  resetAllObligations: (userId: string) => Promise<void>;
   generateChecklist: (userId: string, month?: Date) => Promise<void>;
   syncFromHealthCheck: (
     userId: string,
@@ -354,6 +357,65 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
           : c,
       );
       return { checklist: updated, ...totals(updated) };
+    });
+  },
+
+  markUnpaid: async (checklistId) => {
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from("obligation_checklist")
+      .update({
+        status: "pending",
+        paid_at: null,
+        paid_amount: null,
+      })
+      .eq("id", checklistId);
+
+    if (error) {
+      console.error("markUnpaid error:", error);
+      return;
+    }
+
+    set((state) => {
+      const updated = state.checklist.map((c) =>
+        c.id === checklistId
+          ? {
+              ...c,
+              status: "pending" as const,
+              paid_at: null,
+              paid_amount: null,
+            }
+          : c,
+      );
+      return { checklist: updated, ...totals(updated) };
+    });
+  },
+
+  resetAllObligations: async (userId) => {
+    const supabase = getSupabase();
+    // Checklist first (FK), then obligations — hard delete from DB
+    const { error: checklistErr } = await supabase
+      .from("obligation_checklist")
+      .delete()
+      .eq("user_id", userId);
+    if (checklistErr) {
+      console.error("resetAllObligations checklist:", checklistErr);
+      return;
+    }
+    const { error: obErr } = await supabase
+      .from("financial_obligations")
+      .delete()
+      .eq("user_id", userId);
+    if (obErr) {
+      console.error("resetAllObligations obligations:", obErr);
+      return;
+    }
+    set({
+      obligations: [],
+      checklist: [],
+      totalObligated: 0,
+      totalPaid: 0,
+      totalPending: 0,
     });
   },
 

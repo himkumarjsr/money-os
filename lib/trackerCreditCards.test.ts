@@ -114,7 +114,7 @@ describe("credit card payment method encoding", () => {
 });
 
 describe("cash vs card spend", () => {
-  it("excludes CC charges from cash spend but keeps bill payments", () => {
+  it("excludes CC charges and CC bill payments from purple cash spend", () => {
     expect(
       countsTowardCashSpend({
         bucket: "wants",
@@ -133,7 +133,7 @@ describe("cash vs card spend", () => {
         subcategory: "credit_card",
         payment_method: "upi",
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isCreditCardCharge({
         bucket: "loans",
@@ -173,7 +173,8 @@ describe("cash vs card spend", () => {
         payment_method: "credit_card::c1::HDFC",
       },
     ];
-    expect(sumCashSpend(txns)).toBe(1800);
+    // Bill payment (800) excluded from purple; only day-to-day cash (1000)
+    expect(sumCashSpend(txns)).toBe(1000);
     expect(sumOnCardsSpend(txns)).toBe(700);
   });
 });

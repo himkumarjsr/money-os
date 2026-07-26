@@ -27,6 +27,10 @@ import {
   previousCalendarMonth,
 } from "@/lib/trackerSafetyPulse";
 import {
+  candidateFromExpense,
+  decideObligationLearn,
+} from "@/lib/obligationLearn";
+import {
   creditCardBillPaymentDescription,
   hasTrackerConsentLocal,
   isCreditCardPaymentMethod,
@@ -941,36 +945,52 @@ function TrackerContent() {
         </button>
       </div>
 
-      {viewingCurrentMonth &&
-      (savedCards.length > 0 ||
-        ccBillHistory.some((t) =>
-          isCreditCardPaymentMethod(t.payment_method),
-        ) ||
-        transactions.some(
-          (t) =>
-            (t.bucket === "loans" && t.subcategory === "credit_card") ||
+      <MonthSafetyPulse
+        pulse={safetyPulse}
+        previousMonthLabel={prevMeta.monthName}
+        forceVisible={allAmountsVisible}
+      >
+        {viewingCurrentMonth &&
+        (savedCards.length > 0 ||
+          ccBillHistory.some((t) =>
             isCreditCardPaymentMethod(t.payment_method),
-        )) ? (
-        <CreditCardBillReminder
-          previousTransactions={ccBillHistory}
-          currentTransactions={transactions}
-          cards={savedCards}
-          monthName={currentMonth}
-          year={currentYear}
-          monthlySalary={profileMonthlyFromDb}
-          onPayBill={(amount, label, cardId) => {
-            setEditingExpense(null);
-            setDefaultBucket("loans");
-            setModalDefaults({
-              subcategory: "credit_card",
-              amount,
-              description: creditCardBillPaymentDescription(label, cardId),
-              paymentMethod: "upi",
-            });
-            setShowAddModal(true);
-          }}
-        />
-      ) : null}
+          ) ||
+          transactions.some(
+            (t) =>
+              (t.bucket === "loans" && t.subcategory === "credit_card") ||
+              isCreditCardPaymentMethod(t.payment_method),
+          )) ? (
+          <CreditCardBillReminder
+            previousTransactions={ccBillHistory}
+            currentTransactions={transactions}
+            cards={savedCards}
+            monthName={currentMonth}
+            year={currentYear}
+            monthlySalary={profileMonthlyFromDb}
+            defaultOpen={false}
+            onPayBill={(amount, label, cardId) => {
+              setEditingExpense(null);
+              setDefaultBucket("loans");
+              setModalDefaults({
+                subcategory: "credit_card",
+                amount,
+                description: creditCardBillPaymentDescription(label, cardId),
+                paymentMethod: "upi",
+              });
+              setShowAddModal(true);
+            }}
+          />
+        ) : null}
+        {user?.id ? (
+          <ObligationsChecklist
+            userId={user.id}
+            analyseCompleted={analyseCompleted}
+            learnedSuggestion={learnedObligation}
+            onDismissLearn={() => setLearnedObligation(null)}
+            defaultOpen={false}
+          />
+        ) : null}
+      </MonthSafetyPulse>
 
       {loading ? (
         <BrandPageLoader
@@ -1221,15 +1241,6 @@ function TrackerContent() {
           </div>
         ) : null}
       </div>
-
-      {user?.id ? (
-        <ObligationsChecklist
-          userId={user.id}
-          analyseCompleted={analyseCompleted}
-          learnedSuggestion={learnedObligation}
-          onDismissLearn={() => setLearnedObligation(null)}
-        />
-      ) : null}
 
       {buckets.map((bucketKey) => {
         const cat = TRACKER_CATEGORIES[bucketKey];
@@ -1627,11 +1638,6 @@ function TrackerContent() {
           </div>
         );
       })}
-      <MonthSafetyPulse
-        pulse={safetyPulse}
-        previousMonthLabel={prevMeta.monthName}
-        forceVisible={allAmountsVisible}
-      />
       <div style={{ marginTop: 16 }}>
         <FeedbackWidget pageContext="tracker" />
       </div>
@@ -1683,18 +1689,36 @@ function TrackerContent() {
                 void (async () => {
                   await useObligationStore.getState().fetchObligations(user.id);
                   const { obligations } = useObligationStore.getState();
-                  const alreadyExists = obligations.some(
-                    (o) =>
-                      o.category === matched[1] &&
-                      Math.abs(o.amount - saved.amount) < 100,
+                  const decision = decideObligationLearn({
+                    description: saved.description,
+                    amount: saved.amount,
+                    category: matched[1],
+                    existing: obligations,
+                    priorTransactions: ccBillHistory,
+                  });
+                  if (decision === "skip") return;
+                  const candidate = candidateFromExpense(
+                    saved.description,
+                    saved.amount,
+                    matched[1],
                   );
-                  if (!alreadyExists) {
-                    setLearnedObligation({
-                      title: saved.description || saved.category,
-                      category: matched[1],
-                      amount: saved.amount,
+                  if (decision === "auto") {
+                    await useObligationStore.getState().addObligation({
+                      title: candidate.title,
+                      category: candidate.category,
+                      amount: candidate.amount,
+                      frequency: "monthly",
+                      source: "tracker_learned",
+                      user_id: user.id,
+                      is_active: true,
+                      remind_days_before: 7,
                     });
+                    await useObligationStore
+                      .getState()
+                      .generateChecklist(user.id);
+                    return;
                   }
+                  setLearnedObligation(candidate);
                 })();
               }
             }
