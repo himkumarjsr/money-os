@@ -1,5 +1,5 @@
--- Persistent credit cards for tracker (client also keeps a localStorage cache).
--- Run in Supabase SQL Editor if the table is missing.
+-- Per-card billing / due days for tracker credit cards.
+-- Also relax last4 (app collects nickname + dates; last4 optional).
 
 CREATE TABLE IF NOT EXISTS public.user_credit_cards (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -23,6 +23,7 @@ ALTER TABLE public.user_credit_cards
 ALTER TABLE public.user_credit_cards
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
+-- last4 was NOT NULL in early manual SQL; make optional if present.
 DO $$
 BEGIN
   ALTER TABLE public.user_credit_cards ALTER COLUMN last4 DROP NOT NULL;

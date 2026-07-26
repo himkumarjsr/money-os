@@ -9,12 +9,16 @@ import {
   pickerSubcategories,
 } from "@/lib/tracker-categories";
 import {
+  DEFAULT_DUE_OFFSET_DAYS,
   deleteSavedCreditCard,
   encodeCreditCardPaymentMethod,
   formatCreditCardLabel,
   isCreditCardPaymentMethod,
+  loadCreditCardsMerged,
   loadSavedCreditCards,
   parseCreditCardPaymentMethod,
+  suggestDueDayFromBilling,
+  syncCreditCardBillObligation,
   upsertSavedCreditCard,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
@@ -114,6 +118,8 @@ export default function AddExpenseModal({
   );
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCardNickname, setNewCardNickname] = useState("");
+  const [newCardBillingDay, setNewCardBillingDay] = useState("");
+  const [newCardDueDay, setNewCardDueDay] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -156,22 +162,29 @@ export default function AddExpenseModal({
 
   useEffect(() => {
     if (!user?.id) return;
-    const cards = loadSavedCreditCards(user.id);
-    setSavedCards(cards);
-    if (
-      !selectedCardId &&
-      cards.length === 1 &&
-      paymentMethod === "credit_card"
-    ) {
-      setSelectedCardId(cards[0].id);
-    }
-    if (
-      paymentMethod === "credit_card" &&
-      cards.length === 0 &&
-      !seedParsed.cardId
-    ) {
-      setShowAddCard(true);
-    }
+    let cancelled = false;
+    void (async () => {
+      const cards = await loadCreditCardsMerged(user.id);
+      if (cancelled) return;
+      setSavedCards(cards);
+      if (
+        !selectedCardId &&
+        cards.length === 1 &&
+        paymentMethod === "credit_card"
+      ) {
+        setSelectedCardId(cards[0].id);
+      }
+      if (
+        paymentMethod === "credit_card" &&
+        cards.length === 0 &&
+        !seedParsed.cardId
+      ) {
+        setShowAddCard(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   const selectedCard = useMemo(
@@ -219,12 +232,48 @@ export default function AddExpenseModal({
       setError("Enter a card name (e.g. HDFC Millennia)");
       return;
     }
-    const card = upsertSavedCreditCard(user.id, { nickname: nick });
+    const billingDay = newCardBillingDay
+      ? Number(newCardBillingDay)
+      : undefined;
+    if (
+      newCardBillingDay &&
+      (!Number.isFinite(billingDay) ||
+        (billingDay as number) < 1 ||
+        (billingDay as number) > 31)
+    ) {
+      setError("Billing day must be between 1 and 31");
+      return;
+    }
+    let dueDay = newCardDueDay ? Number(newCardDueDay) : undefined;
+    if (
+      newCardDueDay &&
+      (!Number.isFinite(dueDay) ||
+        (dueDay as number) < 1 ||
+        (dueDay as number) > 31)
+    ) {
+      setError("Due day must be between 1 and 31");
+      return;
+    }
+    if (billingDay && !dueDay) {
+      dueDay = suggestDueDayFromBilling(billingDay);
+    }
+    const card = upsertSavedCreditCard(user.id, {
+      nickname: nick,
+      billingDay,
+      dueDay,
+    });
     setSavedCards(loadSavedCreditCards(user.id));
     setSelectedCardId(card.id);
     setShowAddCard(false);
     setNewCardNickname("");
+    setNewCardBillingDay("");
+    setNewCardDueDay("");
     setError("");
+
+    // Sync calendar obligation → daily cron inserts inbox notification 3 days before due
+    if (card.dueDay) {
+      void syncCreditCardBillObligation(user.id, card, 0);
+    }
   };
 
   const handleDeleteCard = (cardId: string) => {
@@ -683,14 +732,34 @@ export default function AddExpenseModal({
                                 textAlign: "left",
                                 border: "none",
                                 background: "transparent",
-                                fontWeight: 700,
-                                fontSize: 14,
-                                color: "#111110",
                                 cursor: "pointer",
                                 minHeight: 36,
                               }}
                             >
-                              {formatCreditCardLabel(c)}
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: 14,
+                                  color: "#111110",
+                                }}
+                              >
+                                {formatCreditCardLabel(c)}
+                              </div>
+                              {c.billingDay || c.dueDay ? (
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#9B9A94",
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  {c.billingDay
+                                    ? `Bill day ${c.billingDay}`
+                                    : null}
+                                  {c.billingDay && c.dueDay ? " · " : null}
+                                  {c.dueDay ? `Due day ${c.dueDay}` : null}
+                                </div>
+                              ) : null}
                             </button>
                             <button
                               type="button"
@@ -757,6 +826,73 @@ export default function AddExpenseModal({
                         style={IOS_DATE_INPUT_STYLE}
                       />
                     </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 10,
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: FIELD_LABEL_COLOR,
+                            display: "block",
+                            marginBottom: 4,
+                          }}
+                        >
+                          Billing day
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          inputMode="numeric"
+                          value={newCardBillingDay}
+                          onChange={(e) => {
+                            setNewCardBillingDay(e.target.value);
+                            const b = Number(e.target.value);
+                            if (
+                              Number.isFinite(b) &&
+                              b >= 1 &&
+                              b <= 31 &&
+                              !newCardDueDay
+                            ) {
+                              setNewCardDueDay(
+                                String(suggestDueDayFromBilling(b)),
+                              );
+                            }
+                          }}
+                          placeholder="e.g. 15"
+                          style={IOS_DATE_INPUT_STYLE}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: FIELD_LABEL_COLOR,
+                            display: "block",
+                            marginBottom: 4,
+                          }}
+                        >
+                          Due day
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          inputMode="numeric"
+                          value={newCardDueDay}
+                          onChange={(e) => setNewCardDueDay(e.target.value)}
+                          placeholder={`~+${DEFAULT_DUE_OFFSET_DAYS}d`}
+                          style={IOS_DATE_INPUT_STYLE}
+                        />
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={handleAddCard}
@@ -781,8 +917,10 @@ export default function AddExpenseModal({
                         lineHeight: 1.4,
                       }}
                     >
-                      Only the card name is saved on this device — no card
-                      number needed.
+                      Nickname + billing/due days sync to your account. No full
+                      card number. Due day defaults to ~
+                      {DEFAULT_DUE_OFFSET_DAYS} days after statement (not the
+                      ~45-day interest-free period).
                     </p>
                   </div>
                 ) : null}

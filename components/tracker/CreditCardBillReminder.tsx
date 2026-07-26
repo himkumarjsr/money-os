@@ -1,41 +1,86 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
+  buildCreditCardPaySuggestions,
   dismissCreditCardBillReminder,
   isCreditCardBillDismissed,
   summarizeCreditCardBills,
+  syncCreditCardBillObligation,
+  type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
+import { useAuthStore } from "@/store/authStore";
 
 type Txn = {
   amount: number;
   bucket?: string | null;
+  subcategory?: string | null;
+  category?: string | null;
   payment_method?: string | null;
+  date?: string | null;
+  created_at?: string | null;
 };
+
+function formatDueLabel(iso?: string, dueDay?: number): string {
+  if (iso) {
+    const d = new Date(`${iso}T12:00:00`);
+    if (!Number.isNaN(d.getTime())) {
+      return `Pay by ${d.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+      })}`;
+    }
+  }
+  if (dueDay) return `Due around day ${dueDay}`;
+  return "Due from salary this month";
+}
 
 export default function CreditCardBillReminder({
   previousTransactions,
+  currentTransactions = [],
+  cards = [],
   monthName,
   year,
   monthlySalary,
   onPayBill,
 }: {
   previousTransactions: Txn[];
+  currentTransactions?: Txn[];
+  cards?: SavedCreditCard[];
   monthName: string;
   year: number;
   monthlySalary?: number;
   /** Opens add-expense prefilled for paying the bill (loans / credit card). */
   onPayBill?: (amount: number, label: string) => void;
 }) {
+  const userId = useAuthStore((s) => s.user?.id);
   const [dismissed, setDismissed] = useState(() =>
     isCreditCardBillDismissed(year, monthName),
   );
 
-  const bills = useMemo(
-    () => summarizeCreditCardBills(previousTransactions),
-    [previousTransactions],
-  );
+  const bills = useMemo(() => {
+    const pool = [...previousTransactions, ...currentTransactions];
+    if (cards.length > 0) {
+      return buildCreditCardPaySuggestions({
+        cards,
+        transactions: pool,
+      });
+    }
+    // Legacy: no saved cards with dates — previous calendar month totals
+    return summarizeCreditCardBills(previousTransactions);
+  }, [previousTransactions, currentTransactions, cards]);
+
+  // Keep obligation amounts fresh so cron notifications show ~₹ suggested pay
+  useEffect(() => {
+    if (!userId || cards.length === 0 || bills.length === 0) return;
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    for (const bill of bills) {
+      const card = byId.get(bill.cardId);
+      if (!card?.dueDay || bill.amount <= 0) continue;
+      void syncCreditCardBillObligation(userId, card, bill.amount);
+    }
+  }, [userId, cards, bills]);
 
   const total = bills.reduce((s, b) => s + b.amount, 0);
 
@@ -91,7 +136,7 @@ export default function CreditCardBillReminder({
                 margin: 0,
               }}
             >
-              Pay last month’s credit card bills
+              Credit card bills due
             </h2>
             <p
               style={{
@@ -101,11 +146,11 @@ export default function CreditCardBillReminder({
                 color: "#5F5E5A",
               }}
             >
-              You spent{" "}
+              Suggested pay ~₹
               <strong style={{ color: "#111110" }}>
-                ₹{Math.round(total).toLocaleString("en-IN")}
+                {Math.round(total).toLocaleString("en-IN")}
               </strong>{" "}
-              on credit cards last month.{salaryHint}
+              from your statement windows.{salaryHint}
             </p>
           </div>
         </div>
@@ -163,7 +208,10 @@ export default function CreditCardBillReminder({
                 {b.label}
               </div>
               <div style={{ fontSize: 12, color: "#9B9A94", marginTop: 2 }}>
-                Due from salary this month
+                {formatDueLabel(b.dueDate, b.dueDay)}
+                {b.amount > 0
+                  ? ` · Pay ~₹${Math.round(b.amount).toLocaleString("en-IN")}`
+                  : ""}
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
