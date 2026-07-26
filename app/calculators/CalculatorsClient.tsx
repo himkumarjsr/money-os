@@ -5,6 +5,7 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { cn } from "@/lib/cn";
 import { trackToolOpen } from "@/lib/gtag";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES, type Cat } from "./calculator-config";
@@ -208,6 +209,28 @@ export default function CalculatorsClient({
               Includes SIP calculator India, EMI calculator, and income tax
               planning tools.
             </p>
+            <Link
+              href="/tax"
+              className="mt-4 flex items-center gap-3.5 rounded-[14px] border border-[#E8E6F0] bg-white p-4 no-underline"
+            >
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[#EEEDFE] text-2xl"
+                aria-hidden
+              >
+                📄
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-0.5 text-[15px] font-bold text-[#111110]">
+                  ITR Auto-fill
+                </div>
+                <div className="text-xs text-[#9B9A94]">
+                  Upload Form 16 → Get tax numbers filled
+                </div>
+              </div>
+              <div className="rounded-full bg-[#EEEDFE] px-2 py-0.5 text-[10px] font-bold text-[#534AB7]">
+                NEW
+              </div>
+            </Link>
           </div>
         </div>
         <nav

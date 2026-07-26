@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUser = vi.fn();
+const adminGetUser = vi.fn();
 const createSupabaseServerClient = vi.fn(async () => ({
   auth: { getUser },
+}));
+const getSupabaseAdmin = vi.fn(() => ({
+  auth: { getUser: adminGetUser },
 }));
 
 vi.mock("@/lib/supabaseServer", () => ({
   createSupabaseServerClient: () => createSupabaseServerClient(),
+  getSupabaseAdmin: () => getSupabaseAdmin(),
 }));
 
 import {
@@ -20,7 +25,9 @@ import {
 describe("apiGuard helpers", () => {
   beforeEach(() => {
     getUser.mockReset();
+    adminGetUser.mockReset();
     createSupabaseServerClient.mockClear();
+    getSupabaseAdmin.mockClear();
   });
 
   it("unauthorized returns 401 JSON with custom message", async () => {
@@ -92,5 +99,28 @@ describe("apiGuard helpers", () => {
   it("getAuthedUser returns null when supabase throws", async () => {
     createSupabaseServerClient.mockRejectedValueOnce(new Error("boom"));
     await expect(getAuthedUser()).resolves.toBeNull();
+  });
+
+  it("getAuthedUser falls back to Bearer access token", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const tokenUser = { id: "u2", email: "b@c.com" };
+    adminGetUser.mockResolvedValue({ data: { user: tokenUser }, error: null });
+    const req = new Request("http://localhost/api/tax/extract", {
+      headers: { Authorization: "Bearer test-token" },
+    });
+    await expect(getAuthedUser(req)).resolves.toEqual(tokenUser);
+    expect(adminGetUser).toHaveBeenCalledWith("test-token");
+  });
+
+  it("getAuthedUser returns null when Bearer token is invalid", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    adminGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: "bad" },
+    });
+    const req = new Request("http://localhost/api/x", {
+      headers: { Authorization: "Bearer bad" },
+    });
+    await expect(getAuthedUser(req)).resolves.toBeNull();
   });
 });

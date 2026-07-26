@@ -24,7 +24,7 @@ CRITICAL RULES:
 10. in12Months MUST describe the user's specific financial state in 12 months using their actual numbers.`;
 
 export async function POST(req: NextRequest) {
-  const groqKey = process.env.GROQ_API_KEY;
+  const groqKey = process.env.GROQ_API_KEY?.trim();
   let priorityPlan: any = null;
   let analysis: any = null;
   if (!groqKey) {
@@ -125,7 +125,7 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
 }`;
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.1-70b-versatile",
+      model: process.env.GROQ_ANALYSE_MODEL?.trim() || "openai/gpt-oss-120b",
       max_tokens: 3000,
       temperature: 0.25,
       messages: [

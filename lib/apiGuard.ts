@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  createSupabaseServerClient,
+  getSupabaseAdmin,
+} from "@/lib/supabaseServer";
 import type { User } from "@supabase/supabase-js";
 
 /**
@@ -12,13 +15,31 @@ import type { User } from "@supabase/supabase-js";
  * (e.g. Upstash Redis) — the call sites stay the same.
  */
 
-export async function getAuthedUser(): Promise<User | null> {
+/**
+ * Resolve the logged-in user from cookie session first.
+ * Optional `req`: if cookies are missing (common when UI is warm from
+ * localStorage but SSR cookies lagged), accept `Authorization: Bearer <access_token>`.
+ */
+export async function getAuthedUser(req?: Request): Promise<User | null> {
   try {
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    return user ?? null;
+    if (user) return user;
+
+    const authHeader = req?.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : null;
+    if (!token) return null;
+
+    const {
+      data: { user: tokenUser },
+      error,
+    } = await getSupabaseAdmin().auth.getUser(token);
+    if (error || !tokenUser) return null;
+    return tokenUser;
   } catch {
     return null;
   }

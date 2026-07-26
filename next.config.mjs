@@ -91,6 +91,9 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ["recharts", "framer-motion"],
+    // Keep pdf-parse (and its pdf.js) out of the webpack bundle — static import
+    // of pdf-parse@2 broke the tax extract route with Object.defineProperty errors.
+    serverComponentsExternalPackages: ["pdf-parse"],
   },
   async headers() {
     return [
@@ -133,6 +136,22 @@ const nextConfig = {
     }
     if (dev) {
       config.cache = { type: "memory" };
+    }
+    if (isServer) {
+      const prev = config.externals;
+      config.externals = [
+        ...(Array.isArray(prev) ? prev : prev ? [prev] : []),
+        ({ request }, callback) => {
+          if (
+            request === "pdf-parse" ||
+            request === "pdf-parse/lib/pdf-parse.js" ||
+            (typeof request === "string" && request.startsWith("pdf-parse/"))
+          ) {
+            return callback(null, `commonjs ${request}`);
+          }
+          return callback();
+        },
+      ];
     }
     return config;
   },
