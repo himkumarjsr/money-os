@@ -10,6 +10,7 @@ export type TrackerTxnLike = {
   bucket: string;
   category: string;
   subcategory: string | null;
+  payment_method?: string | null;
 };
 
 export type SafetyStatus = "safe" | "tight" | "over" | "unknown";

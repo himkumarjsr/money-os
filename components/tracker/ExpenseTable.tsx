@@ -1,11 +1,13 @@
 "use client";
 
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import { AppIcon } from "@/components/ui/AppIcon";
 import {
   TRACKER_CATEGORIES,
   findSubcategory,
   type BucketType,
 } from "@/lib/tracker-categories";
+import { isCreditCardPaymentMethod } from "@/lib/trackerCreditCards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useState } from "react";
@@ -98,6 +100,7 @@ export default function ExpenseTable({
             const subId = t.subcategory ?? t.category;
             const sub = bucket ? findSubcategory(bucketKey, subId) : null;
             const editVerb = t.bucket === "income" ? "income" : "expense";
+            const onCard = isCreditCardPaymentMethod(t.payment_method);
 
             return (
               <tr key={t.id} style={{ borderBottom: "1px solid #F7F7F4" }}>
@@ -153,8 +156,37 @@ export default function ExpenseTable({
                           : "#111110",
                   }}
                 >
-                  {t.bucket === "investment" ? "+" : "−"}₹
-                  {Number(t.amount).toLocaleString("en-IN")}
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: 6,
+                    }}
+                  >
+                    {onCard ? (
+                      <span
+                        title="Paid by credit card — not in purple LEFT or bucket totals"
+                        aria-label="Paid by credit card"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: "2px 6px",
+                          borderRadius: 6,
+                          background: "#EEEDFE",
+                          color: "#534AB7",
+                          fontSize: 10,
+                          fontWeight: 700,
+                        }}
+                      >
+                        <AppIcon name="card" size={12} color="#534AB7" />
+                        Card
+                      </span>
+                    ) : null}
+                    {t.bucket === "investment" ? "+" : "−"}₹
+                    {Number(t.amount).toLocaleString("en-IN")}
+                  </span>
                 </td>
                 <td style={{ padding: "12px" }}>
                   <div

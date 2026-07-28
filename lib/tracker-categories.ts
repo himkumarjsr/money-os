@@ -1,3 +1,5 @@
+import { isCreditCardSectionTxn } from "@/lib/trackerCreditCards";
+
 export type TrackerIconName =
   | "home"
   | "cart"
@@ -261,9 +263,14 @@ export const TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES = new Set([
 export function countsTowardTrackerTotals(txn: {
   category?: string | null;
   subcategory?: string | null;
+  bucket?: string | null;
+  payment_method?: string | null;
 }): boolean {
   const sub = txn.subcategory || txn.category;
   if (sub && TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES.has(sub)) return false;
+  // Credit-card purchases + bill pays stay visible in lists but never enter
+  // bucket totals / Safety Pulse — same rule as purple SPENT/LEFT.
+  if (isCreditCardSectionTxn(txn)) return false;
   return true;
 }
 
