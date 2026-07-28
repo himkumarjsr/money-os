@@ -6,7 +6,7 @@ import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import CreditCardBillReminder from "@/components/tracker/CreditCardBillReminder";
 import MonthSafetyPulse from "@/components/tracker/MonthSafetyPulse";
 import ObligationsChecklist from "@/components/tracker/ObligationsChecklist";
-import PurpleCashAudit from "@/components/tracker/PurpleCashAudit";
+// import PurpleCashAudit from "@/components/tracker/PurpleCashAudit";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import {
   TRACKER_CATEGORIES,
@@ -905,10 +905,10 @@ function TrackerContent() {
         </div>
       </div>
 
-      <PurpleCashAudit
+      {/* <PurpleCashAudit
         transactions={transactions}
         profileMonthlyIncome={profileMonthlyFromDb}
-      />
+      /> */}
 
       <div
         style={{
