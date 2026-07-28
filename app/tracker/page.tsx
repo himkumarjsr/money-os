@@ -6,6 +6,7 @@ import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import CreditCardBillReminder from "@/components/tracker/CreditCardBillReminder";
 import MonthSafetyPulse from "@/components/tracker/MonthSafetyPulse";
 import ObligationsChecklist from "@/components/tracker/ObligationsChecklist";
+import PurpleCashAudit from "@/components/tracker/PurpleCashAudit";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import {
   TRACKER_CATEGORIES,
@@ -30,7 +31,9 @@ import {
   candidateFromExpense,
   decideObligationLearn,
 } from "@/lib/obligationLearn";
+import { buildCashAudit, logCashAudit } from "@/lib/trackerCashAudit";
 import {
+  countsTowardCashSpend,
   creditCardBillPaymentDescription,
   hasTrackerConsentLocal,
   isCreditCardPaymentMethod,
@@ -425,6 +428,42 @@ function TrackerContent() {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
 
+  // DevTools: dump every tracker row + purple SPENT/LEFT breakdown on each load.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    if (!hasConsent) return;
+
+    console.group(
+      `[Tracker] ${currentMonth} ${currentYear} — ${transactions.length} row(s)`,
+    );
+    console.table(
+      transactions.map((t) => ({
+        date: t.date,
+        amount: Number(t.amount),
+        bucket: t.bucket,
+        subcategory: t.subcategory,
+        payment: t.payment_method,
+        inPurpleSpent: countsTowardCashSpend(t),
+        description: t.description,
+        id: t.id,
+      })),
+    );
+    logCashAudit(
+      buildCashAudit({
+        transactions,
+        profileMonthlyIncome: profileMonthlyFromDb,
+      }),
+      `${currentMonth} ${currentYear} purple cash`,
+    );
+    console.groupEnd();
+  }, [
+    hasConsent,
+    transactions,
+    currentMonth,
+    currentYear,
+    profileMonthlyFromDb,
+  ]);
+
   useEffect(() => {
     if (!hasConsent) return;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -524,8 +563,9 @@ function TrackerContent() {
   const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
   const incomeCat = TRACKER_CATEGORIES.income;
   const displayIncome = monthlyIncome || profileMonthlyFromDb;
-  // Purple summary card: cash out only (excludes CC purchase charges; includes
-  // CC bill payments + loan prepayments). Bucket cards still count CC by category.
+  // Purple SPENT/LEFT: all cash expenses including Loans & Credit EMIs and
+  // investment / loan repayment. Exclude only Credit card section (purchases +
+  // bill pays). Obligation checklist is not expenses — never subtracted here.
   const totalSpent = sumCashSpend(transactions);
   const onCardsSpend = sumOnCardsSpend(transactions);
   const remaining = displayIncome - totalSpent;
@@ -865,6 +905,11 @@ function TrackerContent() {
         </div>
       </div>
 
+      <PurpleCashAudit
+        transactions={transactions}
+        profileMonthlyIncome={profileMonthlyFromDb}
+      />
+
       <div
         style={{
           display: "flex",
@@ -944,53 +989,6 @@ function TrackerContent() {
           {allAmountsVisible ? "Hide all" : "Show all"}
         </button>
       </div>
-
-      <MonthSafetyPulse
-        pulse={safetyPulse}
-        previousMonthLabel={prevMeta.monthName}
-        forceVisible={allAmountsVisible}
-      >
-        {viewingCurrentMonth &&
-        (savedCards.length > 0 ||
-          ccBillHistory.some((t) =>
-            isCreditCardPaymentMethod(t.payment_method),
-          ) ||
-          transactions.some(
-            (t) =>
-              (t.bucket === "loans" && t.subcategory === "credit_card") ||
-              isCreditCardPaymentMethod(t.payment_method),
-          )) ? (
-          <CreditCardBillReminder
-            previousTransactions={ccBillHistory}
-            currentTransactions={transactions}
-            cards={savedCards}
-            monthName={currentMonth}
-            year={currentYear}
-            monthlySalary={profileMonthlyFromDb}
-            defaultOpen={false}
-            onPayBill={(amount, label, cardId) => {
-              setEditingExpense(null);
-              setDefaultBucket("loans");
-              setModalDefaults({
-                subcategory: "credit_card",
-                amount,
-                description: creditCardBillPaymentDescription(label, cardId),
-                paymentMethod: "upi",
-              });
-              setShowAddModal(true);
-            }}
-          />
-        ) : null}
-        {user?.id ? (
-          <ObligationsChecklist
-            userId={user.id}
-            analyseCompleted={analyseCompleted}
-            learnedSuggestion={learnedObligation}
-            onDismissLearn={() => setLearnedObligation(null)}
-            defaultOpen={false}
-          />
-        ) : null}
-      </MonthSafetyPulse>
 
       {loading ? (
         <BrandPageLoader
@@ -1446,10 +1444,9 @@ function TrackerContent() {
                 </div>
                 {Object.keys(bySubcategory).length > 0 ? (
                   Object.entries(bySubcategory).map(([subId, txns]) => {
-                    const subTotal = txns.reduce(
-                      (a, t) => a + Number(t.amount),
-                      0,
-                    );
+                    const subTotal = txns
+                      .filter((t) => countsTowardTrackerTotals(t))
+                      .reduce((a, t) => a + Number(t.amount), 0);
                     const sub = findSubcategory(bucketKey, subId);
                     return (
                       <div
@@ -1520,103 +1517,135 @@ function TrackerContent() {
                             gap: 8,
                           }}
                         >
-                          {txns.map((txn) => (
-                            <div
-                              key={txn.id}
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                borderRadius: 8,
-                                background: "#F9F9FC",
-                                padding: "8px 10px",
-                                gap: 8,
-                              }}
-                            >
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    color: "#111110",
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {formatMaskedAmount(
-                                    Number(txn.amount),
-                                    sectionVisible,
-                                  )}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: 11,
-                                    color: "#111110",
-                                    fontWeight: 500,
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: 220,
-                                  }}
-                                >
-                                  {txn.description ||
-                                    new Date(txn.date).toLocaleDateString(
-                                      "en-IN",
-                                      { day: "numeric", month: "short" },
-                                    )}
-                                </div>
-                              </div>
+                          {txns.map((txn) => {
+                            const onCard = isCreditCardPaymentMethod(
+                              txn.payment_method,
+                            );
+                            return (
                               <div
+                                key={txn.id}
                                 style={{
                                   display: "flex",
+                                  justifyContent: "space-between",
                                   alignItems: "center",
-                                  gap: 2,
-                                  flexShrink: 0,
+                                  borderRadius: 8,
+                                  background: "#F9F9FC",
+                                  padding: "8px 10px",
+                                  gap: 8,
                                 }}
                               >
-                                <button
-                                  type="button"
-                                  aria-label="Edit expense"
-                                  title="Edit expense"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setModalDefaults({});
-                                    setEditingExpense(txn);
-                                    setShowAddModal(true);
-                                  }}
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div
+                                    style={{
+                                      fontSize: 12,
+                                      color: "#111110",
+                                      fontWeight: 700,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    {formatMaskedAmount(
+                                      Number(txn.amount),
+                                      sectionVisible,
+                                    )}
+                                    {onCard ? (
+                                      <span
+                                        title="Paid by credit card — not counted in purple LEFT or bucket totals"
+                                        aria-label="Paid by credit card"
+                                        style={{
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          padding: "2px 6px",
+                                          borderRadius: 6,
+                                          background: "#EEEDFE",
+                                          color: "#534AB7",
+                                          fontSize: 10,
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        <AppIcon
+                                          name="card"
+                                          size={12}
+                                          color="#534AB7"
+                                        />
+                                        Card
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#111110",
+                                      fontWeight: 500,
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      maxWidth: 220,
+                                    }}
+                                  >
+                                    {txn.description ||
+                                      new Date(txn.date).toLocaleDateString(
+                                        "en-IN",
+                                        { day: "numeric", month: "short" },
+                                      )}
+                                  </div>
+                                </div>
+                                <div
                                   style={{
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "#534AB7",
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    padding: "6px 8px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 2,
+                                    flexShrink: 0,
                                   }}
                                 >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label="Delete expense"
-                                  title="Delete expense"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    void deleteTransaction(txn.id);
-                                  }}
-                                  style={{
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "#E24B4A",
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    padding: "6px 8px",
-                                  }}
-                                >
-                                  Delete
-                                </button>
+                                  <button
+                                    type="button"
+                                    aria-label="Edit expense"
+                                    title="Edit expense"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setModalDefaults({});
+                                      setEditingExpense(txn);
+                                      setShowAddModal(true);
+                                    }}
+                                    style={{
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#534AB7",
+                                      fontSize: 13,
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      padding: "6px 8px",
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label="Delete expense"
+                                    title="Delete expense"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void deleteTransaction(txn.id);
+                                    }}
+                                    style={{
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#E24B4A",
+                                      fontSize: 13,
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      padding: "6px 8px",
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -1638,6 +1667,54 @@ function TrackerContent() {
           </div>
         );
       })}
+
+      <MonthSafetyPulse
+        pulse={safetyPulse}
+        previousMonthLabel={prevMeta.monthName}
+        forceVisible={allAmountsVisible}
+      >
+        {viewingCurrentMonth &&
+        (savedCards.length > 0 ||
+          ccBillHistory.some((t) =>
+            isCreditCardPaymentMethod(t.payment_method),
+          ) ||
+          transactions.some(
+            (t) =>
+              (t.bucket === "loans" && t.subcategory === "credit_card") ||
+              isCreditCardPaymentMethod(t.payment_method),
+          )) ? (
+          <CreditCardBillReminder
+            previousTransactions={ccBillHistory}
+            currentTransactions={transactions}
+            cards={savedCards}
+            monthName={currentMonth}
+            year={currentYear}
+            monthlySalary={profileMonthlyFromDb}
+            defaultOpen={false}
+            onPayBill={(amount, label, cardId) => {
+              setEditingExpense(null);
+              setDefaultBucket("loans");
+              setModalDefaults({
+                subcategory: "credit_card",
+                amount,
+                description: creditCardBillPaymentDescription(label, cardId),
+                paymentMethod: "upi",
+              });
+              setShowAddModal(true);
+            }}
+          />
+        ) : null}
+        {user?.id ? (
+          <ObligationsChecklist
+            userId={user.id}
+            analyseCompleted={analyseCompleted}
+            learnedSuggestion={learnedObligation}
+            onDismissLearn={() => setLearnedObligation(null)}
+            defaultOpen={false}
+          />
+        ) : null}
+      </MonthSafetyPulse>
+
       <div style={{ marginTop: 16 }}>
         <FeedbackWidget pageContext="tracker" />
       </div>

@@ -54,4 +54,28 @@ describe("TRACKER_CATEGORIES", () => {
     );
     expect(countsTowardTrackerTotals({ subcategory: "rent" })).toBe(true);
   });
+
+  it("excludes credit-card purchases and bill pays from tracker totals", () => {
+    expect(
+      countsTowardTrackerTotals({
+        bucket: "needs",
+        subcategory: "rent",
+        payment_method: "credit_card::c1::HDFC",
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardTrackerTotals({
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "upi",
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardTrackerTotals({
+        bucket: "needs",
+        subcategory: "rent",
+        payment_method: "upi",
+      }),
+    ).toBe(true);
+  });
 });

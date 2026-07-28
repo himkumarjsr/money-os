@@ -173,9 +173,28 @@ export function isCreditCardCharge(txn: {
 }
 
 /**
- * Purple-card cash out: day-to-day money leaving the account this month.
- * Excludes CC purchase charges (debt, not cash yet) and CC bill payments
- * (tracked in Credit card dues instead). Other loan/EMI cash still counts.
+ * Credit-card *section* rows — never part of purple SPENT/LEFT.
+ * - Card purchases (payment_method credit_card::…)
+ * - Card bill pays (loans → credit_card)
+ * Obligation checklist totals are separate (not expense rows) and never enter this.
+ */
+export function isCreditCardSectionTxn(txn: {
+  bucket?: string | null;
+  subcategory?: string | null;
+  category?: string | null;
+  payment_method?: string | null;
+}): boolean {
+  return isCreditCardCharge(txn) || isCreditCardBillPayment(txn);
+}
+
+/**
+ * Purple-card cash out (SPENT / LEFT).
+ *
+ * INCLUDE: needs/wants, Loans & Credit EMIs (home/car/personal/…), investments
+ * (SIP, etc.), and loan repayment / loan_prepayment even under investment.
+ *
+ * EXCLUDE: income; Credit card section (purchases + bill payments).
+ * Obligation calendar amounts are not expenses — they never appear here.
  */
 export function countsTowardCashSpend(txn: {
   bucket?: string | null;
@@ -184,8 +203,9 @@ export function countsTowardCashSpend(txn: {
   payment_method?: string | null;
 }): boolean {
   if (txn.bucket === "income") return false;
-  if (isCreditCardCharge(txn)) return false;
-  if (isCreditCardBillPayment(txn)) return false;
+  if (isCreditCardSectionTxn(txn)) return false;
+  // Explicitly keep loan repayments (legacy sub) in purple even if bucket
+  // caps exclude them via countsTowardTrackerTotals.
   return true;
 }
 

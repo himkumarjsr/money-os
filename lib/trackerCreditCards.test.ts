@@ -114,7 +114,7 @@ describe("credit card payment method encoding", () => {
 });
 
 describe("cash vs card spend", () => {
-  it("excludes CC charges and CC bill payments from purple cash spend", () => {
+  it("excludes only Credit card section; keeps loan EMI + investment repayment", () => {
     expect(
       countsTowardCashSpend({
         bucket: "wants",
@@ -122,25 +122,26 @@ describe("cash vs card spend", () => {
       }),
     ).toBe(false);
     expect(
-      isCreditCardCharge({
-        bucket: "wants",
-        payment_method: "credit_card::c1::HDFC",
+      countsTowardCashSpend({
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "upi",
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardCashSpend({
+        bucket: "loans",
+        subcategory: "home_loan_emi",
+        payment_method: "upi",
       }),
     ).toBe(true);
     expect(
       countsTowardCashSpend({
-        bucket: "loans",
-        subcategory: "credit_card",
+        bucket: "investment",
+        subcategory: "loan_prepayment",
         payment_method: "upi",
       }),
-    ).toBe(false);
-    expect(
-      isCreditCardCharge({
-        bucket: "loans",
-        subcategory: "credit_card",
-        payment_method: "upi",
-      }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       countsTowardCashSpend({
         bucket: "needs",
