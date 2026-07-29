@@ -1,4 +1,4 @@
-import { isCreditCardSectionTxn } from "@/lib/trackerCreditCards";
+import { isCreditCardCharge } from "@/lib/trackerCreditCards";
 
 export type TrackerIconName =
   | "home"
@@ -268,9 +268,10 @@ export function countsTowardTrackerTotals(txn: {
 }): boolean {
   const sub = txn.subcategory || txn.category;
   if (sub && TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES.has(sub)) return false;
-  // Credit-card purchases + bill pays stay visible in lists but never enter
-  // bucket totals / Safety Pulse — same rule as purple SPENT/LEFT.
-  if (isCreditCardSectionTxn(txn)) return false;
+  // Card-*as-payment* purchases stay visible in lists but never enter bucket
+  // totals / Safety Pulse — same rule as purple SPENT/LEFT. Bill pays (UPI etc.)
+  // do count — cash left the salary pocket.
+  if (isCreditCardCharge(txn)) return false;
   return true;
 }
 

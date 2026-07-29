@@ -159,6 +159,15 @@ export function displayPaymentMethod(
   return PAYMENT_METHOD_LABELS[key] || method;
 }
 
+/** Payment rails that leave the bank / cash pocket (not revolving on a card). */
+export function isCashRailPaymentMethod(
+  method: string | null | undefined,
+): boolean {
+  if (!method || !String(method).trim()) return true;
+  if (isCreditCardPaymentMethod(method)) return false;
+  return true;
+}
+
 /** CC purchase charge (not a cash bill payment under loans → credit_card). */
 export function isCreditCardCharge(txn: {
   bucket?: string | null;
@@ -168,33 +177,22 @@ export function isCreditCardCharge(txn: {
 }): boolean {
   if (txn.bucket === "income") return false;
   const sub = txn.subcategory || txn.category;
+  // Loans → Credit card *payment* is a bill settle, never a purchase charge.
   if (txn.bucket === "loans" && sub === "credit_card") return false;
   return isCreditCardPaymentMethod(txn.payment_method);
 }
 
 /**
- * Credit-card *section* rows — never part of purple SPENT/LEFT.
- * - Card purchases (payment_method credit_card::…)
- * - Card bill pays (loans → credit_card)
- * Obligation checklist totals are separate (not expense rows) and never enter this.
- */
-export function isCreditCardSectionTxn(txn: {
-  bucket?: string | null;
-  subcategory?: string | null;
-  category?: string | null;
-  payment_method?: string | null;
-}): boolean {
-  return isCreditCardCharge(txn) || isCreditCardBillPayment(txn);
-}
-
-/**
  * Purple-card cash out (SPENT / LEFT).
  *
- * INCLUDE: needs/wants, Loans & Credit EMIs (home/car/personal/…), investments
- * (SIP, etc.), and loan repayment / loan_prepayment even under investment.
+ * INCLUDE:
+ * - needs / wants / habits / loan EMIs / investments / loan repayment
+ * - Loans & Credit → Credit card payment when paid via UPI / cash / netbanking /
+ *   wallet (cash left the salary pocket)
  *
- * EXCLUDE: income; Credit card section (purchases + bill payments).
- * Obligation calendar amounts are not expenses — they never appear here.
+ * EXCLUDE:
+ * - income
+ * - any expense where Paid via = credit card (debt, not this month’s cash)
  */
 export function countsTowardCashSpend(txn: {
   bucket?: string | null;
@@ -203,9 +201,15 @@ export function countsTowardCashSpend(txn: {
   payment_method?: string | null;
 }): boolean {
   if (txn.bucket === "income") return false;
-  if (isCreditCardSectionTxn(txn)) return false;
-  // Explicitly keep loan repayments (legacy sub) in purple even if bucket
-  // caps exclude them via countsTowardTrackerTotals.
+
+  const sub = txn.subcategory || txn.category;
+  // Explicit: Loans & Credit → Credit card payment (bill pay).
+  if (txn.bucket === "loans" && sub === "credit_card") {
+    return isCashRailPaymentMethod(txn.payment_method);
+  }
+
+  // Any other row paid with a credit card stays out of LEFT.
+  if (isCreditCardPaymentMethod(txn.payment_method)) return false;
   return true;
 }
 
@@ -490,10 +494,19 @@ export function isCreditCardBillPayment(txn: {
   bucket?: string | null;
   subcategory?: string | null;
   category?: string | null;
+  description?: string | null;
+  payment_method?: string | null;
 }): boolean {
-  if (txn.bucket !== "loans") return false;
-  const sub = txn.subcategory || txn.category;
-  return sub === "credit_card";
+  // Paid *with* a card → purchase charge, not a cash bill payment.
+  if (isCreditCardPaymentMethod(txn.payment_method)) return false;
+  if (txn.bucket === "loans") {
+    const sub = txn.subcategory || txn.category;
+    if (sub === "credit_card") return true;
+  }
+  // Pay-button prefills: "Pay bill · Label [#cardId]" even if bucket was changed.
+  const desc = txn.description || "";
+  if (/pay bill/i.test(desc) && /\[#[^\]]+\]/.test(desc)) return true;
+  return false;
 }
 
 export function billPaymentMatchesCard(
@@ -518,11 +531,22 @@ export function billPaymentMatchesCard(
   return false;
 }
 
-function sumChargesForCard(transactions: BillTxn[], cardId: string): number {
+function sumChargesForCard(
+  transactions: BillTxn[],
+  card: SavedCreditCard,
+  soleCardFallback: boolean,
+): number {
+  const cardLabel = formatCreditCardLabel(card).toLowerCase();
   return transactions.reduce((sum, t) => {
     if (!isCreditCardCharge(t)) return sum;
-    const { cardId: tid } = parseCreditCardPaymentMethod(t.payment_method);
-    if (tid !== cardId) return sum;
+    const { cardId: tid, label } = parseCreditCardPaymentMethod(
+      t.payment_method,
+    );
+    const matched =
+      tid === card.id ||
+      (!!label && label.toLowerCase() === cardLabel) ||
+      (soleCardFallback && !tid);
+    if (!matched) return sum;
     const n = Number(t.amount);
     return Number.isFinite(n) && n > 0 ? sum + n : sum;
   }, 0);
@@ -565,7 +589,7 @@ export function buildCreditCardBillStatuses(opts: {
   const suggestionById = new Map(suggestions.map((s) => [s.cardId, s]));
 
   const statuses: CreditCardBillStatus[] = opts.cards.map((card) => {
-    const charged = sumChargesForCard(opts.transactions, card.id);
+    const charged = sumChargesForCard(opts.transactions, card, soleCard);
     const paid = sumPaymentsForCard(opts.transactions, card, soleCard);
     const remaining = Math.max(0, Math.round((charged - paid) * 100) / 100);
     const sug = suggestionById.get(card.id);
