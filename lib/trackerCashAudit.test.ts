@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildCashAudit } from "./trackerCashAudit";
 
 describe("buildCashAudit", () => {
-  it("includes loan EMI + investment loan repayment; excludes only CC section", () => {
+  it("includes loan EMI + CC bill pay + loan repayment; excludes only CC purchases", () => {
     const audit = buildCashAudit({
       profileMonthlyIncome: 100000,
       transactions: [
@@ -54,14 +54,11 @@ describe("buildCashAudit", () => {
 
     expect(audit.incomeUsed).toBe(100000);
     expect(audit.incomeSource).toBe("profile");
-    // groceries + home EMI + loan repayment (not CC)
-    expect(audit.purpleSpent).toBe(19000);
+    // groceries + bill pay + home EMI + loan repayment
+    expect(audit.purpleSpent).toBe(24000);
     expect(audit.onCards).toBe(2000);
-    expect(audit.left).toBe(81000);
-    expect(audit.included).toHaveLength(3);
-    expect(audit.excluded.map((e) => e.reason).sort()).toEqual([
-      "cc_bill_pay",
-      "cc_purchase",
-    ]);
+    expect(audit.left).toBe(76000);
+    expect(audit.included).toHaveLength(4);
+    expect(audit.excluded.map((e) => e.reason)).toEqual(["cc_purchase"]);
   });
 });

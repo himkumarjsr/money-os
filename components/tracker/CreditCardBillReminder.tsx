@@ -58,6 +58,7 @@ export default function CreditCardBillReminder({
   monthlySalary,
   onPayBill,
   defaultOpen = false,
+  optimisticPayments = [],
 }: {
   previousTransactions: Txn[];
   currentTransactions?: Txn[];
@@ -68,17 +69,48 @@ export default function CreditCardBillReminder({
   /** Opens add-expense prefilled for paying the bill (cash out → loans / credit card). */
   onPayBill?: (amount: number, label: string, cardId: string) => void;
   defaultOpen?: boolean;
+  /** Recent Pay saves not yet reflected in fetched txns (cardId → amount). */
+  optimisticPayments?: Array<{ cardId: string; amount: number }>;
 }) {
   const userId = useAuthStore((s) => s.user?.id);
   const [open, setOpen] = useState(defaultOpen);
 
   const statuses = useMemo(() => {
     const pool = [...previousTransactions, ...currentTransactions];
-    return buildCreditCardBillStatuses({
+    const base = buildCreditCardBillStatuses({
       cards,
       transactions: pool,
     });
-  }, [previousTransactions, currentTransactions, cards]);
+    if (!optimisticPayments.length) return base;
+    return base.map((bill) => {
+      const boost = optimisticPayments
+        .filter((p) => p.cardId === bill.cardId)
+        .reduce((s, p) => s + p.amount, 0);
+      if (boost <= 0) return bill;
+      // Avoid double-count once the real payment is in the pool.
+      const extra = Math.max(0, boost - bill.paid);
+      if (extra <= 0) return bill;
+      const paid = bill.paid + extra;
+      const remaining = Math.max(
+        0,
+        Math.round((bill.charged - paid) * 100) / 100,
+      );
+      let status: typeof bill.status = "clear";
+      if (remaining > 0) status = "due";
+      else if (bill.charged > 0 || paid > 0) status = "paid";
+      return {
+        ...bill,
+        paid,
+        remaining,
+        amount: remaining > 0 ? remaining : bill.amount,
+        status,
+      };
+    });
+  }, [previousTransactions, currentTransactions, cards, optimisticPayments]);
+
+  useEffect(() => {
+    if (optimisticPayments.length > 0) setOpen(true);
+  }, [optimisticPayments]);
 
   useEffect(() => {
     if (!userId || cards.length === 0) return;
@@ -135,7 +167,8 @@ export default function CreditCardBillReminder({
         {dueTotal > 0 ? (
           <>
             Unpaid balances stay here until you mark them paid.
-            {salaryHint} Bill payments do not change the purple cash card.
+            {salaryHint} Paying via UPI / net banking reduces purple LEFT (cash
+            out). Purchases on the card do not.
           </>
         ) : paidCount > 0 ? (
           <>All tracked card bills are paid for now. Nice work.</>

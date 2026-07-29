@@ -98,7 +98,7 @@ export default function AddExpenseModal({
     editExpense?.date || defaultDate || localISODate(),
   );
   const [amount, setAmount] = useState(
-    editExpense?.amount || defaultAmount || 0,
+    editExpense?.amount ?? defaultAmount ?? 0,
   );
   const [bucket, setBucket] = useState(
     editExpense?.bucket || defaultBucket || "",
@@ -186,6 +186,19 @@ export default function AddExpenseModal({
       cancelled = true;
     };
   }, [user?.id]);
+
+  // Loans → Credit card payment is a cash bill settle — don't leave "Paid via"
+  // stuck on Credit card (that would mean charging another card).
+  useEffect(() => {
+    if (
+      bucket === "loans" &&
+      subcategory === "credit_card" &&
+      paymentMethod === "credit_card"
+    ) {
+      setPaymentMethod("upi");
+      setShowAddCard(false);
+    }
+  }, [bucket, subcategory, paymentMethod]);
 
   const selectedCard = useMemo(
     () => savedCards.find((c) => c.id === selectedCardId) ?? null,
@@ -313,7 +326,28 @@ export default function AddExpenseModal({
     setError("");
 
     const supabase = getSupabase();
-    const dateObj = new Date(date);
+    // Parse as local calendar date — avoid UTC shift from `new Date("yyyy-mm-dd")`.
+    const [yStr, mStr, dStr] = date.split("-");
+    const yNum = Number(yStr);
+    const mNum = Number(mStr);
+    const dNum = Number(dStr);
+    const dateObj =
+      Number.isFinite(yNum) && Number.isFinite(mNum) && Number.isFinite(dNum)
+        ? new Date(yNum, mNum - 1, dNum)
+        : new Date(date);
+
+    // Keep [#cardId] token on CC bill pays so dues can mark Paid after save.
+    let descriptionToStore = description;
+    if (
+      bucket === "loans" &&
+      subcategory === "credit_card" &&
+      defaultDescription &&
+      /\[#[^\]]+\]/.test(defaultDescription) &&
+      !/\[#[^\]]+\]/.test(descriptionToStore || "")
+    ) {
+      descriptionToStore =
+        `${(descriptionToStore || "").trim()} ${defaultDescription.match(/\[#[^\]]+\]/)?.[0] || ""}`.trim();
+    }
 
     const payload = {
       user_id: user.id,
@@ -321,10 +355,11 @@ export default function AddExpenseModal({
       amount,
       category: subcategory,
       subcategory,
-      description,
+      description: descriptionToStore,
       bucket,
       payment_method: paymentToStore,
-      month: dateObj.toLocaleString("default", { month: "long" }),
+      // Must match tracker fetch locale (`en-IN`) or the row won't load in-month.
+      month: dateObj.toLocaleString("en-IN", { month: "long" }),
       year: dateObj.getFullYear(),
     };
 
@@ -624,6 +659,20 @@ export default function AddExpenseModal({
             >
               Paid via
             </label>
+            {bucket === "loans" && subcategory === "credit_card" ? (
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: 12,
+                  lineHeight: 1.45,
+                  color: "#5F5E5A",
+                }}
+              >
+                Paying the card bill with UPI, cash, net banking or wallet{" "}
+                <strong style={{ color: "#534AB7" }}>reduces Money Left</strong>{" "}
+                on the purple card.
+              </p>
+            ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {(
                 [
@@ -633,43 +682,49 @@ export default function AddExpenseModal({
                   { id: "netbanking", label: "Net banking", icon: "bank" },
                   { id: "wallet", label: "Wallet", icon: "wallet" },
                 ] as { id: string; label: string; icon: AppIconName }[]
-              ).map((pm) => (
-                <button
-                  key={pm.id}
-                  type="button"
-                  onClick={() => {
-                    setPaymentMethod(pm.id);
-                    if (pm.id === "credit_card") {
-                      if (savedCards.length === 0) setShowAddCard(true);
-                      else if (!selectedCardId && savedCards[0]) {
-                        setSelectedCardId(savedCards[0].id);
+              )
+                .filter((pm) =>
+                  bucket === "loans" && subcategory === "credit_card"
+                    ? pm.id !== "credit_card"
+                    : true,
+                )
+                .map((pm) => (
+                  <button
+                    key={pm.id}
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod(pm.id);
+                      if (pm.id === "credit_card") {
+                        if (savedCards.length === 0) setShowAddCard(true);
+                        else if (!selectedCardId && savedCards[0]) {
+                          setSelectedCardId(savedCards[0].id);
+                        }
+                      } else {
+                        setShowAddCard(false);
                       }
-                    } else {
-                      setShowAddCard(false);
-                    }
-                  }}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    border: `1.5px solid ${paymentMethod === pm.id ? "#534AB7" : "#E8E6F0"}`,
-                    background: paymentMethod === pm.id ? "#EEEDFE" : "white",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    color: paymentMethod === pm.id ? "#534AB7" : "#111110",
-                    fontWeight: paymentMethod === pm.id ? 700 : 400,
-                  }}
-                >
-                  <AppIcon
-                    name={pm.icon}
-                    size={15}
-                    color={paymentMethod === pm.id ? "#534AB7" : "#111110"}
-                  />
-                  {pm.label}
-                </button>
-              ))}
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      border: `1.5px solid ${paymentMethod === pm.id ? "#534AB7" : "#E8E6F0"}`,
+                      background: paymentMethod === pm.id ? "#EEEDFE" : "white",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      color: paymentMethod === pm.id ? "#534AB7" : "#111110",
+                      fontWeight: paymentMethod === pm.id ? 700 : 400,
+                    }}
+                  >
+                    <AppIcon
+                      name={pm.icon}
+                      size={15}
+                      color={paymentMethod === pm.id ? "#534AB7" : "#111110"}
+                    />
+                    {pm.label}
+                  </button>
+                ))}
             </div>
 
             {paymentMethod === "credit_card" ? (

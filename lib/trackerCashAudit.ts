@@ -16,8 +16,8 @@ export type CashAuditReason =
   | "included"
   | "included_loan_emi"
   | "included_loan_repayment"
+  | "included_cc_bill_pay"
   | "cc_purchase"
-  | "cc_bill_pay"
   | "invalid_amount";
 
 export type CashAuditLine = {
@@ -72,8 +72,8 @@ function classify(txn: {
   const n = Number(txn.amount);
   if (!Number.isFinite(n) || n <= 0) return "invalid_amount";
   if (isCreditCardCharge(txn)) return "cc_purchase";
-  if (isCreditCardBillPayment(txn)) return "cc_bill_pay";
   if (!countsTowardCashSpend(txn)) return "invalid_amount";
+  if (isCreditCardBillPayment(txn)) return "included_cc_bill_pay";
   const sub = txn.subcategory || txn.category;
   if (isLoanRepaymentSub(sub)) return "included_loan_repayment";
   if (txn.bucket === "loans" || isLoanEmiSub(sub)) return "included_loan_emi";
@@ -90,10 +90,10 @@ export function reasonLabel(reason: CashAuditReason): string {
       return "In purple SPENT — loan EMI";
     case "included_loan_repayment":
       return "In purple SPENT — loan repayment";
+    case "included_cc_bill_pay":
+      return "In purple SPENT — credit card bill pay (cash out)";
     case "cc_purchase":
-      return "Excluded — Credit card section (purchase)";
-    case "cc_bill_pay":
-      return "Excluded — Credit card section (bill pay)";
+      return "Excluded — paid with credit card";
     case "invalid_amount":
       return "Excluded — invalid amount";
   }
@@ -143,16 +143,14 @@ export function buildCashAudit(opts: {
       countsInPurpleSpent:
         reason === "included" ||
         reason === "included_loan_emi" ||
-        reason === "included_loan_repayment",
+        reason === "included_loan_repayment" ||
+        reason === "included_cc_bill_pay",
     };
   });
 
   const included = lines.filter((l) => l.countsInPurpleSpent);
-  // Only Credit card *section* rows are excluded from purple by design.
-  // Obligation checklist amounts never appear as expense rows.
-  const excluded = lines.filter(
-    (l) => l.reason === "cc_purchase" || l.reason === "cc_bill_pay",
-  );
+  // Only purchases paid *with* a credit card are excluded from purple.
+  const excluded = lines.filter((l) => l.reason === "cc_purchase");
   const purpleSpent = sumCashSpend(opts.transactions);
   const onCards = sumOnCardsSpend(opts.transactions);
 

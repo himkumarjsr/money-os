@@ -55,7 +55,7 @@ describe("TRACKER_CATEGORIES", () => {
     expect(countsTowardTrackerTotals({ subcategory: "rent" })).toBe(true);
   });
 
-  it("excludes credit-card purchases and bill pays from tracker totals", () => {
+  it("excludes credit-card purchases from tracker totals; keeps bill pays", () => {
     expect(
       countsTowardTrackerTotals({
         bucket: "needs",
@@ -69,7 +69,7 @@ describe("TRACKER_CATEGORIES", () => {
         subcategory: "credit_card",
         payment_method: "upi",
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       countsTowardTrackerTotals({
         bucket: "needs",

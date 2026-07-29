@@ -36,6 +36,7 @@ import {
   countsTowardCashSpend,
   creditCardBillPaymentDescription,
   hasTrackerConsentLocal,
+  isCreditCardBillPayment,
   isCreditCardPaymentMethod,
   loadCreditCardsMerged,
   setTrackerConsentLocal,
@@ -179,6 +180,13 @@ function TrackerContent() {
     description?: string;
     paymentMethod?: string;
   }>({});
+  /** Card id for in-flight Pay from dues → marks Paid after save. */
+  const [pendingCcPayCardId, setPendingCcPayCardId] = useState<string | null>(
+    null,
+  );
+  const [ccOptimisticPayments, setCcOptimisticPayments] = useState<
+    Array<{ cardId: string; amount: number }>
+  >([]);
   const [learnedObligation, setLearnedObligation] = useState<{
     title: string;
     category: string;
@@ -428,6 +436,23 @@ function TrackerContent() {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
 
+  // Drop optimistic CC pay credits once the matching bill payment is fetched.
+  useEffect(() => {
+    if (ccOptimisticPayments.length === 0) return;
+    setCcOptimisticPayments((prev) =>
+      prev.filter((p) => {
+        const pool = [...transactions, ...ccBillHistory];
+        return !pool.some(
+          (t) =>
+            isCreditCardBillPayment(t) &&
+            (t.description || "")
+              .toLowerCase()
+              .includes(`[#${p.cardId.toLowerCase()}]`),
+        );
+      }),
+    );
+  }, [transactions, ccBillHistory, ccOptimisticPayments.length]);
+
   // DevTools: dump every tracker row + purple SPENT/LEFT breakdown on each load.
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
@@ -563,9 +588,9 @@ function TrackerContent() {
   const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
   const incomeCat = TRACKER_CATEGORIES.income;
   const displayIncome = monthlyIncome || profileMonthlyFromDb;
-  // Purple SPENT/LEFT: all cash expenses including Loans & Credit EMIs and
-  // investment / loan repayment. Exclude only Credit card section (purchases +
-  // bill pays). Obligation checklist is not expenses — never subtracted here.
+  // Purple SPENT/LEFT: cash leaving the account this month. Includes loan EMIs,
+  // investments, loan repayment, and CC bill pays (UPI/netbanking). Excludes
+  // only expenses paid *with* a credit card. Obligations are not expenses.
   const totalSpent = sumCashSpend(transactions);
   const onCardsSpend = sumOnCardsSpend(transactions);
   const remaining = displayIncome - totalSpent;
@@ -1691,8 +1716,10 @@ function TrackerContent() {
             year={currentYear}
             monthlySalary={profileMonthlyFromDb}
             defaultOpen={false}
+            optimisticPayments={ccOptimisticPayments}
             onPayBill={(amount, label, cardId) => {
               setEditingExpense(null);
+              setPendingCcPayCardId(cardId);
               setDefaultBucket("loans");
               setModalDefaults({
                 subcategory: "credit_card",
@@ -1751,11 +1778,22 @@ function TrackerContent() {
             setShowAddModal(false);
             setEditingExpense(null);
             setModalDefaults({});
+            setPendingCcPayCardId(null);
           }}
           onSaved={(saved) => {
             if (!editingExpense) {
               const trackedBucket = defaultBucket || "unknown";
               Analytics.trackerExpenseAdded(trackedBucket);
+            }
+            if (pendingCcPayCardId && saved?.amount != null) {
+              setCcOptimisticPayments((prev) => [
+                ...prev,
+                {
+                  cardId: pendingCcPayCardId,
+                  amount: Number(saved.amount) || 0,
+                },
+              ]);
+              setPendingCcPayCardId(null);
             }
             if (saved && !saved.isEdit && user?.id) {
               const desc = (saved.description || "").toLowerCase();

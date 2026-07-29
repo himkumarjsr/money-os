@@ -114,7 +114,7 @@ describe("credit card payment method encoding", () => {
 });
 
 describe("cash vs card spend", () => {
-  it("excludes only Credit card section; keeps loan EMI + investment repayment", () => {
+  it("excludes CC payment-method purchases; includes UPI bill pays + EMIs", () => {
     expect(
       countsTowardCashSpend({
         bucket: "wants",
@@ -127,7 +127,28 @@ describe("cash vs card spend", () => {
         subcategory: "credit_card",
         payment_method: "upi",
       }),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      countsTowardCashSpend({
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "netbanking",
+      }),
+    ).toBe(true);
+    expect(
+      countsTowardCashSpend({
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "wallet",
+      }),
+    ).toBe(true);
+    expect(
+      countsTowardCashSpend({
+        bucket: "loans",
+        subcategory: "credit_card",
+        payment_method: "cash",
+      }),
+    ).toBe(true);
     expect(
       countsTowardCashSpend({
         bucket: "loans",
@@ -174,8 +195,8 @@ describe("cash vs card spend", () => {
         payment_method: "credit_card::c1::HDFC",
       },
     ];
-    // Bill payment (800) excluded from purple; only day-to-day cash (1000)
-    expect(sumCashSpend(txns)).toBe(1000);
+    // Bill payment (800) is cash out → in purple; card purchases excluded
+    expect(sumCashSpend(txns)).toBe(1800);
     expect(sumOnCardsSpend(txns)).toBe(700);
   });
 });
