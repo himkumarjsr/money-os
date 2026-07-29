@@ -39,6 +39,7 @@ export default function AppInitializer({
         await useAuthStore.getState().initAuth();
       } catch (err) {
         console.error("AppInitializer error:", err);
+        useAuthStore.setState({ hasInitialized: true, isLoading: false });
       }
     };
 

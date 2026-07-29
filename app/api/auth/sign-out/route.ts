@@ -6,8 +6,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * leaves cookie-backed sessions intact; this route finishes the job server-side.
  */
 export async function POST(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
 
   if (!url || !anonKey) {
     return NextResponse.json({ ok: false }, { status: 503 });

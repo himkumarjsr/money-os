@@ -7,7 +7,10 @@ import {
   findSubcategory,
   type BucketType,
 } from "@/lib/tracker-categories";
-import { isCreditCardPaymentMethod } from "@/lib/trackerCreditCards";
+import {
+  isCreditCardPaymentMethod,
+  displayExpenseDescription,
+} from "@/lib/trackerCreditCards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useState } from "react";
@@ -141,7 +144,7 @@ export default function ExpenseTable({
                 <td
                   style={{ padding: "12px", color: "#111110", maxWidth: 140 }}
                 >
-                  {t.description || "—"}
+                  {displayExpenseDescription(t.description) || "—"}
                 </td>
                 <td
                   style={{
