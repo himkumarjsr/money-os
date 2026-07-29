@@ -11,6 +11,7 @@ import {
 import {
   DEFAULT_DUE_OFFSET_DAYS,
   deleteSavedCreditCard,
+  displayExpenseDescription,
   encodeCreditCardPaymentMethod,
   formatCreditCardLabel,
   isCreditCardPaymentMethod,
@@ -336,17 +337,21 @@ export default function AddExpenseModal({
         ? new Date(yNum, mNum - 1, dNum)
         : new Date(date);
 
-    // Keep [#cardId] token on CC bill pays so dues can mark Paid after save.
-    let descriptionToStore = description;
+    // Clean note — never persist internal [#cardId] tokens.
+    let descriptionToStore = displayExpenseDescription(description);
     if (
       bucket === "loans" &&
       subcategory === "credit_card" &&
-      defaultDescription &&
-      /\[#[^\]]+\]/.test(defaultDescription) &&
-      !/\[#[^\]]+\]/.test(descriptionToStore || "")
+      defaultDescription
     ) {
-      descriptionToStore =
-        `${(descriptionToStore || "").trim()} ${defaultDescription.match(/\[#[^\]]+\]/)?.[0] || ""}`.trim();
+      const fallback = displayExpenseDescription(defaultDescription);
+      if (
+        fallback &&
+        !/^pay bill/i.test(descriptionToStore || "") &&
+        /^pay bill/i.test(fallback)
+      ) {
+        descriptionToStore = fallback;
+      }
     }
 
     const payload = {

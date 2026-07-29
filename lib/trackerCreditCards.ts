@@ -44,13 +44,34 @@ export type CreditCardBillStatus = CreditCardBillLine & {
   overdue: boolean;
 };
 
-/** Description prefix used when logging a CC bill payment expense. */
+/** Clean note when logging a CC bill payment (no internal [#id] tokens). */
 export function creditCardBillPaymentDescription(
   label: string,
-  cardId?: string,
+  _cardId?: string,
 ): string {
-  const base = `Pay bill · ${label.trim() || "Credit card"}`;
-  return cardId ? `${base} [#${cardId}]` : base;
+  const name = label.trim() || "Credit card";
+  // Strip any leftover [#…] if label was polluted.
+  const clean = name.replace(/\s*\[#[^\]]*\]\s*/g, "").trim() || "Credit card";
+  return `Pay bill · ${clean}`;
+}
+
+/** Hide internal [#cardId] tokens from notes shown in the UI. */
+export function displayExpenseDescription(
+  description: string | null | undefined,
+): string {
+  if (!description) return "";
+  return description.replace(/\s*\[#[^\]]*\]/g, "").trim();
+}
+
+/** Label after "Pay bill · …" if present. */
+export function parsePayBillLabel(
+  description: string | null | undefined,
+): string | null {
+  if (!description) return null;
+  const cleaned = displayExpenseDescription(description);
+  const m = cleaned.match(/^pay bill\s*[·\-–—:]\s*(.+)$/i);
+  if (!m?.[1]) return null;
+  return m[1].trim() || null;
 }
 
 const STORAGE_PREFIX = "finkoin_credit_cards_";
@@ -503,9 +524,8 @@ export function isCreditCardBillPayment(txn: {
     const sub = txn.subcategory || txn.category;
     if (sub === "credit_card") return true;
   }
-  // Pay-button prefills: "Pay bill · Label [#cardId]" even if bucket was changed.
-  const desc = txn.description || "";
-  if (/pay bill/i.test(desc) && /\[#[^\]]+\]/.test(desc)) return true;
+  // Pay-button / manual "Pay bill · …" notes.
+  if (parsePayBillLabel(txn.description)) return true;
   return false;
 }
 
@@ -518,16 +538,40 @@ export function billPaymentMatchesCard(
 ): boolean {
   const desc = (txn.description || "").toLowerCase();
   const id = card.id.toLowerCase();
-  // Prefer explicit [#cardId] token from Pay prefills
+  // Legacy [#cardId] token (older saves)
   const bracket = desc.match(/\[#([^\]]+)\]/);
   if (bracket?.[1]?.toLowerCase() === id) return true;
-  if (id && desc.includes(id)) return true;
+  if (id && id.length >= 4 && desc.includes(id)) return true;
+
+  const payLabel = (parsePayBillLabel(txn.description) || "").toLowerCase();
   const nick = card.nickname.trim().toLowerCase();
-  if (nick.length >= 2 && desc.includes(nick)) return true;
   const label = formatCreditCardLabel(card).toLowerCase();
-  if (label && label !== "credit card" && desc.includes(label)) return true;
+  if (payLabel) {
+    if (payLabel === label || payLabel === nick || payLabel === id) return true;
+    if (nick.length >= 2 && payLabel.includes(nick)) return true;
+    if (label.length >= 2 && payLabel.includes(label)) return true;
+  }
+  if (nick.length >= 2 && desc.includes(nick)) return true;
+  if (label.length >= 2 && desc.includes(label)) return true;
   const parsed = parseCreditCardPaymentMethod(txn.payment_method);
   if (parsed.cardId && parsed.cardId === card.id) return true;
+  return false;
+}
+
+function billPaymentMatchesOrphan(
+  txn: { description?: string | null; payment_method?: string | null },
+  orphan: { cardId: string; label: string },
+  soleOrphanFallback: boolean,
+): boolean {
+  const desc = (txn.description || "").toLowerCase();
+  const id = orphan.cardId.toLowerCase();
+  const label = orphan.label.toLowerCase();
+  const bracket = desc.match(/\[#([^\]]+)\]/);
+  if (bracket?.[1]?.toLowerCase() === id) return true;
+  const payLabel = (parsePayBillLabel(txn.description) || "").toLowerCase();
+  if (payLabel && (payLabel === label || payLabel === id)) return true;
+  if (label.length >= 2 && desc.includes(label)) return true;
+  if (soleOrphanFallback) return true;
   return false;
 }
 
@@ -557,12 +601,37 @@ function sumPaymentsForCard(
   card: SavedCreditCard,
   soleCardFallback: boolean,
 ): number {
+  const ourLabels = [
+    formatCreditCardLabel(card).toLowerCase(),
+    card.nickname.trim().toLowerCase(),
+  ].filter((s) => s.length >= 2);
+
   return transactions.reduce((sum, t) => {
     if (!isCreditCardBillPayment(t)) return sum;
     const matched = billPaymentMatchesCard(t, card);
     const hasOtherCardToken = /\[#[^\]]+\]/.test(t.description || "");
-    const attribute = matched || (soleCardFallback && !hasOtherCardToken);
+    const payLabel = (parsePayBillLabel(t.description) || "").toLowerCase();
+    const labeledElsewhere =
+      !!payLabel &&
+      !ourLabels.some(
+        (l) => payLabel === l || payLabel.includes(l) || l.includes(payLabel),
+      );
+    const attribute =
+      matched || (soleCardFallback && !hasOtherCardToken && !labeledElsewhere);
     if (!attribute) return sum;
+    const n = Number(t.amount);
+    return Number.isFinite(n) && n > 0 ? sum + n : sum;
+  }, 0);
+}
+
+function sumPaymentsForOrphan(
+  transactions: Array<BillTxn & { description?: string | null }>,
+  orphan: { cardId: string; label: string },
+  soleOrphanFallback: boolean,
+): number {
+  return transactions.reduce((sum, t) => {
+    if (!isCreditCardBillPayment(t)) return sum;
+    if (!billPaymentMatchesOrphan(t, orphan, soleOrphanFallback)) return sum;
     const n = Number(t.amount);
     return Number.isFinite(n) && n > 0 ? sum + n : sum;
   }, 0);
@@ -629,15 +698,30 @@ export function buildCreditCardBillStatuses(opts: {
     };
   });
 
-  // Orphan spend (no saved card id) still shown as due
-  for (const sug of suggestions) {
-    if (opts.cards.some((c) => c.id === sug.cardId)) continue;
+  // Orphan spend (no saved card id) — still track paid vs charged so Pay can tick.
+  const orphanSuggestions = suggestions.filter(
+    (sug) => !opts.cards.some((c) => c.id === sug.cardId),
+  );
+  const soleOrphan = orphanSuggestions.length === 1 && opts.cards.length === 0;
+  for (const sug of orphanSuggestions) {
+    const orphan = { cardId: sug.cardId, label: sug.label };
+    const paid = sumPaymentsForOrphan(
+      opts.transactions,
+      orphan,
+      soleOrphan || (opts.cards.length === 0 && orphanSuggestions.length === 1),
+    );
+    const charged = Math.max(sug.amount, paid);
+    const remaining = Math.max(0, Math.round((sug.amount - paid) * 100) / 100);
+    let status: CreditCardBillStatus["status"] = "clear";
+    if (remaining > 0) status = "due";
+    else if (sug.amount > 0 || paid > 0) status = "paid";
     statuses.push({
       ...sug,
       charged: sug.amount,
-      paid: 0,
-      remaining: sug.amount,
-      status: sug.amount > 0 ? "due" : "clear",
+      paid,
+      remaining,
+      amount: remaining > 0 ? remaining : charged,
+      status,
       overdue: false,
     });
   }

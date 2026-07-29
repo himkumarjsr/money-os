@@ -31,7 +31,15 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!hasInitialized) return;
+    // Avoid infinite "Checking sign-in…" if initAuth never finishes (env / network).
+    if (!hasInitialized) {
+      const t = window.setTimeout(() => {
+        if (!useAuthStore.getState().hasInitialized) {
+          useAuthStore.setState({ hasInitialized: true, isLoading: false });
+        }
+      }, 8000);
+      return () => window.clearTimeout(t);
+    }
 
     let cancelled = false;
 

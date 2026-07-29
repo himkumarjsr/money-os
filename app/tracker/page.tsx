@@ -35,10 +35,12 @@ import { buildCashAudit, logCashAudit } from "@/lib/trackerCashAudit";
 import {
   countsTowardCashSpend,
   creditCardBillPaymentDescription,
+  displayExpenseDescription,
   hasTrackerConsentLocal,
   isCreditCardBillPayment,
   isCreditCardPaymentMethod,
   loadCreditCardsMerged,
+  parsePayBillLabel,
   setTrackerConsentLocal,
   sumCashSpend,
   sumOnCardsSpend,
@@ -436,19 +438,31 @@ function TrackerContent() {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
 
-  // Drop optimistic CC pay credits once the matching bill payment is fetched.
+  // Drop optimistic CC pay credits once a matching bill payment is fetched.
   useEffect(() => {
     if (ccOptimisticPayments.length === 0) return;
     setCcOptimisticPayments((prev) =>
       prev.filter((p) => {
         const pool = [...transactions, ...ccBillHistory];
-        return !pool.some(
-          (t) =>
-            isCreditCardBillPayment(t) &&
-            (t.description || "")
-              .toLowerCase()
-              .includes(`[#${p.cardId.toLowerCase()}]`),
-        );
+        const id = p.cardId.toLowerCase();
+        return !pool.some((t) => {
+          if (!isCreditCardBillPayment(t)) return false;
+          const desc = (t.description || "").toLowerCase();
+          if (desc.includes(`[#${id}]`)) return true;
+          const payLabel = (
+            parsePayBillLabel(t.description) || ""
+          ).toLowerCase();
+          if (payLabel && (payLabel === id || desc.includes(id))) return true;
+          // Any loans → credit_card cash pay after a Pay CTA (covers orphan "Credit card")
+          if (
+            t.bucket === "loans" &&
+            (t.subcategory === "credit_card" || t.category === "credit_card") &&
+            Math.abs(Number(t.amount) - p.amount) < 0.02
+          ) {
+            return true;
+          }
+          return false;
+        });
       }),
     );
   }, [transactions, ccBillHistory, ccOptimisticPayments.length]);
@@ -1610,7 +1624,9 @@ function TrackerContent() {
                                       maxWidth: 220,
                                     }}
                                   >
-                                    {txn.description ||
+                                    {displayExpenseDescription(
+                                      txn.description,
+                                    ) ||
                                       new Date(txn.date).toLocaleDateString(
                                         "en-IN",
                                         { day: "numeric", month: "short" },

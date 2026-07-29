@@ -487,8 +487,45 @@ describe("credit card bill payment + carry-forward status", () => {
       }),
     ).toBe(false);
     expect(creditCardBillPaymentDescription("HDFC", "c1")).toBe(
-      "Pay bill · HDFC [#c1]",
+      "Pay bill · HDFC",
     );
+    expect(creditCardBillPaymentDescription("Credit card", "Credit card")).toBe(
+      "Pay bill · Credit card",
+    );
+  });
+
+  it("marks orphan Credit card dues paid when Pay bill note matches", () => {
+    const statuses = buildCreditCardBillStatuses({
+      asOf: new Date(2026, 7, 10),
+      cards: [],
+      transactions: [
+        {
+          amount: 2500,
+          bucket: "wants",
+          payment_method: "credit_card",
+          date: "2026-07-15",
+        },
+        {
+          amount: 2500,
+          bucket: "loans",
+          subcategory: "credit_card",
+          description: "Pay bill · Credit card",
+          payment_method: "upi",
+          date: "2026-08-04",
+        },
+      ],
+    });
+    const due = statuses.find((s) => s.status === "due");
+    const paid = statuses.find((s) => s.status === "paid");
+    // Statement-window orphan may still list; at least one paid row for the settle.
+    expect(
+      paid || statuses.some((s) => s.paid >= 2500 && s.remaining === 0),
+    ).toBeTruthy();
+    if (paid) {
+      expect(paid.remaining).toBe(0);
+      expect(paid.status).toBe("paid");
+    }
+    expect(due == null || due.remaining < 2500).toBe(true);
   });
 
   it("marks paid when bill payment covers charges; else carries remaining", () => {
@@ -530,7 +567,7 @@ describe("credit card bill payment + carry-forward status", () => {
           amount: 1000,
           bucket: "loans",
           subcategory: "credit_card",
-          description: "Pay bill · HDFC [#c1]",
+          description: "Pay bill · HDFC",
           payment_method: "upi",
           date: "2026-08-04",
         },
@@ -554,7 +591,7 @@ describe("credit card bill payment + carry-forward status", () => {
           amount: 400,
           bucket: "loans",
           subcategory: "credit_card",
-          description: "Pay bill · HDFC [#c1]",
+          description: "Pay bill · HDFC",
           payment_method: "upi",
           date: "2026-08-04",
         },

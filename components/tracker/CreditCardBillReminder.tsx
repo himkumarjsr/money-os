@@ -84,7 +84,7 @@ export default function CreditCardBillReminder({
     if (!optimisticPayments.length) return base;
     return base.map((bill) => {
       const boost = optimisticPayments
-        .filter((p) => p.cardId === bill.cardId)
+        .filter((p) => p.cardId.toLowerCase() === bill.cardId.toLowerCase())
         .reduce((s, p) => s + p.amount, 0);
       if (boost <= 0) return bill;
       // Avoid double-count once the real payment is in the pool.
