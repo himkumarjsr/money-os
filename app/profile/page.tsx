@@ -5,9 +5,7 @@ import ProfileAssets from "@/components/profile/ProfileAssets";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BackLink from "@/components/ui/BackLink";
 import { analyseFinances } from "@/lib/financialEngine";
-import { verifyPAN } from "@/lib/kycVerification";
 import { trackShare } from "@/lib/gtag";
-import { getSupabase } from "@/lib/supabase";
 import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -19,15 +17,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logoutAction = useAuthStore((s) => s.logout);
-  const updateUser = useAuthStore((s) => s.updateUser);
   const result = useFinancialStore((s) => s.result);
   const submission = useFinancialStore((s) => s.lastSubmission);
   const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
   const fkBalance = useGamificationStore((s) => s.fkBalance);
 
-  const [pan, setPan] = useState("");
-  const [panLoading, setPanLoading] = useState(false);
-  const [panMessage, setPanMessage] = useState("");
   const [referralCopied, setReferralCopied] = useState(false);
 
   // If local store is empty, pull the latest analysis snapshot from Supabase.
@@ -81,32 +75,6 @@ export default function ProfilePage() {
 
   const checklist = analysisSnapshot?.securityChecklist ?? [];
   const checklistCount = checklist.filter((i) => i.status === "ok").length;
-
-  const doVerifyPan = async () => {
-    if (!user) return;
-    setPanLoading(true);
-    const res = await verifyPAN(pan, user.name ?? "User");
-    setPanLoading(false);
-    setPanMessage(res.message);
-    if (res.verified) {
-      const panNorm = pan.trim().toUpperCase();
-      const last4 = panNorm.slice(-4);
-      updateUser({
-        panVerified: true,
-        panLast4: `${last4}${panNorm.charAt(0)}`,
-      });
-      try {
-        const supabase = getSupabase();
-        await supabase
-          .from("users")
-          .update({ pan_verified: true, pan_last4: last4 })
-          .eq("id", user.id);
-        await useAuthStore.getState().refreshUser();
-      } catch (e) {
-        console.warn("Could not persist PAN to profile:", e);
-      }
-    }
-  };
 
   const copyReferralLink = async () => {
     await navigator.clipboard.writeText(referralLink);
@@ -233,50 +201,33 @@ export default function ProfilePage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-semibold">KYC verification</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold">KYC verification</h2>
+            <span className="rounded-full bg-[#EEEDFE] px-2.5 py-0.5 text-[11px] font-semibold text-[#534AB7]">
+              Coming soon
+            </span>
+          </div>
           <p className="mt-1 text-xs text-slate-500">
-            PAN: we check the official pattern only (not a government database).
-            Your verified flag is saved on your Finkoin profile.
+            PAN, Aadhaar, and full identity checks are on the way. We&apos;ll
+            notify you when verification opens on Finkoin.
           </p>
-          <div className="mt-3 space-y-3">
-            <div className="rounded-lg border border-slate-100 p-3">
-              {!user?.panVerified ? (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    value={pan}
-                    onChange={(e) => setPan(e.target.value.toUpperCase())}
-                    placeholder="Enter PAN (ABCDE1234F)"
-                    className="h-10 flex-1 rounded-lg border border-slate-200 px-3 outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={doVerifyPan}
-                    className="h-10 rounded-lg bg-[#534AB7] px-4 text-sm font-semibold text-white"
-                    disabled={panLoading}
-                  >
-                    {panLoading ? "Verifying..." : "Verify PAN"}
-                  </button>
-                </div>
-              ) : (
-                <p className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700">
-                  <AppIcon name="checkCircle" size={16} color="#534AB7" />
-                  PAN verified{user.panLast4 ? ` · ••••${user.panLast4}` : ""}
-                </p>
-              )}
-              {panMessage ? (
-                <p className="mt-1 text-xs text-slate-500">{panMessage}</p>
-              ) : null}
+          <div className="mt-3 space-y-3 opacity-60">
+            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-medium text-slate-700">
+                PAN verification
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500">Coming soon</p>
             </div>
-            <div className="rounded-lg border border-slate-100 p-3 text-sm">
-              <p className="inline-flex items-center gap-1.5">
+            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-sm">
+              <p className="text-slate-700">
                 Mobile verification:{" "}
                 {user?.phone ? (
-                  <>
+                  <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
                     <AppIcon name="checkCircle" size={14} color="#534AB7" />
                     Verified
-                  </>
+                  </span>
                 ) : (
-                  "Not verified"
+                  <span className="text-slate-500">Coming soon</span>
                 )}
               </p>
               <p className="mt-1 text-slate-500">

@@ -611,8 +611,12 @@ function TrackerContent() {
   const spentPercent =
     displayIncome > 0 ? Math.min((totalSpent / displayIncome) * 100, 100) : 0;
   const now = new Date();
-  const isCurrentMonth =
-    selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+  // Allow current month + 1 (salary often lands on last working day / month-end).
+  const forwardLimitMonth = (now.getMonth() + 1) % 12;
+  const forwardLimitYear =
+    now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+  const isAtForwardLimit =
+    selectedMonth === forwardLimitMonth && selectedYear === forwardLimitYear;
   const goToPrevMonth = () => {
     if (selectedMonth === 0) {
       setSelectedMonth(11);
@@ -622,12 +626,7 @@ function TrackerContent() {
     }
   };
   const goToNextMonth = () => {
-    const nowDate = new Date();
-    if (
-      selectedYear === nowDate.getFullYear() &&
-      selectedMonth === nowDate.getMonth()
-    )
-      return;
+    if (isAtForwardLimit) return;
     if (selectedMonth === 11) {
       setSelectedMonth(0);
       setSelectedYear((y) => y + 1);
@@ -764,7 +763,8 @@ function TrackerContent() {
           <button
             type="button"
             onClick={goToNextMonth}
-            disabled={isCurrentMonth}
+            disabled={isAtForwardLimit}
+            aria-label="Next month"
             style={{
               background: "rgba(255,255,255,0.2)",
               border: "none",
@@ -772,9 +772,9 @@ function TrackerContent() {
               width: 36,
               height: 36,
               color: "white",
-              cursor: isCurrentMonth ? "not-allowed" : "pointer",
+              cursor: isAtForwardLimit ? "not-allowed" : "pointer",
               fontSize: 16,
-              opacity: isCurrentMonth ? 0.5 : 1,
+              opacity: isAtForwardLimit ? 0.5 : 1,
             }}
           >
             →
