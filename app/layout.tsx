@@ -319,7 +319,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans min-h-dvh bg-white antialiased">
+      <body className="font-sans min-h-dvh bg-[#F4F2FC] antialiased">
         <Script
           id="microsoft-clarity"
           strategy="afterInteractive"
@@ -363,7 +363,10 @@ export default function RootLayout({
               viewport height on body; with min-h-dvh it clips tall pages (e.g.
               Split add-expense) so the window cannot scroll.
             */}
-            <main id="main-content" className="relative w-full">
+            <main
+              id="main-content"
+              className="relative w-full max-w-[100%] overflow-x-clip"
+            >
               {children}
             </main>
             <MorningTipPopup />

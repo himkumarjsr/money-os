@@ -49,6 +49,8 @@ export function GlobalNavbar() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  /** Mobile bottom nav: slightly compact while away from top (always visible). */
+  const [bottomNavCompact, setBottomNavCompact] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const profileButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -83,8 +85,13 @@ export function GlobalNavbar() {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 8);
+      setBottomNavCompact(y >= 20);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -143,27 +150,41 @@ export function GlobalNavbar() {
         initial={false}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className={`sticky top-0 z-50 w-full border-b border-transparent transition-all duration-300 ${
-          scrolled
-            ? "border-indigo-100/70 bg-white/70 py-2 backdrop-blur-xl shadow-[0_8px_30px_rgba(76,60,180,0.14)]"
-            : "bg-transparent py-3"
-        }`}
+        className="relative sticky top-0 z-50 w-full"
+        style={{ paddingTop: "max(4px, env(safe-area-inset-top))" }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        {/* Soft wash only — no border, shadow, or hard bottom edge */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[88px] transition-opacity duration-300"
+          style={{
+            background: scrolled
+              ? "linear-gradient(180deg, rgba(244,242,252,0.96) 0%, rgba(244,242,252,0.72) 48%, rgba(244,242,252,0) 100%)"
+              : "linear-gradient(180deg, rgba(244,242,252,0.55) 0%, rgba(244,242,252,0.18) 50%, rgba(244,242,252,0) 100%)",
+            WebkitBackdropFilter: "blur(14px) saturate(1.3)",
+            backdropFilter: "blur(14px) saturate(1.3)",
+            maskImage:
+              "linear-gradient(180deg, #000 0%, #000 58%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(180deg, #000 0%, #000 58%, transparent 100%)",
+          }}
+        />
+        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
           <Link
             href="/"
             scroll
-            className="flex items-center gap-2.5"
+            className="flex min-w-0 items-center gap-2 sm:gap-2.5"
             aria-label="Finkoin home"
           >
             <svg
-              width="34"
-              height="34"
+              width="32"
+              height="32"
               viewBox="0 0 64 64"
               role="img"
               aria-label="Finkoin logo"
+              className="shrink-0"
             >
-              <rect width="64" height="64" rx="14" fill="#534AB7" />
+              <rect width="64" height="64" rx="18" fill="#534AB7" />
               <circle
                 cx="32"
                 cy="32"
@@ -185,34 +206,27 @@ export function GlobalNavbar() {
                 FK
               </text>
             </svg>
-            <span
-              style={{
-                fontWeight: 700,
-                fontSize: 20,
-                color: "#534AB7",
-                letterSpacing: "-0.5px",
-              }}
-            >
+            <span className="truncate text-[18px] font-bold tracking-[-0.5px] text-[#534AB7] sm:text-[20px]">
               Finkoin
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium text-slate-600 md:flex">
+          <nav className="hidden items-center gap-6 text-sm font-medium text-[#3D3A5C] lg:flex">
             {centerNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 scroll
-                className="nav-underline transition-colors duration-300 hover:text-slate-900"
+                className="nav-underline transition-colors duration-300 hover:text-[#534AB7]"
               >
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             {showAsLoggedIn ? (
-              <span className="hidden items-center gap-1.5 rounded-full bg-[#EEEDFE] px-3 py-1 text-xs font-semibold text-[#3C3489] md:inline-flex">
+              <span className="hidden items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-[#3C3489] shadow-sm ring-1 ring-[#534AB7]/10 md:inline-flex">
                 <AppIcon name="coin" size={14} color="#534AB7" />
                 {fkBalance} FK
               </span>
@@ -221,18 +235,10 @@ export function GlobalNavbar() {
             <Link
               href="/plans"
               scroll
-              className="hidden rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 px-3.5 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/35 md:inline-flex"
+              className="hidden rounded-full bg-[#534AB7] px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(83,74,183,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(83,74,183,0.45)] md:inline-flex"
             >
               View Plans
             </Link>
-
-            {/* <button
-              type="button"
-              onClick={() => setFeedbackOpen(true)}
-              className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 md:inline-flex"
-            >
-              Feedback
-            </button> */}
 
             {showAsLoggedIn ? <NotificationBell /> : null}
 
@@ -240,7 +246,7 @@ export function GlobalNavbar() {
               <Link
                 href={loginHrefPreserveRef("/login")}
                 scroll
-                className="hidden rounded-xl border border-[#E8E6F0] bg-white px-3.5 py-2 text-sm font-semibold text-[#534AB7] shadow-sm transition-colors hover:border-[#534AB7]/40 md:inline-flex"
+                className="hidden rounded-full border border-white/80 bg-white/70 px-3.5 py-1.5 text-sm font-semibold text-[#534AB7] shadow-sm transition-colors hover:bg-white md:inline-flex"
               >
                 Log in
               </Link>
@@ -257,7 +263,7 @@ export function GlobalNavbar() {
                 }
                 setProfileOpen((v) => !v);
               }}
-              className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-[#E8E6F0] bg-[#F4F2FC] transition-transform duration-300 hover:scale-105"
+              className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white/75 shadow-sm transition-transform duration-300 hover:scale-105"
               aria-label="Profile"
             >
               {authChromePending ? (
@@ -484,271 +490,318 @@ export function GlobalNavbar() {
       <nav
         aria-label="Mobile quick navigation"
         data-track-nav-zone="bottom_nav"
-        className="fixed bottom-0 left-0 right-0 z-[55] border-t border-[#E8E6F0] bg-white pb-[calc(env(safe-area-inset-bottom)+10px)] pt-1 shadow-[0_-4px_24px_rgba(30,30,60,0.06)] md:hidden"
+        data-nav-compact={bottomNavCompact ? "true" : "false"}
+        className="pointer-events-none fixed inset-x-0 z-[55] overflow-visible px-3 md:hidden"
+        style={{
+          bottom: "max(10px, env(safe-area-inset-bottom))",
+        }}
       >
-        <div className="relative mx-auto max-w-md px-1">
-          <div className="grid grid-cols-5 items-end gap-0.5">
-            <Link
-              href="/"
-              scroll
-              aria-current={currentPath === "/" ? "page" : undefined}
-              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${currentPath === "/" ? "text-[#534AB7]" : "text-slate-600"}`}
-            >
-              <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path
-                    d="M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <span
-                className={`text-[11px] leading-none ${currentPath === "/" ? "font-semibold" : "font-medium"}`}
-              >
-                Home
-              </span>
-              <span
-                className={`h-1 w-1 shrink-0 rounded-full ${currentPath === "/" ? "bg-[#534AB7]" : "bg-transparent"}`}
-                aria-hidden
-              />
-            </Link>
-
-            <Link
-              href="/analyse"
-              scroll
-              aria-current={
-                currentPath === "/analyse" ||
-                currentPath.startsWith("/analyse/")
-                  ? "page"
-                  : undefined
-              }
-              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                currentPath === "/analyse" ||
-                currentPath.startsWith("/analyse/")
-                  ? "text-[#534AB7]"
-                  : "text-slate-600"
+        {/* Top padding so the raised Track button is never clipped */}
+        <div
+          className={`pointer-events-auto relative mx-auto max-w-md origin-bottom overflow-visible transition-transform duration-300 ease-out ${
+            bottomNavCompact ? "scale-[0.96] pt-4" : "scale-100 pt-5"
+          }`}
+        >
+          <div
+            className="relative rounded-[28px] border border-white/70"
+            style={{
+              background: [
+                "radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 55%)",
+                "radial-gradient(90% 60% at 50% 120%, rgba(83,74,183,0.22) 0%, rgba(83,74,183,0) 55%)",
+                "linear-gradient(165deg, rgba(255,255,255,0.55) 0%, rgba(232,230,248,0.42) 42%, rgba(196,190,240,0.48) 100%)",
+              ].join(", "),
+              WebkitBackdropFilter: "blur(28px) saturate(1.85)",
+              backdropFilter: "blur(28px) saturate(1.85)",
+              boxShadow: [
+                "0 12px 40px rgba(60, 50, 120, 0.28)",
+                "0 2px 10px rgba(83,74,183,0.16)",
+                "inset 0 1.5px 0 rgba(255,255,255,0.9)",
+                "inset 0 -10px 18px rgba(83,74,183,0.12)",
+                "inset 0 0 0 1px rgba(255,255,255,0.35)",
+              ].join(", "),
+            }}
+          >
+            <div
+              className={`grid grid-cols-5 items-end gap-0.5 px-1.5 ${
+                bottomNavCompact ? "pb-1 pt-1" : "pb-1.5 pt-1.5"
               }`}
             >
-              <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path
-                    d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M14 2v6h6"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              <span
-                className={`text-[11px] leading-none ${
-                  currentPath === "/analyse" ||
-                  currentPath.startsWith("/analyse/")
-                    ? "font-semibold"
-                    : "font-medium"
-                }`}
+              <Link
+                href="/"
+                scroll
+                aria-current={currentPath === "/" ? "page" : undefined}
+                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${currentPath === "/" ? "text-[#534AB7]" : "text-[#3D3A5C]"}`}
               >
-                Report
-              </span>
-              <span
-                className={`h-1 w-1 shrink-0 rounded-full ${
-                  currentPath === "/analyse" ||
-                  currentPath.startsWith("/analyse/")
-                    ? "bg-[#534AB7]"
-                    : "bg-transparent"
-                }`}
-                aria-hidden
-              />
-            </Link>
-
-            <Link
-              href="/tracker"
-              scroll
-              aria-current={
-                currentPath === "/tracker" ||
-                currentPath.startsWith("/tracker/")
-                  ? "page"
-                  : undefined
-              }
-              className="relative flex w-full min-h-[64px] flex-col items-center justify-end gap-0.5 pb-1 pt-2 outline-none"
-            >
-              <span className="relative z-10 -mt-5 mb-0.5 flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-white p-1 shadow-[0_2px_12px_rgba(0,0,0,0.1)] ring-1 ring-[#E8E6F0]">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#534AB7] text-[28px] font-light leading-none text-white shadow-[0_4px_16px_rgba(83,74,183,0.45)]">
-                  +
+                <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </span>
-              </span>
-              <span
-                className={`text-[11px] leading-none ${
-                  currentPath === "/tracker" ||
-                  currentPath.startsWith("/tracker/")
-                    ? "font-semibold text-[#534AB7]"
-                    : "font-medium text-slate-600"
+                <span
+                  className={`text-[11px] leading-none ${currentPath === "/" ? "font-semibold" : "font-medium"}`}
+                >
+                  Home
+                </span>
+                <span
+                  className={`h-1 w-1 shrink-0 rounded-full ${currentPath === "/" ? "bg-[#534AB7]" : "bg-transparent"}`}
+                  aria-hidden
+                />
+              </Link>
+
+              <Link
+                href="/analyse"
+                scroll
+                aria-current={
+                  currentPath === "/analyse" ||
+                  currentPath.startsWith("/analyse/")
+                    ? "page"
+                    : undefined
+                }
+                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
+                  currentPath === "/analyse" ||
+                  currentPath.startsWith("/analyse/")
+                    ? "text-[#534AB7]"
+                    : "text-[#3D3A5C]"
                 }`}
               >
-                Track
-              </span>
-              <span
-                className={`h-1 w-1 shrink-0 rounded-full ${
+                <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M14 2v6h6"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span
+                  className={`text-[11px] leading-none ${
+                    currentPath === "/analyse" ||
+                    currentPath.startsWith("/analyse/")
+                      ? "font-semibold"
+                      : "font-medium"
+                  }`}
+                >
+                  Report
+                </span>
+                <span
+                  className={`h-1 w-1 shrink-0 rounded-full ${
+                    currentPath === "/analyse" ||
+                    currentPath.startsWith("/analyse/")
+                      ? "bg-[#534AB7]"
+                      : "bg-transparent"
+                  }`}
+                  aria-hidden
+                />
+              </Link>
+
+              <Link
+                href="/tracker"
+                scroll
+                aria-current={
                   currentPath === "/tracker" ||
                   currentPath.startsWith("/tracker/")
-                    ? "bg-[#534AB7]"
-                    : "bg-transparent"
-                }`}
-                aria-hidden
-              />
-            </Link>
-
-            <Link
-              href="/calculators"
-              scroll
-              aria-current={
-                currentPath === "/calculators" ||
-                currentPath === "/calculator" ||
-                currentPath.startsWith("/calculators/")
-                  ? "page"
-                  : undefined
-              }
-              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                currentPath === "/calculators" ||
-                currentPath === "/calculator" ||
-                currentPath.startsWith("/calculators/")
-                  ? "text-[#534AB7]"
-                  : "text-slate-600"
-              }`}
-            >
-              <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <rect
-                    x="4"
-                    y="3"
-                    width="16"
-                    height="18"
-                    rx="2"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M8 8h8M8 12h8M8 16h5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              <span
-                className={`text-[11px] leading-none ${
-                  currentPath === "/calculators" ||
-                  currentPath === "/calculator" ||
-                  currentPath.startsWith("/calculators/")
-                    ? "font-semibold"
-                    : "font-medium"
+                    ? "page"
+                    : undefined
+                }
+                className={`relative flex w-full flex-col items-center justify-end gap-0.5 outline-none transition-all duration-300 ${
+                  bottomNavCompact
+                    ? "min-h-[48px] pb-0.5 pt-0"
+                    : "min-h-[52px] pb-1 pt-0"
                 }`}
               >
-                Calculators
-              </span>
-              <span
-                className={`h-1 w-1 shrink-0 rounded-full ${
-                  currentPath === "/calculators" ||
-                  currentPath === "/calculator" ||
-                  currentPath.startsWith("/calculators/")
-                    ? "bg-[#534AB7]"
-                    : "bg-transparent"
-                }`}
-                aria-hidden
-              />
-            </Link>
-
-            <Link
-              href="/profile"
-              scroll
-              aria-current={
-                currentPath === "/profile" ||
-                currentPath.startsWith("/profile/")
-                  ? "page"
-                  : undefined
-              }
-              className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                currentPath === "/profile" ||
-                currentPath.startsWith("/profile/")
-                  ? "text-[#534AB7]"
-                  : "text-slate-600"
-              }`}
-            >
-              <span className="relative inline-flex h-7 w-7 items-center justify-center">
-                {authChromePending ? (
+                <span
+                  className={`relative z-20 mb-0.5 flex shrink-0 items-center justify-center rounded-full bg-white p-[3px] shadow-[0_4px_14px_rgba(83,74,183,0.28)] ring-1 ring-[#E8E6F0] transition-all duration-300 ${
+                    bottomNavCompact ? "-mt-7 h-11 w-11" : "-mt-8 h-12 w-12"
+                  }`}
+                >
                   <span
-                    className="h-7 w-7 animate-pulse rounded-full border border-[#E8E6F0] bg-[#E8E6F0]"
-                    aria-hidden
-                  />
-                ) : !showAsLoggedIn ? (
-                  <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-[#E8E6F0] bg-[#F4F2FC]">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden
-                    >
-                      <circle
-                        cx="12"
-                        cy="8"
-                        r="4"
-                        stroke="#534AB7"
-                        strokeWidth="1.5"
-                      />
-                      <path
-                        d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5"
-                        stroke="#534AB7"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                    </svg>
+                    className={`flex items-center justify-center rounded-full bg-[#534AB7] font-light leading-none text-white shadow-[0_4px_16px_rgba(83,74,183,0.4)] transition-all duration-300 ${
+                      bottomNavCompact
+                        ? "h-9 w-9 text-[22px]"
+                        : "h-10 w-10 text-[26px]"
+                    }`}
+                  >
+                    +
                   </span>
-                ) : user?.photoURL ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={user.photoURL}
-                    alt=""
-                    className="h-7 w-7 rounded-full border border-[#E8E6F0] object-cover"
-                  />
-                ) : (
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8E6F0] bg-[#534AB7] text-xs font-bold text-white">
-                    {avatarLetter}
-                  </span>
-                )}
-                {showAsLoggedIn ? (
-                  <span className="absolute -right-1 -top-0.5 min-h-[16px] min-w-[16px] rounded bg-[#534AB7] px-1 text-[9px] font-bold leading-[14px] text-white">
-                    {fkBalance > 999 ? "999+" : fkBalance}
-                  </span>
-                ) : null}
-              </span>
-              <span
-                className={`text-[11px] leading-none ${
-                  currentPath === "/profile" ||
-                  currentPath.startsWith("/profile/")
-                    ? "font-semibold"
-                    : "font-medium"
+                </span>
+                <span
+                  className={`text-[11px] leading-none ${
+                    currentPath === "/tracker" ||
+                    currentPath.startsWith("/tracker/")
+                      ? "font-semibold text-[#534AB7]"
+                      : "font-medium text-[#3D3A5C]"
+                  }`}
+                >
+                  Track
+                </span>
+                <span
+                  className={`h-1 w-1 shrink-0 rounded-full ${
+                    currentPath === "/tracker" ||
+                    currentPath.startsWith("/tracker/")
+                      ? "bg-[#534AB7]"
+                      : "bg-transparent"
+                  }`}
+                  aria-hidden
+                />
+              </Link>
+
+              <Link
+                href="/calculators"
+                scroll
+                aria-current={
+                  currentPath === "/calculators" ||
+                  currentPath === "/calculator" ||
+                  currentPath.startsWith("/calculators/")
+                    ? "page"
+                    : undefined
+                }
+                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
+                  currentPath === "/calculators" ||
+                  currentPath === "/calculator" ||
+                  currentPath.startsWith("/calculators/")
+                    ? "text-[#534AB7]"
+                    : "text-[#3D3A5C]"
                 }`}
               >
-                Profile
-              </span>
-              <span
-                className={`h-1 w-1 shrink-0 rounded-full ${
+                <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <rect
+                      x="4"
+                      y="3"
+                      width="16"
+                      height="18"
+                      rx="2"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M8 8h8M8 12h8M8 16h5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                <span
+                  className={`text-[11px] leading-none ${
+                    currentPath === "/calculators" ||
+                    currentPath === "/calculator" ||
+                    currentPath.startsWith("/calculators/")
+                      ? "font-semibold"
+                      : "font-medium"
+                  }`}
+                >
+                  Calculators
+                </span>
+                <span
+                  className={`h-1 w-1 shrink-0 rounded-full ${
+                    currentPath === "/calculators" ||
+                    currentPath === "/calculator" ||
+                    currentPath.startsWith("/calculators/")
+                      ? "bg-[#534AB7]"
+                      : "bg-transparent"
+                  }`}
+                  aria-hidden
+                />
+              </Link>
+
+              <Link
+                href="/profile"
+                scroll
+                aria-current={
                   currentPath === "/profile" ||
                   currentPath.startsWith("/profile/")
-                    ? "bg-[#534AB7]"
-                    : "bg-transparent"
+                    ? "page"
+                    : undefined
+                }
+                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
+                  currentPath === "/profile" ||
+                  currentPath.startsWith("/profile/")
+                    ? "text-[#534AB7]"
+                    : "text-[#3D3A5C]"
                 }`}
-                aria-hidden
-              />
-            </Link>
+              >
+                <span className="relative inline-flex h-7 w-7 items-center justify-center">
+                  {authChromePending ? (
+                    <span
+                      className="h-7 w-7 animate-pulse rounded-full border border-[#E8E6F0] bg-[#E8E6F0]"
+                      aria-hidden
+                    />
+                  ) : !showAsLoggedIn ? (
+                    <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-[#E8E6F0] bg-[#F4F2FC]">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden
+                      >
+                        <circle
+                          cx="12"
+                          cy="8"
+                          r="4"
+                          stroke="#534AB7"
+                          strokeWidth="1.5"
+                        />
+                        <path
+                          d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5"
+                          stroke="#534AB7"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </span>
+                  ) : user?.photoURL ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.photoURL}
+                      alt=""
+                      className="h-7 w-7 rounded-full border border-[#E8E6F0] object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8E6F0] bg-[#534AB7] text-xs font-bold text-white">
+                      {avatarLetter}
+                    </span>
+                  )}
+                  {showAsLoggedIn ? (
+                    <span className="absolute -right-1 -top-0.5 min-h-[16px] min-w-[16px] rounded bg-[#534AB7] px-1 text-[9px] font-bold leading-[14px] text-white">
+                      {fkBalance > 999 ? "999+" : fkBalance}
+                    </span>
+                  ) : null}
+                </span>
+                <span
+                  className={`text-[11px] leading-none ${
+                    currentPath === "/profile" ||
+                    currentPath.startsWith("/profile/")
+                      ? "font-semibold"
+                      : "font-medium"
+                  }`}
+                >
+                  Profile
+                </span>
+                <span
+                  className={`h-1 w-1 shrink-0 rounded-full ${
+                    currentPath === "/profile" ||
+                    currentPath.startsWith("/profile/")
+                      ? "bg-[#534AB7]"
+                      : "bg-transparent"
+                  }`}
+                  aria-hidden
+                />
+              </Link>
+            </div>
           </div>
         </div>
       </nav>

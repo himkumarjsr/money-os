@@ -45,13 +45,16 @@
       Document scrolls on the window. Avoid overflow-x:hidden on html —
       on iOS Safari it can turn the root into a broken scrollport.
     */
+    overflow-x: clip;
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    background-color: #f4f2fc;
   }
 
   body {
-    @apply min-h-dvh bg-surface text-[color:var(--color-text)] transition-colors;
+    @apply min-h-dvh text-[color:var(--color-text)] transition-colors;
+    background-color: #f4f2fc;
     /* clip does not force overflow-y to compute as auto (unlike hidden). */
     overflow-x: clip;
     overflow-y: visible;
