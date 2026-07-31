@@ -284,7 +284,6 @@ export default function RootLayout({
                     ],
                   },
                   sameAs: [
-                    "https://www.instagram.com/finkoin",
                     "https://twitter.com/finkoin",
                     "https://linkedin.com/company/finkoin",
                   ],

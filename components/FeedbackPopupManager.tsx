@@ -1,19 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import {
+  hasAskedForProduct,
+  markFeedbackAsked,
+  productKeyFromPath,
+} from "@/lib/feedbackPrompt";
 
 const SHOW_AFTER_SECONDS = 120;
-const PAGES_TO_TRACK = ["/calculators", "/tracker", "/learn", "/analyse", "/portfolio", "/optimizer"];
+const PAGES_TO_TRACK = [
+  "/calculators",
+  "/tracker",
+  "/learn",
+  "/analyse",
+  "/portfolio",
+  "/optimizer",
+  "/split",
+];
 
 export default function FeedbackPopupManager() {
   const pathname = usePathname();
-  const { isLoggedIn } = useAuthStore();
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const userId = useAuthStore((s) => s.user?.id);
 
   const [show, setShow] = useState(false);
   const [context, setContext] = useState("");
+
+  const dismissForGood = useCallback(() => {
+    if (context) markFeedbackAsked(context, userId);
+    setShow(false);
+  }, [context, userId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -23,19 +42,17 @@ export default function FeedbackPopupManager() {
     if (!isTracked) return;
     if (!isLoggedIn) return;
 
-    const pageKey = path.split("/")[1] || "app";
-    const storageKey = `finkoin_feedback_${pageKey}`;
-    if (localStorage.getItem(storageKey)) {
-      return;
-    }
+    const pageKey = productKeyFromPath(path);
+    if (hasAskedForProduct(pageKey, userId)) return;
 
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
+      if (hasAskedForProduct(pageKey, userId)) return;
       setContext(pageKey);
       setShow(true);
     }, SHOW_AFTER_SECONDS * 1000);
 
-    return () => clearTimeout(timer);
-  }, [pathname, isLoggedIn]);
+    return () => window.clearTimeout(timer);
+  }, [pathname, isLoggedIn, userId]);
 
   if (!show) return null;
 
@@ -43,7 +60,7 @@ export default function FeedbackPopupManager() {
     <>
       <div
         role="presentation"
-        onClick={() => setShow(false)}
+        onClick={dismissForGood}
         style={{
           position: "fixed",
           inset: 0,
@@ -92,10 +109,13 @@ export default function FeedbackPopupManager() {
             alignItems: "center",
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>Quick feedback</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>
+            Quick feedback
+          </div>
           <button
             type="button"
-            onClick={() => setShow(false)}
+            onClick={dismissForGood}
+            aria-label="Close feedback"
             style={{
               background: "rgba(255,255,255,0.2)",
               border: "none",
@@ -114,7 +134,7 @@ export default function FeedbackPopupManager() {
           </button>
         </div>
 
-        <FeedbackWidget pageContext={context} onClose={() => setShow(false)} />
+        <FeedbackWidget pageContext={context} onClose={dismissForGood} />
       </div>
     </>
   );

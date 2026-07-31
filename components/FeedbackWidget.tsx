@@ -3,13 +3,21 @@
 import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import { markFeedbackAsked } from "@/lib/feedbackPrompt";
 
 interface FeedbackWidgetProps {
   pageContext: string;
   onClose?: () => void;
 }
 
-export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetProps) {
+const GOOGLE_REVIEW_URL = (
+  process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL ?? ""
+).trim();
+
+export default function FeedbackWidget({
+  pageContext,
+  onClose,
+}: FeedbackWidgetProps) {
   const { user, isLoggedIn } = useAuthStore();
   const result = useFinancialStore((s) => s.result);
 
@@ -38,8 +46,6 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
         score_at_time: result?.overallScore ?? null,
       };
 
-      console.log("FeedbackWidget: submitting", payload);
-
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,21 +54,20 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
 
       const data = (await res.json()) as { error?: string; success?: boolean };
 
-      console.log("FeedbackWidget: response", res.status, data);
-
       if (!res.ok) {
         setError(data.error || `Error ${res.status}`);
         setSaving(false);
         return;
       }
 
-      const key = `finkoin_feedback_${pageContext}`;
-      localStorage.setItem(key, "1");
-
+      markFeedbackAsked(pageContext, user?.id);
       setSaving(false);
       setDone(true);
 
-      setTimeout(() => onClose?.(), 2000);
+      // High ratings: keep modal open briefly so they can leave a Google review.
+      if (!(rating >= 4 && GOOGLE_REVIEW_URL)) {
+        setTimeout(() => onClose?.(), 2000);
+      }
     } catch (err: unknown) {
       console.error("FeedbackWidget error:", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -85,22 +90,98 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
             margin: "0 auto 12px",
           }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2.5" strokeLinecap="round">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#534AB7"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#111110", marginBottom: 4 }}>Thanks for your feedback!</div>
-        {isLoggedIn && (
-          <div style={{ fontSize: 13, color: "#534AB7", fontWeight: 600 }}>+50 FK tokens added</div>
-        )}
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: "#111110",
+            marginBottom: 4,
+          }}
+        >
+          Thanks for your feedback!
+        </div>
+        {isLoggedIn ? (
+          <div style={{ fontSize: 13, color: "#534AB7", fontWeight: 600 }}>
+            +50 FK tokens added
+          </div>
+        ) : null}
+
+        {rating >= 4 && GOOGLE_REVIEW_URL ? (
+          <div style={{ marginTop: 16 }}>
+            <p style={{ fontSize: 13, color: "#5C5A55", marginBottom: 10 }}>
+              Love Finkoin? A quick Google review helps more people find us.
+            </p>
+            <a
+              href={GOOGLE_REVIEW_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 44,
+                width: "100%",
+                borderRadius: 11,
+                background: "#534AB7",
+                color: "white",
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: "none",
+                marginBottom: 8,
+              }}
+            >
+              Leave a Google review
+            </a>
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              style={{
+                width: "100%",
+                height: 40,
+                borderRadius: 11,
+                background: "transparent",
+                border: "1px solid #E8E6F0",
+                fontSize: 13,
+                color: "#9B9A94",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Done
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }
 
   return (
     <div style={{ padding: "20px" }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: "#111110", marginBottom: 4 }}>Was this helpful?</div>
-      <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 16 }}>Rate your experience · Earn 50 FK tokens</div>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: "#111110",
+          marginBottom: 4,
+        }}
+      >
+        Was this helpful?
+      </div>
+      <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 16 }}>
+        Rate your experience · Earn 50 FK tokens
+      </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         {[1, 2, 3, 4, 5].map((star) => (
@@ -115,7 +196,9 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
               height: 44,
               borderRadius: 12,
               background: (hovered || rating) >= star ? "#EEEDFE" : "#F7F7F4",
-              border: `1.5px solid ${(hovered || rating) >= star ? "#534AB7" : "#E8E6F0"}`,
+              border: `1.5px solid ${
+                (hovered || rating) >= star ? "#534AB7" : "#E8E6F0"
+              }`,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -167,7 +250,16 @@ export default function FeedbackWidget({ pageContext, onClose }: FeedbackWidgetP
       />
 
       {error ? (
-        <div style={{ fontSize: 12, color: "#E24B4A", marginTop: 6, marginBottom: 4 }}>{error}</div>
+        <div
+          style={{
+            fontSize: 12,
+            color: "#E24B4A",
+            marginTop: 6,
+            marginBottom: 4,
+          }}
+        >
+          {error}
+        </div>
       ) : null}
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
