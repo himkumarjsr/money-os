@@ -122,7 +122,7 @@ export default function HomeHeroCarousel() {
 
   return (
     <div
-      className="mx-auto w-full max-w-4xl rounded-xl border border-indigo-100/70 px-2.5 py-2 backdrop-blur-sm sm:rounded-3xl sm:px-6 sm:py-7"
+      className="mx-auto w-full max-w-4xl rounded-xl px-2.5 py-2 backdrop-blur-sm sm:rounded-3xl sm:px-6 sm:py-7"
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured Finkoin tools"

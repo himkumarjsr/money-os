@@ -34,23 +34,27 @@ export default function HomePageClient({ children }: { children: ReactNode }) {
   const orbRightY = useTransform(scrollY, [0, 1200], [0, -180]);
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-indigo-50 via-white to-violet-50/70 text-slate-900 antialiased">
+    <div className="relative min-h-dvh overflow-x-clip bg-gradient-to-b from-indigo-50 via-[#F4F2FC] to-violet-50/70 text-slate-900 antialiased">
       <m.div
         aria-hidden
         className="pointer-events-none fixed left-0 right-0 top-0 z-[70] h-1 origin-left bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500"
         style={{ scaleX: progress }}
       />
-      <m.div
+      {/* Contain blurred orbs so they cannot create a horizontal white gutter */}
+      <div
         aria-hidden
-        className="pointer-events-none fixed -left-24 top-24 z-0 h-64 w-64 rounded-full bg-violet-400/25 blur-3xl"
-        style={{ y: orbLeftY }}
-      />
-      <m.div
-        aria-hidden
-        className="pointer-events-none fixed -right-28 top-40 z-0 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl"
-        style={{ y: orbRightY }}
-      />
-      <main className="snap-y snap-mandatory">
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
+        <m.div
+          className="absolute -left-24 top-24 h-64 w-64 rounded-full bg-violet-400/25 blur-3xl"
+          style={{ y: orbLeftY }}
+        />
+        <m.div
+          className="absolute -right-28 top-40 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl"
+          style={{ y: orbRightY }}
+        />
+      </div>
+      <div className="snap-y snap-mandatory">
         <TrackImpression component_id="home_hero_section" threshold={0.2}>
           <section className="relative z-10 overflow-hidden border-b border-indigo-100/80 px-4 pb-10 pt-8 sm:px-6 sm:pb-24 sm:pt-20 lg:px-8">
             <m.div
@@ -92,7 +96,7 @@ export default function HomePageClient({ children }: { children: ReactNode }) {
         </TrackImpression>
 
         <HomePageBelowFold />
-      </main>
+      </div>
     </div>
   );
 }
