@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import SplitMarketingLanding from "@/components/landing/SplitMarketingLanding";
 import InviteLinkShare from "@/components/split/InviteLinkShare";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
@@ -13,12 +14,36 @@ import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 
+/**
+ * Logged-out / crawlers: public marketing landing (SSR HTML).
+ * Logged-in: Split app behind ProtectedGate.
+ */
 export default function SplitHomePage() {
   return (
-    <ProtectedGate>
-      <SplitHomeInner />
-    </ProtectedGate>
+    <SplitEntryClient>
+      <SplitMarketingLanding />
+    </SplitEntryClient>
   );
+}
+
+function SplitEntryClient({ children }: { children: ReactNode }) {
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const user = useAuthStore((s) => s.user);
+
+  if (isLoggedIn && user?.id) {
+    return (
+      <ProtectedGate>
+        <SplitHomeInner />
+      </ProtectedGate>
+    );
+  }
+
+  if (!hasInitialized || !isLoggedIn || !user?.id) {
+    return <>{children}</>;
+  }
+
+  return <BrandPageLoader fullScreen={false} label="Loading…" />;
 }
 
 function SplitHomeInner() {

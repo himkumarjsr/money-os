@@ -21,7 +21,7 @@ export default function CalculatorsClient({
   urlBaseForTaxCanonical,
 }: {
   initialCalcId: string;
-  /** When set, keeps tax-regime on this path; other calcs use `/calculators?calc=…`. */
+  /** When set, keeps tax-regime on this path. */
   urlBaseForTaxCanonical?: string;
 }) {
   const pathname = usePathname();
@@ -40,6 +40,7 @@ export default function CalculatorsClient({
   const lastDeepLinkCalc = useRef<string | null>(null);
   /** Once user picks a calc from the hub list, close should stay on calculators. */
   const openedFromHub = useRef(false);
+  const onDedicatedCalcPath = Boolean(pathname?.match(/^\/calculators\/[^/]+/));
 
   const activeItem = useMemo(() => {
     const item = activeCat.items.find((i) => i.id === calcId);
@@ -56,21 +57,16 @@ export default function CalculatorsClient({
 
   const buildCalcUrl = useCallback(
     (nextCalcId: string, keepFromHome: boolean) => {
-      if (urlBaseForTaxCanonical && nextCalcId === "tax-regime") {
-        return keepFromHome
-          ? `${urlBaseForTaxCanonical}?from=home`
-          : urlBaseForTaxCanonical;
+      if (nextCalcId === "tax-regime") {
+        const taxPath =
+          urlBaseForTaxCanonical || "/calculators/tax-regime-2026";
+        return keepFromHome ? `${taxPath}?from=home` : taxPath;
       }
-      const base =
-        urlBaseForTaxCanonical && nextCalcId !== "tax-regime"
-          ? "/calculators"
-          : pathname || "/calculators";
-      const next = new URLSearchParams();
-      next.set("calc", nextCalcId);
-      if (keepFromHome) next.set("from", "home");
-      return `${base}?${next.toString()}`;
+      // Clean SEO paths for every calculator deep-link / hub selection.
+      const path = `/calculators/${nextCalcId}`;
+      return keepFromHome ? `${path}?from=home` : path;
     },
-    [pathname, urlBaseForTaxCanonical],
+    [urlBaseForTaxCanonical],
   );
 
   const updateCalcInUrl = useCallback(
@@ -88,10 +84,25 @@ export default function CalculatorsClient({
     });
   }, [activeItem.id, activeItem.title]);
 
-  // Deep links (?calc=sip|swp|emi) select category AND open the mobile sheet once per calc id.
+  // Deep links (/calculators/sip or ?calc=sip) select category AND open mobile sheet once.
+  // Hub index (/calculators) must NOT fall back to initialCalcId — that was opening SIP
+  // when users tapped Calculators in the bottom nav.
   useEffect(() => {
-    const fromUrl = searchParams?.get("calc") ?? initialCalcId;
-    if (!fromUrl) return;
+    const pathSeg = pathname?.match(/^\/calculators\/([^/]+)/)?.[1];
+    const pathCalc =
+      pathSeg === "tax-regime-2026" || pathSeg === "tax-regime"
+        ? "tax-regime"
+        : pathSeg;
+    const fromUrl = searchParams?.get("calc") ?? pathCalc;
+
+    if (!fromUrl) {
+      if (pathname === "/calculators") {
+        lastDeepLinkCalc.current = null;
+        setSheetOpen(false);
+      }
+      return;
+    }
+
     setCategory(findCategoryForCalc(fromUrl));
     setCalcId(fromUrl);
     if (lastDeepLinkCalc.current === fromUrl) return;
@@ -102,14 +113,13 @@ export default function CalculatorsClient({
     ) {
       setSheetOpen(true);
     }
-  }, [initialCalcId, searchParams]);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     if (urlBaseForTaxCanonical && calcId === "tax-regime") {
       const expected = fromHome
         ? `${urlBaseForTaxCanonical}?from=home`
         : urlBaseForTaxCanonical;
-      const current = `${pathname}${searchParams?.toString() ? `?${searchParams}` : ""}`;
       if (
         pathname === urlBaseForTaxCanonical &&
         (fromHome
@@ -118,18 +128,34 @@ export default function CalculatorsClient({
       ) {
         return;
       }
+      const current = `${pathname}${searchParams?.toString() ? `?${searchParams}` : ""}`;
       if (current !== expected) {
         router.replace(expected, { scroll: false });
       }
       return;
     }
-    const currentCalc = searchParams?.get("calc");
-    if (currentCalc === calcId) return;
-    // Preserve from=home only for the initial deep-link session, not hub picks.
-    updateCalcInUrl(calcId, fromHome && !openedFromHub.current);
+
+    // Hub index (/calculators) should stay put until the user picks a tool.
+    if (pathname === "/calculators" && !openedFromHub.current && !fromHome) {
+      return;
+    }
+
+    if (onDedicatedCalcPath || openedFromHub.current || fromHome) {
+      const expectedPath =
+        calcId === "tax-regime"
+          ? "/calculators/tax-regime-2026"
+          : `/calculators/${calcId}`;
+      const onExpectedPath = pathname === expectedPath;
+      const fromOk = fromHome
+        ? searchParams?.get("from") === "home"
+        : !searchParams?.get("from");
+      if (onExpectedPath && fromOk) return;
+      updateCalcInUrl(calcId, fromHome && !openedFromHub.current);
+    }
   }, [
     calcId,
     fromHome,
+    onDedicatedCalcPath,
     pathname,
     router,
     searchParams,

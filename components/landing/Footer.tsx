@@ -36,6 +36,8 @@ const columns = [
       { label: "FK Split", href: "/split" },
       { label: "Tax Calculator", href: "/calculators/tax-regime-2026" },
       { label: "SIP Calculator", href: "/calculators/sip" },
+      { label: "SWP Calculator", href: "/calculators/swp" },
+      { label: "EMI Calculator", href: "/calculators/emi" },
       { label: "Portfolio Analysis", href: "/portfolio" },
       { label: "Learn", href: "/learn" },
       { label: "Calculators", href: "/calculators" },

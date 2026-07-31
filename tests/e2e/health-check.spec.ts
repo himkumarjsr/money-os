@@ -47,12 +47,35 @@ test.describe("Health Check Flow", () => {
     await expect(page).not.toHaveURL(/error/);
   });
 
+  test("logged-out analyse shows public marketing landing", async ({
+    page,
+  }) => {
+    await page.goto("/analyse");
+    await expect(page).toHaveURL(/\/analyse/);
+    await expect(
+      page.getByRole("heading", {
+        name: /financial health score/i,
+      }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page
+        .getByRole("link", {
+          name: /start free health check/i,
+        })
+        .first(),
+    ).toBeVisible();
+  });
+
   test("logged-out analyse shows login or form shell", async ({ page }) => {
     await page.goto("/analyse");
     await page.waitForTimeout(800);
     const hasLogin = await page
       .getByRole("button", { name: /log in|sign in/i })
-      .or(page.getByRole("link", { name: /log in|sign in/i }))
+      .or(
+        page.getByRole("link", {
+          name: /log in|sign in|start free health check/i,
+        }),
+      )
       .first()
       .isVisible()
       .catch(() => false);

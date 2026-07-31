@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { BLOG_ARTICLES } from "@/lib/blogContent";
+import { INDEXABLE_CALC_IDS } from "./calculators/calculator-seo";
 
 const baseUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.finkoin.com"
@@ -8,7 +9,7 @@ const baseUrl = (
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  const staticEntries: MetadataRoute.Sitemap = [
+  return [
     {
       url: baseUrl,
       lastModified: now,
@@ -22,6 +23,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.95,
     },
     {
+      url: `${baseUrl}/split`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/calculators`,
       lastModified: now,
       changeFrequency: "monthly",
@@ -33,17 +40,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.95,
     },
-    {
-      url: `${baseUrl}/calculators/sip`,
+    ...INDEXABLE_CALC_IDS.map((id) => ({
+      url: `${baseUrl}/calculators/${id}`,
       lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.8,
-    },
+      changeFrequency: "monthly" as const,
+      priority:
+        id === "sip" || id === "swp" || id === "emi" || id === "fire"
+          ? 0.9
+          : 0.75,
+    })),
     {
       url: `${baseUrl}/tracker`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/portfolio`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/learn`,
@@ -94,6 +110,4 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.2,
     },
   ];
-
-  return staticEntries;
 }

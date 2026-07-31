@@ -8,7 +8,7 @@ import { fadeIn } from "@/lib/animations";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { trackNavClick } from "@/lib/gtag";
 import { useAuthStore } from "@/store/authStore";
-import { AnimatePresence, m } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -24,6 +24,52 @@ const centerNavItems = [
   { href: "/optimizer", label: "Optimizer" },
   { href: "/learn", label: "Learn" },
 ] as const;
+
+type BottomNavId = "home" | "analyse" | "tracker" | "calculators" | "profile";
+
+function matchBottomNav(path: string): BottomNavId | null {
+  if (path === "/") return "home";
+  if (path === "/analyse" || path.startsWith("/analyse/")) return "analyse";
+  if (path === "/tracker" || path.startsWith("/tracker/")) return "tracker";
+  if (
+    path === "/calculators" ||
+    path === "/calculator" ||
+    path.startsWith("/calculators/")
+  ) {
+    return "calculators";
+  }
+  if (path === "/profile" || path.startsWith("/profile/")) return "profile";
+  return null;
+}
+
+const BOTTOM_NAV_PILL_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 480,
+  damping: 36,
+  mass: 0.7,
+};
+
+function BottomNavActivePill({
+  active,
+  className,
+}: {
+  active: boolean;
+  className?: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  if (!active) return null;
+  return (
+    <m.span
+      layoutId="finkoin-bottom-nav-pill"
+      className={
+        className ??
+        "absolute inset-0 rounded-full bg-[#534AB7]/16 ring-1 ring-[#534AB7]/20"
+      }
+      transition={reduceMotion ? { duration: 0 } : BOTTOM_NAV_PILL_TRANSITION}
+      aria-hidden
+    />
+  );
+}
 
 export function GlobalNavbar() {
   const router = useRouter();
@@ -121,6 +167,10 @@ export function GlobalNavbar() {
   const avatarLetter = useMemo(
     () => (user?.name?.trim()?.charAt(0) || "U").toUpperCase(),
     [user?.name],
+  );
+  const activeBottomNav = useMemo(
+    () => matchBottomNav(currentPath),
+    [currentPath],
   );
 
   const handleSignOut = useCallback(async () => {
@@ -526,94 +576,79 @@ export function GlobalNavbar() {
                 bottomNavCompact ? "pb-1 pt-1" : "pb-1.5 pt-1.5"
               }`}
             >
-              <Link
-                href="/"
-                scroll
-                aria-current={currentPath === "/" ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${currentPath === "/" ? "text-[#534AB7]" : "text-[#3D3A5C]"}`}
-              >
-                <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                <span
-                  className={`text-[11px] leading-none ${currentPath === "/" ? "font-semibold" : "font-medium"}`}
-                >
-                  Home
-                </span>
-                <span
-                  className={`h-1 w-1 shrink-0 rounded-full ${currentPath === "/" ? "bg-[#534AB7]" : "bg-transparent"}`}
-                  aria-hidden
-                />
-              </Link>
-
-              <Link
-                href="/analyse"
-                scroll
-                aria-current={
-                  currentPath === "/analyse" ||
-                  currentPath.startsWith("/analyse/")
-                    ? "page"
-                    : undefined
-                }
-                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                  currentPath === "/analyse" ||
-                  currentPath.startsWith("/analyse/")
-                    ? "text-[#534AB7]"
-                    : "text-[#3D3A5C]"
-                }`}
-              >
-                <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M14 2v6h6"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                <span
-                  className={`text-[11px] leading-none ${
-                    currentPath === "/analyse" ||
-                    currentPath.startsWith("/analyse/")
-                      ? "font-semibold"
-                      : "font-medium"
-                  }`}
-                >
-                  Report
-                </span>
-                <span
-                  className={`h-1 w-1 shrink-0 rounded-full ${
-                    currentPath === "/analyse" ||
-                    currentPath.startsWith("/analyse/")
-                      ? "bg-[#534AB7]"
-                      : "bg-transparent"
-                  }`}
-                  aria-hidden
-                />
-              </Link>
+              {(
+                [
+                  {
+                    id: "home" as const,
+                    href: "/",
+                    label: "Home",
+                    icon: (
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: "analyse" as const,
+                    href: "/analyse",
+                    label: "Report",
+                    icon: (
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M14 2v6h6"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                  },
+                ] as const
+              ).map((item) => {
+                const active = activeBottomNav === item.id;
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    scroll
+                    aria-current={active ? "page" : undefined}
+                    className={`flex flex-col items-center gap-1 pb-1 pt-0.5 ${
+                      active ? "text-[#534AB7]" : "text-[#3D3A5C]"
+                    }`}
+                  >
+                    <span className="relative flex h-9 w-9 items-center justify-center">
+                      <BottomNavActivePill active={active} />
+                      <span className="relative z-10 flex h-6 w-6 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                        {item.icon}
+                      </span>
+                    </span>
+                    <span
+                      className={`text-[11px] leading-none ${
+                        active ? "font-semibold" : "font-medium"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </Link>
+                );
+              })}
 
               <Link
                 href="/tracker"
                 scroll
                 aria-current={
-                  currentPath === "/tracker" ||
-                  currentPath.startsWith("/tracker/")
-                    ? "page"
-                    : undefined
+                  activeBottomNav === "tracker" ? "page" : undefined
                 }
                 className={`relative flex w-full flex-col items-center justify-end gap-0.5 outline-none transition-all duration-300 ${
                   bottomNavCompact
@@ -626,8 +661,12 @@ export function GlobalNavbar() {
                     bottomNavCompact ? "-mt-7 h-11 w-11" : "-mt-8 h-12 w-12"
                   }`}
                 >
+                  <BottomNavActivePill
+                    active={activeBottomNav === "tracker"}
+                    className="absolute -inset-1 rounded-full bg-[#534AB7]/14 ring-1 ring-[#534AB7]/25"
+                  />
                   <span
-                    className={`flex items-center justify-center rounded-full bg-[#534AB7] font-light leading-none text-white shadow-[0_4px_16px_rgba(83,74,183,0.4)] transition-all duration-300 ${
+                    className={`relative z-10 flex items-center justify-center rounded-full bg-[#534AB7] font-light leading-none text-white shadow-[0_4px_16px_rgba(83,74,183,0.4)] transition-all duration-300 ${
                       bottomNavCompact
                         ? "h-9 w-9 text-[22px]"
                         : "h-10 w-10 text-[26px]"
@@ -638,168 +677,134 @@ export function GlobalNavbar() {
                 </span>
                 <span
                   className={`text-[11px] leading-none ${
-                    currentPath === "/tracker" ||
-                    currentPath.startsWith("/tracker/")
+                    activeBottomNav === "tracker"
                       ? "font-semibold text-[#534AB7]"
                       : "font-medium text-[#3D3A5C]"
                   }`}
                 >
                   Track
                 </span>
-                <span
-                  className={`h-1 w-1 shrink-0 rounded-full ${
-                    currentPath === "/tracker" ||
-                    currentPath.startsWith("/tracker/")
-                      ? "bg-[#534AB7]"
-                      : "bg-transparent"
-                  }`}
-                  aria-hidden
-                />
               </Link>
 
               <Link
                 href="/calculators"
                 scroll
                 aria-current={
-                  currentPath === "/calculators" ||
-                  currentPath === "/calculator" ||
-                  currentPath.startsWith("/calculators/")
-                    ? "page"
-                    : undefined
+                  activeBottomNav === "calculators" ? "page" : undefined
                 }
-                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                  currentPath === "/calculators" ||
-                  currentPath === "/calculator" ||
-                  currentPath.startsWith("/calculators/")
+                className={`flex flex-col items-center gap-1 pb-1 pt-0.5 ${
+                  activeBottomNav === "calculators"
                     ? "text-[#534AB7]"
                     : "text-[#3D3A5C]"
                 }`}
               >
-                <span className="flex h-7 w-7 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <rect
-                      x="4"
-                      y="3"
-                      width="16"
-                      height="18"
-                      rx="2"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M8 8h8M8 12h8M8 16h5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                <span className="relative flex h-9 w-9 items-center justify-center">
+                  <BottomNavActivePill
+                    active={activeBottomNav === "calculators"}
+                  />
+                  <span className="relative z-10 flex h-6 w-6 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <rect
+                        x="4"
+                        y="3"
+                        width="16"
+                        height="18"
+                        rx="2"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M8 8h8M8 12h8M8 16h5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
                 </span>
                 <span
                   className={`text-[11px] leading-none ${
-                    currentPath === "/calculators" ||
-                    currentPath === "/calculator" ||
-                    currentPath.startsWith("/calculators/")
+                    activeBottomNav === "calculators"
                       ? "font-semibold"
                       : "font-medium"
                   }`}
                 >
                   Calculators
                 </span>
-                <span
-                  className={`h-1 w-1 shrink-0 rounded-full ${
-                    currentPath === "/calculators" ||
-                    currentPath === "/calculator" ||
-                    currentPath.startsWith("/calculators/")
-                      ? "bg-[#534AB7]"
-                      : "bg-transparent"
-                  }`}
-                  aria-hidden
-                />
               </Link>
 
               <Link
                 href="/profile"
                 scroll
                 aria-current={
-                  currentPath === "/profile" ||
-                  currentPath.startsWith("/profile/")
-                    ? "page"
-                    : undefined
+                  activeBottomNav === "profile" ? "page" : undefined
                 }
-                className={`flex flex-col items-center gap-0.5 pb-1 pt-0.5 ${
-                  currentPath === "/profile" ||
-                  currentPath.startsWith("/profile/")
+                className={`flex flex-col items-center gap-1 pb-1 pt-0.5 ${
+                  activeBottomNav === "profile"
                     ? "text-[#534AB7]"
                     : "text-[#3D3A5C]"
                 }`}
               >
-                <span className="relative inline-flex h-7 w-7 items-center justify-center">
-                  {authChromePending ? (
-                    <span
-                      className="h-7 w-7 animate-pulse rounded-full border border-[#E8E6F0] bg-[#E8E6F0]"
-                      aria-hidden
-                    />
-                  ) : !showAsLoggedIn ? (
-                    <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-[#E8E6F0] bg-[#F4F2FC]">
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
+                <span className="relative flex h-9 w-9 items-center justify-center">
+                  <BottomNavActivePill active={activeBottomNav === "profile"} />
+                  <span className="relative z-10 inline-flex h-7 w-7 items-center justify-center">
+                    {authChromePending ? (
+                      <span
+                        className="h-7 w-7 animate-pulse rounded-full border border-[#E8E6F0] bg-[#E8E6F0]"
                         aria-hidden
-                      >
-                        <circle
-                          cx="12"
-                          cy="8"
-                          r="4"
-                          stroke="#534AB7"
-                          strokeWidth="1.5"
-                        />
-                        <path
-                          d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5"
-                          stroke="#534AB7"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </span>
-                  ) : user?.photoURL ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={user.photoURL}
-                      alt=""
-                      className="h-7 w-7 rounded-full border border-[#E8E6F0] object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8E6F0] bg-[#534AB7] text-xs font-bold text-white">
-                      {avatarLetter}
-                    </span>
-                  )}
-                  {showAsLoggedIn ? (
-                    <span className="absolute -right-1 -top-0.5 min-h-[16px] min-w-[16px] rounded bg-[#534AB7] px-1 text-[9px] font-bold leading-[14px] text-white">
-                      {fkBalance > 999 ? "999+" : fkBalance}
-                    </span>
-                  ) : null}
+                      />
+                    ) : !showAsLoggedIn ? (
+                      <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-[#E8E6F0] bg-[#F4F2FC]">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden
+                        >
+                          <circle
+                            cx="12"
+                            cy="8"
+                            r="4"
+                            stroke="#534AB7"
+                            strokeWidth="1.5"
+                          />
+                          <path
+                            d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5"
+                            stroke="#534AB7"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </span>
+                    ) : user?.photoURL ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={user.photoURL}
+                        alt=""
+                        className="h-7 w-7 rounded-full border border-[#E8E6F0] object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8E6F0] bg-[#534AB7] text-xs font-bold text-white">
+                        {avatarLetter}
+                      </span>
+                    )}
+                    {showAsLoggedIn ? (
+                      <span className="absolute -right-1 -top-0.5 z-20 min-h-[16px] min-w-[16px] rounded bg-[#534AB7] px-1 text-[9px] font-bold leading-[14px] text-white">
+                        {fkBalance > 999 ? "999+" : fkBalance}
+                      </span>
+                    ) : null}
+                  </span>
                 </span>
                 <span
                   className={`text-[11px] leading-none ${
-                    currentPath === "/profile" ||
-                    currentPath.startsWith("/profile/")
+                    activeBottomNav === "profile"
                       ? "font-semibold"
                       : "font-medium"
                   }`}
                 >
                   Profile
                 </span>
-                <span
-                  className={`h-1 w-1 shrink-0 rounded-full ${
-                    currentPath === "/profile" ||
-                    currentPath.startsWith("/profile/")
-                      ? "bg-[#534AB7]"
-                      : "bg-transparent"
-                  }`}
-                  aria-hidden
-                />
               </Link>
             </div>
           </div>
