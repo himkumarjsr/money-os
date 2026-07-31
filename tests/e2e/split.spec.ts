@@ -7,14 +7,17 @@ test.describe("FK Split", () => {
     await expect(page).not.toHaveURL(/error/);
   });
 
-  test("split protected route stays usable when logged out", async ({
-    page,
-  }) => {
+  test("logged-out split shows public marketing landing", async ({ page }) => {
     await page.goto("/split");
-    // Gate may redirect to /login, show spinner, or briefly stay on /split.
-    await page.waitForTimeout(2500);
-    await expect(page.locator("body")).toBeVisible();
-    expect(page.url()).toMatch(/\/(split|login)/);
+    await expect(page).toHaveURL(/\/split/);
+    await expect(
+      page.getByRole("heading", {
+        name: /split expenses with friends/i,
+      }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("link", { name: /create free split account/i }).first(),
+    ).toBeVisible();
   });
 
   test("join page handles invalid token without crash", async ({ page }) => {

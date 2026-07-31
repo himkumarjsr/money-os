@@ -5,6 +5,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import { Suspense } from "react";
 import AppInitializer from "@/components/AppInitializer";
+import PwaBootSplash from "@/components/PwaBootSplash";
 import { MotionLazyProvider } from "@/components/MotionLazyProvider";
 import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
@@ -320,6 +321,40 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans min-h-dvh bg-[#F4F2FC] antialiased">
+        {/*
+          Critical CSS is inline so the splash paints before globals.css /
+          JS — covers the blank gap when opening the installed PWA.
+        */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+#finkoin-boot-splash{display:none}
+@media (display-mode:standalone),(display-mode:fullscreen),(display-mode:minimal-ui){
+#finkoin-boot-splash{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:linear-gradient(165deg,#5f56c4 0%,#534ab7 48%,#3c3489 100%);color:#fff;transition:opacity .35s ease,visibility .35s ease}
+#finkoin-boot-splash.finkoin-boot-splash--hide{opacity:0;visibility:hidden;pointer-events:none}
+#finkoin-boot-splash .finkoin-boot-mark{display:flex;height:72px;width:72px;align-items:center;justify-content:center;border-radius:20px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);box-shadow:0 12px 40px rgba(20,16,60,.28);font-size:22px;font-weight:800;letter-spacing:-.03em}
+#finkoin-boot-splash .finkoin-boot-name{margin:0;font-size:22px;font-weight:700;letter-spacing:-.03em}
+#finkoin-boot-splash .finkoin-boot-sub{margin:0;font-size:13px;font-weight:500;color:rgba(255,255,255,.78)}
+#finkoin-boot-splash .finkoin-boot-ring{width:28px;height:28px;margin-top:8px;border-radius:50%;border:2.5px solid rgba(255,255,255,.28);border-top-color:#fff;animation:finkoin-boot-spin .75s linear infinite}
+@keyframes finkoin-boot-spin{to{transform:rotate(360deg)}}
+}
+`,
+          }}
+        />
+        <div
+          id="finkoin-boot-splash"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="finkoin-boot-mark" aria-hidden>
+            FK
+          </div>
+          <p className="finkoin-boot-name">Finkoin</p>
+          <p className="finkoin-boot-sub">Loading your money OS…</p>
+          <div className="finkoin-boot-ring" aria-hidden />
+        </div>
+        <PwaBootSplash />
         <Script
           id="microsoft-clarity"
           strategy="afterInteractive"

@@ -33,15 +33,24 @@ test.describe("Calculators", () => {
     await expect(page.getByText(/₹|regime|tax|old|new/i).first()).toBeVisible();
   });
 
-  test("SIP deep link opens calculators hub", async ({ page }) => {
-    await page.goto("/calculators?calc=sip");
-    await expect(page).toHaveURL(/calc=sip|calculators/);
+  test("SIP clean URL is indexable and loads", async ({ page }) => {
+    await page.goto("/calculators/sip");
+    await expect(page).toHaveURL(/\/calculators\/sip/);
     await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      /\/calculators\/sip$/,
+    );
   });
 
-  test("EMI deep link opens calculators hub", async ({ page }) => {
-    await page.goto("/calculators?calc=emi");
-    await expect(page).toHaveURL(/calc=emi|calculators/);
+  test("legacy SIP query redirects to clean URL", async ({ page }) => {
+    await page.goto("/calculators?calc=sip");
+    await expect(page).toHaveURL(/\/calculators\/sip/);
+  });
+
+  test("EMI clean URL loads", async ({ page }) => {
+    await page.goto("/calculators/emi");
+    await expect(page).toHaveURL(/\/calculators\/emi/);
     await expect(page.locator("body")).toBeVisible();
   });
 });

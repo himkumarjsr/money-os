@@ -33,7 +33,7 @@ export default function TaxExploreMore() {
           </Link>
         </li>
         <li>
-          <Link href="/calculators?calc=sip" className="hover:underline">
+          <Link href="/calculators/sip" className="hover:underline">
             SIP calculator
           </Link>
         </li>

@@ -13,13 +13,13 @@ const TOOLS: Array<{
   {
     id: "sip",
     label: "SIP",
-    href: "/calculators?calc=sip&from=home",
+    href: "/calculators/sip?from=home",
     icon: "trending",
   },
   {
     id: "swp",
     label: "SWP",
-    href: "/calculators?calc=swp&from=home",
+    href: "/calculators/swp?from=home",
     icon: "wallet",
   },
   {
@@ -37,7 +37,7 @@ const TOOLS: Array<{
   {
     id: "emi",
     label: "EMI",
-    href: "/calculators?calc=emi&from=home",
+    href: "/calculators/emi?from=home",
     icon: "bank",
   },
   {
