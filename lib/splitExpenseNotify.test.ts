@@ -10,7 +10,7 @@ const sendWebPushToUser = vi.hoisted(() =>
 );
 
 vi.mock("@/lib/webPush", () => ({
-  sendWebPushToUser: (...args: unknown[]) => sendWebPushToUser(...args),
+  sendWebPushToUser,
 }));
 
 type QueryResult = { data: unknown; error: unknown };

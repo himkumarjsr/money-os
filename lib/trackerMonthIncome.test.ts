@@ -435,12 +435,14 @@ describe("income helpers", () => {
     expect(
       isSavingsCarryForwardTxn({
         bucket: "needs",
+        amount: 0,
         description: SAVINGS_CARRY_FORWARD_DESC,
       }),
     ).toBe(false);
     expect(
       isSavingsCarryForwardTxn({
         bucket: "income",
+        amount: 1,
         description: `  ${SAVINGS_CARRY_FORWARD_DESC}  `,
       }),
     ).toBe(true);
