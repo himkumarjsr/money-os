@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
 export type PushSubscriptionPayload = {
@@ -8,12 +9,15 @@ export type PushSubscriptionPayload = {
   };
 };
 
-export type TipPushPayload = {
+export type WebPushPayload = {
   title: string;
   body: string;
   url?: string;
   tag?: string;
 };
+
+/** @deprecated Use WebPushPayload */
+export type TipPushPayload = WebPushPayload;
 
 let vapidConfigured = false;
 
@@ -38,7 +42,7 @@ export function isWebPushConfigured(): boolean {
 
 export async function sendWebPush(
   subscription: PushSubscriptionPayload,
-  payload: TipPushPayload,
+  payload: WebPushPayload,
 ): Promise<{ ok: boolean; statusCode?: number; gone?: boolean }> {
   if (!ensureVapid()) {
     return { ok: false };
@@ -71,4 +75,55 @@ export async function sendWebPush(
     }
     return { ok: false, statusCode, gone };
   }
+}
+
+/** Send a Web Push to every stored subscription for a user; prune gone endpoints. */
+export async function sendWebPushToUser(
+  supabaseAdmin: SupabaseClient,
+  userId: string,
+  payload: WebPushPayload,
+): Promise<{ pushed: number; cleaned: number }> {
+  if (!isWebPushConfigured()) return { pushed: 0, cleaned: 0 };
+
+  const { data: subs, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .eq("user_id", userId);
+
+  if (error || !subs?.length) return { pushed: 0, cleaned: 0 };
+
+  let pushed = 0;
+  let cleaned = 0;
+
+  await Promise.all(
+    (
+      subs as Array<{
+        id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+      }>
+    ).map(async (sub) => {
+      const result = await sendWebPush(
+        {
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth },
+        },
+        payload,
+      );
+      if (result.ok) {
+        pushed += 1;
+        return;
+      }
+      if (result.gone) {
+        await supabaseAdmin
+          .from("push_subscriptions")
+          .delete()
+          .eq("id", sub.id);
+        cleaned += 1;
+      }
+    }),
+  );
+
+  return { pushed, cleaned };
 }

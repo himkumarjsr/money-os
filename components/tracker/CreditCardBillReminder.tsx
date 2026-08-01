@@ -59,6 +59,7 @@ export default function CreditCardBillReminder({
   onPayBill,
   defaultOpen = false,
   optimisticPayments = [],
+  asOf,
 }: {
   previousTransactions: Txn[];
   currentTransactions?: Txn[];
@@ -71,6 +72,8 @@ export default function CreditCardBillReminder({
   defaultOpen?: boolean;
   /** Recent Pay saves not yet reflected in fetched txns (cardId → amount). */
   optimisticPayments?: Array<{ cardId: string; amount: number }>;
+  /** Anchor month for “last month’s charges” (usually 1st of selected tracker month). */
+  asOf?: Date;
 }) {
   const userId = useAuthStore((s) => s.user?.id);
   const [open, setOpen] = useState(defaultOpen);
@@ -80,6 +83,8 @@ export default function CreditCardBillReminder({
     const base = buildCreditCardBillStatuses({
       cards,
       transactions: pool,
+      asOf,
+      previousMonthChargesOnly: true,
     });
     if (!optimisticPayments.length) return base;
     return base.map((bill) => {
@@ -106,7 +111,22 @@ export default function CreditCardBillReminder({
         status,
       };
     });
-  }, [previousTransactions, currentTransactions, cards, optimisticPayments]);
+  }, [
+    previousTransactions,
+    currentTransactions,
+    cards,
+    optimisticPayments,
+    asOf,
+  ]);
+
+  const dueStatuses = useMemo(
+    () => statuses.filter((b) => b.status === "due" && b.remaining > 0),
+    [statuses],
+  );
+  const paidStatuses = useMemo(
+    () => statuses.filter((b) => b.status === "paid"),
+    [statuses],
+  );
 
   useEffect(() => {
     if (optimisticPayments.length > 0) setOpen(true);
@@ -126,12 +146,16 @@ export default function CreditCardBillReminder({
     }
   }, [userId, cards, statuses]);
 
-  if (cards.length === 0 && statuses.length === 0) return null;
+  if (
+    cards.length === 0 &&
+    dueStatuses.length === 0 &&
+    paidStatuses.length === 0
+  ) {
+    return null;
+  }
 
-  const dueTotal = statuses
-    .filter((b) => b.status === "due")
-    .reduce((s, b) => s + b.remaining, 0);
-  const paidCount = statuses.filter((b) => b.status === "paid").length;
+  const dueTotal = dueStatuses.reduce((s, b) => s + b.remaining, 0);
+  const paidCount = paidStatuses.length;
 
   const salaryHint =
     monthlySalary && monthlySalary > 0 && dueTotal > 0
@@ -177,10 +201,23 @@ export default function CreditCardBillReminder({
         )}
       </p>
 
+      {dueStatuses.length === 0 && paidCount > 0 ? (
+        <p
+          style={{
+            margin: "0 0 8px",
+            fontSize: 12,
+            color: "#1D9E75",
+            fontWeight: 600,
+          }}
+        >
+          Last month&apos;s card spends are settled — nothing due right now.
+        </p>
+      ) : null}
+
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {statuses.map((b) => {
-          const isPaid = b.status === "paid";
-          const isDue = b.status === "due";
+        {dueStatuses.map((b) => {
+          const isPaid = false;
+          const isDue = true;
           return (
             <li
               key={b.cardId}

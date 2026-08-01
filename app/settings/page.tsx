@@ -453,8 +453,8 @@ function SettingsInner() {
               {!pushSupported
                 ? "Push needs a supporting browser. On iPhone: Add to Home Screen, then enable here."
                 : pushConsent
-                  ? "✓ Device push on — you’ll get an OS notification with each tip"
-                  : "Off — enable to get tips as phone notifications"}
+                  ? "✓ Device push on — tips and Split expense alerts on this phone"
+                  : "Off — enable for tips and Split expense alerts on this phone"}
             </p>
             {pushMessage ? (
               <p className="mt-1 text-[11px] font-medium text-[#534AB7]">
@@ -465,7 +465,7 @@ function SettingsInner() {
         </div>
 
         <ToggleRow
-          label="Payment alerts"
+          label="Payment & Split alerts"
           checked={notifPrefs.payment_alerts}
           onChange={(v) => void updatePref("payment_alerts", v)}
           disabled={notifSavingKey === "payment_alerts"}

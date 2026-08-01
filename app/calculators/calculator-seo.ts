@@ -354,6 +354,17 @@ export function absoluteCalcUrl(path: string) {
   return `${SITE_URL}${path}`;
 }
 
+/** Dedicated share banners; others fall back to site home OG. */
+const CALC_OG_IMAGE: Record<string, string> = {
+  sip: "/og/og-sip.png",
+  swp: "/og/og-swp.png",
+  "tax-regime": "/og/og-tax-calculator.png",
+};
+
+export function getOgImagePathForCalc(calcId: string): string {
+  return CALC_OG_IMAGE[calcId] ?? "/og/og-home.png";
+}
+
 export function buildCalculatorJsonLd(seo: CalculatorSeo) {
   const pageUrl = absoluteCalcUrl(seo.path);
   return {

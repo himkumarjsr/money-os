@@ -163,4 +163,107 @@ describe("webPush", () => {
     });
     warn.mockRestore();
   });
+
+  describe("sendWebPushToUser", () => {
+    function mockAdmin(result: {
+      data: Array<{
+        id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+      }> | null;
+      error?: unknown;
+    }) {
+      const del = vi.fn(async () => ({ error: null }));
+      const eq = vi.fn(async () => result);
+      const select = vi.fn(() => ({ eq }));
+      const from = vi.fn((table: string) => {
+        if (table === "push_subscriptions") {
+          return {
+            select,
+            delete: () => ({ eq: del }),
+          };
+        }
+        throw new Error(`unexpected ${table}`);
+      });
+      return { from, del, eq };
+    }
+
+    it("no-ops when VAPID is not configured", async () => {
+      const admin = mockAdmin({ data: [] });
+      const { sendWebPushToUser } = await import("./webPush");
+      await expect(
+        sendWebPushToUser(admin as never, "u1", { title: "T", body: "B" }),
+      ).resolves.toEqual({ pushed: 0, cleaned: 0 });
+      expect(admin.from).not.toHaveBeenCalled();
+    });
+
+    it("returns zeros when select errors or has no rows", async () => {
+      vi.stubEnv("NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY", "pub");
+      vi.stubEnv("WEB_PUSH_VAPID_PRIVATE_KEY", "priv");
+      const { sendWebPushToUser } = await import("./webPush");
+
+      await expect(
+        sendWebPushToUser(
+          mockAdmin({ data: null, error: { message: "x" } }) as never,
+          "u1",
+          { title: "T", body: "B" },
+        ),
+      ).resolves.toEqual({ pushed: 0, cleaned: 0 });
+
+      await expect(
+        sendWebPushToUser(mockAdmin({ data: [] }) as never, "u1", {
+          title: "T",
+          body: "B",
+        }),
+      ).resolves.toEqual({ pushed: 0, cleaned: 0 });
+    });
+
+    it("pushes to each sub and deletes gone endpoints", async () => {
+      vi.stubEnv("NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY", "pub");
+      vi.stubEnv("WEB_PUSH_VAPID_PRIVATE_KEY", "priv");
+      sendNotification
+        .mockResolvedValueOnce({ statusCode: 201 })
+        .mockRejectedValueOnce({ statusCode: 410 })
+        .mockRejectedValueOnce({ statusCode: 500 });
+
+      const admin = mockAdmin({
+        data: [
+          {
+            id: "s1",
+            endpoint: "https://push.example/1",
+            p256dh: "p1",
+            auth: "a1",
+          },
+          {
+            id: "s2",
+            endpoint: "https://push.example/2",
+            p256dh: "p2",
+            auth: "a2",
+          },
+          {
+            id: "s3",
+            endpoint: "https://push.example/3",
+            p256dh: "p3",
+            auth: "a3",
+          },
+        ],
+      });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { sendWebPushToUser } = await import("./webPush");
+
+      await expect(
+        sendWebPushToUser(admin as never, "u1", {
+          title: "Split",
+          body: "New expense",
+          url: "/split/g1",
+          tag: "split-expense-e1",
+        }),
+      ).resolves.toEqual({ pushed: 1, cleaned: 1 });
+
+      expect(admin.del).toHaveBeenCalledWith("id", "s2");
+      expect(warn).toHaveBeenCalled();
+      warn.mockRestore();
+    });
+  });
 });

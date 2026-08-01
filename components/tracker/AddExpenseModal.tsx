@@ -36,11 +36,15 @@ interface AddExpenseModalProps {
   onSaved: (saved?: {
     amount: number;
     category: string;
+    subcategory: string;
+    bucket: string;
     description: string;
     date: string;
     isEdit: boolean;
   }) => void;
   defaultDate?: string;
+  /** Inclusive max selectable date (YYYY-MM-DD). Defaults to today. */
+  maxDate?: string;
   defaultBucket?: string;
   defaultSubcategory?: string;
   defaultAmount?: number;
@@ -82,6 +86,7 @@ export default function AddExpenseModal({
   onClose,
   onSaved,
   defaultDate,
+  maxDate,
   defaultBucket,
   defaultSubcategory,
   defaultAmount,
@@ -91,6 +96,7 @@ export default function AddExpenseModal({
 }: AddExpenseModalProps) {
   const user = useAuthStore((s) => s.user);
   const [today, setToday] = useState(() => localISODate());
+  const dateMax = maxDate && maxDate > today ? maxDate : today;
   const seedPayment =
     editExpense?.payment_method || defaultPaymentMethod || "upi";
   const seedParsed = parseCreditCardPaymentMethod(seedPayment);
@@ -399,6 +405,8 @@ export default function AddExpenseModal({
       onSaved({
         amount: Number(payload.amount),
         category: String(payload.category ?? ""),
+        subcategory: String(payload.subcategory ?? ""),
+        bucket: String(payload.bucket ?? ""),
         description: String(payload.description ?? ""),
         date: String(payload.date ?? ""),
         isEdit: Boolean(editExpense?.id),
@@ -509,7 +517,7 @@ export default function AddExpenseModal({
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            max={today}
+            max={dateMax}
             style={IOS_DATE_INPUT_STYLE}
           />
         </div>

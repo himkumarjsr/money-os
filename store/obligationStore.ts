@@ -247,9 +247,10 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         return;
       }
 
-      const items = (data ?? []).map((row) =>
-        mapChecklist(row as Record<string, unknown>),
-      );
+      const items = (data ?? [])
+        .map((row) => mapChecklist(row as Record<string, unknown>))
+        // Soft-deleted obligations must not stay on the month checklist.
+        .filter((c) => c.obligation == null || c.obligation.is_active);
       set({
         checklist: items,
         currentMonth: monthStart,
@@ -313,6 +314,16 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
   deleteObligation: async (id) => {
     const supabase = getSupabase();
+    // Checklist rows outlive soft-delete — remove them or the item stays visible.
+    const { error: checklistErr } = await supabase
+      .from("obligation_checklist")
+      .delete()
+      .eq("obligation_id", id);
+    if (checklistErr) {
+      console.error("deleteObligation checklist:", checklistErr);
+      return;
+    }
+
     const { error } = await supabase
       .from("financial_obligations")
       .update({ is_active: false, updated_at: new Date().toISOString() })
@@ -323,9 +334,14 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       return;
     }
 
-    set((state) => ({
-      obligations: state.obligations.filter((o) => o.id !== id),
-    }));
+    set((state) => {
+      const checklist = state.checklist.filter((c) => c.obligation_id !== id);
+      return {
+        obligations: state.obligations.filter((o) => o.id !== id),
+        checklist,
+        ...totals(checklist),
+      };
+    });
   },
 
   markPaid: async (checklistId, amount) => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { notifySplitExpenseAdded } from "@/lib/splitExpenseNotify";
 import { computeSplitShares } from "@/lib/splitShares";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 
@@ -146,6 +147,24 @@ export async function POST(req: NextRequest) {
       .from("split_groups")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", groupId);
+
+    const paidByName =
+      body.paidByName?.trim() || paidByEmail.split("@")[0] || "Member";
+
+    // Fire-and-forget: inbox + mobile push for other members.
+    void notifySplitExpenseAdded(admin, {
+      groupId,
+      expenseId: String(newExpense.id),
+      title,
+      amount,
+      paidByName,
+      actorUserId: user.id,
+      shareUserIds: sharesWithExpense.map(
+        (s) => (s as { user_id?: string | null }).user_id,
+      ),
+    }).catch((err) => {
+      console.warn("split expense notify failed", err);
+    });
 
     return NextResponse.json({
       success: true,

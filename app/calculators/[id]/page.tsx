@@ -8,6 +8,7 @@ import {
   INDEXABLE_CALC_IDS,
   absoluteCalcUrl,
   buildCalculatorJsonLd,
+  getOgImagePathForCalc,
   getSeoForCalc,
   resolveCalcIdFromPathSegment,
 } from "../calculator-seo";
@@ -33,6 +34,7 @@ export async function generateMetadata({
 
   const seo = getSeoForCalc(calcId);
   const pageUrl = absoluteCalcUrl(seo.path);
+  const ogImage = `${SITE_URL}${getOgImagePathForCalc(calcId)}`;
 
   return {
     title: { absolute: seo.title },
@@ -48,7 +50,7 @@ export async function generateMetadata({
       type: "website",
       images: [
         {
-          url: `${SITE_URL}/og/og-home.png`,
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: seo.appName,
@@ -59,7 +61,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: seo.title,
       description: seo.description,
-      images: [`${SITE_URL}/og/og-home.png`],
+      images: [ogImage],
     },
   };
 }
