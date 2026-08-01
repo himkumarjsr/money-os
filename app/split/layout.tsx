@@ -27,10 +27,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: `${SITE_URL}/og/og-home.png`,
+        url: `${SITE_URL}/og/og-split.png`,
         width: 1200,
         height: 630,
-        alt: "Finkoin Split",
+        alt: "Finkoin Split — Split expenses with friends",
       },
     ],
   },
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     title: "Finkoin Split — Free Expense Splitting",
     description:
       "Split expenses with friends. Track group spending. Settle debts easily.",
-    images: [`${SITE_URL}/og/og-home.png`],
+    images: [`${SITE_URL}/og/og-split.png`],
   },
 };
 

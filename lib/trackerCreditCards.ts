@@ -575,14 +575,32 @@ function billPaymentMatchesOrphan(
   return false;
 }
 
+function txnDateInRange(
+  txn: { date?: string | null },
+  start: Date,
+  end: Date,
+): boolean {
+  if (!txn.date) return false;
+  const d = new Date(`${txn.date}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getTime() >= start.getTime() && d.getTime() <= end.getTime();
+}
+
 function sumChargesForCard(
   transactions: BillTxn[],
   card: SavedCreditCard,
   soleCardFallback: boolean,
+  chargeWindow?: { start: Date; end: Date } | null,
 ): number {
   const cardLabel = formatCreditCardLabel(card).toLowerCase();
   return transactions.reduce((sum, t) => {
     if (!isCreditCardCharge(t)) return sum;
+    if (
+      chargeWindow &&
+      !txnDateInRange(t, chargeWindow.start, chargeWindow.end)
+    ) {
+      return sum;
+    }
     const { cardId: tid, label } = parseCreditCardPaymentMethod(
       t.payment_method,
     );
@@ -639,17 +657,30 @@ function sumPaymentsForOrphan(
 
 /**
  * Per-card due status with unpaid carry-forward:
- * remaining = all CC charges − all matched bill payments in the txn pool.
+ * remaining = CC charges − matched bill payments in the txn pool.
  * Paid bills show status "paid"; unpaid stay "due" across months until cleared.
+ *
+ * When `previousMonthChargesOnly` is true (default for tracker dues), only the
+ * previous calendar month's card purchases count as charges — so a bill paid
+ * last month does not keep appearing as due this month.
  */
 export function buildCreditCardBillStatuses(opts: {
   cards: SavedCreditCard[];
   transactions: Array<BillTxn & { description?: string | null }>;
   asOf?: Date;
+  /** When true: dues reflect last calendar month's card spends only. */
+  previousMonthChargesOnly?: boolean;
 }): CreditCardBillStatus[] {
   const asOf = opts.asOf ?? new Date();
   const asOfDay = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
   const soleCard = opts.cards.length === 1;
+  const prevMonthOnly = opts.previousMonthChargesOnly === true;
+  const chargeWindow = prevMonthOnly
+    ? {
+        start: new Date(asOf.getFullYear(), asOf.getMonth() - 1, 1),
+        end: new Date(asOf.getFullYear(), asOf.getMonth(), 0, 23, 59, 59, 999),
+      }
+    : null;
   const suggestions = buildCreditCardPaySuggestions({
     cards: opts.cards,
     transactions: opts.transactions,
@@ -658,7 +689,12 @@ export function buildCreditCardBillStatuses(opts: {
   const suggestionById = new Map(suggestions.map((s) => [s.cardId, s]));
 
   const statuses: CreditCardBillStatus[] = opts.cards.map((card) => {
-    const charged = sumChargesForCard(opts.transactions, card, soleCard);
+    const charged = sumChargesForCard(
+      opts.transactions,
+      card,
+      soleCard,
+      chargeWindow,
+    );
     const paid = sumPaymentsForCard(opts.transactions, card, soleCard);
     const remaining = Math.max(0, Math.round((charged - paid) * 100) / 100);
     const sug = suggestionById.get(card.id);

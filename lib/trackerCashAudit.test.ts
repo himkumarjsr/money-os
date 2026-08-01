@@ -1,5 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { buildCashAudit } from "./trackerCashAudit";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildCashAudit, logCashAudit, reasonLabel } from "./trackerCashAudit";
+
+describe("reasonLabel", () => {
+  it("covers every audit reason", () => {
+    expect(reasonLabel("income")).toMatch(/Income/);
+    expect(reasonLabel("included")).toMatch(/purple SPENT/);
+    expect(reasonLabel("included_loan_emi")).toMatch(/loan EMI/);
+    expect(reasonLabel("included_loan_repayment")).toMatch(/loan repayment/);
+    expect(reasonLabel("included_cc_bill_pay")).toMatch(/credit card bill/);
+    expect(reasonLabel("cc_purchase")).toMatch(/Excluded/);
+    expect(reasonLabel("invalid_amount")).toMatch(/invalid/);
+  });
+});
 
 describe("buildCashAudit", () => {
   it("includes loan EMI + CC bill pay + loan repayment; excludes only CC purchases", () => {
@@ -54,11 +66,126 @@ describe("buildCashAudit", () => {
 
     expect(audit.incomeUsed).toBe(100000);
     expect(audit.incomeSource).toBe("profile");
-    // groceries + bill pay + home EMI + loan repayment
     expect(audit.purpleSpent).toBe(24000);
     expect(audit.onCards).toBe(2000);
     expect(audit.left).toBe(76000);
     expect(audit.included).toHaveLength(4);
     expect(audit.excluded.map((e) => e.reason)).toEqual(["cc_purchase"]);
+  });
+
+  it("prefers logged income and classifies edge rows", () => {
+    const audit = buildCashAudit({
+      profileMonthlyIncome: 50000,
+      transactions: [
+        {
+          bucket: "income",
+          amount: 80000,
+          description: "Salary",
+        },
+        {
+          amount: 0,
+          bucket: "needs",
+          description: "zero",
+        },
+        {
+          amount: "NaN" as unknown as number,
+          bucket: "needs",
+        },
+        {
+          id: "emi",
+          amount: 4000,
+          bucket: "needs",
+          subcategory: "personal_loan",
+          payment_method: "upi",
+        },
+        {
+          amount: 2000,
+          bucket: "investment",
+          subcategory: "loan_repayment",
+          payment_method: "upi",
+          description: "  ",
+          date: null,
+        },
+        {
+          amount: 1500,
+          bucket: "needs",
+          category: "bnpl",
+          payment_method: "cash",
+        },
+      ],
+    });
+
+    expect(audit.incomeSource).toBe("logged");
+    expect(audit.incomeUsed).toBe(80000);
+    expect(audit.included.some((l) => l.reason === "included_loan_emi")).toBe(
+      true,
+    );
+    expect(
+      audit.included.some((l) => l.reason === "included_loan_repayment"),
+    ).toBe(true);
+    expect(
+      audit.included.find((l) => l.description === "(no description)"),
+    ).toBeTruthy();
+  });
+
+  it("uses none income source when nothing logged or profiled", () => {
+    const audit = buildCashAudit({
+      transactions: [{ amount: 100, bucket: "needs", payment_method: "upi" }],
+    });
+    expect(audit.incomeSource).toBe("none");
+    expect(audit.incomeUsed).toBe(0);
+    expect(audit.left).toBe(-100);
+  });
+});
+
+describe("logCashAudit", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("prints included and excluded tables", () => {
+    const group = vi.spyOn(console, "group").mockImplementation(() => {});
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const table = vi.spyOn(console, "table").mockImplementation(() => {});
+    const groupEnd = vi.spyOn(console, "groupEnd").mockImplementation(() => {});
+
+    const audit = buildCashAudit({
+      profileMonthlyIncome: 1000,
+      transactions: [
+        {
+          amount: 100,
+          bucket: "needs",
+          payment_method: "upi",
+          description: "Tea",
+        },
+        {
+          amount: 200,
+          bucket: "wants",
+          payment_method: "credit_card::x::Y",
+          description: "Card",
+        },
+      ],
+    });
+
+    logCashAudit(audit, "Test");
+    expect(group).toHaveBeenCalled();
+    expect(table).toHaveBeenCalledTimes(2);
+    expect(groupEnd).toHaveBeenCalled();
+    expect(log).toHaveBeenCalled();
+  });
+
+  it("skips excluded table when empty", () => {
+    const table = vi.spyOn(console, "table").mockImplementation(() => {});
+    vi.spyOn(console, "group").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "groupEnd").mockImplementation(() => {});
+
+    logCashAudit(
+      buildCashAudit({
+        profileMonthlyIncome: 1000,
+        transactions: [{ amount: 50, bucket: "needs", payment_method: "upi" }],
+      }),
+    );
+    expect(table).toHaveBeenCalledTimes(1);
   });
 });

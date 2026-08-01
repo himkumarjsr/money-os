@@ -36,9 +36,9 @@ test.describe("FK Split — Group detail scroll", () => {
     await page.waitForTimeout(2500);
 
     // Next.js error overlay hides <body> and breaks scroll — fail clearly.
-    await expect(page.getByText(/Server Error|Cannot find module/i)).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByText(/Server Error|Cannot find module/i),
+    ).toHaveCount(0);
 
     const scroll = await page.evaluate(() => {
       // Force tall content so scroll is measurable even on login shell.
@@ -68,9 +68,9 @@ test.describe("FK Split — Add expense UI", () => {
     await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(2000);
     // Avoid body.toBeVisible() — Next error overlay sets body visibility:hidden.
-    await expect(page.getByText(/Server Error|Cannot find module/i)).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByText(/Server Error|Cannot find module/i),
+    ).toHaveCount(0);
     expect(page.url()).toMatch(/\/(split|login)/);
   });
 
@@ -162,5 +162,58 @@ test.describe("FK Split — Add expense (authenticated)", () => {
       timeout: 5000,
     });
     await expect(page.getByText(/people/i).first()).toBeVisible();
+  });
+
+  test("saving an expense succeeds (triggers member notify server-side)", async ({
+    page,
+  }) => {
+    await page.goto("/split");
+    await page.waitForTimeout(2500);
+
+    const groupLink = page.locator('a[href^="/split/"]').first();
+    if (!(await groupLink.isVisible().catch(() => false))) {
+      test.skip(true, "No split groups available for E2E user");
+      return;
+    }
+
+    const href = (await groupLink.getAttribute("href")) || "";
+    const groupId = href.split("/split/")[1]?.split(/[?#]/)[0];
+    await page.goto(`/split/${groupId}/add-expense`);
+    await page.waitForTimeout(2500);
+
+    const desc = page
+      .getByPlaceholder(/description|what for|title|beach/i)
+      .first();
+    if (await desc.isVisible().catch(() => false)) {
+      await desc.fill(`E2E notify ${Date.now()}`);
+    }
+
+    const amount = page.locator('input[type="number"]').first();
+    await expect(amount).toBeVisible({ timeout: 10000 });
+    await amount.fill("42");
+
+    const equalBtn = page.getByRole("button", { name: /^equal$/i });
+    if (await equalBtn.isVisible().catch(() => false)) {
+      await equalBtn.click();
+    }
+
+    const save = page.getByRole("button", {
+      name: /save|add expense|add$/i,
+    });
+    await expect(save).toBeVisible({ timeout: 10000 });
+
+    const responsePromise = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/split/expenses") &&
+        res.request().method() === "POST",
+      { timeout: 15000 },
+    );
+    await save.click();
+
+    const res = await responsePromise;
+    expect(res.ok()).toBeTruthy();
+    const body = (await res.json()) as { success?: boolean; expense?: unknown };
+    expect(body.success).toBe(true);
+    expect(body.expense).toBeTruthy();
   });
 });

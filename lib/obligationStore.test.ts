@@ -101,6 +101,10 @@ vi.mock("@/lib/supabase", () => ({
             chain({
               eq: async () => ({ error: null }),
             }),
+          delete: () =>
+            chain({
+              eq: async () => ({ error: null }),
+            }),
         });
       }
       return chain({});

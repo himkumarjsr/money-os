@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { isWebPushConfigured, sendWebPush } from "@/lib/webPush";
+import { createClient } from "@supabase/supabase-js";
+import { isWebPushConfigured, sendWebPushToUser } from "@/lib/webPush";
 
 function authorizeRequest(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
@@ -8,61 +8,6 @@ function authorizeRequest(req: NextRequest): boolean {
     !!process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`;
   const isVercelCron = req.headers.get("x-vercel-cron") === "1";
   return isValidCron || isVercelCron;
-}
-
-async function sendTipPush(
-  supabaseAdmin: SupabaseClient,
-  userId: string,
-  tip: { title: string; content: string; tipId: string },
-) {
-  if (!isWebPushConfigured()) return { pushed: 0, cleaned: 0 };
-
-  const { data: subs, error } = await supabaseAdmin
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth")
-    .eq("user_id", userId);
-
-  if (error || !subs?.length) return { pushed: 0, cleaned: 0 };
-
-  let pushed = 0;
-  let cleaned = 0;
-
-  await Promise.all(
-    (
-      subs as Array<{
-        id: string;
-        endpoint: string;
-        p256dh: string;
-        auth: string;
-      }>
-    ).map(async (sub) => {
-      const result = await sendWebPush(
-        {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
-        },
-        {
-          title: tip.title || "Finkoin tip",
-          body: tip.content || "Your daily finance tip is ready.",
-          url: "/",
-          tag: `tip-${tip.tipId || "daily"}`,
-        },
-      );
-      if (result.ok) {
-        pushed += 1;
-        return;
-      }
-      if (result.gone) {
-        await supabaseAdmin
-          .from("push_subscriptions")
-          .delete()
-          .eq("id", sub.id);
-        cleaned += 1;
-      }
-    }),
-  );
-
-  return { pushed, cleaned };
 }
 
 async function handleDeliverTip(req: NextRequest) {
@@ -192,10 +137,11 @@ async function handleDeliverTip(req: NextRequest) {
               console.error(`deliver-tip: history user ${user.id}`, histErr);
             }
 
-            const pushResult = await sendTipPush(supabaseAdmin, user.id, {
-              title,
-              content,
-              tipId,
+            const pushResult = await sendWebPushToUser(supabaseAdmin, user.id, {
+              title: title || "Finkoin tip",
+              body: content || "Your daily finance tip is ready.",
+              url: "/",
+              tag: `tip-${tipId || "daily"}`,
             });
 
             return {

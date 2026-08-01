@@ -51,12 +51,15 @@ type Editing = {
 
 export default function ObligationsChecklist({
   userId,
+  checklistMonth,
   learnedSuggestion,
   onDismissLearn,
   analyseCompleted = false,
   defaultOpen = false,
 }: {
   userId: string;
+  /** Anchor month for the checklist (tracker selected month). */
+  checklistMonth?: Date;
   learnedSuggestion?: Learned | null;
   onDismissLearn?: () => void;
   /** True when health check already submitted — hide "set up calendar" empty CTA. */
@@ -70,9 +73,8 @@ export default function ObligationsChecklist({
     totalPaid,
     totalPending,
     generateChecklist,
-    markPaid,
-    markUnpaid,
     markSkipped,
+    markUnpaid,
     addObligation,
     updateObligation,
     deleteObligation,
@@ -84,16 +86,19 @@ export default function ObligationsChecklist({
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const month = checklistMonth ?? new Date();
+  const monthKey = `${month.getFullYear()}-${month.getMonth()}`;
 
   useEffect(() => {
-    void generateChecklist(userId);
+    const m = checklistMonth ?? new Date();
+    void generateChecklist(userId, m);
     void useObligationStore.getState().fetchObligations(userId);
-  }, [userId, generateChecklist]);
+  }, [userId, generateChecklist, monthKey, checklistMonth]);
 
   const handleSave = async (data: ObligationFormPayload) => {
     const id = await addObligation({ ...data, user_id: userId });
     if (id) {
-      await generateChecklist(userId);
+      await generateChecklist(userId, month);
       await useObligationStore.getState().fetchObligations(userId);
       setShowAdd(false);
     }
@@ -109,7 +114,7 @@ export default function ObligationsChecklist({
       due_day: data.due_day,
       due_month: data.due_month,
     });
-    await generateChecklist(userId);
+    await generateChecklist(userId, month);
     await useObligationStore.getState().fetchObligations(userId);
     setEditing(null);
   };
@@ -150,7 +155,7 @@ export default function ObligationsChecklist({
                       is_active: true,
                       remind_days_before: 7,
                     });
-                    await generateChecklist(userId);
+                    await generateChecklist(userId, month);
                     await useObligationStore
                       .getState()
                       .fetchObligations(userId);
@@ -265,16 +270,14 @@ export default function ObligationsChecklist({
                         : ""
                     } ${isPaid ? "bg-[#F7FDF9]" : isSkipped ? "bg-[#FAFAFA] opacity-60" : "bg-white"}`}
                   >
-                    <button
-                      type="button"
-                      aria-label={isPaid ? "Mark as unpaid" : "Mark as paid"}
-                      disabled={isSkipped}
-                      onClick={() => {
-                        if (isSkipped) return;
-                        if (isPaid) void markUnpaid(item.id);
-                        else void markPaid(item.id, item.expected_amount);
-                      }}
-                      className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg border-2 transition ${
+                    <span
+                      aria-hidden
+                      title={
+                        isPaid
+                          ? "Paid via logged expense"
+                          : "Checks automatically when you log the expense"
+                      }
+                      className={`flex h-[26px] w-[26px] shrink-0 cursor-default items-center justify-center rounded-lg border-2 ${
                         isPaid
                           ? "border-[#1D9E75] bg-[#1D9E75]"
                           : isSkipped
@@ -285,7 +288,7 @@ export default function ObligationsChecklist({
                       {isPaid ? (
                         <AppIcon name="check" size={14} color="#FFFFFF" />
                       ) : null}
-                    </button>
+                    </span>
                     <div className="shrink-0 text-lg">
                       {CATEGORY_ICON[ob?.category || "other"] || "📌"}
                     </div>
@@ -311,6 +314,7 @@ export default function ObligationsChecklist({
                               month: "short",
                             })}`
                           : null}
+                        {isSkipped ? " · Skipped" : null}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
@@ -347,6 +351,15 @@ export default function ObligationsChecklist({
                             <AppIcon name="pencil" size={14} color="#534AB7" />
                           </button>
                         ) : null}
+                        {isSkipped ? (
+                          <button
+                            type="button"
+                            onClick={() => void markUnpaid(item.id)}
+                            className="bg-transparent p-0 text-[10px] font-semibold text-[#534AB7] underline"
+                          >
+                            Restore
+                          </button>
+                        ) : null}
                         {!isPaid && !isSkipped ? (
                           <button
                             type="button"
@@ -360,10 +373,20 @@ export default function ObligationsChecklist({
                           <button
                             type="button"
                             aria-label={`Remove ${ob.title}`}
+                            title="Delete obligation"
                             onClick={() => {
+                              if (
+                                !window.confirm(
+                                  `Delete “${ob.title}”? It will be removed from this month’s list.`,
+                                )
+                              ) {
+                                return;
+                              }
                               void (async () => {
                                 await deleteObligation(ob.id);
-                                await generateChecklist(userId);
+                                await useObligationStore
+                                  .getState()
+                                  .fetchChecklist(userId, month);
                               })();
                             }}
                             className="bg-transparent p-0"
@@ -394,7 +417,7 @@ export default function ObligationsChecklist({
                 Add obligation
               </button>
               <div className="text-[11px] text-[#9B9A94]">
-                {loading ? "Updating…" : "Tap ✓ to undo · pencil to edit"}
+                {loading ? "Updating…" : "Skip ↔ Restore · ✓ from expenses"}
               </div>
             </div>
           </div>

@@ -20,7 +20,7 @@ import {
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
-import { msUntilNextLocalMidnight } from "@/lib/localDate";
+import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
@@ -46,24 +46,24 @@ import {
   sumOnCardsSpend,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
+import {
+  EXPENSE_SUBCATEGORY_TO_OBLIGATION,
+  SAVINGS_CARRY_FORWARD_DESC,
+  listSavingsCarryForward,
+  monthHasStarted,
+  planAutoIncomeCleanup,
+  planMonthIncomeFromPrior,
+} from "@/lib/trackerMonthIncome";
+import {
+  expenseCoversChecklistItem,
+  findPendingChecklistForExpense,
+  obligationCategoryFromExpense,
+  planObligationExpenseSync,
+} from "@/lib/trackerObligationSync";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-const OBLIGATION_HINTS: Record<string, string> = {
-  insurance: "insurance_life",
-  lic: "insurance_life",
-  "health insurance": "insurance_health",
-  emi: "loan_emi",
-  "home loan": "loan_emi",
-  "car loan": "loan_emi",
-  sip: "investment_sip",
-  "mutual fund": "investment_sip",
-  ppf: "investment_ppf",
-  "credit card": "credit_card",
-  rent: "rent",
-};
 
 export type TrackerTransaction = {
   id: string;
@@ -196,6 +196,11 @@ function TrackerContent() {
   } | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  /** First calendar month the user has tracker activity — nav cannot go earlier. */
+  const [trackerStart, setTrackerStart] = useState<{
+    month: number;
+    year: number;
+  } | null>(null);
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
   /** Summary-card eye only (180° flip). Each Income/bucket section has its own eye. */
   const [amountsVisible, setAmountsVisible] = useState(false);
@@ -540,10 +545,250 @@ function TrackerContent() {
     };
   }, [hasConsent, user?.id]);
 
+  // Tracker back-nav floor: consent month (when they started), else first txn month.
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const supabase = getSupabase();
+        const [consentRes, txnRes] = await Promise.all([
+          supabase
+            .from("tracker_consent")
+            .select("consent_at")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("expense_transactions")
+            .select("date, month, year")
+            .eq("user_id", user.id)
+            .order("date", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        if (cancelled) return;
+
+        const fromDate = (iso: string | null | undefined) => {
+          if (!iso) return null;
+          const d = new Date(iso);
+          if (Number.isNaN(d.getTime())) return null;
+          return { month: d.getMonth(), year: d.getFullYear() };
+        };
+
+        const consentStart = fromDate(consentRes.data?.consent_at ?? null);
+        let txnStart: { month: number; year: number } | null = null;
+        const row = txnRes.data;
+        if (row) {
+          let month = -1;
+          let year = typeof row.year === "number" ? row.year : Number(row.year);
+          if (typeof row.month === "string" && Number.isFinite(year)) {
+            const idx = new Date(`${row.month} 1, ${year}`).getMonth();
+            if (!Number.isNaN(idx)) month = idx;
+          }
+          if (month < 0 && row.date) {
+            txnStart = fromDate(`${String(row.date).slice(0, 10)}T12:00:00`);
+          } else if (month >= 0 && Number.isFinite(year)) {
+            txnStart = { month, year };
+          }
+        }
+
+        // Prefer consent month so auto-seeded junk before they started is skipped.
+        const start = consentStart ||
+          txnStart || {
+            month: new Date().getMonth(),
+            year: new Date().getFullYear(),
+          };
+        setTrackerStart(start);
+      } catch {
+        /* ignore — nav stays unbounded */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasConsent, user?.id, transactions.length]);
+
+  // If current selection is before tracker start, snap forward.
+  useEffect(() => {
+    if (!trackerStart) return;
+    const sel = selectedYear * 12 + selectedMonth;
+    const start = trackerStart.year * 12 + trackerStart.month;
+    if (sel < start) {
+      setSelectedMonth(trackerStart.month);
+      setSelectedYear(trackerStart.year);
+    }
+  }, [trackerStart, selectedMonth, selectedYear]);
+
+  // On/after the 1st: persist missing salary and/or "Saving from last month".
+  // Re-fetches before insert to avoid duplicate rows from Strict Mode / races.
+  const incomeSyncKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    if (!monthHasStarted(selectedMonth, selectedYear)) return;
+    // Never auto-seed months before the user started using the tracker.
+    if (trackerStart) {
+      const startKey = trackerStart.year * 12 + trackerStart.month;
+      const selKey = selectedYear * 12 + selectedMonth;
+      if (selKey < startKey) return;
+    }
+
+    const plan = planMonthIncomeFromPrior({
+      previousTxns: previousTransactions,
+      currentTxns: transactions,
+      profileSalary: profileMonthlyFromDb,
+    });
+    const cleanupPreview = planAutoIncomeCleanup({
+      currentTxns: transactions,
+      salaryAmount: plan.salaryAmount,
+      savingsAmount: plan.savingsAmount,
+    });
+    if (
+      !plan.needsSalaryRow &&
+      !plan.needsSavingsRow &&
+      !cleanupPreview.needsWork
+    ) {
+      return;
+    }
+
+    const key = `${user.id}:${selectedYear}-${selectedMonth}:sal${plan.needsSalaryRow}:cf${plan.needsSavingsRow}:clean${cleanupPreview.dropIds.join(",")}:${cleanupPreview.updateCf?.amount ?? ""}:${plan.salaryAmount}:${plan.savingsAmount}`;
+    if (incomeSyncKeyRef.current === key) return;
+    incomeSyncKeyRef.current = key;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const supabase = getSupabase();
+        const monthName = new Date(
+          selectedYear,
+          selectedMonth,
+          1,
+        ).toLocaleString("en-IN", { month: "long" });
+        const date = localISODate(new Date(selectedYear, selectedMonth, 1));
+
+        // Fresh read so parallel effects don't both insert.
+        const { data: fresh, error: freshErr } = await supabase
+          .from("expense_transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("month", monthName)
+          .eq("year", selectedYear);
+        if (freshErr) {
+          console.warn("month income sync read failed:", freshErr.message);
+          incomeSyncKeyRef.current = null;
+          return;
+        }
+        if (cancelled) return;
+
+        const freshRows = (fresh || []) as TrackerTransaction[];
+        const freshPlan = planMonthIncomeFromPrior({
+          previousTxns: previousTransactions,
+          currentTxns: freshRows,
+          profileSalary: profileMonthlyFromDb,
+        });
+        const cleanup = planAutoIncomeCleanup({
+          currentTxns: freshRows,
+          salaryAmount: freshPlan.salaryAmount,
+          savingsAmount: freshPlan.savingsAmount,
+        });
+
+        // One salary + one CF at the correct leftover — drop extras / fix amount.
+        if (cleanup.dropIds.length > 0) {
+          await supabase
+            .from("expense_transactions")
+            .delete()
+            .eq("user_id", user.id)
+            .in("id", cleanup.dropIds);
+        }
+        if (cleanup.updateCf) {
+          await supabase
+            .from("expense_transactions")
+            .update({ amount: cleanup.updateCf.amount })
+            .eq("user_id", user.id)
+            .eq("id", cleanup.updateCf.id);
+        }
+
+        // Recompute after cleanup so we don't re-insert rows we just fixed.
+        const afterCleanup = freshRows.filter(
+          (t) => !t.id || !cleanup.dropIds.includes(t.id),
+        );
+        const afterPlan = planMonthIncomeFromPrior({
+          previousTxns: previousTransactions,
+          currentTxns: afterCleanup.map((t) =>
+            cleanup.updateCf && t.id === cleanup.updateCf.id
+              ? { ...t, amount: cleanup.updateCf.amount }
+              : t,
+          ),
+          profileSalary: profileMonthlyFromDb,
+        });
+
+        const rows: Array<Record<string, unknown>> = [];
+        if (afterPlan.needsSalaryRow) {
+          rows.push({
+            user_id: user.id,
+            date,
+            amount: afterPlan.salaryAmount,
+            category: "salary",
+            subcategory: "salary",
+            description: "Salary",
+            bucket: "income",
+            payment_method: null,
+            month: monthName,
+            year: selectedYear,
+          });
+        }
+        if (afterPlan.needsSavingsRow) {
+          rows.push({
+            user_id: user.id,
+            date,
+            amount: afterPlan.savingsAmount,
+            category: "other_income",
+            subcategory: "other_income",
+            description: SAVINGS_CARRY_FORWARD_DESC,
+            bucket: "income",
+            payment_method: null,
+            month: monthName,
+            year: selectedYear,
+          });
+        }
+        if (rows.length > 0) {
+          const { error } = await supabase
+            .from("expense_transactions")
+            .insert(rows);
+          if (error) {
+            console.warn("month income sync failed:", error.message);
+            incomeSyncKeyRef.current = null;
+            return;
+          }
+        }
+        if (!cancelled && (cleanup.needsWork || rows.length > 0)) {
+          void fetchTransactions({ soft: true });
+        }
+      } catch (e) {
+        console.warn("month income sync failed:", e);
+        incomeSyncKeyRef.current = null;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hasConsent,
+    user?.id,
+    selectedMonth,
+    selectedYear,
+    previousTransactions,
+    transactions,
+    profileMonthlyFromDb,
+    fetchTransactions,
+    trackerStart,
+  ]);
+
   const deleteTransaction = useCallback(
     async (id: string) => {
       if (!user?.id) return;
       if (!window.confirm("Remove this entry?")) return;
+      const txn = transactions.find((t) => t.id === id);
       try {
         const supabase = getSupabase();
         await supabase
@@ -552,12 +797,97 @@ function TrackerContent() {
           .eq("id", id)
           .eq("user_id", user.id);
         void fetchTransactions({ soft: true });
+
+        // If this expense had ticked an obligation, clear ✓ when nothing else covers it.
+        const obligationCategory = txn
+          ? obligationCategoryFromExpense(txn)
+          : null;
+        if (txn && obligationCategory) {
+          const checklistMonth = new Date(selectedYear, selectedMonth, 1);
+          const store = useObligationStore.getState();
+          await store.fetchChecklist(user.id, checklistMonth);
+          const { checklist } = useObligationStore.getState();
+          const paid = checklist.find(
+            (c) =>
+              c.status === "paid" &&
+              expenseCoversChecklistItem(
+                txn.amount,
+                txn.description,
+                obligationCategory,
+                c,
+              ),
+          );
+          if (paid) {
+            const stillCovered = transactions.some(
+              (t) =>
+                t.id !== id &&
+                expenseCoversChecklistItem(
+                  t.amount,
+                  t.description,
+                  obligationCategoryFromExpense(t),
+                  paid,
+                ),
+            );
+            if (!stillCovered) {
+              await store.markUnpaid(paid.id);
+            }
+          }
+        }
       } catch (e) {
         console.warn("tracker delete failed", e);
       }
     },
-    [user?.id, fetchTransactions],
+    [user?.id, fetchTransactions, transactions, selectedMonth, selectedYear],
   );
+
+  const obligationChecklistMonth = useMemo(
+    () => new Date(selectedYear, selectedMonth, 1),
+    [selectedYear, selectedMonth],
+  );
+
+  // Keep obligation ✓ in sync with real expenses (unmark when Loans etc. empty).
+  const obligationSyncKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    const checklistMonth = obligationChecklistMonth;
+    const monthKey = `${selectedYear}-${selectedMonth}`;
+    let cancelled = false;
+    void (async () => {
+      const store = useObligationStore.getState();
+      await store.generateChecklist(user.id, checklistMonth);
+      if (cancelled) return;
+      const { checklist } = useObligationStore.getState();
+      const plan = planObligationExpenseSync({
+        checklist,
+        expenses: transactions,
+      });
+      if (plan.markPaid.length === 0 && plan.markUnpaid.length === 0) {
+        obligationSyncKeyRef.current = monthKey;
+        return;
+      }
+      const actionKey = `${monthKey}:p${plan.markPaid.map((x) => x.id).join(",")}:u${plan.markUnpaid.join(",")}`;
+      if (obligationSyncKeyRef.current === actionKey) return;
+      obligationSyncKeyRef.current = actionKey;
+      for (const id of plan.markUnpaid) {
+        if (cancelled) return;
+        await store.markUnpaid(id);
+      }
+      for (const row of plan.markPaid) {
+        if (cancelled) return;
+        await store.markPaid(row.id, row.amount);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hasConsent,
+    user?.id,
+    obligationChecklistMonth,
+    selectedMonth,
+    selectedYear,
+    transactions,
+  ]);
 
   const prevMeta = previousCalendarMonth(selectedMonth, selectedYear);
   const viewingCurrentMonth =
@@ -601,7 +931,38 @@ function TrackerContent() {
   const incomeTxns = transactions.filter((t) => t.bucket === "income");
   const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
   const incomeCat = TRACKER_CATEGORIES.income;
-  const displayIncome = monthlyIncome || profileMonthlyFromDb;
+  const incomePlan = planMonthIncomeFromPrior({
+    previousTxns: previousTransactions,
+    currentTxns: transactions,
+    profileSalary: profileMonthlyFromDb,
+  });
+  // Purple + Income use the same total (logged + any planned carry-forward).
+  const displayIncome =
+    incomePlan.displayTotal > 0
+      ? incomePlan.displayTotal
+      : monthlyIncome || profileMonthlyFromDb;
+
+  const openIncomeEditor = () => {
+    setExpandedIncome(true);
+    setExpandedBucket(null);
+    setDefaultBucket("income");
+    const salaryTxn =
+      incomeTxns.find((t) => (t.subcategory || t.category) === "salary") ??
+      incomeTxns[0];
+    if (salaryTxn) {
+      setModalDefaults({});
+      setEditingExpense(salaryTxn);
+    } else {
+      setEditingExpense(null);
+      setModalDefaults({
+        subcategory: "salary",
+        amount:
+          incomePlan.salaryAmount > 0 ? incomePlan.salaryAmount : undefined,
+        description: "Salary",
+      });
+    }
+    setShowAddModal(true);
+  };
   // Purple SPENT/LEFT: cash leaving the account this month. Includes loan EMIs,
   // investments, loan repayment, and CC bill pays (UPI/netbanking). Excludes
   // only expenses paid *with* a credit card. Obligations are not expenses.
@@ -617,7 +978,11 @@ function TrackerContent() {
     now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
   const isAtForwardLimit =
     selectedMonth === forwardLimitMonth && selectedYear === forwardLimitYear;
+  const isAtBackLimit = trackerStart
+    ? selectedMonth === trackerStart.month && selectedYear === trackerStart.year
+    : false;
   const goToPrevMonth = () => {
+    if (isAtBackLimit) return;
     if (selectedMonth === 0) {
       setSelectedMonth(11);
       setSelectedYear((y) => y - 1);
@@ -661,6 +1026,8 @@ function TrackerContent() {
         <button
           type="button"
           onClick={goToPrevMonth}
+          disabled={isAtBackLimit}
+          aria-label="Previous month"
           style={{
             background: "rgba(255,255,255,0.2)",
             border: "none",
@@ -668,9 +1035,10 @@ function TrackerContent() {
             width: 36,
             height: 36,
             color: "white",
-            cursor: "pointer",
+            cursor: isAtBackLimit ? "not-allowed" : "pointer",
             fontSize: 16,
             flexShrink: 0,
+            opacity: isAtBackLimit ? 0.5 : 1,
           }}
         >
           ←
@@ -789,9 +1157,24 @@ function TrackerContent() {
           marginBottom: 16,
         }}
       >
-        <div style={{ minWidth: 0 }}>
+        <button
+          type="button"
+          onClick={openIncomeEditor}
+          aria-label="Edit income"
+          title="Edit income"
+          style={{
+            minWidth: 0,
+            margin: 0,
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            color: "inherit",
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
           <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
-            INCOME
+            INCOME · tap to edit
           </div>
           <div
             style={{
@@ -799,11 +1182,14 @@ function TrackerContent() {
               fontWeight: 800,
               letterSpacing: visible ? "normal" : "0.06em",
               overflowWrap: "anywhere",
+              textDecoration: "underline",
+              textDecorationColor: "rgba(255,255,255,0.35)",
+              textUnderlineOffset: 3,
             }}
           >
             {visible ? `₹${displayIncome.toLocaleString("en-IN")}` : "₹••••••"}
           </div>
-        </div>
+        </button>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
             SPENT
@@ -1085,9 +1471,12 @@ function TrackerContent() {
                 <div style={{ fontSize: 12, color: "#111110", opacity: 0.85 }}>
                   {incomeTxns.length}{" "}
                   {incomeTxns.length === 1 ? "entry" : "entries"}
-                  {monthlyIncome === 0 && profileMonthlyFromDb > 0
-                    ? ` · ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from profile`
-                    : ""}
+                  {listSavingsCarryForward(incomeTxns).length > 0 ||
+                  incomePlan.needsSavingsRow
+                    ? " · includes saving from last month"
+                    : monthlyIncome === 0 && profileMonthlyFromDb > 0
+                      ? " · synced from last month / profile"
+                      : ""}
                 </div>
               </div>
             </div>
@@ -1100,7 +1489,7 @@ function TrackerContent() {
                   letterSpacing: incomeVisible ? "normal" : "0.06em",
                 }}
               >
-                {formatMaskedAmount(monthlyIncome, incomeVisible)}
+                {formatMaskedAmount(displayIncome, incomeVisible)}
               </div>
               <span
                 style={{
@@ -1235,6 +1624,32 @@ function TrackerContent() {
                     </div>
                   );
                 })}
+                {incomePlan.needsSavingsRow ? (
+                  <div
+                    style={{
+                      borderRadius: 8,
+                      background: "#F3F1FF",
+                      padding: "10px 12px",
+                      border: "1px dashed #534AB7",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "#111110",
+                      }}
+                    >
+                      {formatMaskedAmount(
+                        incomePlan.savingsAmount,
+                        incomeVisible,
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.85 }}>
+                      {SAVINGS_CARRY_FORWARD_DESC} · syncing…
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div
@@ -1245,9 +1660,54 @@ function TrackerContent() {
                   fontSize: 13,
                 }}
               >
-                {profileMonthlyFromDb > 0
-                  ? `No income logged yet. Your dashboard shows ${formatMaskedAmount(profileMonthlyFromDb, incomeVisible)} from your profile — tap Add income to record it here.`
-                  : "No income logged this month. Tap Add income to get started."}
+                {displayIncome > 0 ? (
+                  <div style={{ display: "grid", gap: 8, textAlign: "left" }}>
+                    {incomePlan.salaryAmount > 0 ? (
+                      <div
+                        style={{
+                          borderRadius: 8,
+                          background: "#F9F9FC",
+                          padding: "10px 12px",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700 }}>
+                          {formatMaskedAmount(
+                            incomePlan.salaryAmount,
+                            incomeVisible,
+                          )}
+                        </div>
+                        <div style={{ fontSize: 12, opacity: 0.85 }}>
+                          Salary · synced from last month
+                        </div>
+                      </div>
+                    ) : null}
+                    {incomePlan.savingsAmount > 0 ? (
+                      <div
+                        style={{
+                          borderRadius: 8,
+                          background: "#F9F9FC",
+                          padding: "10px 12px",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700 }}>
+                          {formatMaskedAmount(
+                            incomePlan.savingsAmount,
+                            incomeVisible,
+                          )}
+                        </div>
+                        <div style={{ fontSize: 12, opacity: 0.85 }}>
+                          {SAVINGS_CARRY_FORWARD_DESC}
+                        </div>
+                      </div>
+                    ) : null}
+                    <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>
+                      Tap purple INCOME (or Add income) to edit anytime —
+                      leftover savings still auto-sync on the 1st if missing.
+                    </p>
+                  </div>
+                ) : (
+                  "No income logged this month. Tap Add income to get started."
+                )}
               </div>
             )}
             <div style={{ padding: "12px 16px 16px" }}>
@@ -1255,10 +1715,7 @@ function TrackerContent() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setModalDefaults({});
-                  setDefaultBucket("income");
-                  setEditingExpense(null);
-                  setShowAddModal(true);
+                  openIncomeEditor();
                 }}
                 style={{
                   width: "100%",
@@ -1272,7 +1729,7 @@ function TrackerContent() {
                   cursor: "pointer",
                 }}
               >
-                + Add income
+                + Add / edit income
               </button>
             </div>
           </div>
@@ -1714,9 +2171,12 @@ function TrackerContent() {
         previousMonthLabel={prevMeta.monthName}
         forceVisible={allAmountsVisible}
       >
-        {viewingCurrentMonth &&
+        {(viewingCurrentMonth || isAtForwardLimit) &&
         (savedCards.length > 0 ||
           ccBillHistory.some((t) =>
+            isCreditCardPaymentMethod(t.payment_method),
+          ) ||
+          previousTransactions.some((t) =>
             isCreditCardPaymentMethod(t.payment_method),
           ) ||
           transactions.some(
@@ -1730,9 +2190,10 @@ function TrackerContent() {
             cards={savedCards}
             monthName={currentMonth}
             year={currentYear}
-            monthlySalary={profileMonthlyFromDb}
+            monthlySalary={displayIncome}
             defaultOpen={false}
             optimisticPayments={ccOptimisticPayments}
+            asOf={new Date(selectedYear, selectedMonth, 1)}
             onPayBill={(amount, label, cardId) => {
               setEditingExpense(null);
               setPendingCcPayCardId(cardId);
@@ -1750,6 +2211,7 @@ function TrackerContent() {
         {user?.id ? (
           <ObligationsChecklist
             userId={user.id}
+            checklistMonth={obligationChecklistMonth}
             analyseCompleted={analyseCompleted}
             learnedSuggestion={learnedObligation}
             onDismissLearn={() => setLearnedObligation(null)}
@@ -1764,6 +2226,24 @@ function TrackerContent() {
 
       {showAddModal ? (
         <AddExpenseModal
+          defaultDate={(() => {
+            const today = new Date();
+            if (
+              today.getFullYear() === selectedYear &&
+              today.getMonth() === selectedMonth
+            ) {
+              return localISODate(today);
+            }
+            if (
+              selectedYear > today.getFullYear() ||
+              (selectedYear === today.getFullYear() &&
+                selectedMonth > today.getMonth())
+            ) {
+              return localISODate(new Date(selectedYear, selectedMonth, 1));
+            }
+            return localISODate(new Date(selectedYear, selectedMonth + 1, 0));
+          })()}
+          maxDate={localISODate(new Date(selectedYear, selectedMonth + 1, 0))}
           defaultBucket={
             editingExpense ? editingExpense.bucket : defaultBucket || undefined
           }
@@ -1811,47 +2291,75 @@ function TrackerContent() {
               ]);
               setPendingCcPayCardId(null);
             }
-            if (saved && !saved.isEdit && user?.id) {
-              const desc = (saved.description || "").toLowerCase();
-              const matched = Object.entries(OBLIGATION_HINTS).find(([kw]) =>
-                desc.includes(kw),
-              );
-              if (matched) {
-                void (async () => {
-                  await useObligationStore.getState().fetchObligations(user.id);
+            if (
+              saved &&
+              !saved.isEdit &&
+              user?.id &&
+              saved.bucket !== "income"
+            ) {
+              const subKey = (saved.subcategory || saved.category || "").trim();
+              const obligationCategory = obligationCategoryFromExpense(saved);
+              void (async () => {
+                const store = useObligationStore.getState();
+                const checklistMonth = new Date(selectedYear, selectedMonth, 1);
+
+                // Optional: learn a new obligation when we recognize the type.
+                if (obligationCategory) {
+                  await store.fetchObligations(user.id);
                   const { obligations } = useObligationStore.getState();
-                  const decision = decideObligationLearn({
-                    description: saved.description,
-                    amount: saved.amount,
-                    category: matched[1],
-                    existing: obligations,
-                    priorTransactions: ccBillHistory,
-                  });
-                  if (decision === "skip") return;
                   const candidate = candidateFromExpense(
-                    saved.description,
+                    saved.description || subKey.replace(/_/g, " "),
                     saved.amount,
-                    matched[1],
+                    obligationCategory,
                   );
-                  if (decision === "auto") {
-                    await useObligationStore.getState().addObligation({
-                      title: candidate.title,
-                      category: candidate.category,
-                      amount: candidate.amount,
-                      frequency: "monthly",
-                      source: "tracker_learned",
-                      user_id: user.id,
-                      is_active: true,
-                      remind_days_before: 7,
+                  const existing = obligations.find(
+                    (o) =>
+                      o.is_active &&
+                      (Math.abs(Number(o.amount) - saved.amount) < 1 ||
+                        (o.category === obligationCategory &&
+                          o.title.toLowerCase() ===
+                            candidate.title.toLowerCase())),
+                  );
+                  if (!existing) {
+                    const decision = decideObligationLearn({
+                      description: saved.description,
+                      amount: saved.amount,
+                      category: obligationCategory,
+                      existing: obligations,
+                      priorTransactions: ccBillHistory,
                     });
-                    await useObligationStore
-                      .getState()
-                      .generateChecklist(user.id);
-                    return;
+                    const fromSub = Boolean(
+                      EXPENSE_SUBCATEGORY_TO_OBLIGATION[subKey],
+                    );
+                    if (decision !== "skip" || fromSub) {
+                      await store.addObligation({
+                        title: candidate.title,
+                        category: candidate.category,
+                        amount: candidate.amount,
+                        frequency: "monthly",
+                        source: "tracker_learned",
+                        user_id: user.id,
+                        is_active: true,
+                        remind_days_before: 7,
+                      });
+                    } else {
+                      setLearnedObligation(candidate);
+                    }
                   }
-                  setLearnedObligation(candidate);
-                })();
-              }
+                }
+
+                // Always tick by amount first (Home loan EMI etc. — no strict type).
+                await store.generateChecklist(user.id, checklistMonth);
+                await store.fetchChecklist(user.id, checklistMonth);
+                const { checklist } = useObligationStore.getState();
+                const pending = findPendingChecklistForExpense(
+                  checklist,
+                  saved,
+                );
+                if (pending) {
+                  await store.markPaid(pending.id, saved.amount);
+                }
+              })();
             }
             setShowAddModal(false);
             setDefaultBucket("");
