@@ -2201,6 +2201,10 @@ function TrackerContent() {
             defaultOpen={false}
             optimisticPayments={ccOptimisticPayments}
             asOf={new Date(selectedYear, selectedMonth, 1)}
+            onCardsChange={() => {
+              if (!user?.id) return;
+              void loadCreditCardsMerged(user.id).then(setSavedCards);
+            }}
             onPayBill={(amount, label, cardId) => {
               setEditingExpense(null);
               setPendingCcPayCardId(cardId);

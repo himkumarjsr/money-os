@@ -5,8 +5,9 @@ import AddObligationForm, {
 } from "@/components/tracker/AddObligationForm";
 import CollapsiblePanel from "@/components/tracker/CollapsiblePanel";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const CATEGORY_ICON: Record<string, string> = {
   insurance_life: "🛡️",
@@ -89,10 +90,18 @@ export default function ObligationsChecklist({
   const month = checklistMonth ?? new Date();
   const monthKey = `${month.getFullYear()}-${month.getMonth()}`;
 
+  const cleanedCc = useRef(false);
   useEffect(() => {
     const m = checklistMonth ?? new Date();
-    void generateChecklist(userId, m);
-    void useObligationStore.getState().fetchObligations(userId);
+    void (async () => {
+      if (!cleanedCc.current) {
+        cleanedCc.current = true;
+        await deactivateAllCreditCardObligations(userId);
+      }
+      await generateChecklist(userId, m);
+      await useObligationStore.getState().fetchObligations(userId);
+      await useObligationStore.getState().fetchChecklist(userId, m);
+    })();
   }, [userId, generateChecklist, monthKey, checklistMonth]);
 
   const handleSave = async (data: ObligationFormPayload) => {
@@ -128,7 +137,7 @@ export default function ObligationsChecklist({
 
   return (
     <>
-      {learnedSuggestion ? (
+      {learnedSuggestion && learnedSuggestion.category !== "credit_card" ? (
         <div className="mb-2 flex items-start gap-2.5 rounded-xl bg-[#EEEDFE] p-3.5">
           <AppIcon name="bulb" size={20} color="#534AB7" />
           <div className="min-w-0 flex-1">

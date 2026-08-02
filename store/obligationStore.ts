@@ -250,7 +250,9 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       const items = (data ?? [])
         .map((row) => mapChecklist(row as Record<string, unknown>))
         // Soft-deleted obligations must not stay on the month checklist.
-        .filter((c) => c.obligation == null || c.obligation.is_active);
+        .filter((c) => c.obligation == null || c.obligation.is_active)
+        // Credit card bills belong in Credit card dues — never the checklist.
+        .filter((c) => (c.obligation?.category || "") !== "credit_card");
       set({
         checklist: items,
         currentMonth: monthStart,
@@ -264,6 +266,10 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
   },
 
   addObligation: async (obligation) => {
+    // Credit card bills belong only in Credit card dues.
+    if ((obligation.category || "").trim() === "credit_card") {
+      return null;
+    }
     try {
       const supabase = getSupabase();
       const { data, error } = await supabase
@@ -659,19 +665,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       });
     }
 
-    if ((submission.creditCardBillMonthly ?? 0) > 0) {
-      obligations.push({
-        user_id: userId,
-        title: "Credit Card Bill",
-        category: "credit_card",
-        amount: submission.creditCardBillMonthly,
-        frequency: "monthly",
-        due_day: submission.creditCardBillDay || 5,
-        source: "health_check",
-        remind_days_before: 3,
-        is_active: true,
-      });
-    }
+    // Credit card bills are tracked only under Credit card dues (not obligations).
 
     if ((submission.monthlyPPFContribution ?? 0) > 0) {
       obligations.push({
