@@ -4,7 +4,13 @@ import { computeFireNumbers } from "@/lib/fireCalculator";
 import { formatCurrency } from "@/lib/finance";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import {
+  CALCULATOR_MONEY_MAX,
+  Insight,
+  ResultStat,
+  SliderField,
+  type InsightTone,
+} from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -12,7 +18,10 @@ function useClamped(initial: number, min: number, max: number) {
   return [v, set] as const;
 }
 
-function formatYearsMonths(years: number | null, months: number | null): string {
+function formatYearsMonths(
+  years: number | null,
+  months: number | null,
+): string {
   if (years === null || months === null) return "50+ years";
   if (years <= 0) return "Already there";
   const y = Math.floor(years);
@@ -23,7 +32,11 @@ function formatYearsMonths(years: number | null, months: number | null): string 
 }
 
 export function FIRECalculator() {
-  const [expensesExEmi, setExpensesExEmi] = useClamped(70_000, 15_000, 5_00_000);
+  const [expensesExEmi, setExpensesExEmi] = useClamped(
+    70_000,
+    15_000,
+    5_00_000,
+  );
   const [monthlyEmi, setMonthlyEmi] = useClamped(0, 0, 2_00_000);
   const [debtOutstanding, setDebtOutstanding] = useClamped(0, 0, 2_00_00_000);
   const [corpus, setCorpus] = useClamped(80_00_000, 0, 5_00_00_000);
@@ -73,8 +86,10 @@ export function FIRECalculator() {
   return (
     <div className="space-y-6">
       <p className="text-sm leading-relaxed text-slate-600">
-        Uses the <strong className="font-semibold text-slate-800">4% rule</strong> (25× annual lifestyle expenses) plus
-        outstanding loan balances. Enter expenses <em>without</em> EMIs — add loans separately.
+        Uses the{" "}
+        <strong className="font-semibold text-slate-800">4% rule</strong> (25×
+        annual lifestyle expenses) plus outstanding loan balances. Enter
+        expenses <em>without</em> EMIs — add loans separately.
       </p>
 
       <SliderField
@@ -134,29 +149,42 @@ export function FIRECalculator() {
         value={returnPct}
         min={4}
         max={18}
-        step={0.5}
+        step={0.1}
         onChange={setReturnPct}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <ResultStat label="Lifestyle FIRE corpus (25×)" value={fmt(result.lifestyleFireCorpus)} />
-        <ResultStat label="Total FIRE target (+ debt)" value={fmt(result.totalFireTarget)} />
+        <ResultStat
+          label="Lifestyle FIRE corpus (25×)"
+          value={fmt(result.lifestyleFireCorpus)}
+        />
+        <ResultStat
+          label="Total FIRE target (+ debt)"
+          value={fmt(result.totalFireTarget)}
+        />
         <ResultStat label="Gap to target" value={fmt(result.gap)} />
-        <ResultStat label="Progress to target" value={`${result.progressPct.toFixed(0)}%`} />
+        <ResultStat
+          label="Progress to target"
+          value={`${result.progressPct.toFixed(0)}%`}
+        />
         <ResultStat
           label="Time to target (est.)"
           value={formatYearsMonths(result.yearsToTarget, result.monthsToTarget)}
         />
-        <ResultStat label="Safe monthly spend (4% rule)" value={fmt(result.safeMonthlyWithdrawal)} />
+        <ResultStat
+          label="Safe monthly spend (4% rule)"
+          value={fmt(result.safeMonthlyWithdrawal)}
+        />
       </div>
 
       {monthlyEmi > 0 ? (
         <div className="rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950">
           <p className="font-semibold">If you counted EMIs in expenses</p>
           <p className="mt-1 leading-relaxed">
-            Naive FIRE (expenses + EMI): {fmt(result.naiveFireCorpus)}. Loan-free lifestyle FIRE:{" "}
-            {fmt(result.lifestyleFireCorpus)}. Difference:{" "}
-            <strong>{fmt(result.debtPayoffFireSavings)}</strong> — same lifestyle once loans end.
+            Naive FIRE (expenses + EMI): {fmt(result.naiveFireCorpus)}.
+            Loan-free lifestyle FIRE: {fmt(result.lifestyleFireCorpus)}.
+            Difference: <strong>{fmt(result.debtPayoffFireSavings)}</strong> —
+            same lifestyle once loans end.
           </p>
         </div>
       ) : null}
@@ -182,8 +210,10 @@ export function FIRECalculator() {
       </div>
 
       <p className="text-xs leading-relaxed text-slate-500">
-        Educational illustration only. The 4% withdrawal rule is based on historical US portfolio studies; Indian
-        inflation, healthcare, and sequence-of-returns risk may require a larger corpus or lower withdrawals.
+        Educational illustration only. The 4% withdrawal rule is based on
+        historical US portfolio studies; Indian inflation, healthcare, and
+        sequence-of-returns risk may require a larger corpus or lower
+        withdrawals.
       </p>
     </div>
   );

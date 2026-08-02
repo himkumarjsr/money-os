@@ -2,6 +2,11 @@
 
 import { cn } from "@/lib/cn";
 import {
+  CALCULATOR_MONEY_MAX,
+  clampCalculatorValue,
+  formatCalculatorFieldValue,
+} from "@/lib/calculatorInput";
+import {
   formatIndian,
   formatInWords,
   formatSliderLabel,
@@ -9,8 +14,15 @@ import {
 } from "@/lib/formatters";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-/** Max digits for calculator money inputs (10 digits). */
-export const CALCULATOR_MONEY_MAX = 9_999_999_999;
+export { CALCULATOR_MONEY_MAX };
+
+function formatFieldValue(
+  value: number,
+  type: "money" | "percent" | "years" | "months" | "number",
+  step: number,
+): string {
+  return formatCalculatorFieldValue(value, type, step, formatIndian);
+}
 
 export function todayInputValue() {
   const d = new Date();
@@ -65,7 +77,7 @@ export function SliderField({
   value,
   min,
   max,
-  step = 1,
+  step: stepProp,
   onChange,
   suffix,
   unitType,
@@ -81,8 +93,11 @@ export function SliderField({
           : "money");
 
   const isMoney = detectedType === "money";
-  const inputMax = isMoney ? CALCULATOR_MONEY_MAX : max;
-  const sliderMax = Math.max(max, min, Math.min(value, inputMax));
+  const isPercent = detectedType === "percent";
+  /** Interest / return fields default to 0.1 so decimals work on the slider. */
+  const step = stepProp ?? (isPercent ? 0.1 : 1);
+  const inputMax = isMoney ? Math.min(max, CALCULATOR_MONEY_MAX) : max;
+  const sliderMax = Math.min(Math.max(max, min), inputMax);
 
   const leftUnit = isMoney ? "₹" : "";
   const rightUnit =
@@ -98,34 +113,62 @@ export function SliderField({
 
   const [focused, setFocused] = useState(false);
   const [displayValue, setDisplayValue] = useState(() =>
-    Number.isFinite(value)
-      ? formatIndian(Math.min(Math.max(value, min), inputMax))
-      : "0",
+    formatFieldValue(
+      Math.min(Math.max(value, min), inputMax),
+      detectedType,
+      step,
+    ),
   );
 
   useEffect(() => {
-    setDisplayValue(formatIndian(Math.min(Math.max(value, min), inputMax)));
-  }, [inputMax, min, value]);
+    if (focused) return;
+    setDisplayValue(
+      formatFieldValue(
+        Math.min(Math.max(value, min), inputMax),
+        detectedType,
+        step,
+      ),
+    );
+  }, [detectedType, focused, inputMax, min, step, value]);
+
+  const commitValue = (raw: number) => {
+    const clamped = clampCalculatorValue(raw, min, inputMax, step);
+    onChange(clamped);
+    return clamped;
+  };
 
   const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDisplayValue(e.target.value);
+    const raw = e.target.value;
+    // Allow typing decimals (e.g. "7.", "7.5") without fighting the field.
+    if (isPercent || detectedType === "number") {
+      if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw.replace(/,/g, ""))) return;
+    }
+    setDisplayValue(raw);
+
+    // Live-sync rate slider while a complete number is typed (not trailing ".").
+    if (!isPercent) return;
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed === "-" || trimmed.endsWith(".")) return;
+    const parsed = parseIndianInput(trimmed);
+    if (parsed === null) return;
+    const clamped = clampCalculatorValue(parsed, min, inputMax, step);
+    if (clamped !== value) onChange(clamped);
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     setFocused(false);
     const parsed = parseIndianInput(e.target.value);
     if (parsed === null) {
-      setDisplayValue(formatIndian(value));
+      setDisplayValue(formatFieldValue(value, detectedType, step));
       return;
     }
-    const clamped = Math.min(inputMax, Math.max(min, parsed));
-    onChange(clamped);
-    setDisplayValue(formatIndian(clamped));
+    const clamped = commitValue(parsed);
+    setDisplayValue(formatFieldValue(clamped, detectedType, step));
   };
 
   const words = useMemo(
-    () => formatSliderLabel(Math.max(0, value), detectedType),
-    [detectedType, value],
+    () => formatSliderLabel(Math.max(0, value), detectedType, step),
+    [detectedType, step, value],
   );
 
   const sliderValue = Math.min(Math.max(value, min), sliderMax);
@@ -157,7 +200,9 @@ export function SliderField({
         ) : null}
         <input
           type="text"
-          inputMode="numeric"
+          inputMode={
+            isPercent || detectedType === "number" ? "decimal" : "numeric"
+          }
           value={displayValue}
           onChange={handleManualInput}
           onBlur={handleBlur}
@@ -188,9 +233,7 @@ export function SliderField({
         max={sliderMax}
         step={step}
         value={sliderValue}
-        onChange={(e) =>
-          onChange(Math.min(inputMax, Math.max(min, Number(e.target.value))))
-        }
+        onChange={(e) => commitValue(Number(e.target.value))}
         className="h-2 w-full cursor-pointer accent-[#534AB7]"
       />
       <div className="text-right text-xs text-[#9B9A94]">{words}</div>

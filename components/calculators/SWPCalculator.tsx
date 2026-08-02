@@ -12,16 +12,17 @@ import {
   YAxis,
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
-import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import {
+  CALCULATOR_MONEY_MAX,
+  Insight,
+  ResultStat,
+  SliderField,
+  type InsightTone,
+} from "./calculator-ui";
 
 function useClamped(initial: number, min: number, max: number) {
-  const [v, setV] = useState(() =>
-    Math.min(max, Math.max(min, initial)),
-  );
-  const set = useCallback(
-    (nv: number) => setV(Math.max(min, nv)),
-    [min],
-  );
+  const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
+  const set = useCallback((nv: number) => setV(Math.max(min, nv)), [min]);
   return [v, set] as const;
 }
 
@@ -79,7 +80,12 @@ export function SWPCalculator() {
     const maxMonths = Math.min(600, Math.max(1, lasts));
     let bal = corpus;
     let withdrawnSoFar = 0;
-    const out: Array<{ month: number; label: string; balance: number; withdrawn: number }> = [];
+    const out: Array<{
+      month: number;
+      label: string;
+      balance: number;
+      withdrawn: number;
+    }> = [];
     for (let m = 1; m <= maxMonths; m += 1) {
       bal = bal * (1 + r) - withdraw;
       withdrawnSoFar += withdraw;
@@ -122,7 +128,7 @@ export function SWPCalculator() {
         value={rate}
         min={3}
         max={15}
-        step={0.5}
+        step={0.1}
         onChange={setRate}
         format={(v) => `${v}% p.a.`}
       />
@@ -156,18 +162,34 @@ export function SWPCalculator() {
                   return mm % 12 === 0 ? `Y${mm / 12}` : "";
                 }}
               />
-              <YAxis tick={{ fontSize: 12, fill: "#9B9A94" }} tickFormatter={(v) => formatIndianCompact(Number(v))} />
+              <YAxis
+                tick={{ fontSize: 12, fill: "#9B9A94" }}
+                tickFormatter={(v) => formatIndianCompact(Number(v))}
+              />
               <Tooltip
                 contentStyle={tooltipStyle}
                 content={({ active, payload, label }) => {
                   if (!active || !payload || payload.length === 0) return null;
-                  const point = payload[0]?.payload as { month: number; balance: number; withdrawn: number };
-                  const period = point.month % 12 === 0 ? `Year ${point.month / 12}` : `Month ${point.month}`;
+                  const point = payload[0]?.payload as {
+                    month: number;
+                    balance: number;
+                    withdrawn: number;
+                  };
+                  const period =
+                    point.month % 12 === 0
+                      ? `Year ${point.month / 12}`
+                      : `Month ${point.month}`;
                   return (
                     <div style={tooltipStyle}>
-                      <div style={{ fontWeight: 700, marginBottom: 6 }}>{period}</div>
-                      <div>Corpus remaining: ₹{formatIndian(point.balance)}</div>
-                      <div>Total withdrawn: ₹{formatIndian(point.withdrawn)}</div>
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                        {period}
+                      </div>
+                      <div>
+                        Corpus remaining: ₹{formatIndian(point.balance)}
+                      </div>
+                      <div>
+                        Total withdrawn: ₹{formatIndian(point.withdrawn)}
+                      </div>
                     </div>
                   );
                 }}

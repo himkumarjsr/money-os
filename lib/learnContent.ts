@@ -18,6 +18,18 @@ export type LearnArticle = {
 
 export const learnArticles: LearnArticle[] = [
   {
+    id: "sip-calculator-1-crore-10-15-20-years",
+    title: "SIP calculator — how much SIP for ₹1 crore in 10/15/20 years",
+    subtitle:
+      "Live sip calculator 1 crore tool: monthly SIP needed at different returns for 10, 15, and 20 year horizons.",
+    category: "Investment",
+    readTime: 8,
+    content: [
+      "Use the embedded SIP-for-goal calculator to see how much monthly SIP you need for ₹1 crore — then adjust years and return assumptions.",
+      "Longer horizons shrink the monthly amount; higher assumed returns do the same. Always leave room for emergency fund and insurance before maxing SIPs.",
+    ],
+  },
+  {
     id: "know-taxation-in-india-old-vs-new-slabs-interest-rates",
     title: "Indian Income Tax Explained Simply (FY 2025-26)",
     subtitle:
@@ -43,9 +55,9 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "old-vs-new-tax-regime-which-saves-you-more-money",
-    title: "Old vs New Tax Regime (FY 2025-26) — Which saves more?",
+    title: "Old vs new tax regime 2025-26 — complete comparison with examples",
     subtitle:
-      "A practical decision guide: deductions that matter (80C/80D/HRA/24(b)/NPS), proof checklist, and quick examples.",
+      "Side-by-side old vs new tax regime 2026 guide with salary examples, deductions checklist, and an embedded free calculator.",
     category: "Tax",
     readTime: 14,
     content: [
@@ -80,7 +92,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "how-your-cibil-credit-score-is-calculated",
-    title: "How Your CIBIL Credit Score Is Calculated — The Complete 2026 Guide",
+    title:
+      "How Your CIBIL Credit Score Is Calculated — The Complete 2026 Guide",
     subtitle:
       "India’s CIBIL score is a 300–900 number. Know how payment history, utilisation, mix, and inquiries shape approvals and loan pricing.",
     category: "Loans",
@@ -92,9 +105,9 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "emergency-fund-how-much-where-to-keep-it",
-    title: "Emergency fund — how much, where to keep it (India guide)",
+    title: "How much emergency fund do I need — calculator India",
     subtitle:
-      "Plan up to 12 months of essential expenses — life-stage examples for bachelor to married with kids and dependents, plus where to park the money safely.",
+      "Emergency fund calculator India: life-stage targets up to 12 months, where to park cash, plus a live tool for your number.",
     category: "Basics",
     readTime: 11,
     content: [
@@ -105,7 +118,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "sip-vs-lumpsum-when-to-use-which",
-    title: "SIP vs Lumpsum — When to Use Which (With Real Indian Market Examples)",
+    title:
+      "SIP vs Lumpsum — When to Use Which (With Real Indian Market Examples)",
     subtitle:
       "Same rupees, different paths: highs favour SIP discipline; deep crashes can favour lumpsum — plus STP hybrid rules.",
     category: "Investment",
@@ -117,7 +131,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "how-home-loan-tax-benefits-work-80c-24b",
-    title: "How Home Loan Tax Benefits Work — Section 80C and 24B Explained Simply",
+    title:
+      "How Home Loan Tax Benefits Work — Section 80C and 24B Explained Simply",
     subtitle:
       "Principal vs interest, possession rules, joint-owner stacking, and why under-construction EMIs can disappoint.",
     category: "Tax",
@@ -129,7 +144,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "what-is-the-50-30-20-budgeting-rule",
-    title: "Why the 50-30-20 Rule Fails Indians — Finkoin's 40-20-10-30 Framework",
+    title:
+      "Why the 50-30-20 Rule Fails Indians — Finkoin's 40-20-10-30 Framework",
     subtitle:
       "US-born 50/30/20 ignores India’s inflation, weak safety nets, and slow real wage growth — use a India-first bucket model instead.",
     category: "Basics",
@@ -141,7 +157,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "ppf-vs-elss-which-is-better-for-tax-saving",
-    title: "PPF vs ELSS for Tax Saving — The Honest Answer (Not What Your Bank Wants You to Hear)",
+    title:
+      "PPF vs ELSS for Tax Saving — The Honest Answer (Not What Your Bank Wants You to Hear)",
     subtitle:
       "Same ₹1.5L 80C box — very different risk, lock-in, and post-tax wealth outcomes.",
     category: "Tax",
@@ -153,7 +170,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "understanding-inflation-and-your-real-returns",
-    title: "Understanding Inflation and Your Real Returns — What Your Money Is Actually Worth",
+    title:
+      "Understanding Inflation and Your Real Returns — What Your Money Is Actually Worth",
     subtitle:
       "CPI April 2026 ~3.48% headline vs 5–6% history, basket inflation, Rule of 72, and post-tax FD reality.",
     category: "Basics",
@@ -165,7 +183,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "section-80c-limits-and-beyond",
-    title: "Section 80C Limit Is Just ₹1.5L — Here Are All the Deductions Beyond It",
+    title:
+      "Section 80C Limit Is Just ₹1.5L — Here Are All the Deductions Beyond It",
     subtitle:
       "Map 80D, NPS ₹50k (80CCD(1B)), 24B, 80E, and 80TTA/80TTB — old regime stacking can save serious tax.",
     category: "Tax",
@@ -189,7 +208,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "fixed-vs-floating-home-loan",
-    title: "Fixed vs Floating Home Loan — Which Saves More Money in India (With Math)",
+    title:
+      "Fixed vs Floating Home Loan — Which Saves More Money in India (With Math)",
     subtitle:
       "Repo-linked floating vs teaser-fixed, 20-year ₹50L illustration, prepayment edge, and cashflow stress tests.",
     category: "Loans",
@@ -201,7 +221,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "rera-basics-for-homebuyers",
-    title: "RERA Basics Every Indian Home Buyer Must Know Before Signing Anything",
+    title:
+      "RERA Basics Every Indian Home Buyer Must Know Before Signing Anything",
     subtitle:
       "Registration, escrow discipline, carpet area, delay remedies, and what RERA cannot fix.",
     category: "Property",
@@ -213,7 +234,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "what-is-asset-allocation",
-    title: "What Is Asset Allocation and Why It Is the Most Important Investment Decision",
+    title:
+      "What Is Asset Allocation and Why It Is the Most Important Investment Decision",
     subtitle:
       "Equity/debt/gold splits beat stock-picking for most Indians — plus a simple India sleeve template.",
     category: "Investment",
@@ -225,7 +247,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "credit-card-minimum-trap",
-    title: "The Credit Card Minimum Payment Trap — How Banks Make You Pay 3X the Price",
+    title:
+      "The Credit Card Minimum Payment Trap — How Banks Make You Pay 3X the Price",
     subtitle:
       "Revolving APR, lost grace periods, cheaper ways out, and the one habit that fixes it.",
     category: "Basics",
@@ -237,7 +260,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "nps-vs-epf-for-retirement",
-    title: "NPS vs EPF — Which Is Better for Your Retirement? (Real Numbers Compared)",
+    title:
+      "NPS vs EPF — Which Is Better for Your Retirement? (Real Numbers Compared)",
     subtitle:
       "Employer match, EPS split, 80CCD(1B), annuity rules, and why job-change EPF withdrawals destroy compounding.",
     category: "Tax",
@@ -249,7 +273,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "gold-as-investment-myths",
-    title: "Gold as Investment — Myths Busted and When Gold Actually Makes Sense",
+    title:
+      "Gold as Investment — Myths Busted and When Gold Actually Makes Sense",
     subtitle:
       "Jewellery spreads, SGB vs ETF vs digital gold, and why 5–10% is usually enough.",
     category: "Investment",
@@ -261,7 +286,8 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "prepayment-vs-tenure-reduction-home-loan",
-    title: "Home Loan Prepayment — Should You Reduce EMI or Tenure? (With Edge Cases)",
+    title:
+      "Home Loan Prepayment — Should You Reduce EMI or Tenure? (With Edge Cases)",
     subtitle:
       "Illustrative ₹50L math, when EMI cut wins, prepayment timing, and the Section 24B trade-off.",
     category: "Loans",
@@ -274,7 +300,8 @@ export const learnArticles: LearnArticle[] = [
   {
     id: "capital-gains-when-you-sell-property",
     title: "Capital gains when you sell property",
-    subtitle: "Holding period, improvements, and exemptions decide the final bill.",
+    subtitle:
+      "Holding period, improvements, and exemptions decide the final bill.",
     category: "Property",
     readTime: 5,
     content: [
@@ -288,7 +315,8 @@ export const learnArticles: LearnArticle[] = [
   {
     id: "stcg-vs-ltcg-on-equity-india",
     title: "STCG vs LTCG on equity in India",
-    subtitle: "Holding clocks start on dates that changed across Finance Acts — track your grandfathering.",
+    subtitle:
+      "Holding clocks start on dates that changed across Finance Acts — track your grandfathering.",
     category: "Tax",
     readTime: 5,
     content: [
@@ -330,7 +358,8 @@ export const learnArticles: LearnArticle[] = [
   {
     id: "top-up-home-loan-when-it-makes-sense",
     title: "Top-up home loan — when it makes sense",
-    subtitle: "Cheaper than personal loans if discipline exists — disastrous if treated as pocket money.",
+    subtitle:
+      "Cheaper than personal loans if discipline exists — disastrous if treated as pocket money.",
     category: "Loans",
     readTime: 4,
     content: [
@@ -358,7 +387,8 @@ export const learnArticles: LearnArticle[] = [
   {
     id: "opd-cover-in-health-insurance",
     title: "OPD cover in health insurance",
-    subtitle: "Out-patient benefits are tempting but watch sub-limits and utilization friction.",
+    subtitle:
+      "Out-patient benefits are tempting but watch sub-limits and utilization friction.",
     category: "Insurance",
     readTime: 4,
     content: [
@@ -372,7 +402,8 @@ export const learnArticles: LearnArticle[] = [
   {
     id: "liquid-and-overnight-mutual-funds",
     title: "Liquid and overnight mutual funds",
-    subtitle: "Near-cash sleeves for treasuries — not replacements for multi-year goals.",
+    subtitle:
+      "Near-cash sleeves for treasuries — not replacements for multi-year goals.",
     category: "Investment",
     readTime: 4,
     content: [
@@ -385,16 +416,15 @@ export const learnArticles: LearnArticle[] = [
   },
   {
     id: "form-16-what-to-verify",
-    title: "Form 16 — what to verify before filing ITR",
-    subtitle: "Employer summaries still go wrong — cross-check with salary slips.",
+    title: "Free ITR filing 2025-26 — Form 16 checklist & tax regime prep",
+    subtitle:
+      "Verify Form 16, compare old vs new regime free, then file with clarity. Built for India’s ITR season.",
     category: "Tax",
-    readTime: 4,
+    readTime: 9,
     content: [
-      "Part A lists employer TAN and tax deposited; Part B maps allowances, perquisites, deductions, and taxable income computed by payroll. Banks use Part A for loan proofs; the ITR uses reconciled totals.",
-      "HRA exemption mistakes happen when rent receipts were not submitted on time or metro classifications differ. Section 80C often shows PF but misses ELSS proofs if declarations closed early.",
-      "Bonuses paid in March sometimes land in the wrong financial year column if ERP configs lag — match bank credit dates.",
-      "Two Form 16s appear if you switched jobs; merge incomes carefully to avoid under-reporting or double-claiming deductions both employers gave.",
-      "Download AIS/ Form 26AS early — interest from co-operative banks or minor SB interest omissions show up there even if Form 16 stayed silent.",
+      "Part A lists employer TAN and tax deposited; Part B maps allowances, perquisites, deductions, and taxable income computed by payroll.",
+      "Before free e-filing, reconcile Form 16 with AIS/26AS, then run Finkoin’s tax regime calculator so you know which regime saves more.",
+      "Two Form 16s appear if you switched jobs; merge incomes carefully to avoid under-reporting or double-claiming deductions.",
     ],
   },
   {
@@ -497,7 +527,8 @@ export const learnArticles: LearnArticle[] = [
   {
     id: "rent-agreement-registration-basics",
     title: "Rent agreement registration basics",
-    subtitle: "Stamp duty and term clauses differ by state — HRA claims need consistency.",
+    subtitle:
+      "Stamp duty and term clauses differ by state — HRA claims need consistency.",
     category: "Property",
     readTime: 4,
     content: [
@@ -511,9 +542,8 @@ export const learnArticles: LearnArticle[] = [
 ];
 
 /** Lookup map for O(1) article fetch */
-export const learnArticleById: Record<string, LearnArticle> = Object.fromEntries(
-  learnArticles.map((a) => [a.id, a]),
-);
+export const learnArticleById: Record<string, LearnArticle> =
+  Object.fromEntries(learnArticles.map((a) => [a.id, a]));
 
 export const learnCategories: LearnCategory[] = [
   "Basics",

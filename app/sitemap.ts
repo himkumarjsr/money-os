@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { BLOG_ARTICLES } from "@/lib/blogContent";
+import { learnArticles } from "@/lib/learnContent";
 import { INDEXABLE_CALC_IDS } from "./calculators/calculator-seo";
 
 const baseUrl = (
@@ -29,27 +30,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/calculators`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/calculators/tax-regime-2026`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.95,
-    },
-    ...INDEXABLE_CALC_IDS.map((id) => ({
-      url: `${baseUrl}/calculators/${id}`,
-      lastModified: now,
-      changeFrequency: "monthly" as const,
-      priority:
-        id === "sip" || id === "swp" || id === "emi" || id === "fire"
-          ? 0.9
-          : 0.75,
-    })),
-    {
       url: `${baseUrl}/tracker`,
       lastModified: now,
       changeFrequency: "monthly",
@@ -62,11 +42,42 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${baseUrl}/calculators`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/calculators/tax-regime-2026`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.95,
+    },
+    ...INDEXABLE_CALC_IDS.map((id) => ({
+      url: `${baseUrl}/calculators/${id}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority:
+        id === "sip" ||
+        id === "swp" ||
+        id === "emi" ||
+        id === "fire" ||
+        id === "home"
+          ? 0.9
+          : 0.75,
+    })),
+    {
       url: `${baseUrl}/learn`,
       lastModified: now,
       changeFrequency: "weekly",
-      priority: 0.8,
+      priority: 0.85,
     },
+    ...learnArticles.map((a) => ({
+      url: `${baseUrl}/learn/${a.id}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     {
       url: `${baseUrl}/about`,
       lastModified: now,

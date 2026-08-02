@@ -2,10 +2,13 @@ import { ArticleShare } from "@/components/learn/article-share";
 import { ArticleTracker } from "@/components/learn/article-tracker";
 import CompoundInterestGuide from "@/components/learn/CompoundInterestGuide";
 import EmergencyFundGuide from "@/components/learn/EmergencyFundGuide";
+import Form16ItrGuide from "@/components/learn/Form16ItrGuide";
 import IndexFundGuide from "@/components/learn/IndexFundGuide";
+import SipCroreGuide from "@/components/learn/SipCroreGuide";
 import TermInsuranceVsEndowmentGuide from "@/components/learn/TermInsuranceVsEndowmentGuide";
 import IncomeTaxGuideFY2526 from "@/components/learn/tax/IncomeTaxGuideFY2526";
 import OldVsNewRegimeGuideFY2526 from "@/components/learn/tax/OldVsNewRegimeGuideFY2526";
+import HomeLoanPrepayEmbed from "@/components/learn/tools/HomeLoanPrepayEmbed";
 import {
   learnArticleById,
   learnArticles,
@@ -13,11 +16,16 @@ import {
 } from "@/lib/learnContent";
 import { getRichLearnArticle } from "@/lib/learnRichArticles";
 import { LearnRichArticleRenderer } from "@/components/learn/LearnRichArticleRenderer";
-import { LearnPlainArticle, LearnSimpleArticle } from "@/components/learn/LearnSimpleArticle";
+import {
+  LearnPlainArticle,
+  LearnSimpleArticle,
+} from "@/components/learn/LearnSimpleArticle";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Breadcrumb from "@/components/Breadcrumb";
+import { getLearnSeoOverride } from "@/lib/learnSeo";
 import { SITE_URL } from "@/lib/seo";
 
 const badgeColors: Record<LearnCategory, string> = {
@@ -45,6 +53,32 @@ export async function generateMetadata({
     return {
       title: "Article not found | Finkoin Learn",
       robots: { index: false, follow: false },
+    };
+  }
+
+  const seoOverride = getLearnSeoOverride(article.id);
+  if (seoOverride) {
+    return {
+      title: { absolute: seoOverride.title },
+      description: seoOverride.description,
+      keywords: [
+        ...seoOverride.keywords,
+        "Finkoin",
+        "personal finance India",
+        "Know it Fix it Grow it",
+      ],
+      alternates: { canonical: `/learn/${article.id}` },
+      openGraph: {
+        title: seoOverride.title,
+        description: seoOverride.description,
+        type: "article",
+        url: `${SITE_URL}/learn/${article.id}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: seoOverride.title,
+        description: seoOverride.description,
+      },
     };
   }
 
@@ -181,7 +215,7 @@ export async function generateMetadata({
   }
 
   const title = `${article.title} | Finkoin Learn`;
-  const description = article.subtitle;
+  const description = `${article.subtitle} Free personal finance education for Indians. Know it. Fix it. Grow it.`;
 
   return {
     title,
@@ -190,6 +224,7 @@ export async function generateMetadata({
       title: article.title,
       description,
       type: "article",
+      url: `${SITE_URL}/learn/${article.id}`,
     },
     twitter: {
       card: "summary_large_image",
@@ -202,9 +237,12 @@ export async function generateMetadata({
     keywords: [
       article.category,
       "India",
-      "personal finance",
+      "personal finance India",
       "Finkoin",
+      "Finkoin Learn",
       article.title,
+      `${article.category} India`,
+      "financial education India",
     ],
   };
 }
@@ -224,7 +262,16 @@ export default function LearnArticlePage({ params }: PageProps) {
       <ArticleTracker articleId={article.id} />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-3 px-4 py-6 sm:px-6">
-          <Link href="/learn" className="text-sm font-semibold text-[#534AB7] hover:underline">
+          <Breadcrumb
+            items={[
+              { label: "Learn", href: "/learn" },
+              { label: article.title, href: `/learn/${article.id}` },
+            ]}
+          />
+          <Link
+            href="/learn"
+            className="text-sm font-semibold text-[#534AB7] hover:underline"
+          >
             ← All articles
           </Link>
           <div className="flex flex-wrap items-center gap-3">
@@ -243,13 +290,41 @@ export default function LearnArticlePage({ params }: PageProps) {
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             {article.title}
           </h1>
-          <p className="text-lg text-slate-600 sm:text-xl">{article.subtitle}</p>
+          <p className="text-lg text-slate-600 sm:text-xl">
+            {article.subtitle}
+          </p>
           <ArticleShare title={article.title} path={`/learn/${article.id}`} />
         </div>
       </header>
 
       <article className="mx-auto w-full min-w-0 max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        {article.id === "know-taxation-in-india-old-vs-new-slabs-interest-rates" ? (
+        {article.id === "sip-calculator-1-crore-10-15-20-years" ? (
+          <LearnSimpleArticle
+            article={article}
+            toc={[
+              { id: "quick-table", label: "Quick reference" },
+              { id: "assumptions", label: "Assumptions" },
+              { id: "how-to-use", label: "How to use" },
+              { id: "related", label: "Related tools" },
+            ]}
+          >
+            <SipCroreGuide />
+          </LearnSimpleArticle>
+        ) : article.id === "form-16-what-to-verify" ? (
+          <LearnSimpleArticle
+            article={article}
+            toc={[
+              { id: "what-form-16", label: "What Form 16 is" },
+              { id: "verify", label: "What to verify" },
+              { id: "free-filing", label: "Free filing angle" },
+              { id: "steps", label: "5-step path" },
+              { id: "disclaimer", label: "Disclaimer" },
+            ]}
+          >
+            <Form16ItrGuide />
+          </LearnSimpleArticle>
+        ) : article.id ===
+          "know-taxation-in-india-old-vs-new-slabs-interest-rates" ? (
           <>
             <script
               type="application/ld+json"
@@ -258,8 +333,18 @@ export default function LearnArticlePage({ params }: PageProps) {
                   "@context": "https://schema.org",
                   "@type": "BreadcrumbList",
                   itemListElement: [
-                    { "@type": "ListItem", position: 1, name: "Learn", item: `${SITE_URL}/learn` },
-                    { "@type": "ListItem", position: 2, name: article.title, item: `${SITE_URL}/learn/${article.id}` },
+                    {
+                      "@type": "ListItem",
+                      position: 1,
+                      name: "Learn",
+                      item: `${SITE_URL}/learn`,
+                    },
+                    {
+                      "@type": "ListItem",
+                      position: 2,
+                      name: article.title,
+                      item: `${SITE_URL}/learn/${article.id}`,
+                    },
                   ],
                 }),
               }}
@@ -281,7 +366,8 @@ export default function LearnArticlePage({ params }: PageProps) {
             />
             <IncomeTaxGuideFY2526 />
           </>
-        ) : article.id === "old-vs-new-tax-regime-which-saves-you-more-money" ? (
+        ) : article.id ===
+          "old-vs-new-tax-regime-which-saves-you-more-money" ? (
           <>
             <script
               type="application/ld+json"
@@ -290,8 +376,18 @@ export default function LearnArticlePage({ params }: PageProps) {
                   "@context": "https://schema.org",
                   "@type": "BreadcrumbList",
                   itemListElement: [
-                    { "@type": "ListItem", position: 1, name: "Learn", item: `${SITE_URL}/learn` },
-                    { "@type": "ListItem", position: 2, name: article.title, item: `${SITE_URL}/learn/${article.id}` },
+                    {
+                      "@type": "ListItem",
+                      position: 1,
+                      name: "Learn",
+                      item: `${SITE_URL}/learn`,
+                    },
+                    {
+                      "@type": "ListItem",
+                      position: 2,
+                      name: article.title,
+                      item: `${SITE_URL}/learn/${article.id}`,
+                    },
                   ],
                 }),
               }}
@@ -313,7 +409,8 @@ export default function LearnArticlePage({ params }: PageProps) {
             />
             <OldVsNewRegimeGuideFY2526 />
           </>
-        ) : article.id === "what-is-compound-interest-and-why-it-changes-everything" ? (
+        ) : article.id ===
+          "what-is-compound-interest-and-why-it-changes-everything" ? (
           <LearnSimpleArticle
             article={article}
             toc={[
@@ -335,7 +432,8 @@ export default function LearnArticlePage({ params }: PageProps) {
             </section>
             <CompoundInterestGuide />
           </LearnSimpleArticle>
-        ) : article.id === "term-insurance-vs-endowment-why-most-indians-buy-wrong" ? (
+        ) : article.id ===
+          "term-insurance-vs-endowment-why-most-indians-buy-wrong" ? (
           <LearnSimpleArticle
             article={article}
             toc={[
@@ -356,7 +454,8 @@ export default function LearnArticlePage({ params }: PageProps) {
             </section>
             <TermInsuranceVsEndowmentGuide />
           </LearnSimpleArticle>
-        ) : article.id === "what-is-an-index-fund-and-why-it-beats-most-mutual-funds" ? (
+        ) : article.id ===
+          "what-is-an-index-fund-and-why-it-beats-most-mutual-funds" ? (
           <LearnSimpleArticle
             article={article}
             toc={[
@@ -392,8 +491,18 @@ export default function LearnArticlePage({ params }: PageProps) {
                   "@context": "https://schema.org",
                   "@type": "BreadcrumbList",
                   itemListElement: [
-                    { "@type": "ListItem", position: 1, name: "Learn", item: `${SITE_URL}/learn` },
-                    { "@type": "ListItem", position: 2, name: article.title, item: `${SITE_URL}/learn/${article.id}` },
+                    {
+                      "@type": "ListItem",
+                      position: 1,
+                      name: "Learn",
+                      item: `${SITE_URL}/learn`,
+                    },
+                    {
+                      "@type": "ListItem",
+                      position: 2,
+                      name: article.title,
+                      item: `${SITE_URL}/learn/${article.id}`,
+                    },
                   ],
                 }),
               }}
@@ -404,7 +513,8 @@ export default function LearnArticlePage({ params }: PageProps) {
                 __html: JSON.stringify({
                   "@context": "https://schema.org",
                   "@type": "Article",
-                  headline: "Emergency Fund India — How Much (Up to 12 Months), Where to Keep, Life-Stage Examples",
+                  headline:
+                    "Emergency Fund India — How Much (Up to 12 Months), Where to Keep, Life-Stage Examples",
                   description: article.subtitle,
                   mainEntityOfPage: `${SITE_URL}/learn/${article.id}`,
                   author: { "@type": "Organization", name: "Finkoin" },
@@ -459,7 +569,8 @@ export default function LearnArticlePage({ params }: PageProps) {
               article={article}
               asideNote={
                 <>
-                  Target: up to <strong>12 months</strong> of essential expenses.
+                  Target: up to <strong>12 months</strong> of essential
+                  expenses.
                 </>
               }
               toc={[
@@ -483,6 +594,12 @@ export default function LearnArticlePage({ params }: PageProps) {
               </section>
               <EmergencyFundGuide />
             </LearnSimpleArticle>
+          </>
+        ) : article.id === "prepayment-vs-tenure-reduction-home-loan" &&
+          richLearn ? (
+          <>
+            <HomeLoanPrepayEmbed />
+            <LearnRichArticleRenderer rich={richLearn} articleId={article.id} />
           </>
         ) : richLearn ? (
           <LearnRichArticleRenderer rich={richLearn} articleId={article.id} />

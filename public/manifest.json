@@ -1,7 +1,7 @@
 {
   "name": "Finkoin — Financial Health",
   "short_name": "Finkoin",
-  "description": "Check your Financial Freedom Score. Free. No PAN. No Aadhaar.",
+  "description": "Know it. Fix it. Grow it. Your complete money life. Free financial health check for India. No PAN. No Aadhaar.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -11,6 +11,10 @@
   "categories": ["finance", "productivity"],
   "lang": "en-IN",
   "dir": "ltr",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "handle_links": "preferred",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",

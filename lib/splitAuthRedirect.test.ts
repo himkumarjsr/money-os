@@ -41,6 +41,13 @@ describe("sanitizeAppPath", () => {
 describe("split invite post-login path", () => {
   beforeEach(() => {
     localStorage.clear();
+    // jsdom keeps cookies across tests unless Max-Age is cleared.
+    for (const part of document.cookie.split("; ")) {
+      const name = part.split("=")[0];
+      if (name) {
+        document.cookie = `${name}=; Path=/; Max-Age=0`;
+      }
+    }
   });
 
   it("prefers next query over stored invite", () => {
@@ -83,6 +90,37 @@ describe("split invite post-login path", () => {
     clearSplitInviteRedirect();
     expect(localStorage.getItem(FINKOIN_SPLIT_TOKEN_KEY)).toBeNull();
     expect(localStorage.getItem(FINKOIN_SPLIT_REDIRECT_KEY)).toBeNull();
+  });
+
+  it("reads invite from cookie when localStorage is empty", () => {
+    document.cookie = `${FINKOIN_SPLIT_REDIRECT_KEY}=${encodeURIComponent("/split/join?token=from-cookie")}; Path=/`;
+    expect(peekPostLoginPath("")).toBe("/split/join?token=from-cookie");
+  });
+
+  it("prefers localStorage redirect over cookie", () => {
+    document.cookie = `${FINKOIN_SPLIT_REDIRECT_KEY}=${encodeURIComponent("/split/join?token=cookie")}; Path=/`;
+    saveSplitInviteRedirect("/split/join?token=local");
+    expect(peekPostLoginPath("")).toBe("/split/join?token=local");
+  });
+
+  it("clear removes cookie-backed invite too", () => {
+    saveSplitInviteRedirect("/split/join?token=wipe");
+    clearSplitInviteRedirect();
+    expect(peekPostLoginPath("", "/analyse")).toBe("/analyse");
+    expect(document.cookie.includes(FINKOIN_SPLIT_REDIRECT_KEY)).toBe(false);
+  });
+
+  it("keeps token query chars intact through cookie round-trip", () => {
+    const path =
+      "/split/join?token=9b48f71dcff8c5912bc6c6a8e7245e0bc2b0f65549a24e65be71791e4d97a5cb";
+    localStorage.clear();
+    for (const part of document.cookie.split("; ")) {
+      const name = part.split("=")[0];
+      if (name) document.cookie = `${name}=; Path=/; Max-Age=0`;
+    }
+    saveSplitInviteRedirect(path);
+    localStorage.removeItem(FINKOIN_SPLIT_REDIRECT_KEY);
+    expect(peekPostLoginPath("")).toBe(path);
   });
 
   it("resolvePostLoginPath peek-by-default does not clear storage", () => {

@@ -8,12 +8,22 @@ import {
   saveSplitInviteRedirect,
   saveSplitInviteToken,
 } from "@/lib/splitAuthRedirect";
+import {
+  hasPwaOpenAttempted,
+  isAndroidUserAgent,
+  isIosUserAgent,
+  markPwaOpenAttempted,
+  shouldOfferOpenInApp,
+  tryOpenHttpsInAndroidApp,
+} from "@/lib/pwaLaunch";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 
-type JoinStatus = "loading" | "success" | "error";
+type JoinStatus = "checking" | "joining" | "open_app" | "success" | "error";
+
+const JOIN_TIMEOUT_MS = 20_000;
 
 async function joinWithRetry(
   payload: { token?: string; code?: string },
@@ -21,31 +31,58 @@ async function joinWithRetry(
 ) {
   let lastError = "Could not join group";
   for (let i = 0; i < attempts; i++) {
-    const response = await fetch("/api/split/join", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-    const result = (await response.json()) as {
-      success?: boolean;
-      groupId?: string;
-      groupName?: string;
-      error?: string;
-    };
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), JOIN_TIMEOUT_MS);
+    try {
+      const response = await fetch("/api/split/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      const result = (await response.json()) as {
+        success?: boolean;
+        groupId?: string;
+        groupName?: string;
+        error?: string;
+      };
 
-    if (response.ok && result.success && result.groupId) {
-      return result;
-    }
+      if (response.ok && result.success && result.groupId) {
+        return result;
+      }
 
-    lastError = result.error ?? lastError;
-    if (response.status === 401 && i < attempts - 1) {
-      await new Promise((r) => setTimeout(r, 400 * (i + 1)));
-      continue;
+      lastError = result.error ?? lastError;
+      if (response.status === 401 && i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+        continue;
+      }
+      const err = new Error(lastError) as Error & { status?: number };
+      err.status = response.status;
+      throw err;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        throw new Error("Join timed out. Check your connection and try again.");
+      }
+      throw e;
+    } finally {
+      window.clearTimeout(timer);
     }
-    throw new Error(lastError);
   }
   throw new Error(lastError);
+}
+
+function joinPath(token: string | null, code: string | null): string {
+  if (typeof window !== "undefined") {
+    return window.location.pathname + window.location.search;
+  }
+  if (token) return `/split/join?token=${encodeURIComponent(token)}`;
+  return `/split/join?code=${encodeURIComponent(code!)}`;
+}
+
+function persistInvite(token: string | null, code: string | null) {
+  if (token) saveSplitInviteToken(token);
+  saveSplitInviteRedirect(joinPath(token, code));
 }
 
 export default function JoinSplitGroupClient() {
@@ -55,11 +92,26 @@ export default function JoinSplitGroupClient() {
   const code = params?.get("code") ?? null;
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-  const [status, setStatus] = useState<JoinStatus>("loading");
+  const [status, setStatus] = useState<JoinStatus>("checking");
   const [message, setMessage] = useState("");
   const [groupName, setGroupName] = useState("");
-  const joinInFlight = useRef(false);
-  const joinedKey = useRef<string | null>(null);
+  const attemptRef = useRef(0);
+  const finishedKey = useRef<string | null>(null);
+
+  const continueInBrowser = () => {
+    persistInvite(token, code);
+    const currentUrl = joinPath(token, code);
+    router.replace(`/login?next=${encodeURIComponent(currentUrl)}`);
+  };
+
+  const openInApp = () => {
+    persistInvite(token, code);
+    if (typeof window !== "undefined" && isAndroidUserAgent()) {
+      tryOpenHttpsInAndroidApp(window.location.href);
+      return;
+    }
+    setStatus("open_app");
+  };
 
   useEffect(() => {
     if (!hasInitialized) return;
@@ -70,63 +122,139 @@ export default function JoinSplitGroupClient() {
     }
 
     const joinKey = token ? `token:${token}` : `code:${code}`;
-    if (joinedKey.current === joinKey || joinInFlight.current) return;
+    if (finishedKey.current === joinKey) return;
+
+    const attempt = ++attemptRef.current;
 
     const process = async () => {
-      const authenticated = await resolveAuthenticated();
+      setStatus("checking");
+
+      let authenticated = false;
+      try {
+        authenticated = await resolveAuthenticated();
+      } catch {
+        authenticated = useAuthStore.getState().isLoggedIn;
+      }
+      if (attempt !== attemptRef.current) return;
+
       if (!authenticated) {
-        if (token) saveSplitInviteToken(token);
-        const currentUrl =
-          typeof window !== "undefined"
-            ? window.location.pathname + window.location.search
-            : token
-              ? `/split/join?token=${encodeURIComponent(token)}`
-              : `/split/join?code=${encodeURIComponent(code!)}`;
-        saveSplitInviteRedirect(currentUrl);
+        persistInvite(token, code);
+
+        if (shouldOfferOpenInApp()) {
+          if (
+            isAndroidUserAgent() &&
+            !hasPwaOpenAttempted(joinKey) &&
+            typeof window !== "undefined"
+          ) {
+            markPwaOpenAttempted(joinKey);
+            tryOpenHttpsInAndroidApp(window.location.href);
+          }
+          setStatus("open_app");
+          return;
+        }
+
+        const currentUrl = joinPath(token, code);
         router.replace(`/login?next=${encodeURIComponent(currentUrl)}`);
         return;
       }
 
-      joinInFlight.current = true;
-      setStatus("loading");
+      setStatus("joining");
 
       try {
         const result = await joinWithRetry(token ? { token } : { code: code! });
-        joinedKey.current = joinKey;
-        setGroupName(result.groupName ?? "group");
+        if (attempt !== attemptRef.current) return;
 
+        finishedKey.current = joinKey;
+        setGroupName(result.groupName ?? "group");
+        clearSplitInviteRedirect();
+        setStatus("success");
+
+        // Refresh groups in the background — don't block leaving the join screen.
         const authUser = useAuthStore.getState().user;
         const userEmail = (authUser?.email ?? "").toLowerCase();
         if (authUser?.id && userEmail) {
-          await useSplitStore
+          void useSplitStore
             .getState()
             .fetchGroups(authUser.id, userEmail, true);
         }
 
-        clearSplitInviteRedirect();
-        setStatus("success");
-        setTimeout(() => router.replace(`/split/${result.groupId}`), 1200);
+        window.setTimeout(() => {
+          router.replace(`/split/${result.groupId}`);
+        }, 800);
       } catch (err: unknown) {
+        if (attempt !== attemptRef.current) return;
+        const statusCode =
+          err && typeof err === "object" && "status" in err
+            ? Number((err as { status?: number }).status)
+            : 0;
+        if (statusCode === 401) {
+          persistInvite(token, code);
+          const currentUrl = joinPath(token, code);
+          router.replace(`/login?next=${encodeURIComponent(currentUrl)}`);
+          return;
+        }
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Could not join group");
-      } finally {
-        joinInFlight.current = false;
       }
     };
 
     void process();
   }, [hasInitialized, isLoggedIn, router, token, code]);
 
+  const showLoader = status === "checking" || status === "joining";
+
   return (
     <div className="min-h-dvh bg-[#F7F7F4] px-6 py-10">
       <div className="mx-auto max-w-md rounded-2xl border border-[#E8E6F0] bg-white p-8 text-center shadow-sm">
-        {status === "loading" ? (
+        {showLoader ? (
           <BrandPageLoader
             fullScreen={false}
             size="sm"
             minHeight={160}
-            label="Joining group…"
+            label={status === "joining" ? "Joining group…" : "Checking invite…"}
           />
+        ) : null}
+
+        {status === "open_app" ? (
+          <>
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#EEEDFE]">
+              <AppIcon name="users" size={28} color="#534AB7" />
+            </div>
+            <div className="text-lg font-bold text-[#111110]">
+              Open Finkoin to join
+            </div>
+            <div className="mt-2 text-sm leading-relaxed text-[#5F5E5A]">
+              {isIosUserAgent()
+                ? "If Finkoin is on your home screen, open the app — we’ll take you to this group. New here? Continue in the browser."
+                : "If you already use Finkoin, open the app to join with your existing login. New here? Continue in the browser."}
+            </div>
+            {isAndroidUserAgent() ? (
+              <button
+                type="button"
+                onClick={openInApp}
+                className="mt-6 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-bold text-white"
+              >
+                Open in Finkoin app
+              </button>
+            ) : null}
+            {isIosUserAgent() ? (
+              <p className="mt-6 text-xs leading-relaxed text-[#9B9A94]">
+                Prefer the app? Close this tab and open Finkoin from your home
+                screen — your invite is saved and join will continue there.
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={continueInBrowser}
+              className={`w-full rounded-xl px-4 py-3 text-sm font-bold ${
+                isAndroidUserAgent()
+                  ? "mt-3 border border-[#E8E6F0] bg-white text-[#534AB7]"
+                  : "mt-6 bg-[#534AB7] text-white"
+              }`}
+            >
+              Continue in browser
+            </button>
+          </>
         ) : null}
 
         {status === "success" ? (
@@ -154,8 +282,47 @@ export default function JoinSplitGroupClient() {
             <div className="mt-2 text-sm text-[#9B9A94]">{message}</div>
             <button
               type="button"
-              onClick={() => router.push("/split")}
+              onClick={() => {
+                finishedKey.current = null;
+                setMessage("");
+                setStatus("checking");
+                // Bump attempt + isLoggedIn dependency via a fresh process kick
+                void (async () => {
+                  attemptRef.current += 1;
+                  const attempt = attemptRef.current;
+                  const joinKey = token ? `token:${token}` : `code:${code}`;
+                  setStatus("joining");
+                  try {
+                    const result = await joinWithRetry(
+                      token ? { token } : { code: code! },
+                    );
+                    if (attempt !== attemptRef.current) return;
+                    finishedKey.current = joinKey;
+                    setGroupName(result.groupName ?? "group");
+                    clearSplitInviteRedirect();
+                    setStatus("success");
+                    window.setTimeout(() => {
+                      router.replace(`/split/${result.groupId}`);
+                    }, 800);
+                  } catch (err: unknown) {
+                    if (attempt !== attemptRef.current) return;
+                    setStatus("error");
+                    setMessage(
+                      err instanceof Error
+                        ? err.message
+                        : "Could not join group",
+                    );
+                  }
+                })();
+              }}
               className="mt-6 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-bold text-white"
+            >
+              Try again
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/split")}
+              className="mt-3 w-full rounded-xl border border-[#E8E6F0] bg-white px-4 py-3 text-sm font-bold text-[#534AB7]"
             >
               Go to Split
             </button>
