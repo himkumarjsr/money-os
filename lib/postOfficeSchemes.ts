@@ -48,7 +48,7 @@ export function poTdMaturity(
 export function poRdMaturity(
   monthly: number,
   years = 5,
-  annualPct = PO_RATES.rd,
+  annualPct: number = PO_RATES.rd,
 ) {
   const i = annualPct / 400;
   const n = years * 4;
@@ -58,28 +58,40 @@ export function poRdMaturity(
 }
 
 /** NSC VIII — compounded annually, 5 years. */
-export function poNscMaturity(principal: number, annualPct = PO_RATES.nsc) {
+export function poNscMaturity(
+  principal: number,
+  annualPct: number = PO_RATES.nsc,
+) {
   return principal * Math.pow(1 + annualPct / 100, 5);
 }
 
 /** KVP — currently doubles in 115 months at notified rate. */
-export function poKvpMaturity(principal: number, months = PO_RATES.kvpMonths) {
+export function poKvpMaturity(
+  principal: number,
+  months: number = PO_RATES.kvpMonths,
+) {
   // Notified maturity doubles the deposit at current tenure.
   void months;
   return principal * 2;
 }
 
-export function poMisMonthly(principal: number, annualPct = PO_RATES.mis) {
+export function poMisMonthly(
+  principal: number,
+  annualPct: number = PO_RATES.mis,
+) {
   return (principal * annualPct) / 100 / 12;
 }
 
-export function poScssQuarterly(principal: number, annualPct = PO_RATES.scss) {
+export function poScssQuarterly(
+  principal: number,
+  annualPct: number = PO_RATES.scss,
+) {
   return (principal * annualPct) / 100 / 4;
 }
 
 export function poSavingsYearly(
   principal: number,
-  annualPct = PO_RATES.savings,
+  annualPct: number = PO_RATES.savings,
 ) {
   return (principal * annualPct) / 100;
 }
@@ -88,7 +100,7 @@ export function poSavingsYearly(
 export function poSsyMaturity(
   yearly: number,
   years: number,
-  annualPct = PO_RATES.ssy,
+  annualPct: number = PO_RATES.ssy,
 ) {
   const r = annualPct / 100;
   if (years <= 0) return 0;

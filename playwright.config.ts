@@ -56,7 +56,8 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
+    // Prefer a stable route — `/` can briefly 404 during Fast Refresh / CSR bailout.
+    url: "http://localhost:3000/calculators",
     reuseExistingServer: true,
     timeout: 120_000,
   },
