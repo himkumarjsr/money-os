@@ -140,7 +140,7 @@ describe("trackerSafetyPulse", () => {
     expect(pulse.dailySafeSpend!).toBeGreaterThan(0);
   });
 
-  it("excludes loan_prepayment from all tracker maths", () => {
+  it("excludes loan_prepayment from investment bucket / Safety Pulse totals", () => {
     const pulse = computeMonthSafetyPulse({
       monthIndex: 6,
       year: 2026,
@@ -164,6 +164,7 @@ describe("trackerSafetyPulse", () => {
           bucket: "investment",
           category: "loan_prepayment",
           subcategory: "loan_prepayment",
+          payment_method: "upi",
         },
       ],
       previousTxns: [
@@ -184,6 +185,7 @@ describe("trackerSafetyPulse", () => {
           bucket: "investment",
           category: "loan_prepayment",
           subcategory: "loan_prepayment",
+          payment_method: "upi",
         },
       ],
     });

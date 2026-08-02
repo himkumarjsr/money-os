@@ -31,11 +31,17 @@ describe("TRACKER_CATEGORIES", () => {
     }
   });
 
-  it("includes savings account under investments", () => {
+  it("includes savings account and loan repayment under investments", () => {
     expect(findSubcategory("investment", "savings_account")).toEqual(
       expect.objectContaining({
         id: "savings_account",
         label: "Savings account / cash",
+      }),
+    );
+    expect(findSubcategory("investment", "loan_prepayment")).toEqual(
+      expect.objectContaining({
+        id: "loan_prepayment",
+        label: "Loan repayment (extra / lump sum)",
       }),
     );
   });
@@ -48,11 +54,16 @@ describe("TRACKER_CATEGORIES", () => {
     expect(ids).toContain("rent");
   });
 
-  it("excludes loan_prepayment from tracker totals", () => {
-    expect(countsTowardTrackerTotals({ subcategory: "loan_prepayment" })).toBe(
-      false,
-    );
+  it("keeps loan_prepayment out of investment bucket totals", () => {
+    expect(
+      countsTowardTrackerTotals({
+        bucket: "investment",
+        subcategory: "loan_prepayment",
+        payment_method: "upi",
+      }),
+    ).toBe(false);
     expect(countsTowardTrackerTotals({ subcategory: "rent" })).toBe(true);
+    expect(countsTowardTrackerTotals({ subcategory: "sip" })).toBe(true);
   });
 
   it("excludes credit-card purchases from tracker totals; keeps bill pays", () => {

@@ -30,6 +30,7 @@ import {
 import {
   candidateFromExpense,
   decideObligationLearn,
+  shouldLearnObligationFromExpense,
 } from "@/lib/obligationLearn";
 import { buildCashAudit, logCashAudit } from "@/lib/trackerCashAudit";
 import {
@@ -799,10 +800,16 @@ function TrackerContent() {
         void fetchTransactions({ soft: true });
 
         // If this expense had ticked an obligation, clear ✓ when nothing else covers it.
+        // Credit card bill pays never sync to obligations.
         const obligationCategory = txn
           ? obligationCategoryFromExpense(txn)
           : null;
-        if (txn && obligationCategory) {
+        if (
+          txn &&
+          obligationCategory &&
+          obligationCategory !== "credit_card" &&
+          (txn.subcategory || txn.category) !== "credit_card"
+        ) {
           const checklistMonth = new Date(selectedYear, selectedMonth, 1);
           const store = useObligationStore.getState();
           await store.fetchChecklist(user.id, checklistMonth);
@@ -2299,67 +2306,82 @@ function TrackerContent() {
             ) {
               const subKey = (saved.subcategory || saved.category || "").trim();
               const obligationCategory = obligationCategoryFromExpense(saved);
-              void (async () => {
-                const store = useObligationStore.getState();
-                const checklistMonth = new Date(selectedYear, selectedMonth, 1);
+              // CC bill pays never create / tick / suggest obligations.
+              const isCcBillPay =
+                subKey === "credit_card" ||
+                obligationCategory === "credit_card";
+              if (!isCcBillPay) {
+                void (async () => {
+                  const store = useObligationStore.getState();
+                  const checklistMonth = new Date(
+                    selectedYear,
+                    selectedMonth,
+                    1,
+                  );
 
-                // Optional: learn a new obligation when we recognize the type.
-                if (obligationCategory) {
-                  await store.fetchObligations(user.id);
-                  const { obligations } = useObligationStore.getState();
-                  const candidate = candidateFromExpense(
-                    saved.description || subKey.replace(/_/g, " "),
-                    saved.amount,
-                    obligationCategory,
-                  );
-                  const existing = obligations.find(
-                    (o) =>
-                      o.is_active &&
-                      (Math.abs(Number(o.amount) - saved.amount) < 1 ||
-                        (o.category === obligationCategory &&
-                          o.title.toLowerCase() ===
-                            candidate.title.toLowerCase())),
-                  );
-                  if (!existing) {
-                    const decision = decideObligationLearn({
-                      description: saved.description,
-                      amount: saved.amount,
-                      category: obligationCategory,
-                      existing: obligations,
-                      priorTransactions: ccBillHistory,
-                    });
-                    const fromSub = Boolean(
-                      EXPENSE_SUBCATEGORY_TO_OBLIGATION[subKey],
+                  // Optional: learn a new obligation when we recognize the type.
+                  if (obligationCategory) {
+                    await store.fetchObligations(user.id);
+                    const { obligations } = useObligationStore.getState();
+                    const candidate = candidateFromExpense(
+                      saved.description || subKey.replace(/_/g, " "),
+                      saved.amount,
+                      obligationCategory,
                     );
-                    if (decision !== "skip" || fromSub) {
-                      await store.addObligation({
-                        title: candidate.title,
-                        category: candidate.category,
-                        amount: candidate.amount,
-                        frequency: "monthly",
-                        source: "tracker_learned",
-                        user_id: user.id,
-                        is_active: true,
-                        remind_days_before: 7,
+                    const existing = obligations.find(
+                      (o) =>
+                        o.is_active &&
+                        (Math.abs(Number(o.amount) - saved.amount) < 1 ||
+                          (o.category === obligationCategory &&
+                            o.title.toLowerCase() ===
+                              candidate.title.toLowerCase())),
+                    );
+                    if (!existing) {
+                      const decision = decideObligationLearn({
+                        description: saved.description,
+                        amount: saved.amount,
+                        category: obligationCategory,
+                        existing: obligations,
+                        priorTransactions: ccBillHistory,
                       });
-                    } else {
-                      setLearnedObligation(candidate);
+                      const fromSub = Boolean(
+                        EXPENSE_SUBCATEGORY_TO_OBLIGATION[subKey],
+                      );
+                      const learn = shouldLearnObligationFromExpense({
+                        obligationCategory,
+                        decision,
+                        fromMappedSubcategory: fromSub,
+                      });
+                      if (learn === "add") {
+                        await store.addObligation({
+                          title: candidate.title,
+                          category: candidate.category,
+                          amount: candidate.amount,
+                          frequency: "monthly",
+                          source: "tracker_learned",
+                          user_id: user.id,
+                          is_active: true,
+                          remind_days_before: 7,
+                        });
+                      } else if (learn === "suggest") {
+                        setLearnedObligation(candidate);
+                      }
                     }
                   }
-                }
 
-                // Always tick by amount first (Home loan EMI etc. — no strict type).
-                await store.generateChecklist(user.id, checklistMonth);
-                await store.fetchChecklist(user.id, checklistMonth);
-                const { checklist } = useObligationStore.getState();
-                const pending = findPendingChecklistForExpense(
-                  checklist,
-                  saved,
-                );
-                if (pending) {
-                  await store.markPaid(pending.id, saved.amount);
-                }
-              })();
+                  // Tick by amount first (Home loan EMI etc. — no strict type).
+                  await store.generateChecklist(user.id, checklistMonth);
+                  await store.fetchChecklist(user.id, checklistMonth);
+                  const { checklist } = useObligationStore.getState();
+                  const pending = findPendingChecklistForExpense(
+                    checklist,
+                    saved,
+                  );
+                  if (pending) {
+                    await store.markPaid(pending.id, saved.amount);
+                  }
+                })();
+              }
             }
             setShowAddModal(false);
             setDefaultBucket("");
