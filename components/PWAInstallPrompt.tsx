@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type BeforeInstallPromptEvent = Event & {
@@ -8,26 +9,40 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function PWAInstallPrompt() {
+  const pathname = usePathname();
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
   const [showAndroidPrompt, setShowAndroidPrompt] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
+  // Don't block invite / auth flows with the install banner.
+  const hideForFlow =
+    pathname?.startsWith("/split/join") ||
+    pathname?.startsWith("/login") ||
+    pathname?.startsWith("/auth/");
+
   useEffect(() => {
+    if (hideForFlow) return;
+
     const isInstalled =
       window.matchMedia("(display-mode: standalone)").matches ||
       // iOS Safari standalone
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+      (window.navigator as unknown as { standalone?: boolean }).standalone ===
+        true;
 
     if (isInstalled) return;
 
     const dismissedAt = localStorage.getItem("pwa-prompt-dismissed");
     if (dismissedAt) {
-      const daysSince = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
+      const daysSince =
+        (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
       if (daysSince < 7) return;
     }
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+      !(window as unknown as { MSStream?: unknown }).MSStream;
 
     if (isIOS) {
       const timer = setTimeout(() => {
@@ -47,7 +62,9 @@ export default function PWAInstallPrompt() {
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
     };
-  }, []);
+  }, [hideForFlow]);
+
+  if (hideForFlow) return null;
 
   const handleDismiss = () => {
     localStorage.setItem("pwa-prompt-dismissed", Date.now().toString());
@@ -103,8 +120,24 @@ export default function PWAInstallPrompt() {
             FK
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#111110", marginBottom: 4 }}>Add Finkoin to Home Screen</div>
-            <div style={{ fontSize: 12, color: "#5F5E5A", lineHeight: 1.5, marginBottom: 12 }}>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#111110",
+                marginBottom: 4,
+              }}
+            >
+              Add Finkoin to Home Screen
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "#5F5E5A",
+                lineHeight: 1.5,
+                marginBottom: 12,
+              }}
+            >
               Tap the share button{" "}
               <span
                 style={{
@@ -117,7 +150,8 @@ export default function PWAInstallPrompt() {
               >
                 ↑
               </span>{" "}
-              below and select <strong>&quot;Add to Home Screen&quot;</strong> for the best experience.
+              below and select <strong>&quot;Add to Home Screen&quot;</strong>{" "}
+              for the best experience.
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button
@@ -201,7 +235,14 @@ export default function PWAInstallPrompt() {
           border: "1px solid #E8E6F0",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            marginBottom: 16,
+          }}
+        >
           <div
             style={{
               width: 52,
@@ -220,8 +261,19 @@ export default function PWAInstallPrompt() {
             FK
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#111110", marginBottom: 2 }}>Install Finkoin</div>
-            <div style={{ fontSize: 12, color: "#5F5E5A" }}>Add to your home screen for instant access</div>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#111110",
+                marginBottom: 2,
+              }}
+            >
+              Install Finkoin
+            </div>
+            <div style={{ fontSize: 12, color: "#5F5E5A" }}>
+              Add to your home screen for instant access
+            </div>
           </div>
           <button
             type="button"

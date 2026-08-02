@@ -11,6 +11,7 @@ import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { SplitInviteResume } from "@/components/SplitInviteResume";
+import { PwaLaunchHandler } from "@/components/PwaLaunchHandler";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import FeedbackPopupManager from "@/components/FeedbackPopupManager";
 import MorningTipPopup from "@/components/MorningTipPopup";
@@ -19,7 +20,12 @@ import Footer from "@/components/landing/Footer";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
 import RouteChangeLoader from "@/components/ui/RouteChangeLoader";
-import { SEO_CONFIG, SITE_URL } from "@/lib/seo";
+import {
+  FINKOIN_TAGLINE,
+  FINKOIN_TAGLINE_FULL,
+  SEO_CONFIG,
+  SITE_URL,
+} from "@/lib/seo";
 
 const RenewalReminderBanner = dynamic(
   () =>
@@ -48,14 +54,7 @@ const inter = Inter({
 
 const siteUrl = SITE_URL;
 
-const brandKeywords = [
-  "Finkoin",
-  "Finkoin app",
-  "Finkoin financial health",
-  "finkoin.com",
-] as const;
-
-const defaultTitle = "Finkoin — Free Financial Health Check for India";
+const defaultTitle = SEO_CONFIG.defaultTitle;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -64,8 +63,11 @@ export const metadata: Metadata = {
     template: "%s | Finkoin",
   },
   applicationName: "Finkoin",
+  authors: [{ name: "Himanshu Kumar", url: siteUrl }],
+  creator: "Finkoin",
+  publisher: "Finkoin",
   description: SEO_CONFIG.defaultDescription,
-  keywords: [...brandKeywords, ...SEO_CONFIG.defaultKeywords],
+  keywords: SEO_CONFIG.defaultKeywords,
   alternates: {
     canonical: "/",
   },
@@ -81,25 +83,27 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
+    type: "website",
+    locale: "en_IN",
     title: defaultTitle,
-    description:
-      "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
+    description: `${FINKOIN_TAGLINE_FULL} Free financial health check, tax calculator, SIP calculator, home loan EMI, expense tracker and more. Built for Indians.`,
     url: siteUrl,
     siteName: "Finkoin",
-    type: "website",
     images: [
       {
         url: `${siteUrl}/og/og-home.png`,
         width: 1200,
         height: 630,
+        alt: "Finkoin — India Personal Finance",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: defaultTitle,
-    description:
-      "Plan, track, and improve your financial life with Finkoin's AI advisor and free calculators.",
+    site: "@finkoin",
+    creator: "@finkoin",
+    title: `Finkoin — ${FINKOIN_TAGLINE}`,
+    description: `${FINKOIN_TAGLINE_FULL} Free financial health check for every Indian. No PAN needed.`,
     images: [`${siteUrl}/og/og-home.png`],
   },
   appleWebApp: {
@@ -239,7 +243,7 @@ export default function RootLayout({
                   url: "https://www.finkoin.com",
                   name: "Finkoin",
                   alternateName: ["Finkoin App", "Finkoin Finance"],
-                  description: "India's free financial health check platform",
+                  description: `India's free personal finance platform. ${FINKOIN_TAGLINE_FULL}`,
                   potentialAction: {
                     "@type": "SearchAction",
                     target: {
@@ -262,8 +266,7 @@ export default function RootLayout({
                     width: 512,
                     height: 512,
                   },
-                  description:
-                    "Finkoin is India's free financial health check platform. Know your financial health score in 5 minutes. No PAN. No Aadhaar.",
+                  description: `Finkoin is India's complete personal finance platform. ${FINKOIN_TAGLINE_FULL} Free financial health check. No PAN. No Aadhaar.`,
                   foundingDate: "2026",
                   foundingLocation: "India",
                   areaServed: "IN",
@@ -300,8 +303,7 @@ export default function RootLayout({
               "@type": "WebApplication",
               name: "Finkoin",
               url: siteUrl,
-              description:
-                "Personal financial health check and wealth planning for India",
+              description: `Personal finance for India. ${FINKOIN_TAGLINE_FULL}`,
               applicationCategory: "FinanceApplication",
               operatingSystem: "Web",
               offers: {
@@ -388,6 +390,7 @@ export default function RootLayout({
             <ScrollToTopOnRouteChange />
             <RouteChangeLoader />
             <AuthSessionSync />
+            <PwaLaunchHandler />
             <SplitInviteResume />
             <FinancialStoreAuthSync />
             <GlobalNavbar />

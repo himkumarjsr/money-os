@@ -3,7 +3,12 @@
 export type RichBlock =
   | { kind: "p"; text: string }
   | { kind: "ul"; items: string[] }
-  | { kind: "callout"; tone: "violet" | "emerald" | "amber"; title?: string; text: string }
+  | {
+      kind: "callout";
+      tone: "violet" | "emerald" | "amber";
+      title?: string;
+      text: string;
+    }
   | { kind: "table"; headers: string[]; rows: string[][] };
 
 export type RichSection = { id: string; title: string; blocks: RichBlock[] };
@@ -123,9 +128,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Check how your credit behaviour connects to your broader financial health score on Finkoin — patterns in dues, loans, and cash buffers show up together.",
     finkoinTipHref: "/analyse",
     related: [
-      { id: "credit-card-minimum-trap", title: "The credit card minimum-payment trap" },
-      { id: "fixed-vs-floating-home-loan", title: "Fixed vs floating home loan" },
-      { id: "how-home-loan-tax-benefits-work-80c-24b", title: "How home loan tax benefits work (80C, 24B)" },
+      {
+        id: "credit-card-minimum-trap",
+        title: "The credit card minimum-payment trap",
+      },
+      {
+        id: "fixed-vs-floating-home-loan",
+        title: "Fixed vs floating home loan",
+      },
+      {
+        id: "how-home-loan-tax-benefits-work-80c-24b",
+        title: "How home loan tax benefits work (80C, 24B)",
+      },
     ],
   },
 
@@ -238,8 +252,14 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
     finkoinTipHref: "/goals",
     related: [
       { id: "what-is-asset-allocation", title: "What is asset allocation?" },
-      { id: "understanding-inflation-and-your-real-returns", title: "Understanding inflation and your real returns" },
-      { id: "liquid-and-overnight-mutual-funds", title: "Liquid and overnight mutual funds" },
+      {
+        id: "understanding-inflation-and-your-real-returns",
+        title: "Understanding inflation and your real returns",
+      },
+      {
+        id: "liquid-and-overnight-mutual-funds",
+        title: "Liquid and overnight mutual funds",
+      },
     ],
   },
 
@@ -337,9 +357,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Use Finkoin’s tax calculator to compare old vs new regime with your salary, rent, and home loan numbers side by side.",
     finkoinTipHref: "/calculators/tax-regime-2026",
     related: [
-      { id: "fixed-vs-floating-home-loan", title: "Fixed vs floating home loan" },
-      { id: "section-80c-limits-and-beyond", title: "Section 80C limits — and beyond" },
-      { id: "prepayment-vs-tenure-reduction-home-loan", title: "Prepayment vs tenure reduction" },
+      {
+        id: "fixed-vs-floating-home-loan",
+        title: "Fixed vs floating home loan",
+      },
+      {
+        id: "section-80c-limits-and-beyond",
+        title: "Section 80C limits — and beyond",
+      },
+      {
+        id: "prepayment-vs-tenure-reduction-home-loan",
+        title: "Prepayment vs tenure reduction",
+      },
     ],
   },
 
@@ -418,9 +447,27 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "table",
             headers: ["Life stage", "Needs", "Security", "Invest", "Wants"],
             rows: [
-              ["Early career (₹25–40k) — short-term OK", "~50%", "~10%", "~15%", "~25%"],
-              ["Mid career (₹80k–2L) — push invest first", "~40%", "~10%", "~20–25%", "~25–30%"],
-              ["High income (₹2L+) — avoid lifestyle first", "~30%", "~10%", "~30–35%", "~25–30%"],
+              [
+                "Early career (₹25–40k) — short-term OK",
+                "~50%",
+                "~10%",
+                "~15%",
+                "~25%",
+              ],
+              [
+                "Mid career (₹80k–2L) — push invest first",
+                "~40%",
+                "~10%",
+                "~20–25%",
+                "~25–30%",
+              ],
+              [
+                "High income (₹2L+) — avoid lifestyle first",
+                "~30%",
+                "~10%",
+                "~30–35%",
+                "~25–30%",
+              ],
             ],
           },
           {
@@ -444,9 +491,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Finkoin analyses your 40-20-10-30-style allocation and highlights which bucket needs attention after your profile + spends snapshot.",
     finkoinTipHref: "/analyse",
     related: [
-      { id: "understanding-inflation-and-your-real-returns", title: "Understanding inflation and your real returns" },
-      { id: "emergency-fund-how-much-where-to-keep-it", title: "Emergency fund — how much, where to keep it" },
-      { id: "credit-card-minimum-trap", title: "The credit card minimum-payment trap" },
+      {
+        id: "understanding-inflation-and-your-real-returns",
+        title: "Understanding inflation and your real returns",
+      },
+      {
+        id: "emergency-fund-how-much-where-to-keep-it",
+        title: "Emergency fund — how much, where to keep it",
+      },
+      {
+        id: "credit-card-minimum-trap",
+        title: "The credit card minimum-payment trap",
+      },
     ],
   },
 
@@ -564,9 +620,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Compare tax-saving choices as part of a full plan: Finkoin helps you see insurance, debt, and investing trade-offs together — not as isolated “March products”.",
     finkoinTipHref: "/analyse",
     related: [
-      { id: "section-80c-limits-and-beyond", title: "Section 80C limits — and beyond" },
-      { id: "80c-complete-guide-tax-saving-india", title: "Section 80C — complete guide" },
-      { id: "nps-tax-deductions-guide-india", title: "NPS tax benefits — 80CCD layers" },
+      {
+        id: "section-80c-limits-and-beyond",
+        title: "Section 80C limits — and beyond",
+      },
+      {
+        id: "80c-complete-guide-tax-saving-india",
+        title: "Section 80C — complete guide",
+      },
+      {
+        id: "nps-tax-deductions-guide-india",
+        title: "NPS tax benefits — 80CCD layers",
+      },
     ],
   },
 
@@ -672,9 +737,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Use Finkoin’s calculators and goal view to translate “₹1 crore” into months-of-expenses — inflation-aware planning is less misleading than nominal targets.",
     finkoinTipHref: "/calculators",
     related: [
-      { id: "what-is-the-50-30-20-budgeting-rule", title: "Why 50-30-20 struggles — Finkoin 40-20-10-30" },
-      { id: "sip-vs-lumpsum-when-to-use-which", title: "SIP vs lumpsum — when to use which" },
-      { id: "what-is-compound-interest-and-why-it-changes-everything", title: "What is compound interest?" },
+      {
+        id: "what-is-the-50-30-20-budgeting-rule",
+        title: "Why 50-30-20 struggles — Finkoin 40-20-10-30",
+      },
+      {
+        id: "sip-vs-lumpsum-when-to-use-which",
+        title: "SIP vs lumpsum — when to use which",
+      },
+      {
+        id: "what-is-compound-interest-and-why-it-changes-everything",
+        title: "What is compound interest?",
+      },
     ],
   },
 
@@ -803,9 +877,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Finkoin’s tax calculator shows old vs new regime savings for your exact income and deductions — use it before committing to ELSS-only “March panic”.",
     finkoinTipHref: "/calculators/tax-regime-2026",
     related: [
-      { id: "old-vs-new-tax-regime-which-saves-you-more-money", title: "Old vs new tax regime — which saves more?" },
-      { id: "how-home-loan-tax-benefits-work-80c-24b", title: "How home loan tax benefits work (80C, 24B)" },
-      { id: "nps-tax-deductions-guide-india", title: "NPS tax benefits — 80CCD layers" },
+      {
+        id: "old-vs-new-tax-regime-which-saves-you-more-money",
+        title: "Old vs new tax regime — which saves more?",
+      },
+      {
+        id: "how-home-loan-tax-benefits-work-80c-24b",
+        title: "How home loan tax benefits work (80C, 24B)",
+      },
+      {
+        id: "nps-tax-deductions-guide-india",
+        title: "NPS tax benefits — 80CCD layers",
+      },
     ],
   },
 
@@ -918,9 +1001,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "After you model monthly essentials on Finkoin, check whether your health SI matches “one bad hospital bill” in your city tier — underinsurance is common.",
     finkoinTipHref: "/analyse",
     related: [
-      { id: "term-insurance-vs-endowment-why-most-indians-buy-wrong", title: "Term insurance vs endowment" },
-      { id: "opd-cover-in-health-insurance", title: "OPD cover in health insurance" },
-      { id: "emergency-fund-how-much-where-to-keep-it", title: "Emergency fund — how much, where to keep it" },
+      {
+        id: "term-insurance-vs-endowment-why-most-indians-buy-wrong",
+        title: "Term insurance vs endowment",
+      },
+      {
+        id: "opd-cover-in-health-insurance",
+        title: "OPD cover in health insurance",
+      },
+      {
+        id: "emergency-fund-how-much-where-to-keep-it",
+        title: "Emergency fund — how much, where to keep it",
+      },
     ],
   },
 
@@ -1038,9 +1130,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Stress-test EMI + goals together on Finkoin — a loan decision should not crowd out insurance and emergency cash.",
     finkoinTipHref: "/analyse",
     related: [
-      { id: "prepayment-vs-tenure-reduction-home-loan", title: "Prepayment vs tenure reduction" },
-      { id: "how-home-loan-tax-benefits-work-80c-24b", title: "How home loan tax benefits work (80C, 24B)" },
-      { id: "top-up-home-loan-when-it-makes-sense", title: "Top-up home loan — when it makes sense" },
+      {
+        id: "prepayment-vs-tenure-reduction-home-loan",
+        title: "Prepayment vs tenure reduction",
+      },
+      {
+        id: "how-home-loan-tax-benefits-work-80c-24b",
+        title: "How home loan tax benefits work (80C, 24B)",
+      },
+      {
+        id: "top-up-home-loan-when-it-makes-sense",
+        title: "Top-up home loan — when it makes sense",
+      },
     ],
   },
 
@@ -1141,9 +1242,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "If you are saving for a down payment, Finkoin helps separate “goal investments” from emergency cash — don’t market-time your safety buffer.",
     finkoinTipHref: "/goals",
     related: [
-      { id: "under-construction-vs-ready-property", title: "Under-construction vs ready property" },
-      { id: "rent-agreement-registration-basics", title: "Rent agreement registration basics" },
-      { id: "capital-gains-when-you-sell-property", title: "Capital gains when you sell property" },
+      {
+        id: "under-construction-vs-ready-property",
+        title: "Under-construction vs ready property",
+      },
+      {
+        id: "rent-agreement-registration-basics",
+        title: "Rent agreement registration basics",
+      },
+      {
+        id: "capital-gains-when-you-sell-property",
+        title: "Capital gains when you sell property",
+      },
     ],
   },
 
@@ -1246,9 +1356,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Use Finkoin’s portfolio view to see concentration risk — allocation first, ticker obsession second.",
     finkoinTipHref: "/portfolio",
     related: [
-      { id: "diversification-vs-diworsification", title: "Diversification vs diworsification" },
-      { id: "sip-vs-lumpsum-when-to-use-which", title: "SIP vs lumpsum — when to use which" },
-      { id: "what-is-an-index-fund-and-why-it-beats-most-mutual-funds", title: "What is an index fund?" },
+      {
+        id: "diversification-vs-diworsification",
+        title: "Diversification vs diworsification",
+      },
+      {
+        id: "sip-vs-lumpsum-when-to-use-which",
+        title: "SIP vs lumpsum — when to use which",
+      },
+      {
+        id: "what-is-an-index-fund-and-why-it-beats-most-mutual-funds",
+        title: "What is an index fund?",
+      },
     ],
   },
 
@@ -1353,9 +1472,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "If you carry revolving card debt, Finkoin’s debt lens helps prioritise the highest APR leak first — spreadsheets fail when behaviour doesn’t change.",
     finkoinTipHref: "/analyse",
     related: [
-      { id: "how-your-cibil-credit-score-is-calculated", title: "How your CIBIL credit score is calculated" },
-      { id: "top-up-home-loan-when-it-makes-sense", title: "Top-up home loan — when it makes sense" },
-      { id: "what-is-the-50-30-20-budgeting-rule", title: "Why 50-30-20 struggles — Finkoin 40-20-10-30" },
+      {
+        id: "how-your-cibil-credit-score-is-calculated",
+        title: "How your CIBIL credit score is calculated",
+      },
+      {
+        id: "top-up-home-loan-when-it-makes-sense",
+        title: "Top-up home loan — when it makes sense",
+      },
+      {
+        id: "what-is-the-50-30-20-budgeting-rule",
+        title: "Why 50-30-20 struggles — Finkoin 40-20-10-30",
+      },
     ],
   },
 
@@ -1454,9 +1582,18 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       "Retirement is multi-account: Finkoin helps you see EPF/NPS/SIP buckets as one timeline instead of three disconnected apps.",
     finkoinTipHref: "/goals",
     related: [
-      { id: "nps-tax-deductions-guide-india", title: "NPS tax benefits — 80CCD layers" },
-      { id: "ppf-vs-elss-which-is-better-for-tax-saving", title: "PPF vs ELSS for tax saving" },
-      { id: "term-insurance-vs-endowment-why-most-indians-buy-wrong", title: "Term insurance vs endowment" },
+      {
+        id: "nps-tax-deductions-guide-india",
+        title: "NPS tax benefits — 80CCD layers",
+      },
+      {
+        id: "ppf-vs-elss-which-is-better-for-tax-saving",
+        title: "PPF vs ELSS for tax saving",
+      },
+      {
+        id: "term-insurance-vs-endowment-why-most-indians-buy-wrong",
+        title: "Term insurance vs endowment",
+      },
     ],
   },
 
@@ -1546,16 +1683,23 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
     finkoinTipHref: "/portfolio",
     related: [
       { id: "what-is-asset-allocation", title: "What is asset allocation?" },
-      { id: "understanding-inflation-and-your-real-returns", title: "Understanding inflation and your real returns" },
-      { id: "liquid-and-overnight-mutual-funds", title: "Liquid and overnight mutual funds" },
+      {
+        id: "understanding-inflation-and-your-real-returns",
+        title: "Understanding inflation and your real returns",
+      },
+      {
+        id: "liquid-and-overnight-mutual-funds",
+        title: "Liquid and overnight mutual funds",
+      },
     ],
   },
 
   "prepayment-vs-tenure-reduction-home-loan": {
-    seoTitle: "Home Loan Prepay: Cut EMI or Tenure? (India Math)",
+    seoTitle:
+      "Home Loan Prepayment Calculator — Reduce EMI or Tenure? | Finkoin",
     seoDescription:
-      "Prepay home loan: reduce EMI vs cut tenure, when each wins, prepay timing, 24B tax angle. Illustrative ₹50L math. Educational.",
-    tags: ["Prepayment", "Home loan", "EMI", "Tenure"],
+      "Home loan prepayment calculator India: reduce EMI vs cut tenure with live math. Illustrative interest savings. Educational only.",
+    tags: ["Prepayment", "Home loan", "EMI", "Tenure", "prepayment calculator"],
     toc: [
       { id: "setup", label: "The setup" },
       { id: "math", label: "Math with real numbers" },
@@ -1661,12 +1805,21 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
     ],
     finkoinTip:
-      "Model prepayment vs investing inside your goals on Finkoin — the best choice is the one you’ll actually follow for 5+ years.",
-    finkoinTipHref: "/goals",
+      "Use the prepayment calculator above, then stress-test EMI affordability on Finkoin’s EMI tool — pick the option you’ll stick with for years.",
+    finkoinTipHref: "/calculators/emi",
     related: [
-      { id: "fixed-vs-floating-home-loan", title: "Fixed vs floating home loan" },
-      { id: "how-home-loan-tax-benefits-work-80c-24b", title: "How home loan tax benefits work (80C, 24B)" },
-      { id: "top-up-home-loan-when-it-makes-sense", title: "Top-up home loan — when it makes sense" },
+      {
+        id: "fixed-vs-floating-home-loan",
+        title: "Fixed vs floating home loan",
+      },
+      {
+        id: "how-home-loan-tax-benefits-work-80c-24b",
+        title: "How home loan tax benefits work (80C, 24B)",
+      },
+      {
+        id: "top-up-home-loan-when-it-makes-sense",
+        title: "Top-up home loan — when it makes sense",
+      },
     ],
   },
 };

@@ -1,16 +1,14 @@
 "use client";
 
-import {
-  clearSplitInviteRedirect,
-  peekPostLoginPath,
-} from "@/lib/splitAuthRedirect";
+import { peekPostLoginPath } from "@/lib/splitAuthRedirect";
 import { useAuthStore } from "@/store/authStore";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 /**
- * After login (any page), if a Split invite is still pending in localStorage,
- * send the user to /split/join?token=… so membership is created.
+ * After login (any page), if a Split invite is still pending in
+ * localStorage/cookies, send the user to /split/join?token=… so membership
+ * is created (including when the installed PWA opens after a browser invite).
  */
 export function SplitInviteResume() {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
@@ -31,8 +29,8 @@ export function SplitInviteResume() {
     if (!pending.startsWith("/split/join")) return;
 
     attempted.current = true;
-    // Token is in the URL; clear storage so a failed join cannot redirect-loop.
-    clearSplitInviteRedirect();
+    // Keep invite storage until join succeeds — clearing here dropped tokens when
+    // auth was still settling and left users stuck on a bare join URL / home.
     router.replace(pending);
   }, [hasInitialized, isLoggedIn, pathname, router]);
 

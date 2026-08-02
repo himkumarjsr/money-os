@@ -136,7 +136,7 @@ export function parseIndianInput(rawInput: string): number | null {
 export function handleMoneyInput(
   raw: string,
   min: number = 0,
-  max: number = 9_999_999_999,
+  max: number = 990_000_000,
 ): number | null {
   let cleaned = raw.replace(/,/g, "").trim();
   cleaned = cleaned.replace(/₹/g, "").trim();
@@ -153,9 +153,22 @@ export function handleMoneyInput(
 export function formatSliderLabel(
   value: number,
   type: "money" | "percent" | "years" | "months" | "number",
+  step?: number,
 ): string {
   if (type === "money") return `₹${formatInWords(value)}`;
-  if (type === "percent") return `${value}% p.a.`;
+  if (type === "percent") {
+    const decimals =
+      step != null && step > 0 && step < 1
+        ? Math.min(6, (String(step).split(".")[1] || "").length)
+        : Number.isInteger(value)
+          ? 0
+          : 2;
+    const shown =
+      decimals > 0
+        ? Number(value.toFixed(Math.max(decimals, 1))).toString()
+        : String(Math.round(value));
+    return `${shown}% p.a.`;
+  }
   if (type === "years") return `${value}${value === 1 ? " year" : " years"}`;
   if (type === "months") return `${value}${value === 1 ? " month" : " months"}`;
   if (type === "number") return formatIndian(value);

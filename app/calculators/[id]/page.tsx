@@ -1,3 +1,5 @@
+import Breadcrumb from "@/components/Breadcrumb";
+import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { SITE_URL } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -9,6 +11,7 @@ import {
   absoluteCalcUrl,
   buildCalculatorJsonLd,
   getOgImagePathForCalc,
+  getRelatedLinksForCalc,
   getSeoForCalc,
   resolveCalcIdFromPathSegment,
 } from "../calculator-seo";
@@ -84,6 +87,14 @@ export default function CalculatorByIdPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6">
+        <Breadcrumb
+          items={[
+            { label: "Calculators", href: "/calculators" },
+            { label: seo.appName, href: seo.path },
+          ]}
+        />
+      </div>
       {/* SSR-visible copy for crawlers (calculator UI is client-hydrated). */}
       <section className="sr-only">
         <h1>{seo.appName}</h1>
@@ -102,6 +113,9 @@ export default function CalculatorByIdPage({ params }: PageProps) {
       >
         <CalculatorsClient initialCalcId={calcId} />
       </Suspense>
+      <div className="px-4 pb-10 sm:px-6">
+        <CalculatorRelatedLinks links={getRelatedLinksForCalc(calcId)} />
+      </div>
     </>
   );
 }

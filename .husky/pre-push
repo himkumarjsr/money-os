@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Full eslint / coverage / e2e / build already gate every commit (.husky/pre-commit).
 # Keep push light: typecheck + living docs status.
 

@@ -34,12 +34,6 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
         icon: "bank",
       },
       {
-        id: "nsc",
-        title: "NSC",
-        blurb: "5-year National Savings Certificate",
-        icon: "bank",
-      },
-      {
         id: "emergency",
         title: "Emergency fund",
         blurb: "Target vs gap by life stage",
@@ -114,8 +108,56 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
     items: [
       {
         id: "po",
-        title: "Post Office suite",
-        blurb: "Seven popular schemes",
+        title: "All schemes",
+        blurb: "Hub for every India Post calculator",
+        icon: "bank",
+      },
+      {
+        id: "po-savings",
+        title: "Savings Account",
+        blurb: "POSA interest at 4% p.a.",
+        icon: "bank",
+      },
+      {
+        id: "po-td",
+        title: "Time Deposit",
+        blurb: "1–5 year PO FD maturity",
+        icon: "bank",
+      },
+      {
+        id: "po-rd",
+        title: "Recurring Deposit",
+        blurb: "5-year monthly RD maturity",
+        icon: "bank",
+      },
+      {
+        id: "nsc",
+        title: "NSC",
+        blurb: "5-year National Savings Certificate",
+        icon: "bank",
+      },
+      {
+        id: "po-kvp",
+        title: "Kisan Vikas Patra",
+        blurb: "Doubles in 115 months",
+        icon: "bank",
+      },
+      {
+        id: "po-mis",
+        title: "Monthly Income (MIS)",
+        blurb: "Monthly payout calculator",
+        icon: "bank",
+      },
+      {
+        id: "po-scss",
+        title: "Senior Citizen (SCSS)",
+        blurb: "Quarterly interest for 60+",
+        icon: "bank",
+      },
+      {
+        id: "po-ssy",
+        title: "Sukanya Samriddhi",
+        blurb: "Girl child SSY maturity",
         icon: "bank",
       },
     ],

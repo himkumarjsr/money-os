@@ -14,7 +14,13 @@ import {
   YAxis,
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
-import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import {
+  CALCULATOR_MONEY_MAX,
+  Insight,
+  ResultStat,
+  SliderField,
+  type InsightTone,
+} from "./calculator-ui";
 
 function sipMaturity(monthly: number, annualPct: number, years: number) {
   const n = Math.max(1, Math.round(years * 12));
@@ -24,13 +30,8 @@ function sipMaturity(monthly: number, annualPct: number, years: number) {
 }
 
 function useClamped(initial: number, min: number, max: number) {
-  const [v, setV] = useState(() =>
-    Math.min(max, Math.max(min, initial)),
-  );
-  const set = useCallback(
-    (nv: number) => setV(Math.max(min, nv)),
-    [min],
-  );
+  const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
+  const set = useCallback((nv: number) => setV(Math.max(min, nv)), [min]);
   return [v, set] as const;
 }
 
@@ -97,7 +98,7 @@ export function SIPCalculator() {
         value={rate}
         min={6}
         max={20}
-        step={0.5}
+        step={0.1}
         onChange={setRate}
         format={(val) => `${val}% p.a.`}
       />
@@ -132,77 +133,88 @@ export function SIPCalculator() {
         <div className="mt-4 h-[200px] md:h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={yearlyData}>
-                  <CartesianGrid stroke="#F4F2FC" />
-                  <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#9B9A94" }} />
-                  <YAxis tick={{ fontSize: 12, fill: "#9B9A94" }} tickFormatter={(v) => formatIndianCompact(Number(v))} />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload || payload.length === 0) return null;
-                      const inv = Number(payload.find((x) => x.dataKey === "invested")?.value ?? 0);
-                      const port = Number(payload.find((x) => x.dataKey === "portfolio")?.value ?? 0);
-                      const g = port - inv;
-                      const pct = inv > 0 ? (g / inv) * 100 : 0;
-                      return (
-                        <div style={tooltipStyle}>
-                          <div style={{ fontWeight: 700, marginBottom: 6 }}>{`Year ${label}`}</div>
-                          <div>Invested: ₹{formatIndian(inv)}</div>
-                          <div>Portfolio value: ₹{formatIndian(port)}</div>
-                          <div>
-                            Gain: ₹{formatIndian(g)} ({pct.toFixed(0)}%)
-                          </div>
-                        </div>
-                      );
-                    }}
-                  />
-                  {/* Stacked areas: invested + gain (visual wealth created) */}
-                  <Area
-                    type="monotone"
-                    dataKey="invested"
-                    stackId="a"
-                    stroke="transparent"
-                    fill="#EEEDFE"
-                    fillOpacity={1}
-                    isAnimationActive
-                    animationDuration={400}
-                    animationEasing="ease-out"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="gain"
-                    stackId="a"
-                    stroke="transparent"
-                    fill="#EEEDFE"
-                    fillOpacity={0.4}
-                    isAnimationActive
-                    animationDuration={400}
-                    animationEasing="ease-out"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="invested"
-                    stroke="#AFA9EC"
-                    strokeDasharray="6 6"
-                    dot={false}
-                    isAnimationActive
-                    animationDuration={400}
-                    animationEasing="ease-out"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="portfolio"
-                    stroke="#534AB7"
-                    strokeWidth={2.5}
-                    dot={false}
-                    isAnimationActive
-                    animationDuration={400}
-                    animationEasing="ease-out"
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    formatter={(value) => (value === "invested" ? "Invested" : "Portfolio value")}
-                  />
-                </ComposedChart>
+              <CartesianGrid stroke="#F4F2FC" />
+              <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#9B9A94" }} />
+              <YAxis
+                tick={{ fontSize: 12, fill: "#9B9A94" }}
+                tickFormatter={(v) => formatIndianCompact(Number(v))}
+              />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload || payload.length === 0) return null;
+                  const inv = Number(
+                    payload.find((x) => x.dataKey === "invested")?.value ?? 0,
+                  );
+                  const port = Number(
+                    payload.find((x) => x.dataKey === "portfolio")?.value ?? 0,
+                  );
+                  const g = port - inv;
+                  const pct = inv > 0 ? (g / inv) * 100 : 0;
+                  return (
+                    <div style={tooltipStyle}>
+                      <div
+                        style={{ fontWeight: 700, marginBottom: 6 }}
+                      >{`Year ${label}`}</div>
+                      <div>Invested: ₹{formatIndian(inv)}</div>
+                      <div>Portfolio value: ₹{formatIndian(port)}</div>
+                      <div>
+                        Gain: ₹{formatIndian(g)} ({pct.toFixed(0)}%)
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+              {/* Stacked areas: invested + gain (visual wealth created) */}
+              <Area
+                type="monotone"
+                dataKey="invested"
+                stackId="a"
+                stroke="transparent"
+                fill="#EEEDFE"
+                fillOpacity={1}
+                isAnimationActive
+                animationDuration={400}
+                animationEasing="ease-out"
+              />
+              <Area
+                type="monotone"
+                dataKey="gain"
+                stackId="a"
+                stroke="transparent"
+                fill="#EEEDFE"
+                fillOpacity={0.4}
+                isAnimationActive
+                animationDuration={400}
+                animationEasing="ease-out"
+              />
+              <Line
+                type="monotone"
+                dataKey="invested"
+                stroke="#AFA9EC"
+                strokeDasharray="6 6"
+                dot={false}
+                isAnimationActive
+                animationDuration={400}
+                animationEasing="ease-out"
+              />
+              <Line
+                type="monotone"
+                dataKey="portfolio"
+                stroke="#534AB7"
+                strokeWidth={2.5}
+                dot={false}
+                isAnimationActive
+                animationDuration={400}
+                animationEasing="ease-out"
+              />
+              <Legend
+                verticalAlign="bottom"
+                formatter={(value) =>
+                  value === "invested" ? "Invested" : "Portfolio value"
+                }
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>

@@ -29,6 +29,7 @@ const coverageExclude = [
   "lib/learnArticleFaqs.ts",
   "lib/learnRichArticles.ts",
   "lib/seo.ts",
+  "lib/learnSeo.ts",
   "lib/googleFeedbackForm.ts",
   "lib/finkoinAiPlan.ts",
   "lib/payment.ts",
@@ -60,7 +61,11 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     globals: true,
-    include: ["lib/**/*.test.ts", "tests/unit/**/*.test.ts"],
+    include: [
+      "lib/**/*.test.ts",
+      "tests/unit/**/*.test.ts",
+      "tests/unit/**/*.test.tsx",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "text-summary"],

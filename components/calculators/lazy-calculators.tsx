@@ -30,7 +30,9 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
     import("./PPFCalculator").then((m) => ({ default: m.PPFCalculator })),
   ),
   nsc: dyn(() =>
-    import("./NSCCalculator").then((m) => ({ default: m.NSCCalculator })),
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoNscSchemeCalculator,
+    })),
   ),
   emergency: dyn(() =>
     import("./EmergencyFundCalculator").then((m) => ({
@@ -71,6 +73,41 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
   po: dyn(() =>
     import("./PostOfficeCalculator").then((m) => ({
       default: m.PostOfficeCalculator,
+    })),
+  ),
+  "po-savings": dyn(() =>
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoSavingsCalculator,
+    })),
+  ),
+  "po-td": dyn(() =>
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoTimeDepositCalculator,
+    })),
+  ),
+  "po-rd": dyn(() =>
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoRecurringDepositCalculator,
+    })),
+  ),
+  "po-kvp": dyn(() =>
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoKvpCalculator,
+    })),
+  ),
+  "po-mis": dyn(() =>
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoMisCalculator,
+    })),
+  ),
+  "po-scss": dyn(() =>
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoScssCalculator,
+    })),
+  ),
+  "po-ssy": dyn(() =>
+    import("./postOffice/schemeCalculators").then((m) => ({
+      default: m.PoSsyCalculator,
     })),
   ),
   "tax-regime": dyn(() =>

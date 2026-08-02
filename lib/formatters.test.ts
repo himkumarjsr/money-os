@@ -137,6 +137,11 @@ describe("handleMoneyInput", () => {
     expect(handleMoneyInput("12.5")).toBe(12.5);
     expect(handleMoneyInput(".5")).toBe(0.5);
   });
+
+  it("defaults max clamp to ₹99 crore", () => {
+    expect(handleMoneyInput("990000000")).toBe(990_000_000);
+    expect(handleMoneyInput("2000000000")).toBe(990_000_000);
+  });
 });
 
 describe("formatSliderLabel", () => {
@@ -146,6 +151,8 @@ describe("formatSliderLabel", () => {
 
   it("formats percent, years, months, and number", () => {
     expect(formatSliderLabel(8, "percent")).toBe("8% p.a.");
+    expect(formatSliderLabel(7.5, "percent", 0.1)).toBe("7.5% p.a.");
+    expect(formatSliderLabel(7.15, "percent", 0.05)).toBe("7.15% p.a.");
     expect(formatSliderLabel(1, "years")).toBe("1 year");
     expect(formatSliderLabel(2, "years")).toBe("2 years");
     expect(formatSliderLabel(1, "months")).toBe("1 month");

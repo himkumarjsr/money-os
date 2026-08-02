@@ -24,14 +24,25 @@ test.describe("FK Split", () => {
     await page.goto("/split/join?token=invalidtoken123");
     await page.waitForTimeout(1500);
     await expect(page.locator("body")).toBeVisible();
+    // Logged-out desktop: login redirect, or error UI if session exists.
+    const url = page.url();
+    const onJoinOrLogin = /\/(split\/join|login)/.test(url);
+    expect(onJoinOrLogin).toBeTruthy();
   });
 
   test("join page with token shows joining or result UI", async ({ page }) => {
     await page.goto("/split/join?token=e2e-open-invite-token");
     await page.waitForTimeout(2000);
     await expect(page.locator("body")).toBeVisible();
-    // Smoke: join client mounted (loading / success / error / login redirect).
-    const url = page.url();
-    expect(url).toMatch(/\/(split\/join|login)/);
+    // Smoke: stay on join / login / joined group — not a bare home bounce.
+    const path = new URL(page.url()).pathname;
+    expect(path).toMatch(/^\/(split\/join|login|split\/[0-9a-f-]{36})$/);
+  });
+
+  test("join page does not show install banner", async ({ page }) => {
+    await page.goto("/split/join?token=invalidtoken123");
+    await expect(
+      page.getByRole("button", { name: /install app/i }),
+    ).toHaveCount(0);
   });
 });
