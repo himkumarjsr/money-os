@@ -156,6 +156,7 @@ describe("cash vs card spend", () => {
         payment_method: "upi",
       }),
     ).toBe(true);
+    // Shown under Investments, but only hits purple LEFT (not investment total).
     expect(
       countsTowardCashSpend({
         bucket: "investment",
@@ -526,6 +527,33 @@ describe("credit card bill payment + carry-forward status", () => {
       expect(paid.status).toBe("paid");
     }
     expect(due == null || due.remaining < 2500).toBe(true);
+  });
+
+  it("includes this-month card purchases in dues (not only last month)", () => {
+    const card = {
+      id: "c1",
+      nickname: "HDFC",
+      billingDay: 15,
+      dueDay: 5,
+      createdAt: "x",
+    };
+    const statuses = buildCreditCardBillStatuses({
+      asOf: new Date(2026, 7, 10), // August
+      cards: [card],
+      previousMonthChargesOnly: false,
+      transactions: [
+        {
+          amount: 700,
+          bucket: "needs",
+          subcategory: "groceries",
+          payment_method: "credit_card::c1::HDFC",
+          date: "2026-08-08",
+        },
+      ],
+    });
+    expect(statuses[0].charged).toBe(700);
+    expect(statuses[0].remaining).toBe(700);
+    expect(statuses[0].status).toBe("due");
   });
 
   it("marks paid when bill payment covers charges; else carries remaining", () => {

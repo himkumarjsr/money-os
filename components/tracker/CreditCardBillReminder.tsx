@@ -80,11 +80,13 @@ export default function CreditCardBillReminder({
 
   const statuses = useMemo(() => {
     const pool = [...previousTransactions, ...currentTransactions];
+    // Include every card purchase in the pool (prior + this month) so an expense
+    // paid via credit card shows in dues immediately — not only next month.
     const base = buildCreditCardBillStatuses({
       cards,
       transactions: pool,
       asOf,
-      previousMonthChargesOnly: true,
+      previousMonthChargesOnly: false,
     });
     if (!optimisticPayments.length) return base;
     return base.map((bill) => {
@@ -210,7 +212,7 @@ export default function CreditCardBillReminder({
             fontWeight: 600,
           }}
         >
-          Last month&apos;s card spends are settled — nothing due right now.
+          Tracked card spends are settled — nothing due right now.
         </p>
       ) : null}
 

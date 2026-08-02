@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { candidateFromExpense, decideObligationLearn } from "./obligationLearn";
+import {
+  candidateFromExpense,
+  decideObligationLearn,
+  shouldLearnObligationFromExpense,
+} from "./obligationLearn";
 
 describe("decideObligationLearn", () => {
   it("skips when a similar obligation already exists", () => {
@@ -46,5 +50,41 @@ describe("decideObligationLearn", () => {
       category: "investment_sip",
       amount: 5000,
     });
+  });
+});
+
+describe("shouldLearnObligationFromExpense", () => {
+  it("never learns credit_card obligations from tracker expenses", () => {
+    expect(
+      shouldLearnObligationFromExpense({
+        obligationCategory: "credit_card",
+        decision: "auto",
+        fromMappedSubcategory: true,
+      }),
+    ).toBe("skip");
+    expect(
+      shouldLearnObligationFromExpense({
+        obligationCategory: "credit_card",
+        decision: "suggest",
+        fromMappedSubcategory: true,
+      }),
+    ).toBe("skip");
+  });
+
+  it("auto-adds mapped loan types; suggests unknown first-time patterns", () => {
+    expect(
+      shouldLearnObligationFromExpense({
+        obligationCategory: "loan_emi",
+        decision: "suggest",
+        fromMappedSubcategory: true,
+      }),
+    ).toBe("add");
+    expect(
+      shouldLearnObligationFromExpense({
+        obligationCategory: "subscription",
+        decision: "suggest",
+        fromMappedSubcategory: false,
+      }),
+    ).toBe("suggest");
   });
 });

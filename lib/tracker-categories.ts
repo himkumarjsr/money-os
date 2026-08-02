@@ -231,6 +231,11 @@ export const TRACKER_CATEGORIES = {
       },
       { id: "rd", label: "Recurring deposit", icon: "calendar" as const },
       { id: "crypto", label: "Crypto", icon: "coin" as const },
+      {
+        id: "loan_prepayment",
+        label: "Loan repayment (extra / lump sum)",
+        icon: "wallet" as const,
+      },
       { id: "others", label: "Others", icon: "other" as const },
     ],
   },
@@ -255,8 +260,9 @@ export type BucketType = keyof typeof TRACKER_CATEGORIES;
 /**
  * Subcategories that must never affect tracker maths (spent, caps, Safety Pulse, MoM).
  * Kept as an exclusion set so any legacy rows still display but don't skew totals.
+ * Note: loan_prepayment still reduces purple LEFT via sumCashSpend (cash out).
  */
-export const TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES = new Set([
+export const TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES = new Set<string>([
   "loan_prepayment",
 ]);
 

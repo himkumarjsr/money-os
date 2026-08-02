@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   expenseCoversChecklistItem,
   findPendingChecklistForExpense,
+  isCreditCardObligationExpense,
   obligationCategoryFromExpense,
   obligationMatchScore,
   planObligationExpenseSync,
@@ -169,6 +170,59 @@ describe("planObligationExpenseSync — amount first", () => {
       ],
     });
     expect(plan.markPaid).toEqual([]);
+  });
+
+  it("never syncs credit card bill pays into obligations", () => {
+    expect(
+      isCreditCardObligationExpense({
+        bucket: "loans",
+        subcategory: "credit_card",
+      }),
+    ).toBe(true);
+
+    const plan = planObligationExpenseSync({
+      checklist: [
+        {
+          id: "cc1",
+          status: "pending",
+          expected_amount: 5000,
+          obligation: { title: "CC · HDFC", category: "credit_card" },
+        },
+        {
+          id: "emi1",
+          status: "pending",
+          expected_amount: 5000,
+          obligation: { title: "EMI", category: "loan_emi" },
+        },
+      ],
+      expenses: [
+        {
+          id: "t1",
+          amount: 5000,
+          bucket: "loans",
+          subcategory: "credit_card",
+          description: "Pay bill · HDFC",
+        },
+      ],
+    });
+    expect(plan.markPaid).toEqual([]);
+    expect(
+      findPendingChecklistForExpense(
+        [
+          {
+            id: "cc1",
+            status: "pending",
+            expected_amount: 5000,
+            obligation: { title: "CC · HDFC", category: "credit_card" },
+          },
+        ],
+        {
+          amount: 5000,
+          bucket: "loans",
+          subcategory: "credit_card",
+        },
+      ),
+    ).toBeUndefined();
   });
 
   it("unmarks when matching amount expense is gone", () => {

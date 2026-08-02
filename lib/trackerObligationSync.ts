@@ -81,9 +81,22 @@ function itemAmountMatches(amount: number, item: ChecklistLike): boolean {
   );
 }
 
-/** Income never ticks obligations (salary ≠ EMI). */
+/** Credit card bill pays live in CC dues UI — never touch obligations. */
+export function isCreditCardObligationExpense(e: {
+  bucket?: string | null;
+  subcategory?: string | null;
+  category?: string | null;
+  description?: string | null;
+}): boolean {
+  const sub = (e.subcategory || e.category || "").trim();
+  if (sub === "credit_card") return true;
+  return obligationCategoryFromExpense(e) === "credit_card";
+}
+
+/** Income / CC bill pays never tick obligations. */
 function isEligibleExpense(e: ExpenseLike): boolean {
   if ((e.bucket || "").trim() === "income") return false;
+  if (isCreditCardObligationExpense(e)) return false;
   const n = Number(e.amount);
   return Number.isFinite(n) && n > 0;
 }

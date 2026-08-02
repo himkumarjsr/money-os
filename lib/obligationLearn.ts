@@ -65,3 +65,24 @@ export function candidateFromExpense(
     amount,
   };
 }
+
+/**
+ * Credit card bill pays belong in the Credit card dues UI — never spawn new
+ * obligation rows from tracker expenses. Other mapped types may auto-add.
+ */
+export function shouldLearnObligationFromExpense(opts: {
+  obligationCategory: string | null | undefined;
+  decision: LearnDecision;
+  fromMappedSubcategory: boolean;
+}): "add" | "suggest" | "skip" {
+  const cat = (opts.obligationCategory || "").trim();
+  if (!cat) return "skip";
+  if (cat === "credit_card") return "skip";
+
+  if (opts.decision === "auto") return "add";
+  if (opts.decision === "suggest") {
+    return opts.fromMappedSubcategory ? "add" : "suggest";
+  }
+  // decision === "skip"
+  return opts.fromMappedSubcategory ? "add" : "skip";
+}
