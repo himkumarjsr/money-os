@@ -42,10 +42,13 @@ import {
   getMostRecentDueDate,
   getNextDueDate,
   hasTrackerConsentLocal,
+  hideCreditCardDueLine,
   isCreditCardBillDismissed,
   isCreditCardBillPayment,
   isCreditCardCharge,
+  isCreditCardDueLineHidden,
   isCreditCardPaymentMethod,
+  loadHiddenCreditCardDueIds,
   loadSavedCreditCards,
   parseCreditCardPaymentMethod,
   saveCreditCards,
@@ -683,6 +686,19 @@ describe("creditCardObligationTitle", () => {
       "CC · HDFC Millennia",
     );
     expect(creditCardObligationTitle("  ")).toBe("CC · Credit card");
+  });
+});
+
+describe("hide credit card due lines", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("hides a due line id for the user", () => {
+    expect(isCreditCardDueLineHidden("u1", "c1")).toBe(false);
+    hideCreditCardDueLine("u1", "c1");
+    expect(isCreditCardDueLineHidden("u1", "c1")).toBe(true);
+    expect(loadHiddenCreditCardDueIds("u1")).toEqual(["c1"]);
   });
 });
 

@@ -76,12 +76,53 @@ export function parsePayBillLabel(
 
 const STORAGE_PREFIX = "finkoin_credit_cards_";
 const BILL_DISMISS_PREFIX = "finkoin_cc_bill_dismissed_";
+const DUE_HIDDEN_PREFIX = "finkoin_cc_due_hidden_";
 
 /** Typical gap from statement day to payment due (not the ~45-day interest-free period). */
 export const DEFAULT_DUE_OFFSET_DAYS = 20;
 
 function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}${userId}`;
+}
+
+function dueHiddenKey(userId: string): string {
+  return `${DUE_HIDDEN_PREFIX}${userId}`;
+}
+
+/** Card ids the user removed from Credit card dues (expenses stay in history). */
+export function loadHiddenCreditCardDueIds(userId: string): string[] {
+  if (!userId || typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(dueHiddenKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((x) => String(x || "").trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export function hideCreditCardDueLine(userId: string, cardId: string): void {
+  if (!userId || !cardId.trim() || typeof window === "undefined") return;
+  try {
+    const id = cardId.trim();
+    const next = Array.from(
+      new Set([...loadHiddenCreditCardDueIds(userId), id]),
+    );
+    localStorage.setItem(dueHiddenKey(userId), JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isCreditCardDueLineHidden(
+  userId: string,
+  cardId: string,
+): boolean {
+  const id = cardId.trim().toLowerCase();
+  if (!id) return false;
+  return loadHiddenCreditCardDueIds(userId).some((x) => x.toLowerCase() === id);
 }
 
 function clampDay(day: number | undefined | null): number | undefined {
@@ -906,6 +947,8 @@ export function deleteSavedCreditCard(userId: string, cardId: string): boolean {
   saveCreditCards(userId, next);
   void deleteCreditCardFromDb(userId, cardId);
   if (removed) void deactivateCreditCardObligation(userId, removed.nickname);
+  // Keep charges from resurfacing as an orphan due line under the same id.
+  hideCreditCardDueLine(userId, cardId);
   return true;
 }
 
@@ -1013,36 +1056,15 @@ export function creditCardObligationTitle(nickname: string): string {
 }
 
 /**
- * Upsert a monthly credit-card bill obligation so the daily cron
- * (`/api/obligations/reminders`) can insert an inbox notification
- * `remind_days_before` days before `dueDay`.
+ * Credit card bills live only in the Credit card dues UI — do not upsert
+ * obligations. Kept as a no-op so older call sites stay safe.
  */
 export async function syncCreditCardBillObligation(
-  userId: string,
-  card: { nickname: string; dueDay?: number | null },
-  amount = 0,
+  _userId: string,
+  _card: { nickname: string; dueDay?: number | null },
+  _amount = 0,
 ): Promise<void> {
-  if (!userId || !card.dueDay) return;
-  try {
-    const supabase = getSupabase();
-    await supabase.from("financial_obligations").upsert(
-      {
-        user_id: userId,
-        title: creditCardObligationTitle(card.nickname),
-        category: "credit_card",
-        amount: Math.max(0, Math.round(Number(amount) || 0)),
-        frequency: "monthly",
-        due_day: card.dueDay,
-        source: "tracker",
-        remind_days_before: 3,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,title,category" },
-    );
-  } catch {
-    /* optional — table / network */
-  }
+  return;
 }
 
 export async function deactivateCreditCardObligation(
@@ -1060,6 +1082,27 @@ export async function deactivateCreditCardObligation(
       .eq("category", "credit_card");
   } catch {
     /* ignore */
+  }
+}
+
+/** Soft-remove every credit_card obligation (dues UI owns CC bills). */
+export async function deactivateAllCreditCardObligations(
+  userId: string,
+): Promise<number> {
+  if (!userId) return 0;
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from("financial_obligations")
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("category", "credit_card")
+      .eq("is_active", true)
+      .select("id");
+    if (error) return 0;
+    return Array.isArray(data) ? data.length : 0;
+  } catch {
+    return 0;
   }
 }
 

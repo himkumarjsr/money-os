@@ -658,12 +658,12 @@ function SplitGroupInner() {
                         <div className="mt-0.5 truncate text-[11px] text-[#9B9A94]">
                           {e.paid_by_name} · {e.expense_date}
                           {myShare > 0 ? (
-                            <> · you ₹{formatIndian(Math.round(myShare))}</>
+                            <> · you ₹{formatIndian(myShare)}</>
                           ) : null}
                         </div>
                       </div>
                       <div className="shrink-0 text-right text-sm font-extrabold text-[#111110]">
-                        ₹{formatIndian(Math.round(Number(e.amount ?? 0)))}
+                        ₹{formatIndian(Number(e.amount ?? 0))}
                       </div>
                       {isExpenseCreator && groupId ? (
                         <div className="flex shrink-0 items-center gap-0.5">

@@ -19,7 +19,6 @@ import {
   loadSavedCreditCards,
   parseCreditCardPaymentMethod,
   suggestDueDayFromBilling,
-  syncCreditCardBillObligation,
   upsertSavedCreditCard,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
@@ -289,11 +288,6 @@ export default function AddExpenseModal({
     setNewCardBillingDay("");
     setNewCardDueDay("");
     setError("");
-
-    // Sync calendar obligation → daily cron inserts inbox notification 3 days before due
-    if (card.dueDay) {
-      void syncCreditCardBillObligation(user.id, card, 0);
-    }
   };
 
   const handleDeleteCard = (cardId: string) => {

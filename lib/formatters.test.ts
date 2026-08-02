@@ -19,9 +19,11 @@ describe("formatIndian", () => {
     expect(formatIndian(NaN)).toBe("0");
   });
 
-  it("rounds fractional values", () => {
-    expect(formatIndian(12.4)).toBe("12");
-    expect(formatIndian(12.6)).toBe("13");
+  it("keeps up to 2 decimal places (paise)", () => {
+    expect(formatIndian(12.4)).toBe("12.40");
+    expect(formatIndian(12.6)).toBe("12.60");
+    expect(formatIndian(11410.29)).toBe("11,410.29");
+    expect(formatIndian(1000)).toBe("1,000");
   });
 
   it("formats negative numbers", () => {

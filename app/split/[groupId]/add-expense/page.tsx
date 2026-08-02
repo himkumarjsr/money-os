@@ -101,6 +101,8 @@ function AddSplitExpenseInner() {
     .join("|");
 
   const [amountRaw, setAmountRaw] = useState<number>(0);
+  /** Keep typed decimals (e.g. 11.) — Number() alone drops the trailing point. */
+  const [amountText, setAmountText] = useState("");
   const [title, setTitle] = useState("");
   const [paidByEmail, setPaidByEmail] = useState("");
   const [splitType, setSplitType] = useState<SplitType>("equal");
@@ -125,7 +127,8 @@ function AddSplitExpenseInner() {
   const [includedEmails, setIncludedEmails] = useState<Record<string, boolean>>(
     {},
   );
-  const [exactMap, setExactMap] = useState<Record<string, number>>({});
+  /** String drafts so typing "11." does not collapse to 11. */
+  const [exactMap, setExactMap] = useState<Record<string, string>>({});
   const [pctMap, setPctMap] = useState<Record<string, number>>({});
   const [shareCounts, setShareCounts] = useState<Record<string, string>>({});
 
@@ -203,7 +206,9 @@ function AddSplitExpenseInner() {
     const expense = expenses.find((e) => e.id === editExpenseId);
     if (!expense) return;
     hydratedEdit.current = editExpenseId;
-    setAmountRaw(Number(expense.amount) || 0);
+    const amt = Number(expense.amount) || 0;
+    setAmountRaw(amt);
+    setAmountText(amt > 0 ? String(amt) : "");
     setTitle(expense.title || "");
     setPaidByEmail((expense.paid_by_email || "").toLowerCase());
     setCategory(expense.category || "food");
@@ -219,7 +224,7 @@ function AddSplitExpenseInner() {
       setSplitType(st);
     }
     const included: Record<string, boolean> = {};
-    const exact: Record<string, number> = {};
+    const exact: Record<string, string> = {};
     const pct: Record<string, number> = {};
     const shares: Record<string, string> = {};
     for (const m of splittableMembers) {
@@ -228,7 +233,8 @@ function AddSplitExpenseInner() {
     for (const s of expense.shares ?? []) {
       const key = s.email.toLowerCase();
       included[key] = true;
-      exact[key] = Number(s.share_amount) || 0;
+      const shareAmt = Number(s.share_amount) || 0;
+      exact[key] = shareAmt > 0 ? String(shareAmt) : "";
       pct[key] = Number(s.share_percentage) || 0;
       shares[key] = String(
         Math.max(1, Math.round(Number(s.share_percentage) || 1)),
@@ -250,6 +256,14 @@ function AddSplitExpenseInner() {
       }));
   }, [includedEmails, splittableMembers]);
 
+  const exactAmountsNumeric = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(exactMap)) {
+      out[k] = v === "" || v === "." ? 0 : Number(v) || 0;
+    }
+    return out;
+  }, [exactMap]);
+
   /** Live share preview — same engine as the API (esp. equal). */
   const previewShares = useMemo(() => {
     if (!amountRaw || amountRaw <= 0 || includedMembers.length === 0) {
@@ -264,11 +278,18 @@ function AddSplitExpenseInner() {
       amount: amountRaw,
       splitType,
       includedMembers,
-      exactAmounts: splitType === "exact" ? exactMap : undefined,
+      exactAmounts: splitType === "exact" ? exactAmountsNumeric : undefined,
       percentages: splitType === "percentage" ? pctMap : undefined,
       shareCounts: splitType === "shares" ? shareCountNums : undefined,
     });
-  }, [amountRaw, exactMap, includedMembers, pctMap, shareCounts, splitType]);
+  }, [
+    amountRaw,
+    exactAmountsNumeric,
+    includedMembers,
+    pctMap,
+    shareCounts,
+    splitType,
+  ]);
 
   const paidBy = useMemo(() => {
     const e = paidByEmail.toLowerCase();
@@ -277,10 +298,10 @@ function AddSplitExpenseInner() {
 
   const exactSum = useMemo(() => {
     return includedMembers.reduce(
-      (s, m) => s + Number(exactMap[m.email.toLowerCase()] ?? 0),
+      (s, m) => s + Number(exactAmountsNumeric[m.email.toLowerCase()] ?? 0),
       0,
     );
-  }, [exactMap, includedMembers]);
+  }, [exactAmountsNumeric, includedMembers]);
 
   const pctSum = useMemo(() => {
     return includedMembers.reduce(
@@ -324,12 +345,12 @@ function AddSplitExpenseInner() {
     }
     if (splitType === "exact" && !nextErrors.amount) {
       const total = includedMembers.reduce(
-        (s, m) => s + Number(exactMap[m.email.toLowerCase()] ?? 0),
+        (s, m) => s + Number(exactAmountsNumeric[m.email.toLowerCase()] ?? 0),
         0,
       );
       const diff = Math.abs(total - Number(amountRaw || 0));
       if (diff > 0.01) {
-        nextErrors.exact = `Must total ₹${formatIndian(Math.round(amountRaw))} (now ₹${formatIndian(Math.round(total))}).`;
+        nextErrors.exact = `Must total ₹${formatIndian(amountRaw)} (now ₹${formatIndian(total)}).`;
       }
     }
     if (splitType === "percentage") {
@@ -396,7 +417,7 @@ function AddSplitExpenseInner() {
         expenseDate,
         notes: notes.trim() ? notes.trim() : undefined,
         includedMembers,
-        exactAmounts: splitType === "exact" ? exactMap : undefined,
+        exactAmounts: splitType === "exact" ? exactAmountsNumeric : undefined,
         percentages: splitType === "percentage" ? pctMap : undefined,
         shareCounts: splitType === "shares" ? shareCountNums : undefined,
         createdBy,
@@ -527,12 +548,15 @@ function AddSplitExpenseInner() {
             <div className="flex items-center justify-center gap-1">
               <span className="text-[28px] font-bold text-[#534AB7]">₹</span>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                value={amountRaw || ""}
+                value={amountText}
                 onChange={(e) => {
                   clearFieldError("amount");
-                  setAmountRaw(Number(e.target.value) || 0);
+                  const v = e.target.value.replace(/,/g, "");
+                  if (v !== "" && !/^\d*\.?\d{0,2}$/.test(v)) return;
+                  setAmountText(v);
+                  setAmountRaw(v === "" || v === "." ? 0 : Number(v));
                 }}
                 placeholder="0"
                 autoFocus
@@ -549,7 +573,7 @@ function AddSplitExpenseInner() {
               <div className="mt-3 space-y-1 text-left">
                 {splitType === "equal" ? (
                   <div className="mb-1 text-center text-xs font-semibold text-[#534AB7]">
-                    {`Equal split · ${includedMembers.length} people · sums to ₹${formatIndian(Math.round(amountRaw))}`}
+                    {`Equal split · ${includedMembers.length} people · sums to ₹${formatIndian(amountRaw)}`}
                   </div>
                 ) : null}
                 {previewShares.shares.map((s) => (
@@ -726,13 +750,16 @@ function AddSplitExpenseInner() {
                       {m.display_name}
                     </div>
                     <input
+                      type="text"
                       inputMode="decimal"
-                      value={String(exactMap[m.email.toLowerCase()] ?? "")}
+                      value={exactMap[m.email.toLowerCase()] ?? ""}
                       onChange={(e) => {
                         clearFieldError("exact");
+                        const v = e.target.value.replace(/,/g, "");
+                        if (v !== "" && !/^\d*\.?\d{0,2}$/.test(v)) return;
                         setExactMap((prev) => ({
                           ...prev,
-                          [m.email.toLowerCase()]: Number(e.target.value) || 0,
+                          [m.email.toLowerCase()]: v,
                         }));
                       }}
                       placeholder="0"
@@ -749,8 +776,8 @@ function AddSplitExpenseInner() {
                 </p>
               ) : (
                 <div className="mt-3 text-xs font-semibold text-[#5F5E5A]">
-                  Total: ₹{formatIndian(Math.round(exactSum))} / ₹
-                  {formatIndian(Math.round(amountRaw || 0))}
+                  Total: ₹{formatIndian(exactSum)} / ₹
+                  {formatIndian(amountRaw || 0)}
                 </div>
               )}
             </div>

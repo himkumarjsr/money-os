@@ -1,7 +1,12 @@
+/** Indian grouping; keeps up to 2 decimal places (paise) when present. */
 export function formatIndian(num: number): string {
-  if (!num || Number.isNaN(num)) return "0";
-  return Math.round(num).toLocaleString("en-IN", {
-    maximumFractionDigits: 0,
+  if (!Number.isFinite(num) || Number.isNaN(num)) return "0";
+  if (num === 0) return "0";
+  const cents = Math.round(num * 100) / 100;
+  const isWhole = Number.isInteger(cents);
+  return cents.toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: isWhole ? 0 : 2,
   });
 }
 
@@ -35,7 +40,18 @@ const BELOW_TWENTY = [
   "nineteen",
 ];
 
-const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+const TENS = [
+  "",
+  "",
+  "twenty",
+  "thirty",
+  "forty",
+  "fifty",
+  "sixty",
+  "seventy",
+  "eighty",
+  "ninety",
+];
 
 function spellUnder100(n: number): string {
   if (n < 20) return BELOW_TWENTY[n] ?? "";
@@ -145,4 +161,3 @@ export function formatSliderLabel(
   if (type === "number") return formatIndian(value);
   return value.toString();
 }
-
