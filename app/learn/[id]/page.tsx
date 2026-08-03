@@ -26,7 +26,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import { getLearnSeoOverride } from "@/lib/learnSeo";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, socialImageTags } from "@/lib/seo";
 
 const badgeColors: Record<LearnCategory, string> = {
   Basics: "bg-slate-100 text-slate-800 ring-slate-200",
@@ -36,6 +36,53 @@ const badgeColors: Record<LearnCategory, string> = {
   Loans: "bg-amber-50 text-amber-900 ring-amber-200",
   Property: "bg-rose-50 text-rose-900 ring-rose-200",
 };
+
+/** Prefer a topical share banner when the Learn topic matches a product OG. */
+const LEARN_OG_BY_ID: Record<string, string> = {
+  "sip-calculator-1-crore-10-15-20-years": "/og/og-sip.png",
+  "sip-vs-lumpsum-when-to-use-which": "/og/og-sip.png",
+  "form-16-what-to-verify": "/og/og-tax-calculator.png",
+  "know-taxation-in-india-old-vs-new-slabs-interest-rates":
+    "/og/og-tax-calculator.png",
+  "old-vs-new-tax-regime-which-saves-you-more-money":
+    "/og/og-tax-calculator.png",
+  "section-80c-limits-and-beyond": "/og/og-tax-calculator.png",
+  "emergency-fund-how-much-where-to-keep-it": "/og/og-emergency.png",
+  "prepayment-vs-tenure-reduction-home-loan": "/og/og-emi.png",
+  "how-home-loan-tax-benefits-work-80c-24b": "/og/og-emi.png",
+};
+
+function learnOgPath(articleId: string, category: LearnCategory): string {
+  if (LEARN_OG_BY_ID[articleId]) return LEARN_OG_BY_ID[articleId];
+  if (category === "Tax") return "/og/og-tax-calculator.png";
+  if (category === "Investment") return "/og/og-sip.png";
+  if (category === "Loans" || category === "Property") return "/og/og-emi.png";
+  return "/og/og-home.png";
+}
+
+function withLearnShareImages(
+  meta: Metadata,
+  articleId: string,
+  category: LearnCategory,
+  alt: string,
+): Metadata {
+  const { openGraphImages, twitterImages } = socialImageTags(
+    learnOgPath(articleId, category),
+    alt,
+  );
+  return {
+    ...meta,
+    openGraph: {
+      ...meta.openGraph,
+      images: openGraphImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      ...meta.twitter,
+      images: twitterImages,
+    },
+  };
+}
 
 type PageProps = {
   params: { id: string };
@@ -58,49 +105,59 @@ export async function generateMetadata({
 
   const seoOverride = getLearnSeoOverride(article.id);
   if (seoOverride) {
-    return {
-      title: { absolute: seoOverride.title },
-      description: seoOverride.description,
-      keywords: [
-        ...seoOverride.keywords,
-        "Finkoin",
-        "personal finance India",
-        "Know it Fix it Grow it",
-      ],
-      alternates: { canonical: `/learn/${article.id}` },
-      openGraph: {
-        title: seoOverride.title,
+    return withLearnShareImages(
+      {
+        title: { absolute: seoOverride.title },
         description: seoOverride.description,
-        type: "article",
-        url: `${SITE_URL}/learn/${article.id}`,
+        keywords: [
+          ...seoOverride.keywords,
+          "Finkoin",
+          "personal finance India",
+          "Know it Fix it Grow it",
+        ],
+        alternates: { canonical: `/learn/${article.id}` },
+        openGraph: {
+          title: seoOverride.title,
+          description: seoOverride.description,
+          type: "article",
+          url: `${SITE_URL}/learn/${article.id}`,
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: seoOverride.title,
+          description: seoOverride.description,
+        },
       },
-      twitter: {
-        card: "summary_large_image",
-        title: seoOverride.title,
-        description: seoOverride.description,
-      },
-    };
+      article.id,
+      article.category,
+      seoOverride.title,
+    );
   }
 
   const richLearn = getRichLearnArticle(article.id);
   if (richLearn) {
-    return {
-      title: { absolute: richLearn.seoTitle },
-      description: richLearn.seoDescription,
-      alternates: { canonical: `/learn/${article.id}` },
-      keywords: [...richLearn.tags, "India", "personal finance", "Finkoin"],
-      openGraph: {
-        title: richLearn.seoTitle,
+    return withLearnShareImages(
+      {
+        title: { absolute: richLearn.seoTitle },
         description: richLearn.seoDescription,
-        type: "article",
-        url: `${SITE_URL}/learn/${article.id}`,
+        alternates: { canonical: `/learn/${article.id}` },
+        keywords: [...richLearn.tags, "India", "personal finance", "Finkoin"],
+        openGraph: {
+          title: richLearn.seoTitle,
+          description: richLearn.seoDescription,
+          type: "article",
+          url: `${SITE_URL}/learn/${article.id}`,
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: richLearn.seoTitle,
+          description: richLearn.seoDescription,
+        },
       },
-      twitter: {
-        card: "summary_large_image",
-        title: richLearn.seoTitle,
-        description: richLearn.seoDescription,
-      },
-    };
+      article.id,
+      article.category,
+      richLearn.seoTitle,
+    );
   }
 
   // Custom SEO metadata for our two tax cornerstone guides.
@@ -110,36 +167,41 @@ export async function generateMetadata({
     const description =
       "Beginner-friendly Indian income tax guide for FY 2025-26 (AY 2026-27): FY vs AY, ITR forms (ITR-1 to ITR-7), tax slabs, 87A rebate, cess/surcharge, TDS (Form 16/AIS/26AS), and old vs new regime explained with examples.";
 
-    return {
-      title: { absolute: seoTitle },
-      description,
-      alternates: { canonical: `/learn/${article.id}` },
-      keywords: [
-        "Indian income tax guide",
-        "FY 2025-26 tax slab",
-        "AY 2026-27 meaning",
-        "ITR filing India",
-        "old tax regime vs new tax regime",
-        "what is ITR1",
-        "income tax deductions India",
-        "section 80C explained",
-        "how to file income tax return",
-        "best tax regime India",
-        "income tax for salaried employees",
-        "Indian taxation basics",
-      ],
-      openGraph: {
-        title: seoTitle,
+    return withLearnShareImages(
+      {
+        title: { absolute: seoTitle },
         description,
-        type: "article",
-        url: `${SITE_URL}/learn/${article.id}`,
+        alternates: { canonical: `/learn/${article.id}` },
+        keywords: [
+          "Indian income tax guide",
+          "FY 2025-26 tax slab",
+          "AY 2026-27 meaning",
+          "ITR filing India",
+          "old tax regime vs new tax regime",
+          "what is ITR1",
+          "income tax deductions India",
+          "section 80C explained",
+          "how to file income tax return",
+          "best tax regime India",
+          "income tax for salaried employees",
+          "Indian taxation basics",
+        ],
+        openGraph: {
+          title: seoTitle,
+          description,
+          type: "article",
+          url: `${SITE_URL}/learn/${article.id}`,
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: seoTitle,
+          description,
+        },
       },
-      twitter: {
-        card: "summary_large_image",
-        title: seoTitle,
-        description,
-      },
-    };
+      article.id,
+      article.category,
+      seoTitle,
+    );
   }
 
   if (article.id === "old-vs-new-tax-regime-which-saves-you-more-money") {
@@ -148,33 +210,38 @@ export async function generateMetadata({
     const description =
       "A simple, practical old vs new tax regime guide for FY 2025-26: what deductions matter (80C, 80D, HRA, home loan 24(b), NPS), how to decide, proof checklist, and when each regime usually wins.";
 
-    return {
-      title: { absolute: seoTitle },
-      description,
-      alternates: { canonical: `/learn/${article.id}` },
-      keywords: [
-        "old tax regime vs new tax regime",
-        "best tax regime India",
-        "FY 2025-26 tax slab",
-        "income tax for salaried employees",
-        "section 80C explained",
-        "section 80D explained",
-        "HRA exemption",
-        "home loan interest 24(b)",
-        "87A rebate",
-      ],
-      openGraph: {
-        title: seoTitle,
+    return withLearnShareImages(
+      {
+        title: { absolute: seoTitle },
         description,
-        type: "article",
-        url: `${SITE_URL}/learn/${article.id}`,
+        alternates: { canonical: `/learn/${article.id}` },
+        keywords: [
+          "old tax regime vs new tax regime",
+          "best tax regime India",
+          "FY 2025-26 tax slab",
+          "income tax for salaried employees",
+          "section 80C explained",
+          "section 80D explained",
+          "HRA exemption",
+          "home loan interest 24(b)",
+          "87A rebate",
+        ],
+        openGraph: {
+          title: seoTitle,
+          description,
+          type: "article",
+          url: `${SITE_URL}/learn/${article.id}`,
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: seoTitle,
+          description,
+        },
       },
-      twitter: {
-        card: "summary_large_image",
-        title: seoTitle,
-        description,
-      },
-    };
+      article.id,
+      article.category,
+      seoTitle,
+    );
   }
 
   if (article.id === "emergency-fund-how-much-where-to-keep-it") {
@@ -183,68 +250,78 @@ export async function generateMetadata({
     const description =
       "Emergency fund guide for India: why it matters first, how to count essential monthly expenses, life-stage targets from bachelor to married with two kids and dependent parents (max 12 months), rupee example, liquid funds vs sweep FD, and how to rebuild after use.";
 
-    return {
-      title: { absolute: seoTitle },
+    return withLearnShareImages(
+      {
+        title: { absolute: seoTitle },
+        description,
+        alternates: { canonical: `/learn/${article.id}` },
+        keywords: [
+          "emergency fund India",
+          "how much emergency fund",
+          "12 months emergency savings",
+          "emergency fund for salaried India",
+          "liquid mutual fund emergency fund",
+          "sweep FD emergency fund",
+          "bachelor emergency fund months",
+          "married couple emergency fund India",
+          "emergency fund with children India",
+          "where to keep emergency money India",
+          "financial cushion India",
+        ],
+        openGraph: {
+          title: seoTitle,
+          description,
+          type: "article",
+          url: `${SITE_URL}/learn/${article.id}`,
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: seoTitle,
+          description,
+        },
+      },
+      article.id,
+      article.category,
+      seoTitle,
+    );
+  }
+
+  const title = `${article.title} | Finkoin Learn`;
+  const description = `${article.subtitle} Free personal finance education for Indians. Know it. Fix it. Grow it.`;
+
+  return withLearnShareImages(
+    {
+      title,
       description,
-      alternates: { canonical: `/learn/${article.id}` },
-      keywords: [
-        "emergency fund India",
-        "how much emergency fund",
-        "12 months emergency savings",
-        "emergency fund for salaried India",
-        "liquid mutual fund emergency fund",
-        "sweep FD emergency fund",
-        "bachelor emergency fund months",
-        "married couple emergency fund India",
-        "emergency fund with children India",
-        "where to keep emergency money India",
-        "financial cushion India",
-      ],
       openGraph: {
-        title: seoTitle,
+        title: article.title,
         description,
         type: "article",
         url: `${SITE_URL}/learn/${article.id}`,
       },
       twitter: {
         card: "summary_large_image",
-        title: seoTitle,
+        title: article.title,
         description,
       },
-    };
-  }
-
-  const title = `${article.title} | Finkoin Learn`;
-  const description = `${article.subtitle} Free personal finance education for Indians. Know it. Fix it. Grow it.`;
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title: article.title,
-      description,
-      type: "article",
-      url: `${SITE_URL}/learn/${article.id}`,
+      alternates: {
+        canonical: `/learn/${article.id}`,
+      },
+      keywords: [
+        article.category,
+        "India",
+        "personal finance India",
+        "Finkoin",
+        "Finkoin Learn",
+        article.title,
+        `${article.category} India`,
+        "financial education India",
+      ],
     },
-    twitter: {
-      card: "summary_large_image",
-      title: article.title,
-      description,
-    },
-    alternates: {
-      canonical: `/learn/${article.id}`,
-    },
-    keywords: [
-      article.category,
-      "India",
-      "personal finance India",
-      "Finkoin",
-      "Finkoin Learn",
-      article.title,
-      `${article.category} India`,
-      "financial education India",
-    ],
-  };
+    article.id,
+    article.category,
+    article.title,
+  );
 }
 
 export default function LearnArticlePage({ params }: PageProps) {

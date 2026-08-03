@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { getItemById } from "../calculator-config";
-import { getOgImagePathForCalc } from "../calculator-seo";
+import {
+  getOgImagePathForCalc,
+  resolveCalcIdFromPathSegment,
+} from "../calculator-seo";
 import { generatePageMeta } from "@/lib/seo";
 
 type LayoutProps = {
@@ -9,7 +12,8 @@ type LayoutProps = {
 };
 
 export function generateMetadata({ params }: LayoutProps): Metadata {
-  const calc = getItemById(params.id);
+  const calcId = resolveCalcIdFromPathSegment(params.id) ?? params.id;
+  const calc = getItemById(calcId);
   return generatePageMeta(
     `${calc.title} Calculator`,
     calc.blurb,
@@ -19,7 +23,7 @@ export function generateMetadata({ params }: LayoutProps): Metadata {
     ],
     {
       canonicalPath: `/calculators/${params.id}`,
-      openGraphImagePath: getOgImagePathForCalc(params.id),
+      openGraphImagePath: getOgImagePathForCalc(calcId),
     },
   );
 }

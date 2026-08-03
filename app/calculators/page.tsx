@@ -4,8 +4,12 @@ import { permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import CalculatorsClient from "./CalculatorsClient";
 import { getItemById } from "./calculator-config";
-import { buildCalculatorJsonLd, getSeoForCalc } from "./calculator-seo";
-import { SITE_URL } from "@/lib/seo";
+import {
+  buildCalculatorJsonLd,
+  getOgImagePathForCalc,
+  getSeoForCalc,
+} from "./calculator-seo";
+import { SITE_URL, socialImageTags } from "@/lib/seo";
 
 type PageProps = {
   searchParams?: { calc?: string | string[]; from?: string | string[] };
@@ -22,15 +26,37 @@ export async function generateMetadata({
   if (calcParam) {
     const active = getItemById(calcParam);
     const seo = getSeoForCalc(active.id);
+    const { openGraphImages, twitterImages } = socialImageTags(
+      getOgImagePathForCalc(active.id),
+      seo.appName,
+    );
     return {
       title: { absolute: seo.title },
       description: seo.description,
       alternates: { canonical: seo.path },
       robots: "index, follow",
+      openGraph: {
+        title: seo.title,
+        description: seo.description,
+        url: `${SITE_URL}${seo.path}`,
+        siteName: "Finkoin",
+        type: "website",
+        images: openGraphImages,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: seo.title,
+        description: seo.description,
+        images: twitterImages,
+      },
     };
   }
 
   const seo = getSeoForCalc();
+  const { openGraphImages, twitterImages } = socialImageTags(
+    "/og/og-home.png",
+    "Finkoin calculators",
+  );
   return {
     title: { absolute: seo.title },
     description: seo.description,
@@ -42,20 +68,13 @@ export async function generateMetadata({
       url: `${SITE_URL}/calculators`,
       siteName: "Finkoin",
       type: "website",
-      images: [
-        {
-          url: `${SITE_URL}/og/og-home.png`,
-          width: 1200,
-          height: 630,
-          alt: "Finkoin calculators",
-        },
-      ],
+      images: openGraphImages,
     },
     twitter: {
       card: "summary_large_image",
       title: seo.title,
       description: seo.description,
-      images: [`${SITE_URL}/og/og-home.png`],
+      images: twitterImages,
     },
   };
 }

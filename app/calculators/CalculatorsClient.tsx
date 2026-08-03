@@ -2,12 +2,18 @@
 
 import { lazyCalculatorsById } from "@/components/calculators/lazy-calculators";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { ShareButton } from "@/components/ui/ShareButton";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { cn } from "@/lib/cn";
 import { trackToolOpen } from "@/lib/gtag";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES, type Cat } from "./calculator-config";
+
+function calcSharePath(calcId: string) {
+  if (calcId === "tax-regime") return "/calculators/tax-regime-2026";
+  return `/calculators/${calcId}`;
+}
 
 function findCategoryForCalc(calcId: string): Cat {
   for (const category of CATEGORIES) {
@@ -294,13 +300,24 @@ export default function CalculatorsClient({
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
           aria-live="polite"
         >
-          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            {activeItem.icon ? (
-              <AppIcon name={activeItem.icon} size={20} color="#534AB7" />
-            ) : null}
-            {activeItem.title}
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">{activeItem.blurb}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
+                {activeItem.icon ? (
+                  <AppIcon name={activeItem.icon} size={20} color="#534AB7" />
+                ) : null}
+                {activeItem.title}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">{activeItem.blurb}</p>
+            </div>
+            <ShareButton
+              title={`${activeItem.title} | Finkoin`}
+              path={calcSharePath(activeItem.id)}
+              contentType="calculator"
+              contentId={activeItem.id}
+              className="shrink-0"
+            />
+          </div>
           <div className="mt-8">
             <ActiveCalc />
           </div>
@@ -347,7 +364,16 @@ export default function CalculatorsClient({
           className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
           aria-live="polite"
         >
-          <p className="text-sm text-slate-600">{activeItem.blurb}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 text-sm text-slate-600">{activeItem.blurb}</p>
+            <ShareButton
+              title={`${activeItem.title} | Finkoin`}
+              path={calcSharePath(activeItem.id)}
+              contentType="calculator"
+              contentId={activeItem.id}
+              className="shrink-0"
+            />
+          </div>
           <div className="mt-5 min-w-0">
             <ActiveCalc />
           </div>

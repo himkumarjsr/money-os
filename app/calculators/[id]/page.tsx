@@ -1,7 +1,7 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
-import { SITE_URL } from "@/lib/seo";
+import { socialImageTags } from "@/lib/seo";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
@@ -37,7 +37,10 @@ export async function generateMetadata({
 
   const seo = getSeoForCalc(calcId);
   const pageUrl = absoluteCalcUrl(seo.path);
-  const ogImage = `${SITE_URL}${getOgImagePathForCalc(calcId)}`;
+  const { openGraphImages, twitterImages } = socialImageTags(
+    getOgImagePathForCalc(calcId),
+    seo.appName,
+  );
 
   return {
     title: { absolute: seo.title },
@@ -51,20 +54,13 @@ export async function generateMetadata({
       url: pageUrl,
       siteName: "Finkoin",
       type: "website",
-      images: [
-        {
-          url: ogImage,
-          width: 1200,
-          height: 630,
-          alt: seo.appName,
-        },
-      ],
+      images: openGraphImages,
     },
     twitter: {
       card: "summary_large_image",
       title: seo.title,
       description: seo.description,
-      images: [ogImage],
+      images: twitterImages,
     },
   };
 }
