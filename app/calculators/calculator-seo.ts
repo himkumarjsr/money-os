@@ -570,11 +570,32 @@ export function absoluteCalcUrl(path: string) {
   return `${SITE_URL}${path}`;
 }
 
-/** Dedicated share banners; others fall back to site home OG. */
+/**
+ * Dedicated 1200×630 share banners under public/og.
+ * Related tools share a banner so every calculator has a tagged OG image.
+ */
 const CALC_OG_IMAGE: Record<string, string> = {
   sip: "/og/og-sip.png",
   swp: "/og/og-swp.png",
   "tax-regime": "/og/og-tax-calculator.png",
+  emi: "/og/og-emi.png",
+  home: "/og/og-emi.png",
+  car: "/og/og-emi.png",
+  rentbuy: "/og/og-emi.png",
+  rentcar: "/og/og-emi.png",
+  whencar: "/og/og-emi.png",
+  ppf: "/og/og-ppf.png",
+  nsc: "/og/og-po.png",
+  po: "/og/og-po.png",
+  "po-savings": "/og/og-po.png",
+  "po-td": "/og/og-po.png",
+  "po-rd": "/og/og-po.png",
+  "po-kvp": "/og/og-po.png",
+  "po-mis": "/og/og-po.png",
+  "po-scss": "/og/og-po.png",
+  "po-ssy": "/og/og-po.png",
+  emergency: "/og/og-emergency.png",
+  fire: "/og/og-fire.png",
 };
 
 export function getOgImagePathForCalc(calcId: string): string {

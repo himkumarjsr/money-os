@@ -7,6 +7,41 @@ export const FINKOIN_TAGLINE = "Know it. Fix it. Grow it.";
 export const FINKOIN_TAGLINE_SUB = "Your complete money life.";
 export const FINKOIN_TAGLINE_FULL = `${FINKOIN_TAGLINE} ${FINKOIN_TAGLINE_SUB}`;
 
+/** Default Open Graph / Twitter share image (1200×630). */
+export const DEFAULT_OG_IMAGE_PATH = "/og/og-home.png";
+export const OG_IMAGE_WIDTH = 1200;
+export const OG_IMAGE_HEIGHT = 630;
+
+/** Absolute URL for an OG path under /public (e.g. `/og/og-sip.png`). */
+export function absoluteOgUrl(
+  imagePath: string = DEFAULT_OG_IMAGE_PATH,
+): string {
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+  const path = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  return `${SITE_URL}${path}`;
+}
+
+/** Consistent OG + Twitter image tags (url, width, height, alt). */
+export function socialImageTags(
+  imagePath: string = DEFAULT_OG_IMAGE_PATH,
+  alt: string = "Finkoin",
+) {
+  const url = absoluteOgUrl(imagePath);
+  return {
+    openGraphImages: [
+      {
+        url,
+        width: OG_IMAGE_WIDTH,
+        height: OG_IMAGE_HEIGHT,
+        alt,
+      },
+    ],
+    twitterImages: [url],
+  };
+}
+
 export const SEO_CONFIG = {
   siteName: "Finkoin",
   siteUrl: SITE_URL,
@@ -66,42 +101,37 @@ export function generatePageMeta(
   options?: PageMetaOptions,
 ) {
   const canonicalPath = options?.canonicalPath ?? "/";
-  const ogImagePath = options?.openGraphImagePath ?? "/og/og-home.png";
+  const ogImagePath = options?.openGraphImagePath ?? DEFAULT_OG_IMAGE_PATH;
   const titleField =
     options?.titleMode === "absolute"
       ? { absolute: title }
       : `${title} | ${SEO_CONFIG.siteName}`;
+  const displayTitle =
+    options?.titleMode === "absolute"
+      ? title
+      : `${title} | ${SEO_CONFIG.siteName}`;
+  const { openGraphImages, twitterImages } = socialImageTags(
+    ogImagePath,
+    displayTitle,
+  );
 
   return {
     title: titleField,
     description,
     keywords: [...(keywords || []), ...SEO_CONFIG.defaultKeywords],
     openGraph: {
-      title:
-        options?.titleMode === "absolute"
-          ? title
-          : `${title} | ${SEO_CONFIG.siteName}`,
+      title: displayTitle,
       description,
       siteName: SEO_CONFIG.siteName,
       url: `${SEO_CONFIG.siteUrl}${canonicalPath === "/" ? "" : canonicalPath}`,
       type: options?.openGraphType ?? "website",
-      images: [
-        {
-          url: `${SEO_CONFIG.siteUrl}${ogImagePath}`,
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
+      images: openGraphImages,
     },
     twitter: {
       card: "summary_large_image" as const,
-      title:
-        options?.titleMode === "absolute"
-          ? title
-          : `${title} | ${SEO_CONFIG.siteName}`,
+      title: displayTitle,
       description,
-      images: [`${SEO_CONFIG.siteUrl}${ogImagePath}`],
+      images: twitterImages,
     },
     robots: "index, follow" as const,
     alternates: {

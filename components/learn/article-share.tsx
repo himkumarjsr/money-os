@@ -1,22 +1,14 @@
 "use client";
 
-import { ShareButton } from "@/components/learn/share-button";
-import { useEffect, useState } from "react";
+import { ShareButton } from "@/components/ui/ShareButton";
 
-export function ArticleShare({
-  title,
-  path,
-}: {
-  title: string;
-  path: string;
-}) {
-  const [url, setUrl] = useState("");
-
-  useEffect(() => {
-    setUrl(`${window.location.origin}${path}`);
-  }, [path]);
-
+export function ArticleShare({ title, path }: { title: string; path: string }) {
   return (
-    <ShareButton title={title} url={url || path} contentType="learn_article" contentId={path} />
+    <ShareButton
+      title={title}
+      path={path}
+      contentType="learn_article"
+      contentId={path}
+    />
   );
 }
