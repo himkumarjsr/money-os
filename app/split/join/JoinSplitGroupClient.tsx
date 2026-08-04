@@ -11,7 +11,6 @@ import {
 import {
   hasPwaOpenAttempted,
   isAndroidUserAgent,
-  isIosUserAgent,
   markPwaOpenAttempted,
   shouldOfferOpenInApp,
   tryOpenHttpsInAndroidApp,
@@ -224,33 +223,21 @@ export default function JoinSplitGroupClient() {
               Open Finkoin to join
             </div>
             <div className="mt-2 text-sm leading-relaxed text-[#5F5E5A]">
-              {isIosUserAgent()
-                ? "If Finkoin is on your home screen, open the app — we’ll take you to this group. New here? Continue in the browser."
-                : "If you already use Finkoin, open the app to join with your existing login. New here? Continue in the browser."}
+              If you already use Finkoin on this phone, open the app to join
+              with your existing login. New here? Continue in the browser —
+              after you join, the group shows up in the app too.
             </div>
-            {isAndroidUserAgent() ? (
-              <button
-                type="button"
-                onClick={openInApp}
-                className="mt-6 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-bold text-white"
-              >
-                Open in Finkoin app
-              </button>
-            ) : null}
-            {isIosUserAgent() ? (
-              <p className="mt-6 text-xs leading-relaxed text-[#9B9A94]">
-                Prefer the app? Close this tab and open Finkoin from your home
-                screen — your invite is saved and join will continue there.
-              </p>
-            ) : null}
+            <button
+              type="button"
+              onClick={openInApp}
+              className="mt-6 w-full rounded-xl bg-[#534AB7] px-4 py-3 text-sm font-bold text-white"
+            >
+              Open in Finkoin app
+            </button>
             <button
               type="button"
               onClick={continueInBrowser}
-              className={`w-full rounded-xl px-4 py-3 text-sm font-bold ${
-                isAndroidUserAgent()
-                  ? "mt-3 border border-[#E8E6F0] bg-white text-[#534AB7]"
-                  : "mt-6 bg-[#534AB7] text-white"
-              }`}
+              className="mt-3 w-full rounded-xl border border-[#E8E6F0] bg-white px-4 py-3 text-sm font-bold text-[#534AB7]"
             >
               Continue in browser
             </button>

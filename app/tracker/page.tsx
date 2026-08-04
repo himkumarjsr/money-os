@@ -54,6 +54,7 @@ import {
   monthHasStarted,
   planAutoIncomeCleanup,
   planMonthIncomeFromPrior,
+  trackerForwardLimit,
 } from "@/lib/trackerMonthIncome";
 import {
   expenseCoversChecklistItem,
@@ -304,6 +305,16 @@ function TrackerContent() {
       window.clearTimeout(midnightTimer);
     };
   }, []);
+
+  // If next month was open before unlock day, snap back to the allowed limit.
+  useEffect(() => {
+    const limit = trackerForwardLimit();
+    const selectedKey = selectedYear * 12 + selectedMonth;
+    const limitKey = limit.year * 12 + limit.month;
+    if (selectedKey <= limitKey) return;
+    setSelectedMonth(limit.month);
+    setSelectedYear(limit.year);
+  }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     // Already known from localStorage — skip the DB round-trip flash.
@@ -979,12 +990,10 @@ function TrackerContent() {
   const spentPercent =
     displayIncome > 0 ? Math.min((totalSpent / displayIncome) * 100, 100) : 0;
   const now = new Date();
-  // Allow current month + 1 (salary often lands on last working day / month-end).
-  const forwardLimitMonth = (now.getMonth() + 1) % 12;
-  const forwardLimitYear =
-    now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+  // Next month unlocks only on/after the last Friday of the current month.
+  const forwardLimit = trackerForwardLimit(now);
   const isAtForwardLimit =
-    selectedMonth === forwardLimitMonth && selectedYear === forwardLimitYear;
+    selectedMonth === forwardLimit.month && selectedYear === forwardLimit.year;
   const isAtBackLimit = trackerStart
     ? selectedMonth === trackerStart.month && selectedYear === trackerStart.year
     : false;

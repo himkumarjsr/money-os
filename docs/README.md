@@ -1,15 +1,16 @@
 # Finkoin docs
 
-Living overview of the money-os / Finkoin codebase. Synced to app **v0.4.0** (2026-07-18).
+Living overview of the money-os / Finkoin codebase. Synced to app **v0.4.0+** (2026-08-04).
 
 ## Source of truth
 
-| Document                                                | Role                                                                                                |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [`FINKOIN_SYSTEM.md`](../FINKOIN_SYSTEM.md) (repo root) | **Deep source of truth** — rules, runbooks, schema §34, form fields, analytics, “what not to touch” |
-| `docs/*` (this folder)                                  | **Maintained overview** — product map, APIs, data, env, functions, design. Must not contradict SoT  |
-| [`README.md`](../README.md)                             | Quick start only                                                                                    |
-| [`tests/TESTING.md`](../tests/TESTING.md)               | How to run unit + e2e tests                                                                         |
+| Document                                                                      | Role                                                                                               |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [`FINKOIN_SYSTEM.md`](../FINKOIN_SYSTEM.md) (repo root)                       | **Deep source of truth** — rules, runbooks, schema §§5/34/36, APIs §37, SEO/PWA §38, sync §39      |
+| `docs/*` (this folder)                                                        | **Maintained overview** — product map, APIs, data, env, functions, design. Must not contradict SoT |
+| [`README.md`](../README.md)                                                   | Quick start only                                                                                   |
+| [`tests/TESTING.md`](../tests/TESTING.md)                                     | How to run unit + e2e tests                                                                        |
+| [`supabase/USER_DATA_AUDIT_NOTES.sql`](../supabase/USER_DATA_AUDIT_NOTES.sql) | Read-only SQL notes for per-user DB audits                                                         |
 
 When code and docs disagree, **trust the code**, then update SoT + this folder.
 
