@@ -6,12 +6,17 @@ At the start of any new Cursor conversation paste:
 Use it as complete context for all changes.
 Do not break existing functionality.
 Check sections 27 (critical paths), 29 (analytics), 30 (runbooks),
-32 (requirements→solution→outcome), and 34 (split schema)
+32 (requirements→solution→outcome), 34 (split schema),
+36 (live DB inventory), 37 (API inventory), 38 (SEO/OG/PWA handoff)
 before making relevant changes."
 
 This file is the system source of truth for Finkoin (money-os).
 Update it after every significant change (flows, APIs, schema, UX).
-Last full sync: 2026-07-18 — app v0.4.0.
+Last full sync: 2026-08-04 — app v0.4.0+ (tracker month unlock, Split iOS join, OG SEO, DB audit notes).
+Companion docs: `docs/README.md`, `docs/CORE_ARCHITECTURE.md`, `docs/DATA_AND_STORES.md`,
+`docs/API_REFERENCE.md`, `docs/PRODUCT_SURFACE.md`, `docs/FUNCTIONS_REFERENCE.md`,
+`docs/DESIGN_SYSTEM.md`, `docs/ENV_AND_SCRIPTS.md`, `tests/TESTING.md`,
+`supabase/USER_DATA_AUDIT_NOTES.sql` (read-only SQL for per-user DB audits).
 ---
 
 ## TABLE OF CONTENTS
@@ -51,6 +56,10 @@ Last full sync: 2026-07-18 — app v0.4.0.
 33. Test Suite
 34. Split Schema (runtime tables)
 35. Home / Profile / Navigation UX (2026-07-18)
+36. Live database inventory (used vs unused, encryption, audit SQL)
+37. Complete backend API inventory (every `app/api/**/route.ts`)
+38. SEO / Open Graph / Share / Calculator surfaces (2026-08-04)
+39. Sync matrix (client ↔ Supabase ↔ server)
 
 # FINKOIN SYSTEM DOCUMENTATION
 
@@ -457,6 +466,22 @@ Complete inventory with one-line purpose per file:
 - `app/page.tsx`: hero subtitle `line-clamp-1` on mobile.
 - Tests: `profileAssetsPatch`, `splitInvite`, expanded `splitBalances` / `splitShares`.
 
+### 4.z Incremental inventory updates (2026-08-04)
+
+| Path                                                                     | Role                                                    |
+| ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `lib/pwaLaunch.ts` + `.test.ts`                                          | Standalone detect; Android-only open-in-app; intent URL |
+| `lib/seo.ts` (`socialImageTags`)                                         | Consistent OG/Twitter image tags                        |
+| `lib/trackerMonthIncome.ts` (`trackerForwardLimit`, `lastFridayOfMonth`) | Next-month unlock on last Friday                        |
+| `lib/calculatorInput.ts`                                                 | Money max + rate decimal helpers                        |
+| `lib/postOfficeSchemes.ts`                                               | India Post scheme rates/math (Jul–Sep 2026)             |
+| `components/ui/ShareButton.tsx`                                          | Native share / copy for calculators + Learn             |
+| `components/SplitInviteResume.tsx`                                       | Resume join (incl. logged-out → login)                  |
+| `scripts/generate-og-placeholders.mjs`                                   | Product + blog 1200×630 banners                         |
+| `public/og/og-*.png`, `public/og/blog/*.png`                             | Share images                                            |
+| `supabase/USER_DATA_AUDIT_NOTES.sql`                                     | Read-only per-user DB audit queries                     |
+| `app/calculators/calculator-seo.ts` (`CALC_OG_IMAGE` expanded)           | Per-calc OG paths                                       |
+
 ---
 
 ## 5. DATABASE SCHEMA
@@ -659,8 +684,39 @@ RLS: `clicks_own` insert check (auth.uid() == user_id).
 
 ### Extra tables from initial schema
 
-- `referrals`: referral tracking.
-- `user_stats`: per-user stats/metrics.
+- `referrals`: referral tracking — **live columns** are `referrer_id`, `referred_id`, `signed_up_at`, `tokens_awarded` (migration `001` scaffold names `referrer_user_id` / `referred_user_id` are **stale**; trust app code + live DB).
+- `user_stats`: per-user stats/metrics (may be lightly used).
+
+### Live public tables (verified 2026-08-04) — see also §36
+
+| Table                       | Feature                          | User link                     | Field encryption?                                    |
+| --------------------------- | -------------------------------- | ----------------------------- | ---------------------------------------------------- |
+| `users`                     | Profile                          | `id`                          | No (PII plaintext; passwords only in `auth.users`)   |
+| `user_analysis`             | Analyse structured               | `user_id`                     | No (jsonb plaintext)                                 |
+| `user_analyse_snapshots`    | Analyse backup                   | `user_id`                     | No (jsonb plaintext)                                 |
+| `user_financial_data`       | Encrypted health blob            | `user_id`                     | **Yes** AES-GCM (`encrypted_data`, `iv`, `auth_tag`) |
+| `gamification`              | FK / streak                      | `user_id`                     | No                                                   |
+| `fk_transactions`           | FK ledger                        | `user_id`                     | No                                                   |
+| `expense_transactions`      | Tracker spends                   | `user_id`                     | No                                                   |
+| `tracker_consent`           | Tracker consent                  | `user_id`                     | No                                                   |
+| `user_credit_cards`         | Card nicknames                   | `user_id`                     | `last4` fragment only                                |
+| `financial_obligations`     | Bills calendar                   | `user_id`                     | No                                                   |
+| `obligation_checklist`      | Monthly checklist                | `user_id`                     | No                                                   |
+| `user_policies`             | Policy vault                     | `user_id`                     | `policy_number` plaintext                            |
+| `notification_preferences`  | Tips / push prefs                | `user_id`                     | `push_token` secret                                  |
+| `push_subscriptions`        | Web Push                         | `user_id`                     | endpoint/keys secrets                                |
+| `user_notifications`        | In-app inbox                     | `user_id`                     | No                                                   |
+| `user_tip_history`          | Tip dedupe                       | `user_id`                     | No                                                   |
+| `app_feedback` / `feedback` | Feedback / testimonials          | `user_id`                     | Free-text may hold PII                               |
+| `insurance_clicks`          | Affiliate clicks                 | `user_id`                     | Soft PII                                             |
+| `tax_documents`             | Tax docs (if used)               | `user_id`                     | Treat as sensitive                                   |
+| `financial_profiles`        | **Legacy**                       | `user_id`                     | Prefer `user_analysis`                               |
+| `referrals`                 | Referral graph                   | `referrer_id` / `referred_id` | No                                                   |
+| `split_*` (6 tables)        | Finkoin Split                    | see §34                       | Invite `token` is secret                             |
+| `finance_tips`              | Tip catalog                      | n/a                           | No                                                   |
+| `finkoin_knowledge`         | RAG (may be absent on some envs) | n/a                           | No                                                   |
+
+**Audit SQL (copy/paste):** `supabase/USER_DATA_AUDIT_NOTES.sql`
 
 ---
 
@@ -1357,9 +1413,23 @@ Date fields (optional) collected after amounts: insurance renewal month/day, per
 - Consent gate (`TrackerConsent` + `finkoin_tracker_consent` / `tracker_consent` table).
 - Loads current-month + previous-month `expense_transactions` in parallel.
 - Summary card: income / spent / left with privacy eye (180° flip); bucket cards with purple icons and % caps.
+- **Month navigation:** back to first month with data; **forward** only through `trackerForwardLimit()` in `lib/trackerMonthIncome.ts`.
+  - **Default:** current calendar month only.
+  - **Next month unlocks on/after the last Friday** of the current month (`lastFridayOfMonth` / `isNextTrackerMonthUnlocked`). Example: on 4 Aug 2026 only August is open; from Fri 28 Aug, September unlocks.
+  - If the user somehow has a future month selected before unlock, UI snaps back to the limit.
 - **Financial calendar / obligations** (`ObligationsChecklist` + `obligationStore`): after income section — monthly checklist, mark paid/skip, add obligation modal; empty-state CTA. Expense descriptions matching EMI/SIP/insurance/rent keywords can suggest “Add to obligations?”.
 - **Month Safety Pulse** (`computeMonthSafetyPulse` → `MonthSafetyPulse`): Safe/Tight/Over, MoM spent delta, top movers, one action, daily safe spend when viewing the current calendar month. Amounts masked when eye is off.
+- **Credit card dues:** `CreditCardBillReminder` + `lib/trackerCreditCards.ts` (billing/due days, statement windows).
 - Add/edit via `AddExpenseModal`; soft refetch while modal open / on visibility to avoid PWA tap lock.
+- Share not required on tracker (PWA has no URL bar elsewhere — see calculators Share).
+
+### `/calculators` (+ `/calculators/[id]`, `/calculators/tax-regime-2026`, Post Office routes)
+
+- Hub + deep links via `CalculatorsClient` + `calculator-config` / `calculator-seo`.
+- **Share:** `components/ui/ShareButton.tsx` on every calculator (native `navigator.share` → clipboard fallback) — critical for installed PWA (no address bar).
+- **Money inputs:** capped at ₹99 crore (`CALCULATOR_MONEY_MAX`); rate fields accept decimals with slider sync (`lib/calculatorInput.ts`).
+- **Post Office schemes:** hub `/calculators/po` + dedicated routes (`po-savings`, `po-td`, `po-rd`, `nsc`, `po-kvp`, `po-mis`, `po-scss`, `po-ssy`) using `lib/postOfficeSchemes.ts` + Jul–Sep 2026 MoF/DoP rates.
+- **OG images:** `getOgImagePathForCalc` maps calc ids → `/og/og-*.png` (sip/swp/tax/emi/ppf/po/emergency/fire; else home).
 
 ### `/split` ecosystem
 
@@ -1393,8 +1463,11 @@ Date fields (optional) collected after amounts: insurance renewal month/day, per
 
 #### `/split/join?token=...` or `?code=...`
 
-- Invite join client in `JoinSplitGroupClient` (token **or** group `invite_code`).
-- If unauthenticated: persists redirect path then `/login?next=`.
+- Client: `JoinSplitGroupClient` (token **or** group `invite_code`).
+- Persist invite via `lib/splitAuthRedirect.ts` (localStorage **+** cookies) and resume via `components/SplitInviteResume.tsx` (root layout).
+- **PWA / mobile open-in-app (`lib/pwaLaunch.ts`):**
+  - **Android:** may offer “Open in Finkoin app” via `intent://` deep link carrying the full `/split/join?…` URL (WebAPK can land on join).
+  - **iOS:** **does not** offer “close browser and open home-screen app”. Safari/WhatsApp storage is siloed from the PWA — that path never delivered the invite. iOS continues **in-browser** → login → `POST /api/split/join` → group. After join (same account), membership is server-side so the PWA list shows the group once logged in.
 - After auth: `POST /api/split/join` `{ token }` or `{ code }` → `/split/[groupId]`.
 - Open token links: any logged-in account; email invites: matching email; code: any logged-in user.
 
@@ -2198,6 +2271,33 @@ Important implementation note:
 
 ## CHANGE LOG
 
+### 2026-08-04 — Tracker month unlock, Split iOS join, OG SEO, DB audit notes
+
+_Tracker:_
+
+- Next calendar month in `/tracker` unlocks only on/after the **last Friday** of the current month (`lib/trackerMonthIncome.ts`: `lastFridayOfMonth`, `isNextTrackerMonthUnlocked`, `trackerForwardLimit`). Mid-month (e.g. 4 Aug) shows **August only**; September appears from that Friday onward. Selection beyond the limit snaps back.
+
+_Split / PWA:_
+
+- Fixed broken iOS “close browser → open PWA” invite handoff (storage siloed). `shouldOfferOpenInApp` is **Android-only**; iOS joins in-browser. `SplitInviteResume` also routes logged-out users with a pending invite to `/login?next=…`.
+- Shared `components/ui/ShareButton.tsx` for calculators (and Learn share reuses it) so PWA users can share without an address bar.
+
+_SEO / OG:_
+
+- Regenerated product + blog OG PNGs via `npm run og:placeholders` (`scripts/generate-og-placeholders.mjs`) with real logo + tagline.
+- New banners: `og-emi`, `og-ppf`, `og-po`, `og-emergency`, `og-fire`; blog `know-taxation-in-india.png`.
+- `lib/seo.ts` `socialImageTags()` / `absoluteOgUrl()`; Learn articles always set OG/Twitter images; `CALC_OG_IMAGE` covers all indexable calculators; blog JSON-LD includes `image`.
+
+_Calculators:_
+
+- Post Office scheme calculators + Jul–Sep 2026 rates (`lib/postOfficeSchemes.ts`).
+- Money max ₹99 crore; rate decimal + slider sync (`lib/calculatorInput.ts`).
+
+_Docs / DB:_
+
+- `supabase/USER_DATA_AUDIT_NOTES.sql` — read-only per-user audit queries.
+- This file: §§36–39 inventory (DB used vs unused, every API route, SEO/OG/Share, sync matrix).
+
 ### 2026-07-18 — v0.4.0+ (doc sync: open invites, profile assets, home mobile UX)
 
 _Product / Split:_
@@ -2464,14 +2564,18 @@ Finkoin is installable as a PWA on **Android (Chrome)** and **iOS (Safari)**. Th
 
 | Item              | Location / behavior                                                                                                           |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Web manifest      | `public/manifest.json`                                                                                                        |
+| Web manifest      | `public/manifest.json` (`start_url: "/"`, `display: standalone`)                                                              |
 | Icons             | `public/icons/` (`icon-72x72.png` … `icon-512x512.png`; regenerate with `npm run pwa:icons`)                                  |
 | Splash screens    | `public/splash/` (`apple-splash-*.png`; regenerate with `npm run pwa:splashes`)                                               |
 | Service worker    | Auto-generated by **next-pwa** into `public/` at build time (`sw.js`, `workbox-*.js`); listed in `.gitignore` — do not commit |
 | Offline page      | Route **`/offline`** (`app/offline/page.tsx`); used as **`fallbacks.document`** in Workbox                                    |
-| Install prompt UI | `components/PWAInstallPrompt.tsx` (mounted from `AppInitializer`)                                                             |
-| **iOS**           | Users install via **Safari → Share → Add to Home Screen** (no programmatic install API)                                       |
-| **Android**       | Chrome may fire **`beforeinstallprompt`**; the in-app banner uses the deferred prompt when available                          |
+| Install prompt UI | `components/PWAInstallPrompt.tsx` (from `AppInitializer`) — **hidden** on `/split/join`, `/login`, `/auth/*`                  |
+| Launch helpers    | `lib/pwaLaunch.ts` — `isStandalonePwa`, `shouldOfferOpenInApp` (**Android only**), `tryOpenHttpsInAndroidApp`                 |
+| Split resume      | `SplitInviteResume` + `splitAuthRedirect` (localStorage + cookies; **not** shared Safari ↔ iOS PWA)                           |
+| **iOS**           | Install via **Safari → Share → Add to Home Screen** only — **no** auto-install; **no** deep-link into PWA with query URL      |
+| **Android**       | Chrome **`beforeinstallprompt`**; invite links can `intent://` into installed WebAPK with full path+query                     |
+
+**Cannot auto-install:** browsers block silent Add to Home Screen. Max = custom install button (Android) or guided Share steps (iOS).
 
 **Local PWA check:** run `npm run build` then `npm run start` (not `npm run dev`), open DevTools → Application → Service Workers / Manifest / Cache Storage.
 
@@ -2511,27 +2615,29 @@ This section documents runtime flow execution in exact sequence using current fu
 
 Client path (`app/split/join/JoinSplitGroupClient.tsx`):
 
-1. `useSearchParams()` reads `token`.
+1. `useSearchParams()` reads `token` and/or `code`.
 2. Guard waits for `useAuthStore().hasInitialized`.
-3. If token missing -> `setStatus("error")` with "Invalid invite link".
+3. If neither token nor code → `setStatus("error")` with "Invalid invite link".
 4. Calls `resolveAuthenticated()` from `lib/authSession.ts`.
 5. If unauthenticated:
-   - `saveSplitInviteToken(token)` (`localStorage: finkoin_split_token`)
-   - build `currentUrl = pathname + search`
-   - `saveSplitInviteRedirect(currentUrl)` (`localStorage: finkoin_split_redirect`)
-   - `router.replace("/login?next=<encoded currentUrl>")`
+   - `persistInvite` → `saveSplitInviteToken` / `saveSplitInviteRedirect` (localStorage **+** cookies).
+   - If `shouldOfferOpenInApp()` (**Android mobile browser only**):
+     - Optionally auto `tryOpenHttpsInAndroidApp(window.location.href)` once per join key.
+     - Show **open_app** UI (“Open in Finkoin app” + “Continue in browser”).
+   - Else (desktop / **iOS** / already standalone PWA):
+     - `router.replace("/login?next=<encoded join URL>")` — **do not** tell iOS users to close the tab and open the home-screen app (storage is siloed; invite would be lost).
 6. If authenticated:
-   - `fetch("/api/split/join", { method: "POST", credentials: "include", body: { token } })`
-   - On non-200 or `success !== true` -> error state + API message.
-   - On success -> optional `useSplitStore.getState().fetchGroups(user.id, userEmail, true)`
-   - success UI shown -> delayed `router.replace("/split/<groupId>")`.
+   - `fetch("/api/split/join", { method: "POST", credentials: "include", body: { token } | { code } })`
+   - On non-200 or `success !== true` → error state + API message (401 → login with invite preserved).
+   - On success → `clearSplitInviteRedirect()`, optional `fetchGroups`, success UI → delayed `router.replace("/split/<groupId>")`.
+
+Resume path (any page): `components/SplitInviteResume.tsx` peeks pending `/split/join…` from storage; if logged in → `router.replace(pending)`; if logged out → `/login?next=…`.
 
 Server path (`app/api/split/join/route.ts`):
 
-1. Parse body `{ token }`; reject if missing (`400`).
+1. Parse body `{ token }` or `{ code }`; reject if missing (`400`).
 2. Auth user from `createSupabaseServerClient().auth.getUser()`.
-3. Read invite row from `split_invitations` by `token`:
-   - `id, group_id, group_name, invited_email, status, expires_at`.
+3. Read invite row from `split_invitations` by `token` **or** resolve group via `invite_code`.
 4. Validate invite exists (`404`), not expired (`400`), status in `pending|accepted` (`400`).
 5. **If open invite** (`invited_email === __open__@finkoin.invite`):
    - If member already `active` for this email → return success (idempotent).
@@ -3062,80 +3168,76 @@ jsonb fields store JSON securely
 
 ---
 
-## SEO & organic discovery (2026-05-04)
+## SEO & organic discovery (2026-05-04; refreshed 2026-08-04)
 
-**Sitemap:** `app/sitemap.ts` → served at `/sitemap.xml`. Includes homepage, analyse, calculators hub, `/calculators/tax-regime-2026`, `/calculators/sip` (redirect route), tracker, learn, about, blog index, each `/blog/[slug]` article, and legal pages (privacy, terms, refund, disclaimer).
+**Sitemap:** `app/sitemap.ts` → `/sitemap.xml`. Includes homepage, analyse, split, tracker, portfolio, calculators hub, `/calculators/tax-regime-2026`, all `INDEXABLE_CALC_IDS` under `/calculators/[id]`, learn index + each article, about, blog index + each slug, legal pages. `lastModified` uses build time (`new Date()`) for most routes; blog uses `publishedAt`.
 
-**Robots:** `app/robots.ts` → `/robots.txt`. Allows `GPTBot`, `anthropic-ai`, `PerplexityBot`; disallows `/api/`, `/analyse/fixplan`, `/auth/`, `/_next/`; sitemap URL `https://finkoin.com/sitemap.xml`.
+**Robots:** `app/robots.ts` → `/robots.txt`. Allows major AI bots; disallows `/api/`, `/analyse/fixplan`, `/auth/`, `/_next/`; sitemap from `SITE_URL`.
 
-**Metadata:** Per-route `metadata` / `generateMetadata` on landing (`app/page.tsx`), analyse layout, calculators hub + tax landing, tracker layout, learn, about, blog index & articles, result layout, calculator `[id]` layout. Uses `metadataBase` from `NEXT_PUBLIC_SITE_URL` and absolute titles where the root `title.template` would duplicate the brand.
+**Metadata helpers:** `lib/seo.ts` — `SITE_URL`, `FINKOIN_TAGLINE*`, `generatePageMeta`, **`socialImageTags` / `absoluteOgUrl` / `DEFAULT_OG_IMAGE_PATH`** (1200×630 + alt).
 
-**Structured data (JSON-LD):** Root `app/layout.tsx` — WebApplication (head), `@graph` in body with Organization (logo `icons/icon-512x512.png`, `hello@finkoin.com`, sameAs Twitter/LinkedIn) and WebSite (`SearchAction` → `/learn?q={search_term_string}`). Homepage FAQPage; calculators hub uses **tax-specific `WebApplication`** JSON-LD when the active calc is **`tax-regime`** (otherwise generic **`SoftwareApplication`**); dedicated **`/calculators/tax-regime-2026`** page includes full tax **`WebApplication`** + FAQPage; blog articles `Article` schema.
+**OG / Twitter images (shipped assets under `public/og/`):**
 
-**URL normalization:** `lib/seo.ts` **`SITE_URL`** and `app/sitemap.ts` **`baseUrl`** trim trailing slashes so composed OG/metadata URLs avoid **`//`** paths.
+| File                                                   | Used by                                         |
+| ------------------------------------------------------ | ----------------------------------------------- |
+| `og-home.png`                                          | Default / learn hub / blog hub / many fallbacks |
+| `og-analyse.png`                                       | `/analyse`                                      |
+| `og-sip.png` / `og-swp.png`                            | SIP / SWP calculators + related Learn           |
+| `og-tax-calculator.png`                                | Tax regime + tax Learn                          |
+| `og-emi.png`                                           | EMI / home / car / rent\* calcs + loan Learn    |
+| `og-ppf.png`                                           | PPF                                             |
+| `og-po.png`                                            | Post Office + NSC                               |
+| `og-emergency.png` / `og-fire.png`                     | Emergency / FIRE                                |
+| `og-tracker.png` / `og-split.png` / `og-portfolio.png` | Product surfaces                                |
+| `og/blog/<slug>.png`                                   | Each blog article (fallback home if missing)    |
 
-**OG images:** `public/og/home.png`, `tax-calculator.png`, `analyse.png`, and `public/og/blog/<slug>.png` — generated via `npm run og:placeholders` (`scripts/generate-og-placeholders.mjs`, Sharp). Replace with designed 1200×630 assets when ready.
+Regenerate: `npm run og:placeholders` → `scripts/generate-og-placeholders.mjs` (Sharp + `public/logo.png`).
 
-**Internal links:** Tax landing footer links analyse / learn / blog / SIP; learn header links analyse; blog index links tools; analyse result page “Keep going” links tax calculator, tracker, learn; article bodies link calculators and health check.
+**Structured data:** Root Organization + WebSite; homepage FAQ; calculator `WebApplication` + FAQ; blog `Article` (+ `image`).
 
-**Performance / headers:** `next.config.mjs` — `images.formats` (AVIF/WebP), `minimumCacheTTL`, `experimental.optimizePackageImports` (`recharts`, `framer-motion`), security/cache headers on `/:path*`, `/icons/*`, `/fonts/*`.
+**Canonical host:** `https://www.finkoin.com` via `NEXT_PUBLIC_SITE_URL` / `SITE_URL` fallbacks.
 
-**Changelog — 2026-05-04:** Full SEO pass: blog as real routes with `lib/blogContent.ts`, dedicated tax calculator URL, expanded sitemap/robots, JSON-LD and OG placeholders, metadata on key marketing routes.
+**Changelog — 2026-05-04:** Initial SEO pass (blog routes, tax URL, sitemap, OG placeholders).
 
-**Changelog — 2026-05-07:** Trailing-slash normalization; calculators hub conditional **`WebApplication`** for tax tool; India taxation education articles in Learn + Blog (see **§CHANGE LOG 2026-05-07**). **GA4** instrumentation documented in **§29**.
+**Changelog — 2026-05-07:** Trailing-slash normalization; GA4 §29.
 
-**Changelog — 2026-07-18 (v0.4.0) — API hardening + Split production-ready:**
+**Changelog — 2026-07-18:** www host standardization; founder Person JSON-LD.
 
-_Security / API hardening:_
+**Changelog — 2026-08-04:** Full OG remap + Learn images + calculator Share + Post Office SEO paths.
 
-- New `lib/apiGuard.ts`: shared `getAuthedUser()`, `unauthorized()`, `tooManyRequests()`, and an in-memory fixed-window `rateLimit()` (per warm instance; back with Redis for a strict global limit).
-- `POST /api/ai/analyse` now **requires auth** + rate-limited (10/hr/user) — protects the paid Groq call from anonymous cost/DoS abuse.
-- `POST /api/split/invite` now **requires auth**, verifies the caller is an **active member**, and derives the inviter identity from the session (no longer trusts `invitedById`/`invitedByName` from the client). Email is format-validated; rate-limited 30/hr.
-- `POST /api/split/settle` now uses the **admin client after verifying membership**, validates the amount, blocks self-settlement, checks the recipient is in the group, and records the exact settlement amount (removed the old amount-blind "mark all shares settled" logic). Rate-limited 60/hr.
-- `POST /api/feedback` now derives `user_id` from the **session** (kills FK-token farming via forged `user_id`); anonymous feedback allowed but earns no FK; message/context length-capped; rate-limited 10/hr; removed PII (`console.log` of full body) and verbose error detail from responses.
-- `POST /api/razorpay/create-order` now **requires auth** + rate-limited (15/hr); tags order with `user_id`; removed key-prefix/verbose logging.
-- `next.config.mjs`: added `Referrer-Policy`, `Permissions-Policy`, and a conservative **CSP** (`base-uri 'self'; object-src 'none'; frame-ancestors 'self'; upgrade-insecure-requests`) that hardens clickjacking/base-injection/object-embedding without breaking inline scripts/styles or the payment flow.
+---
 
-_Split (Finkoin Split) — production-ready + debt simplification:_
+## Tip delivery SQL helpers (ops)
 
-- New `lib/splitBalances.ts` (+ `lib/splitBalances.test.ts`): deterministic, unit-tested balance engine. `computeNetBalances()` derives per-member net from expenses + shares + settlements (amount-accurate); `simplifyDebts()` implements minimum-cash-flow greedy matching (≤ n−1 transfers). Replaces reliance on the opaque `get_split_balances` DB RPC.
-- New `GET /api/split/balances?groupId=`: auth + membership-checked, computes `{ net, edges }` server-side via admin (bypasses settlement RLS uncertainty).
-- `store/splitStore.ts`: added `netBalances` state; `fetchGroupDetail` now fetches simplified `edges` + `net` from the balances API instead of the RPC; added `getMyNetBalance()`.
-- `app/split/[groupId]/page.tsx`: header net now from precise net balances; **"Simplified settle-up"** list (fewest payments) with per-row **Settle** buttons; new per-member **Balances** summary; proper **Record a payment** modal (replaces `window.prompt`); realtime now also refreshes on `split_settlements` and expense deletes.
-- `app/split/page.tsx`: corrected misleading delete copy (soft close, history kept, creator-only).
+```sql
+-- Find user ID
+SELECT id FROM auth.users WHERE email = 'USER_EMAIL';
 
--- 1. Find user ID
-SELECT id FROM auth.users
-WHERE email = 'himkumarjsr@gmail.com';
-
--- 2. Deliver one tip (replace YOUR_ID)
+-- Deliver one tip (replace YOUR_ID)
 INSERT INTO public.user_notifications
-(user_id, tip_id, title, content,
-emoji, category, is_read, shown_as_popup)
-SELECT 'YOUR_ID', out_tip_id, out_title,
-out_content, out_emoji, out_category,
-false, false
+  (user_id, tip_id, title, content, emoji, category, is_read, shown_as_popup)
+SELECT 'YOUR_ID', out_tip_id, out_title, out_content, out_emoji, out_category, false, false
 FROM get_next_tip_for_user('YOUR_ID');
 
--- 3. Check your notifications inbox
-SELECT title, emoji, is_read,
-shown_as_popup, created_at
+-- Inbox
+SELECT title, emoji, is_read, shown_as_popup, created_at
 FROM public.user_notifications
 WHERE user_id = 'YOUR_ID'
 ORDER BY created_at DESC;
 
--- 4. Reset for retesting
+-- Reset popup flags for retesting
 UPDATE public.user_notifications
 SET shown_as_popup = false, is_read = false
 WHERE user_id = 'YOUR_ID';
+```
 
--- 5. Clear tip history (reset no-repeat)
-DELETE FROM public.user_tip_history
-WHERE user_id = 'YOUR_ID';
+Full per-user audits: `supabase/USER_DATA_AUDIT_NOTES.sql`.
 
--- 6. Delete all notifications (fresh start)
-DELETE FROM public.user_notifications
-WHERE user_id = 'YOUR_ID';
+```sql
+-- Optional reset helpers (destructive — use only on test accounts)
+DELETE FROM public.user_tip_history WHERE user_id = 'YOUR_ID';
+DELETE FROM public.user_notifications WHERE user_id = 'YOUR_ID';
+```
 
 ---
 
@@ -3150,10 +3252,10 @@ Use this as the master inventory of what the app ships. Status: **shipped** | **
 | Financial health check        | `/analyse`, `analyse-onboarding-form.tsx`, `financialEngine.ts` | Collect India-relevant profile once; score + gaps | 7-step RHF+Zod form → `analyseFinances` → snapshot            | Score, buckets, checklist, plan steps on `/analyse/result` | shipped     |
 | AI fix plan                   | `/analyse/fixplan`, `/api/ai/analyse`, RAG                      | Explain priorities with India knowledge           | Groq + `search_by_keywords` + cache                           | Personalized plan + PDF                                    | shipped     |
 | Paywall unlock                | Razorpay routes, paywall modal                                  | Monetize deep plan                                | ₹99 order + verify → `subscription_tier=pro`; FK redeem paths | Access to fixplan                                          | shipped     |
-| Calculators hub               | `/calculators`, `calculator-config.ts`                          | Instant tools without full analyse                | Lazy-loaded SIP/SWP/EMI/tax/FIRE/PPF/NSC/home/car/rentbuy/…   | Live math + charts; GA `tool_open`                         | shipped     |
+| Calculators hub               | `/calculators`, Post Office routes, `ShareButton`               | Instant tools without full analyse                | Lazy SIP/SWP/EMI/tax/FIRE/PPF/NSC/PO… + OG map                | Live math; GA `tool_open`; PWA share                       | shipped     |
 | Tax regime FY2026             | `/calculators/tax-regime-2026`, `taxRegimeComparisonFY2026.ts`  | Old vs new regime compare                         | Client-side engine + multi-select employment                  | Take-home comparison + alerts                              | shipped     |
-| Expense tracker               | `/tracker`, `expense_transactions`                              | Monthly spend vs caps                             | Categories + Safety Pulse                                     | Safe/Tight/Over coaching                                   | shipped     |
-| FK Split                      | `/split/*`, `/api/split/*`                                      | Split bills with friends                          | Groups, open/email invites, shares, balances, settle          | Shared expenses + fewest payments                          | shipped     |
+| Expense tracker               | `/tracker`, `trackerMonthIncome.ts`                             | Monthly spend; controlled forward month           | Safety Pulse + **last-Friday next-month unlock**              | Sept locked until last Fri of Aug                          | shipped     |
+| FK Split                      | `/split/*`, `/api/split/*`, `pwaLaunch.ts`                      | Split bills with friends                          | Open/email invites; **iOS join in-browser**                   | Shared expenses + fewest payments                          | shipped     |
 | Profile assets                | `/profile` `ProfileAssets`                                      | Edit net-worth inputs after analyse               | Patch helpers + `syncProfileAssets`                           | App-wide net worth/checklist stay current                  | shipped     |
 | Investments view              | `/investments`                                                  | Snapshot of assets                                | Read from financial store / analysis                          | Read-only rollup                                           | shipped     |
 | Goals                         | `/goals`                                                        | Goal tracking UI                                  | Cards UI                                                      | Most actions coming soon                                   | placeholder |
@@ -3350,4 +3452,127 @@ Manual SQL also exists for tracker (`supabase/manual/expense_tracker.sql`) and a
 
 At the start of any new Cursor conversation paste:
 
-> Read FINKOIN_SYSTEM.md first. Use it as complete context for all changes. Do not break existing functionality. Check sections **27** (critical paths), **29** (analytics), **30** (runbooks), **32** (requirements), and **34** (split schema) before making relevant changes.
+> Read FINKOIN_SYSTEM.md first. Use it as complete context for all changes. Do not break existing functionality. Check sections **27** (critical paths), **29** (analytics), **30** (runbooks), **32** (requirements), **34** (split schema), **36** (DB inventory), **37** (API inventory), **38** (SEO/OG/PWA), **39** (sync matrix) before making relevant changes.
+
+---
+
+## 36. LIVE DATABASE INVENTORY (USED VS UNUSED, ENCRYPTION, AUDIT)
+
+**Source of truth for audits:** `supabase/USER_DATA_AUDIT_NOTES.sql` (read-only SELECT notes).  
+**Companion:** `docs/DATA_AND_STORES.md`.
+
+### 36.1 Heavily used (product-critical)
+
+| Table / object                                                                                                 | Written by                          | Read by                         | Notes                                  |
+| -------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------- | -------------------------------------- |
+| `auth.users`                                                                                                   | Supabase Auth                       | Session / profile               | Passwords hashed by Supabase           |
+| `public.users`                                                                                                 | `handle_new_user`, profile/settings | `authStore`, profile, referrals | App profile                            |
+| `user_analyse_snapshots`                                                                                       | Analyse / `syncProfileAssets`       | Restore / cross-device          | Full plaintext JSON blob               |
+| `user_analysis`                                                                                                | Analyse / AI cache paths            | Result / fixplan                | May be **empty** while snapshot exists |
+| `user_financial_data`                                                                                          | `/api/financial-data`               | Same API decrypt                | **App AES-GCM** only table             |
+| `gamification` + `fk_transactions`                                                                             | Rewards / unlock                    | Profile, leaderboard            | FK ledger                              |
+| `expense_transactions`                                                                                         | Tracker                             | Tracker                         | Plain rows — normal for reporting      |
+| `tracker_consent` / `user_credit_cards`                                                                        | Tracker                             | Tracker                         | Consent + nicknames                    |
+| `financial_obligations` / `obligation_checklist`                                                               | Obligations store + sync            | Tracker calendar                | RPC `generate_monthly_checklist`       |
+| `split_*` (6)                                                                                                  | Split APIs                          | Split UI                        | See §34                                |
+| `notification_preferences` / `push_subscriptions` / `user_notifications` / `user_tip_history` / `finance_tips` | Tip/push pipelines                  | Bell, MorningTip, cron          |                                        |
+
+### 36.2 Partial / optional
+
+| Table                       | Status                                                    |
+| --------------------------- | --------------------------------------------------------- |
+| `user_policies`             | Policy vault — shipped UI; may be empty per user          |
+| `app_feedback` / `feedback` | Feedback + testimonials                                   |
+| `insurance_clicks`          | Click logging; full affiliate APIs **not** shipped        |
+| `tax_documents`             | Present in live DB — confirm feature usage before relying |
+| `referrals`                 | Live columns `referrer_id` / `referred_id`                |
+| `user_stats`                | Scaffold; lightly used                                    |
+
+### 36.3 Legacy / unused for new writes
+
+| Table                | Guidance                                     |
+| -------------------- | -------------------------------------------- |
+| `financial_profiles` | Prefer `user_analysis` + snapshots           |
+| `finkoin_knowledge`  | RAG — may be **absent** on some environments |
+
+### 36.4 Encryption reality
+
+- **Disk at rest:** Supabase (all tables).
+- **Field-level app encryption:** only `user_financial_data`.
+- **Hashes (not passwords):** `user_analysis.profile_hash`, `user_financial_data.data_hash`.
+- **Secrets:** push keys, invite tokens, `pan_last4` / card `last4` fragments.
+- Encrypting tracker rows does **not** shrink storage and breaks SQL aggregates — keep plain structured expenses.
+
+---
+
+## 37. COMPLETE BACKEND API INVENTORY (`app/api/**/route.ts`)
+
+Also see `docs/API_REFERENCE.md`. Auth = cookie session unless noted.
+
+| Route                               | Methods         | Auth                         | Role                        |
+| ----------------------------------- | --------------- | ---------------------------- | --------------------------- |
+| `/api/ai/analyse`                   | POST            | Yes + rate limit             | Groq AI fix plan            |
+| `/api/financial-data`               | GET/POST        | Yes                          | Encrypted health blob R/W   |
+| `/api/feedback`                     | POST            | Optional (FK only if authed) | Feedback widget             |
+| `/api/testimonials`                 | GET             | Public                       | Featured testimonials       |
+| `/api/auth/sign-out`                | POST            | Session                      | Server sign-out             |
+| `/api/razorpay/checkout-config`     | GET             | —                            | Public key / amounts        |
+| `/api/razorpay/create-order`        | POST            | Yes + RL                     | Create ₹ order              |
+| `/api/razorpay/verify-payment`      | POST            | Yes                          | Verify + upgrade tier       |
+| `/api/obligations/reminders`        | GET/POST        | Cron/admin patterns          | Obligation reminder fan-out |
+| `/api/notifications/welcome-tip`    | POST            | —                            | Welcome tip email/path      |
+| `/api/notifications/send-daily-tip` | POST            | Cron                         | Daily tip send              |
+| `/api/notifications/send-test-tip`  | POST            | Ops                          | Test tip                    |
+| `/api/notifications/deliver-tip`    | POST            | —                            | Deliver tip to inbox        |
+| `/api/notifications/push-subscribe` | POST            | Yes                          | Save Web Push subscription  |
+| `/api/split/groups`                 | GET/POST/DELETE | Yes                          | List/create/soft-delete     |
+| `/api/split/groups/[groupId]`       | GET/DELETE      | Yes                          | Detail / hard-delete admin  |
+| `/api/split/invite`                 | POST            | Yes + member + RL            | Create invite URL           |
+| `/api/split/join`                   | POST            | Yes                          | Accept token/code           |
+| `/api/split/members`                | GET/DELETE      | Yes                          | Members / remove            |
+| `/api/split/expenses`               | POST            | Yes                          | Add expense                 |
+| `/api/split/expenses/[expenseId]`   | PUT/DELETE      | Yes                          | Edit / soft-delete          |
+| `/api/split/balances`               | GET             | Yes + member                 | Net + simplify edges        |
+| `/api/split/settle`                 | POST            | Yes + RL                     | Record settlement           |
+
+Client-heavy features (Analyse engine, Tracker ledger, Calculators, Learn) talk to **Supabase directly** with RLS — not only via these APIs.
+
+---
+
+## 38. SEO / OPEN GRAPH / SHARE / CALCULATOR SURFACES (2026-08-04)
+
+| Concern                 | Files                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| Site URL + meta helpers | `lib/seo.ts`                                                                                    |
+| Sitemap / robots        | `app/sitemap.ts`, `app/robots.ts`                                                               |
+| Calc SEO + OG map       | `app/calculators/calculator-seo.ts` (`getOgImagePathForCalc`, `SEO_COPY`, `INDEXABLE_CALC_IDS`) |
+| Learn SEO overrides     | `lib/learnSeo.ts` + `app/learn/[id]/page.tsx` (`withLearnShareImages`)                          |
+| Blog OG                 | `app/blog/[slug]/page.tsx` (+ JSON-LD `image`)                                                  |
+| OG generator            | `scripts/generate-og-placeholders.mjs` → `npm run og:placeholders`                              |
+| Share (PWA)             | `components/ui/ShareButton.tsx`                                                                 |
+| Post Office rates/math  | `lib/postOfficeSchemes.ts`, `components/calculators/postOffice/*`                               |
+| Calculator inputs       | `lib/calculatorInput.ts` (`CALCULATOR_MONEY_MAX = 99_00_00_000`)                                |
+
+Tagline for banners/meta: **Know it. Fix it. Grow it.** / **Your complete money life.** (`FINKOIN_TAGLINE*`).
+
+---
+
+## 39. SYNC MATRIX (CLIENT ↔ SUPABASE ↔ SERVER)
+
+| Domain                    | Client source                              | Persistence                                           | Realtime / refresh                    |
+| ------------------------- | ------------------------------------------ | ----------------------------------------------------- | ------------------------------------- |
+| Auth session              | `authStore` + middleware                   | Supabase cookies / JWT                                | `onAuthStateChange`                   |
+| Analyse profile           | `financialStore`                           | `user_analyse_snapshots` (+ optional `user_analysis`) | Soft restore on login                 |
+| Encrypted analyse payload | `/api/financial-data`                      | `user_financial_data` ciphertext                      | On demand                             |
+| FK / streaks              | `gamificationStore`                        | `gamification`, `fk_transactions`                     | Realtime on `gamification`            |
+| Tracker expenses          | Tracker page / modal                       | `expense_transactions`                                | Soft refetch on focus/visibility      |
+| Obligations               | `obligationStore`                          | `financial_obligations`, `obligation_checklist`       | Sync from health-check; checklist RPC |
+| Split groups              | `splitStore`                               | `split_*` via `/api/split/*`                          | Realtime members/expenses/settlements |
+| Split invite handoff      | `splitAuthRedirect` + `SplitInviteResume`  | localStorage + cookies (same browser profile)         | Login `?next=` / resume on boot       |
+| Tips / push               | `notificationStore`, MorningTip, cron APIs | prefs, subscriptions, inbox, tip history              | Realtime inbox inserts                |
+| Portfolio                 | `portfolioStore`                           | Mostly client + optional APIs                         | —                                     |
+| Leaderboard               | `/leaderboard`                             | `leaderboard_view` + cache                            | Invalidate on gamification            |
+
+**What is NOT synced Safari → iOS PWA:** localStorage/cookies for invite tokens (siloed). Join must complete in the browser that opened the link (or Android intent deep-link).
+
+**Docs index:** `docs/README.md` · Architecture `docs/CORE_ARCHITECTURE.md` · Product routes `docs/PRODUCT_SURFACE.md` · Functions `docs/FUNCTIONS_REFERENCE.md` · Design `docs/DESIGN_SYSTEM.md` · Env/scripts `docs/ENV_AND_SCRIPTS.md` · Tests `tests/TESTING.md`.
