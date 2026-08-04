@@ -27,6 +27,40 @@ export function monthHasStarted(
   return todayStart.getTime() >= first.getTime();
 }
 
+function startOfLocalDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Last Friday (local calendar) of the given month. */
+export function lastFridayOfMonth(year: number, monthIndex: number): Date {
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  const offset = (lastDay.getDay() - 5 + 7) % 7;
+  return new Date(year, monthIndex, lastDay.getDate() - offset);
+}
+
+/**
+ * Next tracker month unlocks on/after the last working Friday of the
+ * current calendar month (salary often credits around month-end).
+ */
+export function isNextTrackerMonthUnlocked(today: Date = new Date()): boolean {
+  const unlock = lastFridayOfMonth(today.getFullYear(), today.getMonth());
+  return startOfLocalDay(today).getTime() >= startOfLocalDay(unlock).getTime();
+}
+
+/** Farthest month the tracker month-switcher may open. */
+export function trackerForwardLimit(today: Date = new Date()): {
+  month: number;
+  year: number;
+} {
+  const month = today.getMonth();
+  const year = today.getFullYear();
+  if (!isNextTrackerMonthUnlocked(today)) {
+    return { month, year };
+  }
+  if (month === 11) return { month: 0, year: year + 1 };
+  return { month: month + 1, year };
+}
+
 export function sumLoggedIncome(txns: IncomeLikeTxn[]): number {
   return txns.reduce((sum, t) => {
     if (t.bucket !== "income") return sum;

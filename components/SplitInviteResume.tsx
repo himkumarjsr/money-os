@@ -6,9 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 /**
- * After login (any page), if a Split invite is still pending in
- * localStorage/cookies, send the user to /split/join?token=… so membership
- * is created (including when the installed PWA opens after a browser invite).
+ * If a Split invite is pending in localStorage/cookies (same browser/PWA
+ * storage), route to join — or to login with ?next= when signed out.
+ *
+ * Note: iOS Safari/WhatsApp storage is siloed from the home-screen PWA, so
+ * invites opened in those browsers must complete join in-browser; this
+ * resume path only helps when storage is shared (e.g. Android Chrome ↔ TWA).
  */
 export function SplitInviteResume() {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
@@ -18,7 +21,7 @@ export function SplitInviteResume() {
   const attempted = useRef(false);
 
   useEffect(() => {
-    if (!hasInitialized || !isLoggedIn) return;
+    if (!hasInitialized) return;
     if (attempted.current) return;
     if (pathname?.startsWith("/split/join")) return;
     if (pathname?.startsWith("/login") || pathname?.startsWith("/auth/")) {
@@ -31,7 +34,11 @@ export function SplitInviteResume() {
     attempted.current = true;
     // Keep invite storage until join succeeds — clearing here dropped tokens when
     // auth was still settling and left users stuck on a bare join URL / home.
-    router.replace(pending);
+    if (isLoggedIn) {
+      router.replace(pending);
+      return;
+    }
+    router.replace(`/login?next=${encodeURIComponent(pending)}`);
   }, [hasInitialized, isLoggedIn, pathname, router]);
 
   return null;

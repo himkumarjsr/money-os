@@ -3,7 +3,9 @@ import {
   EXPENSE_SUBCATEGORY_TO_OBLIGATION,
   SAVINGS_CARRY_FORWARD_DESC,
   computeMonthLeftover,
+  isNextTrackerMonthUnlocked,
   isSavingsCarryForwardTxn,
+  lastFridayOfMonth,
   listSavingsCarryForward,
   monthHasStarted,
   planAutoIncomeCleanup,
@@ -15,6 +17,7 @@ import {
   sumLoggedIncome,
   sumSalaryIncome,
   sumSavingsCarryForward,
+  trackerForwardLimit,
 } from "./trackerMonthIncome";
 
 describe("monthHasStarted", () => {
@@ -25,6 +28,54 @@ describe("monthHasStarted", () => {
   it("is true on/after the 1st", () => {
     expect(monthHasStarted(7, 2026, new Date(2026, 7, 1))).toBe(true);
     expect(monthHasStarted(6, 2026, new Date(2026, 6, 15))).toBe(true);
+  });
+});
+
+describe("last Friday next-month unlock", () => {
+  it("finds last Friday of August 2026 (28th)", () => {
+    const d = lastFridayOfMonth(2026, 7); // August
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(7);
+    expect(d.getDate()).toBe(28);
+    expect(d.getDay()).toBe(5);
+  });
+
+  it("keeps next month locked before last Friday", () => {
+    // 4 Aug 2026 — well before last Friday (28 Aug)
+    expect(isNextTrackerMonthUnlocked(new Date(2026, 7, 4))).toBe(false);
+    expect(trackerForwardLimit(new Date(2026, 7, 4))).toEqual({
+      month: 7,
+      year: 2026,
+    });
+  });
+
+  it("unlocks next month on last Friday", () => {
+    expect(isNextTrackerMonthUnlocked(new Date(2026, 7, 28))).toBe(true);
+    expect(trackerForwardLimit(new Date(2026, 7, 28))).toEqual({
+      month: 8,
+      year: 2026,
+    });
+  });
+
+  it("stays unlocked after last Friday through month end", () => {
+    expect(isNextTrackerMonthUnlocked(new Date(2026, 7, 31))).toBe(true);
+    expect(trackerForwardLimit(new Date(2026, 7, 31))).toEqual({
+      month: 8,
+      year: 2026,
+    });
+  });
+
+  it("wraps year from December last Friday", () => {
+    // Dec 2026 last Friday = 25 Dec
+    expect(lastFridayOfMonth(2026, 11).getDate()).toBe(25);
+    expect(trackerForwardLimit(new Date(2026, 11, 25))).toEqual({
+      month: 0,
+      year: 2027,
+    });
+    expect(trackerForwardLimit(new Date(2026, 11, 20))).toEqual({
+      month: 11,
+      year: 2026,
+    });
   });
 });
 

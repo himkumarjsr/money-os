@@ -123,7 +123,7 @@ describe("shouldOfferOpenInApp", () => {
     ).toBe(false);
   });
 
-  it("offers on production mobile browser", () => {
+  it("offers on production Android browser only (iOS cannot deep-link PWAs)", () => {
     expect(
       shouldOfferOpenInApp({
         hostname: "www.finkoin.com",
@@ -137,6 +137,6 @@ describe("shouldOfferOpenInApp", () => {
         userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)",
         standalone: false,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
