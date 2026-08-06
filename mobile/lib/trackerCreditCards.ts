@@ -1134,23 +1134,28 @@ export function dismissCreditCardBillReminder(
   }
 }
 
-export function hasTrackerConsentLocal(): boolean {
-  if (typeof window === "undefined") return false;
+function lsGet(key: string): string | null {
   try {
-    return (
-      localStorage.getItem(TRACKER_CONSENT_STORAGE_KEY) ===
-      TRACKER_CONSENT_VERSION
-    );
+    if (typeof localStorage === "undefined") return null;
+    return localStorage.getItem(key);
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function setTrackerConsentLocal(): void {
-  if (typeof window === "undefined") return;
+function lsSet(key: string, value: string): void {
   try {
-    localStorage.setItem(TRACKER_CONSENT_STORAGE_KEY, TRACKER_CONSENT_VERSION);
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(key, value);
   } catch {
-    /* ignore */
+    /* ignore (React Native has no localStorage) */
   }
+}
+
+export function hasTrackerConsentLocal(): boolean {
+  return lsGet(TRACKER_CONSENT_STORAGE_KEY) === TRACKER_CONSENT_VERSION;
+}
+
+export function setTrackerConsentLocal(): void {
+  lsSet(TRACKER_CONSENT_STORAGE_KEY, TRACKER_CONSENT_VERSION);
 }
