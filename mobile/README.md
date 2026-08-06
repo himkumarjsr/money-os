@@ -1,27 +1,32 @@
 # Finkoin mobile (Expo SDK 54)
 
-Do not modify web code. This app lives only under `mobile/`.
+## Google OAuth return-to-app
 
-## Run
+Expo Go redirects to an **`exp://…`** URL, not only `finkoin://`.  
+If Google stays on the account picker dialog, Supabase blocked/mismatched the redirect.
+
+### Supabase → Authentication → URL configuration → Redirect URLs
+
+Add **all** of these:
+
+```
+exp://**
+finkoin://**
+finkoin://auth/callback
+```
+
+Also the exact URI from Metro logs (`[oauth] redirectTo = …`) after tapping Google.
+
+### After changing redirects
+
+1. Save in Supabase
+2. Reload the app
+3. Try **Continue with Google** again
+
+On success the in-app browser closes and you land on Home.
+
+### Run
 
 ```bash
-cd mobile
-npm start
+cd mobile && npx expo start --lan --clear
 ```
-
-Expo Go **54** · same Wi‑Fi · scan QR. Prefer LAN over `--tunnel`.
-
-## Env
-
-Copy from web `.env.local`:
-
-```
-EXPO_PUBLIC_SUPABASE_URL=…   # same as NEXT_PUBLIC_SUPABASE_URL
-EXPO_PUBLIC_SUPABASE_ANON_KEY=…  # same as NEXT_PUBLIC_SUPABASE_ANON_KEY
-```
-
-## V1
-
-- Auth (email) + home dashboard
-- Tabs: Health / Tools / Track / Profile (placeholders deepen next)
-- Shared engines copied into `mobile/lib/`

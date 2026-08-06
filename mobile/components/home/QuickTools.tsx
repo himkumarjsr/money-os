@@ -1,51 +1,51 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 
-export const QUICK_TOOLS = [
+export const QUICK_TOOLS: Array<{
+  label: string;
+  route: string;
+  icon: AppIconName;
+  bg: string;
+}> = [
   {
-    emoji: "📊",
     label: "Health Check",
     route: "/(tabs)/analyse",
+    icon: "chart",
     bg: "#EEEDFE",
-    color: "#534AB7",
   },
   {
-    emoji: "🧾",
     label: "Tax Calc",
     route: "/(tabs)/calculators",
+    icon: "receipt",
     bg: "#E1F5EE",
-    color: "#1D9E75",
   },
   {
-    emoji: "📈",
     label: "SIP Calc",
     route: "/(tabs)/calculators",
+    icon: "trending",
     bg: "#FFF3E0",
-    color: "#BA7517",
   },
   {
-    emoji: "📒",
     label: "Tracker",
     route: "/(tabs)/tracker",
+    icon: "notebook",
     bg: "#FCEBEB",
-    color: "#E24B4A",
   },
   {
-    emoji: "🏠",
     label: "Home Loan",
     route: "/(tabs)/calculators",
+    icon: "bank",
     bg: "#E8F5E9",
-    color: "#2E7D32",
   },
   {
-    emoji: "🛡️",
     label: "Insurance",
     route: "/(tabs)/analyse",
+    icon: "shield",
     bg: "#EDE7F6",
-    color: "#5E35B1",
   },
-] as const;
+];
 
 export function QuickTools() {
   return (
@@ -58,7 +58,7 @@ export function QuickTools() {
           activeOpacity={0.85}
         >
           <View style={[styles.icon, { backgroundColor: tool.bg }]}>
-            <Text style={styles.emoji}>{tool.emoji}</Text>
+            <AppIcon name={tool.icon} size={22} color={Colors.primary} />
           </View>
           <Text style={styles.label}>{tool.label}</Text>
         </TouchableOpacity>
@@ -93,7 +93,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  emoji: { fontSize: 22 },
   label: {
     fontSize: FontSize.xs,
     fontWeight: "600",

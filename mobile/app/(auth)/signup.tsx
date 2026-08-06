@@ -10,17 +10,20 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { router } from "expo-router";
-import { useAuthStore } from "@/store/authStore";
-import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
+import { useAuthStore, getOAuthRedirectUri } from "@/store/authStore";
+import { Colors, Spacing, FontSize } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 export default function SignupScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const signUp = useAuthStore((s) => s.signUp);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
 
   const handleSubmit = async () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -44,6 +47,20 @@ export default function SignupScreen() {
     }
   };
 
+  const handleGoogle = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (result.error) {
+        Alert.alert("Google sign-in", result.error);
+      } else {
+        router.replace("/(tabs)");
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -55,9 +72,7 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.logoContainer}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoText}>FK</Text>
-          </View>
+          <BrandLogo size={80} />
           <Text style={styles.appName}>Create account</Text>
           <Text style={styles.tagline}>Same Finkoin as the web</Text>
         </View>
@@ -90,7 +105,14 @@ export default function SignupScreen() {
             label={loading ? "Please wait…" : "Create account"}
             onPress={() => void handleSubmit()}
             loading={loading}
-            disabled={loading}
+            disabled={loading || googleLoading}
+          />
+          <Button
+            label={googleLoading ? "Opening Google…" : "Continue with Google"}
+            variant="secondary"
+            onPress={() => void handleGoogle()}
+            loading={googleLoading}
+            disabled={loading || googleLoading}
           />
         </View>
 
@@ -100,6 +122,15 @@ export default function SignupScreen() {
         >
           <Text style={styles.link}>
             Have an account? <Text style={styles.linkStrong}>Log in</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => router.replace("/(tabs)")}
+          style={styles.linkWrap}
+        >
+          <Text style={styles.link}>
+            ← Back to <Text style={styles.linkStrong}>home</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -114,22 +145,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: Spacing.xxxl,
   },
-  logoBox: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.xl,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
-    ...Shadow.strong,
-  },
-  logoText: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.textWhite,
-  },
   appName: {
+    marginTop: Spacing.md,
     fontSize: FontSize.xxl,
     fontWeight: "800",
     color: Colors.textPrimary,
