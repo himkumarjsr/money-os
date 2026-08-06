@@ -1,23 +1,49 @@
-import "@/lib/cryptoPolyfill";
 import "react-native-url-polyfill/auto";
 import { createClient } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
-import { appStorage } from "@/lib/storage";
 
 const extra = Constants.expoConfig?.extra as
   | { supabaseUrl?: string; supabaseAnonKey?: string }
   | undefined;
 
-const supabaseUrl = (
-  extra?.supabaseUrl ||
-  process.env.EXPO_PUBLIC_SUPABASE_URL ||
-  ""
-).trim();
-const supabaseAnonKey = (
-  extra?.supabaseAnonKey ||
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  ""
-).trim();
+const supabaseUrl =
+  extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey =
+  extra?.supabaseAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+
+/** Prefer SecureStore; fall back to AsyncStorage (JWT size / SecureStore 2KB limit). */
+const ExpoSecureStoreAdapter = {
+  getItem: async (key: string) => {
+    try {
+      const fromSecure = await SecureStore.getItemAsync(key);
+      if (fromSecure != null) return fromSecure;
+    } catch {
+      /* fall through */
+    }
+    return AsyncStorage.getItem(key);
+  },
+  setItem: async (key: string, value: string) => {
+    try {
+      if (value.length < 2000) {
+        await SecureStore.setItemAsync(key, value);
+        return;
+      }
+    } catch {
+      /* fall through */
+    }
+    await AsyncStorage.setItem(key, value);
+  },
+  removeItem: async (key: string) => {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      /* ignore */
+    }
+    await AsyncStorage.removeItem(key);
+  },
+};
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
@@ -25,39 +51,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-/**
- * No-op process lock. Supabase's default navigator/lock can hang forever on
- * React Native when auth methods are nested (password sign-in freezes).
- */
-async function rnAuthLock<R>(
-  _name: string,
-  _acquireTimeout: number,
-  fn: () => Promise<R>,
-): Promise<R> {
-  return fn();
-}
-
 export const supabase = createClient(
   supabaseUrl || "https://placeholder.supabase.co",
   supabaseAnonKey || "placeholder",
   {
     auth: {
-      storage: appStorage,
+      storage: ExpoSecureStoreAdapter,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
-      flowType: "pkce",
-      lock: rnAuthLock,
     },
   },
 );
 
+/** Alias used by copied web helpers (e.g. trackerCreditCards). */
 export function getSupabase() {
   return supabase;
-}
-
-export function isSupabaseConfigured() {
-  return Boolean(
-    supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith("http"),
-  );
 }

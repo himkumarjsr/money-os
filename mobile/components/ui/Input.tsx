@@ -4,79 +4,50 @@ import {
   TextInput,
   StyleSheet,
   type TextInputProps,
-  type StyleProp,
-  type TextStyle,
 } from "react-native";
 import { Colors, Radius, FontSize, Spacing } from "@/constants/theme";
 
 type Props = TextInputProps & {
   label?: string;
-  helper?: string;
   error?: string;
-  prefix?: string;
-  style?: StyleProp<TextStyle>;
 };
 
-function Input({ label, helper, error, prefix, style, ...props }: Props) {
+export function Input({ label, error, style, ...rest }: Props) {
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.group}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={[styles.inputRow, error ? styles.inputError : null]}>
-        {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
-        <TextInput
-          style={[styles.input, style]}
-          placeholderTextColor={Colors.textMuted}
-          {...props}
-        />
-      </View>
-      {helper && !error ? <Text style={styles.helper}>{helper}</Text> : null}
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <TextInput
+        placeholderTextColor={Colors.textMuted}
+        style={[styles.input, error ? styles.inputError : null, style]}
+        {...rest}
+      />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { gap: 6 },
+  group: { gap: Spacing.sm },
   label: {
     fontSize: FontSize.md,
     fontWeight: "600",
     color: Colors.textSecondary,
   },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  input: {
     height: 52,
     backgroundColor: Colors.card,
     borderRadius: Radius.lg,
     borderWidth: 1.5,
     borderColor: Colors.border,
     paddingHorizontal: Spacing.lg,
+    fontSize: FontSize.base,
+    color: Colors.textPrimary,
   },
   inputError: {
     borderColor: Colors.error,
   },
-  prefix: {
-    fontSize: FontSize.base,
-    fontWeight: "600",
-    color: Colors.textMuted,
-    marginRight: 6,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    height: "100%",
-  },
-  helper: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-  },
-  errorText: {
+  error: {
     fontSize: FontSize.sm,
     color: Colors.error,
-    fontWeight: "600",
   },
 });
-
-export { Input };
-export default Input;

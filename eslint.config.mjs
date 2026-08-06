@@ -75,9 +75,6 @@ const eslintConfig = [
       "playwright-report/**",
       "*.config.js",
       "*.config.mjs",
-      "mobile/.expo/**",
-      "mobile/node_modules/**",
-      "mobile/dist/**",
     ],
   },
 ];

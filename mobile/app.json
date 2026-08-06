@@ -22,14 +22,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#534AB7"
       },
-      "package": "com.finkoin.app",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "category": ["BROWSABLE", "DEFAULT"],
-          "data": [{ "scheme": "finkoin" }]
-        }
-      ]
+      "package": "com.finkoin.app"
     },
     "plugins": ["expo-router", "expo-secure-store", "expo-font"],
     "experiments": {

@@ -2,64 +2,61 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
-  ActivityIndicator,
   type ViewStyle,
   type TextStyle,
+  ActivityIndicator,
 } from "react-native";
-import { Colors, Radius, FontSize } from "@/constants/theme";
+import { Colors, Radius, FontSize, Shadow, Spacing } from "@/constants/theme";
 
 type Props = {
   label: string;
   onPress: () => void;
-  variant?: "primary" | "secondary" | "danger" | "ghost";
-  loading?: boolean;
   disabled?: boolean;
+  loading?: boolean;
+  variant?: "primary" | "secondary" | "ghost";
   style?: ViewStyle;
   textStyle?: TextStyle;
-  fullWidth?: boolean;
 };
 
-function Button({
+export function Button({
   label,
   onPress,
-  variant = "primary",
-  loading,
   disabled,
+  loading,
+  variant = "primary",
   style,
   textStyle,
-  fullWidth = true,
 }: Props) {
-  const bg = {
-    primary: Colors.primary,
-    secondary: Colors.primaryLight,
-    danger: Colors.error,
-    ghost: "transparent",
-  }[variant];
-
-  const textColor = {
-    primary: "#fff",
-    secondary: Colors.primary,
-    danger: "#fff",
-    ghost: Colors.primary,
-  }[variant];
-
+  const isPrimary = variant === "primary";
+  const isSecondary = variant === "secondary";
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.85}
       style={[
         styles.base,
-        { backgroundColor: bg },
-        fullWidth && styles.full,
+        isPrimary && styles.primary,
+        isSecondary && styles.secondary,
+        variant === "ghost" && styles.ghost,
         (disabled || loading) && styles.disabled,
         style,
       ]}
+      activeOpacity={0.85}
     >
       {loading ? (
-        <ActivityIndicator color={textColor} size="small" />
+        <ActivityIndicator
+          color={isPrimary ? Colors.textWhite : Colors.primary}
+        />
       ) : (
-        <Text style={[styles.text, { color: textColor }, textStyle]}>
+        <Text
+          style={[
+            styles.text,
+            isPrimary && styles.textPrimary,
+            isSecondary && styles.textSecondary,
+            variant === "ghost" && styles.textGhost,
+            textStyle,
+          ]}
+        >
           {label}
         </Text>
       )}
@@ -69,19 +66,32 @@ function Button({
 
 const styles = StyleSheet.create({
   base: {
-    height: 52,
+    height: 54,
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
   },
-  full: { width: "100%" },
-  disabled: { opacity: 0.5 },
+  primary: {
+    backgroundColor: Colors.primary,
+    ...Shadow.strong,
+  },
+  secondary: {
+    backgroundColor: Colors.card,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  ghost: {
+    backgroundColor: "transparent",
+  },
+  disabled: {
+    opacity: 0.55,
+  },
   text: {
     fontSize: FontSize.base,
     fontWeight: "700",
   },
+  textPrimary: { color: Colors.textWhite },
+  textSecondary: { color: Colors.primary },
+  textGhost: { color: Colors.textSecondary },
 });
-
-export { Button };
-export default Button;

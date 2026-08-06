@@ -10,7 +10,7 @@ import {
 } from "@/lib/analyse-form-schema";
 import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
 import { useAuthStore } from "@/store/authStore";
-import { appStorage } from "@/lib/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import {
   createJSONStorage,
@@ -27,12 +27,12 @@ function createUserScopedFinancialStorage(): StateStorage {
       const uid = useAuthStore.getState().user?.id ?? "__guest__";
       const key = `${name}:${uid}`;
       try {
-        let value = await appStorage.getItem(key);
+        let value = await AsyncStorage.getItem(key);
         if (value == null && uid === "__guest__") {
-          const legacy = await appStorage.getItem(name);
+          const legacy = await AsyncStorage.getItem(name);
           if (legacy != null) {
-            await appStorage.setItem(key, legacy);
-            await appStorage.removeItem(name);
+            await AsyncStorage.setItem(key, legacy);
+            await AsyncStorage.removeItem(name);
             value = legacy;
           }
         }
@@ -44,7 +44,7 @@ function createUserScopedFinancialStorage(): StateStorage {
     setItem: async (name, value) => {
       const uid = useAuthStore.getState().user?.id ?? "__guest__";
       try {
-        await appStorage.setItem(`${name}:${uid}`, value);
+        await AsyncStorage.setItem(`${name}:${uid}`, value);
       } catch {
         /* ignore */
       }
@@ -52,7 +52,7 @@ function createUserScopedFinancialStorage(): StateStorage {
     removeItem: async (name) => {
       const uid = useAuthStore.getState().user?.id ?? "__guest__";
       try {
-        await appStorage.removeItem(`${name}:${uid}`);
+        await AsyncStorage.removeItem(`${name}:${uid}`);
       } catch {
         /* ignore */
       }
