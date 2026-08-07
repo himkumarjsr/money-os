@@ -33,7 +33,8 @@ export default function RootLayout() {
           <Stack.Screen name="auth/callback" />
           <Stack.Screen name="analyse/form" />
           <Stack.Screen name="analyse/fixplan" />
-          <Stack.Screen name="split/[groupId]" />
+          <Stack.Screen name="split/[groupId]/index" />
+          <Stack.Screen name="split/[groupId]/add-expense" />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
