@@ -5,6 +5,7 @@ import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 export default function NotificationBell() {
@@ -182,9 +183,19 @@ export default function NotificationBell() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#111110" }}>
-                Finance Tips
-              </span>
+              <Link
+                href="/notifications"
+                style={{
+                  textDecoration: "none",
+                  color: "inherit",
+                }}
+              >
+                <span
+                  style={{ fontSize: 16, fontWeight: 800, color: "#111110" }}
+                >
+                  Finance Tips
+                </span>
+              </Link>
               {unreadCount > 0 && (
                 <div
                   style={{

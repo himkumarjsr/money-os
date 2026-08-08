@@ -8,7 +8,7 @@ self.addEventListener("push", function (event) {
   let data = {
     title: "Finkoin tip",
     body: "Your daily finance tip is ready.",
-    url: "/",
+    url: "/notifications",
     tag: "finkoin-tip",
   };
 
@@ -38,7 +38,7 @@ self.addEventListener("push", function (event) {
       badge: "/icons/icon-192.png",
       tag: data.tag,
       renotify: true,
-      data: { url: data.url },
+      data: { url: data.url, title: data.title, body: data.body },
     }),
   );
 });
@@ -46,7 +46,8 @@ self.addEventListener("push", function (event) {
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   const target =
-    (event.notification.data && event.notification.data.url) || "/";
+    (event.notification.data && event.notification.data.url) ||
+    "/notifications";
   const absolute = new URL(target, self.location.origin).href;
 
   event.waitUntil(
@@ -55,7 +56,11 @@ self.addEventListener("notificationclick", function (event) {
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
           if (client.url.startsWith(self.location.origin) && "focus" in client) {
-            client.navigate(absolute);
+            if (typeof client.navigate === "function") {
+              return client.navigate(absolute).then(function () {
+                return client.focus();
+              });
+            }
             return client.focus();
           }
         }

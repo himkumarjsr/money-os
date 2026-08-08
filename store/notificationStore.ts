@@ -33,8 +33,10 @@ interface NotificationStore {
   loading: boolean;
   fetchNotifications: (userId: string) => Promise<void>;
   markAllRead: (userId: string) => Promise<void>;
+  markRead: (notifId: string) => Promise<void>;
   markPopupShown: (notifId: string) => Promise<void>;
   getTodayUnshownPopup: () => Notification | null;
+  getById: (notifId: string) => Notification | null;
 }
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
@@ -59,7 +61,9 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         return;
       }
 
-      const notifs = (data ?? []).map((row) => mapRow(row as Record<string, unknown>));
+      const notifs = (data ?? []).map((row) =>
+        mapRow(row as Record<string, unknown>),
+      );
       const unread = notifs.filter((n) => !n.is_read).length;
 
       set({
@@ -88,11 +92,44 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       }
 
       set((state) => ({
-        notifications: state.notifications.map((n) => ({ ...n, is_read: true })),
+        notifications: state.notifications.map((n) => ({
+          ...n,
+          is_read: true,
+        })),
         unreadCount: 0,
       }));
     } catch (err) {
       console.error("markAllRead error:", err);
+    }
+  },
+
+  markRead: async (notifId) => {
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .from("user_notifications")
+        .update({ is_read: true, shown_as_popup: true })
+        .eq("id", notifId);
+
+      if (error) {
+        console.error("markRead error:", error);
+        return;
+      }
+
+      set((state) => {
+        const prev = state.notifications.find((n) => n.id === notifId);
+        const dec = prev && !prev.is_read ? 1 : 0;
+        return {
+          notifications: state.notifications.map((n) =>
+            n.id === notifId
+              ? { ...n, is_read: true, shown_as_popup: true }
+              : n,
+          ),
+          unreadCount: Math.max(0, state.unreadCount - dec),
+        };
+      });
+    } catch (err) {
+      console.error("markRead error:", err);
     }
   },
 
@@ -114,7 +151,9 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         const dec = prev && !prev.is_read ? 1 : 0;
         return {
           notifications: state.notifications.map((n) =>
-            n.id === notifId ? { ...n, shown_as_popup: true, is_read: true } : n,
+            n.id === notifId
+              ? { ...n, shown_as_popup: true, is_read: true }
+              : n,
           ),
           unreadCount: Math.max(0, state.unreadCount - dec),
         };
@@ -130,8 +169,14 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     if (unshown.length === 0) return null;
     return (
       [...unshown].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       )[0] ?? null
     );
+  },
+
+  getById: (notifId) => {
+    const { notifications } = get();
+    return notifications.find((n) => n.id === notifId) ?? null;
   },
 }));
