@@ -114,7 +114,7 @@ export async function notifySplitExpenseAdded(
 
   await Promise.all(
     allowedIds.map(async (userId) => {
-      const { error: insertErr } = await admin
+      const { data: inserted, error: insertErr } = await admin
         .from("user_notifications")
         .insert({
           user_id: userId,
@@ -125,7 +125,9 @@ export async function notifySplitExpenseAdded(
           is_read: false,
           // Avoid hijacking the daily tip popup; push + inbox are enough.
           shown_as_popup: true,
-        });
+        })
+        .select("id")
+        .single();
       if (insertErr) {
         console.warn(
           "split expense notification insert failed",
@@ -134,10 +136,17 @@ export async function notifySplitExpenseAdded(
         );
       }
 
+      // Prefer the message inbox deep-link so mobile push shows the copy;
+      // include group in path as fallback when insert failed.
+      const notifId = inserted?.id ? String(inserted.id) : "";
+      const pushUrl = notifId
+        ? `/notifications?id=${encodeURIComponent(notifId)}`
+        : url;
+
       const result = await sendWebPushToUser(admin, userId, {
         title: copy.title,
         body: copy.body,
-        url,
+        url: pushUrl,
         tag,
       });
       pushed += result.pushed;

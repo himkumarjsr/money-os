@@ -4,14 +4,15 @@ import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { useAuthStore } from "@/store/authStore";
-import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { type ReactNode, useEffect, useRef, useState, Suspense } from "react";
 
-export function ProtectedGate({ children }: { children: ReactNode }) {
+function ProtectedGateInner({ children }: { children: ReactNode }) {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const redirected = useRef(false);
   // Start false so SSR + first client render match; persist applies in layout effect.
   const [accessGranted, setAccessGranted] = useState(false);
@@ -56,7 +57,9 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
       setAccessGranted(false);
       if (!redirected.current) {
         redirected.current = true;
-        const redirect = pathname || "/";
+        // Preserve query string so push deep-links like ?id=... survive login.
+        const qs = searchParams?.toString();
+        const redirect = qs ? `${pathname || "/"}?${qs}` : pathname || "/";
         router.replace(
           loginHrefPreserveRef(
             `/login?redirect=${encodeURIComponent(redirect)}`,
@@ -68,7 +71,7 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [mounted, hasInitialized, isLoggedIn, router, pathname]);
+  }, [mounted, hasInitialized, isLoggedIn, router, pathname, searchParams]);
 
   // Until mounted, always spinner — matches SSR and avoids hydration mismatch.
   if (!mounted) {
@@ -81,4 +84,14 @@ export function ProtectedGate({ children }: { children: ReactNode }) {
   }
 
   return <BrandPageLoader fullScreen={false} label="Checking sign-in…" />;
+}
+
+export function ProtectedGate({ children }: { children: ReactNode }) {
+  return (
+    <Suspense
+      fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
+    >
+      <ProtectedGateInner>{children}</ProtectedGateInner>
+    </Suspense>
+  );
 }

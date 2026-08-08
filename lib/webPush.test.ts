@@ -100,7 +100,7 @@ describe("webPush", () => {
       JSON.stringify({
         title: "Tip 2",
         body: "Budget",
-        url: "/",
+        url: "/notifications",
         tag: "finkoin-tip",
       }),
       { TTL: 60 * 60 * 12, urgency: "normal" },

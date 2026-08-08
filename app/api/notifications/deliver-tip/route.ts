@@ -108,18 +108,20 @@ async function handleDeliverTip(req: NextRequest) {
             const title = String(tip.out_title ?? "");
             const content = String(tip.out_content ?? "");
 
-            const { error: insertErr } = await supabaseAdmin
+            const { data: inserted, error: insertErr } = await supabaseAdmin
               .from("user_notifications")
               .insert({
                 user_id: user.id,
-                tip_id: tipId,
+                tip_id: tipId || null,
                 title,
                 content,
                 emoji: String(tip.out_emoji ?? "💡"),
                 category: String(tip.out_category ?? ""),
                 is_read: false,
                 shown_as_popup: false,
-              });
+              })
+              .select("id")
+              .single();
 
             if (insertErr) {
               console.error(`deliver-tip: insert user ${user.id}`, insertErr);
@@ -137,11 +139,17 @@ async function handleDeliverTip(req: NextRequest) {
               console.error(`deliver-tip: history user ${user.id}`, histErr);
             }
 
+            const notifId = inserted?.id ? String(inserted.id) : "";
+            // Open the in-app notification detail — not the marketing home page.
+            const openUrl = notifId
+              ? `/notifications?id=${encodeURIComponent(notifId)}`
+              : "/notifications";
+
             const pushResult = await sendWebPushToUser(supabaseAdmin, user.id, {
               title: title || "Finkoin tip",
               body: content || "Your daily finance tip is ready.",
-              url: "/",
-              tag: `tip-${tipId || "daily"}`,
+              url: openUrl,
+              tag: `tip-${tipId || notifId || "daily"}`,
             });
 
             return {

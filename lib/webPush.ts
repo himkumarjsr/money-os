@@ -54,7 +54,7 @@ export async function sendWebPush(
       JSON.stringify({
         title: payload.title,
         body: payload.body,
-        url: payload.url ?? "/",
+        url: payload.url ?? "/notifications",
         tag: payload.tag ?? "finkoin-tip",
       }),
       {
