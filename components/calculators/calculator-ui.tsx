@@ -131,8 +131,19 @@ export function SliderField({
     );
   }, [detectedType, focused, inputMax, min, step, value]);
 
-  const commitValue = (raw: number) => {
-    const clamped = clampCalculatorValue(raw, min, inputMax, step);
+  /** Range thumb: honour step. Typed text: exact value within min/max only. */
+  const commitFromSlider = (raw: number) => {
+    const clamped = clampCalculatorValue(raw, min, inputMax, step, {
+      snap: true,
+    });
+    onChange(clamped);
+    return clamped;
+  };
+
+  const commitFromText = (raw: number) => {
+    const clamped = clampCalculatorValue(raw, min, inputMax, step, {
+      snap: false,
+    });
     onChange(clamped);
     return clamped;
   };
@@ -140,18 +151,25 @@ export function SliderField({
   const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
     // Allow typing decimals (e.g. "7.", "7.5") without fighting the field.
-    if (isPercent || detectedType === "number") {
+    if (
+      isPercent ||
+      detectedType === "number" ||
+      detectedType === "money" ||
+      detectedType === "years" ||
+      detectedType === "months"
+    ) {
       if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw.replace(/,/g, ""))) return;
     }
     setDisplayValue(raw);
 
-    // Live-sync rate slider while a complete number is typed (not trailing ".").
-    if (!isPercent) return;
+    // Live-sync while a complete number is typed (not trailing ".").
     const trimmed = raw.trim();
     if (!trimmed || trimmed === "-" || trimmed.endsWith(".")) return;
     const parsed = parseIndianInput(trimmed);
     if (parsed === null) return;
-    const clamped = clampCalculatorValue(parsed, min, inputMax, step);
+    const clamped = clampCalculatorValue(parsed, min, inputMax, step, {
+      snap: false,
+    });
     if (clamped !== value) onChange(clamped);
   };
 
@@ -162,7 +180,7 @@ export function SliderField({
       setDisplayValue(formatFieldValue(value, detectedType, step));
       return;
     }
-    const clamped = commitValue(parsed);
+    const clamped = commitFromText(parsed);
     setDisplayValue(formatFieldValue(clamped, detectedType, step));
   };
 
@@ -208,7 +226,12 @@ export function SliderField({
           onBlur={handleBlur}
           onFocus={(e) => {
             setFocused(true);
-            e.currentTarget.select();
+            // Plain digits while editing so commas don't alter the number.
+            setDisplayValue(Number.isFinite(value) ? String(value) : "");
+            const el = e.currentTarget;
+            queueMicrotask(() => {
+              if (document.activeElement === el) el.select();
+            });
           }}
           className="min-w-0 flex-1 border-none bg-transparent text-base font-semibold text-[#111110] outline-none"
           style={{ fontSize: 16 }}
@@ -233,7 +256,7 @@ export function SliderField({
         max={sliderMax}
         step={step}
         value={sliderValue}
-        onChange={(e) => commitValue(Number(e.target.value))}
+        onChange={(e) => commitFromSlider(Number(e.target.value))}
         className="h-2 w-full cursor-pointer accent-[#534AB7]"
       />
       <div className="text-right text-xs text-[#9B9A94]">{words}</div>

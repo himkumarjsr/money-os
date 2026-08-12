@@ -1,7 +1,14 @@
-/** Indian grouping; keeps up to 2 decimal places (paise) when present. */
+/** Indian grouping; keeps exact integers and up to 2 decimal places (paise). */
 export function formatIndian(num: number): string {
   if (!Number.isFinite(num) || Number.isNaN(num)) return "0";
   if (num === 0) return "0";
+  // Use truncation-free path for whole rupees so large principals never "round".
+  if (Number.isInteger(num)) {
+    return num.toLocaleString("en-IN", {
+      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
+    });
+  }
   const cents = Math.round(num * 100) / 100;
   const isWhole = Number.isInteger(cents);
   return cents.toLocaleString("en-IN", {

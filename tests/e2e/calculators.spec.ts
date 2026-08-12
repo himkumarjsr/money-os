@@ -83,7 +83,7 @@ test.describe("Calculators", () => {
     await expect(rateField.getByText("11.3% p.a.")).toBeVisible();
   });
 
-  test("SIP money field clamps above ₹99 crore", async ({ page }) => {
+  test("SIP money field clamps above ₹1 crore", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/calculators/sip");
 
@@ -101,7 +101,7 @@ test.describe("Calculators", () => {
     await moneyInput.fill("2000000000");
     await moneyInput.blur();
 
-    await expect(moneyInput).toHaveValue("99,00,00,000");
+    await expect(moneyInput).toHaveValue("1,00,00,000");
   });
 
   test("Post Office suite and TD calculator load", async ({ page }) => {

@@ -15,7 +15,6 @@ import {
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
 import {
-  CALCULATOR_MONEY_MAX,
   Insight,
   ResultStat,
   SliderField,
@@ -35,8 +34,10 @@ function useClamped(initial: number, min: number, max: number) {
   return [v, set] as const;
 }
 
+const SIP_MONTHLY_MAX = 1_00_00_000; // ₹1 crore
+
 export function SIPCalculator() {
-  const [monthly, setMonthly] = useClamped(10_000, 500, 100_000);
+  const [monthly, setMonthly] = useClamped(10_000, 500, SIP_MONTHLY_MAX);
   const [rate, setRate] = useClamped(12, 6, 20);
   const [years, setYears] = useClamped(15, 1, 30);
 
@@ -87,7 +88,7 @@ export function SIPCalculator() {
         unitType="money"
         value={monthly}
         min={500}
-        max={CALCULATOR_MONEY_MAX}
+        max={SIP_MONTHLY_MAX}
         step={500}
         onChange={setMonthly}
         format={(val) => formatCurrency(val, "en-IN", "INR")}

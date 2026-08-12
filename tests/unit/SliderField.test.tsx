@@ -109,6 +109,20 @@ describe("SliderField", () => {
     expect(input).toHaveValue("99,00,00,000");
   });
 
+  it("keeps exact money amounts that are off the slider step grid", async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<MoneyHarness initial={10_000} onChangeSpy={spy} />);
+
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.type(input, "22500000");
+    await user.tab();
+
+    expect(spy).toHaveBeenCalledWith(22_500_000);
+    expect(input).toHaveValue("2,25,00,000");
+  });
+
   it("uses decimal inputMode for percent fields", () => {
     render(<RateHarness />);
     expect(screen.getByRole("textbox")).toHaveAttribute("inputMode", "decimal");
