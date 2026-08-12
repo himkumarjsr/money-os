@@ -35,6 +35,8 @@ Inventory of `app/**/page.tsx` by feature. Status is from code behavior, not mar
 
 Hub IDs commonly used: `sip`, `swp`, `ppf`, `nsc`, `emergency`, `fire`, `emi`, `home`, `car`, `rentbuy`, `rentcar`, `whencar`, `po`, `tax-regime`. Deep link: `/calculators?calc=sip|swp|emi`.
 
+Input caps: default money **₹99 crore**; **SIP** monthly **₹1 crore**; **SWP** corpus **₹10 crore**. Tax regime **80D** uses parent age for the ₹25k/₹50k parents cap.
+
 ## Tracker
 
 | Route              | Status  | Notes                                                                              |

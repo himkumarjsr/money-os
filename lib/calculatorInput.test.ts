@@ -60,20 +60,63 @@ describe("clampCalculatorValue", () => {
     ).toBe(CALCULATOR_MONEY_MAX);
   });
 
-  it("clamps rate into min/max with decimal step", () => {
+  it("clamps rate into min/max with decimal step when snapping", () => {
     expect(clampCalculatorValue(5, 6, 20, 0.1)).toBe(6);
     expect(clampCalculatorValue(25, 6, 20, 0.1)).toBe(20);
     expect(clampCalculatorValue(12.34, 6, 20, 0.1)).toBe(12.3);
+  });
+
+  it("keeps exact typed money when snap is false (no step rounding)", () => {
+    // Large steps used for sliders must not rewrite free-form entry.
+    expect(
+      clampCalculatorValue(
+        2_25_00_000,
+        1_00_000,
+        CALCULATOR_MONEY_MAX,
+        10_00_000,
+        {
+          snap: false,
+        },
+      ),
+    ).toBe(2_25_00_000);
+    expect(
+      clampCalculatorValue(
+        2_25_00_000,
+        1_00_000,
+        CALCULATOR_MONEY_MAX,
+        50_000,
+        {
+          snap: false,
+        },
+      ),
+    ).toBe(2_25_00_000);
+  });
+
+  it("snaps money onto slider step when snap is true", () => {
+    expect(
+      clampCalculatorValue(
+        2_25_00_000,
+        30_00_000,
+        CALCULATOR_MONEY_MAX,
+        10_00_000,
+        {
+          snap: true,
+        },
+      ),
+    ).toBe(2_30_00_000);
   });
 });
 
 describe("formatCalculatorFieldValue", () => {
   const money = (n: number) => `₹${n}`;
 
-  it("formats percent with decimal precision from step", () => {
+  it("formats percent without forcing the step grid", () => {
     expect(formatCalculatorFieldValue(7.5, "percent", 0.1, money)).toBe("7.5");
     expect(formatCalculatorFieldValue(7.15, "percent", 0.05, money)).toBe(
       "7.15",
+    );
+    expect(formatCalculatorFieldValue(12.34, "percent", 0.1, money)).toBe(
+      "12.34",
     );
     expect(formatCalculatorFieldValue(NaN, "percent", 0.1, money)).toBe("0");
   });

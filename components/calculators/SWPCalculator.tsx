@@ -13,7 +13,6 @@ import {
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
 import {
-  CALCULATOR_MONEY_MAX,
   Insight,
   ResultStat,
   SliderField,
@@ -49,8 +48,10 @@ function sustainableMonthly(corpus: number, annualPct: number) {
   return corpus * r;
 }
 
+const SWP_CORPUS_MAX = 10_00_00_000; // ₹10 crore
+
 export function SWPCalculator() {
-  const [corpus, setCorpus] = useClamped(50_00_000, 5_00_000, 5_00_00_000);
+  const [corpus, setCorpus] = useClamped(50_00_000, 5_00_000, SWP_CORPUS_MAX);
   const [withdraw, setWithdraw] = useClamped(40_000, 5_000, 5_00_000);
   const [rate, setRate] = useClamped(8, 3, 15);
 
@@ -107,7 +108,7 @@ export function SWPCalculator() {
         unitType="money"
         value={corpus}
         min={5_00_000}
-        max={CALCULATOR_MONEY_MAX}
+        max={SWP_CORPUS_MAX}
         step={50_000}
         onChange={setCorpus}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
@@ -117,7 +118,7 @@ export function SWPCalculator() {
         unitType="money"
         value={withdraw}
         min={5_000}
-        max={CALCULATOR_MONEY_MAX}
+        max={5_00_000}
         step={1_000}
         onChange={setWithdraw}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
