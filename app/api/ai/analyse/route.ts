@@ -125,7 +125,7 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
 }`;
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.1-70b-versatile",
+      model: process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b",
       max_tokens: 3000,
       temperature: 0.25,
       messages: [

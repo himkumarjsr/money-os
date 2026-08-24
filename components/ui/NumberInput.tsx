@@ -95,10 +95,7 @@ export default function NumberInput({
           inputMode="decimal"
           value={draft}
           onChange={handleChange}
-          onFocus={(e) => {
-            setFocused(true);
-            e.currentTarget.select();
-          }}
+          onFocus={() => setFocused(true)}
           onBlur={() => {
             setFocused(false);
             const next = parseAndClamp(draft);

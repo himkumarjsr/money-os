@@ -248,13 +248,14 @@ describe("getUniversalBucketRows", () => {
 });
 
 describe("getUnallocatedIncome", () => {
-  it("subtracts all bucket actuals from income", () => {
+  it("subtracts all bucket actuals from income except EPF (deducted at source)", () => {
     const data = {
       monthlySalary: 100000,
       lifeStage: "bachelor" as const,
       rentAmount: 20000,
       shopping: 5000,
       monthlySIP: 10000,
+      monthlyEPFContribution: 3000,
       carLoanEMI: 8000,
       healthInsurancePremiumMonthly: 2000,
     };
@@ -266,7 +267,7 @@ describe("getUnallocatedIncome", () => {
         actuals.wants -
         actuals.security -
         actuals.loans -
-        actuals.investment,
+        (actuals.investment - 3000),
     );
   });
 

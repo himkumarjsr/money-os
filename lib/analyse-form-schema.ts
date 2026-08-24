@@ -160,6 +160,7 @@ export interface FinancialProfile {
   creditCardBillMonthly?: number;
   /** Optional EMI / bill debit day of month (1–31) for calendar reminders. */
   homeLoanEMIDay?: number;
+  homeLoanEMIMonth?: number;
   carLoanEMIDay?: number;
   personalLoanEMIDay?: number;
   educationLoanEMIDay?: number;
@@ -188,6 +189,8 @@ export interface FinancialProfile {
     odInterestOnlyYears?: number;
     /** Day of month EMI is typically debited (1–31). */
     emiDay?: number;
+    /** Calendar month of debit (1–12). Year is not collected. */
+    emiMonth?: number;
   }>;
 
   /** @deprecated Use `foodTotal`; kept for backward compatibility. */
@@ -451,6 +454,7 @@ const unifiedLoanSchema = z.object({
   odUsed: optionalMoney,
   odInterestOnlyYears: optionalWholeNumber,
   emiDay: optionalWholeNumber,
+  emiMonth: optionalWholeNumber,
 });
 
 /** Coerce legacy loanType labels so Next isn't blocked by invisible enum errors. */
@@ -554,6 +558,7 @@ const formShape = {
   bikeOutstanding: optionalMoney,
   creditCardBillMonthly: optionalMoney,
   homeLoanEMIDay: optionalWholeNumber,
+  homeLoanEMIMonth: optionalWholeNumber,
   carLoanEMIDay: optionalWholeNumber,
   personalLoanEMIDay: optionalWholeNumber,
   educationLoanEMIDay: optionalWholeNumber,
@@ -1296,6 +1301,7 @@ function migrateLegacyAnalysePartial(
             : Number(row.odUsed ?? 0) || 0,
         odInterestOnlyYears: row.odInterestOnlyYears ?? 0,
         emiDay: row.emiDay == null ? undefined : Number(row.emiDay),
+        emiMonth: row.emiMonth == null ? undefined : Number(row.emiMonth),
       };
     });
   }
@@ -1313,6 +1319,11 @@ function migrateLegacyAnalysePartial(
       policyName: row.policyName,
       premiumAmount: row.premiumAmount ?? row.premiumInput,
       frequency: row.frequency ?? "monthly",
+      maturityAmount: row.maturityAmount ?? 0,
+      maturityYear: row.maturityYear ?? 0,
+      renewalMonth:
+        row.renewalMonth == null ? undefined : Number(row.renewalMonth),
+      renewalDay: row.renewalDay == null ? undefined : Number(row.renewalDay),
     }));
     delete out.otherInsurancePolicies;
   }
@@ -1365,8 +1376,18 @@ export function mergeAnalyseDraftWithProfile(
         frequency: (d?.frequency ??
           p?.frequency ??
           "monthly") as PremiumFrequency,
-        maturityAmount: d?.maturityAmount ?? p?.maturityAmount ?? 0,
-        maturityYear: d?.maturityYear ?? p?.maturityYear ?? 0,
+        maturityAmount: (() => {
+          const dAmt = Number(d?.maturityAmount ?? 0) || 0;
+          const pAmt = Number(p?.maturityAmount ?? 0) || 0;
+          return dAmt > 0 ? dAmt : pAmt;
+        })(),
+        maturityYear: (() => {
+          const dY = Number(d?.maturityYear ?? 0) || 0;
+          const pY = Number(p?.maturityYear ?? 0) || 0;
+          return dY > 0 ? dY : pY;
+        })(),
+        renewalMonth: d?.renewalMonth ?? p?.renewalMonth,
+        renewalDay: d?.renewalDay ?? p?.renewalDay,
       };
     });
   }
@@ -1390,6 +1411,8 @@ export function mergeAnalyseDraftWithProfile(
         odUsed: d?.odUsed ?? p?.odUsed ?? 0,
         odInterestOnlyYears:
           d?.odInterestOnlyYears ?? p?.odInterestOnlyYears ?? 0,
+        emiDay: d?.emiDay ?? p?.emiDay,
+        emiMonth: d?.emiMonth ?? p?.emiMonth,
       };
     });
   }
@@ -1428,6 +1451,35 @@ export function mergeAnalyseDraftWithProfile(
   if ((pPol?.length ?? 0) > 0) {
     merged.hasOtherInsurance = true;
   }
+
+  // Draft zeros must not wipe restored spouse fields (common after bachelor default mount).
+  const draftSpouseIncome = Number(draftN.spouseIncome ?? 0) || 0;
+  const profileSpouseIncome = Number(profileFormN.spouseIncome ?? 0) || 0;
+  if (draftSpouseIncome <= 0 && profileSpouseIncome > 0) {
+    merged.spouseIncome = profileSpouseIncome;
+  }
+  const draftSpouseAge = Number(draftN.spouseAge ?? 0) || 0;
+  const profileSpouseAge = Number(profileFormN.spouseAge ?? 0) || 0;
+  if (draftSpouseAge <= 0 && profileSpouseAge > 0) {
+    merged.spouseAge = profileSpouseAge;
+  }
+
+  // Prefer profile renewal dates when draft cleared them.
+  const preferRenewal = <K extends keyof AnalyseFormValues>(key: K) => {
+    const dVal = draftN[key];
+    const pVal = profileFormN[key];
+    if ((dVal == null || dVal === 0) && pVal != null && pVal !== 0) {
+      merged[key] = pVal;
+    }
+  };
+  preferRenewal("healthInsuranceRenewalMonth");
+  preferRenewal("healthInsuranceRenewalDay");
+  preferRenewal("termInsuranceRenewalMonth");
+  preferRenewal("termInsuranceRenewalDay");
+  preferRenewal("carInsuranceRenewalMonth");
+  preferRenewal("carInsuranceRenewalDay");
+  preferRenewal("bikeInsuranceRenewalMonth");
+  preferRenewal("bikeInsuranceRenewalDay");
 
   return merged;
 }
@@ -1507,6 +1559,7 @@ export function financialProfileToFormValues(
             : (loan.odUsed ?? 0),
         odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
         emiDay: loan.emiDay,
+        emiMonth: loan.emiMonth,
       };
     }) ?? [];
 
@@ -1586,7 +1639,7 @@ export function financialProfileToFormValues(
   return {
     lifeStage: p.lifeStage,
     selfAge: p.selfAge,
-    spouseAge: p.spouseAge,
+    spouseAge: p.spouseAge ?? 0,
     numberOfKids: p.numberOfKids,
     kidsAges: p.kidsAges?.map((a) => a) as AnalyseFormValues["kidsAges"],
     kidsGenders: p.kidsGenders,
@@ -1597,6 +1650,8 @@ export function financialProfileToFormValues(
     rentAmount: p.rentAmount ?? 0,
     rentMaintenanceMonthly: p.rentMaintenanceMonthly ?? 0,
     homeLoanEMI: p.homeLoanEMI ?? 0,
+    homeLoanEMIDay: p.homeLoanEMIDay,
+    homeLoanEMIMonth: p.homeLoanEMIMonth,
     secondPropertyEMI: p.secondPropertyEMI ?? 0,
     carLoanEMI: p.carLoanEMI ?? 0,
     bikeEMI: p.bikeEMI ?? 0,
@@ -1654,12 +1709,16 @@ export function financialProfileToFormValues(
       p.healthInsurancePremiumInput ?? p.healthInsurancePremiumMonthly ?? 0,
     healthInsurancePremiumFrequency:
       p.healthInsurancePremiumFrequency ?? "monthly",
+    healthInsuranceRenewalMonth: p.healthInsuranceRenewalMonth,
+    healthInsuranceRenewalDay: p.healthInsuranceRenewalDay,
     hasTermInsurance: p.hasTermInsurance,
     termInsuranceSumAssured: p.termInsuranceSumAssured ?? 0,
     termInsurancePremiumInput:
       p.termInsurancePremiumInput ?? p.termInsurancePremiumMonthly ?? 0,
     termInsurancePremiumFrequency: p.termInsurancePremiumFrequency ?? "monthly",
     termInsurancePremiumTillYear: p.termInsurancePremiumTillYear ?? 0,
+    termInsuranceRenewalMonth: p.termInsuranceRenewalMonth,
+    termInsuranceRenewalDay: p.termInsuranceRenewalDay,
     carInsurancePremiumInput:
       p.carInsurancePremiumInput ?? p.carInsurancePremiumMonthly ?? 0,
     carInsurancePremiumFrequency: p.carInsurancePremiumFrequency ?? "monthly",
@@ -1772,7 +1831,7 @@ export function financialProfileToFormValues(
     kidsEducationFundTarget: p.kidsEducationFundTarget,
     kidsMarriageFundTarget: p.kidsMarriageFundTarget,
     emergencyFundTarget: p.emergencyFundTarget,
-    medicalEmergencyFund: p.medicalEmergencyFund,
+    medicalEmergencyFund: p.medicalEmergencyFund ?? 0,
     bereavementFund: p.bereavementFund,
     homePurchaseTarget: p.homePurchaseTarget,
     homePurchaseYear: p.homePurchaseYear,
@@ -2069,6 +2128,7 @@ export function normalizeAnalyseFormValues(
     bikeOutstanding: form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
     homeLoanEMIDay: form.homeLoanEMIDay,
+    homeLoanEMIMonth: form.homeLoanEMIMonth,
     carLoanEMIDay: form.carLoanEMIDay,
     personalLoanEMIDay: form.personalLoanEMIDay,
     educationLoanEMIDay: form.educationLoanEMIDay,
@@ -2389,6 +2449,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   bikeOutstanding: 0,
   creditCardBillMonthly: 0,
   homeLoanEMIDay: undefined,
+  homeLoanEMIMonth: undefined,
   carLoanEMIDay: undefined,
   personalLoanEMIDay: undefined,
   educationLoanEMIDay: undefined,

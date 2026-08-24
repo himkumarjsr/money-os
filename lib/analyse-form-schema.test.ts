@@ -100,6 +100,70 @@ describe("mergeAnalyseDraftWithProfile", () => {
     const merged = mergeAnalyseDraftWithProfile(profile, draft);
     expect(merged.additionalObligations?.[0]?.lenderName).toBe("HDFC PF");
   });
+
+  it("keeps profile spouse age/income when draft zeros them", () => {
+    const profile: Partial<AnalyseFormValues> = {
+      lifeStage: "married",
+      spouseAge: 33,
+      spouseIncome: 140_000,
+    };
+    const draft: Partial<AnalyseFormValues> = {
+      lifeStage: "married",
+      spouseAge: 0,
+      spouseIncome: 0,
+    };
+    const merged = mergeAnalyseDraftWithProfile(profile, draft);
+    expect(merged.spouseAge).toBe(33);
+    expect(merged.spouseIncome).toBe(140_000);
+  });
+
+  it("preserves insurance renewal dates and LIC maturity through migrate + merge", () => {
+    const profile: Partial<AnalyseFormValues> = {
+      hasTermInsurance: true,
+      termInsuranceRenewalMonth: 6,
+      termInsuranceRenewalDay: 15,
+      carInsuranceRenewalMonth: 3,
+      carInsuranceRenewalDay: 1,
+      hasOtherInsurance: true,
+      otherInsurancePremiums: [
+        {
+          policyName: "LIC",
+          premiumAmount: 2_895,
+          frequency: "monthly",
+          maturityAmount: 1_800_000,
+          maturityYear: 2042,
+          renewalMonth: 8,
+          renewalDay: 10,
+        },
+      ],
+    };
+    const draft: Partial<AnalyseFormValues> = {
+      hasTermInsurance: true,
+      termInsuranceRenewalMonth: undefined,
+      termInsuranceRenewalDay: undefined,
+      carInsuranceRenewalMonth: 0 as never,
+      carInsuranceRenewalDay: 0 as never,
+      hasOtherInsurance: true,
+      otherInsurancePremiums: [
+        {
+          policyName: "LIC",
+          premiumAmount: 2_895,
+          frequency: "monthly",
+          maturityAmount: 0,
+          maturityYear: 0,
+        },
+      ],
+    };
+    const merged = mergeAnalyseDraftWithProfile(profile, draft);
+    expect(merged.termInsuranceRenewalMonth).toBe(6);
+    expect(merged.termInsuranceRenewalDay).toBe(15);
+    expect(merged.carInsuranceRenewalMonth).toBe(3);
+    expect(merged.carInsuranceRenewalDay).toBe(1);
+    expect(merged.otherInsurancePremiums?.[0]?.maturityAmount).toBe(1_800_000);
+    expect(merged.otherInsurancePremiums?.[0]?.maturityYear).toBe(2042);
+    expect(merged.otherInsurancePremiums?.[0]?.renewalMonth).toBe(8);
+    expect(merged.otherInsurancePremiums?.[0]?.renewalDay).toBe(10);
+  });
 });
 
 describe("loan normalization", () => {
@@ -249,6 +313,61 @@ describe("premium normalization", () => {
     const back = financialProfileToFormValues(normalized);
     expect(back.healthInsurancePremiumInput).toBe(24_000);
     expect(back.healthInsurancePremiumFrequency).toBe("yearly");
+  });
+
+  it("round-trips term/car renewal dates and LIC maturity fields", () => {
+    const normalized = normalizeAnalyseFormValues({
+      lifeStage: "married",
+      selfAge: 35,
+      cityTier: "metro",
+      monthlySalary: 2_00_000,
+      spouseIncome: 1_00_000,
+      hasTermInsurance: true,
+      termInsuranceSumAssured: 1_00_00_000,
+      termInsurancePremiumInput: 18_599,
+      termInsurancePremiumFrequency: "yearly",
+      termInsuranceRenewalMonth: 6,
+      termInsuranceRenewalDay: 15,
+      carInsurancePremiumInput: 15_000,
+      carInsurancePremiumFrequency: "yearly",
+      carInsuranceRenewalMonth: 3,
+      carInsuranceRenewalDay: 1,
+      hasOtherInsurance: true,
+      otherInsurancePremiums: [
+        {
+          policyName: "LIC",
+          premiumAmount: 2_895,
+          frequency: "monthly",
+          maturityAmount: 18_00_000,
+          maturityYear: 2042,
+          renewalMonth: 8,
+          renewalDay: 10,
+        },
+      ],
+      additionalObligations: [],
+      primaryGoal: "grow_wealth",
+    });
+
+    expect(normalized.termInsuranceRenewalMonth).toBe(6);
+    expect(normalized.termInsuranceRenewalDay).toBe(15);
+    expect(normalized.carInsuranceRenewalMonth).toBe(3);
+    expect(normalized.carInsuranceRenewalDay).toBe(1);
+    expect(normalized.otherInsurancePremiums?.[0]?.maturityAmount).toBe(
+      18_00_000,
+    );
+    expect(normalized.otherInsurancePremiums?.[0]?.maturityYear).toBe(2042);
+    expect(normalized.otherInsurancePremiums?.[0]?.renewalMonth).toBe(8);
+    expect(normalized.otherInsurancePremiums?.[0]?.renewalDay).toBe(10);
+
+    const back = financialProfileToFormValues(normalized);
+    expect(back.termInsuranceRenewalMonth).toBe(6);
+    expect(back.termInsuranceRenewalDay).toBe(15);
+    expect(back.carInsuranceRenewalMonth).toBe(3);
+    expect(back.carInsuranceRenewalDay).toBe(1);
+    expect(back.otherInsurancePremiums?.[0]?.maturityAmount).toBe(18_00_000);
+    expect(back.otherInsurancePremiums?.[0]?.maturityYear).toBe(2042);
+    expect(back.otherInsurancePremiums?.[0]?.renewalMonth).toBe(8);
+    expect(back.otherInsurancePremiums?.[0]?.renewalDay).toBe(10);
   });
 
   it("keeps girl-child investment fields and kid genders in the final profile", () => {

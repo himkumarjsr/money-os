@@ -166,6 +166,47 @@ function n(v: number | undefined): number {
   return v ?? 0;
 }
 
+/** Outstanding loan principal used for net worth. Prefer unified loan rows; assets-step home/car are additive when absent from unified list. */
+export function totalLoanLiabilities(data: FinancialProfile): number {
+  const credit = n(data.creditCardBillMonthly) * 3;
+  const unified = (data.unifiedLoans ?? []).filter(
+    (loan) => n(loan.monthlyEMI) > 0 || n(loan.outstandingAmount) > 0,
+  );
+
+  const outstandingFromLoan = (loan: {
+    outstandingAmount?: number;
+    monthlyEMI?: number;
+    remainingMonths?: number;
+  }) => {
+    const out = n(loan.outstandingAmount);
+    if (out > 0) return out;
+    return n(loan.monthlyEMI) * (n(loan.remainingMonths) || 18);
+  };
+
+  if (unified.length > 0) {
+    const loanSum = unified.reduce(
+      (sum, loan) => sum + outstandingFromLoan(loan),
+      0,
+    );
+    const hasHomeInUnified = unified.some((l) => l.loanType === "home_loan");
+    const hasCarInUnified = unified.some((l) => l.loanType === "car_loan");
+    return (
+      loanSum +
+      (hasHomeInUnified ? 0 : n(data.homeLoanOutstanding)) +
+      (hasCarInUnified ? 0 : n(data.carLoanOutstanding)) +
+      credit
+    );
+  }
+
+  return (
+    n(data.homeLoanOutstanding) +
+    n(data.carLoanOutstanding) +
+    (n(data.personalLoanOutstanding) || n(data.personalLoanEMI) * 24) +
+    n(data.bikeEMI) * 24 +
+    credit
+  );
+}
+
 /** Suggested medical emergency corpus (beyond health insurance) by city, age, and dependants. */
 function medicalEmergencyTargetLiquid(data: FinancialProfile): number {
   let target =
@@ -1065,12 +1106,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const savingsVal = data.savingsAccountBalance || 0;
   const fdVal = data.fdValue || 0;
   const liquidMFVal = data.liquidMFValue || 0;
-  const otherLiquidVal = data.otherLiquidSavings || 0;
-  const emergencyCorpusTotal =
-    savingsVal * 1.0 + liquidMFVal * 0.95 + fdVal * 0.7 + otherLiquidVal * 0.5;
-  const needsMonthly = bucketActuals?.needs || 0;
-  const monthsCovered =
-    needsMonthly > 0 ? emergencyCorpusTotal / needsMonthly : 0;
   const totalAssets =
     savingsVal +
     fdVal +
@@ -1088,6 +1123,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     (data.homeMarketValue || 0) +
     (data.carMarketValue || 0) +
     (data.goldValue || 0) +
+    n(data.emergencyFundCurrent) +
     (() => {
       const schemes = (
         data as FinancialProfile & {
@@ -1109,24 +1145,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       (sum: number, inv: any) => sum + (inv.currentValue || 0),
       0,
     );
-  const totalLiabilities =
-    (data.homeLoanOutstanding || 0) +
-    (data.carLoanOutstanding || 0) +
-    (data.personalLoanOutstanding || (data.personalLoanEMI || 0) * 24) +
-    (data.bikeEMI || 0) * 24 +
-    (data.creditCardBillMonthly || 0) * 3 +
-    (data.unifiedLoans || []).reduce((sum: number, loan: any) => {
-      const alreadyCounted =
-        loan.loanType === "personal_loan" ||
-        loan.loanType === "car_loan" ||
-        loan.loanType === "bike_loan";
-      if (alreadyCounted) return sum;
-      return (
-        sum +
-        (loan.outstandingAmount ||
-          (loan.monthlyEMI || 0) * (loan.remainingMonths || 18))
-      );
-    }, 0);
+  const totalLiabilities = totalLoanLiabilities(data);
   const netWorth = totalAssets - totalLiabilities;
   if (process.env.NODE_ENV === "development") {
     console.log(
@@ -1160,8 +1179,8 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     termInsuranceNeeded,
     realEmergencyFund: {
       ...er,
-      total: emergencyCorpusTotal,
-      monthsCovered,
+      total: er.realTotal,
+      monthsCovered: er.monthsCovered,
       savings: savingsVal,
       fd: fdVal,
       fdWeighted: fdVal * 0.7,

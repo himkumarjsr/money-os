@@ -31,6 +31,8 @@ type MoneyInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   hint?: string;
   min?: number | string;
   max?: number | string;
+  /** When true, label is applied as aria-label only (for nested PremiumField layouts). */
+  hideLabel?: boolean;
 };
 
 const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
@@ -47,6 +49,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
       placeholder = "0",
       min = 0,
       max = CALCULATOR_MONEY_MAX,
+      hideLabel = false,
       onChange,
       onBlur,
       onFocus,
@@ -117,7 +120,6 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
       );
       e.currentTarget.value =
         parsed !== null && parsed > 0 ? String(parsed) : "";
-      e.currentTarget.select();
       onFocus?.(e);
     };
 
@@ -145,27 +147,29 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
       };
 
     return (
-      <div className="mb-5">
-        <div className="mb-1.5 flex items-start justify-between gap-2">
-          <label
-            htmlFor={id}
-            className="inline-flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-sm font-medium text-[#5F5E5A]"
-          >
-            <span>
-              {label}
-              {required ? <span className="text-[#E24B4A]"> *</span> : null}
-              {optional ? (
-                <span className="ml-1.5 text-[11px] font-normal text-[#9B9A94]">
-                  optional
-                </span>
-              ) : null}
-            </span>
-            {helperText ? <FieldTooltip text={helperText} /> : null}
-          </label>
-          {labelAction ? (
-            <span className="shrink-0 pt-0.5">{labelAction}</span>
-          ) : null}
-        </div>
+      <div className={`min-w-0 ${hideLabel ? "mb-0" : "mb-5"}`}>
+        {hideLabel ? null : (
+          <div className="mb-1.5 flex items-start justify-between gap-2">
+            <label
+              htmlFor={id}
+              className="inline-flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-sm font-medium text-[#5F5E5A]"
+            >
+              <span>
+                {label}
+                {required ? <span className="text-[#E24B4A]"> *</span> : null}
+                {optional ? (
+                  <span className="ml-1.5 text-[11px] font-normal text-[#9B9A94]">
+                    optional
+                  </span>
+                ) : null}
+              </span>
+              {helperText ? <FieldTooltip text={helperText} /> : null}
+            </label>
+            {labelAction ? (
+              <span className="shrink-0 pt-0.5">{labelAction}</span>
+            ) : null}
+          </div>
+        )}
 
         <div
           className={`flex w-full min-h-[52px] cursor-text items-center gap-2 rounded-xl px-4 py-3 transition-[border-color,background-color] box-border ${
@@ -176,7 +180,6 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
           onClick={() => {
             if (!innerRef.current || nativeInputProps.disabled) return;
             innerRef.current.focus();
-            innerRef.current.select();
           }}
         >
           <span className="shrink-0 select-none text-[15px] font-semibold text-[#9B9A94]">
@@ -191,6 +194,7 @@ const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
             className="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold leading-snug text-[#111110] outline-none placeholder:text-slate-400"
             style={{ fontSize: 16 }}
             placeholder={placeholder}
+            aria-label={hideLabel ? label : undefined}
             onChange={handleChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
