@@ -1224,7 +1224,7 @@ function TrackerContent() {
           }}
         >
           <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
-            INCOME · tap to edit salary
+            INCOME
           </div>
           <div
             style={{
@@ -1751,9 +1751,8 @@ function TrackerContent() {
                       </div>
                     ) : null}
                     <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>
-                      Tap purple INCOME to edit salary, or Add income for bonus
-                      / freelance / other — leftover savings still auto-sync on
-                      the 1st if missing.
+                      Use Add income for bonus / freelance / other — leftover
+                      savings still auto-sync on the 1st if missing.
                     </p>
                   </div>
                 ) : (

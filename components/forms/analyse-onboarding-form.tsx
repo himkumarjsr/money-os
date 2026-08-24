@@ -3,11 +3,11 @@
 import { Button } from "@/components/ui/button";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
-import PrivateAmount from "@/components/ui/PrivateAmount";
 import AnalyseAdvisorModal from "@/components/analyse/AnalyseAdvisorModal";
 import {
   DayOfMonthPicker,
   PremiumDueFields,
+  YearSelect,
 } from "@/components/forms/ObligationDateFields";
 import NumberInput from "../ui/NumberInput";
 import {
@@ -118,8 +118,7 @@ function detectLastStep(profile: Partial<AnalyseFormValues> | null): number {
     (p.emergencyFundTarget ?? 0) > 0 ||
     (p.kidsEducationFundTarget ?? 0) > 0 ||
     (p.kidsMarriageFundTarget ?? 0) > 0 ||
-    (p.homePurchaseTarget ?? 0) > 0 ||
-    (p.medicalEmergencyFund ?? 0) > 0
+    (p.homePurchaseTarget ?? 0) > 0
   ) {
     return 6;
   }
@@ -128,7 +127,9 @@ function detectLastStep(profile: Partial<AnalyseFormValues> | null): number {
     (p.epfBalance ?? 0) > 0 ||
     (p.fdValue ?? 0) > 0 ||
     (p.savingsAccountBalance ?? 0) > 0 ||
-    (p.ppfBalance ?? 0) > 0
+    (p.ppfBalance ?? 0) > 0 ||
+    (p.medicalEmergencyFund ?? 0) > 0 ||
+    (p.emergencyFundCurrent ?? 0) > 0
   ) {
     return 5;
   }
@@ -243,32 +244,30 @@ const AgeNumberInput = forwardRef<
 
 AgeNumberInput.displayName = "AgeNumberInput";
 
-function TextInput({
-  id,
-  label,
-  error,
-  helper,
-  required,
-  onChange,
-  style,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & {
-  id: string;
-  label: string;
-  error?: string;
-  helper?: string;
-  required?: boolean;
-}) {
+const TextInput = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    id: string;
+    label: string;
+    error?: string;
+    helper?: string;
+    required?: boolean;
+  }
+>(function TextInput(
+  { id, label, error, helper, required, onChange, style, ...props },
+  ref,
+) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <label htmlFor={id} className="text-[14px] font-medium text-[#5F5E5A]">
         {label}
         {required ? <span className="text-[#E24B4A]"> *</span> : null}
       </label>
       <input
         id={id}
+        ref={ref}
         autoCapitalize="characters"
-        className="h-12 rounded-[10px] border-[1.5px] border-[#E8E6F0] bg-white px-[14px] text-[15px] uppercase text-[#111110] outline-none focus:border-[#534AB7] focus:shadow-[0_0_0_3px_rgba(83,74,183,0.1)] placeholder:normal-case placeholder:text-slate-400"
+        className="h-12 min-w-0 rounded-[10px] border-[1.5px] border-[#E8E6F0] bg-white px-[14px] text-[15px] uppercase text-[#111110] outline-none focus:border-[#534AB7] focus:shadow-[0_0_0_3px_rgba(83,74,183,0.1)] placeholder:normal-case placeholder:text-slate-400"
         style={{ textTransform: "uppercase", ...style }}
         onChange={(e) => {
           const start = e.target.selectionStart;
@@ -284,6 +283,81 @@ function TextInput({
       />
       {helper ? <p className={FIELD_HELPER}>{helper}</p> : null}
       {error ? <p className="text-sm text-[#E24B4A]">{error}</p> : null}
+    </div>
+  );
+});
+
+function LoanTypeSelect({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: (typeof UNIFIED_LOAN_TYPE_VALUES)[number]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [open]);
+
+  const label =
+    LOAN_TYPE_OPTIONS.find((o) => o.value === value)?.label ??
+    "Select loan type";
+
+  return (
+    <div ref={wrapRef} className="relative min-w-0">
+      <label
+        htmlFor={id}
+        className="mb-1.5 block text-[14px] font-medium text-[#5F5E5A]"
+      >
+        Loan type *
+      </label>
+      <button
+        id={id}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-12 w-full min-w-0 items-center justify-between rounded-[10px] border-[1.5px] border-[#E8E6F0] bg-white px-[14px] text-left text-[15px] text-[#111110] outline-none focus:border-[#534AB7] focus:shadow-[0_0_0_3px_rgba(83,74,183,0.1)]"
+      >
+        <span className="truncate">{label}</span>
+        <span className="ml-2 shrink-0 text-[#9B9A94]">▾</span>
+      </button>
+      {open ? (
+        <ul
+          role="listbox"
+          className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-[10px] border border-[#E8E6F0] bg-white py-1 shadow-[0_8px_24px_rgba(30,30,60,0.12)]"
+        >
+          {LOAN_TYPE_OPTIONS.map((option) => (
+            <li key={option.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={option.value === value}
+                className={`w-full px-3.5 py-2.5 text-left text-[15px] ${
+                  option.value === value
+                    ? "bg-[#EEEDFE] font-semibold text-[#3C3489]"
+                    : "text-[#111110] hover:bg-[#F7F7F4]"
+                }`}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -386,7 +460,7 @@ function ToggleButtons({
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            className={`h-9 flex-1 rounded-[8px] px-5 text-sm font-medium transition-all duration-150 ${
+            className={`h-9 min-w-0 flex-1 rounded-[8px] px-3 text-sm font-medium transition-all duration-150 ${
               selected
                 ? "bg-white font-semibold text-[#534AB7] shadow-[0_1px_4px_rgba(0,0,0,0.1)]"
                 : "bg-transparent text-[#9B9A94]"
@@ -448,10 +522,10 @@ function PremiumField({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-slate-800">{label}</p>
-        <div className="w-[180px]">
+    <div className="min-w-0 space-y-3 overflow-hidden rounded-2xl border border-slate-200 p-3 sm:p-4">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="min-w-0 text-sm font-medium text-slate-800">{label}</p>
+        <div className="w-full min-w-0 shrink-0 sm:w-[160px]">
           <ToggleButtons
             options={[
               { label: "Monthly", value: "monthly" },
@@ -462,7 +536,7 @@ function PremiumField({
           />
         </div>
       </div>
-      {children}
+      <div className="min-w-0">{children}</div>
       {amountError ? (
         <p className="text-sm text-[#E24B4A]">{amountError}</p>
       ) : null}
@@ -508,6 +582,11 @@ export function AnalyseOnboardingForm() {
   );
   /** Loan cards the user marked as saved (collapsed summary). Form values stay intact. */
   const [savedLoanIds, setSavedLoanIds] = useState<string[]>([]);
+  const pendingOtherInsId = useRef<string | null>(null);
+  const otherInsCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const otherInsPolicyRefs = useRef<Record<string, HTMLInputElement | null>>(
+    {},
+  );
   const [liquidMfInfoOpen, setLiquidMfInfoOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -538,6 +617,17 @@ export function AnalyseOnboardingForm() {
     mode: "onSubmit",
     shouldUnregister: false,
   });
+
+  /** Ensure watch → draft persist picks up select/date changes. */
+  const persistValue = useCallback(
+    (name: FieldPath<AnalyseFormValues>, value: unknown) => {
+      setValue(name, value as never, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    },
+    [setValue],
+  );
 
   const bindMoneyField = useCallback(
     (name: FieldPath<AnalyseFormValues>) => {
@@ -635,9 +725,11 @@ export function AnalyseOnboardingForm() {
   });
 
   const addOtherInsuranceRow = useCallback(() => {
+    const id = newAnalyseRowId();
+    pendingOtherInsId.current = id;
     const nextIndex = otherInsuranceFields.length;
     appendOtherInsurance({
-      id: newAnalyseRowId(),
+      id,
       policyName: "",
       premiumAmount: 0,
       frequency: "monthly",
@@ -660,6 +752,21 @@ export function AnalyseOnboardingForm() {
       defaultValue: 0,
     });
   }, [appendOtherInsurance, otherInsuranceFields.length, resetField]);
+
+  useEffect(() => {
+    const id = pendingOtherInsId.current;
+    if (!id) return;
+    pendingOtherInsId.current = null;
+    const t = window.setTimeout(() => {
+      otherInsCardRefs.current[id]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      otherInsPolicyRefs.current[id]?.focus({ preventScroll: true });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [otherInsuranceFields.length]);
+
   const {
     fields: customInvestmentFields,
     append: appendCustomInvestment,
@@ -943,7 +1050,9 @@ export function AnalyseOnboardingForm() {
 
   useEffect(() => {
     const prev = prevLifeStageRef.current;
-    if (lifeStage === "bachelor") {
+    // Only clear spouse fields when the user switches TO bachelor — not on
+    // initial mount with default lifeStage (that was wiping restored drafts).
+    if (prev !== null && prev !== "bachelor" && lifeStage === "bachelor") {
       setValue("spouseIncome", 0, {
         shouldDirty: false,
         shouldValidate: false,
@@ -1201,6 +1310,7 @@ export function AnalyseOnboardingForm() {
 
   const handleFinalSubmit = useCallback(async () => {
     clearErrors();
+    setSubmitError(null);
     const values = getValues();
     const finalParsed = step7Schema.safeParse({
       ...values,
@@ -1210,11 +1320,17 @@ export function AnalyseOnboardingForm() {
     });
     if (!finalParsed.success) {
       applyZodFieldErrors(finalParsed.error.flatten(), setError);
+      const flat = finalParsed.error.flatten();
+      const firstMsg =
+        Object.values(flat.fieldErrors).find((m) => m?.[0])?.[0] ??
+        flat.formErrors[0] ??
+        "Please fix the highlighted fields, then try again.";
+      setSubmitError(firstMsg);
+      scrollStepIntoView();
       return;
     }
 
     setIsSubmitting(true);
-    setSubmitError(null);
 
     try {
       const mergedValues = coalesceInsuranceToggles({
@@ -1239,44 +1355,59 @@ export function AnalyseOnboardingForm() {
         return;
       }
 
-      const { plan: aiPlan } = await getAIFixPlan(savedProfile, nextResult);
-      useFinancialStore.getState().setAiPlan(aiPlan);
+      // Navigate immediately — AI + cloud save must not block the report.
+      router.push("/analyse/result");
 
-      const uid = useAuthStore.getState().user?.id;
-      if (uid && supabase) {
-        void upsertUserAnalyseSnapshot(uid, {
-          profile: savedProfile,
-          result: nextResult,
-          submittedAt: new Date().toISOString(),
-          version: "1.0",
-          aiPlan,
-          analysis: mergedValues,
-        }).then(({ error }) => {
+      void (async () => {
+        try {
+          const { plan: aiPlan } = await getAIFixPlan(savedProfile, nextResult);
+          useFinancialStore.getState().setAiPlan(aiPlan);
+
+          const uid = useAuthStore.getState().user?.id;
+          if (!uid || !supabase) return;
+
+          const { error } = await upsertUserAnalyseSnapshot(uid, {
+            profile: savedProfile,
+            result: nextResult,
+            submittedAt: new Date().toISOString(),
+            version: "1.0",
+            aiPlan,
+            analysis: mergedValues,
+          });
           if (error) console.warn("Snapshot save failed:", error.message);
           else invalidateProfileMonthlySalaryCache(uid);
-        });
-        void useObligationStore
-          .getState()
-          .syncFromHealthCheck(uid, savedProfile)
-          .catch((err) => console.warn("Obligation sync failed:", err));
-        // Encrypt sensitive money fields server-side (ENCRYPTION_KEY never on client).
-        void fetch("/api/financial-data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ submission: savedProfile }),
-        }).catch((err) =>
-          console.warn("Encrypted financial data save failed:", err),
-        );
-      }
 
-      router.push("/analyse/result");
+          void useObligationStore
+            .getState()
+            .syncFromHealthCheck(uid, savedProfile)
+            .catch((err) => console.warn("Obligation sync failed:", err));
+
+          void fetch("/api/financial-data", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ submission: savedProfile }),
+          }).catch((err) =>
+            console.warn("Encrypted financial data save failed:", err),
+          );
+        } catch (err) {
+          console.warn("Post-submit AI/snapshot failed:", err);
+        }
+      })();
     } catch (e) {
       console.error("Submit error:", e);
       setSubmitError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [clearErrors, getValues, router, setAnalysis, setError, setFullAnalysis]);
+  }, [
+    clearErrors,
+    getValues,
+    router,
+    scrollStepIntoView,
+    setAnalysis,
+    setError,
+    setFullAnalysis,
+  ]);
 
   const debtWarning =
     totalIncome > 0 && fixedObligations > totalIncome * 0.5
@@ -1303,12 +1434,6 @@ export function AnalyseOnboardingForm() {
       return {
         tone: "blue" as const,
         text: "You have both rent and home loan. This is valid if your mortgaged property is rented out and you live in a rented place.",
-      };
-    }
-    if (rent > 0) {
-      return {
-        tone: "yellow" as const,
-        text: `Renting — ${formatCurrency(rent, "en-IN", "INR")}/month`,
       };
     }
     if (homeLoan > 0 || secondProperty > 0) {
@@ -1673,20 +1798,14 @@ export function AnalyseOnboardingForm() {
                     <span className="text-sm font-medium text-[#3C3489]">
                       Total monthly income
                     </span>
-                    <PrivateAmount
-                      value={totalIncome}
-                      label="total monthly income"
-                      align="flex-start"
-                    >
-                      <span className="text-right">
-                        <span className="block text-lg font-bold text-[#534AB7]">
-                          ₹{formatIndian(totalIncome)}
-                        </span>
-                        <span className="block text-[11px] text-[#7F77DD]">
-                          {formatInWords(totalIncome)}
-                        </span>
+                    <span className="text-right">
+                      <span className="block text-lg font-bold text-[#534AB7]">
+                        ₹{formatIndian(totalIncome)}
                       </span>
-                    </PrivateAmount>
+                      <span className="block text-[11px] text-[#7F77DD]">
+                        {formatInWords(totalIncome)}
+                      </span>
+                    </span>
                   </div>
                 </div>
               ) : null}
@@ -1696,11 +1815,11 @@ export function AnalyseOnboardingForm() {
                   <div className="space-y-4">
                     <SectionTitle>Housing</SectionTitle>
                     <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm font-medium text-slate-800">
                           Are you on rent?
                         </p>
-                        <div className="w-[180px]">
+                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -1885,58 +2004,49 @@ export function AnalyseOnboardingForm() {
                                   Loan {index + 1}
                                 </div>
 
-                                <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                  <div className="flex flex-col gap-1.5">
-                                    <label
-                                      htmlFor={`unifiedLoans.${index}.loanType`}
-                                      className="text-[14px] font-medium text-[#5F5E5A]"
-                                    >
-                                      Loan type *
-                                    </label>
-                                    <select
-                                      id={`unifiedLoans.${index}.loanType`}
-                                      className="h-12 rounded-[10px] border-[1.5px] border-[#E8E6F0] bg-white px-[14px] text-[15px] text-[#111110] outline-none focus:border-[#534AB7] focus:shadow-[0_0_0_3px_rgba(83,74,183,0.1)]"
-                                      {...register(
-                                        `unifiedLoans.${index}.loanType` as const,
-                                      )}
-                                    >
-                                      {LOAN_TYPE_OPTIONS.map((option) => (
-                                        <option
-                                          key={option.value}
-                                          value={option.value}
-                                        >
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <TextInput
-                                    id={`unifiedLoans.${index}.lenderName`}
-                                    label="Lender name"
-                                    placeholder="e.g. HDFC, ICICI"
-                                    {...register(
-                                      `unifiedLoans.${index}.lenderName` as const,
-                                      {
-                                        setValueAs: (v) =>
-                                          typeof v === "string"
-                                            ? v.toUpperCase()
-                                            : v,
-                                      },
-                                    )}
-                                    onBlur={(e) => {
-                                      const caps = e.target.value
-                                        .toUpperCase()
-                                        .trim();
+                                <div className="mb-3 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                                  <LoanTypeSelect
+                                    id={`unifiedLoans.${index}.loanType`}
+                                    value={loanType ?? "personal_loan"}
+                                    onChange={(next) => {
                                       setValue(
-                                        `unifiedLoans.${index}.lenderName` as const,
-                                        caps,
-                                        {
-                                          shouldDirty: true,
-                                          shouldTouch: true,
-                                        },
+                                        `unifiedLoans.${index}.loanType` as const,
+                                        next,
+                                        { shouldDirty: true },
                                       );
                                       setAnalysis(getValues());
                                     }}
+                                  />
+                                  <Controller
+                                    control={control}
+                                    name={`unifiedLoans.${index}.lenderName`}
+                                    render={({ field: lenderField }) => (
+                                      <TextInput
+                                        id={`unifiedLoans.${index}.lenderName`}
+                                        label="Lender name"
+                                        placeholder="e.g. HDFC, ICICI"
+                                        value={lenderField.value ?? ""}
+                                        onChange={(e) => {
+                                          const caps =
+                                            e.target.value.toUpperCase();
+                                          lenderField.onChange(caps);
+                                          setValue(
+                                            `unifiedLoans.${index}.lenderName` as const,
+                                            caps,
+                                            {
+                                              shouldDirty: true,
+                                              shouldTouch: true,
+                                            },
+                                          );
+                                          setAnalysis({
+                                            ...getValues(),
+                                            unifiedLoans:
+                                              getValues().unifiedLoans,
+                                          });
+                                        }}
+                                        onBlur={lenderField.onBlur}
+                                      />
+                                    )}
                                   />
                                 </div>
 
@@ -1963,6 +2073,20 @@ export function AnalyseOnboardingForm() {
                                             ) ?? 0,
                                           )
                                         }
+                                        onFocus={(e) => {
+                                          if ((field.value ?? 0) === 0) {
+                                            e.currentTarget.value = "";
+                                          }
+                                        }}
+                                        onBlur={(e) => {
+                                          const raw = e.currentTarget.value
+                                            .replace(/[,\s₹]/g, "")
+                                            .trim();
+                                          if (raw === "") {
+                                            field.onChange(0);
+                                            e.currentTarget.value = "";
+                                          }
+                                        }}
                                       />
                                     )}
                                   />
@@ -1970,12 +2094,25 @@ export function AnalyseOnboardingForm() {
                                     0) > 0 ? (
                                     <DayOfMonthPicker
                                       label="Which date is this EMI debited? (optional)"
-                                      hint="We'll remind you a few days before"
+                                      hint="We'll remind you a few days before. Pick month and day only — no year."
                                       value={
                                         watch(
                                           `unifiedLoans.${index}.emiDay` as const,
                                         ) || undefined
                                       }
+                                      month={
+                                        watch(
+                                          `unifiedLoans.${index}.emiMonth` as const,
+                                        ) || undefined
+                                      }
+                                      onMonth={(m) => {
+                                        setValue(
+                                          `unifiedLoans.${index}.emiMonth` as const,
+                                          m,
+                                          { shouldDirty: true },
+                                        );
+                                        setAnalysis(getValues());
+                                      }}
                                       onChange={(day) => {
                                         setValue(
                                           `unifiedLoans.${index}.emiDay` as const,
@@ -2184,9 +2321,10 @@ export function AnalyseOnboardingForm() {
 
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
+                            const id = newAnalyseRowId();
                             appendUnifiedLoan({
-                              id: newAnalyseRowId(),
+                              id,
                               loanType: "personal_loan",
                               lenderName: "",
                               monthlyEMI: 0,
@@ -2196,8 +2334,8 @@ export function AnalyseOnboardingForm() {
                               odLimit: 0,
                               odUsed: 0,
                               odInterestOnlyYears: 0,
-                            })
-                          }
+                            });
+                          }}
                           className="mt-1 flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#534AB7] bg-transparent text-sm font-semibold text-[#534AB7]"
                         >
                           + Add a loan
@@ -2214,11 +2352,11 @@ export function AnalyseOnboardingForm() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-medium text-slate-800">
                         Do you have credit card outstanding?
                       </p>
-                      <div className="w-[180px]">
+                      <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                         <ToggleButtons
                           options={[
                             { label: "Yes", value: "yes" },
@@ -2395,11 +2533,11 @@ export function AnalyseOnboardingForm() {
                           </select>
                         </div>
                         <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
-                          <div className="flex items-center justify-between gap-4">
+                          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm font-medium text-slate-800">
                               Do your parents have health insurance?
                             </p>
-                            <div className="w-[180px]">
+                            <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                               <ToggleButtons
                                 options={[
                                   { label: "Yes", value: "yes" },
@@ -2463,13 +2601,13 @@ export function AnalyseOnboardingForm() {
               ) : null}
 
               {step === 4 ? (
-                <div className="space-y-6">
+                <div className="min-w-0 space-y-6 overflow-x-clip">
                   <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-medium text-slate-800">
                         Do you have health insurance?
                       </p>
-                      <div className="w-[180px]">
+                      <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                         <ToggleButtons
                           options={[
                             { label: "Yes", value: "yes" },
@@ -2483,7 +2621,7 @@ export function AnalyseOnboardingForm() {
                       </div>
                     </div>
                     {hasHealthInsurance ? (
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid min-w-0 gap-5 sm:grid-cols-2">
                         <MoneyInput
                           id="healthInsuranceSumInsured"
                           label="Sum insured"
@@ -2507,6 +2645,7 @@ export function AnalyseOnboardingForm() {
                           <MoneyInput
                             id="healthInsurancePremiumInput"
                             label="Premium amount"
+                            hideLabel
                             {...bindMoneyField("healthInsurancePremiumInput")}
                           />
                         </PremiumField>
@@ -2525,10 +2664,10 @@ export function AnalyseOnboardingForm() {
                                 watch("healthInsuranceRenewalDay") || undefined
                               }
                               onMonth={(m) =>
-                                setValue("healthInsuranceRenewalMonth", m)
+                                persistValue("healthInsuranceRenewalMonth", m)
                               }
                               onDay={(d) =>
-                                setValue("healthInsuranceRenewalDay", d)
+                                persistValue("healthInsuranceRenewalDay", d)
                               }
                               yearlyLabel="When is your health insurance renewal? (optional)"
                               monthlyLabel="Which date is the health premium debited? (optional)"
@@ -2540,11 +2679,11 @@ export function AnalyseOnboardingForm() {
                   </div>
 
                   <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-medium text-slate-800">
                         Do you have term insurance?
                       </p>
-                      <div className="w-[180px]">
+                      <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                         <ToggleButtons
                           options={[
                             { label: "Yes", value: "yes" },
@@ -2558,7 +2697,7 @@ export function AnalyseOnboardingForm() {
                       </div>
                     </div>
                     {hasTermInsurance ? (
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid min-w-0 gap-5 sm:grid-cols-2">
                         <MoneyInput
                           id="termInsuranceSumAssured"
                           label="Sum assured"
@@ -2581,23 +2720,19 @@ export function AnalyseOnboardingForm() {
                           <MoneyInput
                             id="termInsurancePremiumInput"
                             label="Premium amount"
+                            hideLabel
                             {...bindMoneyField("termInsurancePremiumInput")}
                           />
                         </PremiumField>
-                        <NumberInput
+                        <YearSelect
                           label="Premium paying till year (optional)"
-                          value={watch("termInsurancePremiumTillYear") || 0}
-                          onChange={(val: number) =>
-                            setValue(
-                              "termInsurancePremiumTillYear",
-                              Math.round(val),
-                            )
-                          }
-                          placeholder="e.g. 2045"
-                          min={2024}
-                          max={2060}
-                          step={1}
                           helper="Which year does your term end?"
+                          value={watch("termInsurancePremiumTillYear") || 0}
+                          onChange={(year) =>
+                            persistValue("termInsurancePremiumTillYear", year)
+                          }
+                          minYear={2024}
+                          maxYear={2060}
                         />
                         {(watch("termInsurancePremiumInput") ?? 0) > 0 ? (
                           <div className="sm:col-span-2">
@@ -2613,10 +2748,10 @@ export function AnalyseOnboardingForm() {
                                 watch("termInsuranceRenewalDay") || undefined
                               }
                               onMonth={(m) =>
-                                setValue("termInsuranceRenewalMonth", m)
+                                persistValue("termInsuranceRenewalMonth", m)
                               }
                               onDay={(d) =>
-                                setValue("termInsuranceRenewalDay", d)
+                                persistValue("termInsuranceRenewalDay", d)
                               }
                               yearlyLabel="When is your term insurance renewal? (optional)"
                               monthlyLabel="Which date is the term premium debited? (optional)"
@@ -2629,11 +2764,11 @@ export function AnalyseOnboardingForm() {
 
                   <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
                     <SectionTitle>Vehicle insurance</SectionTitle>
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-medium text-slate-800">
                         Do you have a vehicle?
                       </p>
-                      <div className="w-[180px]">
+                      <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                         <ToggleButtons
                           options={[
                             { label: "Yes", value: "yes" },
@@ -2667,6 +2802,7 @@ export function AnalyseOnboardingForm() {
                           <MoneyInput
                             id="carInsurancePremiumInput"
                             label="Car insurance premium"
+                            hideLabel
                             {...bindMoneyField("carInsurancePremiumInput")}
                           />
                         </PremiumField>
@@ -2680,9 +2816,11 @@ export function AnalyseOnboardingForm() {
                             }
                             day={watch("carInsuranceRenewalDay") || undefined}
                             onMonth={(m) =>
-                              setValue("carInsuranceRenewalMonth", m)
+                              persistValue("carInsuranceRenewalMonth", m)
                             }
-                            onDay={(d) => setValue("carInsuranceRenewalDay", d)}
+                            onDay={(d) =>
+                              persistValue("carInsuranceRenewalDay", d)
+                            }
                             yearlyLabel="When is your car insurance renewal? (optional)"
                             monthlyLabel="Which date is the car premium debited? (optional)"
                           />
@@ -2703,6 +2841,7 @@ export function AnalyseOnboardingForm() {
                           <MoneyInput
                             id="bikeInsurancePremiumInput"
                             label="Two-wheeler insurance premium"
+                            hideLabel
                             {...bindMoneyField("bikeInsurancePremiumInput")}
                           />
                         </PremiumField>
@@ -2717,10 +2856,10 @@ export function AnalyseOnboardingForm() {
                             }
                             day={watch("bikeInsuranceRenewalDay") || undefined}
                             onMonth={(m) =>
-                              setValue("bikeInsuranceRenewalMonth", m)
+                              persistValue("bikeInsuranceRenewalMonth", m)
                             }
                             onDay={(d) =>
-                              setValue("bikeInsuranceRenewalDay", d)
+                              persistValue("bikeInsuranceRenewalDay", d)
                             }
                             yearlyLabel="When is your two-wheeler insurance renewal? (optional)"
                             monthlyLabel="Which date is the two-wheeler premium debited? (optional)"
@@ -2731,11 +2870,11 @@ export function AnalyseOnboardingForm() {
                   </div>
 
                   <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-medium text-slate-800">
                         Any other insurance premium?
                       </p>
-                      <div className="w-[180px]">
+                      <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                         <ToggleButtons
                           options={[
                             { label: "Yes", value: "yes" },
@@ -2773,7 +2912,10 @@ export function AnalyseOnboardingForm() {
                           {otherInsuranceFields.map((field, index) => (
                             <div
                               key={field.id}
-                              className="rounded-2xl border border-slate-200 p-4"
+                              ref={(node) => {
+                                otherInsCardRefs.current[field.id] = node;
+                              }}
+                              className="min-w-0 rounded-2xl border border-slate-200 p-4"
                             >
                               <div className="mb-4 flex items-center justify-between gap-3">
                                 <p className="text-sm font-medium text-slate-800">
@@ -2791,18 +2933,22 @@ export function AnalyseOnboardingForm() {
                                 <Controller
                                   control={control}
                                   name={`otherInsurancePremiums.${index}.policyName`}
-                                  render={({ field }) => (
+                                  render={({ field: policyField }) => (
                                     <TextInput
                                       id={`otherInsurancePremiums.${index}.policyName`}
+                                      ref={(node) => {
+                                        otherInsPolicyRefs.current[field.id] =
+                                          node;
+                                      }}
                                       label="Policy name"
                                       error={
                                         errors.otherInsurancePremiums?.[index]
                                           ?.policyName?.message
                                       }
                                       placeholder="LIC / endowment / ULIP / other"
-                                      value={field.value ?? ""}
-                                      onChange={field.onChange}
-                                      onBlur={field.onBlur}
+                                      value={policyField.value ?? ""}
+                                      onChange={policyField.onChange}
+                                      onBlur={policyField.onBlur}
                                     />
                                   )}
                                 />
@@ -2828,6 +2974,7 @@ export function AnalyseOnboardingForm() {
                                   <MoneyInput
                                     id={`otherInsurancePremiums.${index}.premiumAmount`}
                                     label="Premium amount"
+                                    hideLabel
                                     {...bindMoneyField(
                                       `otherInsurancePremiums.${index}.premiumAmount` as const,
                                     )}
@@ -2853,13 +3000,13 @@ export function AnalyseOnboardingForm() {
                                       ) || undefined
                                     }
                                     onMonth={(m) =>
-                                      setValue(
+                                      persistValue(
                                         `otherInsurancePremiums.${index}.renewalMonth` as const,
                                         m,
                                       )
                                     }
                                     onDay={(d) =>
-                                      setValue(
+                                      persistValue(
                                         `otherInsurancePremiums.${index}.renewalDay` as const,
                                         d,
                                       )
@@ -2878,24 +3025,22 @@ export function AnalyseOnboardingForm() {
                                     `otherInsurancePremiums.${index}.maturityAmount` as const,
                                   )}
                                 />
-                                <NumberInput
+                                <YearSelect
                                   label="Maturity year (optional)"
+                                  helper="Year this policy pays the maturity amount"
                                   value={
                                     watch(
                                       `otherInsurancePremiums.${index}.maturityYear` as const,
                                     ) || 0
                                   }
-                                  onChange={(val: number) =>
-                                    setValue(
+                                  onChange={(year) =>
+                                    persistValue(
                                       `otherInsurancePremiums.${index}.maturityYear` as const,
-                                      Math.round(val),
+                                      year,
                                     )
                                   }
-                                  placeholder="e.g. 2035"
-                                  min={2024}
-                                  max={2060}
-                                  step={1}
-                                  helper="e.g. 2035"
+                                  minYear={new Date().getFullYear()}
+                                  maxYear={2060}
                                 />
                                 <div className="rounded-lg bg-[#FAEEDA] px-3 py-2 text-xs text-[#633806]">
                                   ⚠️ If this is a ULIP or endowment plan, the
@@ -2938,28 +3083,19 @@ export function AnalyseOnboardingForm() {
                             step={0.1}
                             helper="Check your FD certificate"
                           />
-                          <NumberInput
-                            label="Tenure in years"
-                            value={watch("fdTenureYears") || 0}
-                            onChange={(val: number) =>
-                              setValue("fdTenureYears", Math.round(val))
-                            }
-                            placeholder="e.g. 5"
-                            min={0}
-                            max={50}
-                            step={1}
-                          />
-                          <NumberInput
-                            label="Maturity year"
-                            value={watch("fdMaturityYear") || 0}
-                            onChange={(val: number) =>
-                              setValue("fdMaturityYear", Math.round(val))
-                            }
-                            placeholder="e.g. 2027"
-                            min={2024}
-                            max={2060}
-                            step={1}
+                          <YearSelect
+                            label="Tenure (maturity year)"
                             helper="Year your FD matures"
+                            value={watch("fdMaturityYear") || 0}
+                            onChange={(year) => {
+                              setValue("fdMaturityYear", year);
+                              const now = new Date().getFullYear();
+                              if (year >= now) {
+                                setValue("fdTenureYears", year - now);
+                              }
+                            }}
+                            minYear={new Date().getFullYear()}
+                            maxYear={2060}
                           />
                         </div>
                         <div className="rounded-lg bg-[#EEEDFE] px-3 py-2 text-xs text-[#3C3489]">
@@ -3095,6 +3231,15 @@ export function AnalyseOnboardingForm() {
                         helper="Gold ETF, short term bonds, money market funds"
                         error={errors.otherLiquidSavings?.message}
                         {...bindMoneyField("otherLiquidSavings")}
+                      />
+
+                      <MoneyInput
+                        id="medicalEmergencyFund"
+                        label="Medical emergency fund"
+                        helper="Cash set aside only for medical use — separate from the general emergency pot above. Suggested minimum about ₹2–3 lakh depending on city and family. Used in your report checklist."
+                        optional
+                        error={errors.medicalEmergencyFund?.message}
+                        {...bindMoneyField("medicalEmergencyFund")}
                       />
                     </div>
 
@@ -3331,11 +3476,11 @@ export function AnalyseOnboardingForm() {
                   <div className="space-y-4">
                     <SectionTitle>Physical assets</SectionTitle>
                     <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm font-medium text-slate-800">
                           Do you own a home?
                         </p>
-                        <div className="w-[180px]">
+                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -3375,6 +3520,8 @@ export function AnalyseOnboardingForm() {
                               <DayOfMonthPicker
                                 label="Which date is your home loan EMI debited? (optional)"
                                 value={watch("homeLoanEMIDay") || undefined}
+                                month={watch("homeLoanEMIMonth") || undefined}
+                                onMonth={(m) => setValue("homeLoanEMIMonth", m)}
                                 onChange={(day) =>
                                   setValue("homeLoanEMIDay", day)
                                 }
@@ -3386,11 +3533,11 @@ export function AnalyseOnboardingForm() {
                     </div>
 
                     <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm font-medium text-slate-800">
                           Do you own a car?
                         </p>
-                        <div className="w-[180px]">
+                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -3600,24 +3747,22 @@ export function AnalyseOnboardingForm() {
                                       />
                                     )}
                                   />
-                                  <NumberInput
+                                  <YearSelect
                                     label="Maturity year (optional)"
+                                    helper="From your certificate or passbook"
                                     value={
                                       watch(
                                         `postOfficeSchemes.${index}.maturityYear` as const,
                                       ) || 0
                                     }
-                                    onChange={(val: number) =>
+                                    onChange={(year) =>
                                       setValue(
                                         `postOfficeSchemes.${index}.maturityYear` as const,
-                                        Math.round(val),
+                                        year,
                                       )
                                     }
-                                    placeholder="e.g. 2028"
-                                    min={2024}
-                                    max={2060}
-                                    step={1}
-                                    helper="From your certificate or passbook"
+                                    minYear={new Date().getFullYear()}
+                                    maxYear={2060}
                                   />
                                 </div>
                               </div>

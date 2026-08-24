@@ -172,7 +172,11 @@ describe("getBucketBreakdown", () => {
       { label: "Monthly RD", value: 2000 },
       { label: "NPS contribution", value: 1500 },
       { label: "PPF contribution", value: 500 },
-      { label: "EPF contribution (employee)", value: 2000 },
+      {
+        label:
+          "EPF contribution (employee) — deducted at source, not from in-hand",
+        value: 2000,
+      },
       { label: "SSY contribution", value: 1000 },
       { label: "Gold SIP", value: 300 },
     ]);
