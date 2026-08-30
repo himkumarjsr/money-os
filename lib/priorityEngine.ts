@@ -1,4 +1,5 @@
 import { calculateOutstanding } from "@/lib/amortisation";
+import { medicalEmergencyTarget } from "@/lib/financialEngine";
 
 export interface PriorityItem {
   rank: number;
@@ -299,11 +300,16 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     startMonth: 1,
   });
 
-  const medicalTarget = 200000;
-  const medicalCurrent = Math.min(
-    (profile.liquidMFValue || 0) * 0.5,
-    medicalTarget,
-  );
+  const medicalTarget = medicalEmergencyTarget(profile);
+  const enteredMedical = Number(profile.medicalEmergencyFund ?? 0) || 0;
+  let medicalCurrent = enteredMedical;
+  if (medicalCurrent <= 0) {
+    // Only estimate from liquid assets when the user did not enter a dedicated medical pot.
+    medicalCurrent = Math.min(
+      (profile.liquidMFValue || 0) * 0.5,
+      medicalTarget,
+    );
+  }
   const medicalGap = Math.max(0, medicalTarget - medicalCurrent);
   const medicalStartMonth =
     hardPriorityMode && emergencyMonthsToComplete > 0
@@ -333,7 +339,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     id: "medical_fund",
     title: "Medical emergency fund",
     category: "safety",
-    urgency: medicalCurrent === 0 ? "critical" : "high",
+    urgency:
+      medicalGap <= 0 ? "medium" : medicalCurrent === 0 ? "critical" : "high",
     status:
       medicalCurrent >= medicalTarget
         ? "complete"

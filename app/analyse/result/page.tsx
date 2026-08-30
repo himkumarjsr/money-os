@@ -11,7 +11,11 @@ import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { supabase } from "@/lib/supabase";
-import { analyseFinances, monthlyTotalIncome } from "@/lib/financialEngine";
+import {
+  analyseFinances,
+  medicalEmergencyTarget,
+  monthlyTotalIncome,
+} from "@/lib/financialEngine";
 import {
   getEpfContributionMonthly,
   getInHandOutflow,
@@ -257,6 +261,11 @@ export default function AnalyseResultPage() {
     return "partial" as const;
   })();
 
+  const medEmergencyTargetAmount = profile
+    ? medicalEmergencyTarget(profile)
+    : 200_000;
+  const medEmergencyCurrent = profile?.medicalEmergencyFund || 0;
+
   const safetyItems = [
     {
       id: "emergency",
@@ -283,11 +292,11 @@ export default function AnalyseResultPage() {
     {
       id: "medical",
       title: "Medical emergency fund",
-      current: profile?.medicalEmergencyFund || 0,
-      target: 200000,
+      current: medEmergencyCurrent,
+      target: medEmergencyTargetAmount,
       formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
-      formatTarget: () => "₹2,00,000",
-      isOk: (profile?.medicalEmergencyFund || 0) >= 200000,
+      formatTarget: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
+      isOk: medEmergencyCurrent >= medEmergencyTargetAmount,
       icon: "hospital",
     },
     {

@@ -3,6 +3,7 @@
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
+import { authRecoveryRedirectUrl } from "@/lib/authRecovery";
 import { getSupabase } from "@/lib/supabase";
 import {
   disableWebPush,
@@ -245,7 +246,7 @@ function SettingsInner() {
     if (!user?.email) return;
     const supabase = getSupabase();
     await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?type=recovery`,
+      redirectTo: authRecoveryRedirectUrl(),
     });
     setResetSent(true);
   };

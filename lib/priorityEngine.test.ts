@@ -177,4 +177,21 @@ describe("buildPriorityPlan", () => {
     ]);
     expect(plan.fdSuggestion).toBeUndefined();
   });
+
+  it("skips medical fund allocation when entered medical emergency fund meets target", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        cityTier: "tier3",
+        liquidMFValue: 300_000,
+        medicalEmergencyFund: 250_000,
+        savingsAccountBalance: 1_000_000,
+      }),
+      { needsActual: 50_000, overallScore: 70 },
+    );
+    const medical = plan.priorities.find((item) => item.id === "medical_fund");
+    expect(medical?.status).toBe("complete");
+    expect(medical?.gap).toBe(0);
+    expect(medical?.monthlyContribution).toBe(0);
+    expect(plan.monthlyPlan?.[0]?.medical).toBe(0);
+  });
 });

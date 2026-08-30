@@ -208,7 +208,7 @@ export function totalLoanLiabilities(data: FinancialProfile): number {
 }
 
 /** Suggested medical emergency corpus (beyond health insurance) by city, age, and dependants. */
-function medicalEmergencyTargetLiquid(data: FinancialProfile): number {
+export function medicalEmergencyTarget(data: FinancialProfile): number {
   let target =
     data.cityTier === "metro"
       ? 3_00_000
@@ -764,7 +764,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const premiumReserveTarget =
     monthlyPremiumsAll > 0 ? monthlyPremiumsAll * 12 : 0;
 
-  const medEmergencyTarget = medicalEmergencyTargetLiquid(data);
+  const medEmergencyTarget = medicalEmergencyTarget(data);
   const medEmergencyCurrent = n(data.medicalEmergencyFund);
 
   // 1. Emergency fund (weighted: savings 100%, liquid MF 95%, FD 70%, other liquid 50%, legacy field 100%)

@@ -1,6 +1,7 @@
 "use client";
 
 import { AppIcon } from "@/components/ui/AppIcon";
+import { authRecoveryRedirectUrl } from "@/lib/authRecovery";
 import { getSupabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useState } from "react";
@@ -21,7 +22,7 @@ export default function ResetPasswordPage() {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.trim(),
       {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+        redirectTo: authRecoveryRedirectUrl(),
       },
     );
 
