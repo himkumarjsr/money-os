@@ -9,6 +9,7 @@ import PwaBootSplash from "@/components/PwaBootSplash";
 import { MotionLazyProvider } from "@/components/MotionLazyProvider";
 import { ReferralCapture } from "@/components/ReferralCapture";
 import { ReferralSuccessToast } from "@/components/ReferralSuccessToast";
+import { AuthRecoveryRedirect } from "@/components/AuthRecoveryRedirect";
 import { AuthSessionSync } from "@/components/AuthSessionSync";
 import { SplitInviteResume } from "@/components/SplitInviteResume";
 import { PwaLaunchHandler } from "@/components/PwaLaunchHandler";
@@ -390,6 +391,7 @@ export default function RootLayout({
             <ScrollToTopOnRouteChange />
             <RouteChangeLoader />
             <AuthSessionSync />
+            <AuthRecoveryRedirect />
             <PwaLaunchHandler />
             <SplitInviteResume />
             <FinancialStoreAuthSync />

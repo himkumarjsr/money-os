@@ -2,6 +2,7 @@
 
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
+import { authRecoveryRedirectUrl } from "@/lib/authRecovery";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { peekPostLoginPath, sanitizeAppPath } from "@/lib/splitAuthRedirect";
 import { REFERRAL_PENDING_STORAGE_KEY } from "@/lib/referralRewards";
@@ -107,7 +108,7 @@ function LoginContent() {
       const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+          redirectTo: authRecoveryRedirectUrl(),
         },
       );
       setSubmitting(false);

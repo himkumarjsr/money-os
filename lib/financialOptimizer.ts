@@ -2,6 +2,7 @@ import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   calculateTermNeeded,
   computeRealEmergencyFund,
+  medicalEmergencyTarget,
   monthlyInsuranceTotal,
   monthlyTotalIncome,
 } from "@/lib/financialEngine";
@@ -128,7 +129,9 @@ export type OptimizerAnalysisInput = Partial<{
   securityActual: number;
 }>;
 
-export function buildOptimizerAnalysisFromProfile(profile: FinancialProfile): Required<OptimizerAnalysisInput> {
+export function buildOptimizerAnalysisFromProfile(
+  profile: FinancialProfile,
+): Required<OptimizerAnalysisInput> {
   const b = getUniversalBucketActuals(profile);
   return {
     needsActual: b.needs,
@@ -159,10 +162,6 @@ function hasGirlChildUnder10(p: FinancialProfile): boolean {
   return a !== undefined && a < 10;
 }
 
-function medicalEmergencyTarget(p: FinancialProfile): number {
-  return p.cityTier === "metro" ? 3_00_000 : 2_00_000;
-}
-
 function fmtIn(amount: number): string {
   return `₹${Math.round(amount).toLocaleString("en-IN")}`;
 }
@@ -182,7 +181,8 @@ export function optimizeFinances(
   const securityActual = analysis?.securityActual ?? buckets.security;
 
   const totalIncome = monthlyTotalIncome(profile);
-  const totalMonthlyOutflow = needsActual + wantsActual + loansActual + investmentActual + securityActual;
+  const totalMonthlyOutflow =
+    needsActual + wantsActual + loansActual + investmentActual + securityActual;
   const monthlySurplus = Math.max(0, totalIncome - totalMonthlyOutflow);
 
   const age = n(profile.selfAge) || 30;
@@ -199,16 +199,23 @@ export function optimizeFinances(
 
   const er = computeRealEmergencyFund(profile);
   const realEmergencyFund = er.realTotal;
-  const liquidLayerAccessible = er.savingsCounted + er.liquidCounted + er.otherCounted;
+  const liquidLayerAccessible =
+    er.savingsCounted + er.liquidCounted + er.otherCounted;
   const emergencyTarget = needsActual * 6;
-  const liquidityLayerGap = Math.max(0, emergencyTarget - liquidLayerAccessible);
+  const liquidityLayerGap = Math.max(
+    0,
+    emergencyTarget - liquidLayerAccessible,
+  );
 
   const mandatoryFunds: MandatoryFund[] = [];
 
   // 1. Bereavement (when supporting parents)
   if (hasParents) {
     const bereavementTarget = 2_00_000;
-    const bereavementCurrent = Math.min(n(profile.bereavementFund), bereavementTarget);
+    const bereavementCurrent = Math.min(
+      n(profile.bereavementFund),
+      bereavementTarget,
+    );
     const gap = Math.max(0, bereavementTarget - bereavementCurrent);
     const monthlyContribution = Math.min(
       monthlySurplus * 0.3,
@@ -216,7 +223,8 @@ export function optimizeFinances(
     );
     mandatoryFunds.push({
       fundName: "Bereavement fund",
-      purpose: "Immediate expenses when a parent or close family member passes — travel, rituals, urgent cash.",
+      purpose:
+        "Immediate expenses when a parent or close family member passes — travel, rituals, urgent cash.",
       targetAmount: bereavementTarget,
       currentAmount: bereavementCurrent,
       gap,
@@ -235,21 +243,27 @@ export function optimizeFinances(
   let medicalCurrent = n(profile.medicalEmergencyFund);
   if (medicalCurrent <= 0) {
     medicalCurrent = Math.min(liquidMF + savingsAccount * 0.3, medicalTarget);
-  } else {
-    medicalCurrent = Math.min(medicalCurrent, medicalTarget);
   }
   const medGap = Math.max(0, medicalTarget - medicalCurrent);
-  const medMonthly = Math.min(monthlySurplus * 0.2, medGap > 0 ? medGap / 6 : 0);
+  const medMonthly = Math.min(
+    monthlySurplus * 0.2,
+    medGap > 0 ? medGap / 6 : 0,
+  );
   mandatoryFunds.push({
     fundName: "Medical emergency fund",
-    purpose: "Hospital bills not fully covered by insurance — deductibles, exclusions, co-pay, waiting periods.",
+    purpose:
+      "Hospital bills not fully covered by insurance — deductibles, exclusions, co-pay, waiting periods.",
     targetAmount: medicalTarget,
     currentAmount: Math.round(medicalCurrent),
     gap: medGap,
     whereToKeep: "Liquid mutual fund",
-    whyThisPlace: "Withdraw in ~24 hours, no FD-style penalty, typically ~6.5–7% vs ~3–4% in savings.",
+    whyThisPlace:
+      "Withdraw in ~24 hours, no FD-style penalty, typically ~6.5–7% vs ~3–4% in savings.",
     urgency: medicalCurrent < medicalTarget * 0.5 ? "critical" : "high",
-    monthsToFill: medGap <= 0 ? 0 : Math.ceil(medGap / Math.max(1_000, monthlySurplus * 0.2)),
+    monthsToFill:
+      medGap <= 0
+        ? 0
+        : Math.ceil(medGap / Math.max(1_000, monthlySurplus * 0.2)),
     monthlyContribution: medMonthly,
     isComplete: medicalCurrent >= medicalTarget,
   });
@@ -267,33 +281,45 @@ export function optimizeFinances(
       whyThisPlace:
         "Government-backed, predictable accrual. Pair with a short RD so renewals are funded from a maturity, not salary.",
       urgency: "high",
-      monthsToFill: Math.ceil(insuranceFundTarget / Math.max(1_000, monthlySurplus * 0.2)),
-      monthlyContribution: Math.min(monthlySurplus * 0.2, insuranceFundTarget / 12),
+      monthsToFill: Math.ceil(
+        insuranceFundTarget / Math.max(1_000, monthlySurplus * 0.2),
+      ),
+      monthlyContribution: Math.min(
+        monthlySurplus * 0.2,
+        insuranceFundTarget / 12,
+      ),
       isComplete: false,
     });
   }
 
   // 4. Emergency fund (weighted accessible corpus — same as health engine)
-  const emMonths = er.monthlyExpenses > 0 ? realEmergencyFund / er.monthlyExpenses : 0;
+  const emMonths =
+    er.monthlyExpenses > 0 ? realEmergencyFund / er.monthlyExpenses : 0;
   const emGap = Math.max(0, emergencyTarget - realEmergencyFund);
   const emMonthly = Math.min(monthlySurplus * 0.3, emGap > 0 ? emGap / 12 : 0);
   mandatoryFunds.push({
     fundName: "Emergency fund",
-    purpose: "Six months of essential expenses if income stops — weighted for how fast you can access cash.",
+    purpose:
+      "Six months of essential expenses if income stops — weighted for how fast you can access cash.",
     targetAmount: emergencyTarget,
     currentAmount: Math.round(realEmergencyFund),
     gap: emGap,
     whereToKeep: "Split: savings (instant) + liquid mutual fund (rest)",
-    whyThisPlace: "Savings for same-day needs; liquid MF for the bulk with better return and quick redemption.",
+    whyThisPlace:
+      "Savings for same-day needs; liquid MF for the bulk with better return and quick redemption.",
     urgency: emMonths < 3 ? "critical" : emMonths < 6 ? "high" : "medium",
-    monthsToFill: emGap <= 0 ? 0 : Math.ceil(emGap / Math.max(1_000, monthlySurplus * 0.3)),
+    monthsToFill:
+      emGap <= 0 ? 0 : Math.ceil(emGap / Math.max(1_000, monthlySurplus * 0.3)),
     monthlyContribution: emMonthly,
     isComplete: realEmergencyFund >= emergencyTarget,
   });
 
   // 5. Kids education
   if (numberOfKids > 0) {
-    const perChild = n(profile.kidsEducationFundTarget) > 0 ? n(profile.kidsEducationFundTarget) : 25_00_000;
+    const perChild =
+      n(profile.kidsEducationFundTarget) > 0
+        ? n(profile.kidsEducationFundTarget)
+        : 25_00_000;
     const educationTarget = perChild * numberOfKids;
     const yChild = youngestChildAge(profile);
     const yearsToGoal = Math.max(1, 18 - yChild);
@@ -304,7 +330,9 @@ export function optimizeFinances(
         : yearsToGoal > 5
           ? "Mix of PPF + short-duration debt MF"
           : "Debt mutual fund + RD (capital protection)";
-    const monthlyEdu = Math.round(educationTarget / (yearsToGoal * 12 * growthFactor));
+    const monthlyEdu = Math.round(
+      educationTarget / (yearsToGoal * 12 * growthFactor),
+    );
     mandatoryFunds.push({
       fundName: "Kids education fund",
       purpose: `Graduation and post-graduation for ${numberOfKids} child${numberOfKids > 1 ? "ren" : ""}.`,
@@ -326,18 +354,24 @@ export function optimizeFinances(
   }
 
   // 6. SSY for girl child under 10
-  if (hasGirlChildUnder10(profile) && girlChildAge !== undefined && girlChildAge < 10) {
+  if (
+    hasGirlChildUnder10(profile) &&
+    girlChildAge !== undefined &&
+    girlChildAge < 10
+  ) {
     const ssyYearsLeft = Math.max(1, 21 - girlChildAge);
     const ssyTarget = 25_00_000;
     const ssyMonthly = Math.round(ssyTarget / (ssyYearsLeft * 12 * 1.082));
     mandatoryFunds.push({
       fundName: "Sukanya Samriddhi Yojana",
-      purpose: "Girl child education / marriage — government scheme with EEE tax treatment (subject to rules).",
+      purpose:
+        "Girl child education / marriage — government scheme with EEE tax treatment (subject to rules).",
       targetAmount: ssyTarget,
       currentAmount: 0,
       gap: ssyTarget,
       whereToKeep: "SSY at post office or authorised bank",
-      whyThisPlace: "Purpose-built for girl child; long lock-in enforces discipline — confirm current rates and limits.",
+      whyThisPlace:
+        "Purpose-built for girl child; long lock-in enforces discipline — confirm current rates and limits.",
       urgency: girlChildAge >= 9 ? "critical" : "high",
       monthsToFill: ssyYearsLeft * 12,
       monthlyContribution: ssyMonthly,
@@ -360,7 +394,10 @@ export function optimizeFinances(
     void remainder;
   }
 
-  const fdToKeep = Math.max(0, fdValue - fdForCreditCard - fdForKVP - fdForLiquidMF);
+  const fdToKeep = Math.max(
+    0,
+    fdValue - fdForCreditCard - fdForKVP - fdForLiquidMF,
+  );
 
   const fdStrategy: FDStrategy = {
     totalFDAmount: fdValue,
@@ -407,7 +444,11 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
   const incompleteFunds = mandatoryFunds
     .filter((f) => !f.isComplete)
     .sort((a, b) => {
-      const order: Record<OptimizerUrgency, number> = { critical: 0, high: 1, medium: 2 };
+      const order: Record<OptimizerUrgency, number> = {
+        critical: 0,
+        high: 1,
+        medium: 2,
+      };
       return order[a.urgency] - order[b.urgency];
     });
 
@@ -420,7 +461,8 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       monthlyAllocation.push({
         category: fund.fundName,
         amount: Math.round(allocation),
-        percentage: totalIncome > 0 ? Math.round((allocation / totalIncome) * 100) : 0,
+        percentage:
+          totalIncome > 0 ? Math.round((allocation / totalIncome) * 100) : 0,
         purpose: fund.purpose,
         where: fund.whereToKeep,
         priority: index + 1,
@@ -433,9 +475,16 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
     monthlyAllocation.push({
       category: "Wealth building",
       amount: Math.round(remainingSurplus),
-      percentage: totalIncome > 0 ? Math.round((remainingSurplus / totalIncome) * 100) : 0,
-      purpose: "Long-term wealth after safety nets — increase only when buckets above are funded.",
-      where: age < 40 ? "Low-cost index fund (e.g. Nifty 50) via SIP" : "Blend of PPF + debt MF + moderate equity per risk profile",
+      percentage:
+        totalIncome > 0
+          ? Math.round((remainingSurplus / totalIncome) * 100)
+          : 0,
+      purpose:
+        "Long-term wealth after safety nets — increase only when buckets above are funded.",
+      where:
+        age < 40
+          ? "Low-cost index fund (e.g. Nifty 50) via SIP"
+          : "Blend of PPF + debt MF + moderate equity per risk profile",
       priority: incompleteFunds.length + 1,
     });
   }
@@ -443,7 +492,9 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
   const insuranceSuggestions: InsuranceSuggestion[] = [];
 
   const termNeeded = calculateTermNeeded(profile);
-  const termHave = profile.hasTermInsurance ? n(profile.termInsuranceSumAssured) : 0;
+  const termHave = profile.hasTermInsurance
+    ? n(profile.termInsuranceSumAssured)
+    : 0;
   if (termHave < termNeeded) {
     insuranceSuggestions.push({
       type: "Term life insurance",
@@ -451,8 +502,10 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       currentCover: termHave,
       recommendedCover: termNeeded,
       gap: termNeeded - termHave,
-      monthlyPremiumEstimate: age < 30 ? 800 : age < 35 ? 1_200 : age < 40 ? 1_800 : 2_500,
-      productSuggestion: "Compare pure-term plans (e.g. HDFC Click 2 Protect, Max Life Smart Secure) on cover, riders, and claim experience.",
+      monthlyPremiumEstimate:
+        age < 30 ? 800 : age < 35 ? 1_200 : age < 40 ? 1_800 : 2_500,
+      productSuggestion:
+        "Compare pure-term plans (e.g. HDFC Click 2 Protect, Max Life Smart Secure) on cover, riders, and claim experience.",
       urgency: termHave === 0 ? "Buy this week" : "Top up within 30 days",
       buyFromFinkoin: true,
       policyHint: "term",
@@ -460,8 +513,14 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
   }
 
   const healthNeeded =
-    profile.cityTier === "metro" ? (numberOfKids > 0 ? 20_00_000 : 10_00_000) : 7_00_000;
-  const healthHave = profile.hasHealthInsurance ? n(profile.healthInsuranceSumInsured) : 0;
+    profile.cityTier === "metro"
+      ? numberOfKids > 0
+        ? 20_00_000
+        : 10_00_000
+      : 7_00_000;
+  const healthHave = profile.hasHealthInsurance
+    ? n(profile.healthInsuranceSumInsured)
+    : 0;
   if (healthHave < healthNeeded) {
     insuranceSuggestions.push({
       type: "Health insurance (family floater)",
@@ -470,14 +529,18 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       recommendedCover: healthNeeded,
       gap: healthNeeded - healthHave,
       monthlyPremiumEstimate: numberOfKids > 0 ? 1_800 : 1_200,
-      productSuggestion: "Compare floater plans (e.g. HDFC Ergo Optima, Niva Bupa ReAssure) on room rent, co-pay, and exclusions.",
+      productSuggestion:
+        "Compare floater plans (e.g. HDFC Ergo Optima, Niva Bupa ReAssure) on room rent, co-pay, and exclusions.",
       urgency: healthHave === 0 ? "Buy this week" : "Increase cover this month",
       buyFromFinkoin: true,
       policyHint: "health",
     });
   }
 
-  if (profile.ownsCar && (n(profile.carMarketValue) > 0 || n(profile.carLoanEMI) > 0)) {
+  if (
+    profile.ownsCar &&
+    (n(profile.carMarketValue) > 0 || n(profile.carLoanEMI) > 0)
+  ) {
     insuranceSuggestions.push({
       type: "Car insurance",
       needed: true,
@@ -485,7 +548,8 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       recommendedCover: n(profile.carMarketValue),
       gap: n(profile.carMarketValue),
       monthlyPremiumEstimate: 500,
-      productSuggestion: "Comprehensive OD + TP; add zero-dep if the car is new.",
+      productSuggestion:
+        "Comprehensive OD + TP; add zero-dep if the car is new.",
       urgency: "Renew before expiry — avoid a break in own-damage cover",
       buyFromFinkoin: true,
       policyHint: "car",
@@ -502,8 +566,12 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       recommendedCover: pTarget,
       gap: Math.max(0, pTarget - pCover),
       monthlyPremiumEstimate: 2_500,
-      productSuggestion: "Senior-focused plans (e.g. Star Senior Citizens Red Carpet, Niva Bupa Senior First) — watch co-pay and disease caps.",
-      urgency: pCover < pTarget ? "High — elder hospital bills are lumpy" : "Review at renewal",
+      productSuggestion:
+        "Senior-focused plans (e.g. Star Senior Citizens Red Carpet, Niva Bupa Senior First) — watch co-pay and disease caps.",
+      urgency:
+        pCover < pTarget
+          ? "High — elder hospital bills are lumpy"
+          : "Review at renewal",
       buyFromFinkoin: true,
       policyHint: "parents_health",
     });
@@ -556,8 +624,14 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       : numberOfKids > 0
         ? "Start goal-tagged education SIP"
         : "Top up liquid emergency layer",
-    amount: hasGirlChildUnder10(profile) ? Math.round(totalInsuranceYearly / 12) : 5_000,
-    instrument: hasGirlChildUnder10(profile) ? "SSY" : numberOfKids > 0 ? "Equity / hybrid MF" : "Liquid MF",
+    amount: hasGirlChildUnder10(profile)
+      ? Math.round(totalInsuranceYearly / 12)
+      : 5_000,
+    instrument: hasGirlChildUnder10(profile)
+      ? "SSY"
+      : numberOfKids > 0
+        ? "Equity / hybrid MF"
+        : "Liquid MF",
     reason: hasGirlChildUnder10(profile)
       ? "SSY has a hard age gate — don’t miss the window."
       : "Compounding needs time; start small if needed.",
@@ -584,7 +658,9 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
   const monthlyActionPlan: string[] = [];
 
   const bFund = mandatoryFunds.find((f) => f.fundName === "Bereavement fund");
-  const mFund = mandatoryFunds.find((f) => f.fundName === "Medical emergency fund");
+  const mFund = mandatoryFunds.find(
+    (f) => f.fundName === "Medical emergency fund",
+  );
   const eFund = mandatoryFunds.find((f) => f.fundName === "Emergency fund");
 
   if (bFund && bFund.monthlyContribution > 0) {
@@ -607,7 +683,10 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       `${fmtIn(eFund.monthlyContribution)}/month → Savings + liquid MF (weighted emergency fund top-up).`,
     );
   }
-  if (remainingSurplus > 0 && monthlyAllocation.some((a) => a.category === "Wealth building")) {
+  if (
+    remainingSurplus > 0 &&
+    monthlyAllocation.some((a) => a.category === "Wealth building")
+  ) {
     monthlyActionPlan.push(
       `${fmtIn(Math.round(remainingSurplus))}/month → Index / goal SIPs after mandatory buckets.`,
     );
@@ -625,9 +704,12 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       currentAmount: fdValue,
       currentReturn: "~6–7% taxable; premature withdrawal penalty",
       problem: "FD is not instant liquidity; breaks cost you return and time.",
-      suggestedAsset: "Split: lien FD for card (optional) + KVP ladder + liquid MF",
-      suggestedReturn: "Liquid MF ~6.5–7% (market) + small savings stack for renewals",
-      benefit: "Matches each rupee to job: renewals, penalty-free emergency cash, optional secured credit.",
+      suggestedAsset:
+        "Split: lien FD for card (optional) + KVP ladder + liquid MF",
+      suggestedReturn:
+        "Liquid MF ~6.5–7% (market) + small savings stack for renewals",
+      benefit:
+        "Matches each rupee to job: renewals, penalty-free emergency cash, optional secured credit.",
       amountToMove: Math.round(fdForCreditCard + fdForKVP + fdForLiquidMF),
       howToDoIt: `1) Keep ${fmtIn(fdForCreditCard)} as lien FD if you want a secured card. 2) Move ${fmtIn(fdForKVP)} into KVP / post office instruments toward premiums. 3) Shift ${fmtIn(fdForLiquidMF)} to liquid MF for instant coverage. 4) Let ${fmtIn(fdToKeep)} ride to maturity if it already fits your plan.`,
     });
@@ -641,16 +723,21 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       problem: "Large idle balances drag long-term returns.",
       suggestedAsset: "Liquid mutual fund",
       suggestedReturn: "~6.5–7% (variable)",
-      benefit: "Keeps T+1 liquidity while improving yield on non-instant buffer.",
-      amountToMove: Math.round(Math.min(savingsAccount - needsActual * 3, needsActual * 3)),
-      howToDoIt: "Leave 1–2 months of expenses in savings; sweep the rest to liquid MF in 2–3 tranches.",
+      benefit:
+        "Keeps T+1 liquidity while improving yield on non-instant buffer.",
+      amountToMove: Math.round(
+        Math.min(savingsAccount - needsActual * 3, needsActual * 3),
+      ),
+      howToDoIt:
+        "Leave 1–2 months of expenses in savings; sweep the rest to liquid MF in 2–3 tranches.",
     });
   }
 
   const investmentPlan: InvestmentPlan[] = incompleteFunds.map((f) => ({
     goalName: f.fundName,
     targetAmount: f.targetAmount,
-    targetYear: new Date().getFullYear() + Math.max(1, Math.ceil(f.monthsToFill / 12)),
+    targetYear:
+      new Date().getFullYear() + Math.max(1, Math.ceil(f.monthsToFill / 12)),
     timeHorizon: f.monthsToFill,
     recommendedInstrument: f.whereToKeep,
     monthlyRequired: f.monthlyContribution,
@@ -667,7 +754,9 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
     riskLevel:
       f.whereToKeep.includes("ELSS") || f.whereToKeep.includes("equity")
         ? "high"
-        : f.whereToKeep.includes("Liquid") || f.whereToKeep.includes("KVP") || f.whereToKeep.includes("SSY")
+        : f.whereToKeep.includes("Liquid") ||
+            f.whereToKeep.includes("KVP") ||
+            f.whereToKeep.includes("SSY")
           ? "low"
           : "medium",
   }));

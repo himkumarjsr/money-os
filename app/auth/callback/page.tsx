@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  AUTH_RECOVERY_PATH,
+  completeAuthSessionFromUrl,
+  isRecoveryAuthUrl,
+} from "@/lib/authRecovery";
 import { applyPendingReferralRewards } from "@/lib/referralRewards";
 import { peekPostLoginPath, sanitizeAppPath } from "@/lib/splitAuthRedirect";
 import { getSupabase } from "@/lib/supabase";
@@ -19,20 +24,20 @@ function AuthCallbackContent() {
       try {
         const supabase = getSupabase();
         const params = new URLSearchParams(window.location.search);
-        const code = params.get("code");
-        const type = params.get("type");
+        const recoveryFromUrl = isRecoveryAuthUrl(
+          window.location.search,
+          window.location.hash,
+        );
         // Prefer URL next, then pending Split invite in localStorage — never wipe invite yet.
         const next =
           sanitizeAppPath(params.get("next")) ??
           peekPostLoginPath(window.location.search);
 
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) {
-            console.error("Auth callback:", error);
-            router.replace("/login?error=auth_failed");
-            return;
-          }
+        const authResult = await completeAuthSessionFromUrl(supabase);
+        if (!authResult.ok) {
+          console.error("Auth callback:", authResult.error);
+          router.replace("/login?error=auth_failed");
+          return;
         }
 
         await initAuth();
@@ -48,8 +53,8 @@ function AuthCallbackContent() {
           return;
         }
 
-        if (type === "recovery") {
-          router.replace("/auth/update-password");
+        if (recoveryFromUrl) {
+          router.replace(AUTH_RECOVERY_PATH);
           return;
         }
 

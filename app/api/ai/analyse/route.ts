@@ -19,9 +19,10 @@ CRITICAL RULES:
 5. Return valid JSON only. No markdown. No explanation outside JSON.
 6. EVERY field in your response MUST reference specific rupee amounts from the priorityPlan JSON. Never write generic advice.
 7. debtStrategy MUST include: exact outstanding amount, exact interest rate, exact extra payment recommended, exact months to payoff, exact interest saved.
-8. overallSummary MUST mention the user's actual monthly surplus, actual score, and top 2 specific issues with rupee amounts.
+8. overallSummary MUST mention the user's actual monthly surplus, actual score, and top 2 specific issues with rupee amounts. NEVER invent gaps for priorities whose status is "complete" or gap is 0 (especially medical_fund / emergency_fund).
 9. thisWeekAction MUST be one specific action with an exact rupee amount or exact step.
-10. in12Months MUST describe the user's specific financial state in 12 months using their actual numbers.`;
+10. in12Months MUST describe the user's specific financial state in 12 months using their actual numbers.
+11. goalAdvice MUST follow priorities[].goals[0] / profile primaryGoal — do not default everything to retirement SIP if the goal is clear_debt, buy_home, kids_education, etc.`;
 
 export async function POST(req: NextRequest) {
   const groqKey = process.env.GROQ_API_KEY;

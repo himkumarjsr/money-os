@@ -260,6 +260,25 @@ describe("loan normalization", () => {
     expect(normalized.additionalObligations).toHaveLength(1);
     expect(normalized.additionalObligations?.[0]?.lenderName).toBe("EPFO");
   });
+
+  it("clears stale legacy loan scalars when unifiedLoans is empty", () => {
+    const normalized = normalizeAnalyseFormValues({
+      ...baseLoanForm,
+      unifiedLoans: [],
+      personalLoanEMI: 42_055,
+      personalLoanLenderName: "ICICI",
+      homeLoanEMI: 28_000,
+      additionalObligations: [
+        { type: "Personal Loan", lenderName: "ICICI", monthlyAmount: 42_055 },
+      ],
+    });
+
+    expect(normalized.unifiedLoans).toHaveLength(0);
+    expect(normalized.personalLoanEMI).toBe(0);
+    expect(normalized.homeLoanEMI).toBe(0);
+    expect(normalized.personalLoanLenderName).toBe("");
+    expect(normalized.additionalObligations).toHaveLength(0);
+  });
 });
 
 describe("premium normalization", () => {

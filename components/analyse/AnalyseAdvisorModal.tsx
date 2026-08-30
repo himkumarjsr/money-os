@@ -85,10 +85,7 @@ export default function AnalyseAdvisorModal({
           </p>
         </div>
 
-        <div
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-2 sm:px-6"
-          data-analyse-modal-scroll
-        >
+        <div className="min-h-0 flex-1 flex flex-col overflow-hidden px-4 pt-2 sm:px-6">
           {children}
         </div>
       </div>
