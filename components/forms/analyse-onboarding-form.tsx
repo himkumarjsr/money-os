@@ -2812,8 +2812,9 @@ export function AnalyseOnboardingForm() {
                                 onDay={(d) =>
                                   persistValue("termInsuranceRenewalDay", d)
                                 }
-                                yearlyLabel="When is your term insurance renewal? (optional)"
-                                monthlyLabel="Which date is the term premium debited? (optional)"
+                                hint="Optional renewal reminder — calendar day/month when premium is due, not health waiting-period days"
+                                yearlyLabel="Term premium renewal month & day (optional)"
+                                monthlyLabel="Term premium debit date each month (optional)"
                               />
                             </div>
                           ) : null}
@@ -4053,22 +4054,22 @@ export function AnalyseOnboardingForm() {
           <div
             className={
               advisorOpen
-                ? "relative z-10 shrink-0 border-t border-[#F0EFF8] bg-white pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pt-4"
-                : "relative z-10 flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-between"
+                ? "relative z-10 shrink-0 w-full border-t border-[#F0EFF8] bg-white pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pt-4"
+                : "relative z-10 w-full pt-4"
             }
           >
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <div className="flex w-full flex-row items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="secondary"
-                className="w-full border-slate-200 sm:w-auto"
+                className="shrink-0 border-slate-200"
                 onClick={goBack}
                 disabled={step === 0}
               >
                 Back
               </Button>
               {step === STEPS.length - 1 ? (
-                <div className="w-full sm:w-auto sm:min-w-[280px]">
+                <div className="shrink-0 min-w-0 max-w-[min(calc(100%-5.5rem),280px)]">
                   <button
                     type="button"
                     onClick={() => void handleFinalSubmit()}
@@ -4100,10 +4101,10 @@ export function AnalyseOnboardingForm() {
                   ) : null}
                 </div>
               ) : (
-                <div className="w-full sm:w-auto">
+                <div className="shrink-0">
                   <button
                     type="button"
-                    className="relative z-20 inline-flex min-h-10 w-full touch-manipulation select-none items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-[color:var(--color-primary-foreground)] outline-none transition hover:opacity-95 active:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--ring-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] sm:w-auto"
+                    className="relative z-20 inline-flex min-h-10 min-w-[5.5rem] touch-manipulation select-none items-center justify-center rounded-xl bg-primary px-5 text-sm font-medium text-[color:var(--color-primary-foreground)] outline-none transition hover:opacity-95 active:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--ring-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]"
                     onClick={() => forceNext()}
                   >
                     Next

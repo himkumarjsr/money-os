@@ -13,6 +13,7 @@ import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { supabase } from "@/lib/supabase";
 import {
   analyseFinances,
+  assessTermCover,
   medicalEmergencyTarget,
   monthlyTotalIncome,
 } from "@/lib/financialEngine";
@@ -252,14 +253,12 @@ export default function AnalyseResultPage() {
     },
   ];
 
-  const termStatus = (() => {
-    const hasTerm = profile?.hasTermInsurance;
-    const termCover = profile?.termInsuranceSumAssured || 0;
-    const termNeeded = analysis?.termInsuranceNeeded || 0;
-    if (!hasTerm || termCover === 0) return "missing" as const;
-    if (termNeeded > 0 && termCover >= termNeeded) return "complete" as const;
-    return "partial" as const;
-  })();
+  const termAssessment = assessTermCover({
+    hasTermInsurance: profile?.hasTermInsurance ?? false,
+    termCover: profile?.termInsuranceSumAssured || 0,
+    termNeeded: analysis?.termInsuranceNeeded || 0,
+  });
+  const termStatus = termAssessment.status;
 
   const medEmergencyTargetAmount = profile
     ? medicalEmergencyTarget(profile)
@@ -306,23 +305,20 @@ export default function AnalyseResultPage() {
           ? "Term life cover"
           : termStatus === "partial"
             ? "Term cover"
-            : "Term insurance",
+            : termStatus === "baseline_ok"
+              ? "Term insurance"
+              : "Term insurance",
       current: profile?.termInsuranceSumAssured || 0,
       target: analysis?.termInsuranceNeeded || 0,
       formatCurrent: (v: number) =>
         v === 0 ? "None" : `₹${(v / 10000000).toFixed(1)} crore`,
       formatTarget: (v: number) =>
-        termStatus === "partial"
-          ? `₹${(v / 10000000).toFixed(1)} crore recommended`
+        termStatus === "partial" || termStatus === "baseline_ok"
+          ? `₹${(v / 10000000).toFixed(1)} crore at today's income`
           : `₹${(v / 10000000).toFixed(1)} crore`,
-      isOk: termStatus === "complete",
-      status: termStatus,
-      infoText:
-        termStatus === "partial"
-          ? "Your existing policy is good. A top-up plan can add more cover at lower cost than a new policy."
-          : termStatus === "complete"
-            ? "Cover is adequate"
-            : "You have no term insurance",
+      isOk: termAssessment.safetyNetOk,
+      status: termStatus === "baseline_ok" ? "partial" : termStatus,
+      infoText: termAssessment.infoText,
       icon: "shield",
     },
     {

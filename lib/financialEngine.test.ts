@@ -1,5 +1,6 @@
 import {
   analyseFinances,
+  assessTermCover,
   computeRealEmergencyFund,
   housingAndEmiTotal,
   isMetroCity,
@@ -211,5 +212,62 @@ describe("financialEngine", () => {
     expect(result.netWorth).toBeTypeOf("number");
     // education 120k + gold EMI*months 60k counted; personal_loan skipped as duplicate type
     expect(result.totalLiabilities).toBeGreaterThanOrEqual(180_000);
+  });
+});
+
+describe("assessTermCover", () => {
+  it("treats ₹1Cr+ existing cover as adequate when income grew", () => {
+    const result = assessTermCover({
+      hasTermInsurance: true,
+      termCover: 10_000_000,
+      termNeeded: 25_000_000,
+    });
+    expect(result.status).toBe("baseline_ok");
+    expect(result.safetyNetOk).toBe(true);
+    expect(result.gap).toBe(15_000_000);
+    expect(result.infoText).toMatch(/top-up/i);
+  });
+
+  it("flags missing and partial cover correctly", () => {
+    expect(
+      assessTermCover({
+        hasTermInsurance: false,
+        termCover: 0,
+        termNeeded: 20_000_000,
+      }).status,
+    ).toBe("missing");
+    expect(
+      assessTermCover({
+        hasTermInsurance: true,
+        termCover: 3_000_000,
+        termNeeded: 20_000_000,
+      }).safetyNetOk,
+    ).toBe(false);
+    expect(
+      assessTermCover({
+        hasTermInsurance: true,
+        termCover: 25_000_000,
+        termNeeded: 20_000_000,
+      }).status,
+    ).toBe("complete");
+  });
+
+  it("does not penalize overall score for ₹1Cr+ term when reference need is higher", () => {
+    const result = analyseFinances(
+      baseProfile({
+        hasTermInsurance: true,
+        termInsuranceSumAssured: 10_000_000,
+        termInsurancePremiumMonthly: 1_500,
+        monthlySalary: 300_000,
+        spouseIncome: 100_000,
+      }),
+    );
+    expect(result.termInsuranceNeeded).toBeGreaterThan(10_000_000);
+    expect(result.issues.some((i) => i.code === "term_underinsured")).toBe(
+      false,
+    );
+    expect(result.issues.some((i) => i.code === "term_cover_baseline_ok")).toBe(
+      true,
+    );
   });
 });

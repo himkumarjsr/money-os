@@ -318,6 +318,67 @@ export function calculateTermNeeded(data: FinancialProfile): number {
   return Math.ceil(termNeeded / 10_00_000) * 10_00_000;
 }
 
+export type TermCoverStatus =
+  | "missing"
+  | "partial"
+  | "baseline_ok"
+  | "complete";
+
+/** How we judge existing term vs today's income — not "buy another full policy". */
+export function assessTermCover(params: {
+  hasTermInsurance: boolean;
+  termCover: number;
+  termNeeded: number;
+}): {
+  status: TermCoverStatus;
+  gap: number;
+  adequacyFloor: number;
+  infoText: string;
+  safetyNetOk: boolean;
+} {
+  const termCover = Math.max(0, params.termCover);
+  const termNeeded = Math.max(0, params.termNeeded);
+  const gap = Math.max(0, termNeeded - termCover);
+  const adequacyFloor = Math.max(50_00_000, termNeeded * 0.5);
+
+  if (!params.hasTermInsurance || termCover <= 0) {
+    return {
+      status: "missing",
+      gap: termNeeded,
+      adequacyFloor,
+      infoText: "You have no term insurance",
+      safetyNetOk: false,
+    };
+  }
+  if (termCover >= termNeeded) {
+    return {
+      status: "complete",
+      gap: 0,
+      adequacyFloor,
+      infoText: "Cover is adequate",
+      safetyNetOk: true,
+    };
+  }
+  if (termCover >= 10_000_000 || termCover >= adequacyFloor) {
+    return {
+      status: "baseline_ok",
+      gap,
+      adequacyFloor,
+      infoText:
+        "Your existing policy is valuable — premiums rise with age, so keep it. If income has grown, add a separate top-up for the gap only; do not cancel and rebuy.",
+      safetyNetOk: true,
+    };
+  }
+  return {
+    status: "partial",
+    gap,
+    adequacyFloor,
+    infoText:
+      "Your existing policy helps, but cover is still low for your income. Add a top-up for the gap only — no need to replace the old policy.",
+    safetyNetOk: false,
+  };
+}
+
 function issuesToFlags(issues: AnalysisIssue[]): AnalysisFlag[] {
   const flags: AnalysisFlag[] = [];
   const critical = issues.find((issue) => issue.severity === "critical");
@@ -485,13 +546,30 @@ function buildIssues(params: {
       message:
         "You have no term insurance. Your family has zero protection if income stops.",
     });
-  } else if (termCover < termNeeded) {
-    issues.push({
-      severityScore: 58,
-      severity: "warning",
-      code: "term_underinsured",
-      message: `You have ₹${(termCover / 10000000).toFixed(1)}Cr. Recommended: ₹${(termNeeded / 10000000).toFixed(1)}Cr.`,
+  } else {
+    const termAssessment = assessTermCover({
+      hasTermInsurance,
+      termCover,
+      termNeeded,
     });
+    if (termAssessment.status === "partial") {
+      issues.push({
+        severityScore: 58,
+        severity: "warning",
+        code: "term_underinsured",
+        message: `You have ₹${(termCover / 10000000).toFixed(1)}Cr. Recommended at today's income: ₹${(termNeeded / 10000000).toFixed(1)}Cr — top-up the gap only; keep your existing policy.`,
+      });
+    } else if (termAssessment.status === "baseline_ok") {
+      issues.push({
+        severityScore: 32,
+        severity: "good",
+        code: "term_cover_baseline_ok",
+        message:
+          termAssessment.gap > 0
+            ? `You have ₹${(termCover / 10000000).toFixed(1)}Cr pure term — strong baseline. Reference at today's income is ~₹${(termNeeded / 10000000).toFixed(1)}Cr; optional top-up for the gap, not a second full policy.`
+            : "You have strong term cover for your current profile.",
+      });
+    }
   }
 
   if (medEmergencyCurrent < medEmergencyTarget) {
@@ -1070,17 +1148,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     medEmergencyTarget,
     monthlyInvesting,
   });
-
-  if (data.hasTermInsurance && n(data.termInsuranceSumAssured) >= 10_000_000) {
-    issues.push({
-      severityScore: 32,
-      severity: "good",
-      code: "term_cover_one_crore_baseline",
-      message:
-        "You have ₹1 crore or more pure term cover — strong protection. If income has grown since you bought it, new cover at today’s age is often much costlier, so your existing policy is still a big win.",
-    });
-    issues.sort((a, b) => b.severityScore - a.severityScore);
-  }
 
   // Defensive de-dup in case future branches push same issue code twice.
   const seenIssueCodes = new Set<string>();

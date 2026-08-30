@@ -5,6 +5,7 @@ import {
   type FinancialProfile,
 } from "@/lib/analyse-form-schema";
 import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
+import { clearCache } from "@/lib/cache";
 import type { FinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { useAuthStore } from "@/store/authStore";
 import { create } from "zustand";
@@ -112,6 +113,8 @@ export const useFinancialStore = create<FinancialState>()(
           },
         })),
       setFullAnalysis: (data) => {
+        // Any new analysis must invalidate AI fix-plan cache so Groq re-evaluates.
+        clearCache();
         try {
           const result = analyseFinances(data);
           const form = {
@@ -123,6 +126,7 @@ export const useFinancialStore = create<FinancialState>()(
             result,
             profile: form,
             analysis: form,
+            aiPlan: null,
           });
           if (process.env.NODE_ENV === "development") {
             console.log("[financialStore] setFullAnalysis OK", {
@@ -141,6 +145,7 @@ export const useFinancialStore = create<FinancialState>()(
             result: null,
             profile: form,
             analysis: form,
+            aiPlan: null,
           });
         }
       },
