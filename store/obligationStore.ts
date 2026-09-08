@@ -95,7 +95,7 @@ interface ObligationState {
   updateObligation: (
     id: string,
     data: Partial<FinancialObligation>,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   deleteObligation: (id: string) => Promise<void>;
   markPaid: (checklistId: string, amount: number) => Promise<void>;
   markUnpaid: (checklistId: string) => Promise<void>;
@@ -302,20 +302,57 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       .from("financial_obligations")
       .update({
         ...data,
+        // Manual edit wins over analyse sync — don't let health-check overwrite.
+        source: "manual",
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
 
     if (error) {
       console.error("updateObligation error:", error);
-      return;
+      return false;
     }
 
-    set((state) => ({
-      obligations: state.obligations.map((o) =>
-        o.id === id ? { ...o, ...data } : o,
-      ),
-    }));
+    // Checklist stores its own expected_amount (generate RPC does ON CONFLICT DO NOTHING),
+    // so amount edits must update pending/skipped rows or the UI looks unchanged.
+    if (data.amount != null && Number.isFinite(Number(data.amount))) {
+      const { error: checklistErr } = await supabase
+        .from("obligation_checklist")
+        .update({ expected_amount: Number(data.amount) })
+        .eq("obligation_id", id)
+        .in("status", ["pending", "skipped"]);
+      if (checklistErr) {
+        console.error("updateObligation checklist amount:", checklistErr);
+      }
+    }
+
+    set((state) => {
+      const checklist = state.checklist.map((c) => {
+        if (c.obligation_id !== id) return c;
+        const nextAmount =
+          data.amount != null && Number.isFinite(Number(data.amount))
+            ? Number(data.amount)
+            : c.expected_amount;
+        return {
+          ...c,
+          expected_amount:
+            c.status === "paid" || c.status === "auto_debit"
+              ? c.expected_amount
+              : nextAmount,
+          obligation: c.obligation
+            ? { ...c.obligation, ...data, source: "manual" }
+            : c.obligation,
+        };
+      });
+      return {
+        obligations: state.obligations.map((o) =>
+          o.id === id ? { ...o, ...data, source: "manual" } : o,
+        ),
+        checklist,
+        ...totals(checklist),
+      };
+    });
+    return true;
   },
 
   deleteObligation: async (id) => {
@@ -683,13 +720,18 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
     if (obligations.length === 0) return;
 
+    // Insert missing analyse-derived rows only. Never overwrite existing rows —
+    // user edits in Tracker must stick (same title+category unique key).
     for (const ob of obligations) {
       const { error } = await supabase.from("financial_obligations").upsert(
         {
           ...ob,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "user_id,title,category" },
+        {
+          onConflict: "user_id,title,category",
+          ignoreDuplicates: true,
+        },
       );
       if (error) {
         console.error("syncFromHealthCheck upsert error:", error);

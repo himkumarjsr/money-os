@@ -692,6 +692,18 @@ export function GlobalNavbar() {
                 aria-current={
                   activeBottomNav === "calculators" ? "page" : undefined
                 }
+                onClick={(e) => {
+                  // Always land on the hub list — never keep a deep-linked SIP/EMI sheet open.
+                  const path = pathname ?? "";
+                  if (
+                    path === "/calculators" ||
+                    path.startsWith("/calculators/") ||
+                    path === "/calculator"
+                  ) {
+                    e.preventDefault();
+                    router.replace("/calculators");
+                  }
+                }}
                 className={`flex flex-col items-center gap-1 pb-1 pt-0.5 ${
                   activeBottomNav === "calculators"
                     ? "text-[#534AB7]"
