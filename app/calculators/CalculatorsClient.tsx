@@ -83,34 +83,46 @@ export default function CalculatorsClient({
   );
 
   useEffect(() => {
+    // Only track when a tool is actually open (deep link / hub pick) — not hub browse.
+    if (!sheetOpen && !onDedicatedCalcPath && !openedFromHub.current) return;
     trackToolOpen({
       tool_category: "calculator",
       tool_id: activeItem.id,
       tool_name: activeItem.title,
     });
-  }, [activeItem.id, activeItem.title]);
+  }, [activeItem.id, activeItem.title, sheetOpen, onDedicatedCalcPath]);
 
-  // Deep links (/calculators/sip or ?calc=sip) select category AND open mobile sheet once.
-  // Hub index (/calculators) must NOT fall back to initialCalcId — that was opening SIP
-  // when users tapped Calculators in the bottom nav.
+  // Hub (/calculators) = category list only. Never auto-open SIP/EMI sheet.
+  // Deep links (/calculators/sip, ?calc=) open the tool sheet on mobile once.
   useEffect(() => {
     const pathSeg = pathname?.match(/^\/calculators\/([^/]+)/)?.[1];
     const pathCalc =
       pathSeg === "tax-regime-2026" || pathSeg === "tax-regime"
         ? "tax-regime"
         : pathSeg;
-    const fromUrl = searchParams?.get("calc") ?? pathCalc;
+    const queryCalc = searchParams?.get("calc");
+    const fromUrl = queryCalc ?? pathCalc ?? null;
+    const isHub = pathname === "/calculators" && !queryCalc && !fromHome;
+
+    if (isHub) {
+      lastDeepLinkCalc.current = null;
+      openedFromHub.current = false;
+      setSheetOpen(false);
+      return;
+    }
 
     if (!fromUrl) {
-      if (pathname === "/calculators") {
-        lastDeepLinkCalc.current = null;
-        setSheetOpen(false);
-      }
+      setSheetOpen(false);
       return;
     }
 
     setCategory(findCategoryForCalc(fromUrl));
     setCalcId(fromUrl);
+
+    // Dedicated calc routes always open the mobile sheet once per calc id.
+    const isDedicated =
+      Boolean(pathCalc) || Boolean(queryCalc) || Boolean(fromHome);
+    if (!isDedicated) return;
     if (lastDeepLinkCalc.current === fromUrl) return;
     lastDeepLinkCalc.current = fromUrl;
     if (
@@ -119,7 +131,7 @@ export default function CalculatorsClient({
     ) {
       setSheetOpen(true);
     }
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, fromHome]);
 
   useEffect(() => {
     if (urlBaseForTaxCanonical && calcId === "tax-regime") {
@@ -141,7 +153,7 @@ export default function CalculatorsClient({
       return;
     }
 
-    // Hub index (/calculators) should stay put until the user picks a tool.
+    // Hub browse: stay on /calculators — do not push first-tool URLs (SIP/EMI).
     if (pathname === "/calculators" && !openedFromHub.current && !fromHome) {
       return;
     }
@@ -177,6 +189,21 @@ export default function CalculatorsClient({
     if (openSheet) setSheetOpen(true);
   };
 
+  /** Category chips only switch the list — never open EMI/SIP/etc. */
+  const selectCategory = (nextCategory: Cat) => {
+    const cat = CATEGORIES.find((c) => c.id === nextCategory);
+    if (!cat) return;
+    // Only change the visible list. Do NOT setCalcId here — that races with
+    // URL sync while still on /calculators/[id] and auto-opens the first tool.
+    setCategory(nextCategory);
+    setSheetOpen(false);
+    openedFromHub.current = false;
+    lastDeepLinkCalc.current = null;
+    if (pathname !== "/calculators") {
+      router.replace("/calculators", { scroll: false });
+    }
+  };
+
   const handleSheetClose = () => {
     // Quick Tools / home deep-link: leave while the sheet is still up so the
     // hub never flashes underneath during the close animation + route change.
@@ -185,6 +212,12 @@ export default function CalculatorsClient({
       return;
     }
     setSheetOpen(false);
+    openedFromHub.current = false;
+    lastDeepLinkCalc.current = null;
+    // Always return to hub so bottom-nav / category taps stay list-only.
+    if (pathname !== "/calculators") {
+      router.replace("/calculators", { scroll: false });
+    }
   };
 
   const handleBack = () => {
@@ -250,9 +283,8 @@ export default function CalculatorsClient({
             <button
               key={c.id}
               type="button"
-              onClick={() => {
-                selectCalcFromHub(c.items[0].id, false);
-              }}
+              aria-label={`Category: ${c.label}`}
+              onClick={() => selectCategory(c.id)}
               className={cn(
                 "whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition",
                 category === c.id

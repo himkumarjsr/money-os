@@ -99,7 +99,11 @@ vi.mock("@/lib/supabase", () => ({
             }),
           update: () =>
             chain({
-              eq: async () => ({ error: null }),
+              eq: () =>
+                chain({
+                  in: async () => ({ error: null }),
+                  eq: async () => ({ error: null }),
+                }),
             }),
           delete: () =>
             chain({
@@ -188,6 +192,30 @@ describe("useObligationStore", () => {
     };
     expect(payload?.frequency).toBe("monthly");
     expect(payload?.amount).toBe(1500);
+    const opts = upsert.mock.calls[0]?.[1] as {
+      ignoreDuplicates?: boolean;
+    };
+    expect(opts?.ignoreDuplicates).toBe(true);
+  });
+
+  it("updateObligation persists amount to checklist and marks source manual", async () => {
+    const { useObligationStore } = await import("@/store/obligationStore");
+    await useObligationStore
+      .getState()
+      .fetchChecklist("u1", new Date(2026, 6, 1));
+    const ok = await useObligationStore.getState().updateObligation("ob-1", {
+      amount: 25000,
+      due_day: 12,
+      title: "Home Loan EMI",
+    });
+    expect(ok).toBe(true);
+    const row = useObligationStore
+      .getState()
+      .checklist.find((c) => c.obligation_id === "ob-1");
+    expect(row?.expected_amount).toBe(25000);
+    expect(row?.obligation?.amount).toBe(25000);
+    expect(row?.obligation?.due_day).toBe(12);
+    expect(row?.obligation?.source).toBe("manual");
   });
 
   it("monthStartIso uses local calendar month (not UTC)", async () => {
