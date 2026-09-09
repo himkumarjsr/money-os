@@ -253,10 +253,44 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         .filter((c) => c.obligation == null || c.obligation.is_active)
         // Credit card bills belong in Credit card dues — never the checklist.
         .filter((c) => (c.obligation?.category || "") !== "credit_card");
+
+      // Heal stale expected_amount so UI + amount-match stay aligned after edits.
+      const healed = items.map((c) => {
+        const live = Number(c.obligation?.amount);
+        if (
+          (c.status === "pending" || c.status === "skipped") &&
+          Number.isFinite(live) &&
+          live > 0 &&
+          Math.abs(live - Number(c.expected_amount || 0)) >= 1
+        ) {
+          return { ...c, expected_amount: live };
+        }
+        return c;
+      });
+
+      const stale = healed.filter((c, i) => {
+        const orig = items[i];
+        return (
+          orig &&
+          Math.abs(Number(c.expected_amount) - Number(orig.expected_amount)) >=
+            1
+        );
+      });
+      if (stale.length > 0) {
+        void Promise.all(
+          stale.map((c) =>
+            supabase
+              .from("obligation_checklist")
+              .update({ expected_amount: c.expected_amount })
+              .eq("id", c.id),
+          ),
+        );
+      }
+
       set({
-        checklist: items,
+        checklist: healed,
         currentMonth: monthStart,
-        ...totals(items),
+        ...totals(healed),
         loading: false,
       });
     } catch (err) {
