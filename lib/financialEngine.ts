@@ -166,8 +166,49 @@ function n(v: number | undefined): number {
   return v ?? 0;
 }
 
+/** Outstanding loan principal used for net worth. Prefer unified loan rows; assets-step home/car are additive when absent from unified list. */
+export function totalLoanLiabilities(data: FinancialProfile): number {
+  const credit = n(data.creditCardBillMonthly) * 3;
+  const unified = (data.unifiedLoans ?? []).filter(
+    (loan) => n(loan.monthlyEMI) > 0 || n(loan.outstandingAmount) > 0,
+  );
+
+  const outstandingFromLoan = (loan: {
+    outstandingAmount?: number;
+    monthlyEMI?: number;
+    remainingMonths?: number;
+  }) => {
+    const out = n(loan.outstandingAmount);
+    if (out > 0) return out;
+    return n(loan.monthlyEMI) * (n(loan.remainingMonths) || 18);
+  };
+
+  if (unified.length > 0) {
+    const loanSum = unified.reduce(
+      (sum, loan) => sum + outstandingFromLoan(loan),
+      0,
+    );
+    const hasHomeInUnified = unified.some((l) => l.loanType === "home_loan");
+    const hasCarInUnified = unified.some((l) => l.loanType === "car_loan");
+    return (
+      loanSum +
+      (hasHomeInUnified ? 0 : n(data.homeLoanOutstanding)) +
+      (hasCarInUnified ? 0 : n(data.carLoanOutstanding)) +
+      credit
+    );
+  }
+
+  return (
+    n(data.homeLoanOutstanding) +
+    n(data.carLoanOutstanding) +
+    (n(data.personalLoanOutstanding) || n(data.personalLoanEMI) * 24) +
+    n(data.bikeEMI) * 24 +
+    credit
+  );
+}
+
 /** Suggested medical emergency corpus (beyond health insurance) by city, age, and dependants. */
-function medicalEmergencyTargetLiquid(data: FinancialProfile): number {
+export function medicalEmergencyTarget(data: FinancialProfile): number {
   let target =
     data.cityTier === "metro"
       ? 3_00_000
@@ -275,6 +316,67 @@ export function calculateTermNeeded(data: FinancialProfile): number {
   );
 
   return Math.ceil(termNeeded / 10_00_000) * 10_00_000;
+}
+
+export type TermCoverStatus =
+  | "missing"
+  | "partial"
+  | "baseline_ok"
+  | "complete";
+
+/** How we judge existing term vs today's income — not "buy another full policy". */
+export function assessTermCover(params: {
+  hasTermInsurance: boolean;
+  termCover: number;
+  termNeeded: number;
+}): {
+  status: TermCoverStatus;
+  gap: number;
+  adequacyFloor: number;
+  infoText: string;
+  safetyNetOk: boolean;
+} {
+  const termCover = Math.max(0, params.termCover);
+  const termNeeded = Math.max(0, params.termNeeded);
+  const gap = Math.max(0, termNeeded - termCover);
+  const adequacyFloor = Math.max(50_00_000, termNeeded * 0.5);
+
+  if (!params.hasTermInsurance || termCover <= 0) {
+    return {
+      status: "missing",
+      gap: termNeeded,
+      adequacyFloor,
+      infoText: "You have no term insurance",
+      safetyNetOk: false,
+    };
+  }
+  if (termCover >= termNeeded) {
+    return {
+      status: "complete",
+      gap: 0,
+      adequacyFloor,
+      infoText: "Cover is adequate",
+      safetyNetOk: true,
+    };
+  }
+  if (termCover >= 10_000_000 || termCover >= adequacyFloor) {
+    return {
+      status: "baseline_ok",
+      gap,
+      adequacyFloor,
+      infoText:
+        "Your existing policy is valuable — premiums rise with age, so keep it. If income has grown, add a separate top-up for the gap only; do not cancel and rebuy.",
+      safetyNetOk: true,
+    };
+  }
+  return {
+    status: "partial",
+    gap,
+    adequacyFloor,
+    infoText:
+      "Your existing policy helps, but cover is still low for your income. Add a top-up for the gap only — no need to replace the old policy.",
+    safetyNetOk: false,
+  };
 }
 
 function issuesToFlags(issues: AnalysisIssue[]): AnalysisFlag[] {
@@ -444,13 +546,30 @@ function buildIssues(params: {
       message:
         "You have no term insurance. Your family has zero protection if income stops.",
     });
-  } else if (termCover < termNeeded) {
-    issues.push({
-      severityScore: 58,
-      severity: "warning",
-      code: "term_underinsured",
-      message: `You have ₹${(termCover / 10000000).toFixed(1)}Cr. Recommended: ₹${(termNeeded / 10000000).toFixed(1)}Cr.`,
+  } else {
+    const termAssessment = assessTermCover({
+      hasTermInsurance,
+      termCover,
+      termNeeded,
     });
+    if (termAssessment.status === "partial") {
+      issues.push({
+        severityScore: 58,
+        severity: "warning",
+        code: "term_underinsured",
+        message: `You have ₹${(termCover / 10000000).toFixed(1)}Cr. Recommended at today's income: ₹${(termNeeded / 10000000).toFixed(1)}Cr — top-up the gap only; keep your existing policy.`,
+      });
+    } else if (termAssessment.status === "baseline_ok") {
+      issues.push({
+        severityScore: 32,
+        severity: "good",
+        code: "term_cover_baseline_ok",
+        message:
+          termAssessment.gap > 0
+            ? `You have ₹${(termCover / 10000000).toFixed(1)}Cr pure term — strong baseline. Reference at today's income is ~₹${(termNeeded / 10000000).toFixed(1)}Cr; optional top-up for the gap, not a second full policy.`
+            : "You have strong term cover for your current profile.",
+      });
+    }
   }
 
   if (medEmergencyCurrent < medEmergencyTarget) {
@@ -723,7 +842,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const premiumReserveTarget =
     monthlyPremiumsAll > 0 ? monthlyPremiumsAll * 12 : 0;
 
-  const medEmergencyTarget = medicalEmergencyTargetLiquid(data);
+  const medEmergencyTarget = medicalEmergencyTarget(data);
   const medEmergencyCurrent = n(data.medicalEmergencyFund);
 
   // 1. Emergency fund (weighted: savings 100%, liquid MF 95%, FD 70%, other liquid 50%, legacy field 100%)
@@ -1030,17 +1149,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     monthlyInvesting,
   });
 
-  if (data.hasTermInsurance && n(data.termInsuranceSumAssured) >= 10_000_000) {
-    issues.push({
-      severityScore: 32,
-      severity: "good",
-      code: "term_cover_one_crore_baseline",
-      message:
-        "You have ₹1 crore or more pure term cover — strong protection. If income has grown since you bought it, new cover at today’s age is often much costlier, so your existing policy is still a big win.",
-    });
-    issues.sort((a, b) => b.severityScore - a.severityScore);
-  }
-
   // Defensive de-dup in case future branches push same issue code twice.
   const seenIssueCodes = new Set<string>();
   issues = issues.filter((issue) => {
@@ -1065,12 +1173,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const savingsVal = data.savingsAccountBalance || 0;
   const fdVal = data.fdValue || 0;
   const liquidMFVal = data.liquidMFValue || 0;
-  const otherLiquidVal = data.otherLiquidSavings || 0;
-  const emergencyCorpusTotal =
-    savingsVal * 1.0 + liquidMFVal * 0.95 + fdVal * 0.7 + otherLiquidVal * 0.5;
-  const needsMonthly = bucketActuals?.needs || 0;
-  const monthsCovered =
-    needsMonthly > 0 ? emergencyCorpusTotal / needsMonthly : 0;
   const totalAssets =
     savingsVal +
     fdVal +
@@ -1088,6 +1190,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     (data.homeMarketValue || 0) +
     (data.carMarketValue || 0) +
     (data.goldValue || 0) +
+    n(data.emergencyFundCurrent) +
     (() => {
       const schemes = (
         data as FinancialProfile & {
@@ -1109,24 +1212,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       (sum: number, inv: any) => sum + (inv.currentValue || 0),
       0,
     );
-  const totalLiabilities =
-    (data.homeLoanOutstanding || 0) +
-    (data.carLoanOutstanding || 0) +
-    (data.personalLoanOutstanding || (data.personalLoanEMI || 0) * 24) +
-    (data.bikeEMI || 0) * 24 +
-    (data.creditCardBillMonthly || 0) * 3 +
-    (data.unifiedLoans || []).reduce((sum: number, loan: any) => {
-      const alreadyCounted =
-        loan.loanType === "personal_loan" ||
-        loan.loanType === "car_loan" ||
-        loan.loanType === "bike_loan";
-      if (alreadyCounted) return sum;
-      return (
-        sum +
-        (loan.outstandingAmount ||
-          (loan.monthlyEMI || 0) * (loan.remainingMonths || 18))
-      );
-    }, 0);
+  const totalLiabilities = totalLoanLiabilities(data);
   const netWorth = totalAssets - totalLiabilities;
   if (process.env.NODE_ENV === "development") {
     console.log(
@@ -1160,8 +1246,8 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     termInsuranceNeeded,
     realEmergencyFund: {
       ...er,
-      total: emergencyCorpusTotal,
-      monthsCovered,
+      total: er.realTotal,
+      monthsCovered: er.monthsCovered,
       savings: savingsVal,
       fd: fdVal,
       fdWeighted: fdVal * 0.7,

@@ -61,13 +61,15 @@ export default function AddObligationForm({
     initial?.due_month != null ? String(initial.due_month) : "",
   );
   const [saving, setSaving] = useState(false);
-  const isEdit = Boolean(initial?.title);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const isEdit = Boolean(initial);
 
   const canSave = Boolean(title.trim() && amount);
 
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await onSave({
         title: title.trim(),
@@ -78,8 +80,11 @@ export default function AddObligationForm({
         due_month: dueMonth ? parseInt(dueMonth, 10) : null,
         source: "manual",
         is_active: true,
-        remind_days_before: 7,
+        remind_days_before: initial?.remind_days_before ?? 7,
       });
+    } catch (err) {
+      console.error("obligation save failed:", err);
+      setSaveError("Could not save. Try again.");
     } finally {
       setSaving(false);
     }
@@ -186,14 +191,14 @@ export default function AddObligationForm({
             Due date (day of month)
           </label>
           <div className="flex flex-wrap gap-1.5">
-            {[1, 2, 3, 5, 7, 10, 15, 20, 25, 28, 30].map((day) => {
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
               const active = dueDay === String(day);
               return (
                 <button
                   key={day}
                   type="button"
                   onClick={() => setDueDay(String(day))}
-                  className={`h-11 w-11 rounded-[10px] border-[1.5px] text-[13px] font-semibold ${
+                  className={`h-9 w-9 rounded-[10px] border-[1.5px] text-xs font-semibold ${
                     active
                       ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
                       : "border-[#E8E6F0] bg-white text-[#5F5E5A]"
@@ -238,6 +243,12 @@ export default function AddObligationForm({
             ))}
           </select>
         </div>
+      ) : null}
+
+      {saveError ? (
+        <p className="mb-3 text-center text-[13px] font-medium text-[#E24B4A]">
+          {saveError}
+        </p>
       ) : null}
 
       <button

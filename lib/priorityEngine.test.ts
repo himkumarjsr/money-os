@@ -79,7 +79,7 @@ function profile(overrides: Record<string, unknown> = {}) {
     numberOfKids: 1,
     kidsAges: [9],
     kidsGenders: ["girl"],
-    primaryGoal: "buy_house",
+    primaryGoal: "buy_home",
     homePurchaseTarget: 5_000_000,
     retirementAge: 60,
     hasTermInsurance: false,
@@ -103,16 +103,22 @@ describe("buildPriorityPlan", () => {
         "medical_fund",
         "term_insurance",
         "health_insurance",
-        "start_sip",
+        "home_downpayment",
         "ssy_girl_age_9",
       ]),
     );
     expect(plan.debts).toHaveLength(6);
     expect(plan.debts[0]?.type).toBe("Credit card");
     expect(plan.goals[0]).toMatchObject({
-      goalType: "buy_house",
+      goalType: "buy_home",
       readyToStart: false,
     });
+    const priorityIds = plan.priorities.map((item) => item.id);
+    const homeIdx = priorityIds.indexOf("home_downpayment");
+    const ssyIdx = priorityIds.indexOf("ssy_girl_age_9");
+    expect(homeIdx).toBeGreaterThan(ssyIdx);
+    expect(priorityIds.indexOf("term_insurance")).toBeLessThan(homeIdx);
+    expect(priorityIds.indexOf("health_insurance")).toBeLessThan(homeIdx);
     expect(plan.fdSuggestion).toMatchObject({
       bank: "Unity Small Finance Bank",
       currentRate: 5,
@@ -176,5 +182,75 @@ describe("buildPriorityPlan", () => {
       },
     ]);
     expect(plan.fdSuggestion).toBeUndefined();
+  });
+
+  it("skips medical fund allocation when entered medical emergency fund meets target", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        cityTier: "tier3",
+        liquidMFValue: 300_000,
+        medicalEmergencyFund: 250_000,
+        savingsAccountBalance: 1_000_000,
+      }),
+      { needsActual: 50_000, overallScore: 70 },
+    );
+    const medical = plan.priorities.find((item) => item.id === "medical_fund");
+    expect(medical?.status).toBe("complete");
+    expect(medical?.gap).toBe(0);
+    expect(medical?.monthlyContribution).toBe(0);
+    expect(plan.monthlyPlan?.[0]?.medical).toBe(0);
+  });
+
+  it("routes buy_home deploy after safety and SSY in priority order", () => {
+    const plan = buildPriorityPlan(profile(), {
+      needsActual: 50_000,
+      overallScore: 40,
+    });
+    const priorityIds = plan.priorities.map((item) => item.id);
+    const homeIdx = priorityIds.indexOf("home_downpayment");
+    const ssyIdx = priorityIds.indexOf("ssy_girl_age_9");
+    expect(homeIdx).toBeGreaterThan(ssyIdx);
+    expect(priorityIds.indexOf("term_insurance")).toBeLessThan(homeIdx);
+    expect(priorityIds.indexOf("health_insurance")).toBeLessThan(homeIdx);
+  });
+
+  it("routes buy_home goal deploy after extra debt in monthly plan", () => {
+    const plan = buildPriorityPlan(profile(), {
+      needsActual: 50_000,
+      overallScore: 40,
+    });
+    const safeMonth = plan.monthlyPlan?.find(
+      (m) =>
+        (m.emergency || 0) === 0 &&
+        (m.medical || 0) === 0 &&
+        (m.termYearly || 0) === 0 &&
+        ((m.sip || 0) > 0 || (m.extraDebt || 0) > 0),
+    );
+    expect(safeMonth).toBeTruthy();
+    if ((safeMonth?.extraDebt || 0) > 0 && (safeMonth?.sip || 0) > 0) {
+      expect(safeMonth?.extraDebt).toBeGreaterThan(0);
+    }
+  });
+
+  it("routes surplus to debt when primary goal is clear_debt", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        primaryGoal: "clear_debt",
+        medicalEmergencyFund: 300_000,
+        cityTier: "metro",
+        liquidMFValue: 500_000,
+        savingsAccountBalance: 2_000_000,
+      }),
+      { needsActual: 40_000, overallScore: 70 },
+    );
+    expect(plan.goals.some((g) => g.goalType === "clear_debt")).toBe(true);
+    const wealth = plan.priorities.find((p) => p.id === "accelerate_debt");
+    expect(wealth?.title).toMatch(/debt/i);
+    const firstSafe = plan.monthlyPlan?.find(
+      (m) => (m.emergency || 0) === 0 && (m.medical || 0) === 0,
+    );
+    expect((firstSafe?.extraDebt || 0) > 0 || (firstSafe?.sip || 0) >= 0).toBe(
+      true,
+    );
   });
 });

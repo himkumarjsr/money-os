@@ -44,10 +44,7 @@ export default function NumberInput({
     let next = parsed;
     if (min !== undefined) next = Math.max(min, next);
     if (max !== undefined) next = Math.min(max, next);
-    if (step > 0 && step < 1) {
-      const decimals = Math.min(6, (String(step).split(".")[1] || "").length);
-      next = Number(next.toFixed(decimals));
-    }
+    // Do not round to step for free-form entry (step is UI-only elsewhere).
     return next;
   };
 
@@ -98,10 +95,7 @@ export default function NumberInput({
           inputMode="decimal"
           value={draft}
           onChange={handleChange}
-          onFocus={(e) => {
-            setFocused(true);
-            e.currentTarget.select();
-          }}
+          onFocus={() => setFocused(true)}
           onBlur={() => {
             setFocused(false);
             const next = parseAndClamp(draft);

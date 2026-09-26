@@ -120,6 +120,55 @@ describe("planObligationExpenseSync — amount first", () => {
     expect(plan.markPaid).toEqual([{ id: "c1", amount: 28760 }]);
   });
 
+  it("ticks when expense matches live obligation.amount even if expected_amount is stale", () => {
+    const plan = planObligationExpenseSync({
+      checklist: [
+        {
+          id: "c1",
+          status: "pending",
+          expected_amount: 22000, // stale checklist copy
+          obligation: {
+            title: "Home Loan EMI",
+            category: "loan_emi",
+            amount: 25000, // edited live amount shown in UI
+          },
+        },
+      ],
+      expenses: [
+        {
+          id: "t1",
+          amount: 25000,
+          bucket: "loans",
+          subcategory: "home_loan_emi",
+        },
+      ],
+    });
+    expect(plan.markPaid).toEqual([{ id: "c1", amount: 25000 }]);
+  });
+
+  it("findPendingChecklistForExpense matches obligation.amount when expected is stale", () => {
+    const pending = findPendingChecklistForExpense(
+      [
+        {
+          id: "c1",
+          status: "pending",
+          expected_amount: 5000,
+          obligation: {
+            title: "SIP",
+            category: "investment_sip",
+            amount: 8000,
+          },
+        },
+      ],
+      {
+        amount: 8000,
+        bucket: "investment",
+        subcategory: "sip",
+      },
+    );
+    expect(pending?.id).toBe("c1");
+  });
+
   it("ticks HDFC/ICICI by amount alone", () => {
     const plan = planObligationExpenseSync({
       checklist: [

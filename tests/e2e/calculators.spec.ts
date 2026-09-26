@@ -83,7 +83,7 @@ test.describe("Calculators", () => {
     await expect(rateField.getByText("11.3% p.a.")).toBeVisible();
   });
 
-  test("SIP money field clamps above ₹99 crore", async ({ page }) => {
+  test("SIP money field clamps above ₹1 crore", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/calculators/sip");
 
@@ -101,7 +101,7 @@ test.describe("Calculators", () => {
     await moneyInput.fill("2000000000");
     await moneyInput.blur();
 
-    await expect(moneyInput).toHaveValue("99,00,00,000");
+    await expect(moneyInput).toHaveValue("1,00,00,000");
   });
 
   test("Post Office suite and TD calculator load", async ({ page }) => {
@@ -136,5 +136,47 @@ test.describe("Calculators", () => {
     ).toBeVisible({
       timeout: 15_000,
     });
+  });
+
+  test("hub from mobile stays on list — Loans does not open EMI", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/calculators");
+    await expect(page).toHaveURL(/\/calculators\/?$/);
+    await expect(
+      page.getByRole("heading", { name: "Calculators", exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Category: Loans" }).click();
+    await expect(page).toHaveURL(/\/calculators\/?$/);
+    await expect(page.getByRole("button", { name: /^EMI\b/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Home loan/i }),
+    ).toBeVisible();
+    // Sheet / dedicated EMI route must not open from category alone.
+    await expect(page).not.toHaveURL(/\/calculators\/emi/);
+  });
+
+  test("bottom nav Calculators returns to hub from deep link", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/calculators/emi");
+    await expect(page).toHaveURL(/\/calculators\/emi/);
+
+    // Close the mobile sheet (fullscreen covers bottom nav).
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page).toHaveURL(/\/calculators\/?$/, { timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Calculators", exact: true }),
+    ).toBeVisible();
+
+    // Open another tool, then tap bottom-nav Calculators to force hub.
+    await page.getByRole("button", { name: /^SIP\b/i }).click();
+    await expect(page).toHaveURL(/\/calculators\/sip/);
+    await page.getByRole("button", { name: "Close" }).click();
+    await page.locator('a[href="/calculators"]').last().click();
+    await expect(page).toHaveURL(/\/calculators\/?$/);
   });
 });

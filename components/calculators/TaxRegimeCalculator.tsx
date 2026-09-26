@@ -365,8 +365,16 @@ export function TaxRegimeCalculator() {
   const [widowed, setWidowed] = useState(false);
   const [disabledSelf, setDisabledSelf] = useState(false);
   const [nri, setNri] = useState(false);
+  /** Oldest parent’s age (for 80D parents cap). 0 = not entered yet. */
+  const [parentsAge, setParentsAge] = useState(0);
   const [parentsSenior, setParentsSenior] = useState(false);
   const [age, setAge] = useState(18);
+
+  /** Section 80D parents premium cap: ₹50k if either parent is 60+, else ₹25k. */
+  const parentsSeniorEffective =
+    parentsAge > 0 ? parentsAge >= 60 : parentsSenior;
+  const parents80DCap = parentsSeniorEffective ? 50_000 : 25_000;
+  const self80DCap = age >= 60 ? 50_000 : 25_000;
 
   const [basicMonthly, setBasicMonthly] = useState(0);
   const [specialAllowanceMonthly, setSpecialAllowanceMonthly] = useState(0);
@@ -556,7 +564,9 @@ export function TaxRegimeCalculator() {
       setWidowed(g("widowed", false));
       setDisabledSelf(g("disabledSelf", false));
       setNri(g("nri", false));
-      setParentsSenior(g("parentsSenior", false));
+      const legacySenior = g("parentsSenior", false);
+      setParentsSenior(legacySenior);
+      setParentsAge(g("parentsAge", legacySenior ? 60 : 0));
       setAge(g("age", 18));
       setBasicMonthly(g("basicMonthly", 0));
       setSpecialAllowanceMonthly(
@@ -684,7 +694,8 @@ export function TaxRegimeCalculator() {
         widowed,
         disabledSelf,
         nri,
-        parentsSenior,
+        parentsAge,
+        parentsSenior: parentsAge > 0 ? parentsAge >= 60 : parentsSenior,
         age,
         basicMonthly,
         specialAllowanceMonthly,
@@ -808,6 +819,7 @@ export function TaxRegimeCalculator() {
     widowed,
     disabledSelf,
     nri,
+    parentsAge,
     parentsSenior,
     age,
     basicMonthly,
@@ -1178,7 +1190,7 @@ export function TaxRegimeCalculator() {
       nps80CCD1B: secDed80c ? nps80CCD1B : 0,
       deductions80DSelf: secDed80d ? deductions80DSelf : 0,
       deductions80DParents: secDed80d ? deductions80DParents : 0,
-      parentsSenior,
+      parentsSenior: parentsSeniorEffective,
       deduction80DD: secDedRest ? deduction80DD : 0,
       deduction80DDB: secDedRest ? deduction80DDB : 0,
       deduction80E: secDedRest ? deduction80E : 0,
@@ -1223,6 +1235,8 @@ export function TaxRegimeCalculator() {
     secDed80d,
     deductions80DSelf,
     deductions80DParents,
+    parentsSeniorEffective,
+    parentsAge,
     parentsSenior,
     secDedRest,
     deduction80DD,
@@ -1951,11 +1965,17 @@ export function TaxRegimeCalculator() {
                   <label className="flex cursor-pointer items-center gap-2 text-sm text-[#5F5E5A]">
                     <input
                       type="checkbox"
-                      checked={parentsSenior}
-                      onChange={(e) => setParentsSenior(e.target.checked)}
+                      checked={parentsSeniorEffective}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setParentsSenior(on);
+                        setParentsAge((a) =>
+                          on ? (a >= 60 ? a : 60) : a > 0 && a < 60 ? a : 0,
+                        );
+                      }}
                       className="accent-[#534AB7]"
                     />
-                    Parents are senior (80D cap ₹50k)
+                    Parents 60+ (80D parents cap ₹{formatIndian(parents80DCap)})
                   </label>
                 </div>
                 <div>
@@ -3355,15 +3375,15 @@ export function TaxRegimeCalculator() {
                 emoji="🩺"
                 title="80D medical insurance"
                 subtitle="Self & parents premiums"
-                oneLiner="Caps shift with senior citizen toggles — combine with parents-senior checkbox for ₹50k rails."
+                oneLiner="Self cap follows your age (₹25k / ₹50k). Parents cap needs parents’ age — ₹50k if 60+."
                 isOn={secDed80d}
                 onToggle={setSecDed80d}
               >
                 <Mt
                   id="tax-80d-self"
-                  label="80D — self / spouse / kids"
+                  label={`80D — self / spouse / kids (cap ₹${formatIndian(self80DCap)})`}
                   teach={TEACH.deductions.eightyDSelf}
-                  max={age >= 60 ? 50000 : 25000}
+                  max={self80DCap}
                   defaultValue={
                     deductions80DSelf ? formatIndian(deductions80DSelf) : ""
                   }
@@ -3371,11 +3391,33 @@ export function TaxRegimeCalculator() {
                     setDeductions80DSelf(parseMoneyInput(e.target.value) ?? 0)
                   }
                 />
+                <NumberInput
+                  label="Age of oldest parent"
+                  value={parentsAge}
+                  onChange={(v) => {
+                    const next = Math.round(v);
+                    setParentsAge(next);
+                    setParentsSenior(next >= 60);
+                  }}
+                  min={0}
+                  max={120}
+                  step={1}
+                  placeholder="e.g. 62"
+                  helper="As of FY end (31 Mar). Under 60 → parents 80D cap ₹25,000; 60+ → ₹50,000."
+                />
+                <p className="text-xs text-[#7A7871]">
+                  Parents 80D cap applied: ₹{formatIndian(parents80DCap)}
+                  {parentsAge > 0
+                    ? parentsSeniorEffective
+                      ? " (senior parents)"
+                      : " (parents under 60)"
+                    : " — enter parent age above for the right cap"}
+                </p>
                 <Mt
                   id="tax-80d-par"
-                  label="80D — parents"
+                  label={`80D — parents (cap ₹${formatIndian(parents80DCap)})`}
                   teach={TEACH.deductions.eightyDParents}
-                  max={parentsSenior ? 50000 : 25000}
+                  max={parents80DCap}
                   optional
                   defaultValue={
                     deductions80DParents
@@ -3990,11 +4032,17 @@ export function TaxRegimeCalculator() {
                     <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
                       <input
                         type="checkbox"
-                        checked={parentsSenior}
-                        onChange={(e) => setParentsSenior(e.target.checked)}
+                        checked={parentsSeniorEffective}
+                        onChange={(e) => {
+                          const on = e.target.checked;
+                          setParentsSenior(on);
+                          setParentsAge((a) =>
+                            on ? (a >= 60 ? a : 60) : a > 0 && a < 60 ? a : 0,
+                          );
+                        }}
                         className="accent-[#534AB7]"
                       />
-                      Parents are senior citizens
+                      Parents 60+ (higher 80D parents cap)
                     </label>
                     <label className="flex items-center gap-2 text-sm text-[#5F5E5A]">
                       <input
@@ -4806,14 +4854,15 @@ export function TaxRegimeCalculator() {
               {personalCAStep === 12 ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-[#111110]">
-                    Health insurance premiums. Caps: self/family ₹25k or ₹50k
-                    (senior), parents ₹25k or ₹50k (senior).{" "}
-                    <span className="text-[#7A7871]">(Sec 80D)</span>
+                    Health insurance premiums (Sec 80D). Self/family cap ₹
+                    {formatIndian(self80DCap)} from your age. Parents cap
+                    depends on parent age: ₹25,000 under 60, ₹50,000 if 60+.
                   </p>
                   <Mt
                     id="ca-80d-self"
-                    label="Self/spouse/kids premium"
+                    label={`Self/spouse/kids premium (cap ₹${formatIndian(self80DCap)})`}
                     teach={TEACH.deductions.eightyDSelf}
+                    max={self80DCap}
                     optional
                     defaultValue={
                       deductions80DSelf ? formatIndian(deductions80DSelf) : ""
@@ -4822,10 +4871,33 @@ export function TaxRegimeCalculator() {
                       setDeductions80DSelf(parseMoneyInput(e.target.value) ?? 0)
                     }
                   />
+                  <NumberInput
+                    label="Age of oldest parent"
+                    value={parentsAge}
+                    onChange={(v) => {
+                      const next = Math.round(v);
+                      setParentsAge(next);
+                      setParentsSenior(next >= 60);
+                    }}
+                    min={0}
+                    max={120}
+                    step={1}
+                    placeholder="e.g. 62"
+                    helper="As of FY end (31 Mar). 60+ unlocks ₹50,000 parents premium cap."
+                  />
+                  <p className="text-xs text-[#7A7871]">
+                    Parents 80D cap applied: ₹{formatIndian(parents80DCap)}
+                    {parentsAge > 0
+                      ? parentsSeniorEffective
+                        ? " (senior parents)"
+                        : " (parents under 60)"
+                      : " — enter age for the correct cap"}
+                  </p>
                   <Mt
                     id="ca-80d-parent"
-                    label="Parents premium"
+                    label={`Parents premium (cap ₹${formatIndian(parents80DCap)})`}
                     teach={TEACH.deductions.eightyDParents}
+                    max={parents80DCap}
                     optional
                     defaultValue={
                       deductions80DParents

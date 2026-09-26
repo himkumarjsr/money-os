@@ -11,8 +11,18 @@ import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { supabase } from "@/lib/supabase";
-import { analyseFinances, monthlyTotalIncome } from "@/lib/financialEngine";
-import { getUniversalBucketActuals } from "@/lib/universal-buckets";
+import {
+  analyseFinances,
+  assessTermCover,
+  medicalEmergencyTarget,
+  monthlyTotalIncome,
+} from "@/lib/financialEngine";
+import {
+  getEpfContributionMonthly,
+  getInHandOutflow,
+  getUnallocatedIncome,
+  getUniversalBucketActuals,
+} from "@/lib/universal-buckets";
 import { getBucketBreakdown } from "@/lib/bucket-breakdown";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -66,17 +76,12 @@ export default function AnalyseResultPage() {
   const priorityPlan = useMemo(() => {
     if (!lastSubmission) return null;
     const stableResult = result ?? analyseFinances(lastSubmission);
+    const bucketActualsForPlan = getUniversalBucketActuals(lastSubmission);
     return buildPriorityPlan(lastSubmission, {
-      needsActual:
-        (lastSubmission?.rentAmount || 0) +
-        (lastSubmission?.grocery || 0) +
-        (lastSubmission?.vegetables || 0),
-      loansActual:
-        (lastSubmission?.homeLoanEMI || 0) +
-        (lastSubmission?.personalLoanEMI || 0),
-      wantsActual:
-        (lastSubmission?.shopping || 0) + (lastSubmission?.entertainment || 0),
-      investmentActual: lastSubmission?.monthlySIP || 0,
+      needsActual: bucketActualsForPlan.needs,
+      loansActual: bucketActualsForPlan.loans,
+      wantsActual: bucketActualsForPlan.wants,
+      investmentActual: bucketActualsForPlan.investment,
       overallScore: stableResult.overallScore,
     });
   }, [lastSubmission, result]);
@@ -201,13 +206,10 @@ export default function AnalyseResultPage() {
   } as const;
 
   const totalIncome = income;
-  const totalExpenses =
-    bucketActuals.needs +
-    bucketActuals.wants +
-    bucketActuals.security +
-    bucketActuals.loans +
-    bucketActuals.investment;
-  const amountLeftInHand = totalIncome - totalExpenses;
+  const epfMonthly = getEpfContributionMonthly(profile);
+  // EPF is deducted at source — not paid from in-hand, so exclude from surplus/outflow.
+  const totalOutflow = getInHandOutflow(profile);
+  const amountLeftInHand = getUnallocatedIncome(profile);
   const buckets = [
     {
       key: "needs",
@@ -251,14 +253,17 @@ export default function AnalyseResultPage() {
     },
   ];
 
-  const termStatus = (() => {
-    const hasTerm = profile?.hasTermInsurance;
-    const termCover = profile?.termInsuranceSumAssured || 0;
-    const termNeeded = analysis?.termInsuranceNeeded || 0;
-    if (!hasTerm || termCover === 0) return "missing" as const;
-    if (termNeeded > 0 && termCover >= termNeeded) return "complete" as const;
-    return "partial" as const;
-  })();
+  const termAssessment = assessTermCover({
+    hasTermInsurance: profile?.hasTermInsurance ?? false,
+    termCover: profile?.termInsuranceSumAssured || 0,
+    termNeeded: analysis?.termInsuranceNeeded || 0,
+  });
+  const termStatus = termAssessment.status;
+
+  const medEmergencyTargetAmount = profile
+    ? medicalEmergencyTarget(profile)
+    : 200_000;
+  const medEmergencyCurrent = profile?.medicalEmergencyFund || 0;
 
   const safetyItems = [
     {
@@ -286,11 +291,11 @@ export default function AnalyseResultPage() {
     {
       id: "medical",
       title: "Medical emergency fund",
-      current: profile?.medicalEmergencyFund || 0,
-      target: 200000,
+      current: medEmergencyCurrent,
+      target: medEmergencyTargetAmount,
       formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
-      formatTarget: () => "₹2,00,000",
-      isOk: (profile?.medicalEmergencyFund || 0) >= 200000,
+      formatTarget: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
+      isOk: medEmergencyCurrent >= medEmergencyTargetAmount,
       icon: "hospital",
     },
     {
@@ -300,23 +305,20 @@ export default function AnalyseResultPage() {
           ? "Term life cover"
           : termStatus === "partial"
             ? "Term cover"
-            : "Term insurance",
+            : termStatus === "baseline_ok"
+              ? "Term insurance"
+              : "Term insurance",
       current: profile?.termInsuranceSumAssured || 0,
       target: analysis?.termInsuranceNeeded || 0,
       formatCurrent: (v: number) =>
         v === 0 ? "None" : `₹${(v / 10000000).toFixed(1)} crore`,
       formatTarget: (v: number) =>
-        termStatus === "partial"
-          ? `₹${(v / 10000000).toFixed(1)} crore recommended`
+        termStatus === "partial" || termStatus === "baseline_ok"
+          ? `₹${(v / 10000000).toFixed(1)} crore at today's income`
           : `₹${(v / 10000000).toFixed(1)} crore`,
-      isOk: termStatus === "complete",
-      status: termStatus,
-      infoText:
-        termStatus === "partial"
-          ? "Your existing policy is good. A top-up plan can add more cover at lower cost than a new policy."
-          : termStatus === "complete"
-            ? "Cover is adequate"
-            : "You have no term insurance",
+      isOk: termAssessment.safetyNetOk,
+      status: termStatus === "baseline_ok" ? "partial" : termStatus,
+      infoText: termAssessment.infoText,
       icon: "shield",
     },
     {
@@ -495,10 +497,12 @@ export default function AnalyseResultPage() {
                   Total outflow
                 </div>
                 <div className="break-words font-extrabold leading-tight text-[#B42323] tabular-nums text-[length:clamp(14px,calc(8px + 4.2vw),22px)] sm:text-[22px]">
-                  ₹{Math.round(totalExpenses).toLocaleString("en-IN")}
+                  ₹{Math.round(totalOutflow).toLocaleString("en-IN")}
                 </div>
                 <div className="mt-1 text-xs font-medium text-[#5F5E5A]">
-                  needs + loans + wants
+                  {epfMonthly > 0
+                    ? "from in-hand (EPF excluded)"
+                    : "needs + loans + insurance + wants + SIP"}
                 </div>
               </div>
               <div className="min-w-0 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] p-4 sm:border-0 sm:bg-transparent sm:p-0">
@@ -692,20 +696,37 @@ export default function AnalyseResultPage() {
                 );
               })}
               <div className="rounded-2xl border border-dashed border-[#D4D2F5] bg-[#F7F7F4] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="font-semibold text-[#111110]">
-                    Unallocated
-                  </span>
-                  <span className="break-all text-right font-bold tabular-nums text-[#111110]">
-                    ₹
-                    {Math.max(
-                      0,
-                      income - buckets.reduce((s, b) => s + b.actual, 0),
-                    ).toLocaleString("en-IN")}
-                  </span>
+                <div className="space-y-2 text-[13px]">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-[#5F5E5A]">Total income</span>
+                    <span className="font-semibold tabular-nums text-[#111110]">
+                      ₹{Math.round(totalIncome).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-[#5F5E5A]">
+                      Total outflow
+                      {epfMonthly > 0 ? " (excl. EPF)" : ""}
+                    </span>
+                    <span className="font-semibold tabular-nums text-[#B42323]">
+                      ₹{Math.round(totalOutflow).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3 border-t border-[#E8E6F0] pt-2">
+                    <span className="font-semibold text-[#111110]">
+                      Amount left
+                    </span>
+                    <span
+                      className={`break-all text-right font-bold tabular-nums ${amountLeftInHand >= 0 ? "text-[#0F766E]" : "text-[#B42323]"}`}
+                    >
+                      ₹{Math.round(amountLeftInHand).toLocaleString("en-IN")}
+                    </span>
+                  </div>
                 </div>
                 <p className="mt-2 text-xs font-medium text-[#5F5E5A]">
-                  Income not mapped into these buckets.
+                  {epfMonthly > 0
+                    ? `EPF ₹${Math.round(epfMonthly).toLocaleString("en-IN")}/mo is deducted at source and is not subtracted from in-hand surplus.`
+                    : "Income not mapped into these buckets."}
                 </p>
               </div>
             </div>
@@ -806,21 +827,53 @@ export default function AnalyseResultPage() {
                   })}
                   <tr className="border-t border-[#EFEDE7] bg-[#F7F7F4]">
                     <td className="px-3 py-2 font-semibold text-[#111110]">
-                      Unallocated
+                      Total income
                     </td>
                     <td className="px-3 py-2 text-[#5F5E5A]">—</td>
                     <td className="px-3 py-2 text-[#5F5E5A]">—</td>
                     <td className="px-3 py-2 font-semibold tabular-nums text-[#111110]">
-                      ₹
-                      {Math.max(
-                        0,
-                        income - buckets.reduce((s, b) => s + b.actual, 0),
-                      ).toLocaleString("en-IN")}
+                      ₹{Math.round(totalIncome).toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                  </tr>
+                  <tr className="border-t border-[#EFEDE7] bg-[#F7F7F4]">
+                    <td className="px-3 py-2 font-semibold text-[#111110]">
+                      Total outflow
+                      {epfMonthly > 0 ? (
+                        <span className="ml-1 text-xs font-medium text-[#5F5E5A]">
+                          (excl. EPF)
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 font-semibold tabular-nums text-[#B42323]">
+                      ₹{Math.round(totalOutflow).toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                  </tr>
+                  <tr className="border-t border-[#EFEDE7] bg-[#EEEDFE]">
+                    <td className="px-3 py-2 font-semibold text-[#111110]">
+                      Amount left
+                    </td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td
+                      className={`px-3 py-2 font-bold tabular-nums ${amountLeftInHand >= 0 ? "text-[#0F766E]" : "text-[#B42323]"}`}
+                    >
+                      ₹{Math.round(amountLeftInHand).toLocaleString("en-IN")}
                     </td>
                     <td className="px-3 py-2 text-[#5F5E5A]">—</td>
                   </tr>
                 </tbody>
               </table>
+              {epfMonthly > 0 ? (
+                <p className="border-t border-[#E8E6F0] bg-white px-3 py-2 text-xs font-medium text-[#5F5E5A]">
+                  EPF ₹{Math.round(epfMonthly).toLocaleString("en-IN")}/mo still
+                  shows under Investment for savings tracking, but is deducted
+                  at source — not counted in total outflow or amount left.
+                </p>
+              ) : null}
             </div>
           </section>
 

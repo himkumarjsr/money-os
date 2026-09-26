@@ -15,7 +15,7 @@ Full guide: [`tests/TESTING.md`](../tests/TESTING.md).
 - `navigation.spec.ts` — main nav links
 - `health-check.spec.ts` — analyse smoke
 - `responsive.spec.ts` — overflow / bottom nav
-- `calculators.spec.ts` — calculator inputs, SIP decimal rate/slider sync, ₹99cr money clamp, Post Office pages
+- `calculators.spec.ts` — calculator inputs, SIP decimal rate/slider sync, SIP money clamp at ₹1 crore, Post Office pages
 - `protected.spec.ts` — auth-gated pages (needs `E2E_USER_*`)
 - `split.spec.ts` — Split logged-out + invite redirect smoke
 

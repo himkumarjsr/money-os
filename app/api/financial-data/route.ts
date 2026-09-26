@@ -29,6 +29,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!process.env.ENCRYPTION_KEY) {
+      // Optional encrypted vault — analyse snapshot is the source of truth.
+      console.warn(
+        "Financial data save skipped: ENCRYPTION_KEY not set in env",
+      );
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: "encryption_unavailable",
+      });
+    }
+
     const encrypted = encryptSensitiveFields(
       submission as Record<string, unknown>,
     );
@@ -69,6 +81,10 @@ export async function GET(_req: NextRequest) {
       60 * 60 * 1000,
     );
     if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
+    if (!process.env.ENCRYPTION_KEY) {
+      return NextResponse.json({ data: null, skipped: true });
+    }
 
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase

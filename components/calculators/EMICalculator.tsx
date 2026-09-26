@@ -42,9 +42,9 @@ function emi(principal: number, annualPct: number, months: number) {
 }
 
 export function EMICalculator() {
-  const [loan, setLoan] = useClamped(25_00_000, 1_00_000, 2_00_00_000);
-  const [rate, setRate] = useClamped(10.5, 6, 18);
-  const [tenure, setTenure] = useClamped(60, 12, 360);
+  const [loan, setLoan] = useClamped(25_00_000, 1, CALCULATOR_MONEY_MAX);
+  const [rate, setRate] = useClamped(10.5, 0.1, 100);
+  const [tenure, setTenure] = useClamped(60, 1, 600);
   const [loanStartDate, setLoanStartDate] = useState(todayInputValue);
   const [showAll, setShowAll] = useState(false);
 
@@ -169,7 +169,7 @@ export function EMICalculator() {
         label="Loan amount"
         unitType="money"
         value={loan}
-        min={1_00_000}
+        min={1}
         max={CALCULATOR_MONEY_MAX}
         step={50_000}
         onChange={setLoan}
@@ -179,8 +179,8 @@ export function EMICalculator() {
         label="Interest rate"
         unitType="percent"
         value={rate}
-        min={6}
-        max={18}
+        min={0.1}
+        max={100}
         step={0.1}
         onChange={setRate}
         format={(v) => `${v}% p.a.`}
@@ -189,8 +189,8 @@ export function EMICalculator() {
         label="Tenure"
         unitType="months"
         value={tenure}
-        min={12}
-        max={360}
+        min={1}
+        max={600}
         step={1}
         onChange={setTenure}
         format={(v) => `${v} months (${(v / 12).toFixed(1)} yr)`}

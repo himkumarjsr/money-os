@@ -1,30 +1,108 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearCache,
+  enginePlanFingerprint,
   getCachedPlan,
   hashProfile,
+  isCachedAiStale,
   loadFromSupabase,
   saveToSupabase,
   setCachedPlan,
 } from "./cache";
 
 describe("hashProfile", () => {
-  it("returns stable hash for same relevant fields", () => {
-    const a = hashProfile({ monthlySalary: 100000, city: "BLR", ignored: 1 });
-    const b = hashProfile({ monthlySalary: 100000, city: "BLR", ignored: 99 });
+  it("returns stable hash for same profile payload", () => {
+    const a = hashProfile({ monthlySalary: 100000, cityTier: "metro" });
+    const b = hashProfile({ monthlySalary: 100000, cityTier: "metro" });
     expect(a).toBe(b);
     expect(a).toMatch(/^[0-9a-z]+$/);
   });
 
-  it("changes when relevant fields change", () => {
+  it("changes when any profile field changes", () => {
     const a = hashProfile({ monthlySalary: 100000 });
     const b = hashProfile({ monthlySalary: 100001 });
     expect(a).not.toBe(b);
   });
 
+  it("changes when medical fund or goal changes", () => {
+    const base = {
+      monthlySalary: 100000,
+      medicalEmergencyFund: 200000,
+      primaryGoal: "grow_wealth",
+    };
+    expect(hashProfile(base)).not.toBe(
+      hashProfile({ ...base, medicalEmergencyFund: 300000 }),
+    );
+    expect(hashProfile(base)).not.toBe(
+      hashProfile({ ...base, primaryGoal: "clear_debt" }),
+    );
+  });
+
+  it("changes when analysis score changes", () => {
+    const profile = { monthlySalary: 100000 };
+    expect(hashProfile(profile, { overallScore: 70 })).not.toBe(
+      hashProfile(profile, { overallScore: 80 }),
+    );
+  });
+
   it("handles empty / sparse profiles", () => {
     expect(hashProfile({})).toMatch(/^[0-9a-z]+$/);
-    expect(hashProfile({ monthlySalary: undefined })).toBe(hashProfile({}));
+    expect(hashProfile({ monthlySalary: undefined })).toBe(
+      hashProfile({ monthlySalary: undefined }),
+    );
+  });
+});
+
+describe("enginePlanFingerprint / isCachedAiStale", () => {
+  it("marks cache stale when fingerprint missing or differs", () => {
+    const fp = enginePlanFingerprint({
+      monthlySurplus: 10000,
+      priorities: [
+        {
+          id: "medical_fund",
+          gap: 0,
+          monthlyContribution: 0,
+          status: "complete",
+        },
+      ],
+      goals: [{ goalType: "grow_wealth", targetAmount: 1 }],
+    });
+    expect(isCachedAiStale(null, fp)).toBe(true);
+    expect(
+      isCachedAiStale(
+        {
+          profileHash: "h",
+          aiPlan: {},
+          projection: null,
+          generatedAt: new Date().toISOString(),
+        },
+        fp,
+      ),
+    ).toBe(true);
+    expect(
+      isCachedAiStale(
+        {
+          profileHash: "h",
+          aiPlan: {},
+          projection: null,
+          generatedAt: new Date().toISOString(),
+          engineFingerprint: fp,
+        },
+        fp,
+      ),
+    ).toBe(false);
+    expect(
+      isCachedAiStale(
+        {
+          profileHash: "h",
+          aiPlan: {},
+          projection: null,
+          generatedAt: new Date().toISOString(),
+          engineFingerprint: fp,
+        },
+        "other",
+      ),
+    ).toBe(true);
   });
 });
 

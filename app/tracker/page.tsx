@@ -960,18 +960,52 @@ function TrackerContent() {
       ? incomePlan.displayTotal
       : monthlyIncome || profileMonthlyFromDb;
 
-  const openIncomeEditor = () => {
+  /**
+   * Edit the main salary row (purple INCOME tap).
+   * Only creates when no salary exists yet.
+   */
+  const openSalaryEditor = () => {
     setExpandedIncome(true);
     setExpandedBucket(null);
     setDefaultBucket("income");
-    const salaryTxn =
-      incomeTxns.find((t) => (t.subcategory || t.category) === "salary") ??
-      incomeTxns[0];
+    const salaryTxn = incomeTxns.find(
+      (t) => (t.subcategory || t.category) === "salary",
+    );
     if (salaryTxn) {
       setModalDefaults({});
       setEditingExpense(salaryTxn);
     } else {
       setEditingExpense(null);
+      setModalDefaults({
+        subcategory: "salary",
+        amount:
+          incomePlan.salaryAmount > 0 ? incomePlan.salaryAmount : undefined,
+        description: "Salary",
+      });
+    }
+    setShowAddModal(true);
+  };
+
+  /**
+   * Always add a *new* income row (bonus, freelance, etc.).
+   * Does not open the existing salary for edit — that was the bug.
+   */
+  const openAddIncome = () => {
+    setExpandedIncome(true);
+    setExpandedBucket(null);
+    setDefaultBucket("income");
+    setEditingExpense(null);
+    const hasSalary = incomeTxns.some(
+      (t) => (t.subcategory || t.category) === "salary",
+    );
+    if (hasSalary) {
+      // Additional income on top of salary — never overwrite salary.
+      setModalDefaults({
+        subcategory: "other_income",
+        amount: undefined,
+        description: "",
+      });
+    } else {
       setModalDefaults({
         subcategory: "salary",
         amount:
@@ -1175,9 +1209,9 @@ function TrackerContent() {
       >
         <button
           type="button"
-          onClick={openIncomeEditor}
-          aria-label="Edit income"
-          title="Edit income"
+          onClick={openSalaryEditor}
+          aria-label="Edit salary"
+          title="Edit salary"
           style={{
             minWidth: 0,
             margin: 0,
@@ -1190,7 +1224,7 @@ function TrackerContent() {
           }}
         >
           <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
-            INCOME · tap to edit
+            INCOME
           </div>
           <div
             style={{
@@ -1717,8 +1751,8 @@ function TrackerContent() {
                       </div>
                     ) : null}
                     <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>
-                      Tap purple INCOME (or Add income) to edit anytime —
-                      leftover savings still auto-sync on the 1st if missing.
+                      Use Add income for bonus / freelance / other — leftover
+                      savings still auto-sync on the 1st if missing.
                     </p>
                   </div>
                 ) : (
@@ -1731,7 +1765,7 @@ function TrackerContent() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  openIncomeEditor();
+                  openAddIncome();
                 }}
                 style={{
                   width: "100%",
@@ -1745,7 +1779,7 @@ function TrackerContent() {
                   cursor: "pointer",
                 }}
               >
-                + Add / edit income
+                + Add income
               </button>
             </div>
           </div>

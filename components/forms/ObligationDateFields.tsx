@@ -72,51 +72,81 @@ export function MonthDaySelects({
   );
 }
 
-/** Calendar date picker; stores only day-of-month (1–31) for recurring EMI. */
+/** Recurring EMI debit: month + day only (no year). */
 export function DayOfMonthPicker({
   value,
   onChange,
+  month,
+  onMonth,
   label,
   hint,
 }: {
   value?: number;
   onChange: (day: number | undefined) => void;
+  month?: number;
+  onMonth?: (m: number | undefined) => void;
   label: string;
   hint?: string;
 }) {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const dateValue =
-    value && value >= 1 && value <= 31
-      ? `${y}-${m}-${String(value).padStart(2, "0")}`
-      : "";
+  return (
+    <MonthDaySelects
+      label={label}
+      hint={hint}
+      month={month}
+      day={value}
+      onMonth={(m) => onMonth?.(m)}
+      onDay={onChange}
+    />
+  );
+}
+
+const YEAR_SELECT_CLASS =
+  "h-12 w-full min-w-0 rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none focus:border-[#534AB7]";
+
+/** Year dropdown (no free-typed rounding). */
+export function YearSelect({
+  label,
+  value,
+  onChange,
+  helper,
+  minYear,
+  maxYear,
+  placeholder = "Select year",
+}: {
+  label: string;
+  value?: number;
+  onChange: (year: number) => void;
+  helper?: string;
+  minYear?: number;
+  maxYear?: number;
+  placeholder?: string;
+}) {
+  const now = new Date().getFullYear();
+  const min = minYear ?? now;
+  const max = maxYear ?? now + 40;
+  const years: number[] = [];
+  for (let y = min; y <= max; y += 1) years.push(y);
 
   return (
-    <div className="mt-3 space-y-2">
-      <label className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5F5E5A]">
+    <div className="min-w-0 space-y-1.5">
+      <label className="inline-flex items-center gap-1.5 text-sm font-medium text-[#5F5E5A]">
         <span>{label}</span>
-        {hint ? <FieldTooltip text={hint} /> : null}
+        {helper ? <FieldTooltip text={helper} /> : null}
       </label>
-      <input
-        type="date"
-        value={dateValue}
-        onChange={(e) => {
-          const raw = e.target.value;
-          if (!raw) {
-            onChange(undefined);
-            return;
-          }
-          const day = Number(raw.split("-")[2] || 0);
-          onChange(day >= 1 && day <= 31 ? day : undefined);
-        }}
-        className="h-12 w-full rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none focus:border-[#534AB7]"
-      />
-      {value ? (
-        <p className="text-[12px] text-[#534AB7]">
-          Debit day each month: <strong>{value}</strong>
-        </p>
-      ) : null}
+      <select
+        value={value && value >= min && value <= max ? value : ""}
+        onChange={(e) =>
+          onChange(e.target.value ? parseInt(e.target.value, 10) : 0)
+        }
+        className={YEAR_SELECT_CLASS}
+      >
+        <option value="">{placeholder}</option>
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -159,6 +189,8 @@ export function PremiumDueFields({
       hint={hint}
       value={day}
       onChange={onDay}
+      month={month}
+      onMonth={onMonth}
     />
   );
 }

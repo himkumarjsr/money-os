@@ -1,21 +1,19 @@
 /** True when running inside the installed Finkoin PWA shell. */
 export function isStandalonePwa(): boolean {
-  if (typeof window === "undefined") return false;
-  if (window.matchMedia("(display-mode: standalone)").matches) return true;
-  if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
-  const nav = navigator as Navigator & { standalone?: boolean };
-  return nav.standalone === true;
+  const w = globalThis.window;
+  if (!w) return false;
+  if (w.matchMedia("(display-mode: standalone)").matches) return true;
+  if (w.matchMedia("(display-mode: minimal-ui)").matches) return true;
+  const nav = globalThis.navigator as Navigator & { standalone?: boolean };
+  return nav?.standalone === true;
 }
 
 export function isAndroidUserAgent(ua = ""): boolean {
-  return /Android/i.test(
-    ua || (typeof navigator !== "undefined" ? navigator.userAgent : ""),
-  );
+  return /Android/i.test(ua || globalThis.navigator?.userAgent || "");
 }
 
 export function isIosUserAgent(ua = ""): boolean {
-  const agent =
-    ua || (typeof navigator !== "undefined" ? navigator.userAgent : "");
+  const agent = ua || globalThis.navigator?.userAgent || "";
   return /iPhone|iPad|iPod/i.test(agent);
 }
 
@@ -29,7 +27,8 @@ export function isMobileUserAgent(ua = ""): boolean {
  * Returns false when not on Android or the URL cannot be built.
  */
 export function tryOpenHttpsInAndroidApp(absoluteUrl: string): boolean {
-  if (typeof window === "undefined") return false;
+  const w = globalThis.window;
+  if (!w) return false;
   if (!isAndroidUserAgent()) return false;
   try {
     const u = new URL(absoluteUrl);
@@ -42,7 +41,7 @@ export function tryOpenHttpsInAndroidApp(absoluteUrl: string): boolean {
       `;action=android.intent.action.VIEW` +
       `;category=android.intent.category.BROWSABLE` +
       `;S.browser_fallback_url=${fallback};end`;
-    window.location.href = intent;
+    w.location.href = intent;
     return true;
   } catch {
     return false;
@@ -52,13 +51,15 @@ export function tryOpenHttpsInAndroidApp(absoluteUrl: string): boolean {
 const OPEN_ATTEMPT_KEY = "finkoin_pwa_open_attempted";
 
 export function markPwaOpenAttempted(joinKey: string) {
-  if (typeof sessionStorage === "undefined") return;
-  sessionStorage.setItem(OPEN_ATTEMPT_KEY, joinKey);
+  const store = globalThis.sessionStorage;
+  if (!store) return;
+  store.setItem(OPEN_ATTEMPT_KEY, joinKey);
 }
 
 export function hasPwaOpenAttempted(joinKey: string): boolean {
-  if (typeof sessionStorage === "undefined") return false;
-  return sessionStorage.getItem(OPEN_ATTEMPT_KEY) === joinKey;
+  const store = globalThis.sessionStorage;
+  if (!store) return false;
+  return store.getItem(OPEN_ATTEMPT_KEY) === joinKey;
 }
 
 /**
@@ -76,21 +77,16 @@ export function shouldOfferOpenInApp(opts?: {
   userAgent?: string;
   standalone?: boolean;
 }): boolean {
-  const standalone =
-    opts?.standalone ??
-    (typeof window !== "undefined" ? isStandalonePwa() : false);
+  const w = globalThis.window;
+  const standalone = opts?.standalone ?? (w ? isStandalonePwa() : false);
   if (standalone) return false;
 
-  const ua =
-    opts?.userAgent ??
-    (typeof navigator !== "undefined" ? navigator.userAgent : "");
+  const ua = opts?.userAgent ?? globalThis.navigator?.userAgent ?? "";
   // iOS cannot hand off invite URLs into the PWA — skip the dead-end prompt.
   if (isIosUserAgent(ua)) return false;
   if (!isAndroidUserAgent(ua)) return false;
 
-  const host =
-    opts?.hostname ??
-    (typeof window !== "undefined" ? window.location.hostname : "");
+  const host = opts?.hostname ?? w?.location.hostname ?? "";
   if (host === "localhost" || host === "127.0.0.1") return false;
   return true;
 }

@@ -78,7 +78,7 @@ export default function ObligationsChecklist({
     markUnpaid,
     addObligation,
     updateObligation,
-    deleteObligation,
+    closeObligation,
     resetAllObligations,
     loading,
   } = useObligationStore();
@@ -115,16 +115,21 @@ export default function ObligationsChecklist({
 
   const handleUpdate = async (data: ObligationFormPayload) => {
     if (!editing) return;
-    await updateObligation(editing.id, {
+    const ok = await updateObligation(editing.id, {
       title: data.title,
       category: data.category,
       amount: data.amount,
       frequency: data.frequency,
       due_day: data.due_day,
       due_month: data.due_month,
+      source: "manual",
     });
+    if (!ok) {
+      throw new Error("updateObligation failed");
+    }
     await generateChecklist(userId, month);
     await useObligationStore.getState().fetchObligations(userId);
+    await useObligationStore.getState().fetchChecklist(userId, month);
     setEditing(null);
   };
 
@@ -332,14 +337,21 @@ export default function ObligationsChecklist({
                           isPaid ? "text-[#1D9E75]" : "text-[#111110]"
                         }`}
                       >
-                        ₹{(item.expected_amount || 0).toLocaleString("en-IN")}
+                        ₹
+                        {(
+                          (ob?.amount != null && ob.amount > 0
+                            ? ob.amount
+                            : item.expected_amount) || 0
+                        ).toLocaleString("en-IN")}
                       </div>
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
                         {ob ? (
                           <button
                             type="button"
                             aria-label={`Edit ${ob.title}`}
-                            onClick={() =>
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowAdd(false);
                               setEditing({
                                 id: ob.id,
                                 payload: {
@@ -353,8 +365,8 @@ export default function ObligationsChecklist({
                                   is_active: true,
                                   remind_days_before: ob.remind_days_before,
                                 },
-                              })
-                            }
+                              });
+                            }}
                             className="bg-transparent p-0"
                           >
                             <AppIcon name="pencil" size={14} color="#534AB7" />
@@ -374,6 +386,7 @@ export default function ObligationsChecklist({
                             type="button"
                             onClick={() => void markSkipped(item.id)}
                             className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
+                            title="Skip this month only — comes back next month"
                           >
                             Skip
                           </button>
@@ -381,26 +394,28 @@ export default function ObligationsChecklist({
                         {ob ? (
                           <button
                             type="button"
-                            aria-label={`Remove ${ob.title}`}
-                            title="Delete obligation"
-                            onClick={() => {
+                            aria-label={`Mark ${ob.title} as closed`}
+                            title="EMI paid off / stop forever — will not show from next month"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (
                                 !window.confirm(
-                                  `Delete “${ob.title}”? It will be removed from this month’s list.`,
+                                  `Mark “${ob.title}” as closed?\n\nUse this when the EMI is paid off or the obligation is done.\nIt will not appear from next month.\nThis month’s paid ✓ stays for your records.`,
                                 )
                               ) {
                                 return;
                               }
                               void (async () => {
-                                await deleteObligation(ob.id);
+                                await closeObligation(ob.id, month);
                                 await useObligationStore
                                   .getState()
                                   .fetchChecklist(userId, month);
                               })();
                             }}
-                            className="bg-transparent p-0"
+                            className="inline-flex items-center gap-1 rounded-md bg-[#FCEBEB] px-1.5 py-0.5 text-[10px] font-bold text-[#E24B4A]"
                           >
-                            <AppIcon name="trash" size={14} color="#E24B4A" />
+                            <AppIcon name="trash" size={12} color="#E24B4A" />
+                            Mark closed
                           </button>
                         ) : null}
                       </div>
@@ -426,7 +441,9 @@ export default function ObligationsChecklist({
                 Add obligation
               </button>
               <div className="text-[11px] text-[#9B9A94]">
-                {loading ? "Updating…" : "Skip ↔ Restore · ✓ from expenses"}
+                {loading
+                  ? "Updating…"
+                  : "Skip = this month · Mark closed = stop forever"}
               </div>
             </div>
           </div>
@@ -488,6 +505,7 @@ export default function ObligationsChecklist({
           <div className="fixed bottom-0 left-0 right-0 z-[991] mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-[20px] bg-white px-5 pb-10 pt-6">
             <div className="mx-auto mb-5 h-1 w-10 rounded bg-[#E8E6F0]" />
             <AddObligationForm
+              key={editing ? `edit-${editing.id}` : "add-new"}
               initial={editing?.payload}
               onSave={editing ? handleUpdate : handleSave}
               onClose={() => {

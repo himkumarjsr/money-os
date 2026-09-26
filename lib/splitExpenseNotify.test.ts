@@ -20,10 +20,17 @@ function createAdminMock(handlers: {
   members?: QueryResult;
   prefs?: QueryResult;
   insertError?: unknown;
+  insertId?: string;
 }) {
-  const insert = vi.fn(async () => ({
-    data: null,
-    error: handlers.insertError ?? null,
+  const insert = vi.fn(() => ({
+    select: () => ({
+      single: async () => ({
+        data: handlers.insertError
+          ? null
+          : { id: handlers.insertId ?? "notif-1" },
+        error: handlers.insertError ?? null,
+      }),
+    }),
   }));
 
   const from = vi.fn((table: string) => {
@@ -202,7 +209,7 @@ describe("notifySplitExpenseAdded", () => {
       expect.objectContaining({
         title: "New expense in Trip",
         body: "Actor added “Dinner” · ₹1,200",
-        url: "/split/g1",
+        url: "/notifications?id=notif-1",
         tag: "split-expense-e1",
       }),
     );

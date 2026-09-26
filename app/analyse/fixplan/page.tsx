@@ -1,6 +1,13 @@
 "use client";
 
-import { getCachedPlan, hashProfile, setCachedPlan } from "@/lib/cache";
+import {
+  getCachedPlan,
+  hashProfile,
+  setCachedPlan,
+  clearCache,
+  enginePlanFingerprint,
+  isCachedAiStale,
+} from "@/lib/cache";
 import { downloadOptimizerPDF } from "@/lib/generatePDF";
 import { Analytics } from "@/lib/analytics";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
@@ -25,6 +32,108 @@ const LOADING_MESSAGES = [
   "Generating 12-month roadmap...",
   "Almost ready...",
 ];
+
+/** Engine numbers always win — AI/cache must not resurrect closed medical/emergency gaps. */
+function mergeEnginePriorityPlan(
+  engine: any,
+  overlay: any,
+  monthsForPriority: (id: string, gap: number, monthly: number) => number,
+) {
+  return {
+    ...engine,
+    ...overlay,
+    priorities: (engine.priorities || []).map((p: any) => {
+      const match =
+        (overlay.priorities || []).find((o: any) => o?.id === p.id) || {};
+      const monthly = Math.max(0, Number(p.monthlyContribution || 0));
+      const gap = Math.max(0, Number(p.gap || 0));
+      const isComplete = gap <= 0 || monthly <= 0 || p.status === "complete";
+      return {
+        ...p,
+        rank: p.rank,
+        gap,
+        monthlyContribution: monthly,
+        monthlyRequired: Number(p.monthlyRequired || monthly),
+        monthsToComplete: monthsForPriority(String(p.id || ""), gap, monthly),
+        surplusBefore: Number(p.surplusBefore || 0),
+        surplusAfterThis: Number(p.surplusAfterThis || 0),
+        title: isComplete ? p.title : match.title || p.title,
+        instrument: isComplete
+          ? p.instrument
+          : match.instrument || p.instrument,
+        actionThisWeek: isComplete
+          ? "Maintain this completed bucket and continue monitoring monthly."
+          : p.actionThisWeek,
+        whyThisMatters: isComplete
+          ? "This bucket is already on track. Keep it funded and shift new surplus to the next gap."
+          : match.whyThisMatters || p.whyThisMatters,
+      };
+    }),
+    // Deterministic allocation — never take AI/cache monthlyPlan
+    debts: engine.debts,
+    goals: engine.goals,
+    monthlyIncome: engine.monthlyIncome,
+    monthlySurplus: engine.monthlySurplus,
+    surplusBreakdown: engine.surplusBreakdown,
+    monthlyPlan: engine.monthlyPlan,
+    scoreToday: engine.scoreToday,
+    scoreAfter12Months: engine.scoreAfter12Months,
+    topAction: engine.topAction,
+  };
+}
+
+function incompletePriorities(plan: any) {
+  return (plan?.priorities || []).filter(
+    (p: any) =>
+      p.status !== "complete" &&
+      (Number(p.gap || 0) > 0 || Number(p.monthlyContribution || 0) > 0),
+  );
+}
+
+/** Drop stale AI copy that still mentions closed gaps (e.g. medical when funded). */
+function reconcileExplanations(explanations: any, plan: any, analysis: any) {
+  const open = incompletePriorities(plan);
+  const surplus = Math.round(plan?.monthlySurplus || 0);
+  const score = analysis?.overallScore ?? plan?.scoreToday ?? 0;
+  const issueLine = open
+    .slice(0, 2)
+    .map(
+      (p: any) =>
+        `${p.title}${Number(p.gap || 0) > 0 ? ` gap of ₹${Number(p.gap || 0).toLocaleString("en-IN")}` : ""}`,
+    )
+    .join(" and ");
+  const goal = plan?.goals?.[0];
+  const goalBit = goal
+    ? ` Primary goal (${goal.goalType}): target ₹${Number(goal.targetAmount || 0).toLocaleString("en-IN")}, ~₹${Number(goal.monthlyRequired || 0).toLocaleString("en-IN")}/mo.`
+    : "";
+
+  const base =
+    explanations && typeof explanations === "object" ? explanations : {};
+  const summaryMentionsClosedMedical =
+    typeof base.overallSummary === "string" &&
+    /medical/i.test(base.overallSummary) &&
+    !(open || []).some((p: any) => p.id === "medical_fund");
+
+  return {
+    ...base,
+    greeting:
+      open.length > 0
+        ? `Based on your financial profile, we identified ${open.length} area${open.length === 1 ? "" : "s"} that need attention.`
+        : "Based on your financial profile, core safety buckets look funded.",
+    overallSummary:
+      summaryMentionsClosedMedical || !base.overallSummary
+        ? `You have a monthly surplus of ₹${surplus.toLocaleString("en-IN")} and a health score of ${score}/100.${
+            issueLine
+              ? ` Focus next on ${issueLine}.`
+              : " Keep allocating surplus to your primary goal."
+          }${goalBit}`
+        : base.overallSummary,
+    goalAdvice:
+      goal && (!base.goalAdvice || summaryMentionsClosedMedical)
+        ? `${goal.goalType}: aim for ₹${Number(goal.targetAmount || 0).toLocaleString("en-IN")} via ${goal.instrument} (~₹${Number(goal.monthlyRequired || 0).toLocaleString("en-IN")}/mo over ~${goal.yearsToGoal}y).`
+        : base.goalAdvice,
+  };
+}
 
 export default function FixPlanPage() {
   const router = useRouter();
@@ -66,8 +175,10 @@ export default function FixPlanPage() {
   const loadFixPlan = useCallback(
     async (forceRefresh = false) => {
       if (!profile || !result) return;
-      const currentHash = hashProfile(profile);
-      const flowKey = `${currentHash}:${forceRefresh ? "f" : "n"}`;
+      const currentHash = hashProfile(profile, result);
+      const enginePriorityPlan = buildPriorityPlan(profile, result);
+      const currentFingerprint = enginePlanFingerprint(enginePriorityPlan);
+      const flowKey = `${currentHash}:${currentFingerprint}:${forceRefresh ? "f" : "n"}`;
       if (!forceRefresh) {
         const pending = fixPlanInFlight.get(flowKey);
         if (pending) {
@@ -77,62 +188,35 @@ export default function FixPlanPage() {
       }
       const run = (async () => {
         const cached = !forceRefresh ? getCachedPlan(currentHash) : null;
-        if (cached) {
+        const cacheUsable =
+          cached && !isCachedAiStale(cached, currentFingerprint);
+
+        if (cacheUsable && cached) {
           console.log("Using cached AI plan ✓");
-          const enginePriorityPlan = buildPriorityPlan(profile, result);
           const cachedPlan = cached.aiPlan || {};
-          const mergedCachedPriority = {
-            ...enginePriorityPlan,
-            ...(cachedPlan.priorityPlan || {}),
-            priorities: (enginePriorityPlan.priorities || []).map(
-              (p: any, idx: number) => {
-                const cp =
-                  (cachedPlan.priorityPlan?.priorities || [])[idx] || {};
-                const monthly = Math.max(0, Number(p.monthlyContribution || 0));
-                const gap = Math.max(0, Number(p.gap || 0));
-                const isComplete =
-                  gap <= 0 || monthly <= 0 || p.status === "complete";
-                return {
-                  ...p,
-                  rank: p.rank,
-                  gap,
-                  monthlyContribution: monthly,
-                  monthlyRequired: Number(p.monthlyRequired || monthly),
-                  monthsToComplete: monthsForPriority(
-                    String(p.id || ""),
-                    gap,
-                    monthly,
-                  ),
-                  surplusBefore: Number(p.surplusBefore || 0),
-                  surplusAfterThis: Number(p.surplusAfterThis || 0),
-                  title: cp.title || p.title,
-                  instrument: isComplete
-                    ? p.instrument
-                    : cp.instrument || p.instrument,
-                  actionThisWeek: isComplete
-                    ? "Maintain this completed bucket and continue monitoring monthly."
-                    : p.actionThisWeek,
-                  whyThisMatters: isComplete
-                    ? "This bucket is already on track. Keep it funded and shift new surplus to the next gap."
-                    : cp.whyThisMatters || p.whyThisMatters,
-                };
-              },
-            ),
-            debts: enginePriorityPlan.debts,
-            goals: enginePriorityPlan.goals,
-            monthlyIncome: enginePriorityPlan.monthlyIncome,
-            monthlySurplus: enginePriorityPlan.monthlySurplus,
-            surplusBreakdown: enginePriorityPlan.surplusBreakdown,
-          };
+          const mergedCachedPriority = mergeEnginePriorityPlan(
+            enginePriorityPlan,
+            cachedPlan.priorityPlan || {},
+            monthsForPriority,
+          );
           setAiPlan({
             ...cachedPlan,
             priorityPlan: mergedCachedPriority,
+            explanations: reconcileExplanations(
+              cachedPlan.explanations,
+              mergedCachedPriority,
+              result,
+            ),
           });
           setAiLoading(false);
           return;
         }
 
-        console.log("Calling AI (cache miss)...");
+        if (cached && !cacheUsable) {
+          console.log("AI cache stale vs engine — re-evaluating…");
+        }
+
+        console.log("Calling AI (cache miss / refresh)...");
         // Keep existing plan visible on silent retries; only show loader on first load.
         if (!hasPlanRef.current) setAiLoading(true);
         try {
@@ -143,60 +227,22 @@ export default function FixPlanPage() {
           });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || "AI failed");
-          const enginePriorityPlan = buildPriorityPlan(profile, result);
           const aiPriorityPlan = data.priorityPlan || {};
-          const mergedPriorityPlan = {
-            ...enginePriorityPlan,
-            ...aiPriorityPlan,
-            priorities: (enginePriorityPlan.priorities || []).map(
-              (p: any, idx: number) => {
-                const aiP = (aiPriorityPlan.priorities || [])[idx] || {};
-                const monthly = Math.max(0, Number(p.monthlyContribution || 0));
-                const gap = Math.max(0, Number(p.gap || 0));
-                const isComplete =
-                  gap <= 0 || monthly <= 0 || p.status === "complete";
-                return {
-                  ...p,
-                  // keep deterministic numbers from engine as source of truth
-                  rank: p.rank,
-                  gap,
-                  monthlyContribution: monthly,
-                  monthlyRequired: Number(p.monthlyRequired || monthly),
-                  monthsToComplete: monthsForPriority(
-                    String(p.id || ""),
-                    gap,
-                    monthly,
-                  ),
-                  surplusBefore: Number(p.surplusBefore || 0),
-                  surplusAfterThis: Number(p.surplusAfterThis || 0),
-                  // allow AI to enhance text/instrument if provided
-                  title: aiP.title || p.title,
-                  instrument: isComplete
-                    ? p.instrument
-                    : aiP.instrument || p.instrument,
-                  actionThisWeek: isComplete
-                    ? "Maintain this completed bucket and continue monitoring monthly."
-                    : p.actionThisWeek,
-                  whyThisMatters: isComplete
-                    ? "This bucket is already on track. Keep it funded and shift new surplus to the next gap."
-                    : aiP.whyThisMatters || p.whyThisMatters,
-                };
-              },
-            ),
-            debts: enginePriorityPlan.debts || aiPriorityPlan.debts || [],
-            goals: enginePriorityPlan.goals || aiPriorityPlan.goals || [],
-            monthlyIncome: enginePriorityPlan.monthlyIncome,
-            monthlySurplus: enginePriorityPlan.monthlySurplus,
-            surplusBreakdown:
-              enginePriorityPlan.surplusBreakdown ||
-              aiPriorityPlan.surplusBreakdown,
-          };
+          const mergedPriorityPlan = mergeEnginePriorityPlan(
+            enginePriorityPlan,
+            aiPriorityPlan,
+            monthsForPriority,
+          );
           const combinedPlan = {
             priorityPlan: mergedPriorityPlan,
-            explanations: data.explanations,
+            explanations: reconcileExplanations(
+              data.explanations,
+              mergedPriorityPlan,
+              result,
+            ),
             isFallback: !!data.isFallback,
           };
-          setCachedPlan(currentHash, combinedPlan, null);
+          setCachedPlan(currentHash, combinedPlan, null, currentFingerprint);
 
           if (supabase && user?.id) {
             supabase
@@ -261,7 +307,7 @@ export default function FixPlanPage() {
         }
       }
       if (!profile || !result) return;
-      const loadKey = `${hashProfile(profile)}:${String((result as { overallScore?: number })?.overallScore ?? "")}`;
+      const loadKey = `${hashProfile(profile, result)}:${String((result as { overallScore?: number })?.overallScore ?? "")}`;
       if (lastLoadKeyRef.current !== loadKey) {
         lastLoadKeyRef.current = loadKey;
         hasLoadedRef.current = false;
@@ -578,6 +624,12 @@ export default function FixPlanPage() {
                 "medical_fund",
                 "term_insurance",
                 "start_sip",
+                "accelerate_debt",
+                "home_downpayment",
+                "car_purchase_fund",
+                "kids_education_sip",
+                "boost_emergency",
+                "premium_reserve",
               ].includes(String(p.id)),
           )
           .map((p: any) => (
@@ -698,8 +750,15 @@ export default function FixPlanPage() {
                 <span>
                   ₹
                   {Math.round(
-                    aiPlan.priorityPlan?.surplusBreakdown?.afterAllPriorities ??
+                    Math.max(
                       0,
+                      (aiPlan.priorityPlan.monthlySurplus || 0) -
+                        visiblePriorities.reduce(
+                          (s: number, p: any) =>
+                            s + Number(p.monthlyContribution || 0),
+                          0,
+                        ),
+                    ),
                   ).toLocaleString("en-IN")}
                 </span>
               </div>

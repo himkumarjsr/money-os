@@ -320,17 +320,30 @@ export function getUniversalBucketRows(
   });
 }
 
-export function getUnallocatedIncome(data: BucketProfileInput): number {
-  const totalMonthlyIncome = totalIncome(data);
+/**
+ * Employee EPF is deducted at source — it is not paid from in-hand salary.
+ * Keep it in the Investment bucket for savings-rate tracking, but exclude it
+ * when computing surplus / unallocated cash.
+ */
+export function getEpfContributionMonthly(data: BucketProfileInput): number {
+  return n(data.monthlyEPFContribution);
+}
+
+/** Cash outflow from take-home (all buckets except EPF). */
+export function getInHandOutflow(data: BucketProfileInput): number {
   const actuals = getUniversalBucketActuals(data);
   return (
-    totalMonthlyIncome -
-    actuals.needs -
-    actuals.wants -
-    actuals.security -
-    actuals.loans -
-    actuals.investment
+    actuals.needs +
+    actuals.wants +
+    actuals.security +
+    actuals.loans +
+    Math.max(0, actuals.investment - getEpfContributionMonthly(data))
   );
+}
+
+/** Income left after in-hand outflows (EPF excluded). */
+export function getUnallocatedIncome(data: BucketProfileInput): number {
+  return totalIncome(data) - getInHandOutflow(data);
 }
 
 export function getInsuranceGuideline(totalIncome: number) {
