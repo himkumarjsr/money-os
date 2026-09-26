@@ -65,11 +65,9 @@ export default function TrackerScreen() {
   const [amountsVisible, setAmountsVisible] = useState(false);
 
   const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const monthName = now.toLocaleDateString("en-IN", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthOnly = now.toLocaleDateString("en-IN", { month: "long" });
+  const year = now.getFullYear();
+  const monthName = `${monthOnly} ${year}`;
 
   const loadData = useCallback(async () => {
     if (!user?.id) {
@@ -79,12 +77,14 @@ export default function TrackerScreen() {
       return;
     }
 
+    // Filter by the same (month name, year) columns the insert below writes —
+    // not a date range, which broke on 30-day months and February.
     const { data } = await supabase
       .from("expense_transactions")
       .select("*")
       .eq("user_id", user.id)
-      .gte("date", `${monthKey}-01`)
-      .lte("date", `${monthKey}-31`)
+      .eq("month", monthOnly)
+      .eq("year", year)
       .order("date", { ascending: false });
 
     setExpenses((data as Expense[]) || []);
@@ -109,7 +109,7 @@ export default function TrackerScreen() {
     }
 
     setLoading(false);
-  }, [user?.id, monthKey]);
+  }, [user?.id, monthOnly, year]);
 
   useEffect(() => {
     void loadData();
@@ -301,8 +301,8 @@ export default function TrackerScreen() {
       {showAdd ? (
         <AddExpenseModal
           userId={user?.id || ""}
-          monthName={now.toLocaleDateString("en-IN", { month: "long" })}
-          year={now.getFullYear()}
+          monthName={monthOnly}
+          year={year}
           onClose={() => setShowAdd(false)}
           onSave={async () => {
             setShowAdd(false);
@@ -354,7 +354,7 @@ function AddExpenseModal({
       const date = new Date().toISOString().split("T")[0];
       const { error } = await supabase.from("expense_transactions").insert({
         user_id: userId,
-        title: title.trim(),
+        // No `title` column on expense_transactions — description carries it.
         description: title.trim(),
         amount: parseFloat(amount),
         bucket,
