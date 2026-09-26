@@ -27,13 +27,13 @@ const TOOLS: Array<{
     icon: "wallet",
     calcTool: "swp",
   },
-  { id: "split", label: "Split", route: "/(tabs)", icon: "users" },
+  { id: "split", label: "Split", route: "/(tabs)/split", icon: "users" },
   {
     id: "tax",
     label: "Tax",
     route: "/(tabs)/calculators",
     icon: "receipt",
-    calcTool: "tax",
+    calcTool: "tax-regime",
   },
   {
     id: "emi",
@@ -63,6 +63,13 @@ export function QuickTools() {
   const go = (t: (typeof TOOLS)[number]) => {
     if (t.needsAuth && !isLoggedIn) {
       router.push("/(auth)/login");
+      return;
+    }
+    if (t.calcTool) {
+      router.push({
+        pathname: t.route as never,
+        params: { tool: t.calcTool },
+      });
       return;
     }
     router.push(t.route as any);

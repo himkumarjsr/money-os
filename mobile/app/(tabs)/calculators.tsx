@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, FontSize, Spacing, Radius, Shadow } from "@/constants/theme";
 import { AppHeader } from "@/components/AppHeader";
@@ -36,8 +36,21 @@ function inr(n: number) {
 }
 
 export default function CalculatorsScreen() {
+  const params = useLocalSearchParams<{ tool?: string }>();
   const [category, setCategory] = useState<Cat>("investment");
-  const [toolId, setToolId] = useState<string | null>(null);
+  // Deep-linked from Home quick tools / hero carousel: router.push({ pathname:
+  // '/(tabs)/calculators', params: { tool: 'sip' } }). Re-reads on every param
+  // change so tapping a different tile while already on this tab still opens it.
+  const [toolId, setToolId] = useState<string | null>(
+    typeof params.tool === "string" ? params.tool : null,
+  );
+
+  useEffect(() => {
+    if (typeof params.tool === "string" && params.tool !== toolId) {
+      setToolId(params.tool);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.tool]);
 
   const activeCat = useMemo(
     () => CATEGORIES.find((c) => c.id === category)!,
