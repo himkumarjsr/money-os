@@ -18,6 +18,7 @@ import {
   analyseDefaultValues,
   normalizeAnalyseFormValues,
 } from "@/lib/analyse-form-schema";
+import { upsertUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { Colors, Spacing, Radius, FontSize } from "@/constants/theme";
 import MoneyInput from "@/components/ui/MoneyInput";
 import Input from "@/components/ui/Input";
@@ -207,6 +208,24 @@ export default function AnalyseFormScreen() {
       const normalized = normalizeAnalyseFormValues(payload as never);
       const analysisResult = analyseFinances(normalized);
 
+      // Canonical store the web app reads: one row per user, full profile +
+      // engine result. Without this, a mobile health check never shows up
+      // on the web Report (they only read this table, not user_analysis).
+      const { error: snapshotError } = await upsertUserAnalyseSnapshot(
+        user.id,
+        {
+          profile: normalized,
+          result: analysisResult,
+          submittedAt: new Date().toISOString(),
+          version: "1.0",
+        },
+      );
+      if (snapshotError) {
+        console.warn("Snapshot save failed:", snapshotError.message);
+      }
+
+      // Kept for backward compatibility with any code still reading
+      // user_analysis directly (e.g. this screen's own pre-fix fallback).
       const { error } = await supabase.from("user_analysis").upsert(
         {
           user_id: user.id,

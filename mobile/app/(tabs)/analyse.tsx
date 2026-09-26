@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
+import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -36,6 +37,15 @@ export default function AnalyseScreen() {
       return;
     }
     setLoading(true);
+    // Canonical source: user_analyse_snapshots (what the web app + mobile
+    // form both write). Falls back to the legacy user_analysis row so an
+    // older mobile-only health check (before this fix) still shows.
+    const snapshot = await fetchUserAnalyseSnapshot(user.id);
+    if (snapshot?.result) {
+      setResult(snapshot.result as unknown as typeof result);
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("user_analysis")
       .select("analysis_result, updated_at")
