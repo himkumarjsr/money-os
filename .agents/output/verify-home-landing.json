@@ -1,0 +1,9 @@
+{
+  "feature_id": "home-landing",
+  "verdict": "PARTIAL",
+  "missing": ["Testimonials section", "below-fold marketing content"],
+  "wrong": [],
+  "fixes_needed": [
+    "This pass fixed the Split quick-tool tile, which routed to Home instead of the Split tab. Home screen itself otherwise matches the PWA layout (hero + quick tools + top picks)."
+  ]
+}

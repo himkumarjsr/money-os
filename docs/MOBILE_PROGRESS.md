@@ -1,6 +1,6 @@
 # Mobile App Progress Tracker
 
-> Generated 2026-09-26 from a file-by-file read of `mobile/` at commit `e5d3f3b` ("split functinality").
+> Generated 2026-09-26 from a file-by-file read of `mobile/` at commit `e5d3f3b` ("split functinality"). Updated same day after an autonomous build pass (commits `2a197d5`..`HEAD` on `mobile-app`): see `.agents/output/COMPLETION_REPORT.md` for what changed.
 > Target list = the screens / components / stores / integrations defined in `docs/MOBILE_BUILD_PLAN.md`.
 > Legend: ✅ Complete (built, wired, parity-acceptable) · ⚠️ Partial / placeholder / built-but-unwired · ❌ Not built
 > Update this file at the end of every sprint.
@@ -9,7 +9,7 @@
 
 | Area | Complete | Partial | Not built | Total | % complete |
 |---|---|---|---|---|---|
-| Screens | 7 | 9 | 26 | 42 | 17 % |
+| Screens | 8 | 9 | 25 | 42 | 19 % |
 | Components | 9 | 24 | 55 | 88 | 10 % |
 | Stores | 1 | 3 | 3 | 7 | 14 % |
 | API / data integrations | 5 | 3 | 17 | 25 | 20 % |
@@ -42,7 +42,7 @@ API integration: 5/25 complete
 | Group Detail | `app/split/[groupId]/index.tsx` | ✅ Complete | Tabs, balances, settle, invite, leave/remove, delete; no realtime / email invite |
 | Add Expense | `app/split/[groupId]/add-expense.tsx` | ✅ Complete | 4 split types + edit; date is a text field |
 | Split join (deep link) | `app/split/join.tsx` | ❌ Not built | P0 — `?code=` / `?token=` links from WhatsApp |
-| Calculators | `app/(tabs)/calculators.tsx` | ⚠️ Partial | All 20 tools work inline (hidden tab); not deep-linkable; simplified engines |
+| Calculators | `app/(tabs)/calculators.tsx` | ⚠️ Partial | Home quick-tool deep-linking fixed 2026-09-26 (reads `?tool=` param, updates on tab re-visit too); still all 20 tools inline in one hidden-tab screen, no per-id routes, simplified engines |
 | Calculator detail | `app/calculators/[id].tsx` | ❌ Not built | P1 — one route per calc id |
 | Tax Calculator | `app/calculators/tax-regime.tsx` | ⚠️ Partial | Only a 5-input simplified compare inside the Calculators tab; full FY26 engine not ported |
 | SIP Calculator | `app/calculators/[id].tsx` (`sip`) | ⚠️ Partial | Works inline in the Calculators tab (`SipTool`); no standalone route |
@@ -110,7 +110,7 @@ Routing-only files (not counted): `app/_layout.tsx` ✅, `app/index.tsx` ✅, `a
 | PushPermissionPrompt | `components/PushPermissionPrompt.tsx` | ❌ Not built | Needs dev build |
 | HeroCarousel | `components/landing/HeroCarousel.tsx` | ✅ Complete | |
 | TopPicks | `components/landing/TopPicks.tsx` | ✅ Complete | |
-| QuickTools | `components/landing/QuickTools.tsx` | ⚠️ Partial | Split → Home bug; calculators not deep-linked |
+| QuickTools | `components/landing/QuickTools.tsx` | ✅ Complete | Split → Home bug and calculator deep-link bug both fixed 2026-09-26 |
 | Testimonials | `components/landing/Testimonials.tsx` | ❌ Not built | P2 |
 | StepIndicator | `components/analyse/StepIndicator.tsx` | ⚠️ Built, unwired | |
 | ResultCard | `components/analyse/ResultCard.tsx` | ⚠️ Built, unwired | |
@@ -209,17 +209,19 @@ Legacy / to delete: `components/home/QuickTools.tsx`, `components/home/DailyTip.
 
 ## What to Build Next
 
-Ordered list of the next 10 files (Sprint 1, see `MOBILE_BUILD_PLAN.md §7`):
+**Done in the 2026-09-26 autonomous pass** (was items 1-3, 9, 10 above): `userAnalyseSnapshot.ts` ported and wired into both the Report screen and the form's submit; the 5 stale shared engines re-synced from web `lib/`; `QuickTools.tsx` Split-tile and calculator-deep-link bugs fixed; `forgot-password.tsx` + `authStore.resetPassword` + login's missing link/validation added; the tracker's insert/query bugs (B4) fixed. See `.agents/output/COMPLETION_REPORT.md` for the full list with commit hashes.
 
-1. `mobile/lib/userAnalyseSnapshot.ts` — port from web (swap to `@/lib/supabase`); fixes B1 read/write.
-2. `mobile/app/(tabs)/analyse.tsx` — load `user_analyse_snapshots` → `financialStore.hydrateFromSnapshot`, fall back to `user_analysis`.
-3. `mobile/app/analyse/form.tsx` — on submit also upsert the snapshot payload `{profile, result, submittedAt, version:'1.0', analysis}`.
-4. `mobile/lib/localDate.ts`, `trackerMonthIncome.ts`, `trackerObligationSync.ts`, `obligationLearn.ts` — copy as-is from web `lib/`.
-5. `mobile/store/obligationStore.ts` — port the web store (fetch, checklist, mark paid/skip, RPC, `syncFromHealthCheck`).
-6. `mobile/components/ui/BottomSheet.tsx` — shared sheet (radius 20, maxHeight 90 %, bottom inset, backdrop close).
-7. `mobile/components/tracker/TrackerIcons.tsx` — `TrackerIcon` / `TrackerIconBadge` (react-native-svg port).
-8. `mobile/app/(tabs)/tracker.tsx` — rebuild: `TrackerConsent` gate, month/year queries, `AddExpenseSheet`, `MonthSafetyPulse`, forward-limit month nav, eyes, pull-to-refresh (B4/B5).
-9. `mobile/components/landing/QuickTools.tsx` + `mobile/components/ProfileMenu.tsx` — fix Split route and in-app destinations (B6).
-10. `mobile/app/(auth)/forgot-password.tsx` (+ `authStore.resetPassword`, link from `login.tsx`).
+Ordered list of the next 10 files:
+
+1. `mobile/lib/localDate.ts`, `trackerMonthIncome.ts`, `trackerObligationSync.ts`, `obligationLearn.ts` — copy as-is from web `lib/`.
+2. `mobile/store/obligationStore.ts` — port the web store (fetch, checklist, mark paid/skip/close/delete, RPC, `syncFromHealthCheck`).
+3. `mobile/components/ui/BottomSheet.tsx` — shared sheet (radius 20, maxHeight 90 %, bottom inset, backdrop close).
+4. `mobile/components/tracker/TrackerIcons.tsx` — `TrackerIcon` / `TrackerIconBadge` (react-native-svg port).
+5. `mobile/app/(tabs)/tracker.tsx` — rebuild: `TrackerConsent` gate, wire in the already-built `AddExpenseSheet`/`MonthSafetyPulse`, forward-limit month nav, eyes, pull-to-refresh (B5).
+6. `mobile/app/analyse/consent.tsx` — the consent gate before the health-check form (currently missing entirely on mobile).
+7. `mobile/lib/authRecovery.ts` (port from web) + `mobile/app/auth/update-password.tsx` + a recovery branch in `app/auth/callback.tsx` — completes the forgot-password loop this pass started.
+8. `mobile/app/analyse/result.tsx` — the whole result screen is still missing on mobile (score/buckets/safety-net/paywall).
+9. `mobile/store/gamificationStore.ts` — needed before Profile/Rewards/Leaderboard can show real data.
+10. `mobile/app/split/join.tsx` — deep-link screen for `?code=`/`?token=` invite links (currently no route exists).
 
 Parallel web-repo task: add `Authorization: Bearer` support to `lib/apiGuard.ts#getAuthedUser` (B2) — unblocks fix plan, payments, encrypted data, and feedback FK on mobile.

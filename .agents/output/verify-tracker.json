@@ -1,0 +1,16 @@
+{
+  "feature_id": "tracker",
+  "verdict": "PARTIAL",
+  "missing": [
+    "Consent gate (TrackerConsent component exists, built, not mounted)",
+    "Month Safety Pulse (component exists, built, not mounted)",
+    "Obligations checklist (obligationStore doesn't exist on mobile yet)",
+    "Credit card bill reminder",
+    "Forward-month unlock rule (last-Friday-of-month), month history route",
+    "The already-built AddExpenseSheet.tsx is still not wired in (the screen keeps its own simpler inline add-expense modal)"
+  ],
+  "wrong": [],
+  "fixes_needed": [
+    "This pass fixed the two failure-causing data bugs only (insert column that doesn't exist; invalid date-range query) so add/list at least work correctly for the current month. The rest is a larger rebuild — see docs/MOBILE_BUILD_PLAN.md's Tracker screen plan for the full list of components/stores to port."
+  ]
+}
