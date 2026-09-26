@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     zIndex: 40,
   },
   wash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(244,242,252,0.55)",
   },
   bar: {
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   avatarFill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",

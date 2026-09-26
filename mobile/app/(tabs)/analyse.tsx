@@ -4,157 +4,301 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect, useCallback } from "react";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
-import { supabase } from "@/lib/supabase";
-import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
+import { useFinancialStore } from "@/store/financialStore";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
+import { hasAnalyseConsent } from "@/lib/analyseConsent";
+import type { AnalysisResult } from "@/lib/financialEngine";
+import type { FinancialProfile } from "@/lib/analyse-form-schema";
+import { Colors, Spacing, Radius, FontSize } from "@/constants/theme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { ResultCard } from "@/components/analyse/ResultCard";
+import { IssueCard } from "@/components/analyse/IssueCard";
 
-type Issue = {
-  title?: string;
-  message?: string;
-  description?: string;
-  severity?: string;
-};
+/** Plan score colours: Critical < 40, Warning < 70, Good otherwise. */
+function scoreTone(s: number) {
+  if (s < 40) {
+    return { bg: "#FDEDED", fg: "#991B1B", label: "Take action now" };
+  }
+  if (s < 70) {
+    return { bg: "#FFF4E5", fg: "#92400E", label: "Needs attention" };
+  }
+  return { bg: "#DCFCE7", fg: "#166534", label: "Great shape" };
+}
+
+async function goToHealthCheck(userId: string | undefined) {
+  if (!userId) {
+    router.push({
+      pathname: "/(auth)/login",
+      params: { next: "/(tabs)/analyse" },
+    });
+    return;
+  }
+  const ok = await hasAnalyseConsent(userId);
+  router.push(ok ? "/analyse/form" : "/analyse/consent");
+}
 
 export default function AnalyseScreen() {
-  const { user } = useAuthStore();
-  const [result, setResult] = useState<{
-    overallScore?: number;
-    issues?: Issue[];
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const result = useFinancialStore((s) => s.result);
+  const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
+  const hasHydrated = useFinancialStore((s) => s.hasHydrated);
 
-  const loadResult = useCallback(async () => {
-    if (!user?.id) {
-      setResult(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadResult = useCallback(
+    async (opts?: { force?: boolean }) => {
+      if (!user?.id) {
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      const store = useFinancialStore.getState();
+      if (!opts?.force && store.result && store.lastSubmission) {
+        setLoading(false);
+        setRefreshing(false);
+        setError(null);
+        return;
+      }
+
+      setError(null);
+      try {
+        const snapshot = await fetchUserAnalyseSnapshot(user.id);
+        if (snapshot?.lastSubmission && snapshot.result) {
+          if (isValidStoredAnalysis(snapshot.result)) {
+            hydrateFromSnapshot(snapshot.lastSubmission, snapshot.result, {
+              analysisPatch: snapshot.analysis ?? undefined,
+            });
+            return;
+          }
+          if (
+            snapshot.result &&
+            typeof (snapshot.result as AnalysisResult).overallScore === "number"
+          ) {
+            hydrateFromSnapshot(
+              snapshot.lastSubmission,
+              snapshot.result as AnalysisResult,
+              { analysisPatch: snapshot.analysis ?? undefined },
+            );
+            return;
+          }
+        }
+
+        if (!isSupabaseConfigured()) {
+          setError("Could not load your report. Check your connection.");
+          return;
+        }
+        const supabase = getSupabase();
+        const { data, error: dbErr } = await supabase
+          .from("user_analysis")
+          .select("analysis_result, profile, updated_at")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (dbErr) {
+          setError(dbErr.message || "Failed to load report.");
+          return;
+        }
+
+        const legacyResult = data?.analysis_result;
+        const legacyProfile = data?.profile as FinancialProfile | null;
+        if (
+          legacyResult &&
+          typeof (legacyResult as AnalysisResult).overallScore === "number" &&
+          legacyProfile
+        ) {
+          hydrateFromSnapshot(legacyProfile, legacyResult as AnalysisResult);
+        } else if (
+          legacyResult &&
+          typeof (legacyResult as AnalysisResult).overallScore === "number"
+        ) {
+          useFinancialStore
+            .getState()
+            .setResult(legacyResult as AnalysisResult);
+        }
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : "Something went wrong.";
+        setError(message);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [user?.id, hydrateFromSnapshot],
+  );
+
+  useEffect(() => {
+    if (!isLoggedIn) {
       setLoading(false);
       return;
     }
+    if (!hasHydrated) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("user_analysis")
-      .select("analysis_result, updated_at")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    setResult((data?.analysis_result as typeof result) || null);
-    setLoading(false);
-  }, [user?.id]);
-
-  useEffect(() => {
     void loadResult();
-  }, [loadResult]);
+  }, [isLoggedIn, hasHydrated, loadResult]);
 
-  const score = result?.overallScore ?? 0;
-
-  const getScoreColor = (s: number) => {
-    if (s >= 75) return Colors.success;
-    if (s >= 50) return Colors.warning;
-    return Colors.error;
+  const onRefresh = () => {
+    setRefreshing(true);
+    void loadResult({ force: true });
   };
 
-  const getScoreLabel = (s: number) => {
-    if (s >= 75) return "Great shape";
-    if (s >= 50) return "Needs attention";
-    return "Take action now";
-  };
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyEmoji}>📊</Text>
+          <Text style={styles.emptyTitle}>Know your financial health</Text>
+          <Text style={styles.emptySub}>
+            Log in to see your score, or start a free health check after signing
+            in.
+          </Text>
+          <Button
+            label="Log in"
+            onPress={() =>
+              router.push({
+                pathname: "/(auth)/login",
+                params: { next: "/(tabs)/analyse" },
+              })
+            }
+            style={{ marginTop: 24, minHeight: 52, alignSelf: "stretch" }}
+          />
+          <Button
+            label="Create free account"
+            variant="secondary"
+            onPress={() => router.push("/(auth)/signup")}
+            style={{ marginTop: 12, minHeight: 52, alignSelf: "stretch" }}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (
       <SafeAreaView style={styles.center} edges={["top"]}>
-        <Text style={styles.loadingText}>Loading...</Text>
+        <LoadingSpinner full />
       </SafeAreaView>
     );
   }
+
+  const score = result?.overallScore ?? 0;
+  const tone = scoreTone(score);
+  const issues = result?.issues ?? [];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Financial Health</Text>
           {result ? (
-            <TouchableOpacity onPress={() => router.push("/analyse/form")}>
+            <TouchableOpacity
+              onPress={() => void goToHealthCheck(user?.id)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.retakeHit}
+            >
               <Text style={styles.retake}>Retake →</Text>
             </TouchableOpacity>
           ) : null}
         </View>
 
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setLoading(true);
+                void loadResult({ force: true });
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.retry}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {result ? (
           <>
             <View
               style={[
-                styles.scoreHero,
-                { backgroundColor: getScoreColor(score) },
+                styles.scoreBanner,
+                { backgroundColor: tone.bg, marginHorizontal: Spacing.xl },
               ]}
             >
-              <Text style={styles.scoreNum}>{score}</Text>
-              <Text style={styles.scoreOf}>/100</Text>
-              <Text style={styles.scoreLabel}>{getScoreLabel(score)}</Text>
-              <Text style={styles.scoreSubtitle}>Financial Health Score</Text>
+              <Text style={[styles.scoreNum, { color: tone.fg }]}>{score}</Text>
+              <Text style={[styles.scoreOf, { color: tone.fg }]}>/100</Text>
+              <Text style={[styles.scoreLabel, { color: tone.fg }]}>
+                {tone.label}
+              </Text>
+              <Text style={[styles.scoreSubtitle, { color: tone.fg }]}>
+                Financial Health Score
+              </Text>
+            </View>
+
+            <View
+              style={{ paddingHorizontal: Spacing.xl, marginTop: Spacing.md }}
+            >
+              <ResultCard
+                score={score}
+                title={tone.label}
+                subtitle="Tap issues below for the full report"
+              />
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>What needs attention</Text>
-              {(result.issues ?? []).slice(0, 5).map((issue, i) => {
-                const title = issue.title || issue.message || "Issue";
-                const description = issue.description;
-                const sev = issue.severity || "warning";
-                return (
-                  <Card key={i} style={styles.issueCard}>
-                    <View style={styles.issueRow}>
-                      <View
-                        style={[
-                          styles.issueDot,
-                          {
-                            backgroundColor:
-                              sev === "critical"
-                                ? Colors.error
-                                : sev === "warning"
-                                  ? Colors.warning
-                                  : Colors.success,
-                          },
-                        ]}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.issueTitle}>{title}</Text>
-                        {description ? (
-                          <Text style={styles.issueDesc} numberOfLines={2}>
-                            {description}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Text
-                        style={[
-                          styles.issueSeverity,
-                          {
-                            color:
-                              sev === "critical"
-                                ? Colors.error
-                                : Colors.warning,
-                            backgroundColor:
-                              sev === "critical"
-                                ? Colors.errorLight
-                                : Colors.warningLight,
-                          },
-                        ]}
-                      >
-                        {sev}
-                      </Text>
-                    </View>
-                  </Card>
-                );
-              })}
+              {issues.length === 0 ? (
+                <Card style={{ padding: Spacing.lg }}>
+                  <Text style={styles.issueFallbackTitle}>Looking solid</Text>
+                  <Text style={styles.issueFallbackDesc}>
+                    No critical gaps flagged right now. Keep tracking.
+                  </Text>
+                </Card>
+              ) : (
+                issues
+                  .slice(0, 5)
+                  .map((issue, i) => (
+                    <IssueCard
+                      key={`${issue.code}-${i}`}
+                      severity={issue.severity}
+                      title={issue.message}
+                      onPress={() => router.push("/analyse/result")}
+                    />
+                  ))
+              )}
             </View>
 
             <View style={styles.ctaSection}>
+              <Button
+                label="See full report"
+                variant="secondary"
+                onPress={() => router.push("/analyse/result")}
+                style={{ minHeight: 48, marginBottom: Spacing.md }}
+              />
               <Card style={styles.ctaCard}>
                 <Text style={styles.ctaTitle}>Get your complete fix plan</Text>
                 <Text style={styles.ctaSub}>
@@ -164,7 +308,7 @@ export default function AnalyseScreen() {
                 <Button
                   label="View fix plan → ₹99"
                   onPress={() => router.push("/analyse/fixplan")}
-                  style={{ marginTop: 14 }}
+                  style={{ marginTop: 14, minHeight: 48 }}
                 />
               </Card>
             </View>
@@ -193,8 +337,8 @@ export default function AnalyseScreen() {
             </View>
             <Button
               label="Start health check →"
-              onPress={() => router.push("/analyse/form")}
-              style={{ marginTop: 24 }}
+              onPress={() => void goToHealthCheck(user?.id)}
+              style={{ marginTop: 24, minHeight: 52, alignSelf: "stretch" }}
             />
           </View>
         )}
@@ -214,10 +358,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: Colors.background,
   },
-  loadingText: {
-    color: Colors.textMuted,
-    fontSize: FontSize.base,
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -230,43 +370,68 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: Colors.textPrimary,
   },
+  retakeHit: {
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
   retake: {
     fontSize: FontSize.md,
     color: Colors.primary,
     fontWeight: "700",
   },
-  scoreHero: {
-    margin: Spacing.xl,
-    borderRadius: Radius.xxl,
-    padding: 32,
+  errorBox: {
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    backgroundColor: "#FCEBEB",
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    flexDirection: "row",
     alignItems: "center",
-    ...Shadow.strong,
+    justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: FontSize.md,
+    color: "#791F1F",
+    lineHeight: 20,
+  },
+  retry: {
+    fontSize: FontSize.md,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
+  scoreBanner: {
+    marginTop: Spacing.xl,
+    borderRadius: Radius.xxl,
+    padding: 28,
+    alignItems: "center",
   },
   scoreNum: {
-    fontSize: 80,
+    fontSize: 72,
     fontWeight: "900",
-    color: "#fff",
-    lineHeight: 88,
+    lineHeight: 80,
   },
   scoreOf: {
     fontSize: FontSize.xl,
     fontWeight: "700",
-    color: "rgba(255,255,255,0.7)",
-    marginTop: -8,
+    marginTop: -4,
+    opacity: 0.85,
   },
   scoreLabel: {
     fontSize: FontSize.lg,
     fontWeight: "800",
-    color: "#fff",
     marginTop: 8,
   },
   scoreSubtitle: {
     fontSize: FontSize.md,
-    color: "rgba(255,255,255,0.7)",
     marginTop: 4,
+    opacity: 0.8,
   },
   section: {
     paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
     gap: Spacing.md,
   },
   sectionTitle: {
@@ -275,39 +440,16 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: 4,
   },
-  issueCard: {
-    padding: Spacing.lg,
-  },
-  issueRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing.md,
-  },
-  issueDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 4,
-  },
-  issueTitle: {
+  issueFallbackTitle: {
     fontSize: FontSize.base,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: 2,
   },
-  issueDesc: {
+  issueFallbackDesc: {
     fontSize: FontSize.md,
     color: Colors.textMuted,
     lineHeight: 18,
-  },
-  issueSeverity: {
-    fontSize: FontSize.xs,
-    fontWeight: "700",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.round,
-    textTransform: "uppercase",
-    overflow: "hidden",
   },
   ctaSection: {
     padding: Spacing.xl,

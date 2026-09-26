@@ -548,12 +548,12 @@ const styles = StyleSheet.create({
   },
   chevron: { fontSize: FontSize.lg, color: Colors.textMuted },
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
     zIndex: 40,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
   modal: {

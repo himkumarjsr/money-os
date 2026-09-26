@@ -29,7 +29,9 @@ export type AppIconName =
   | "logout"
   | "gift"
   | "trophy"
-  | "target";
+  | "target"
+  | "mail"
+  | "lock";
 
 type Props = {
   name: AppIconName;
@@ -40,6 +42,20 @@ type Props = {
 
 function IconPaths({ name }: { name: AppIconName }) {
   switch (name) {
+    case "mail":
+      return (
+        <>
+          <Path d="M4 6h16v12H4z" />
+          <Path d="M4 7l8 6 8-6" />
+        </>
+      );
+    case "lock":
+      return (
+        <>
+          <Path d="M6 11h12v9H6z" />
+          <Path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
+        </>
+      );
     case "trending":
       return (
         <>

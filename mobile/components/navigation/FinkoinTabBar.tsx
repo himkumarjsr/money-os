@@ -74,7 +74,9 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
   const fk = user?.fkBalance ?? 0;
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
 
-  const routesByName = Object.fromEntries(state.routes.map((r) => [r.name, r]));
+  const routesByName = Object.fromEntries(
+    state.routes.map((r: (typeof state.routes)[number]) => [r.name, r]),
+  );
 
   const bottomPad = Math.max(insets.bottom, 10);
 
@@ -89,7 +91,10 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
             const route = routesByName[name];
             if (!route) return null;
             const focused =
-              state.index === state.routes.findIndex((r) => r.name === name);
+              state.index ===
+              state.routes.findIndex(
+                (r: (typeof state.routes)[number]) => r.name === name,
+              );
             const color = focused ? Colors.primary : "#3D3A5C";
             const onPress = () => {
               const event = navigation.emit({
@@ -242,7 +247,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   pill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 999,
     backgroundColor: "rgba(83,74,183,0.16)",
     borderWidth: 1,
@@ -276,7 +281,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   plusRing: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     margin: -4,
     borderRadius: 999,
     backgroundColor: "rgba(83,74,183,0.14)",

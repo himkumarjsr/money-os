@@ -31,8 +31,14 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
           <Stack.Screen name="auth/callback" />
+          <Stack.Screen name="auth/update-password" />
           <Stack.Screen name="analyse/form" />
           <Stack.Screen name="analyse/fixplan" />
+          <Stack.Screen
+            name="analyse/consent"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen name="analyse/result" />
           <Stack.Screen name="split/[groupId]/index" />
           <Stack.Screen name="split/[groupId]/add-expense" />
         </Stack>

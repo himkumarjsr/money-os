@@ -1,4 +1,4 @@
-# Finkoin mobile (Expo SDK 54)
+# Finkoin mobile (Expo SDK 57)
 
 ## Google OAuth return-to-app
 
