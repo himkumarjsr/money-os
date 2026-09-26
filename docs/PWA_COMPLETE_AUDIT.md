@@ -110,7 +110,7 @@ Interactions:
   - Validation: email required ("Please enter your email"); password required; password ≥ 6 chars; name required on signup.
   - Links: Terms `/legal/terms`, Privacy `/legal/privacy` (new tab).
 Mobile specific:
-  - ⚠️ Inputs use **font-size 15 px** (below the 16 px rule), so iOS may zoom on focus.
+  - Inputs declare an inline 15 px font, but `app/globals.css` forces `font-size: 16px !important` on inputs at ≤ 768 px, so phones get 16 px (no iOS focus zoom). Desktop (≥ 768 px) uses 15 px.
   - Full-screen centred card with a 16 px outer padding; no bottom sheet.
   - Touch targets 44–52 px.
 
@@ -177,7 +177,7 @@ Interactions (every form field):
   - Validation rules (from `lib/analyse-form-schema.ts`): money ≥ 0 ("Cannot be negative"); `selfAge` 18–80; kids 1–6; per-kid age + gender required; health/term sum + premium required when toggled; ≥ 1 other-insurance row when toggled; home/car market value + outstanding required when owned; kids education target required for the kids stage; `primaryGoal` required; array caps: obligations 6, unified loans 6, custom investments 5, PO schemes 8; whole numbers are rounded (months).
 Mobile specific:
   - A single column on phones; the step chip bar scrolls horizontally.
-  - Inputs are 48 px tall with **15 px** text (the global CSS forces 16 px on inputs — `app/globals.css`).
+  - Inputs are 48 px tall; the 15 px class is overridden to 16 px on phones by `app/globals.css` (`!important`, ≤ 768 px).
   - The advisor opens as a modal overlay (not a bottom sheet).
   - The sticky footer has Back/Next buttons.
 
