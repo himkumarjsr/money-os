@@ -223,13 +223,11 @@ describe("useObligationStore", () => {
     expect(row?.obligation?.source).toBe("manual");
   });
 
-  it("closeObligation deactivates and drops pending but keeps paid history", async () => {
+  it("closeObligation keeps this month row struck-out and drops only future months", async () => {
     const { useObligationStore } = await import("@/store/obligationStore");
     await useObligationStore
       .getState()
       .fetchChecklist("u1", new Date(2026, 6, 1));
-    await useObligationStore.getState().markPaid("c1", 22000);
-    // Seed obligations list as if fetched
     useObligationStore.setState({
       obligations: [
         {
@@ -255,10 +253,12 @@ describe("useObligationStore", () => {
     expect(ok).toBe(true);
     const s = useObligationStore.getState();
     expect(s.obligations.find((o) => o.id === "ob-1")).toBeUndefined();
-    // Paid row for this month remains
-    expect(s.checklist.some((c) => c.id === "c1" && c.status === "paid")).toBe(
-      true,
-    );
+    // Pending row stays this month, marked inactive for strike-out UI
+    const row = s.checklist.find((c) => c.id === "c1");
+    expect(row).toBeTruthy();
+    expect(row?.obligation?.is_active).toBe(false);
+    expect(row?.status).toBe("pending");
+    expect(s.totalPending).toBe(0);
   });
 
   it("monthStartIso uses local calendar month (not UTC)", async () => {
