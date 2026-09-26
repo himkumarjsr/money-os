@@ -11,6 +11,26 @@ export function newAnalyseRowId(): string {
   return `id_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
+/** Zeros legacy per-type loan scalars when unified loans are cleared in the UI. */
+export function clearLegacyLoanScalars(): Partial<AnalyseFormValues> {
+  return {
+    homeLoanEMI: 0,
+    secondPropertyEMI: 0,
+    personalLoanEMI: 0,
+    carLoanEMI: 0,
+    bikeEMI: 0,
+    personalLoanOutstanding: 0,
+    homeLoanOutstanding: 0,
+    carLoanOutstanding: 0,
+    bikeOutstanding: 0,
+    personalLoanLenderName: "",
+    homeLoanLenderName: "",
+    carLoanLenderName: "",
+    bikeLoanLenderName: "",
+    additionalObligations: [],
+  };
+}
+
 export const LIFE_STAGE_VALUES = [
   "bachelor",
   "married",
@@ -160,6 +180,7 @@ export interface FinancialProfile {
   creditCardBillMonthly?: number;
   /** Optional EMI / bill debit day of month (1–31) for calendar reminders. */
   homeLoanEMIDay?: number;
+  homeLoanEMIMonth?: number;
   carLoanEMIDay?: number;
   personalLoanEMIDay?: number;
   educationLoanEMIDay?: number;
@@ -188,6 +209,8 @@ export interface FinancialProfile {
     odInterestOnlyYears?: number;
     /** Day of month EMI is typically debited (1–31). */
     emiDay?: number;
+    /** Calendar month of debit (1–12). Year is not collected. */
+    emiMonth?: number;
   }>;
 
   /** @deprecated Use `foodTotal`; kept for backward compatibility. */
@@ -451,6 +474,7 @@ const unifiedLoanSchema = z.object({
   odUsed: optionalMoney,
   odInterestOnlyYears: optionalWholeNumber,
   emiDay: optionalWholeNumber,
+  emiMonth: optionalWholeNumber,
 });
 
 /** Coerce legacy loanType labels so Next isn't blocked by invisible enum errors. */
@@ -554,6 +578,7 @@ const formShape = {
   bikeOutstanding: optionalMoney,
   creditCardBillMonthly: optionalMoney,
   homeLoanEMIDay: optionalWholeNumber,
+  homeLoanEMIMonth: optionalWholeNumber,
   carLoanEMIDay: optionalWholeNumber,
   personalLoanEMIDay: optionalWholeNumber,
   educationLoanEMIDay: optionalWholeNumber,
@@ -1296,6 +1321,7 @@ function migrateLegacyAnalysePartial(
             : Number(row.odUsed ?? 0) || 0,
         odInterestOnlyYears: row.odInterestOnlyYears ?? 0,
         emiDay: row.emiDay == null ? undefined : Number(row.emiDay),
+        emiMonth: row.emiMonth == null ? undefined : Number(row.emiMonth),
       };
     });
   }
@@ -1313,6 +1339,11 @@ function migrateLegacyAnalysePartial(
       policyName: row.policyName,
       premiumAmount: row.premiumAmount ?? row.premiumInput,
       frequency: row.frequency ?? "monthly",
+      maturityAmount: row.maturityAmount ?? 0,
+      maturityYear: row.maturityYear ?? 0,
+      renewalMonth:
+        row.renewalMonth == null ? undefined : Number(row.renewalMonth),
+      renewalDay: row.renewalDay == null ? undefined : Number(row.renewalDay),
     }));
     delete out.otherInsurancePolicies;
   }
@@ -1365,31 +1396,67 @@ export function mergeAnalyseDraftWithProfile(
         frequency: (d?.frequency ??
           p?.frequency ??
           "monthly") as PremiumFrequency,
-        maturityAmount: d?.maturityAmount ?? p?.maturityAmount ?? 0,
-        maturityYear: d?.maturityYear ?? p?.maturityYear ?? 0,
+        maturityAmount: (() => {
+          const dAmt = Number(d?.maturityAmount ?? 0) || 0;
+          const pAmt = Number(p?.maturityAmount ?? 0) || 0;
+          return dAmt > 0 ? dAmt : pAmt;
+        })(),
+        maturityYear: (() => {
+          const dY = Number(d?.maturityYear ?? 0) || 0;
+          const pY = Number(p?.maturityYear ?? 0) || 0;
+          return dY > 0 ? dY : pY;
+        })(),
+        renewalMonth: d?.renewalMonth ?? p?.renewalMonth,
+        renewalDay: d?.renewalDay ?? p?.renewalDay,
       };
     });
   }
 
   const pUnified = profileFormN.unifiedLoans;
   const dUnified = draftN.unifiedLoans;
-  if ((pUnified?.length ?? 0) > 0 || (dUnified?.length ?? 0) > 0) {
-    const len = Math.max(pUnified?.length ?? 0, dUnified?.length ?? 0);
-    merged.unifiedLoans = Array.from({ length: len }, (_, i) => {
-      const p = pUnified?.[i];
-      const d = dUnified?.[i];
+  if (dUnified !== undefined) {
+    merged.unifiedLoans = (dUnified ?? []).map((loan) => {
+      const outstanding = loan.outstandingAmount ?? 0;
       return {
-        id: d?.id ?? p?.id ?? newAnalyseRowId(),
-        loanType: (d?.loanType ?? p?.loanType ?? "other") as UnifiedLoanType,
-        lenderName: preferNonEmptyString(d?.lenderName, p?.lenderName),
-        monthlyEMI: d?.monthlyEMI ?? p?.monthlyEMI ?? 0,
-        outstandingAmount: d?.outstandingAmount ?? p?.outstandingAmount ?? 0,
-        interestRate: d?.interestRate ?? p?.interestRate ?? 0,
-        remainingMonths: d?.remainingMonths ?? p?.remainingMonths ?? 0,
-        odLimit: d?.odLimit ?? p?.odLimit ?? 0,
-        odUsed: d?.odUsed ?? p?.odUsed ?? 0,
-        odInterestOnlyYears:
-          d?.odInterestOnlyYears ?? p?.odInterestOnlyYears ?? 0,
+        id: loan.id ?? newAnalyseRowId(),
+        loanType: loan.loanType,
+        lenderName: loan.lenderName ?? "",
+        monthlyEMI: loan.monthlyEMI ?? 0,
+        outstandingAmount: outstanding,
+        interestRate: loan.interestRate ?? 0,
+        remainingMonths: loan.remainingMonths ?? 0,
+        odLimit: loan.odLimit ?? 0,
+        odUsed:
+          loan.loanType === "overdraft"
+            ? outstanding || loan.odUsed || 0
+            : (loan.odUsed ?? 0),
+        odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
+        emiDay: loan.emiDay,
+        emiMonth: loan.emiMonth,
+      };
+    });
+    if ((dUnified ?? []).length === 0) {
+      Object.assign(merged, clearLegacyLoanScalars());
+    }
+  } else if ((pUnified?.length ?? 0) > 0) {
+    merged.unifiedLoans = (pUnified ?? []).map((loan) => {
+      const outstanding = loan.outstandingAmount ?? 0;
+      return {
+        id: loan.id ?? newAnalyseRowId(),
+        loanType: loan.loanType,
+        lenderName: loan.lenderName ?? "",
+        monthlyEMI: loan.monthlyEMI ?? 0,
+        outstandingAmount: outstanding,
+        interestRate: loan.interestRate ?? 0,
+        remainingMonths: loan.remainingMonths ?? 0,
+        odLimit: loan.odLimit ?? 0,
+        odUsed:
+          loan.loanType === "overdraft"
+            ? outstanding || loan.odUsed || 0
+            : (loan.odUsed ?? 0),
+        odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
+        emiDay: loan.emiDay,
+        emiMonth: loan.emiMonth,
       };
     });
   }
@@ -1428,6 +1495,35 @@ export function mergeAnalyseDraftWithProfile(
   if ((pPol?.length ?? 0) > 0) {
     merged.hasOtherInsurance = true;
   }
+
+  // Draft zeros must not wipe restored spouse fields (common after bachelor default mount).
+  const draftSpouseIncome = Number(draftN.spouseIncome ?? 0) || 0;
+  const profileSpouseIncome = Number(profileFormN.spouseIncome ?? 0) || 0;
+  if (draftSpouseIncome <= 0 && profileSpouseIncome > 0) {
+    merged.spouseIncome = profileSpouseIncome;
+  }
+  const draftSpouseAge = Number(draftN.spouseAge ?? 0) || 0;
+  const profileSpouseAge = Number(profileFormN.spouseAge ?? 0) || 0;
+  if (draftSpouseAge <= 0 && profileSpouseAge > 0) {
+    merged.spouseAge = profileSpouseAge;
+  }
+
+  // Prefer profile renewal dates when draft cleared them.
+  const preferRenewal = <K extends keyof AnalyseFormValues>(key: K) => {
+    const dVal = draftN[key];
+    const pVal = profileFormN[key];
+    if ((dVal == null || dVal === 0) && pVal != null && pVal !== 0) {
+      merged[key] = pVal;
+    }
+  };
+  preferRenewal("healthInsuranceRenewalMonth");
+  preferRenewal("healthInsuranceRenewalDay");
+  preferRenewal("termInsuranceRenewalMonth");
+  preferRenewal("termInsuranceRenewalDay");
+  preferRenewal("carInsuranceRenewalMonth");
+  preferRenewal("carInsuranceRenewalDay");
+  preferRenewal("bikeInsuranceRenewalMonth");
+  preferRenewal("bikeInsuranceRenewalDay");
 
   return merged;
 }
@@ -1490,27 +1586,30 @@ export function financialProfileToFormValues(
   };
 
   const unifiedLoans: NonNullable<AnalyseFormValues["unifiedLoans"]> =
-    (p.unifiedLoans ?? []).map((loan) => {
-      const outstanding = loan.outstandingAmount ?? 0;
-      return {
-        id: loan.id ?? newAnalyseRowId(),
-        loanType: loan.loanType,
-        lenderName: loan.lenderName ?? "",
-        monthlyEMI: loan.monthlyEMI ?? 0,
-        outstandingAmount: outstanding,
-        interestRate: loan.interestRate ?? 0,
-        remainingMonths: loan.remainingMonths ?? 0,
-        odLimit: loan.odLimit ?? 0,
-        odUsed:
-          loan.loanType === "overdraft"
-            ? outstanding || loan.odUsed || 0
-            : (loan.odUsed ?? 0),
-        odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
-        emiDay: loan.emiDay,
-      };
-    }) ?? [];
+    p.unifiedLoans !== undefined
+      ? (p.unifiedLoans ?? []).map((loan) => {
+          const outstanding = loan.outstandingAmount ?? 0;
+          return {
+            id: loan.id ?? newAnalyseRowId(),
+            loanType: loan.loanType,
+            lenderName: loan.lenderName ?? "",
+            monthlyEMI: loan.monthlyEMI ?? 0,
+            outstandingAmount: outstanding,
+            interestRate: loan.interestRate ?? 0,
+            remainingMonths: loan.remainingMonths ?? 0,
+            odLimit: loan.odLimit ?? 0,
+            odUsed:
+              loan.loanType === "overdraft"
+                ? outstanding || loan.odUsed || 0
+                : (loan.odUsed ?? 0),
+            odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
+            emiDay: loan.emiDay,
+            emiMonth: loan.emiMonth,
+          };
+        })
+      : [];
 
-  if (unifiedLoans.length === 0) {
+  if (p.unifiedLoans === undefined) {
     if ((p.homeLoanEMI ?? 0) > 0) {
       unifiedLoans.push({
         id: newAnalyseRowId(),
@@ -1586,7 +1685,7 @@ export function financialProfileToFormValues(
   return {
     lifeStage: p.lifeStage,
     selfAge: p.selfAge,
-    spouseAge: p.spouseAge,
+    spouseAge: p.spouseAge ?? 0,
     numberOfKids: p.numberOfKids,
     kidsAges: p.kidsAges?.map((a) => a) as AnalyseFormValues["kidsAges"],
     kidsGenders: p.kidsGenders,
@@ -1597,6 +1696,8 @@ export function financialProfileToFormValues(
     rentAmount: p.rentAmount ?? 0,
     rentMaintenanceMonthly: p.rentMaintenanceMonthly ?? 0,
     homeLoanEMI: p.homeLoanEMI ?? 0,
+    homeLoanEMIDay: p.homeLoanEMIDay,
+    homeLoanEMIMonth: p.homeLoanEMIMonth,
     secondPropertyEMI: p.secondPropertyEMI ?? 0,
     carLoanEMI: p.carLoanEMI ?? 0,
     bikeEMI: p.bikeEMI ?? 0,
@@ -1654,12 +1755,16 @@ export function financialProfileToFormValues(
       p.healthInsurancePremiumInput ?? p.healthInsurancePremiumMonthly ?? 0,
     healthInsurancePremiumFrequency:
       p.healthInsurancePremiumFrequency ?? "monthly",
+    healthInsuranceRenewalMonth: p.healthInsuranceRenewalMonth,
+    healthInsuranceRenewalDay: p.healthInsuranceRenewalDay,
     hasTermInsurance: p.hasTermInsurance,
     termInsuranceSumAssured: p.termInsuranceSumAssured ?? 0,
     termInsurancePremiumInput:
       p.termInsurancePremiumInput ?? p.termInsurancePremiumMonthly ?? 0,
     termInsurancePremiumFrequency: p.termInsurancePremiumFrequency ?? "monthly",
     termInsurancePremiumTillYear: p.termInsurancePremiumTillYear ?? 0,
+    termInsuranceRenewalMonth: p.termInsuranceRenewalMonth,
+    termInsuranceRenewalDay: p.termInsuranceRenewalDay,
     carInsurancePremiumInput:
       p.carInsurancePremiumInput ?? p.carInsurancePremiumMonthly ?? 0,
     carInsurancePremiumFrequency: p.carInsurancePremiumFrequency ?? "monthly",
@@ -1772,7 +1877,7 @@ export function financialProfileToFormValues(
     kidsEducationFundTarget: p.kidsEducationFundTarget,
     kidsMarriageFundTarget: p.kidsMarriageFundTarget,
     emergencyFundTarget: p.emergencyFundTarget,
-    medicalEmergencyFund: p.medicalEmergencyFund,
+    medicalEmergencyFund: p.medicalEmergencyFund ?? 0,
     bereavementFund: p.bereavementFund,
     homePurchaseTarget: p.homePurchaseTarget,
     homePurchaseYear: p.homePurchaseYear,
@@ -1808,6 +1913,10 @@ export function normalizeAnalyseFormValues(
   data: Partial<AnalyseFormValues>,
 ): FinancialProfile {
   const form = migrateLegacyAnalysePartial(data);
+  const formUnifiedDefined = Array.isArray(form.unifiedLoans);
+  /** User cleared every loan in the UI (`unifiedLoans: []`) — drop stale scalars. */
+  const clearStaleLegacyLoans =
+    formUnifiedDefined && (form.unifiedLoans ?? []).length === 0;
   const unifiedLoans = (form.unifiedLoans ?? []).filter(
     (loan) => (loan.monthlyEMI ?? 0) > 0,
   );
@@ -1934,8 +2043,9 @@ export function normalizeAnalyseFormValues(
       return true;
     });
   };
-  const resolvedAdditionalObligations =
-    unifiedLoans.length > 0
+  const resolvedAdditionalObligations = clearStaleLegacyLoans
+    ? []
+    : unifiedLoans.length > 0
       ? selfDedupe(additionalFromUnified)
       : existingAdditionalObligations;
   const foodTotal =
@@ -2042,33 +2152,65 @@ export function normalizeAnalyseFormValues(
 
     rentAmount: form.rentAmount ?? 0,
     rentMaintenanceMonthly: form.rentMaintenanceMonthly,
-    homeLoanEMI: firstHome?.monthlyEMI ?? form.homeLoanEMI ?? 0,
-    secondPropertyEMI: form.secondPropertyEMI ?? 0,
-    carLoanEMI: firstCar?.monthlyEMI ?? form.carLoanEMI,
-    bikeEMI: firstBike?.monthlyEMI ?? form.bikeEMI,
-    personalLoanEMI: firstPersonal?.monthlyEMI ?? form.personalLoanEMI,
-    personalLoanOutstanding:
-      firstPersonal?.outstandingAmount ?? form.personalLoanOutstanding,
-    personalLoanLenderName:
-      firstPersonal?.lenderName ?? form.personalLoanLenderName ?? "",
-    personalLoanRate: firstPersonal?.interestRate ?? form.personalLoanRate,
-    personalLoanRemainingMonths:
-      firstPersonal?.remainingMonths ?? form.personalLoanRemainingMonths,
-    homeLoanLenderName: firstHome?.lenderName ?? form.homeLoanLenderName ?? "",
-    homeLoanRate: firstHome?.interestRate ?? form.homeLoanRate,
-    homeLoanRemainingMonths:
-      firstHome?.remainingMonths ?? form.homeLoanRemainingMonths,
-    carLoanLenderName: firstCar?.lenderName ?? form.carLoanLenderName ?? "",
-    carLoanRate: firstCar?.interestRate ?? form.carLoanRate,
-    carLoanRemainingMonths:
-      firstCar?.remainingMonths ?? form.carLoanRemainingMonths,
-    bikeLoanLenderName: firstBike?.lenderName ?? form.bikeLoanLenderName ?? "",
-    bikeLoanRate: firstBike?.interestRate ?? form.bikeLoanRate,
-    bikeLoanRemainingMonths:
-      firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths,
-    bikeOutstanding: form.bikeOutstanding,
+    // Prefer unified row; keep assets-step / legacy scalars unless user cleared all loans.
+    homeLoanEMI: clearStaleLegacyLoans
+      ? 0
+      : (firstHome?.monthlyEMI ?? form.homeLoanEMI ?? 0),
+    secondPropertyEMI: clearStaleLegacyLoans
+      ? 0
+      : (form.secondPropertyEMI ?? 0),
+    carLoanEMI: clearStaleLegacyLoans
+      ? 0
+      : (firstCar?.monthlyEMI ?? form.carLoanEMI),
+    bikeEMI: clearStaleLegacyLoans
+      ? 0
+      : (firstBike?.monthlyEMI ?? form.bikeEMI),
+    personalLoanEMI: clearStaleLegacyLoans
+      ? 0
+      : (firstPersonal?.monthlyEMI ?? form.personalLoanEMI),
+    personalLoanOutstanding: clearStaleLegacyLoans
+      ? 0
+      : (firstPersonal?.outstandingAmount ?? form.personalLoanOutstanding),
+    personalLoanLenderName: clearStaleLegacyLoans
+      ? ""
+      : (firstPersonal?.lenderName ?? form.personalLoanLenderName ?? ""),
+    personalLoanRate: clearStaleLegacyLoans
+      ? 0
+      : (firstPersonal?.interestRate ?? form.personalLoanRate),
+    personalLoanRemainingMonths: clearStaleLegacyLoans
+      ? 0
+      : (firstPersonal?.remainingMonths ?? form.personalLoanRemainingMonths),
+    homeLoanLenderName: clearStaleLegacyLoans
+      ? ""
+      : (firstHome?.lenderName ?? form.homeLoanLenderName ?? ""),
+    homeLoanRate: clearStaleLegacyLoans
+      ? 0
+      : (firstHome?.interestRate ?? form.homeLoanRate),
+    homeLoanRemainingMonths: clearStaleLegacyLoans
+      ? 0
+      : (firstHome?.remainingMonths ?? form.homeLoanRemainingMonths),
+    carLoanLenderName: clearStaleLegacyLoans
+      ? ""
+      : (firstCar?.lenderName ?? form.carLoanLenderName ?? ""),
+    carLoanRate: clearStaleLegacyLoans
+      ? 0
+      : (firstCar?.interestRate ?? form.carLoanRate),
+    carLoanRemainingMonths: clearStaleLegacyLoans
+      ? 0
+      : (firstCar?.remainingMonths ?? form.carLoanRemainingMonths),
+    bikeLoanLenderName: clearStaleLegacyLoans
+      ? ""
+      : (firstBike?.lenderName ?? form.bikeLoanLenderName ?? ""),
+    bikeLoanRate: clearStaleLegacyLoans
+      ? 0
+      : (firstBike?.interestRate ?? form.bikeLoanRate),
+    bikeLoanRemainingMonths: clearStaleLegacyLoans
+      ? 0
+      : (firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths),
+    bikeOutstanding: clearStaleLegacyLoans ? 0 : form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
     homeLoanEMIDay: form.homeLoanEMIDay,
+    homeLoanEMIMonth: form.homeLoanEMIMonth,
     carLoanEMIDay: form.carLoanEMIDay,
     personalLoanEMIDay: form.personalLoanEMIDay,
     educationLoanEMIDay: form.educationLoanEMIDay,
@@ -2389,6 +2531,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   bikeOutstanding: 0,
   creditCardBillMonthly: 0,
   homeLoanEMIDay: undefined,
+  homeLoanEMIMonth: undefined,
   carLoanEMIDay: undefined,
   personalLoanEMIDay: undefined,
   educationLoanEMIDay: undefined,
