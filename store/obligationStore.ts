@@ -164,14 +164,13 @@ function mapChecklist(row: Record<string, unknown>): ChecklistItem {
 }
 
 function totals(items: ChecklistItem[]) {
-  const totalObligated = items.reduce(
-    (s, i) => s + (i.expected_amount || 0),
-    0,
-  );
+  // Closed (inactive) rows stay visible this month but don't inflate pending.
+  const open = items.filter((i) => i.obligation?.is_active !== false);
+  const totalObligated = open.reduce((s, i) => s + (i.expected_amount || 0), 0);
   const totalPaid = items
     .filter((i) => i.status === "paid" || i.status === "auto_debit")
     .reduce((s, i) => s + (i.paid_amount || i.expected_amount || 0), 0);
-  const totalPending = items
+  const totalPending = open
     .filter((i) => i.status === "pending")
     .reduce((s, i) => s + (i.expected_amount || 0), 0);
   return { totalObligated, totalPaid, totalPending };
@@ -256,8 +255,9 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
       const items = (data ?? [])
         .map((row) => mapChecklist(row as Record<string, unknown>))
-        // Soft-deleted obligations must not stay on the month checklist.
-        .filter((c) => c.obligation == null || c.obligation.is_active)
+        // Keep closed (is_active=false) rows for this month so they can show struck-out.
+        // Drop orphan rows with no joined obligation.
+        .filter((c) => c.obligation != null)
         // Credit card bills belong in Credit card dues — never the checklist.
         .filter((c) => (c.obligation?.category || "") !== "credit_card");
 
@@ -400,7 +400,8 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     const supabase = getSupabase();
     const monthStart = monthStartIso(month);
 
-    // Stop forever — generate_monthly_checklist only picks is_active = true.
+    // Stop forever — generate_monthly_checklist only picks is_active = true,
+    // so next months never get a new row.
     const { error } = await supabase
       .from("financial_obligations")
       .update({
@@ -414,17 +415,8 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       return false;
     }
 
-    // Drop unpaid rows for this month and anything in future months.
-    // Keep paid rows for this month so history / ✓ stay visible.
-    const { error: pendingErr } = await supabase
-      .from("obligation_checklist")
-      .delete()
-      .eq("obligation_id", id)
-      .in("status", ["pending", "skipped"]);
-    if (pendingErr) {
-      console.error("closeObligation pending checklist:", pendingErr);
-    }
-
+    // Only remove future months. Keep THIS month’s row (paid or pending)
+    // so the UI can show it struck-out as closed.
     const { error: futureErr } = await supabase
       .from("obligation_checklist")
       .delete()
@@ -435,10 +427,14 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     }
 
     set((state) => {
-      const checklist = state.checklist.filter((c) => {
-        if (c.obligation_id !== id) return true;
-        // Keep paid / auto_debit for the month being viewed.
-        return c.status === "paid" || c.status === "auto_debit";
+      const checklist = state.checklist.map((c) => {
+        if (c.obligation_id !== id) return c;
+        return {
+          ...c,
+          obligation: c.obligation
+            ? { ...c.obligation, is_active: false }
+            : c.obligation,
+        };
       });
       return {
         obligations: state.obligations.filter((o) => o.id !== id),
