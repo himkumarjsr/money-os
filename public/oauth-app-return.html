@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Returning to Finkoin…</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background: #f7f7f4;
+        color: #5f5e5a;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Returning to the Finkoin app…</p>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var app = params.get("app");
+        if (!app) {
+          window.location.replace("/login?error=auth_failed");
+          return;
+        }
+        var target;
+        try {
+          target = new URL(app);
+        } catch (e) {
+          window.location.replace("/login?error=auth_failed");
+          return;
+        }
+        params.forEach(function (value, key) {
+          if (key === "app") return;
+          target.searchParams.set(key, value);
+        });
+        if (window.location.hash && window.location.hash.length > 1) {
+          var hash = window.location.hash.replace(/^#/, "");
+          var existing = target.hash ? target.hash.replace(/^#/, "") : "";
+          target.hash = existing ? existing + "&" + hash : hash;
+        }
+        window.location.replace(target.toString());
+      })();
+    </script>
+  </body>
+</html>
