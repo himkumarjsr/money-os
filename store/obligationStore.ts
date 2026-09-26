@@ -96,7 +96,14 @@ interface ObligationState {
     id: string,
     data: Partial<FinancialObligation>,
   ) => Promise<boolean>;
-  deleteObligation: (id: string) => Promise<void>;
+  /**
+   * Mark obligation closed (EMI paid off, policy cancelled, etc.).
+   * Soft-deactivates so generateChecklist never creates next-month rows.
+   * Keeps this month's paid ✓ history; drops pending/skipped + future months.
+   */
+  closeObligation: (id: string, month?: Date) => Promise<boolean>;
+  /** @deprecated Prefer closeObligation — same soft-deactivate path. */
+  deleteObligation: (id: string, month?: Date) => Promise<void>;
   markPaid: (checklistId: string, amount: number) => Promise<void>;
   markUnpaid: (checklistId: string) => Promise<void>;
   markSkipped: (checklistId: string) => Promise<void>;
@@ -389,36 +396,61 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     return true;
   },
 
-  deleteObligation: async (id) => {
+  closeObligation: async (id, month = new Date()) => {
     const supabase = getSupabase();
-    // Checklist rows outlive soft-delete — remove them or the item stays visible.
-    const { error: checklistErr } = await supabase
-      .from("obligation_checklist")
-      .delete()
-      .eq("obligation_id", id);
-    if (checklistErr) {
-      console.error("deleteObligation checklist:", checklistErr);
-      return;
-    }
+    const monthStart = monthStartIso(month);
 
+    // Stop forever — generate_monthly_checklist only picks is_active = true.
     const { error } = await supabase
       .from("financial_obligations")
-      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", id);
 
     if (error) {
-      console.error("deleteObligation error:", error);
-      return;
+      console.error("closeObligation error:", error);
+      return false;
+    }
+
+    // Drop unpaid rows for this month and anything in future months.
+    // Keep paid rows for this month so history / ✓ stay visible.
+    const { error: pendingErr } = await supabase
+      .from("obligation_checklist")
+      .delete()
+      .eq("obligation_id", id)
+      .in("status", ["pending", "skipped"]);
+    if (pendingErr) {
+      console.error("closeObligation pending checklist:", pendingErr);
+    }
+
+    const { error: futureErr } = await supabase
+      .from("obligation_checklist")
+      .delete()
+      .eq("obligation_id", id)
+      .gt("checklist_month", monthStart);
+    if (futureErr) {
+      console.error("closeObligation future checklist:", futureErr);
     }
 
     set((state) => {
-      const checklist = state.checklist.filter((c) => c.obligation_id !== id);
+      const checklist = state.checklist.filter((c) => {
+        if (c.obligation_id !== id) return true;
+        // Keep paid / auto_debit for the month being viewed.
+        return c.status === "paid" || c.status === "auto_debit";
+      });
       return {
         obligations: state.obligations.filter((o) => o.id !== id),
         checklist,
         ...totals(checklist),
       };
     });
+    return true;
+  },
+
+  deleteObligation: async (id, month) => {
+    await get().closeObligation(id, month);
   },
 
   markPaid: async (checklistId, amount) => {
@@ -754,8 +786,9 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
     if (obligations.length === 0) return;
 
-    // Insert missing analyse-derived rows only. Never overwrite existing rows —
-    // user edits in Tracker must stick (same title+category unique key).
+    // Insert missing analyse-derived rows only. Never overwrite / reactivate
+    // existing rows — closed (is_active=false) EMIs must stay closed so they
+    // never reappear next month after a health-check sync.
     for (const ob of obligations) {
       const { error } = await supabase.from("financial_obligations").upsert(
         {

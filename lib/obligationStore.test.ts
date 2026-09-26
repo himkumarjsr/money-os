@@ -107,7 +107,12 @@ vi.mock("@/lib/supabase", () => ({
             }),
           delete: () =>
             chain({
-              eq: async () => ({ error: null }),
+              eq: () =>
+                chain({
+                  in: async () => ({ error: null }),
+                  gt: async () => ({ error: null }),
+                  eq: async () => ({ error: null }),
+                }),
             }),
         });
       }
@@ -216,6 +221,44 @@ describe("useObligationStore", () => {
     expect(row?.obligation?.amount).toBe(25000);
     expect(row?.obligation?.due_day).toBe(12);
     expect(row?.obligation?.source).toBe("manual");
+  });
+
+  it("closeObligation deactivates and drops pending but keeps paid history", async () => {
+    const { useObligationStore } = await import("@/store/obligationStore");
+    await useObligationStore
+      .getState()
+      .fetchChecklist("u1", new Date(2026, 6, 1));
+    await useObligationStore.getState().markPaid("c1", 22000);
+    // Seed obligations list as if fetched
+    useObligationStore.setState({
+      obligations: [
+        {
+          id: "ob-1",
+          user_id: "u1",
+          title: "Home Loan EMI",
+          category: "loan_emi",
+          amount: 22000,
+          frequency: "monthly",
+          due_day: 5,
+          due_month: null,
+          due_date: null,
+          source: "health_check",
+          is_active: true,
+          remind_days_before: 3,
+          notes: null,
+        },
+      ],
+    });
+    const ok = await useObligationStore
+      .getState()
+      .closeObligation("ob-1", new Date(2026, 6, 1));
+    expect(ok).toBe(true);
+    const s = useObligationStore.getState();
+    expect(s.obligations.find((o) => o.id === "ob-1")).toBeUndefined();
+    // Paid row for this month remains
+    expect(s.checklist.some((c) => c.id === "c1" && c.status === "paid")).toBe(
+      true,
+    );
   });
 
   it("monthStartIso uses local calendar month (not UTC)", async () => {
