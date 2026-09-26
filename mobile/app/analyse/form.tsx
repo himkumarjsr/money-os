@@ -21,6 +21,7 @@ import {
 } from "@/lib/analyse-form-schema";
 import { upsertUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
+import { useObligationStore } from "@/store/obligationStore";
 import { Colors, Spacing, Radius, FontSize } from "@/constants/theme";
 import MoneyInput from "@/components/ui/MoneyInput";
 import Input from "@/components/ui/Input";
@@ -237,6 +238,10 @@ export default function AnalyseFormScreen() {
         { onConflict: "user_id" },
       );
       if (error) throw error;
+
+      await useObligationStore
+        .getState()
+        .syncFromHealthCheck(user.id, normalized);
 
       await invalidateProfileMonthlySalaryCache(user.id);
 
