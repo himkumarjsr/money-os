@@ -31,6 +31,10 @@ export default function LoginScreen() {
       setFormError("Please enter email and password");
       return;
     }
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters");
+      return;
+    }
     setLoading(true);
     try {
       const result = await signIn(email.trim(), password);
@@ -108,6 +112,13 @@ export default function LoginScreen() {
             loading={loading}
             disabled={loading || googleLoading}
           />
+
+          <TouchableOpacity
+            onPress={() => router.push("/(auth)/forgot-password")}
+            style={{ alignItems: "flex-end" }}
+          >
+            <Text style={styles.link}>Forgot password?</Text>
+          </TouchableOpacity>
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
