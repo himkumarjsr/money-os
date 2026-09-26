@@ -272,6 +272,7 @@ export default function ObligationsChecklist({
             {checklist.length > 0 ? (
               checklist.map((item, i) => {
                 const ob = item.obligation;
+                const isClosed = ob != null && ob.is_active === false;
                 const isPaid =
                   item.status === "paid" || item.status === "auto_debit";
                 const isSkipped = item.status === "skipped";
@@ -282,25 +283,41 @@ export default function ObligationsChecklist({
                       i < checklist.length - 1
                         ? "border-b border-[#F7F7F4]"
                         : ""
-                    } ${isPaid ? "bg-[#F7FDF9]" : isSkipped ? "bg-[#FAFAFA] opacity-60" : "bg-white"}`}
+                    } ${
+                      isClosed
+                        ? "bg-[#FAFAFA] opacity-70"
+                        : isPaid
+                          ? "bg-[#F7FDF9]"
+                          : isSkipped
+                            ? "bg-[#FAFAFA] opacity-60"
+                            : "bg-white"
+                    }`}
                   >
                     <span
                       aria-hidden
                       title={
-                        isPaid
-                          ? "Paid via logged expense"
-                          : "Checks automatically when you log the expense"
+                        isClosed
+                          ? "Closed — will not appear from next month"
+                          : isPaid
+                            ? "Paid via logged expense"
+                            : "Checks automatically when you log the expense"
                       }
                       className={`flex h-[26px] w-[26px] shrink-0 cursor-default items-center justify-center rounded-lg border-2 ${
-                        isPaid
-                          ? "border-[#1D9E75] bg-[#1D9E75]"
-                          : isSkipped
-                            ? "border-[#E8E6F0] bg-white"
-                            : "border-[#534AB7] bg-white"
+                        isClosed
+                          ? "border-[#D3D1C7] bg-[#E8E6F0]"
+                          : isPaid
+                            ? "border-[#1D9E75] bg-[#1D9E75]"
+                            : isSkipped
+                              ? "border-[#E8E6F0] bg-white"
+                              : "border-[#534AB7] bg-white"
                       }`}
                     >
-                      {isPaid ? (
+                      {isPaid && !isClosed ? (
                         <AppIcon name="check" size={14} color="#FFFFFF" />
+                      ) : isClosed ? (
+                        <span className="text-[11px] font-bold text-[#9B9A94]">
+                          —
+                        </span>
                       ) : null}
                     </span>
                     <div className="shrink-0 text-lg">
@@ -309,32 +326,46 @@ export default function ObligationsChecklist({
                     <div className="min-w-0 flex-1">
                       <div
                         className={`mb-0.5 text-sm font-semibold ${
-                          isPaid ? "text-[#1D5C3A]" : "text-[#111110]"
-                        } ${isSkipped ? "line-through" : ""}`}
+                          isClosed
+                            ? "text-[#9B9A94] line-through"
+                            : isPaid
+                              ? "text-[#1D5C3A]"
+                              : "text-[#111110]"
+                        } ${isSkipped && !isClosed ? "line-through" : ""}`}
                       >
                         {ob?.title || "Obligation"}
                       </div>
                       <div className="text-[11px] text-[#9B9A94]">
-                        {ob?.frequency === "monthly"
-                          ? `Due on ${ob.due_day ?? "—"}th`
-                          : ob?.frequency === "yearly"
-                            ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
-                            : ob?.frequency}
-                        {isPaid && item.paid_at
-                          ? ` · Paid ${new Date(
-                              item.paid_at,
-                            ).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                            })}`
-                          : null}
-                        {isSkipped ? " · Skipped" : null}
+                        {isClosed ? (
+                          <>Closed · won’t show from next month</>
+                        ) : (
+                          <>
+                            {ob?.frequency === "monthly"
+                              ? `Due on ${ob.due_day ?? "—"}th`
+                              : ob?.frequency === "yearly"
+                                ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
+                                : ob?.frequency}
+                            {isPaid && item.paid_at
+                              ? ` · Paid ${new Date(
+                                  item.paid_at,
+                                ).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                })}`
+                              : null}
+                            {isSkipped ? " · Skipped" : null}
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
                       <div
                         className={`mb-1 text-[15px] font-bold ${
-                          isPaid ? "text-[#1D9E75]" : "text-[#111110]"
+                          isClosed
+                            ? "text-[#9B9A94] line-through"
+                            : isPaid
+                              ? "text-[#1D9E75]"
+                              : "text-[#111110]"
                         }`}
                       >
                         ₹
@@ -344,81 +375,91 @@ export default function ObligationsChecklist({
                             : item.expected_amount) || 0
                         ).toLocaleString("en-IN")}
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
-                        {ob ? (
-                          <button
-                            type="button"
-                            aria-label={`Edit ${ob.title}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowAdd(false);
-                              setEditing({
-                                id: ob.id,
-                                payload: {
-                                  title: ob.title,
-                                  category: ob.category,
-                                  amount: ob.amount,
-                                  frequency: ob.frequency,
-                                  due_day: ob.due_day ?? null,
-                                  due_month: ob.due_month ?? null,
-                                  source: ob.source,
-                                  is_active: true,
-                                  remind_days_before: ob.remind_days_before,
-                                },
-                              });
-                            }}
-                            className="bg-transparent p-0"
-                          >
-                            <AppIcon name="pencil" size={14} color="#534AB7" />
-                          </button>
-                        ) : null}
-                        {isSkipped ? (
-                          <button
-                            type="button"
-                            onClick={() => void markUnpaid(item.id)}
-                            className="bg-transparent p-0 text-[10px] font-semibold text-[#534AB7] underline"
-                          >
-                            Restore
-                          </button>
-                        ) : null}
-                        {!isPaid && !isSkipped ? (
-                          <button
-                            type="button"
-                            onClick={() => void markSkipped(item.id)}
-                            className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
-                            title="Skip this month only — comes back next month"
-                          >
-                            Skip
-                          </button>
-                        ) : null}
-                        {ob ? (
-                          <button
-                            type="button"
-                            aria-label={`Mark ${ob.title} as closed`}
-                            title="EMI paid off / stop forever — will not show from next month"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (
-                                !window.confirm(
-                                  `Mark “${ob.title}” as closed?\n\nUse this when the EMI is paid off or the obligation is done.\nIt will not appear from next month.\nThis month’s paid ✓ stays for your records.`,
-                                )
-                              ) {
-                                return;
-                              }
-                              void (async () => {
-                                await closeObligation(ob.id, month);
-                                await useObligationStore
-                                  .getState()
-                                  .fetchChecklist(userId, month);
-                              })();
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md bg-[#FCEBEB] px-1.5 py-0.5 text-[10px] font-bold text-[#E24B4A]"
-                          >
-                            <AppIcon name="trash" size={12} color="#E24B4A" />
-                            Mark closed
-                          </button>
-                        ) : null}
-                      </div>
+                      {isClosed ? (
+                        <div className="mt-1 text-[10px] font-semibold text-[#9B9A94]">
+                          Closed
+                        </div>
+                      ) : (
+                        <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+                          {ob ? (
+                            <button
+                              type="button"
+                              aria-label={`Edit ${ob.title}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowAdd(false);
+                                setEditing({
+                                  id: ob.id,
+                                  payload: {
+                                    title: ob.title,
+                                    category: ob.category,
+                                    amount: ob.amount,
+                                    frequency: ob.frequency,
+                                    due_day: ob.due_day ?? null,
+                                    due_month: ob.due_month ?? null,
+                                    source: ob.source,
+                                    is_active: true,
+                                    remind_days_before: ob.remind_days_before,
+                                  },
+                                });
+                              }}
+                              className="bg-transparent p-0"
+                            >
+                              <AppIcon
+                                name="pencil"
+                                size={14}
+                                color="#534AB7"
+                              />
+                            </button>
+                          ) : null}
+                          {isSkipped ? (
+                            <button
+                              type="button"
+                              onClick={() => void markUnpaid(item.id)}
+                              className="bg-transparent p-0 text-[10px] font-semibold text-[#534AB7] underline"
+                            >
+                              Restore
+                            </button>
+                          ) : null}
+                          {!isPaid && !isSkipped ? (
+                            <button
+                              type="button"
+                              onClick={() => void markSkipped(item.id)}
+                              className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
+                              title="Skip this month only — comes back next month"
+                            >
+                              Skip
+                            </button>
+                          ) : null}
+                          {ob ? (
+                            <button
+                              type="button"
+                              aria-label={`Mark ${ob.title} as closed`}
+                              title="EMI paid off / stop forever — stays struck out this month"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (
+                                  !window.confirm(
+                                    `Mark “${ob.title}” as closed?\n\nIt stays on this month’s list (struck out).\nIt will not appear from next month.`,
+                                  )
+                                ) {
+                                  return;
+                                }
+                                void (async () => {
+                                  await closeObligation(ob.id, month);
+                                  await useObligationStore
+                                    .getState()
+                                    .fetchChecklist(userId, month);
+                                })();
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md bg-[#FCEBEB] px-1.5 py-0.5 text-[10px] font-bold text-[#E24B4A]"
+                            >
+                              <AppIcon name="trash" size={12} color="#E24B4A" />
+                              Mark closed
+                            </button>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -443,7 +484,7 @@ export default function ObligationsChecklist({
               <div className="text-[11px] text-[#9B9A94]">
                 {loading
                   ? "Updating…"
-                  : "Skip = this month · Mark closed = stop forever"}
+                  : "Mark closed = strike this month · hide from next"}
               </div>
             </div>
           </div>
