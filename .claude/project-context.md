@@ -1,6 +1,6 @@
 # Finkoin Project Context Cache
-Generated: 2026-09-26 · PWA source: `main@e42852c` · Mobile source: `mobile-app@1c958cf` (mobile/ exists ONLY on mobile-app)
-Refresh when stale: compare `git rev-parse --short origin/main` / `origin/mobile-app` to the SHAs above. If they differ, re-read only the files changed since then (`git diff --stat <sha>..origin/main`).
+Generated: 2026-09-26, updated same day after mobile-app synced with main/production · PWA source: `main@e42852c` (== `production`) · Mobile source: `mobile-app@d33a499`+docs (mobile/ exists ONLY on mobile-app; the PWA dirs on mobile-app now equal main/production exactly)
+Refresh when stale: compare `git rev-parse --short origin/main` / `origin/mobile-app` to the SHAs above. If they differ, re-read only the files changed since then (`git diff --stat <sha>..origin/main`). mobile-app no longer needs a separate "is it behind main" check — just diff against whichever moved.
 Deep docs (read only when needed): FINKOIN_SYSTEM.md (3.5k lines, business rules) · docs/PWA_COMPLETE_AUDIT.md (per-screen interactions) · docs/MOBILE_BUILD_PLAN.md · docs/MOBILE_CURRENT_STATE.md
 Format: `a|b|c` rows. Status: C=complete P=partial PH=placeholder B=broken U=unused X=not built. Purity: pure=no DOM/IO (portable to RN), web/io=browser/Supabase/storage, server=Node/Next server only.
 
@@ -21,9 +21,9 @@ Format: `a|b|c` rows. Status: C=complete P=partial PH=placeholder B=broken U=unu
 - **All authed API routes are cookie-only** (`lib/apiGuard.ts#getAuthedUser`); only `/api/razorpay/verify-payment` reads `Authorization: Bearer`. Mobile cannot call them until Bearer support is added.
 - Recovery (main): reset email → `/auth/callback?type=recovery` or `AuthRecoveryRedirect`/`lib/authRecovery.ts` → `/auth/update-password`.
 ### Branches
-- `main`: PWA, latest. `mobile/` was deleted from main by `950748f` ("revert native app code"). Merging main→mobile-app naively deletes mobile/.
-- `mobile-app`: mobile/ + docs; its app/ components/ lib/ store/ are 17 commits behind main. Mobile copies of analyse-form-schema, financialEngine, priorityEngine, universal-buckets, formatters are STALE vs main.
-- Other remotes: production, calculator-input-fix, improve-tax-flow, test/github-actions.
+- `main` == `production` (identical trees as of this sync): PWA, latest. `mobile/` was deleted from both by `950748f` ("revert native app code") — inherited via merged PRs into production.
+- `mobile-app`: **synced 2026-09-26** — merged `production` then `main` into it. Its app/ components/ lib/ store/ etc. now exactly equal main/production (verified 0-diff outside `mobile/` + this cache's own docs). `mobile/` was preserved 100% through the resulting modify/delete conflicts (verified 0-diff vs pre-merge). Only `mobile/lib/{analyse-form-schema,financialEngine,priorityEngine,universal-buckets,formatters}.ts` remain STALE — those are RN-side copies that still need re-copying from the now-current `lib/`, unrelated to branch divergence.
+- Other remotes: calculator-input-fix, improve-tax-flow, test/github-actions.
 
 ## Screen Inventory
 ### PWA (main) — route|file|status notes
@@ -776,8 +776,9 @@ Touch ≥44×44. Primary button 52h radius 14. Sheets maxHeight 90vh, zIndex 100
 Taglines: FINKOIN_TAGLINE 'Know it. Fix it. Grow it.' · SUB 'Your complete money life.' Manifest theme/bg #534AB7, lang en-IN.
 
 ## Known Issues
-BRANCH: main deleted mobile/ (950748f); mobile-app is 17 commits behind main in app/components/lib/store
-STALE: mobile/lib analyse-form-schema, financialEngine, priorityEngine, universal-buckets, formatters differ from main → mobile scores ≠ PWA
+BRANCH: RESOLVED 2026-09-26 — mobile-app merged production+main; app/components/lib/store now equal main/production exactly. main deleted mobile/ (950748f) but mobile/ was preserved 100% through the merge's modify/delete conflicts.
+STALE: mobile/lib analyse-form-schema, financialEngine, priorityEngine, universal-buckets, formatters still differ from lib/ (now the current main/production content) → mobile scores ≠ PWA. Still needs a re-copy; unaffected by the branch sync.
+NEW ON MAIN (2026-09-26 sync, not yet reflected in mobile plans): /notifications full-page inbox (push-tap deep link ?id=); lib/authRecovery.ts + AuthRecoveryRedirect (global PASSWORD_RECOVERY listener, /auth/callback + /auth/update-password rewritten onto it); obligationStore.closeObligation (3rd state: struck-through this month, stops next month, distinct from deleteObligation); financialEngine exports totalLoanLiabilities/medicalEmergencyTarget/assessTermCover; priorityEngine medical-fund target changed from flat ₹2L to medicalEmergencyTarget(profile) + prefers entered medicalEmergencyFund; cache.ts gained enginePlanFingerprint/isCachedAiStale; AI route model now env GROQ_MODEL (default openai/gpt-oss-20b); /api/financial-data no-ops without ENCRYPTION_KEY.
 API: every authed /api route is cookie-only (lib/apiGuard.ts getAuthedUser); mobile can't call ai/analyse, financial-data, feedback FK, razorpay create-order, split/*, push-subscribe
 MOBILE DATA: Report/form/tracker use user_analysis; PWA canonical is user_analyse_snapshots → web users see empty mobile Report
 MOBILE TRACKER: insert sends `title` column (not in expense_transactions schema) → likely insert failure

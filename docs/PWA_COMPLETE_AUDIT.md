@@ -3,6 +3,8 @@
 > Audit date: 2026-09-26 · Branch audited: `mobile-app` (HEAD `e5d3f3b`) · App version `0.4.0` (`package.json`)
 > Scope: `FINKOIN_SYSTEM.md`, `package.json`, `next.config.mjs`, `middleware.ts`, `app/**`, `components/**`, `lib/**`, `store/**`, `public/manifest.json`, `supabase/**`, `mobile/**`.
 > Read-only audit — no application code was changed.
+>
+> **Refreshed 2026-09-26 (same day, after `mobile-app` synced with `main`/`production`, HEAD `d33a499`):** the PWA (`app/`, `components/`, `lib/`, `store/`) on `mobile-app` moved from the `e5d3f3b`-era snapshot to the current `main@e42852c` (== `production`) content — 66 files, ~7,000 lines. Verified and corrected below: the auth-recovery rewrite (§1.4), a new `/notifications` screen (§1.4a), the obligation close-vs-delete split (§1.8), the AI prompt/model change and optional encrypted vault (§4), and the `financialEngine`/`universal-buckets`/`cache` function renames (§5). Everything else in this document was spot-checked against the new code (form step structure, priority IDs, bucket caps, route list) and still holds; the screen/component/store prose elsewhere was not re-derived line-by-line, so treat unflagged sections as "believed current, not re-verified" rather than freshly re-read.
 
 ---
 
@@ -44,13 +46,17 @@
 |---|---|---|---|
 | F1 | `/signup`, `/tax`, `/calculators/home-loan`, `/calculators/fd-calculator`, `/calculators/retirement-calculator`, `/calculators/emi-calculator`, `/calculators/emergency-fund`, `/calculators/fire-number` **don't exist**. Real routes: `/login?mode=signup`, `/calculators/tax-regime-2026` (not ITR auto-fill), `/calculators/home`, no FD calculator (closest `/calculators/po-td`), no retirement calculator (closest `/calculators/fire`), `/calculators/emi`, `/calculators/emergency`, `/calculators/fire`. Unknown ids hit `notFound()` in `app/calculators/[id]/page.tsx`. | Info | routing |
 | F2 | There is **no ITR auto-fill** feature. Tax is a client-side regime comparison with an "ITR form suggestion" block (`TaxRegimeCalculator.tsx`, lines ~1373–1430). | Info | `/tax` |
-| F3 | All `/api/*` routes authenticate via **cookies only** (`lib/apiGuard.ts#getAuthedUser` → `createSupabaseServerClient()` reading `next/headers` cookies). Only `/api/razorpay/verify-payment` accepts `Authorization: Bearer`. **Native mobile can't call the other authed APIs** until Bearer support is added. | High (mobile) | `lib/apiGuard.ts` |
+| F3 | All `/api/*` routes authenticate via **cookies only** (`lib/apiGuard.ts#getAuthedUser` → `createSupabaseServerClient()` reading `next/headers` cookies, unchanged by the 2026-09-26 sync). Only `/api/razorpay/verify-payment` accepts `Authorization: Bearer`. **Native mobile can't call the other authed APIs** until Bearer support is added. | High (mobile) | `lib/apiGuard.ts` |
 | F4 | `FINKOIN_SYSTEM.md §37` lists `GET /api/split/groups`, `GET /api/split/groups/[groupId]`, `GET /api/split/members` — **these handlers don't exist** (only POST/DELETE, DELETE, DELETE respectively). | Doc drift | `app/api/split/**` |
 | F5 | `components/learn/article-tracker.tsx` is a no-op ("FK rewards removed"); `FINKOIN_SYSTEM.md §15` still says learn reads earn FK. | Doc drift | learn |
 | F6 | Web `BottomNav` and `HealthScoreRing` are **not standalone components**. The bottom nav lives inside `components/global-navbar.tsx`; the score UI is `SpeedoMeter` + an inline score badge. `HealthScoreRing` exists only in `mobile/components/ui/`. | Info | components |
 | F7 | Unused / dead web components: `forms/onboarding-wizard.tsx` (+ its steps), `ui/LoginSheet.tsx`, `ui/GoalCard.tsx`, `ui/ChipSelector.tsx`, `ui/SectionToggle.tsx`, `ui/ScrollSection.tsx`, `calculators/compound-interest-calculator.tsx`, `calculators/spending-trend-chart.tsx`, `tracker/PurpleCashAudit.tsx` (import commented out on `/tracker`). | Low | components |
 | F8 | Production `console.log` noise: `/analyse/result` `handleUnlockClick`, `/login` referral logs, engine debug logs gated to `NODE_ENV=development`. | Low | result/login |
 | F9 | Analyse writes **`user_analyse_snapshots`** (payload JSON). `user_analysis` is only updated by fix-plan (`ai_fix_plan`) and `lib/cache.ts`. The mobile app reads/writes `user_analysis` → **web users see an empty Report on mobile** (see `docs/MOBILE_BUILD_PLAN.md §0`). | High (mobile) | data |
+| F10 | **New since the last audit:** `/notifications` (full-page inbox, deep-linked from OS push taps via `?id=<notif_id>`) and the password-recovery rewrite (`lib/authRecovery.ts` + `components/AuthRecoveryRedirect.tsx`, a global `PASSWORD_RECOVERY` listener — PKCE redirects can drop `type=recovery` from the URL, so callback alone was unreliable). Neither is documented anywhere else; see §1.4 and §1.4a. | Info | auth, notifications |
+| F11 | Obligations gained a **third state**: `closeObligation(id, month)` marks an obligation `is_active=false` but the *current* month's checklist row stays visible **struck-through** ("EMI paid off / stop forever"); only future months stop generating rows. `deleteObligation` is a separate, still-present hard removal. The engine/tracker docs elsewhere describe only the old binary soft-delete. | Info | tracker/obligations |
+| F12 | `lib/financialEngine.ts`'s internal `medicalEmergencyTargetLiquid` is now an **exported** `medicalEmergencyTarget`; a new exported `totalLoanLiabilities` backs net-worth liabilities, and a new exported `assessTermCover({hasTermInsurance, termCover, termNeeded})` centralises the term-cover status/gap/adequacy-floor logic previously inlined in the result page. `lib/universal-buckets.ts` gained `getEpfContributionMonthly` and `getInHandOutflow`. `lib/cache.ts` gained `enginePlanFingerprint` and `isCachedAiStale` (staleness is now plan-shape-aware, not just profile-hash). See §5.1/§5.8. | Info | lib |
+| F13 | The AI route's Groq model is now `process.env.GROQ_MODEL \|\| "openai/gpt-oss-20b"` (was hardcoded `llama-3.1-70b-versatile`), and the system prompt gained two rules: never invent a gap for a `complete`/`0`-gap priority (medical/emergency fund), and `goalAdvice` must follow the user's actual `primaryGoal` instead of defaulting to a retirement SIP narrative. `/api/financial-data` now no-ops (`{success:true, skipped:true}` / `{data:null, skipped:true}`) when `ENCRYPTION_KEY` isn't set — the encrypted vault is explicitly optional, reinforcing F9 (the snapshot is the real source of truth). | Info | `/api/ai/analyse`, `/api/financial-data` |
 
 ---
 
@@ -126,24 +132,42 @@ Notes: the mobile app has a dedicated `mobile/app/(auth)/signup.tsx`.
 
 ### 1.4 Auth callback
 
-Route: `/auth/callback` (`?code`, `?type=recovery`, `?next`)
+Route: `/auth/callback` (`?code`, `?token_hash`, `?type=recovery`, `?next`)
 File: `app/auth/callback/page.tsx`
-Status: **Complete**
+Status: **Complete** — rewritten since the last audit (`lib/authRecovery.ts`, new)
 Components used: `BrandPageLoader` ("Completing login…")
 Store used: `authStore.initAuth`
 API routes: none
-Supabase tables: `auth` (PKCE `exchangeCodeForSession`), plus `referralRewards` writes
+Supabase tables: `auth` (PKCE `exchangeCodeForSession` **or** OTP `verifyOtp({token_hash, type:'recovery'})`), plus `referralRewards` writes
 Key functionality:
-  - `code` → `exchangeCodeForSession(code)`. On error → `/login?error=auth_failed`.
-  - `initAuth()` → `getSession()`. No session → `/login?error=auth_failed`.
-  - `type=recovery` → `/auth/update-password`.
-  - Else `applyPendingReferralRewards()` → `router.replace(next ?? peekPostLoginPath())`. The default is `/analyse`, or a pending Split join URL.
+  - Calls shared `completeAuthSessionFromUrl(supabase)` (`lib/authRecovery.ts`): exchanges `?code` via PKCE **or** verifies `?token_hash` for `type=recovery`, then polls `getSession()` up to 8× (150 ms apart) while a hash-based token (`#access_token=…` or `type=recovery` in the hash) is still present — Supabase sometimes needs a beat to parse the URL hash into a session.
+  - `isRecoveryAuthUrl(search, hash)` checks **both** the query string and the hash for `type=recovery` (PKCE redirects can silently drop it from the query).
+  - No session after all that → `/login?error=auth_failed`. Session + recovery intent → `/auth/update-password` (`AUTH_RECOVERY_PATH`). Otherwise `applyPendingReferralRewards()` → `router.replace(next ?? peekPostLoginPath())` (default `/analyse`, or a pending Split join URL).
+  - **Global safety net:** `components/AuthRecoveryRedirect.tsx` (mounted in `app/layout.tsx` alongside `AuthSessionSync`) listens for Supabase's `PASSWORD_RECOVERY` auth event from *any* page — if that fires while the user isn't already on `/auth/update-password`, it force-redirects there. This catches the case where the recovery link's session establishes on a page other than `/auth/callback`.
 Interactions: none (spinner only).
 Mobile specific: full-screen loader.
 
 Related routes:
 - **`/auth/reset-password`** (`app/auth/reset-password/page.tsx`) — **Complete**. One email field (`email`, 15 px) plus "Send reset link →", which calls `resetPasswordForEmail` with the recovery redirect. The success state reads "Check your email". Validation: "Enter your email".
-- **`/auth/update-password`** (`app/auth/update-password/page.tsx`) — **Complete**. Needs a recovery session (else `/login?error=session`). Fields: password + confirm. Validation: ≥ 6 chars and the two must match. Calls `auth.updateUser({ password })`.
+- **`/auth/update-password`** (`app/auth/update-password/page.tsx`) — **Complete**, also rewritten onto `completeAuthSessionFromUrl` (same PKCE/OTP/hash handling as the callback, not just a plain "session exists?" check). No usable session → `/login?error=session`. Once resolved it strips the auth tokens from the address bar (`history.replaceState(null, "", AUTH_RECOVERY_PATH)`). Fields: password + confirm. Validation: ≥ 6 chars and the two must match. Calls `auth.updateUser({ password })`.
+
+---
+
+### 1.4a Notifications inbox (full page)
+
+Route: `/notifications` (`?id=<notification_id>`)
+File: `app/notifications/page.tsx` → `components/notifications/NotificationsClient.tsx` (417 lines)
+Status: **Complete** — new since the last audit, not previously documented
+Components used: `NotificationsClient`, `AppIcon`, `BrandPageLoader`, `ProtectedGate`
+Store used: `notificationStore` (`notifications`, `loading`, `fetchNotifications`, `markRead`, `markAllRead`, `getById`), `authStore`
+API routes: none (direct Supabase)
+Supabase tables: `user_notifications`
+Key functionality:
+  - This is the destination for OS push-notification taps (`worker/index.js` / `lib/webPush.ts` both default the click URL to `/notifications`; a specific tip adds `?id=<row id>`) — the fix referenced in the `main` commit "push notification fix from notification to open app in notification".
+  - On load: fetches the user's notifications; if `?id=` names a row not yet in the store cache (e.g. cold app start from a push tap), it fetches that row directly (`getById` first, then a direct query) so the deep link works even before the list has loaded, and marks it read.
+  - Full chronological list (not just the last 20 like the bell dropdown), with per-row "mark read" and a "mark all read" action.
+Interactions: tap a row → expand/mark read; "mark all read" button; each row links out via the notification's own category (e.g. `/learn` for tips, `/tracker` for obligation reminders).
+Mobile specific: not built (see `docs/MOBILE_BUILD_PLAN.md` §3 "Notifications inbox" — was scoped from `NotificationBell` only; this full-page screen should be added to that plan).
 
 ---
 
@@ -162,13 +186,13 @@ Key functionality:
   - GA `health_check_started` fires once after consent.
   - 7 steps (`STEPS`): Personal profile · Income · Fixed obligations · Living expenses · Insurance coverage · Assets and savings · Goals. Each step is validated by `stepNSchema.safeParse` (Zod) before Next.
   - The draft autosaves to `financialStore.analysis` (persisted, per-user key `finkoin-financial:<uid>`), and the draft is merged with the last profile (`mergeAnalyseDraftWithProfile`).
-  - "Start fresh" wipes the RHF form, `finkoin-financial*`, `finkoin_ai_cache`, and resets the store.
+  - "Start fresh" wipes the RHF form, `finkoin-financial*`, `finkoin_ai_cache`, and resets the store — including `clearLegacyLoanScalars()`, which zeroes the legacy scalar loan fields (`homeLoanEMI`, `homeLoanEMIMonth`, etc.) so a stale EMI can't survive a reset or an emptied `unifiedLoans[]` (fixed since the last audit: previously a cleared loan row could leave its old EMI amount haunting the scalar mapping).
   - Live computed hints: total monthly income (`PrivateAmount`), a debt warning when obligations exceed 50 % of income, and housing notes (rent + EMI + second property).
   - Submit pipeline (`handleFinalSubmit`): `step7Schema` → `coalesceInsuranceToggles` → `normalizeAnalyseFormValues` → `setFullAnalysis` (runs `analyseFinances`) → `getAIFixPlan` → `setAiPlan`. Then fire-and-forget: `upsertUserAnalyseSnapshot`, `syncFromHealthCheck`, and `POST /api/financial-data`. Then `router.push('/analyse/result')`.
 Interactions (every form field):
   - **Step 1 — Profile**: `lifeStage` radio cards (Single/bachelor, Married no kids, Married with kids, Pre-retirement 50+); `selfAge` number (18–80, required); `spouseAge` number (married/kids, optional, ≥ 0); `numberOfKids` number (kids, 1–6); `kidsAges[i]` number (required per kid); `kidsGenders[i]` Boy/Girl toggle (required per kid); `cityTier` radio (Metro / Tier 2 / Tier 3).
   - **Step 2 — Income**: `monthlySalary` MoneyInput (required > 0); `spouseIncome` (hidden for bachelor); `otherIncome`.
-  - **Step 3 — Fixed obligations**: `rentAmount`; `rentMaintenanceMonthly` (if rent > 0); **My loans** field-array `unifiedLoans[]` with add/remove rows — `loanType` select (Home, Personal, Car, Two-wheeler, Education, PF/EPF, Overdraft, Gold, Business, Credit card, Other), `lenderName` text, `monthlyEMI` money (required per row), `emiDay` day-of-month picker (optional), `outstandingAmount` money, `interestRate` %, `remainingMonths`, OD-only `odLimit`/`odUsed`/`odInterestOnlyYears`; `creditCardBillMonthly` money + `creditCardBillDay` picker.
+  - **Step 3 — Fixed obligations**: `rentAmount`; `rentMaintenanceMonthly` (if rent > 0); **My loans** field-array `unifiedLoans[]` with add/remove rows — `loanType` select (Home, Personal, Car, Two-wheeler, Education, PF/EPF, Overdraft, Gold, Business, Credit card, Other), `lenderName` text, `monthlyEMI` money (required per row), `emiDay` **+ `emiMonth`** day-of-month picker (optional; `emiMonth` is new since the last audit — `DayOfMonthPicker` now takes an optional `month`/`onMonth` alongside the day), `outstandingAmount` money, `interestRate` %, `remainingMonths`, OD-only `odLimit`/`odUsed`/`odInterestOnlyYears`; `creditCardBillMonthly` money + `creditCardBillDay` picker. The first home loan's `emiMonth` also maps to a new top-level `homeLoanEMIMonth` scalar (`financialProfileToFormValues`/normalisation), matching the existing `homeLoanEMI`/`homeLoanEMIDay` scalar mapping.
   - **Step 4 — Living expenses**: `foodTotal`, `transportTotal`, `utilityTotal`, `domesticHelpTotal`, `lifestyleTotal`; kids: `kidsSchoolFees`, `kidsActivities`; `parentsSupport`; if > 0: `parentsCity` select, parents health insurance toggle + `parentsHealthInsuranceSumInsured`, `parentsEmergencyCash`.
   - **Step 5 — Insurance**: `hasHealthInsurance` Yes/No → `healthInsuranceSumInsured` + premium (`PremiumField`: amount + Monthly/Yearly toggle) + renewal month/day (`PremiumDueFields`); `hasTermInsurance` → sum assured, premium, frequency, `termInsurancePremiumTillYear`, renewal; vehicle toggle → car/bike premium + frequency + renewal; `hasOtherInsurance` → rows `otherInsurancePremiums[]` (policyName, premiumAmount, frequency, maturityAmount, maturityYear) with add/remove.
   - **Step 6 — Assets**: `fdValue` (+ `fdRate`, `fdTenureYears`, `fdMaturityYear`); `savingsAccountBalance`; `liquidMFValue` (info toggle explains liquid funds); `otherLiquidSavings`; `bereavementFund`; `ppfBalance`, `npsBalance`, `epfBalance`; `monthlySIP` + `sipAutoDebitDay`; `ppfDepositDay`; `totalEquityValue`; `customInvestments[]` (≤ 5: label, currentValue, monthlyContribution, type); `ownsHome` → `homeMarketValue`, `homeLoanOutstanding`, home-loan EMI + debit day; `ownsCar` → `carMarketValue`, `carLoanOutstanding`; `goldValue`; `otherAssets` + `otherAssetLabel`; `monthlyRD`, `monthlyPPFContribution`, `monthlyNPSContribution`, `monthlyEPFContribution`; `ssy` (only with a girl child under 10); Post-office schemes Yes/No → `postOfficeSchemes[]` (≤ 8; scheme select: Savings, RD, TD, NSC, KVP, MIS, SCSS, MSSC, Other; holding amount; maturity year).
@@ -227,7 +251,7 @@ Design tokens used: white cards radius 16; priority rank chips `#EEEDFE/#534AB7`
 Key functionality:
   - Gate: waits for `hasInitialized`. Not logged in → login (`loginHrefPreserveRef`). No profile → `/analyse/result`.
   - Loading messages rotate: "Reading your profile...", "Calculating insurance gaps...", "Building debt strategy...", "Generating 12-month roadmap...", "Almost ready...".
-  - Cache: `hashProfile(profile)` → `getCachedPlan` (`localStorage['finkoin_ai_cache']`, 30 days). On a hit, it merges the engine `buildPriorityPlan` numbers with cached AI text.
+  - Cache: `hashProfile(profile, result)` → `getCachedPlan` (`localStorage['finkoin_ai_cache']`, 30 days). Since the last audit, a hash match is no longer sufficient by itself: `enginePlanFingerprint(enginePriorityPlan)` (a compact hash of each priority's gap/monthly/status + goals + surplus) is also compared via `isCachedAiStale(cached, currentFingerprint)` — if the deterministic engine's output shape changed (e.g. after the medical-fund-target fix above) but the profile hash didn't, the cache is treated as stale and the AI is re-called instead of serving old text next to new numbers. On a cache hit it still merges the engine `buildPriorityPlan` numbers with the cached AI text (engine numbers stay authoritative either way).
   - On a miss it calls `POST /api/ai/analyse {profile, analysis}`, then merges (the engine numbers stay authoritative and the AI only adds title/instrument/whyThisMatters), then `setCachedPlan` and updates `user_analysis`. There's an in-flight de-dupe map.
   - Sections: greeting/summary card with monthly income (masked); ranked **priority cards** (emergency fund, medical fund, term, health, start SIP, SSY per girl) showing gap, monthly contribution, months to complete, this-week action, and why it matters; surplus waterfall ("Your surplus" → Step N → "Remaining buffer"); **Debt strategy** table (lender display names, outstanding, rate, payoff); **Goal plan**; **FD opportunity**; this-week action + encouragement; AI/fallback indicator + retry.
   - GA `fix_plan_viewed`.
@@ -268,7 +292,7 @@ Interactions:
   - Bucket header tap → expand; "+ Add" inside a bucket → modal with that default bucket.
   - Row edit → modal in edit mode; row delete → `window.confirm("Remove this entry?")` → delete.
   - Credit card: "Pay bill" → modal prefilled (loans / credit_card / amount / description / UPI).
-  - Obligations: mark paid, undo, skip, edit, delete (confirm), add obligation (sheet), reset all (confirm), accept/dismiss the learned suggestion.
+  - Obligations: mark paid, undo, skip, edit, **close** ("EMI paid off / stop forever" — `closeObligation(id, month)`, new since the last audit) or **delete** (confirm; still a separate hard action), add obligation (sheet), reset all (confirm), accept/dismiss the learned suggestion. A closed obligation's row for the *current* checklist month stays visible with a strikethrough (`text-[#9B9A94] line-through`) instead of disappearing — only future months stop generating a row for it.
   - Feedback widget (`pageContext="tracker"`).
 Mobile specific:
   - `AddExpenseModal` is a **bottom sheet** (fixed, `zIndex 1000`, radius `20px 20px 0 0`, padding 24, `maxHeight 90vh`).
@@ -604,6 +628,7 @@ Related account routes:
 | Component | Lines | Status | Purpose |
 |---|---|---|---|
 | `AuthSessionSync` | 69 | Complete | `storage` + `visibilitychange` → `refreshUser()` |
+| `AuthRecoveryRedirect` | 30 | Complete | New since the last audit (§1.4). Global `PASSWORD_RECOVERY` `onAuthStateChange` listener → force-redirect to `/auth/update-password` from any page |
 | `FinancialStoreAuthSync` | 23 | Complete | Rehydrate the per-user financial store on user switch |
 | `ReferralCapture` | 34 | Complete | `?ref=` → sessionStorage |
 | `ReferralSuccessToast` | 29 | Complete | One-time referral success toast |
@@ -627,7 +652,7 @@ Related account routes:
 | `ExpenseTable` | Complete | `transactions, onChanged, onEdit?` | `/tracker/[month]` rows |
 | `MonthSafetyPulse` | Complete | see 2.6 | |
 | `MonthSummary` | Complete | `title, bucketTotals, totalSpent` | Bars for month detail |
-| `ObligationsChecklist` | Complete | `userId, checklistMonth?, learnedSuggestion?, onDismissLearn?, analyseCompleted?, defaultOpen?` | "Keep this aside" total, paid/undo/skip/delete, add, reset-all confirm, learn suggestion |
+| `ObligationsChecklist` | Complete | `userId, checklistMonth?, learnedSuggestion?, onDismissLearn?, analyseCompleted?, defaultOpen?` | "Keep this aside" total, paid/undo/skip/**close** (struck-through, new)/delete, add, reset-all confirm, learn suggestion |
 | `PurpleCashAudit` | Unused | `transactions, profileMonthlyIncome?` | Commented out on `/tracker` |
 | `TrackerConsent` | Complete | `onAccept()` | 4 "what we track" items + Accept → `tracker_consent` upsert |
 | `TrackerIcons` | Complete | `TrackerIcon{name,size,color,className}`, `TrackerIconBadge{name,size,iconSize,color,…}` | 50+ purple stroke icons |
@@ -667,7 +692,8 @@ Related account routes:
 ### 2.17 Other component folders
 - `components/analyse/`: `ConsentModal` (`onAccept`, `onDecline`), `PaywallModal` (`open, onClose, priceLabel?, title?, subtitle?, checkoutDescription?, bulletPoints?, navigateAfterUnlock?`; loads `checkout.razorpay.com/v1/checkout.js`), `AnalyseAdvisorModal` (`open, step, stepTitle, stepCount, onClose, children`), `AnalyseResultErrorBoundary`.
 - `components/split/InviteLinkShare.tsx`: `inviteUrl, groupName` → Copy, WhatsApp, visible URL.
-- `components/auth/ProtectedGate.tsx`: waits for `hasInitialized`; persisted login renders immediately; otherwise → `/login?redirect=<path>` (preserving `ref`).
+- `components/auth/ProtectedGate.tsx`: waits for `hasInitialized`; persisted login renders immediately; otherwise → `/login?redirect=<path>` (preserving `ref`). Since the last audit it also preserves the current query string in the redirect (`useSearchParams`, wrapped in its own `Suspense`) so a deep link like `/notifications?id=…` survives a forced login round-trip.
+- `components/notifications/NotificationsClient.tsx`: new since the last audit — full inbox page behind `app/notifications/page.tsx`; see §1.4a.
 - `components/profile/ProfileAssets.tsx` (907 lines): see 1.21.
 - `components/feedback/FeedbackModal.tsx` (471 lines): 6-step wizard → `POST /api/feedback`, or opens a Google Form when `NEXT_PUBLIC_FEEDBACK_GOOGLE_FORM_URL` is set.
 - `components/finkoin/`: `finkoin-ai-plan-view.tsx`, `optimizer-full-sections.tsx`, `MonthlyAllocationPieChart.tsx` (recharts).
@@ -707,9 +733,9 @@ Related account routes:
 - Not persisted. **State**: `notifications[]` (`id, title, content, emoji, category, is_read, shown_as_popup, created_at`), `unreadCount`, `loading`.
 - **Actions**: `fetchNotifications(userId)` (20 newest), `markAllRead(userId)`, `markPopupShown(notifId)`, `getTodayUnshownPopup()`.
 
-### 3.6 obligationStore (`store/obligationStore.ts`, 702 lines)
-- Not persisted. **State**: `obligations[]` (`FinancialObligation`), `checklist[]` (`ChecklistItem` with `status pending|paid|skipped|auto_debit` + joined obligation), `currentMonth`, `loading`, `totalObligated`, `totalPaid`, `totalPending`.
-- **Actions**: `fetchObligations(userId)`, `fetchChecklist(userId, month?)` (join `obligation:financial_obligations(*)`), `addObligation(o)`, `updateObligation(id, patch)`, `deleteObligation(id)` (soft `is_active=false`), `markPaid(id, amount)`, `markUnpaid(id)`, `markSkipped(id)`, `resetAllObligations(userId)`, `generateChecklist(userId, month?)` (RPC `generate_monthly_checklist`), `syncFromHealthCheck(userId, submission)` (upserts from premiums/EMIs/SIP/CC/PPF + date fields, `onConflict user_id,title,category`).
+### 3.6 obligationStore (`store/obligationStore.ts` — 807 lines, up from 702; reworked since the last audit)
+- Not persisted. **State**: `obligations[]` (`FinancialObligation`), `checklist[]` (`ChecklistItem` with `status pending|paid|skipped|auto_debit` + joined obligation), `currentMonth`, `loading`, `totalObligated`, `totalPaid`, `totalPending` (now computed only over checklist rows whose joined obligation is still `is_active` — a closed obligation's row stays on the list but no longer inflates the pending/obligated totals).
+- **Actions**: `fetchObligations(userId)`, `fetchChecklist(userId, month?)` (join `obligation:financial_obligations(*)`, keeps rows with `is_active=false` for the struck-through display, drops only orphan rows with no joined obligation), `addObligation(o)`, `updateObligation(id, patch)`, **`closeObligation(id, month?)`** (new — sets the obligation `is_active=false` so `generate_monthly_checklist` stops creating future rows, but leaves this month's checklist row alone so it still renders struck-through), `deleteObligation(id, month?)` (the older hard removal, still present, separate from `closeObligation`), `markPaid(id, amount)`, `markUnpaid(id)`, `markSkipped(id)`, `resetAllObligations(userId)`, `generateChecklist(userId, month?)` (RPC `generate_monthly_checklist`), `syncFromHealthCheck(userId, submission)` (upserts from premiums/EMIs/SIP/CC/PPF + date fields, `onConflict user_id,title,category`).
 - Helper: `monthStartIso(date)`.
 
 ### 3.7 Minor stores
@@ -757,19 +783,23 @@ Cron (`vercel.json`): `/api/notifications/deliver-tip` and `/api/obligations/rem
 
 ## 5. LIB FILES
 
-### 5.1 `lib/financialEngine.ts` (1,213 lines — pure TS; only dev-gated `console.log`)
-Exports:
-- Types: `FinancialProfile` (re-export), `IssueSeverity`, `AnalysisIssue`, `AnalysisFlag`, `SecurityItem`, `RealEmergencyFundBreakdown`, `AnalysisResult`.
+### 5.1 `lib/financialEngine.ts` (1,299 lines, up from 1,213 — pure TS; only dev-gated `console.log`)
+Exports (updated since the last audit — three internal helpers were promoted to exports and extracted for reuse):
+- Types: `FinancialProfile` (re-export), `IssueSeverity`, `AnalysisIssue`, `AnalysisFlag`, `SecurityItem`, `RealEmergencyFundBreakdown`, `AnalysisResult`, `TermCoverStatus`.
 - `computeRealEmergencyFund(profile)` — weighted corpus: savings 100 %, liquid MF 95 %, FD 70 %, other liquid 50 %, legacy fund 100 %; months covered.
+- **`totalLoanLiabilities(data)`** (new export, extracted from inline net-worth math) — credit-card bill ×3 + every `unifiedLoans[]` row's outstanding-or-derived amount; backs `analyseFinances`'s `totalLiabilities`/`netWorth`.
+- **`medicalEmergencyTarget(data)`** (was the internal `medicalEmergencyTargetLiquid`, now exported unchanged: metro ₹3 L / tier2 ₹2.5 L / tier3 ₹2 L, +₹50 k at age ≥ 45, +₹50 k for kids).
+- **`assessTermCover({hasTermInsurance, termCover, termNeeded})`** (new export, extracted from what was inline in the result page) → `{status, gap, adequacyFloor, infoText, safetyNetOk}`; `adequacyFloor = max(₹50L, termNeeded*0.5)`, same missing/underinsured/adequate rule as before.
 - `isMetroCity(tier)`, `getSavingsTargetPercent(p)`, `getDebtSafeLimitPercent()`.
 - `monthlyTotalIncome(p)` (salary + spouse unless bachelor + other), `monthlySavingsContributions(p)`, `monthlyInsuranceTotal(p)`, `monthlyLivingExpenses(p)`, `housingAndEmiTotal(p)`, `monthlyTotalExpenses(p)`.
 - `calculateTermNeeded(p)` — 10× annual income + liabilities + ₹20 L × dependents − assets, × age multiplier (1.2/1.0/0.8/0.6), floor ₹50 L, round up to ₹10 L.
-- `analyseFinances(p)` → `AnalysisResult` (score = 100 − 15·critical − 7·warning − 2·info, issues, flags, teaser, planSteps, securityChecklist, termInsuranceNeeded, realEmergencyFund, totalAssets, totalLiabilities, netWorth).
-- Internal: `n`, `medicalEmergencyTargetLiquid` (metro ₹3 L / tier2 ₹2.5 L / tier3 ₹2 L, +₹50 k at age ≥ 45, +₹50 k for kids), `fmt`, `issuesToFlags`, `goalLabel`, `buildIssues`, `buildPlanSteps`.
+- `analyseFinances(p)` → `AnalysisResult` (score = 100 − 15·critical − 7·warning − 2·info, issues, flags, teaser, planSteps, securityChecklist, termInsuranceNeeded, realEmergencyFund, totalAssets, totalLiabilities, netWorth) — now built on `totalLoanLiabilities`/`assessTermCover` internally, same output shape and numbers.
+- Internal: `n`, `fmt`, `issuesToFlags`, `goalLabel`, `buildIssues`, `buildPlanSteps`.
 
-### 5.2 `lib/priorityEngine.ts` (890 lines — pure TS)
+### 5.2 `lib/priorityEngine.ts` (1,216 lines, up from 890 — pure TS; substantial internal rework, same exported surface)
 - Types: `PriorityItem`, `DebtItem`, `GoalItem`, `PriorityPlan`.
-- `buildPriorityPlan(profile, analysis)` → priorities in order `emergency_fund`, `medical_fund` (₹2 L target), `term_insurance`, `health_insurance`, `start_sip`, `ssy_girl_age_<n>`; ranked debts (explicit outstanding → `calculateOutstanding` amortisation → EMI-multiple fallback); goals (house/car/FIRE); `monthlyIncome`, `monthlySurplus`, `surplusBreakdown`, `scoreToday`, `scoreAfter12Months`, `topAction`, `fdSuggestion`; `allocationPlan` is currently empty.
+- `buildPriorityPlan(profile, analysis)` → priorities in order `emergency_fund`, `medical_fund`, `term_insurance`, `health_insurance`, `start_sip`, `ssy_girl_age_<n>`; ranked debts (explicit outstanding → `calculateOutstanding` amortisation → EMI-multiple fallback); goals (house/car/FIRE); `monthlyIncome`, `monthlySurplus`, `surplusBreakdown`, `scoreToday`, `scoreAfter12Months`, `topAction`, `fdSuggestion`; `allocationPlan` is currently empty.
+- **`medical_fund` target/current changed since the last audit** (this doc previously said a flat ₹2 L target — that's now wrong): the target is now `medicalEmergencyTarget(profile)` from `financialEngine.ts` (city-tier + age + kids adjusted: metro ₹3 L / tier2 ₹2.5 L / tier3 ₹2 L, +₹50 k at age ≥ 45, +₹50 k for kids — **not** a flat ₹2 L). The "current" amount now prefers the user's own goals-step `medicalEmergencyFund` entry when it's > 0; only when that field is empty/zero does it fall back to the old estimate (`min(liquidMFValue*0.5, target)`). Net effect: the fix plan's medical-fund gap can be smaller (or zero) for users who filled in `medicalEmergencyFund`, and the target itself now varies by city tier/age/kids instead of always being ₹2 L — this was the "medical fund gap" fix referenced in the `main` commit "Fix password reset deep links, analyse CTA, loan clearing, and medical fund gap". The fix-plan/priority numbers for the same profile can differ from a pre-sync mobile build even though `buildPriorityPlan`'s signature is unchanged.
 - Internal: `normalizeStage` (single → bachelor).
 
 ### 5.3 `lib/encryption.ts` (116 lines — **Node-only**, `crypto`)
@@ -826,9 +856,9 @@ Exports: `TrackerIconName`, `TrackerSubcategory`, `TrackerBucket`, `TRACKER_ICON
 | Metric | Count |
 |---|---|
 | Requested screens audited | 28. Of these, 8 requested paths don't exist: 5 map to a real route (`/signup` → `/login?mode=signup`, `home-loan` → `home`, `emi-calculator` → `emi`, `emergency-fund` → `emergency`, `fire-number` → `fire`) and 3 have no equivalent (`/tax` ITR auto-fill, `fd-calculator`, `retirement-calculator`) |
-| Additional routes audited | 42 (3 auth/tracker, 15 extra calculator ids, 7 account pages, 17 marketing/legal/utility routes) |
-| Total route entries | 70 |
-| Components documented | 127 component files (all of `components/`). The 12 requested components get full entries; every tracker (11), forms (6), ui (20) and root-level (25) file is in a table; the remaining folders (analyse, split, auth, profile, feedback, finkoin, landing, learn, policies, seo, calculators) are listed in 2.17 |
+| Additional routes audited | 43 (3 auth/tracker, 15 extra calculator ids, 7 account pages, 17 marketing/legal/utility routes, 1 `/notifications` — added in the 2026-09-26 sync refresh, §1.4a) |
+| Total route entries | 71 (48 `page.tsx` files currently exist under `app/`) |
+| Components documented | 129 component files currently exist under `components/` (127 at the original audit + `AuthRecoveryRedirect.tsx` and `components/notifications/NotificationsClient.tsx`, both added by the sync and now documented in §1.4/§1.4a). The 12 requested components get full entries; every tracker (11), forms (6), ui (20) and root-level (25, now 26 with `AuthRecoveryRedirect`) file is in a table; the remaining folders (analyse, split, auth, profile, feedback, finkoin, landing, learn, policies, seo, calculators, notifications) are listed in 2.17 |
 | Stores documented | 8 (6 requested + `portfolioStore`, `use-app-store`) |
-| API route files / handlers | 23 / 31 |
-| Lib files classified | 84 |
+| API route files / handlers | 23 / 31 (unchanged by the sync — no routes added/removed, several handlers' internals changed, see F13) |
+| Lib files classified | 86 (was 84; `lib/authRecovery.ts` and `lib/analyseUserScenarioFixture.ts` added by the sync) |

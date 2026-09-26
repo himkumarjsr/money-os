@@ -3,42 +3,48 @@
 > Date: 2026-09-26 · Report only, no code changed.
 > Read: `FINKOIN_SYSTEM.md`, `docs/PWA_COMPLETE_AUDIT.md`, `docs/MOBILE_BUILD_PLAN.md`, every file in `mobile/` on `mobile-app` (HEAD `62c0ed2`), and `app/`, `components/`, `lib/`, `store/` on `origin/main` (HEAD `e42852c`).
 > Verification is by static reading only. `mobile/node_modules` isn't installed in this environment, so the app wasn't built, type-checked or run.
+>
+> **Update, same day (post-report):** `mobile-app` was merged with `origin/production` and then `origin/main` (commits `2104a4e`, `d33a499`; `mobile-app` HEAD is now `07d9d22`+docs). `main` and `production` had identical trees at merge time, so this was one sync, not two. **Section 0 below is now resolved** — the "branch situation" gap it describes no longer exists for the PWA side. Everything from **Question 1 onward is about `mobile/`, which the merge left byte-for-byte untouched** (production/main never contained `mobile/`, so there was nothing to reconcile there) — so all of Questions 1–6 remain accurate as originally written. Only the "Consequences" list right below and the branch table are superseded; read the box after it for the current state.
 
 ---
 
-## 0. Branch situation (read this first)
+## 0. Branch situation — RESOLVED 2026-09-26
 
-| | `mobile-app` | `main` |
-|---|---|---|
-| HEAD | `62c0ed2` (docs) ← `e5d3f3b` "split functinality" | `e42852c` "marked closed-v1" |
-| Has `mobile/`? | **Yes** (87 files) | **No.** Commit `950748f` "revert native app code" (2026-08-06) deleted all of `mobile/` from main (84 files, −28,702 lines) |
-| Commits not on the other branch | 2 | 17 (2026-08-06 → 2026-09-26) |
-| Common ancestor | `86446b4` (RN Phase 1) | |
+**This section described a gap that has since been closed.** Kept below for history; see the box above for what actually happened.
 
-**Consequences:**
-1. The mobile app exists **only** on `mobile-app`. Merging `main` into `mobile-app` would delete `mobile/` unless the revert is handled.
-2. The PWA on `main` has moved on since `mobile-app` branched: 66 files changed in `app/ components/ lib/ store/` (+6,992 / −3,417). Notable changes:
-   - Health-check form rework: `analyse-onboarding-form.tsx` (4,900 lines changed) and `lib/analyse-form-schema.ts` (new `emiMonth`, `homeLoanEMIMonth`, `clearLegacyLoanScalars()`).
-   - Engine changes: `lib/financialEngine.ts` (+176) and `lib/priorityEngine.ts` (+766), including the medical fund gap fix.
-   - Fix-plan cache rewrite (`lib/cache.ts`).
-   - Password-recovery deep links: new `lib/authRecovery.ts`, `components/AuthRecoveryRedirect.tsx`, and an `/auth/update-password` rewrite.
-   - New `/notifications` page (`components/notifications/NotificationsClient.tsx`).
-   - Obligations and tracker fixes (`store/obligationStore.ts`, `ObligationsChecklist.tsx`, `trackerObligationSync.ts`).
-   - Tax (80D), SIP, SWP and EMI calculator fixes; push-notification open-app fix.
-   - `lib/apiGuard.ts` is **unchanged**, so the API is still cookie-only.
-3. **Shared-lib drift.** The mobile copies of these files no longer match `main`:
+~~| | `mobile-app` | `main` |~~
+~~|---|---|---|~~
+~~| HEAD | `62c0ed2` (docs) ← `e5d3f3b` "split functinality" | `e42852c` "marked closed-v1" |~~
+~~| Has `mobile/`? | **Yes** (87 files) | **No.** Commit `950748f` "revert native app code" (2026-08-06) deleted all of `mobile/` from main (84 files, −28,702 lines) |~~
+~~| Commits not on the other branch | 2 | 17 (2026-08-06 → 2026-09-26) |~~
+~~| Common ancestor | `86446b4` (RN Phase 1) |~~
 
-| `mobile/lib/` file | vs `main:lib/` |
+**What was done:** `mobile-app` was merged with `origin/production`, then `origin/main` (which by then had an identical tree to production). Every path under `mobile/` came back as a "modify/delete" conflict (production/main's history still contains the `950748f` revert that removed `mobile/`) and was resolved by keeping 100% of `mobile-app`'s side — verified with `git diff <pre-merge-HEAD> HEAD -- mobile` returning 0 lines both times. The result: `app/`, `components/`, `lib/`, `store/`, `supabase/` etc. on `mobile-app` now exactly match `main`/`production` (66 files, +6,992/−3,417 vs the old `e5d3f3b`-era snapshot), while `mobile/` is unchanged.
+
+**What actually changed in the PWA** (now on `mobile-app` too) — see `docs/PWA_COMPLETE_AUDIT.md`'s 2026-09-26 refresh note and findings F10–F13 for the verified detail:
+- Health-check form: `analyse-onboarding-form.tsx` (large reformat + real additions) and `lib/analyse-form-schema.ts` gained `emiMonth`/`homeLoanEMIMonth` (month picker for loan EMI dates) and `clearLegacyLoanScalars()` (fixes a stale-EMI-after-reset bug). The 7 steps and field set are otherwise unchanged (verified).
+- Engine changes: `lib/financialEngine.ts` gained exported `totalLoanLiabilities`, `medicalEmergencyTarget` (was internal `medicalEmergencyTargetLiquid`), `assessTermCover`. `lib/priorityEngine.ts`'s medical-fund target changed from a flat ₹2,00,000 to `medicalEmergencyTarget(profile)` (city/age/kids-adjusted) and now prefers the user's own `medicalEmergencyFund` entry over the old liquid-MF estimate — this is the "medical fund gap" fix. `lib/universal-buckets.ts` gained `getEpfContributionMonthly`, `getInHandOutflow`.
+- Fix-plan cache rewrite: `lib/cache.ts` gained `enginePlanFingerprint`/`isCachedAiStale` so a stale AI-text cache is detected even when the profile hash still matches but the engine's output changed.
+- Password-recovery rewrite: new `lib/authRecovery.ts` (`isRecoveryAuthUrl`, `completeAuthSessionFromUrl` — handles PKCE `code` and OTP `token_hash`, retries for hash-based sessions), `components/AuthRecoveryRedirect.tsx` (global `PASSWORD_RECOVERY` listener), `/auth/callback` and `/auth/update-password` both rewritten onto it.
+- New `/notifications` full-page inbox (`app/notifications/page.tsx` → `components/notifications/NotificationsClient.tsx`), the destination for OS push taps (`?id=<notif_id>`).
+- Obligations: `store/obligationStore.ts` gained `closeObligation(id, month)` — a third state distinct from `deleteObligation`: the checklist row stays visible struck-through for the current month, only future months stop generating it.
+- AI route: Groq model is now `process.env.GROQ_MODEL || "openai/gpt-oss-20b"` (was hardcoded `llama-3.1-70b-versatile`); prompt hardened against inventing gaps for complete priorities and against ignoring `primaryGoal`. `/api/financial-data` now no-ops gracefully when `ENCRYPTION_KEY` is unset.
+- Minor: tax (80D)/SIP/SWP/EMI calculator fixes, `ProtectedGate` now preserves the query string through a forced login redirect, calculators tab always returns to the hub (never a deep-linked sheet), `FieldTooltip` is now a positioned portal.
+- `lib/apiGuard.ts` is **still unchanged** — the API remains cookie-only (see Question 5 / B2, both still accurate).
+
+**Shared-lib drift — unchanged by this sync, still real.** The mobile copies below were already being compared against the *current* `main` in the original report (main hadn't moved between the two checks), so the numbers are identical:
+
+| `mobile/lib/` file | vs current `main`/`production`:lib/ |
 |---|---|
 | `analyse-form-schema.ts` | **Stale** (277 diff lines) |
 | `financialEngine.ts` | **Stale** (176) |
-| `priorityEngine.ts` | **Stale** (logic differs, not just formatting) |
+| `priorityEngine.ts` | **Stale** (logic differs, not just formatting — includes the medical-fund-target change above) |
 | `universal-buckets.ts` | **Stale** (29) |
 | `formatters.ts` | **Stale** (9) |
 | `trackerCreditCards.ts` | Intentional RN patch (27) |
 | `amortisation.ts`, `splitBalances.ts`, `splitInvite.ts`, `splitShares.ts`, `tracker-categories.ts`, `trackerSafetyPulse.ts` | Identical |
 
-So scores computed on mobile today can differ from the live PWA for the same inputs.
+So scores computed on mobile today can still differ from the live PWA for the same inputs — that gap was never about the branch (mobile-app vs main), it's specifically these 5 RN-side copies under `mobile/lib/` needing a re-copy from the now-synced `lib/`.
 
 ---
 
@@ -348,6 +354,8 @@ Built but not wired (12): AddExpenseSheet, MonthSafetyPulse, TrackerConsent, Buc
 
 ---
 
-## Suggested first step (for the next task, not done here)
+## Suggested first step — DONE 2026-09-26
 
-Decide the branch strategy before writing mobile code. Options: (a) merge `main` into `mobile-app`, keeping `mobile/` against the `950748f` revert, then re-copy the 5 stale libs; or (b) re-apply `mobile/` onto a fresh branch from `main`. Either way, new mobile work then builds against the current PWA behaviour.
+~~Decide the branch strategy before writing mobile code. Options: (a) merge `main` into `mobile-app`, keeping `mobile/` against the `950748f` revert, then re-copy the 5 stale libs; or (b) re-apply `mobile/` onto a fresh branch from `main`. Either way, new mobile work then builds against the current PWA behaviour.~~
+
+Option (a) was done: `mobile-app` merged `production` then `main` (identical trees), keeping 100% of `mobile/` through the `950748f` modify/delete conflicts. **Still outstanding, and now the actual first step for mobile code:** re-copy the 5 stale libs (`analyse-form-schema.ts`, `financialEngine.ts`, `priorityEngine.ts`, `universal-buckets.ts`, `formatters.ts`) from `lib/` to `mobile/lib/`, then re-apply `trackerCreditCards.ts`'s RN `localStorage`→`appStorage` patch and any other RN-specific adaptations those files need (see `docs/MOBILE_BUILD_PLAN.md` §2.1/§2.3) before building against them.

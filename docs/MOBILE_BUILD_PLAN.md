@@ -3,6 +3,8 @@
 > Source of truth: `docs/PWA_COMPLETE_AUDIT.md` (PWA behaviour) + a read of every file in `mobile/` as of `e5d3f3b` (2026-08-07).
 > Stack in `mobile/`: Expo SDK 54, expo-router 6 (typed routes), React Native 0.81.5 (New Architecture), React 19.1, zustand 5, zod 3, @supabase/supabase-js 2.112, react-native-svg, reanimated 4, gesture-handler, safe-area-context, expo-secure-store / AsyncStorage, expo-auth-session / expo-web-browser, @react-native-community/slider.
 > Per `mobile/AGENTS.md`: read the Expo v54 docs (https://docs.expo.dev/versions/v54.0.0/) before writing code.
+>
+> **Refreshed 2026-09-26** after `mobile-app` merged `main`/`production` (they're now identical trees). The PWA side of `mobile-app` (`app/`, `components/`, `lib/`, `store/`) went from the `e5d3f3b`-era snapshot to the current PWA — but `mobile/` itself was untouched by that merge (production never had it), so every fact below about what's built in `mobile/` still holds exactly as written. B1–B8 were re-checked against the new PWA code and are all still accurate as stated. What changed: a new B9 below, the "Notifications inbox" screen plan (now covers a full page, not just the bell), and the "stale libs" list in `docs/MOBILE_CURRENT_STATE.md` (same 5 files, diff sizes unchanged since `main` hadn't moved between the two checks).
 
 ---
 
@@ -18,6 +20,7 @@
 | **B6** | Navigation bugs: `components/landing/QuickTools.tsx` "Split" routes to `/(tabs)` (Home) instead of `/(tabs)/split`; SIP/SWP/Tax/EMI/Portfolio tiles all open `/(tabs)/calculators` without selecting the tool; `ProfileMenu` opens **web** `/split` though native Split exists; menu items for Policies/Goals/Investments/Leaderboard/Rewards/Refer/Settings are external web links. | Wrong destination / leaves the app. | Add `calculators/[id]` routes and deep-link each tile; point Split to the tab; replace external links as native screens land (P1/P2). |
 | **B7** | Payments & push need native modules not in Expo Go: Razorpay (`react-native-razorpay`) and push (`expo-notifications` + FCM). `notification_preferences.push_token` already exists in the DB. | Can't test in Expo Go. | Move to an **EAS development build** in Sprint 3. Push delivery needs a server sender for Expo tokens (backend change to `deliver-tip` / `obligations/reminders`). |
 | **B8** | Env gaps: `mobile/.env.example` has only the Supabase URL/key. Code also reads `EXPO_PUBLIC_SITE_URL` (split invites) and the Google client id (`lib/googleAuth.ts#getGoogleWebClientId`). | Wrong invite host; OAuth config unclear. | Add `EXPO_PUBLIC_SITE_URL=https://www.finkoin.com` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=` to `.env.example`. |
+| **B9** | New PWA surface since the last plan (2026-09-26 sync): `/notifications` full-page inbox (docs/PWA_COMPLETE_AUDIT.md §1.4a) and a password-recovery rewrite (`lib/authRecovery.ts` + `AuthRecoveryRedirect`, a global `PASSWORD_RECOVERY` listener). `obligationStore` also gained `closeObligation` (struck-through, stays visible this month, stops next month) alongside the existing `deleteObligation` (hard remove) — mobile has neither store yet (see §1.4 — obligationStore, gamificationStore, portfolioStore are all "MISSING"). | Mobile plan under-scopes notifications and the obligations UI needs a third action, not just delete. | Build the full-page notifications screen (not just the bell dropdown), reuse `lib/authRecovery.ts`'s logic when porting the forgot-password/update-password screens, and give the ported `obligationStore`/`ObligationsChecklist` a Close action distinct from Delete. |
 | **D1** | Tab bar decision: the PWA bottom nav is **Home · Report · [Track] · Calculators · Profile**; the mobile tab bar (already built) is **Home · Report · [Track] · Split · Profile**, with Calculators as a hidden tab. | Parity question. | **Recommendation:** keep the mobile layout (Split is a high-frequency native use case). Expose Calculators from the Home quick tools, the Home header, and Profile menu. Revisit after analytics. |
 
 ---
@@ -472,9 +475,9 @@ Push toggle: `expo-notifications` permission → store the Expo push token in `n
 ---
 
 ### Screen: Notifications inbox
-PWA route: bell dropdown (no route)
-RN file: `mobile/components/NotificationBell.tsx` (exists) — optional full screen `mobile/app/notifications.tsx` (P2)
-Priority: P1 · Store: `notificationStore` (add `markPopupShown`, `getTodayUnshownPopup`, realtime `notifications:<uid>`)
+PWA route: bell dropdown **and**, since the 2026-09-26 main/production sync, a full page `/notifications?id=<notif_id>` (`app/notifications/page.tsx` → `components/notifications/NotificationsClient.tsx`) that OS push taps deep-link into (`worker/index.js` / `lib/webPush.ts` default the click URL to `/notifications`) — see `docs/PWA_COMPLETE_AUDIT.md` §1.4a.
+RN file: `mobile/components/NotificationBell.tsx` (exists) — build the full-screen equivalent `mobile/app/notifications.tsx` (no longer just "optional": `expo-notifications`' response listener needs somewhere to deep-link to, matching the web fix)
+Priority: P1 · Store: `notificationStore` (add `markPopupShown`, `getTodayUnshownPopup`, `getById`, realtime `notifications:<uid>`)
 Plus: **MorningTipSheet** (`mobile/components/MorningTipSheet.tsx`, P1): 06:00–22:59 IST, once per IST day (`appStorage['finkoin_tip_popup_<date>']`), 3 s delay, "Learn more" → `/learn`.
 
 ---

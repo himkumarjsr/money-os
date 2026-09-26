@@ -28,7 +28,7 @@ API integration: 5/25 complete
 | Login | `app/(auth)/login.tsx` | ⚠️ Partial | Email + Google work; missing Forgot password, ≥ 6-char rule, `next` redirect |
 | Sign up | `app/(auth)/signup.tsx` | ✅ Complete | Add Terms/Privacy links + referral apply (polish) |
 | Forgot password | `app/(auth)/forgot-password.tsx` | ❌ Not built | P0 |
-| Auth callback | `app/auth/callback.tsx` | ✅ Complete | Needs `type=recovery` branch later |
+| Auth callback | `app/auth/callback.tsx` | ✅ Complete | Needs `type=recovery` branch later — port `lib/authRecovery.ts`'s `isRecoveryAuthUrl`/`completeAuthSessionFromUrl` (now on the synced web `lib/`) rather than reinventing it |
 | Update password | `app/auth/update-password.tsx` | ❌ Not built | P1 |
 | Home | `app/(tabs)/index.tsx` | ✅ Complete | QuickTools routing bugs (B6) are in the component |
 | Report (Analyse tab) | `app/(tabs)/analyse.tsx` | ⚠️ Partial | Reads `user_analysis` only (B1); score + issues only |
