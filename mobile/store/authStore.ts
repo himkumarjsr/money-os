@@ -319,7 +319,10 @@ export const useAuthStore = create<AuthState>()(
 
       signIn: async (email, password) => {
         if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
         }
         try {
           const cleaned = email.trim().toLowerCase();
@@ -359,7 +362,10 @@ export const useAuthStore = create<AuthState>()(
 
       signUp: async (name, email, password) => {
         if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
         }
         try {
           const cleaned = email.trim().toLowerCase();
@@ -395,7 +401,10 @@ export const useAuthStore = create<AuthState>()(
 
       signInWithGoogle: async () => {
         if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
         }
         try {
           const nativeCallback = getNativeAppCallbackUri();
@@ -495,7 +504,10 @@ export const useAuthStore = create<AuthState>()(
 
       resetPassword: async (email) => {
         if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
         }
         try {
           // Callback screen sees type=recovery and routes to update-password.

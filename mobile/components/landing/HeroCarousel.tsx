@@ -122,10 +122,7 @@ export function HeroCarousel() {
             </View>
           ) : null}
           <Text style={styles.title}>{slide.title}</Text>
-          {/* Web hides subtitle on xs; keep one short line for RN density */}
-          <Text style={styles.subtitle} numberOfLines={2}>
-            {slide.subtitle}
-          </Text>
+          {/* PWA hides subtitle on xs (hidden sm:block) — keep carousel compact */}
           {"comingSoon" in slide && slide.comingSoon ? (
             <View style={styles.ctaDisabled}>
               <Text style={styles.ctaDisabledText}>Coming soon</Text>

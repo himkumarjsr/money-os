@@ -27,7 +27,7 @@ const TOOLS: Array<{
     icon: "wallet",
     calcTool: "swp",
   },
-  { id: "split", label: "Split", route: "/(tabs)", icon: "users" },
+  { id: "split", label: "Split", route: "/(tabs)/split", icon: "users" },
   {
     id: "tax",
     label: "Tax",
