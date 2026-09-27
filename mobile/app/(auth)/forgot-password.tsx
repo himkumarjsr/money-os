@@ -9,123 +9,126 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { Colors, Spacing, FontSize } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { BrandLogo } from "@/components/ui/BrandLogo";
+import { FormError } from "@/components/ui/FormError";
 import { AppIcon } from "@/components/ui/AppIcon";
 
-/** Mirrors the web /login?mode=reset flow: send a Supabase recovery email. */
 export default function ForgotPasswordScreen() {
-  const resetPassword = useAuthStore((s) => s.resetPassword);
-  const [email, setEmail] = useState("");
+  const params = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(params.email ?? "");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const resetPassword = useAuthStore((s) => s.resetPassword);
 
-  const handleSend = async () => {
-    setError("");
+  const backToLogin = () =>
+    router.canGoBack() ? router.back() : router.replace("/(auth)/login");
+
+  const handleSubmit = async () => {
+    setFormError(null);
     if (!email.trim()) {
-      setError("Enter your email");
+      setFormError("Enter your email");
       return;
     }
     setLoading(true);
-    const result = await resetPassword(email.trim());
-    setLoading(false);
-    if (result.error) {
-      setError(result.error);
-      return;
+    try {
+      const result = await resetPassword(email);
+      if (result.error) {
+        setFormError(result.error);
+        return;
+      }
+      setSent(true);
+    } finally {
+      setLoading(false);
     }
-    setSent(true);
   };
 
-  if (sent) {
-    return (
-      <SafeAreaView style={styles.center} edges={["top"]}>
-        <AppIcon name="bell" size={44} color={Colors.primary} />
-        <Text style={styles.title}>Check your email</Text>
-        <Text style={styles.sub}>
-          We sent a password reset link to {email}. Open it on this device to
-          choose a new password.
-        </Text>
-        <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
-          <Text style={styles.link}>Back to login</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.link}>← Back</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>Reset password</Text>
-          <Text style={styles.sub}>
-            Enter your email and we will send a secure reset link.
-          </Text>
-
-          <View style={styles.form}>
-            <Input
-              label="Email"
-              placeholder="you@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="emailAddress"
-              autoComplete="email"
-            />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            <Button
-              label={loading ? "Sending…" : "Send reset link →"}
-              onPress={() => void handleSend()}
-              loading={loading}
-              disabled={loading}
-            />
+          <View style={styles.logoContainer}>
+            <BrandLogo size={64} />
           </View>
+
+          {sent ? (
+            <View style={styles.success}>
+              <AppIcon name="mail" size={44} color={Colors.primary} />
+              <Text style={styles.title}>Check your email</Text>
+              <Text style={styles.subtitle}>
+                We sent a password reset link to {email.trim()}. Open it on this
+                phone to set a new password.
+              </Text>
+              <Button label="Back to login" onPress={backToLogin} />
+            </View>
+          ) : (
+            <View style={styles.form}>
+              <Text style={styles.title}>Reset your password</Text>
+              <Text style={styles.subtitle}>
+                Enter the email you signed up with and we'll send you a reset
+                link.
+              </Text>
+              <Input
+                label="Email"
+                placeholder="you@email.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="emailAddress"
+                autoComplete="email"
+              />
+              <FormError message={formError} />
+              <Button
+                label={loading ? "Sending…" : "Send reset link"}
+                onPress={() => void handleSubmit()}
+                loading={loading}
+                disabled={loading}
+              />
+              <TouchableOpacity onPress={backToLogin} style={styles.linkWrap}>
+                <Text style={styles.link}>
+                  ← Back to <Text style={styles.linkStrong}>login</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.xl, paddingTop: 24, gap: Spacing.md },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.md,
-    padding: Spacing.xl,
-    backgroundColor: Colors.background,
-  },
+  safe: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: Spacing.xl, paddingTop: 56, flexGrow: 1 },
+  logoContainer: { alignItems: "center", marginBottom: Spacing.xxl },
+  form: { gap: Spacing.lg },
+  success: { gap: Spacing.lg, alignItems: "center" },
   title: {
-    fontSize: FontSize.xl,
+    fontSize: 22,
     fontWeight: "800",
     color: Colors.textPrimary,
-    marginTop: Spacing.md,
+    textAlign: "center",
   },
-  sub: {
-    fontSize: FontSize.base,
+  subtitle: {
+    fontSize: FontSize.md,
     color: Colors.textMuted,
     textAlign: "center",
-    lineHeight: 22,
-    maxWidth: 320,
+    lineHeight: 19,
   },
-  form: { gap: Spacing.lg, marginTop: Spacing.lg },
-  error: { color: Colors.error, fontSize: FontSize.md, fontWeight: "600" },
-  link: { fontSize: FontSize.md, color: Colors.primary, fontWeight: "700" },
+  linkWrap: { marginTop: Spacing.md, alignItems: "center" },
+  link: { fontSize: FontSize.md, color: Colors.textMuted },
+  linkStrong: { color: Colors.primary, fontWeight: "700" },
 });

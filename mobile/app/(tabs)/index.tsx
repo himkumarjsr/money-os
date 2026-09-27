@@ -12,7 +12,8 @@ import { TopPicks } from "@/components/landing/TopPicks";
 import { useAuthStore } from "@/store/authStore";
 
 /**
- * Public home = PWA landing, inside tabs so bottom nav is always visible.
+ * Public home = PWA landing (`app/page.tsx` + HomePageClient mobile).
+ * Centered hero, indigo/violet wash, carousel, quick tools, top picks.
  */
 export default function HomeScreen() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
@@ -25,6 +26,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scroll}
       >
         <View style={styles.heroSection}>
+          <View style={styles.heroWash} pointerEvents="none" />
           <View style={styles.orbA} pointerEvents="none" />
           <View style={styles.orbB} pointerEvents="none" />
           <View style={styles.orbC} pointerEvents="none" />
@@ -60,10 +62,15 @@ export default function HomeScreen() {
                 styles.footerCta,
                 pressed && { opacity: 0.9 },
               ]}
+              accessibilityRole="button"
             >
               <Text style={styles.footerCtaText}>Create free account</Text>
             </Pressable>
-            <Pressable onPress={() => router.push("/(auth)/login")}>
+            <Pressable
+              onPress={() => router.push("/(auth)/login")}
+              hitSlop={8}
+              style={{ minHeight: 44, justifyContent: "center" }}
+            >
               <Text style={styles.footerLogin}>
                 Already have an account?{" "}
                 <Text style={styles.footerLoginStrong}>Log in</Text>
@@ -81,79 +88,94 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#EEF2FF",
+    // PWA: from-indigo-50 via-[#F4F2FC] to-violet-50
+    backgroundColor: "#F4F2FC",
   },
   scroll: {
-    // clear floating glass bottom nav
     paddingBottom: 120,
   },
   heroSection: {
     paddingHorizontal: 16,
-    paddingTop: 28,
-    paddingBottom: 36,
+    paddingTop: 32,
+    paddingBottom: 40,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(199,210,254,0.8)",
     overflow: "hidden",
-    backgroundColor: "rgba(224,231,255,0.65)",
+    alignItems: "center",
+  },
+  heroWash: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(224,231,255,0.72)",
   },
   orbA: {
     position: "absolute",
     left: "7%",
     top: 40,
-    height: 120,
-    width: 120,
+    height: 160,
+    width: 160,
     borderRadius: 999,
-    backgroundColor: "rgba(196,181,253,0.45)",
+    backgroundColor: "rgba(167,139,250,0.28)",
   },
   orbB: {
     position: "absolute",
     right: "4%",
-    top: 80,
-    height: 140,
-    width: 140,
+    top: 56,
+    height: 192,
+    width: 192,
     borderRadius: 999,
-    backgroundColor: "rgba(165,180,252,0.4)",
+    backgroundColor: "rgba(129,140,248,0.22)",
   },
   orbC: {
     position: "absolute",
-    left: "35%",
-    bottom: 40,
-    height: 90,
-    width: 90,
+    left: "32%",
+    bottom: 48,
+    height: 100,
+    width: 100,
     borderRadius: 999,
     backgroundColor: "rgba(191,219,254,0.35)",
   },
+  // PWA mobile: text-3xl / text-center / #534AB7 then slate-900
   h1Sub: {
+    textAlign: "center",
     fontSize: 28,
-    fontWeight: "800",
+    fontWeight: "600",
     color: Colors.primary,
     letterSpacing: -0.5,
-    lineHeight: 34,
+    lineHeight: 32,
+    paddingHorizontal: 8,
   },
   h1Main: {
     marginTop: 4,
+    textAlign: "center",
     fontSize: 28,
     fontWeight: "800",
-    color: Colors.textPrimary,
+    color: "#0F172A",
     letterSpacing: -0.5,
     lineHeight: 34,
+    paddingHorizontal: 8,
   },
   h2: {
     marginTop: 12,
-    fontSize: 15,
-    lineHeight: 22,
-    color: Colors.textSecondary,
-    maxWidth: 360,
+    textAlign: "center",
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "400",
+    color: "#475569",
+    maxWidth: 340,
+    paddingHorizontal: 8,
   },
   carouselWrap: {
-    marginTop: 20,
+    marginTop: 12,
+    width: "100%",
   },
   toolsWrap: {
-    marginTop: 16,
+    marginTop: 12,
+    width: "100%",
   },
   belowFold: {
     backgroundColor: "#FFFFFF",
     paddingTop: 8,
+    paddingHorizontal: 16,
   },
   footer: {
     backgroundColor: "#FFFFFF",
@@ -177,7 +199,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 14,
     minWidth: 220,
+    minHeight: 48,
     alignItems: "center",
+    justifyContent: "center",
   },
   footerCtaText: {
     color: "#FFFFFF",
@@ -188,6 +212,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
     color: Colors.textSecondary,
+    textAlign: "center",
   },
   footerLoginStrong: {
     color: Colors.primary,

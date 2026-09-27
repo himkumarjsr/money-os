@@ -46,6 +46,8 @@ interface AuthState {
   signInWithGoogle: () => Promise<{ error?: string }>;
   handleIncomingAuthUrl: (url: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (password: string) => Promise<{ error?: string }>;
   refreshUser: () => Promise<void>;
 }
 
@@ -318,7 +320,10 @@ export const useAuthStore = create<AuthState>()(
 
       signIn: async (email, password) => {
         if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
         }
         try {
           const cleaned = email.trim().toLowerCase();
@@ -382,7 +387,10 @@ export const useAuthStore = create<AuthState>()(
 
       signUp: async (name, email, password) => {
         if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
         }
         try {
           const cleaned = email.trim().toLowerCase();
@@ -418,7 +426,10 @@ export const useAuthStore = create<AuthState>()(
 
       signInWithGoogle: async () => {
         if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
         }
         try {
           const nativeCallback = getNativeAppCallbackUri();
@@ -514,6 +525,43 @@ export const useAuthStore = create<AuthState>()(
           /* ignore */
         }
         set({ user: null, isLoggedIn: false });
+      },
+
+      resetPassword: async (email) => {
+        if (!isSupabaseConfigured()) {
+          return {
+            error:
+              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+          };
+        }
+        try {
+          // Callback screen sees type=recovery and routes to update-password.
+          const redirectTo = Linking.createURL("auth/callback", {
+            queryParams: { type: "recovery" },
+          });
+          const { error } = await supabase.auth.resetPasswordForEmail(
+            email.trim().toLowerCase(),
+            { redirectTo },
+          );
+          if (error) return { error: error.message };
+          return {};
+        } catch (e) {
+          return {
+            error: e instanceof Error ? e.message : "Could not send reset link",
+          };
+        }
+      },
+
+      updatePassword: async (password) => {
+        try {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) return { error: error.message };
+          return {};
+        } catch (e) {
+          return {
+            error: e instanceof Error ? e.message : "Could not update password",
+          };
+        }
       },
     }),
     {

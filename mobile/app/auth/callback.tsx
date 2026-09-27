@@ -11,7 +11,8 @@ import { useAuthStore, createSessionFromUrl } from "@/store/authStore";
 import { Colors, FontSize } from "@/constants/theme";
 
 /**
- * Deep-link landing after Google OAuth.
+ * Deep-link landing after Google OAuth and password-recovery emails
+ * (`type=recovery` → update-password).
  * Expo Go: exp://…/--/auth/callback?code=…
  * Standalone: finkoin://auth/callback?code=…
  */
@@ -26,6 +27,7 @@ export default function AuthCallbackScreen() {
     ran.current = true;
 
     let cancelled = false;
+    let isRecovery = false;
 
     (async () => {
       try {
@@ -42,6 +44,11 @@ export default function AuthCallbackScreen() {
 
         const linkingUrl = await Linking.getInitialURL();
         let handled = false;
+        const typeParam =
+          (params.type as string) || (globalParams.type as string) || "";
+        isRecovery =
+          typeParam === "recovery" ||
+          /[?&#]type=recovery\b/.test(linkingUrl ?? "");
 
         if (
           linkingUrl &&
@@ -86,7 +93,9 @@ export default function AuthCallbackScreen() {
       } finally {
         if (!cancelled) {
           const loggedIn = useAuthStore.getState().isLoggedIn;
-          router.replace(loggedIn ? "/(tabs)" : "/(auth)/login");
+          if (!loggedIn) router.replace("/(auth)/login");
+          else if (isRecovery) router.replace("/auth/update-password");
+          else router.replace("/(tabs)");
         }
       }
     })();

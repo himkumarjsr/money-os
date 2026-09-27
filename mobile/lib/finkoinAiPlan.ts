@@ -88,7 +88,11 @@ export interface FinkoinMonthlyAllocationRow {
 
 export interface FinkoinSpecialSituations {
   educationLoan?: { applicable?: boolean; advice?: string };
-  planningBaby?: { applicable?: boolean; maternityFund?: number; advice?: string };
+  planningBaby?: {
+    applicable?: boolean;
+    maternityFund?: number;
+    advice?: string;
+  };
   ssyUrgent?: { applicable?: boolean; monthsLeft?: number; advice?: string };
   homePurchasePlan?: {
     applicable?: boolean;
@@ -133,7 +137,9 @@ export interface FinkoinAIPlan {
 export function isValidFinkoinAIPlan(x: unknown): x is FinkoinAIPlan {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
-  return typeof o.oneLiner === "string" && typeof o.topPriorityAction === "string";
+  return (
+    typeof o.oneLiner === "string" && typeof o.topPriorityAction === "string"
+  );
 }
 
 function n(v: unknown): number {
@@ -157,7 +163,9 @@ type ExtProfile = FinancialProfile & {
 function educationLoanEmiFromProfile(profile: FinancialProfile): number {
   const ext = profile as ExtProfile;
   if (n(ext.educationLoanEMI) > 0) return n(ext.educationLoanEMI);
-  const row = profile.additionalObligations?.find((o) => /education|student/i.test(o.type));
+  const row = profile.additionalObligations?.find((o) =>
+    /education|student/i.test(o.type),
+  );
   return n(row?.monthlyAmount);
 }
 
@@ -170,48 +178,67 @@ function overallScoreFromAnalysis(analysis: AnalysisResult): number {
   );
 }
 
-function girlUnder10(profile: FinancialProfile): { has: boolean; age?: number } {
+function girlUnder10(profile: FinancialProfile): {
+  has: boolean;
+  age?: number;
+} {
   const nk = profile.numberOfKids ?? 0;
   const ages = profile.kidsAges ?? [];
   const g = profile.kidsGenders ?? [];
   for (let i = 0; i < nk; i++) {
-    if (g[i] === "girl" && n(ages[i]) < 10) return { has: true, age: n(ages[i]) };
+    if (g[i] === "girl" && n(ages[i]) < 10)
+      return { has: true, age: n(ages[i]) };
   }
   return { has: false };
 }
 
 /** Rule-based plan when Groq is unavailable or returns invalid JSON. */
-export function buildFallbackFinkoinPlan(profile: FinancialProfile, analysis: AnalysisResult): FinkoinAIPlan {
+export function buildFallbackFinkoinPlan(
+  profile: FinancialProfile,
+  analysis: AnalysisResult,
+): FinkoinAIPlan {
   const ext = profile as ExtProfile;
   const buckets = getUniversalBucketActuals(profile);
   const income = monthlyTotalIncome(profile);
   const out =
-    buckets.needs + buckets.wants + buckets.security + buckets.loans + buckets.investment;
+    buckets.needs +
+    buckets.wants +
+    buckets.security +
+    buckets.loans +
+    buckets.investment;
   const surplus = Math.max(0, income - out);
   const er = computeRealEmergencyFund(profile);
   const emergencyTarget = buckets.needs * 6;
   const emergencyGap = Math.max(0, emergencyTarget - er.realTotal);
   const termNeed = calculateTermNeeded(profile);
-  const termHave = profile.hasTermInsurance ? n(profile.termInsuranceSumAssured) : 0;
+  const termHave = profile.hasTermInsurance
+    ? n(profile.termInsuranceSumAssured)
+    : 0;
   const healthNeed = profile.cityTier === "metro" ? 10_00_000 : 7_00_000;
-  const healthHave = profile.hasHealthInsurance ? n(profile.healthInsuranceSumInsured) : 0;
+  const healthHave = profile.hasHealthInsurance
+    ? n(profile.healthInsuranceSumInsured)
+    : 0;
   const yearlyPrem = monthlyInsuranceTotal(profile) * 12;
   const { has: hasGirlU10, age: girlAge } = girlUnder10(profile);
   const monthsToSsyClose =
-    girlAge !== undefined && girlAge < 10 ? Math.max(0, (10 - girlAge) * 12) : 0;
+    girlAge !== undefined && girlAge < 10
+      ? Math.max(0, (10 - girlAge) * 12)
+      : 0;
 
   const mandatory: FinkoinMandatoryFund[] = [];
   if (emergencyGap > 0) {
     mandatory.push({
       fundName: "Emergency fund",
-      purpose: "Six months of needs, weighted for accessible cash (savings + liquid MF; FD only 70%).",
+      purpose:
+        "Six months of needs, weighted for accessible cash (savings + liquid MF; FD only 70%).",
       targetAmount: emergencyTarget,
       currentAmount: Math.round(er.realTotal),
       gap: emergencyGap,
       monthlyContribution: Math.min(surplus * 0.35, emergencyGap / 12),
       monthsToComplete: Math.ceil(emergencyGap / Math.max(1, surplus * 0.35)),
       whereToKeep: "Savings ₹50k + rest liquid MF",
-      whyThisInstrument: "Instant access without FD break penalty on the liquid slice.",
+      whyThisInstrument:
+        "Instant access without FD break penalty on the liquid slice.",
       urgency: er.monthsCovered < 3 ? "critical" : "high",
       actionThisWeek: `Set up liquid MF SIP of ₹${Math.max(500, Math.round(emergencyGap / 12)).toLocaleString("en-IN")} or move one FD tranche after checking penalty.`,
     });
@@ -228,7 +255,8 @@ export function buildFallbackFinkoinPlan(profile: FinancialProfile, analysis: An
       whereToKeep: "Pure term from a reputable insurer",
       whyThisInstrument: "Cheapest cost per lakh; avoid ULIPs.",
       urgency: termHave === 0 ? "critical" : "high",
-      actionThisWeek: "Compare 3 pure-term quotes on cover, premium waiver, and claim settlement.",
+      actionThisWeek:
+        "Compare 3 pure-term quotes on cover, premium waiver, and claim settlement.",
     });
   }
 
@@ -241,8 +269,10 @@ export function buildFallbackFinkoinPlan(profile: FinancialProfile, analysis: An
       gap: termNeed - termHave,
       urgency: "this-week",
       monthlyPremiumEstimate: profile.selfAge < 35 ? 900 : 1500,
-      whyThisAmount: "Roughly 10–15× annual income adjusted for loans and dependants.",
-      consequence: "Family bears EMIs and living costs with no income replacement.",
+      whyThisAmount:
+        "Roughly 10–15× annual income adjusted for loans and dependants.",
+      consequence:
+        "Family bears EMIs and living costs with no income replacement.",
       buyFromFinkoin: true,
     });
   }
@@ -277,9 +307,13 @@ export function buildFallbackFinkoinPlan(profile: FinancialProfile, analysis: An
         emergencyGap > termNeed - termHave
           ? "Building accessible emergency money without relying on FD breaks."
           : "Closing protection gaps before scaling investments.",
-      biggestMistake: "Starting aggressive SIPs while high-interest or protection gaps remain.",
+      biggestMistake:
+        "Starting aggressive SIPs while high-interest or protection gaps remain.",
       smartMove: top,
-      nextMilestone: emergencyGap <= 0 ? "Fully fund 6-month weighted emergency layer." : "Reach 3 months accessible cash first.",
+      nextMilestone:
+        emergencyGap <= 0
+          ? "Fully fund 6-month weighted emergency layer."
+          : "Reach 3 months accessible cash first.",
     },
     debtPlan: [],
     mandatoryFunds: mandatory,
@@ -335,7 +369,8 @@ export function buildFallbackFinkoinPlan(profile: FinancialProfile, analysis: An
           : "",
       },
       homePurchasePlan: {
-        applicable: !!ext.planningHomePurchase || n(profile.homePurchaseTarget) > 0,
+        applicable:
+          !!ext.planningHomePurchase || n(profile.homePurchaseTarget) > 0,
         advice:
           n(profile.homePurchaseTarget) > 0
             ? `Target down payment discipline toward ₹${n(profile.homePurchaseTarget).toLocaleString("en-IN")}.`

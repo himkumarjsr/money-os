@@ -1,8 +1,11 @@
-import type { AnalyseFormValues, FinancialProfile } from "@/lib/analyse-form-schema";
+import type {
+  AnalyseFormValues,
+  FinancialProfile,
+} from "@/lib/analyse-form-schema";
 import type { AnalysisResult } from "@/lib/financialEngine";
 import type { FinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { isValidFinkoinAIPlan } from "@/lib/finkoinAiPlan";
-import { supabase } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 /** Stored inside `user_analyse_snapshots.payload` (current shape). */
 export type UserAnalyseSnapshotPayload = {
@@ -33,9 +36,10 @@ export async function upsertUserAnalyseSnapshot(
   userId: string,
   payload: UserAnalyseSnapshotPayload,
 ): Promise<{ error: Error | null }> {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     return { error: new Error("Supabase not configured") };
   }
+  const supabase = getSupabase();
   const { error } = await supabase.from("user_analyse_snapshots").upsert(
     {
       user_id: userId,
@@ -51,7 +55,8 @@ export async function upsertUserAnalyseSnapshot(
 export async function fetchUserAnalyseSnapshot(
   userId: string,
 ): Promise<FetchedUserAnalyseSnapshot | null> {
-  if (!supabase) return null;
+  if (!isSupabaseConfigured()) return null;
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from("user_analyse_snapshots")
     .select("payload")
@@ -60,7 +65,9 @@ export async function fetchUserAnalyseSnapshot(
   if (error || !data?.payload) return null;
 
   const raw = data.payload as Record<string, unknown>;
-  const lastSubmission = (raw.profile ?? raw.lastSubmission) as FinancialProfile | undefined;
+  const lastSubmission = (raw.profile ?? raw.lastSubmission) as
+    | FinancialProfile
+    | undefined;
   if (!lastSubmission) return null;
 
   const result = (raw.result ?? null) as AnalysisResult | null;

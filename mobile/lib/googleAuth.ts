@@ -9,6 +9,13 @@ WebBrowser.maybeCompleteAuthSession();
 
 const isExpoGo = Constants.appOwnership === "expo";
 
+function siteBase(): string {
+  const raw = (process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com")
+    .trim()
+    .replace(/\/$/, "");
+  return raw || "https://www.finkoin.com";
+}
+
 /**
  * Deep link that MUST close the auth browser and hand control back to Expo.
  * Expo Go → exp://HOST:PORT/--/auth/callback
@@ -22,6 +29,17 @@ export function getNativeAppCallbackUri(): string {
     });
   }
   return makeRedirectUri({ path: "auth/callback" });
+}
+
+/**
+ * HTTPS redirect allowlisted in Supabase, then bounces to the native deep link.
+ * Static HTML (no React) so it works as soon as this file is on www.finkoin.com.
+ * Avoids requiring every changing exp://IP:port in the Supabase allow list.
+ */
+export function getOAuthBridgeRedirectUri(nativeCallback: string): string {
+  const u = new URL(`${siteBase()}/oauth-app-return.html`);
+  u.searchParams.set("app", nativeCallback);
+  return u.toString();
 }
 
 /** Prefix for openAuthSessionAsync matching (scheme/host). */
@@ -49,7 +67,7 @@ export function getGoogleWebClientId(): string {
   return (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "").trim();
 }
 
-/** Force Supabase authorize URL → native deep link (never the marketing site). */
+/** Force Supabase authorize URL → our redirect_to (bridge or native). */
 export function forceOAuthRedirectTo(
   authorizeUrl: string,
   redirectTo: string,
@@ -135,7 +153,7 @@ export async function signInWithGoogleIdToken(): Promise<{
 }
 
 /**
- * Fallback: Supabase browser OAuth with forced deep-link redirect_to.
+ * Fallback: Supabase browser OAuth → HTTPS mobile-bridge → native deep link.
  */
 export async function signInWithGoogleSupabaseBrowser(): Promise<{
   ok: boolean;
@@ -143,12 +161,17 @@ export async function signInWithGoogleSupabaseBrowser(): Promise<{
   authUrl?: string;
 }> {
   const nativeCallback = getNativeAppCallbackUri();
-  console.log("[oauth/browser] redirectTo =", nativeCallback);
+  const redirectTo = getOAuthBridgeRedirectUri(nativeCallback);
+  const returnUrl = getAuthSessionReturnUrl(nativeCallback);
+
+  console.log("[oauth/browser] nativeCallback =", nativeCallback);
+  console.log("[oauth/browser] redirectTo (bridge) =", redirectTo);
+  console.log("[oauth/browser] returnUrl matcher =", returnUrl);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: nativeCallback,
+      redirectTo,
       skipBrowserRedirect: true,
       queryParams: {
         prompt: "select_account",
@@ -158,7 +181,7 @@ export async function signInWithGoogleSupabaseBrowser(): Promise<{
   if (error) return { ok: false, error: error.message };
   if (!data?.url) return { ok: false, error: "No OAuth URL returned" };
 
-  const authorizeUrl = forceOAuthRedirectTo(data.url, nativeCallback);
+  const authorizeUrl = forceOAuthRedirectTo(data.url, redirectTo);
   console.log(
     "[oauth/browser] redirect_to param =",
     (() => {
@@ -176,16 +199,22 @@ export async function signInWithGoogleSupabaseBrowser(): Promise<{
     /* optional */
   }
 
-  // Match on the full deep-link so https://finkoin.com does NOT close the session as "success"
+  // Match on the native scheme/host so the session closes when the bridge
+  // bounces to exp://… or finkoin://… (not when landing on finkoin.com).
   const result = await WebBrowser.openAuthSessionAsync(
     authorizeUrl,
-    nativeCallback,
+    returnUrl,
     {
       showInRecents: false,
       preferEphemeralSession: false,
       createTask: Platform.OS === "android" ? false : undefined,
     } as WebBrowser.AuthSessionOpenOptions,
   );
+
+  console.log("[oauth/browser] result.type =", result.type);
+  if (result.type === "success" && "url" in result) {
+    console.log("[oauth/browser] result.url =", result.url?.slice(0, 120));
+  }
 
   try {
     await WebBrowser.coolDownAsync();
@@ -212,12 +241,14 @@ export async function signInWithGoogleSupabaseBrowser(): Promise<{
       error: [
         "Did not return to the Expo app after Google.",
         "",
-        "Add this Redirect URL in Supabase → Auth → URL configuration:",
-        nativeCallback,
+        "In Supabase → Authentication → URL configuration, add:",
+        "https://www.finkoin.com/oauth-app-return.html**",
+        "https://www.finkoin.com/**",
+        "exp://**",
+        "finkoin://**",
         "",
-        "Also add: exp://**  and  finkoin://**",
-        "",
-        "Recommended: set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID so Google stays in-app.",
+        `Bridge redirect in use:`,
+        redirectTo.split("&code=")[0],
       ].join("\n"),
     };
   }
@@ -232,8 +263,9 @@ export async function signInWithGoogleSupabaseBrowser(): Promise<{
       ok: false,
       error: [
         "Google opened the website instead of the app.",
-        "Add this exact Redirect URL in Supabase:",
-        nativeCallback,
+        "Add this Redirect URL in Supabase → Auth → URL configuration:",
+        "https://www.finkoin.com/oauth-app-return.html**",
+        "exp://**",
       ].join("\n"),
     };
   }

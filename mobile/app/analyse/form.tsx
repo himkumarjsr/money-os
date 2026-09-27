@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
+import { useFinancialStore } from "@/store/financialStore";
 import { supabase } from "@/lib/supabase";
 import { analyseFinances } from "@/lib/financialEngine";
 import {
@@ -19,6 +20,8 @@ import {
   normalizeAnalyseFormValues,
 } from "@/lib/analyse-form-schema";
 import { upsertUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
+import { useObligationStore } from "@/store/obligationStore";
 import { Colors, Spacing, Radius, FontSize } from "@/constants/theme";
 import MoneyInput from "@/components/ui/MoneyInput";
 import Input from "@/components/ui/Input";
@@ -208,24 +211,23 @@ export default function AnalyseFormScreen() {
       const normalized = normalizeAnalyseFormValues(payload as never);
       const analysisResult = analyseFinances(normalized);
 
-      // Canonical store the web app reads: one row per user, full profile +
-      // engine result. Without this, a mobile health check never shows up
-      // on the web Report (they only read this table, not user_analysis).
-      const { error: snapshotError } = await upsertUserAnalyseSnapshot(
-        user.id,
-        {
-          profile: normalized,
-          result: analysisResult,
-          submittedAt: new Date().toISOString(),
-          version: "1.0",
-        },
-      );
-      if (snapshotError) {
-        console.warn("Snapshot save failed:", snapshotError.message);
-      }
+      // Canonical store + snapshot (web parity — B1)
+      useFinancialStore
+        .getState()
+        .hydrateFromSnapshot(normalized, analysisResult, {
+          analysisPatch: payload as never,
+        });
 
-      // Kept for backward compatibility with any code still reading
-      // user_analysis directly (e.g. this screen's own pre-fix fallback).
+      const { error: snapErr } = await upsertUserAnalyseSnapshot(user.id, {
+        profile: normalized,
+        result: analysisResult,
+        submittedAt: new Date().toISOString(),
+        version: "1.0",
+        analysis: payload as never,
+      });
+      if (snapErr) throw snapErr;
+
+      // Legacy table kept for older clients / back-compat
       const { error } = await supabase.from("user_analysis").upsert(
         {
           user_id: user.id,
@@ -235,8 +237,13 @@ export default function AnalyseFormScreen() {
         },
         { onConflict: "user_id" },
       );
-
       if (error) throw error;
+
+      await useObligationStore
+        .getState()
+        .syncFromHealthCheck(user.id, normalized);
+
+      await invalidateProfileMonthlySalaryCache(user.id);
 
       router.replace("/(tabs)/analyse");
     } catch (err: unknown) {

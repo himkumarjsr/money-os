@@ -71,7 +71,7 @@ const CARDS: Card[] = [
     title: "FK Split",
     body: "Split bills, track shared expenses, and settle up — ₹ first. No ads.",
     cta: "Open Split →",
-    route: "/(tabs)",
+    route: "/(tabs)/split",
     accent: "#F5F3FF",
     border: "rgba(221,214,254,0.9)",
     ctaColor: "#6D28D9",
