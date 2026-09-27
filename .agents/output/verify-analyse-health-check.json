@@ -1,0 +1,17 @@
+{
+  "feature_id": "analyse-health-check",
+  "verdict": "PARTIAL",
+  "missing": [
+    "Consent gate before the form (web: components/analyse/ConsentModal.tsx + users.data_consent_given)",
+    "Steps 3-7 are still a simplified ~35-field subset, not the full unifiedLoans[] field array, insurance premium frequency/renewal fields, custom investments, post-office schemes, or goal targets from the web's step5Schema-step7Schema",
+    "Per-step Zod validation (web validates each step with stepNSchema.safeParse before Next; mobile has no schema-gated Next)",
+    "syncFromHealthCheck (financial_obligations upsert) is not called on mobile submit",
+    "getAIFixPlan is not called on mobile submit (no cached AI plan set)"
+  ],
+  "wrong": [],
+  "fixes_needed": [
+    "This pass fixed the P0 data bug only: mobile now reads/writes user_analyse_snapshots (canonical store) instead of only user_analysis, so mobile <-> web health-check data is now shared correctly.",
+    "Remaining items above are a larger, separate task (full 7-step parity form) — see docs/MOBILE_BUILD_PLAN.md Sprint 2 'Analyse form' entry for the complete field-by-field plan.",
+    "Not attempted in this pass: no simulator/device is available in this environment to interactively test the form; verification here is npx tsc --noEmit (0 errors) plus manual code review, not an on-device run."
+  ]
+}

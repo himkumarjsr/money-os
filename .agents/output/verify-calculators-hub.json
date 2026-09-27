@@ -1,0 +1,13 @@
+{
+  "feature_id": "calculators-hub",
+  "verdict": "PARTIAL",
+  "missing": [
+    "Per-calculator routes (app/calculators/[id].tsx) - all tools still live inline inside one screen, not deep-linkable by URL/path, only by the in-memory toolId state",
+    "Real engines - SIP/SWP/EMI/tax all use mobile/lib/calcEngines.ts's simplified formulas, not the actual web engines (lib/fireCalculator.ts, lib/taxRegimeComparisonFY2026.ts, lib/amortisation.ts, etc. - none of these are ported yet)",
+    "Share button, amortisation table, slider max cap (CALCULATOR_MONEY_MAX)"
+  ],
+  "wrong": [],
+  "fixes_needed": [
+    "This pass fixed the actual bug: Home quick-tool taps for SIP/SWP/Tax/EMI previously always opened the calculators hub with nothing selected, because the tool id was computed but never passed through router.push. Deep-linking via a `tool` search param now works and the Tax tile's id was corrected (tax -> tax-regime, matching CalcRouter). Porting the real calculation engines is separate, larger work."
+  ]
+}
