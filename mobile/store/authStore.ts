@@ -46,7 +46,6 @@ interface AuthState {
   signInWithGoogle: () => Promise<{ error?: string }>;
   handleIncomingAuthUrl: (url: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error?: string }>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
   refreshUser: () => Promise<void>;
 }
@@ -357,30 +356,6 @@ export const useAuthStore = create<AuthState>()(
           console.warn("[auth] signIn throw", e);
           return {
             error: e instanceof Error ? e.message : "Sign in failed",
-          };
-        }
-      },
-
-      resetPassword: async (email) => {
-        if (!isSupabaseConfigured()) {
-          return { error: "Supabase is not configured. Check mobile/.env" };
-        }
-        try {
-          const cleaned = email.trim().toLowerCase();
-          const redirectTo = `${getNativeAppCallbackUri()}?type=recovery`;
-          const { error } = await supabase.auth.resetPasswordForEmail(
-            cleaned,
-            { redirectTo },
-          );
-          if (error) {
-            console.warn("[auth] resetPassword error", error.message);
-            return { error: error.message };
-          }
-          return {};
-        } catch (e) {
-          console.warn("[auth] resetPassword throw", e);
-          return {
-            error: e instanceof Error ? e.message : "Could not send reset email",
           };
         }
       },
