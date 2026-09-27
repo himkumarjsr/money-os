@@ -17,6 +17,7 @@
         "backgroundColor": "#534AB7"
       },
       "package": "com.finkoin.app",
+      "versionCode": 1,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -32,7 +33,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/splash.png",
           "resizeMode": "contain",
           "backgroundColor": "#534AB7"
         }
@@ -40,6 +41,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
     }
   }
 }
