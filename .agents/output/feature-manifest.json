@@ -1,0 +1,1236 @@
+[
+  {
+    "id": "auth",
+    "name": "Authentication (login/signup/reset/OAuth)",
+    "priority": "P0",
+    "pwa_files": [
+      "app/login/page.tsx",
+      "app/auth/callback/page.tsx",
+      "app/auth/reset-password/page.tsx",
+      "app/auth/update-password/page.tsx",
+      "lib/authRecovery.ts",
+      "components/AuthRecoveryRedirect.tsx",
+      "components/AuthSessionSync.tsx",
+      "lib/auth.ts",
+      "lib/authSession.ts",
+      "lib/supabase.ts",
+      "lib/supabaseServer.ts"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/app/(auth)/login.tsx",
+      "mobile/app/(auth)/signup.tsx",
+      "mobile/app/auth/callback.tsx",
+      "mobile/store/authStore.ts",
+      "mobile/lib/supabase.ts",
+      "mobile/lib/googleAuth.ts",
+      "mobile/lib/cryptoPolyfill.ts"
+    ],
+    "screens": [
+      {
+        "name": "Login",
+        "all_ui_elements": [
+          "logo + tagline",
+          "email input",
+          "password input + show/hide",
+          "log in button",
+          "forgot password link (MISSING on mobile)",
+          "divider or",
+          "continue with google button",
+          "sign up link"
+        ],
+        "all_interactions": [
+          "type email",
+          "type password",
+          "tap show/hide",
+          "tap log in",
+          "tap forgot password",
+          "tap continue with google",
+          "tap sign up"
+        ],
+        "all_states": [
+          "idle",
+          "submitting (button spinner)",
+          "error (inline red box)",
+          "already-logged-in redirect"
+        ],
+        "data_operations": [
+          "supabase.auth.signInWithPassword",
+          "supabase.auth.signInWithOAuth(google)"
+        ],
+        "navigation": [
+          "from: app open / sign out / protected-route redirect",
+          "to: (tabs) home on success, signup, forgot-password"
+        ]
+      },
+      {
+        "name": "Signup",
+        "all_ui_elements": [
+          "name input",
+          "email input",
+          "password input",
+          "create account button",
+          "google button",
+          "login link"
+        ],
+        "all_interactions": [
+          "type fields",
+          "tap create account",
+          "tap google"
+        ],
+        "all_states": [
+          "idle",
+          "submitting",
+          "email-confirm-required alert",
+          "error"
+        ],
+        "data_operations": [
+          "supabase.auth.signUp"
+        ],
+        "navigation": [
+          "from: login screen",
+          "to: (tabs) home or back to login"
+        ]
+      },
+      {
+        "name": "Forgot password (MISSING on mobile)",
+        "all_ui_elements": [
+          "email input",
+          "send reset link button"
+        ],
+        "all_interactions": [
+          "type email",
+          "tap send"
+        ],
+        "all_states": [
+          "idle",
+          "sent (success state)",
+          "error"
+        ],
+        "data_operations": [
+          "supabase.auth.resetPasswordForEmail"
+        ],
+        "navigation": [
+          "from: login",
+          "to: back to login after email sent"
+        ]
+      },
+      {
+        "name": "Auth callback",
+        "all_ui_elements": [
+          "spinner only"
+        ],
+        "all_interactions": [
+          "none (automatic)"
+        ],
+        "all_states": [
+          "completing login",
+          "redirecting"
+        ],
+        "data_operations": [
+          "supabase.auth.exchangeCodeForSession / verifyOtp"
+        ],
+        "navigation": [
+          "from: OAuth/email deep link",
+          "to: tabs home or update-password"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/authRecovery.ts (pure logic, web-safe fns isRecoveryAuthUrl/completeAuthSessionFromUrl need a supabase client passed in)"
+    ],
+    "stores_used": [
+      "authStore"
+    ],
+    "supabase_tables": [
+      "users",
+      "gamification",
+      "user_stats"
+    ],
+    "api_routes": []
+  },
+  {
+    "id": "home-landing",
+    "name": "Home / landing",
+    "priority": "P0",
+    "pwa_files": [
+      "app/page.tsx",
+      "components/landing/HomePageClient.tsx",
+      "components/landing/HomeHeroCarousel.tsx",
+      "components/landing/HomeMobileQuickTools.tsx",
+      "components/landing/HomePageBelowFold.tsx",
+      "components/Testimonials.tsx"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/app/(tabs)/index.tsx",
+      "mobile/components/landing/HeroCarousel.tsx",
+      "mobile/components/landing/QuickTools.tsx",
+      "mobile/components/landing/TopPicks.tsx"
+    ],
+    "screens": [
+      {
+        "name": "Home",
+        "all_ui_elements": [
+          "H1 tagline",
+          "H2 subtitle",
+          "hero carousel (4 slides)",
+          "quick tools grid (7 tiles)",
+          "top picks / below-fold cards",
+          "logged-out signup/login footer"
+        ],
+        "all_interactions": [
+          "swipe carousel",
+          "tap carousel CTA",
+          "tap quick tool tile",
+          "tap create account/login"
+        ],
+        "all_states": [
+          "logged-in vs logged-out variant"
+        ],
+        "data_operations": [
+          "none required (public)"
+        ],
+        "navigation": [
+          "from: app launch / tab bar",
+          "to: analyse, calculators, tracker, split, login, signup"
+        ]
+      }
+    ],
+    "shared_logic": [],
+    "stores_used": [
+      "authStore"
+    ],
+    "supabase_tables": [],
+    "api_routes": []
+  },
+  {
+    "id": "analyse-health-check",
+    "name": "Analyse — 7-step health check form",
+    "priority": "P0",
+    "pwa_files": [
+      "app/analyse/page.tsx",
+      "app/analyse/AnalyseAppClient.tsx",
+      "components/analyse/ConsentModal.tsx",
+      "components/forms/analyse-onboarding-form.tsx",
+      "lib/analyse-form-schema.ts",
+      "lib/financialEngine.ts",
+      "lib/priorityEngine.ts",
+      "lib/userAnalyseSnapshot.ts",
+      "lib/aiService.ts",
+      "store/financialStore.ts",
+      "store/obligationStore.ts",
+      "app/api/financial-data/route.ts"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/app/analyse/form.tsx",
+      "mobile/lib/analyse-form-schema.ts (STALE)",
+      "mobile/lib/financialEngine.ts (STALE)",
+      "mobile/lib/priorityEngine.ts (STALE)",
+      "mobile/store/financialStore.ts (built, unused)"
+    ],
+    "screens": [
+      {
+        "name": "Consent gate (MISSING on mobile)",
+        "all_ui_elements": [
+          "what-we-collect copy",
+          "no PAN/Aadhaar note",
+          "accept button",
+          "decline button"
+        ],
+        "all_interactions": [
+          "tap accept",
+          "tap decline"
+        ],
+        "all_states": [
+          "shown once per user"
+        ],
+        "data_operations": [
+          "users.data_consent_given select/update"
+        ],
+        "navigation": [
+          "from: analyse tab first open",
+          "to: form or back"
+        ]
+      },
+      {
+        "name": "7-step form",
+        "all_ui_elements": [
+          "progress bar",
+          "step title",
+          "back/next buttons",
+          "step-1 life stage/age/city",
+          "step-2 income",
+          "step-3 loans+rent (unified loans field array)",
+          "step-4 expenses",
+          "step-5 insurance toggles",
+          "step-6 assets",
+          "step-7 goals",
+          "start fresh button"
+        ],
+        "all_interactions": [
+          "fill each field",
+          "add/remove loan rows",
+          "toggle insurance sections",
+          "tap back/next",
+          "tap start fresh",
+          "submit final step"
+        ],
+        "all_states": [
+          "draft autosave",
+          "per-step validation error",
+          "submitting (analysing spinner)",
+          "submit error"
+        ],
+        "data_operations": [
+          "normalizeAnalyseFormValues -> analyseFinances (local)",
+          "upsert user_analyse_snapshots",
+          "upsert user_analysis",
+          "syncFromHealthCheck -> financial_obligations upsert + generate_monthly_checklist RPC",
+          "POST /api/financial-data (optional)"
+        ],
+        "navigation": [
+          "from: consent accept / report retake",
+          "to: result screen"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/analyse-form-schema.ts (pure)",
+      "lib/financialEngine.ts (pure)",
+      "lib/priorityEngine.ts (pure)",
+      "lib/universal-buckets.ts (pure)",
+      "lib/userAnalyseSnapshot.ts (needs supabase client swap)"
+    ],
+    "stores_used": [
+      "financialStore",
+      "obligationStore"
+    ],
+    "supabase_tables": [
+      "user_analyse_snapshots",
+      "user_analysis",
+      "users",
+      "financial_obligations",
+      "obligation_checklist",
+      "user_financial_data"
+    ],
+    "api_routes": [
+      "/api/financial-data"
+    ]
+  },
+  {
+    "id": "analyse-result",
+    "name": "Analyse — result screen (score/buckets/safety-net)",
+    "priority": "P0",
+    "pwa_files": [
+      "app/analyse/result/page.tsx",
+      "lib/bucket-breakdown.ts",
+      "lib/speedo-meter-buckets.ts",
+      "lib/netWorth.ts",
+      "components/analyse/paywall-modal.tsx",
+      "components/FeedbackWidget.tsx",
+      "components/ui/SpeedoMeter.tsx"
+    ],
+    "mobile_status": "missing",
+    "mobile_files": [],
+    "screens": [
+      {
+        "name": "Result",
+        "all_ui_elements": [
+          "score hero (0-100, colour by band)",
+          "masked total income + eye",
+          "net worth summary",
+          "5 bucket rows (needs/wants/insurance/loans/investment) expandable",
+          "health gauges",
+          "safety-net checklist",
+          "cash-flow waterfall",
+          "unlock CTA (₹99 or FK)",
+          "feedback widget",
+          "related links"
+        ],
+        "all_interactions": [
+          "tap bucket row to expand",
+          "toggle income eye",
+          "tap unlock",
+          "submit feedback stars"
+        ],
+        "all_states": [
+          "no-analysis empty state",
+          "loaded"
+        ],
+        "data_operations": [
+          "reads financialStore.result/lastSubmission; restores from snapshot if empty"
+        ],
+        "navigation": [
+          "from: form submit / report tab",
+          "to: fixplan (paywall) or back to form"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/bucket-breakdown.ts (pure)",
+      "lib/speedo-meter-buckets.ts (pure)",
+      "lib/netWorth.ts (pure)"
+    ],
+    "stores_used": [
+      "financialStore",
+      "authStore"
+    ],
+    "supabase_tables": [
+      "user_analyse_snapshots"
+    ],
+    "api_routes": []
+  },
+  {
+    "id": "analyse-fixplan",
+    "name": "Analyse — AI fix plan + paywall",
+    "priority": "P1",
+    "pwa_files": [
+      "app/analyse/fixplan/page.tsx",
+      "lib/cache.ts",
+      "lib/payment.ts",
+      "lib/generatePDF.ts",
+      "app/api/ai/analyse/route.ts",
+      "app/api/razorpay/checkout-config/route.ts",
+      "app/api/razorpay/create-order/route.ts",
+      "app/api/razorpay/verify-payment/route.ts"
+    ],
+    "mobile_status": "missing",
+    "mobile_files": [
+      "mobile/app/analyse/fixplan.tsx (placeholder text only)"
+    ],
+    "screens": [
+      {
+        "name": "Fix plan",
+        "all_ui_elements": [
+          "rotating loading messages",
+          "greeting card",
+          "ranked priority cards",
+          "surplus waterfall",
+          "debt strategy table",
+          "goal plan",
+          "this-week action",
+          "download pdf button",
+          "fallback/retry banner"
+        ],
+        "all_interactions": [
+          "tap download pdf",
+          "tap retry on fallback"
+        ],
+        "all_states": [
+          "cache hit (instant)",
+          "loading (AI call)",
+          "fallback (AI failed)"
+        ],
+        "data_operations": [
+          "localStorage cache hashProfile+enginePlanFingerprint",
+          "POST /api/ai/analyse on miss",
+          "update user_analysis.ai_fix_plan"
+        ],
+        "navigation": [
+          "from: result unlock",
+          "to: back to result"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/finkoinAiPlan.ts (pure)"
+    ],
+    "stores_used": [
+      "financialStore"
+    ],
+    "supabase_tables": [
+      "user_analysis"
+    ],
+    "api_routes": [
+      "/api/ai/analyse",
+      "/api/razorpay/checkout-config",
+      "/api/razorpay/create-order",
+      "/api/razorpay/verify-payment"
+    ]
+  },
+  {
+    "id": "tracker",
+    "name": "Expense tracker",
+    "priority": "P0",
+    "pwa_files": [
+      "app/tracker/page.tsx",
+      "app/tracker/[month]/page.tsx",
+      "components/tracker/AddExpenseModal.tsx",
+      "components/tracker/MonthSafetyPulse.tsx",
+      "components/tracker/CreditCardBillReminder.tsx",
+      "components/tracker/TrackerConsent.tsx",
+      "lib/tracker-categories.ts",
+      "lib/trackerSafetyPulse.ts",
+      "lib/trackerMonthIncome.ts",
+      "lib/trackerCreditCards.ts",
+      "lib/trackerObligationSync.ts"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/app/(tabs)/tracker.tsx (BROKEN: bad insert column + invalid date range)",
+      "mobile/lib/tracker-categories.ts",
+      "mobile/lib/trackerSafetyPulse.ts",
+      "mobile/lib/trackerCreditCards.ts",
+      "mobile/components/tracker/AddExpenseSheet.tsx (built, unwired)",
+      "mobile/components/tracker/MonthSafetyPulse.tsx (built, unwired)",
+      "mobile/components/tracker/TrackerConsent.tsx (built, unwired)"
+    ],
+    "screens": [
+      {
+        "name": "Tracker home",
+        "all_ui_elements": [
+          "consent gate",
+          "month switcher",
+          "purple summary card (income/spent/left)",
+          "eye toggle",
+          "show-all pill",
+          "income section",
+          "5 bucket sections with progress bars",
+          "credit card bill reminder",
+          "obligations checklist",
+          "month safety pulse (safe/tight/over)",
+          "FAB add expense"
+        ],
+        "all_interactions": [
+          "prev/next month (forward-limited)",
+          "toggle eyes",
+          "tap add expense FAB",
+          "edit/delete a row",
+          "expand a bucket",
+          "pay credit card bill",
+          "mark obligation paid/skip/close/delete"
+        ],
+        "all_states": [
+          "loading",
+          "empty (no txns)",
+          "error"
+        ],
+        "data_operations": [
+          "expense_transactions select/insert/update/delete by month+year",
+          "user_credit_cards",
+          "financial_obligations",
+          "obligation_checklist + RPC generate_monthly_checklist"
+        ],
+        "navigation": [
+          "from: tab bar (raised centre button)",
+          "to: month history, add-expense sheet"
+        ]
+      },
+      {
+        "name": "Add/edit expense sheet",
+        "all_ui_elements": [
+          "large amount input",
+          "date",
+          "bucket chips",
+          "subcategory grid",
+          "description",
+          "payment method chips incl. credit card selector"
+        ],
+        "all_interactions": [
+          "type amount",
+          "pick bucket/subcategory",
+          "pick payment method",
+          "save"
+        ],
+        "all_states": [
+          "create vs edit mode",
+          "validation error"
+        ],
+        "data_operations": [
+          "expense_transactions insert/update"
+        ],
+        "navigation": [
+          "from: FAB / row edit",
+          "to: back to tracker"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/tracker-categories.ts (pure)",
+      "lib/universal-buckets.ts (pure)",
+      "lib/trackerSafetyPulse.ts (pure)",
+      "lib/trackerMonthIncome.ts (pure)",
+      "lib/trackerObligationSync.ts (pure)",
+      "lib/localDate.ts (pure)"
+    ],
+    "stores_used": [
+      "obligationStore (MISSING on mobile)"
+    ],
+    "supabase_tables": [
+      "expense_transactions",
+      "tracker_consent",
+      "user_credit_cards",
+      "financial_obligations",
+      "obligation_checklist"
+    ],
+    "api_routes": []
+  },
+  {
+    "id": "split",
+    "name": "FK Split — groups, expenses, settle, join",
+    "priority": "P0",
+    "pwa_files": [
+      "app/split/page.tsx",
+      "app/split/[groupId]/page.tsx",
+      "app/split/[groupId]/add-expense/page.tsx",
+      "app/split/join/page.tsx",
+      "store/splitStore.ts",
+      "lib/splitBalances.ts",
+      "lib/splitShares.ts",
+      "lib/splitInvite.ts",
+      "app/api/split/groups/route.ts",
+      "app/api/split/invite/route.ts",
+      "app/api/split/join/route.ts",
+      "app/api/split/expenses/route.ts",
+      "app/api/split/settle/route.ts",
+      "app/api/split/balances/route.ts",
+      "app/api/split/members/route.ts"
+    ],
+    "mobile_status": "exists",
+    "mobile_files": [
+      "mobile/app/(tabs)/split.tsx",
+      "mobile/app/split/[groupId]/index.tsx",
+      "mobile/app/split/[groupId]/add-expense.tsx",
+      "mobile/store/splitStore.ts",
+      "mobile/lib/splitBalances.ts",
+      "mobile/lib/splitShares.ts",
+      "mobile/lib/splitInvite.ts"
+    ],
+    "screens": [
+      {
+        "name": "Groups list",
+        "all_ui_elements": [
+          "group rows (emoji/name/net)",
+          "empty state",
+          "create group button",
+          "create->invite 2-step modal"
+        ],
+        "all_interactions": [
+          "tap group",
+          "create group",
+          "copy/whatsapp invite link",
+          "join by code",
+          "delete group (creator)"
+        ],
+        "all_states": [
+          "loading",
+          "empty",
+          "error"
+        ],
+        "data_operations": [
+          "split_group_members/split_groups select; direct writes (no /api validation)"
+        ],
+        "navigation": [
+          "from: tab bar",
+          "to: group detail, join-by-code"
+        ]
+      },
+      {
+        "name": "Group detail",
+        "all_ui_elements": [
+          "header net",
+          "expenses/members/settlements tabs",
+          "simplified settle-up edges",
+          "settle modal",
+          "invite modal"
+        ],
+        "all_interactions": [
+          "switch tabs",
+          "settle up",
+          "invite",
+          "edit/delete expense",
+          "leave/remove member"
+        ],
+        "all_states": [
+          "loading",
+          "empty"
+        ],
+        "data_operations": [
+          "split_expenses/shares/settlements/members direct writes"
+        ],
+        "navigation": [
+          "from: groups list",
+          "to: add-expense"
+        ]
+      },
+      {
+        "name": "Add/edit expense",
+        "all_ui_elements": [
+          "amount",
+          "title",
+          "paid-by chips",
+          "split type segmented",
+          "member toggles",
+          "exact/percentage/share inputs",
+          "category chips",
+          "date"
+        ],
+        "all_interactions": [
+          "fill + save"
+        ],
+        "all_states": [
+          "validation error per split type"
+        ],
+        "data_operations": [
+          "split_expenses/split_expense_shares insert/update"
+        ],
+        "navigation": [
+          "from: group detail FAB",
+          "to: back to group"
+        ]
+      },
+      {
+        "name": "Join (MISSING deep link route on mobile)",
+        "all_ui_elements": [
+          "status: checking/success/error"
+        ],
+        "all_interactions": [
+          "retry / go to split"
+        ],
+        "all_states": [
+          "checking",
+          "success",
+          "error"
+        ],
+        "data_operations": [
+          "joinByCode direct write; token-based join needs API+Bearer"
+        ],
+        "navigation": [
+          "from: shared invite link",
+          "to: group detail"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/splitBalances.ts (pure)",
+      "lib/splitShares.ts (pure)",
+      "lib/splitInvite.ts (pure)"
+    ],
+    "stores_used": [
+      "splitStore"
+    ],
+    "supabase_tables": [
+      "split_groups",
+      "split_group_members",
+      "split_expenses",
+      "split_expense_shares",
+      "split_invitations",
+      "split_settlements"
+    ],
+    "api_routes": [
+      "/api/split/groups",
+      "/api/split/invite",
+      "/api/split/join",
+      "/api/split/expenses",
+      "/api/split/settle",
+      "/api/split/balances",
+      "/api/split/members"
+    ]
+  },
+  {
+    "id": "calculators-hub",
+    "name": "Calculators hub + individual tools",
+    "priority": "P1",
+    "pwa_files": [
+      "app/calculators/page.tsx",
+      "app/calculators/CalculatorsClient.tsx",
+      "app/calculators/[id]/page.tsx",
+      "app/calculators/calculator-config.ts",
+      "components/calculators/*.tsx",
+      "lib/calculatorInput.ts",
+      "lib/fireCalculator.ts",
+      "lib/postOfficeSchemes.ts"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/app/(tabs)/calculators.tsx (all tools inline, not deep-linkable, simplified engines)",
+      "mobile/lib/calcEngines.ts (simplified, not the real engines)"
+    ],
+    "screens": [
+      {
+        "name": "Calculators hub",
+        "all_ui_elements": [
+          "category chips",
+          "tool cards grid"
+        ],
+        "all_interactions": [
+          "tap category",
+          "tap tool"
+        ],
+        "all_states": [
+          "n/a"
+        ],
+        "data_operations": [],
+        "navigation": [
+          "from: quick tools / tab",
+          "to: individual calculator"
+        ]
+      },
+      {
+        "name": "Individual calculator (SIP/SWP/PPF/EMI/Home/Car/Emergency/FIRE/Post-office)",
+        "all_ui_elements": [
+          "sliders + result stats + insight banner"
+        ],
+        "all_interactions": [
+          "drag slider / type value",
+          "share result"
+        ],
+        "all_states": [
+          "n/a"
+        ],
+        "data_operations": [],
+        "navigation": [
+          "from: hub",
+          "to: back"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/fireCalculator.ts (pure)",
+      "lib/postOfficeSchemes.ts (pure)",
+      "lib/calculatorInput.ts (pure)",
+      "lib/amortisation.ts (pure)",
+      "lib/sipGoal.ts (pure)"
+    ],
+    "stores_used": [],
+    "supabase_tables": [],
+    "api_routes": []
+  },
+  {
+    "id": "tax-calculator",
+    "name": "Tax regime calculator (FY2026, old vs new)",
+    "priority": "P1",
+    "pwa_files": [
+      "app/calculators/tax-regime-2026/page.tsx",
+      "components/calculators/TaxRegimeCalculator.tsx",
+      "lib/taxRegimeComparisonFY2026.ts",
+      "lib/taxCalculatorHelpers.ts",
+      "lib/taxMissedDeductionAlerts.ts"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/app/(tabs)/calculators.tsx (5-input simplified compareTaxRegimesSimple, not the real 5200-line engine)"
+    ],
+    "screens": [
+      {
+        "name": "Tax calculator",
+        "all_ui_elements": [
+          "Personal CA wizard",
+          "many ToggleSections (HRA/80C/80D/capital gains/etc)",
+          "live summary",
+          "winner banner",
+          "comparison table",
+          "ITR suggestion",
+          "deep-report paywall"
+        ],
+        "all_interactions": [
+          "toggle each section",
+          "enter amounts",
+          "reset",
+          "unlock deep report"
+        ],
+        "all_states": [
+          "n/a"
+        ],
+        "data_operations": [],
+        "navigation": [
+          "from: calculators hub",
+          "to: back"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/taxRegimeComparisonFY2026.ts (pure)",
+      "lib/taxCalculatorHelpers.ts (pure)",
+      "lib/taxMissedDeductionAlerts.ts (pure)"
+    ],
+    "stores_used": [],
+    "supabase_tables": [],
+    "api_routes": []
+  },
+  {
+    "id": "profile-settings",
+    "name": "Profile, assets editor, settings",
+    "priority": "P1",
+    "pwa_files": [
+      "app/profile/page.tsx",
+      "components/profile/ProfileAssets.tsx",
+      "lib/profileAssetsPatch.ts",
+      "lib/syncProfileAssets.ts",
+      "app/settings/page.tsx"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/app/(tabs)/profile.tsx (placeholder: name/email/plan/FK card + sign out only)"
+    ],
+    "screens": [
+      {
+        "name": "Profile",
+        "all_ui_elements": [
+          "hero avatar",
+          "health score + FK tiles",
+          "assets sections (cash/investments/physical/liabilities)",
+          "checklist",
+          "referral card",
+          "KYC row"
+        ],
+        "all_interactions": [
+          "edit asset row",
+          "add asset",
+          "copy referral",
+          "sign out"
+        ],
+        "all_states": [
+          "logged-out gate"
+        ],
+        "data_operations": [
+          "user_analyse_snapshots read/write via syncProfileAssets"
+        ],
+        "navigation": [
+          "from: tab bar",
+          "to: settings"
+        ]
+      },
+      {
+        "name": "Settings (MISSING on mobile)",
+        "all_ui_elements": [
+          "name field",
+          "avatar upload",
+          "password reset button",
+          "notification toggles",
+          "export data",
+          "delete account"
+        ],
+        "all_interactions": [
+          "save name",
+          "upload avatar",
+          "toggle prefs",
+          "export",
+          "delete"
+        ],
+        "all_states": [
+          "saving"
+        ],
+        "data_operations": [
+          "users update; storage avatars; notification_preferences upsert"
+        ],
+        "navigation": [
+          "from: profile",
+          "to: back"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/profileAssetsPatch.ts (pure)"
+    ],
+    "stores_used": [
+      "financialStore",
+      "gamificationStore (MISSING on mobile)"
+    ],
+    "supabase_tables": [
+      "users",
+      "notification_preferences"
+    ],
+    "api_routes": []
+  },
+  {
+    "id": "notifications",
+    "name": "Notifications (bell + full inbox page)",
+    "priority": "P1",
+    "pwa_files": [
+      "components/NotificationBell.tsx",
+      "app/notifications/page.tsx",
+      "components/notifications/NotificationsClient.tsx",
+      "store/notificationStore.ts",
+      "components/MorningTipPopup.tsx",
+      "app/api/notifications/deliver-tip/route.ts",
+      "app/api/notifications/push-subscribe/route.ts"
+    ],
+    "mobile_status": "partial",
+    "mobile_files": [
+      "mobile/components/NotificationBell.tsx (dropdown modal, no realtime)"
+    ],
+    "screens": [
+      {
+        "name": "Bell dropdown",
+        "all_ui_elements": [
+          "bell icon + unread badge",
+          "list of tips"
+        ],
+        "all_interactions": [
+          "open/close",
+          "mark all read"
+        ],
+        "all_states": [
+          "loading",
+          "empty"
+        ],
+        "data_operations": [
+          "user_notifications select/update"
+        ],
+        "navigation": [
+          "from: header",
+          "to: n/a"
+        ]
+      },
+      {
+        "name": "Full inbox page (MISSING on mobile)",
+        "all_ui_elements": [
+          "chronological list",
+          "mark read"
+        ],
+        "all_interactions": [
+          "tap row",
+          "mark all read"
+        ],
+        "all_states": [
+          "loading"
+        ],
+        "data_operations": [
+          "user_notifications select/update, deep-link ?id="
+        ],
+        "navigation": [
+          "from: OS push tap",
+          "to: category target"
+        ]
+      },
+      {
+        "name": "Morning tip popup (MISSING on mobile)",
+        "all_ui_elements": [
+          "tip card"
+        ],
+        "all_interactions": [
+          "dismiss",
+          "learn more"
+        ],
+        "all_states": [
+          "06:00-22:59 IST once/day"
+        ],
+        "data_operations": [
+          "user_notifications"
+        ],
+        "navigation": [
+          "from: app open",
+          "to: learn"
+        ]
+      }
+    ],
+    "shared_logic": [],
+    "stores_used": [
+      "notificationStore"
+    ],
+    "supabase_tables": [
+      "user_notifications",
+      "push_subscriptions",
+      "notification_preferences"
+    ],
+    "api_routes": [
+      "/api/notifications/deliver-tip",
+      "/api/notifications/push-subscribe"
+    ]
+  },
+  {
+    "id": "gamification",
+    "name": "FK tokens, leaderboard, rewards, refer",
+    "priority": "P2",
+    "pwa_files": [
+      "store/gamificationStore.ts",
+      "app/leaderboard/page.tsx",
+      "app/rewards/page.tsx",
+      "app/refer/page.tsx"
+    ],
+    "mobile_status": "missing",
+    "mobile_files": [],
+    "screens": [
+      {
+        "name": "Leaderboard (MISSING)",
+        "all_ui_elements": [
+          "rank rows",
+          "my rank card"
+        ],
+        "all_interactions": [
+          "refresh"
+        ],
+        "all_states": [
+          "loading"
+        ],
+        "data_operations": [
+          "leaderboard_view select"
+        ],
+        "navigation": [
+          "from: profile menu",
+          "to: n/a"
+        ]
+      },
+      {
+        "name": "Rewards (MISSING)",
+        "all_ui_elements": [
+          "balance",
+          "streak",
+          "badges"
+        ],
+        "all_interactions": [
+          "n/a"
+        ],
+        "all_states": [
+          "loading"
+        ],
+        "data_operations": [
+          "gamification select"
+        ],
+        "navigation": [
+          "from: profile menu",
+          "to: n/a"
+        ]
+      },
+      {
+        "name": "Refer (MISSING)",
+        "all_ui_elements": [
+          "code",
+          "copy/whatsapp",
+          "referred list"
+        ],
+        "all_interactions": [
+          "copy",
+          "share"
+        ],
+        "all_states": [
+          "loading"
+        ],
+        "data_operations": [
+          "users.referral_code; users where referred_by=uid"
+        ],
+        "navigation": [
+          "from: profile menu",
+          "to: n/a"
+        ]
+      }
+    ],
+    "shared_logic": [],
+    "stores_used": [
+      "gamificationStore (MISSING on mobile)"
+    ],
+    "supabase_tables": [
+      "gamification",
+      "fk_transactions",
+      "leaderboard_view",
+      "users"
+    ],
+    "api_routes": []
+  },
+  {
+    "id": "learn-blog",
+    "name": "Learn hub + articles, blog",
+    "priority": "P2",
+    "pwa_files": [
+      "app/learn/page.tsx",
+      "app/learn/[id]/page.tsx",
+      "app/blog/page.tsx",
+      "app/blog/[slug]/page.tsx",
+      "lib/learnContent.ts",
+      "lib/learnRichArticles.ts",
+      "lib/blogContent.ts"
+    ],
+    "mobile_status": "missing",
+    "mobile_files": [],
+    "screens": [
+      {
+        "name": "Learn hub (MISSING)",
+        "all_ui_elements": [
+          "category chips",
+          "article cards"
+        ],
+        "all_interactions": [
+          "filter",
+          "tap article"
+        ],
+        "all_states": [
+          "n/a"
+        ],
+        "data_operations": [],
+        "navigation": [
+          "from: home/menu",
+          "to: article"
+        ]
+      },
+      {
+        "name": "Learn article (MISSING)",
+        "all_ui_elements": [
+          "rich content",
+          "FAQ accordion",
+          "share"
+        ],
+        "all_interactions": [
+          "expand FAQ",
+          "share"
+        ],
+        "all_states": [
+          "n/a"
+        ],
+        "data_operations": [],
+        "navigation": [
+          "from: hub",
+          "to: back"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/learnContent.ts (pure data)",
+      "lib/learnRichArticles.ts (pure data)",
+      "lib/blogContent.ts (pure data)"
+    ],
+    "stores_used": [],
+    "supabase_tables": [],
+    "api_routes": []
+  },
+  {
+    "id": "policies-portfolio-other",
+    "name": "Policy vault, portfolio demo, insurance/KYC/plans placeholders",
+    "priority": "P2",
+    "pwa_files": [
+      "app/policies/page.tsx",
+      "components/policies/PolicyVaultClient.tsx",
+      "app/portfolio/page.tsx",
+      "app/insurance/page.tsx",
+      "app/kyc/page.tsx",
+      "app/plans/page.tsx",
+      "lib/userPolicies.ts"
+    ],
+    "mobile_status": "missing",
+    "mobile_files": [],
+    "screens": [
+      {
+        "name": "Policy vault (MISSING)",
+        "all_ui_elements": [
+          "policy list",
+          "add/edit sheet"
+        ],
+        "all_interactions": [
+          "add/edit/delete policy"
+        ],
+        "all_states": [
+          "loading",
+          "empty"
+        ],
+        "data_operations": [
+          "user_policies CRUD"
+        ],
+        "navigation": [
+          "from: profile menu",
+          "to: n/a"
+        ]
+      }
+    ],
+    "shared_logic": [
+      "lib/userPolicies.ts (needs supabase client swap)"
+    ],
+    "stores_used": [],
+    "supabase_tables": [
+      "user_policies",
+      "insurance_clicks"
+    ],
+    "api_routes": []
+  }
+]

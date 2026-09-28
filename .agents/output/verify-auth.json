@@ -1,0 +1,14 @@
+{
+  "feature_id": "auth",
+  "verdict": "PARTIAL",
+  "missing": [
+    "Recovery loop is not end-to-end: app/auth/callback.tsx has no type=recovery branch and there is no app/auth/update-password.tsx screen, so tapping the reset email link re-opens the app but doesn't land on a password-change form",
+    "Login does not preserve a `next`/`redirect` target (web supports ?redirect=<path> so a gated deep link survives a forced login)",
+    "Referral (?ref=) capture and post-signup FK bonus apply are not ported"
+  ],
+  "wrong": [],
+  "fixes_needed": [
+    "Port lib/authRecovery.ts's isRecoveryAuthUrl/completeAuthSessionFromUrl into mobile/lib/authRecovery.ts (swap the supabase client the same way userAnalyseSnapshot.ts was), add app/auth/update-password.tsx, and branch on type=recovery inside app/auth/callback.tsx.",
+    "This pass added: resetPassword() action + forgot-password screen + login's missing forgot-password link and >=6-char rule — real, working, but the loop stops at 'email sent' until the above is done."
+  ]
+}
