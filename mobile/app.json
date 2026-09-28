@@ -17,11 +17,16 @@
         "backgroundColor": "#534AB7"
       },
       "package": "com.finkoin.app",
+      "versionCode": 1,
       "intentFilters": [
         {
           "action": "VIEW",
           "category": ["BROWSABLE", "DEFAULT"],
-          "data": [{ "scheme": "finkoin" }]
+          "data": [
+            {
+              "scheme": "finkoin"
+            }
+          ]
         }
       ]
     },
@@ -32,7 +37,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/splash.png",
           "resizeMode": "contain",
           "backgroundColor": "#534AB7"
         }
@@ -40,6 +45,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "82e76ba1-3e55-4fe5-8b89-f13e2e2776d2"
+      }
+    },
+    "owner": "himkumarjsr"
   }
 }
