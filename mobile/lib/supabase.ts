@@ -1,22 +1,12 @@
 import "@/lib/cryptoPolyfill";
 import "react-native-url-polyfill/auto";
 import { createClient } from "@supabase/supabase-js";
-import Constants from "expo-constants";
 import { appStorage } from "@/lib/storage";
 
-const extra = Constants.expoConfig?.extra as
-  | { supabaseUrl?: string; supabaseAnonKey?: string }
-  | undefined;
-
-const supabaseUrl = (
-  extra?.supabaseUrl ||
-  process.env.EXPO_PUBLIC_SUPABASE_URL ||
-  ""
-).trim();
+// Must stay literal `process.env.EXPO_PUBLIC_*` so Expo inlines them at bundle time.
+const supabaseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || "").trim();
 const supabaseAnonKey = (
-  extra?.supabaseAnonKey ||
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  ""
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ""
 ).trim();
 
 if (!supabaseUrl || !supabaseAnonKey) {
