@@ -288,8 +288,12 @@ export default function PrivacyPage() {
             data in your account settings.
           </li>
           <li>
-            <strong>Right to erasure:</strong> Request deletion of your account
-            and all associated data. We will process deletion within 30 days.
+            <strong>Right to erasure:</strong>{" "}
+            <a href="/legal/delete-account" style={{ color: "#534AB7" }}>
+              Request deletion
+            </a>{" "}
+            of your account and all associated data. We will process deletion
+            within 30 days.
           </li>
           <li>
             <strong>Right to withdraw consent:</strong> Withdraw your consent

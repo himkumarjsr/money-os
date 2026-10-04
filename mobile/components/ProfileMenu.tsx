@@ -220,6 +220,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                   ["Terms", "/legal/terms"],
                   ["Refunds", "/legal/refund"],
                   ["Disclaimer", "/legal/disclaimer"],
+                  ["Delete account", "/legal/delete-account"],
                 ] as const
               ).map(([label, path], i) => (
                 <View key={label} style={styles.legalItem}>
