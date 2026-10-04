@@ -4,6 +4,7 @@
  */
 
 import { getSupabase } from "@/lib/supabase";
+import { syncKv } from "@/lib/syncKv";
 
 export const TRACKER_CONSENT_VERSION = "v2";
 export const TRACKER_CONSENT_STORAGE_KEY = "finkoin_tracker_consent";
@@ -91,9 +92,9 @@ function dueHiddenKey(userId: string): string {
 
 /** Card ids the user removed from Credit card dues (expenses stay in history). */
 export function loadHiddenCreditCardDueIds(userId: string): string[] {
-  if (!userId || typeof window === "undefined") return [];
+  if (!userId) return [];
   try {
-    const raw = localStorage.getItem(dueHiddenKey(userId));
+    const raw = syncKv.getItem(dueHiddenKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -104,13 +105,13 @@ export function loadHiddenCreditCardDueIds(userId: string): string[] {
 }
 
 export function hideCreditCardDueLine(userId: string, cardId: string): void {
-  if (!userId || !cardId.trim() || typeof window === "undefined") return;
+  if (!userId || !cardId.trim()) return;
   try {
     const id = cardId.trim();
     const next = Array.from(
       new Set([...loadHiddenCreditCardDueIds(userId), id]),
     );
-    localStorage.setItem(dueHiddenKey(userId), JSON.stringify(next));
+    syncKv.setItem(dueHiddenKey(userId), JSON.stringify(next));
   } catch {
     /* ignore */
   }
@@ -846,9 +847,9 @@ function parseStoredCard(raw: unknown): SavedCreditCard | null {
 }
 
 export function loadSavedCreditCards(userId: string): SavedCreditCard[] {
-  if (!userId || typeof window === "undefined") return [];
+  if (!userId) return [];
   try {
-    const raw = localStorage.getItem(storageKey(userId));
+    const raw = syncKv.getItem(storageKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -864,9 +865,9 @@ export function saveCreditCards(
   userId: string,
   cards: SavedCreditCard[],
 ): void {
-  if (!userId || typeof window === "undefined") return;
+  if (!userId) return;
   try {
-    localStorage.setItem(storageKey(userId), JSON.stringify(cards));
+    syncKv.setItem(storageKey(userId), JSON.stringify(cards));
   } catch {
     /* quota / private mode */
   }
@@ -1114,9 +1115,8 @@ export function isCreditCardBillDismissed(
   year: number,
   monthName: string,
 ): boolean {
-  if (typeof window === "undefined") return false;
   try {
-    return localStorage.getItem(billDismissKey(year, monthName)) === "1";
+    return syncKv.getItem(billDismissKey(year, monthName)) === "1";
   } catch {
     return false;
   }
@@ -1126,9 +1126,8 @@ export function dismissCreditCardBillReminder(
   year: number,
   monthName: string,
 ): void {
-  if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(billDismissKey(year, monthName), "1");
+    syncKv.setItem(billDismissKey(year, monthName), "1");
   } catch {
     /* ignore */
   }
@@ -1136,8 +1135,7 @@ export function dismissCreditCardBillReminder(
 
 function lsGet(key: string): string | null {
   try {
-    if (typeof localStorage === "undefined") return null;
-    return localStorage.getItem(key);
+    return syncKv.getItem(key);
   } catch {
     return null;
   }
@@ -1145,10 +1143,9 @@ function lsGet(key: string): string | null {
 
 function lsSet(key: string, value: string): void {
   try {
-    if (typeof localStorage === "undefined") return;
-    localStorage.setItem(key, value);
+    syncKv.setItem(key, value);
   } catch {
-    /* ignore (React Native has no localStorage) */
+    /* ignore */
   }
 }
 
