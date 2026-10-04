@@ -6,6 +6,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { useAuthStore } from "@/store/authStore";
+import { hydrateSyncKv } from "@/lib/syncKv";
+
+void hydrateSyncKv();
 
 // Closes the OAuth browser when the app regains focus after redirect.
 WebBrowser.maybeCompleteAuthSession();
@@ -39,6 +42,7 @@ export default function RootLayout() {
             options={{ presentation: "modal" }}
           />
           <Stack.Screen name="analyse/result" />
+          <Stack.Screen name="tracker/[month]" />
           <Stack.Screen name="split/[groupId]/index" />
           <Stack.Screen name="split/[groupId]/add-expense" />
         </Stack>

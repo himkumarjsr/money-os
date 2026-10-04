@@ -71,14 +71,37 @@ type ChecklistLike = {
   status: string;
   expected_amount?: number | null;
   paid_amount?: number | null;
-  obligation?: { title?: string | null; category?: string | null } | null;
+  obligation?: {
+    title?: string | null;
+    category?: string | null;
+    amount?: number | null;
+    is_active?: boolean | null;
+  } | null;
 };
 
+/** Match expense ₹ to checklist expected amount OR live obligation amount. */
 function itemAmountMatches(amount: number, item: ChecklistLike): boolean {
-  return (
-    amountsMatch(Number(item.expected_amount), amount) ||
-    (item.paid_amount != null && amountsMatch(Number(item.paid_amount), amount))
-  );
+  const expense = Math.round(Number(amount));
+  if (!Number.isFinite(expense) || expense <= 0) return false;
+
+  const expected = Number(item.expected_amount);
+  if (Number.isFinite(expected) && amountsMatch(expected, expense)) return true;
+
+  // After obligation edits, checklist.expected_amount can stay stale
+  // (generate_monthly_checklist uses ON CONFLICT DO NOTHING). UI shows
+  // obligation.amount — matching must use that too.
+  const live = Number(item.obligation?.amount);
+  if (Number.isFinite(live) && live > 0 && amountsMatch(live, expense)) {
+    return true;
+  }
+
+  if (
+    item.paid_amount != null &&
+    amountsMatch(Number(item.paid_amount), expense)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /** Credit card bill pays live in CC dues UI — never touch obligations. */
@@ -135,7 +158,11 @@ export function expenseCoversChecklistItem(
   item: {
     expected_amount?: number | null;
     paid_amount?: number | null;
-    obligation?: { title?: string | null; category?: string | null } | null;
+    obligation?: {
+      title?: string | null;
+      category?: string | null;
+      amount?: number | null;
+    } | null;
   },
 ): boolean {
   return itemAmountMatches(amount, item as ChecklistLike);
@@ -149,7 +176,10 @@ export function findPendingChecklistForExpense(
   if (!isEligibleExpense(expense)) return undefined;
   const amount = Number(expense.amount);
   const candidates = checklist.filter(
-    (c) => c.status === "pending" && itemAmountMatches(amount, c),
+    (c) =>
+      c.status === "pending" &&
+      c.obligation?.is_active !== false &&
+      itemAmountMatches(amount, c),
   );
   if (candidates.length === 0) return undefined;
   if (candidates.length === 1) return candidates[0];
@@ -171,7 +201,10 @@ export function planObligationExpenseSync(opts: {
 }): { markPaid: Array<{ id: string; amount: number }>; markUnpaid: string[] } {
   const expenses = opts.expenses.filter(isEligibleExpense);
   const items = opts.checklist.filter(
-    (c) => c.status !== "skipped" && c.status !== "auto_debit",
+    (c) =>
+      c.status !== "skipped" &&
+      c.status !== "auto_debit" &&
+      c.obligation?.is_active !== false,
   );
 
   type Pair = {

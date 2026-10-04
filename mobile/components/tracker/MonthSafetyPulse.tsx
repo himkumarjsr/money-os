@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import type { SafetyPulseResult } from "@/lib/trackerSafetyPulse";
 import { SectionPrivacyEye } from "@/components/ui/PrivacyEye";
 import { formatIndian } from "@/lib/formatters";
@@ -174,86 +174,6 @@ export function MonthSafetyPulse({
   );
 }
 
-/** Simple obligations + card summary nested under Safety Pulse */
-export function TrackerNestedPanels({
-  onCards,
-  obligationsCount,
-  amountsVisible,
-  onAddFromCards,
-}: {
-  onCards: number;
-  obligationsCount: number;
-  amountsVisible: boolean;
-  onAddFromCards?: () => void;
-}) {
-  const [openCards, setOpenCards] = useState(false);
-  const [openObs, setOpenObs] = useState(false);
-
-  return (
-    <View style={{ gap: 8, marginTop: 12 }}>
-      {onCards > 0 ? (
-        <View style={styles.nested}>
-          <Pressable
-            onPress={() => setOpenCards((o) => !o)}
-            style={styles.nestedHead}
-          >
-            <Text style={styles.nestedTitle}>Credit card activity</Text>
-            <Text style={styles.nestedChevron}>{openCards ? "▾" : "▸"}</Text>
-          </Pressable>
-          {openCards ? (
-            <View style={styles.nestedBody}>
-              <Text style={styles.nestedBodyText}>
-                On cards this month:{" "}
-                {amountsVisible
-                  ? `₹${formatIndian(Math.round(onCards))}`
-                  : "₹••••••"}
-              </Text>
-              <Text style={styles.nestedHint}>
-                Card purchases don’t reduce Money Left until you pay the bill
-                (Loans → Credit card payment).
-              </Text>
-              {onAddFromCards ? (
-                <Pressable onPress={onAddFromCards}>
-                  <Text style={styles.nestedLink}>Log a card bill pay →</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      <View style={styles.nested}>
-        <Pressable
-          onPress={() => setOpenObs((o) => !o)}
-          style={styles.nestedHead}
-        >
-          <Text style={styles.nestedTitle}>
-            Monthly obligations
-            {obligationsCount > 0 ? ` · ${obligationsCount}` : ""}
-          </Text>
-          <Text style={styles.nestedChevron}>{openObs ? "▾" : "▸"}</Text>
-        </Pressable>
-        {openObs ? (
-          <View style={styles.nestedBody}>
-            {obligationsCount > 0 ? (
-              <Text style={styles.nestedBodyText}>
-                {obligationsCount} obligation
-                {obligationsCount === 1 ? "" : "s"} saved on your account. Check
-                off via Analyse / full checklist on finkoin.com if needed.
-              </Text>
-            ) : (
-              <Text style={styles.nestedBodyText}>
-                No obligations yet. Log recurring EMIs under Loans, or set bills
-                on the web tracker checklist.
-              </Text>
-            )}
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
@@ -373,41 +293,4 @@ const styles = StyleSheet.create({
     color: "#3C3489",
   },
   children: { marginTop: 4 },
-  nested: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: "hidden",
-  },
-  nestedHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
-  },
-  nestedTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#111110",
-  },
-  nestedChevron: { color: Colors.primary, fontWeight: "700" },
-  nestedBody: { paddingHorizontal: 12, paddingBottom: 12 },
-  nestedBodyText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  nestedHint: {
-    marginTop: 6,
-    fontSize: 11,
-    color: Colors.textMuted,
-    lineHeight: 16,
-  },
-  nestedLink: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
 });
