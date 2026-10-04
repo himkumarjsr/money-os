@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -5,19 +6,62 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Image,
+  ActivityIndicator,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
+import { uploadAvatar } from "@/lib/avatarUpload";
 import { Colors, FontSize, Spacing, Radius } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AppHeader } from "@/components/AppHeader";
+import { AppIcon } from "@/components/ui/AppIcon";
 
 export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const signOut = useAuthStore((s) => s.signOut);
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  const initials = (user?.name?.trim()?.charAt(0) || "U").toUpperCase();
+
+  const handlePickPhoto = async () => {
+    if (!user?.id || photoBusy) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Permission needed",
+        "Allow photo access to set a profile picture.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+
+    setPhotoBusy(true);
+    try {
+      const { publicUrl, error } = await uploadAvatar(
+        user.id,
+        result.assets[0].uri,
+      );
+      if (error) {
+        Alert.alert("Upload failed", error);
+        return;
+      }
+      if (publicUrl) updateUser({ photoURL: publicUrl });
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
 
   if (!isLoggedIn) {
     return (
@@ -51,6 +95,33 @@ export default function ProfileScreen() {
       <AppHeader />
       <ScrollView contentContainerStyle={styles.pad}>
         <Text style={styles.title}>Profile</Text>
+
+        <View style={styles.avatarRow}>
+          <View style={styles.avatarWrap}>
+            {user?.photoURL ? (
+              <Image
+                source={{ uri: user.photoURL }}
+                style={styles.avatarImg}
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+            <Pressable
+              onPress={() => void handlePickPhoto()}
+              disabled={photoBusy}
+              style={styles.avatarEditBadge}
+            >
+              {photoBusy ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <AppIcon name="camera" size={15} color="#FFFFFF" />
+              )}
+            </Pressable>
+          </View>
+        </View>
+
         <Card style={styles.card}>
           <Text style={styles.label}>Name</Text>
           <Text style={styles.value}>{user?.name || "—"}</Text>
@@ -87,6 +158,46 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   pad: { flexGrow: 1, padding: Spacing.xl, paddingBottom: 120 },
+  avatarRow: {
+    alignItems: "center",
+    marginBottom: Spacing.xl,
+  },
+  avatarWrap: {
+    width: 88,
+    height: 88,
+  },
+  avatarImg: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Colors.primaryLight,
+  },
+  avatarFallback: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInitials: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  avatarEditBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.textPrimary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: Colors.background,
+  },
   title: {
     fontSize: FontSize.xxl,
     fontWeight: "800",
