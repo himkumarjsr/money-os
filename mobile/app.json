@@ -41,6 +41,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#534AB7"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Finkoin needs access to your photos so you can set a profile picture.",
+          "cameraPermission": "Finkoin needs access to your camera so you can take a profile picture."
+        }
       ]
     ],
     "experiments": {

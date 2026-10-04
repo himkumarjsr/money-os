@@ -9,14 +9,25 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useAuthStore, getOAuthRedirectUri } from "@/store/authStore";
 import { Colors, Spacing, FontSize } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
+/** Only allow in-app paths as post-signup targets. */
+function safeNext(next: unknown): Href {
+  return typeof next === "string" &&
+    next.startsWith("/") &&
+    !next.startsWith("//")
+    ? (next as Href)
+    : "/(tabs)";
+}
+
 export default function SignupScreen() {
+  const { next } = useLocalSearchParams<{ next?: string }>();
+  const target = safeNext(next);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +50,16 @@ export default function SignupScreen() {
         Alert.alert(
           "Check your email",
           "We sent a verification link. Please verify then log in.",
-          [{ text: "OK", onPress: () => router.replace("/(auth)/login") }],
+          [
+            {
+              text: "OK",
+              onPress: () =>
+                router.replace({
+                  pathname: "/(auth)/login",
+                  params: next ? { next } : {},
+                }),
+            },
+          ],
         );
       }
     } finally {
@@ -54,7 +74,7 @@ export default function SignupScreen() {
       if (result.error) {
         Alert.alert("Google sign-in", result.error);
       } else {
-        router.replace("/(tabs)");
+        router.replace(target);
       }
     } finally {
       setGoogleLoading(false);
@@ -117,7 +137,12 @@ export default function SignupScreen() {
         </View>
 
         <TouchableOpacity
-          onPress={() => router.replace("/(auth)/login")}
+          onPress={() =>
+            router.replace({
+              pathname: "/(auth)/login",
+              params: next ? { next } : {},
+            })
+          }
           style={styles.linkWrap}
         >
           <Text style={styles.link}>
