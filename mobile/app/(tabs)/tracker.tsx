@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
@@ -297,6 +298,22 @@ export default function TrackerScreen() {
   useEffect(() => {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
+
+  // Soft refresh when returning to the tab (e.g. after editing in the month drill-down).
+  // Refs keep the callback stable so it fires on focus only, and never mid-edit.
+  const focusRefreshRef = useRef({ fetchTransactions, showSheet, first: true });
+  focusRefreshRef.current.fetchTransactions = fetchTransactions;
+  focusRefreshRef.current.showSheet = showSheet;
+  useFocusEffect(
+    useCallback(() => {
+      const r = focusRefreshRef.current;
+      if (r.first) {
+        r.first = false;
+        return;
+      }
+      if (hasConsent && !r.showSheet) void r.fetchTransactions({ soft: true });
+    }, [hasConsent]),
+  );
 
   // Re-runs when the sheet closes so a card added inside it shows up immediately.
   useEffect(() => {
@@ -1026,12 +1043,25 @@ export default function TrackerScreen() {
           </View>
         </View>
 
-        <Pressable onPress={toggleShowAll} style={styles.showAllBtn}>
-          <EyeIcon open={allVisible} size={14} color={Colors.primary} />
-          <Text style={styles.showAllText}>
-            {allVisible ? "Hide all" : "Show all"}
-          </Text>
-        </Pressable>
+        <View style={styles.toolbarRow}>
+          <Pressable
+            onPress={() =>
+              router.push(
+                `/tracker/${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`,
+              )
+            }
+            accessibilityRole="link"
+            style={styles.allTxnLink}
+          >
+            <Text style={styles.allTxnText}>All transactions →</Text>
+          </Pressable>
+          <Pressable onPress={toggleShowAll} style={styles.showAllBtn}>
+            <EyeIcon open={allVisible} size={14} color={Colors.primary} />
+            <Text style={styles.showAllText}>
+              {allVisible ? "Hide all" : "Show all"}
+            </Text>
+          </Pressable>
+        </View>
 
         {loading ? <LoadingSpinner /> : null}
 
@@ -1545,10 +1575,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   progressFill: { height: "100%", borderRadius: 4 },
+  toolbarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.md,
+  },
+  allTxnLink: { minHeight: 44, justifyContent: "center" },
+  allTxnText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   showAllBtn: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-end",
     gap: 6,
     height: 36,
     paddingHorizontal: 14,
@@ -1556,7 +1593,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: "#F9F9FC",
-    marginBottom: Spacing.md,
   },
   showAllText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   sectionCard: {

@@ -42,6 +42,7 @@ export default function RootLayout() {
             options={{ presentation: "modal" }}
           />
           <Stack.Screen name="analyse/result" />
+          <Stack.Screen name="tracker/[month]" />
           <Stack.Screen name="split/[groupId]/index" />
           <Stack.Screen name="split/[groupId]/add-expense" />
         </Stack>
