@@ -39,7 +39,10 @@ export type AppIconName =
   | "card"
   | "chevronDown"
   | "chevronRight"
-  | "calendar";
+  | "calendar"
+  | "rupee"
+  | "hospital"
+  | "phone";
 
 type Props = {
   name: AppIconName;
@@ -249,6 +252,27 @@ function IconPaths({ name }: { name: AppIconName }) {
         <>
           <Rect x="3" y="5" width="18" height="16" rx="2" />
           <Path d="M8 3v4M16 3v4M3 11h18" />
+        </>
+      );
+    case "rupee":
+      return (
+        <>
+          <Path d="M7 5h10M7 9h10M15 5c0 4-3.5 5-6 5l6 6" />
+          <Path d="M7 10h3" />
+        </>
+      );
+    case "hospital":
+      return (
+        <>
+          <Rect x="5" y="4" width="14" height="16" rx="1.5" />
+          <Path d="M12 8v8M8 12h8" />
+        </>
+      );
+    case "phone":
+      return (
+        <>
+          <Rect x="7" y="3" width="10" height="18" rx="2" />
+          <Path d="M11 18h2" />
         </>
       );
     default:
