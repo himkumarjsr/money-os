@@ -26,10 +26,8 @@ import {
   type SavedExpense,
   type TrackerTxn,
 } from "@/components/tracker/AddExpenseSheet";
-import {
-  MonthSafetyPulse,
-  TrackerNestedPanels,
-} from "@/components/tracker/MonthSafetyPulse";
+import { MonthSafetyPulse } from "@/components/tracker/MonthSafetyPulse";
+import { ObligationsChecklist } from "@/components/tracker/ObligationsChecklist";
 import {
   TRACKER_CATEGORIES,
   countsTowardTrackerTotals,
@@ -95,8 +93,6 @@ export default function TrackerScreen() {
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analyseResult = useFinancialStore((s) => s.result);
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
-  const obligationsCount = useObligationStore((s) => s.checklist.length);
-
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
       if (hasTrackerConsentLocal()) return true;
@@ -1432,50 +1428,16 @@ export default function TrackerScreen() {
               }}
             />
           ) : null}
-          <TrackerNestedPanels
-            onCards={0}
-            obligationsCount={obligationsCount}
-            amountsVisible={allVisible}
-          />
+          {user?.id ? (
+            <ObligationsChecklist
+              userId={user.id}
+              checklistMonth={obligationChecklistMonth}
+              analyseCompleted={analyseCompleted}
+              learnedSuggestion={learnedObligation}
+              onDismissLearn={() => setLearnedObligation(null)}
+            />
+          ) : null}
         </MonthSafetyPulse>
-
-        {learnedObligation ? (
-          <View style={styles.learnedBanner}>
-            <Text style={styles.learnedText}>
-              Add "{learnedObligation.title}" (₹
-              {learnedObligation.amount.toLocaleString("en-IN")}) as a recurring
-              obligation?
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-              <Pressable
-                onPress={() => {
-                  if (user?.id) {
-                    void useObligationStore.getState().addObligation({
-                      title: learnedObligation.title,
-                      category: learnedObligation.category,
-                      amount: learnedObligation.amount,
-                      frequency: "monthly",
-                      source: "tracker_learned",
-                      user_id: user.id,
-                      is_active: true,
-                      remind_days_before: 7,
-                    });
-                  }
-                  setLearnedObligation(null);
-                }}
-                style={styles.learnedAddBtn}
-              >
-                <Text style={styles.learnedAddText}>Yes, add it</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setLearnedObligation(null)}
-                style={styles.learnedDismissBtn}
-              >
-                <Text style={styles.learnedDismissText}>Not now</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
       </ScrollView>
 
       <Pressable
@@ -1720,26 +1682,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
   },
   cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primary },
-  learnedBanner: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  learnedText: { fontSize: 13, color: Colors.textPrimary, fontWeight: "600" },
-  learnedAddBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  learnedAddText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  learnedDismissBtn: { paddingHorizontal: 14, paddingVertical: 8 },
-  learnedDismissText: {
-    color: Colors.textSecondary,
-    fontWeight: "600",
-    fontSize: 13,
-  },
   fab: {
     position: "absolute",
     bottom: 100,
