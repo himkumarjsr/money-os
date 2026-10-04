@@ -9,7 +9,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 const isExpoGo = Constants.appOwnership === "expo";
 
-function siteBase(): string {
+export function siteBase(): string {
   const raw = (process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com")
     .trim()
     .replace(/\/$/, "");

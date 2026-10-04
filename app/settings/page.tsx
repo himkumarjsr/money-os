@@ -267,14 +267,34 @@ function SettingsInner() {
     URL.revokeObjectURL(a.href);
   }, [user, lastSubmission]);
 
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
   const handleDeleteAccount = async () => {
     const typed = window.prompt(
-      "Type DELETE to confirm permanent removal from this device and session. (Server-side purge may require support.)",
+      "Type DELETE to permanently remove your account and data. This cannot be undone.",
     );
     if (typed !== "DELETE") return;
-    await logoutAction();
-    router.push("/");
-    router.refresh();
+    setDeleteBusy(true);
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        window.alert(
+          data?.error ||
+            "Could not delete your account. Please contact support.",
+        );
+        return;
+      }
+      await logoutAction();
+      router.push("/");
+      router.refresh();
+    } catch {
+      window.alert(
+        "Could not reach the server. Check your connection and try again.",
+      );
+    } finally {
+      setDeleteBusy(false);
+    }
   };
 
   return (
@@ -487,9 +507,10 @@ function SettingsInner() {
         <button
           type="button"
           onClick={() => void handleDeleteAccount()}
-          className="mt-3 w-full rounded-xl border border-red-200 bg-red-50 py-3 text-sm font-bold text-red-700"
+          disabled={deleteBusy}
+          className="mt-3 w-full rounded-xl border border-red-200 bg-red-50 py-3 text-sm font-bold text-red-700 disabled:opacity-60"
         >
-          Delete account &amp; sign out
+          {deleteBusy ? "Deleting…" : "Delete account permanently"}
         </button>
         <p className="mt-2 text-xs text-[#9B9A94]">
           Export includes profile snapshot from this browser session. For full

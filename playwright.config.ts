@@ -26,6 +26,14 @@ function loadEnvFile(filename: string) {
 loadEnvFile(".env.local");
 loadEnvFile(".env.test.local");
 
+// Opt-in only (unset in CI and for any normal contributor): some sandboxed
+// environments only ship a plain Chromium binary, not the separate
+// chrome-headless-shell build Playwright's headless Chromium project wants
+// by default. Setting this in a local, gitignored .env.test.local points
+// Playwright at that binary instead of failing to launch; everyone else's
+// setup is untouched.
+const chromiumExecutablePath = process.env.PW_CHROMIUM_EXECUTABLE_PATH;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -37,6 +45,9 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    ...(chromiumExecutablePath
+      ? { launchOptions: { executablePath: chromiumExecutablePath } }
+      : {}),
   },
   projects: [
     {

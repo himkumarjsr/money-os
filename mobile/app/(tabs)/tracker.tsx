@@ -6,6 +6,8 @@ import {
   Pressable,
   RefreshControl,
   Alert,
+  Animated,
+  Easing,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +24,7 @@ import {
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
 import { TrackerConsent } from "@/components/tracker/TrackerConsent";
+import { AppHeader } from "@/components/AppHeader";
 import {
   AddExpenseSheet,
   type SavedExpense,
@@ -147,6 +150,15 @@ export default function TrackerScreen() {
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
 
   const [amountsVisible, setAmountsVisible] = useState(false);
+  const flip = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(flip, {
+      toValue: amountsVisible ? 1 : 0,
+      duration: 550,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: true,
+    }).start();
+  }, [amountsVisible, flip]);
   const [sectionVisible, setSectionVisible] = useState<Record<string, boolean>>(
     {},
   );
@@ -732,6 +744,7 @@ export default function TrackerScreen() {
   if (hasConsent === null) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
+        <AppHeader />
         <LoadingSpinner full />
       </SafeAreaView>
     );
@@ -933,8 +946,113 @@ export default function TrackerScreen() {
     setEditingExpense(null);
   };
 
+  const renderSummaryCard = (revealed: boolean) => (
+    <View style={styles.summaryCard}>
+      <View style={styles.summaryTopRow}>
+        <Pressable
+          onPress={goToPrevMonth}
+          disabled={isAtBackLimit}
+          style={[styles.navBtn, isAtBackLimit && { opacity: 0.4 }]}
+        >
+          <Text style={styles.navBtnText}>←</Text>
+        </Pressable>
+        <Text style={styles.monthTitle} numberOfLines={1}>
+          {currentMonth} {currentYear}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <SectionPrivacyEye
+            visible={revealed}
+            onToggle={() => setAmountsVisible((v) => !v)}
+            light
+          />
+          <Pressable
+            onPress={goToNextMonth}
+            disabled={isAtForwardLimit}
+            style={[styles.navBtn, isAtForwardLimit && { opacity: 0.4 }]}
+          >
+            <Text style={styles.navBtnText}>→</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.summaryGrid}>
+        <Pressable onPress={openSalaryEditor} style={{ flex: 1 }}>
+          <Text style={styles.summaryLabel}>INCOME</Text>
+          <Text
+            style={[styles.summaryValue, styles.underline]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {formatMasked(displayIncome, revealed)}
+          </Text>
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.summaryLabel}>SPENT</Text>
+          <Text
+            style={[
+              styles.summaryValue,
+              totalSpent > displayIncome && { color: "#FFB3B3" },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {formatMasked(totalSpent, revealed)}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.summaryLabel}>LEFT</Text>
+          <Text
+            style={[
+              styles.summaryValue,
+              { color: remaining < 0 ? "#FFB3B3" : "#B3FFD9" },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {revealed
+              ? `₹${Math.abs(remaining).toLocaleString("en-IN")}${remaining < 0 ? " over" : ""}`
+              : "₹••••••"}
+          </Text>
+        </View>
+      </View>
+
+      {onCardsSpend > 0 ? (
+        <Text style={styles.onCardsText} numberOfLines={1}>
+          On cards this month:{" "}
+          {revealed
+            ? `₹${Math.round(onCardsSpend).toLocaleString("en-IN")}`
+            : "₹••••"}
+        </Text>
+      ) : null}
+
+      <View style={styles.progressRow}>
+        <Text style={styles.progressLabel}>Cash budget used</Text>
+        <Text style={styles.progressLabel}>
+          {revealed ? `${spentPercent.toFixed(0)}%` : "••%"}
+        </Text>
+      </View>
+      <View style={styles.progressTrack}>
+        <View
+          style={[
+            styles.progressFill,
+            {
+              width: revealed ? `${spentPercent}%` : "0%",
+              backgroundColor:
+                spentPercent > 90
+                  ? "#FF6B6B"
+                  : spentPercent > 70
+                    ? "#FFD93D"
+                    : "#6BCB77",
+            },
+          ]}
+        />
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <AppHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: Spacing.xl, paddingBottom: 140 }}
@@ -946,101 +1064,55 @@ export default function TrackerScreen() {
           />
         }
       >
-        {/* Summary card */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryTopRow}>
-            <Pressable
-              onPress={goToPrevMonth}
-              disabled={isAtBackLimit}
-              style={[styles.navBtn, isAtBackLimit && { opacity: 0.4 }]}
-            >
-              <Text style={styles.navBtnText}>←</Text>
-            </Pressable>
-            <Text style={styles.monthTitle} numberOfLines={1}>
-              {currentMonth} {currentYear}
-            </Text>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <SectionPrivacyEye
-                visible={amountsVisible}
-                onToggle={() => setAmountsVisible((v) => !v)}
-                light
-              />
-              <Pressable
-                onPress={goToNextMonth}
-                disabled={isAtForwardLimit}
-                style={[styles.navBtn, isAtForwardLimit && { opacity: 0.4 }]}
-              >
-                <Text style={styles.navBtnText}>→</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.summaryGrid}>
-            <Pressable onPress={openSalaryEditor} style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>INCOME</Text>
-              <Text style={[styles.summaryValue, styles.underline]}>
-                {formatMasked(displayIncome, amountsVisible)}
-              </Text>
-            </Pressable>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>SPENT</Text>
-              <Text
-                style={[
-                  styles.summaryValue,
-                  totalSpent > displayIncome && { color: "#FFB3B3" },
-                ]}
-              >
-                {formatMasked(totalSpent, amountsVisible)}
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>LEFT</Text>
-              <Text
-                style={[
-                  styles.summaryValue,
-                  { color: remaining < 0 ? "#FFB3B3" : "#B3FFD9" },
-                ]}
-              >
-                {amountsVisible
-                  ? `₹${Math.abs(remaining).toLocaleString("en-IN")}${remaining < 0 ? " over" : ""}`
-                  : "₹••••••"}
-              </Text>
-            </View>
-          </View>
-
-          {onCardsSpend > 0 ? (
-            <Text style={styles.onCardsText}>
-              On cards this month:{" "}
-              {amountsVisible
-                ? `₹${Math.round(onCardsSpend).toLocaleString("en-IN")}`
-                : "₹••••"}
-            </Text>
-          ) : null}
-
-          <View style={styles.progressRow}>
-            <Text style={styles.progressLabel}>Cash budget used</Text>
-            <Text style={styles.progressLabel}>
-              {amountsVisible ? `${spentPercent.toFixed(0)}%` : "••%"}
-            </Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: amountsVisible ? `${spentPercent}%` : "0%",
-                  backgroundColor:
-                    spentPercent > 90
-                      ? "#FF6B6B"
-                      : spentPercent > 70
-                        ? "#FFD93D"
-                        : "#6BCB77",
-                },
-              ]}
-            />
-          </View>
+        {/* Summary card — flips like a coin to reveal amounts (PWA parity). */}
+        <View>
+          <Animated.View
+            pointerEvents={amountsVisible ? "none" : "auto"}
+            style={[
+              styles.flipFace,
+              {
+                opacity: flip.interpolate({
+                  inputRange: [0, 0.5, 0.5001, 1],
+                  outputRange: [1, 1, 0, 0],
+                }),
+                transform: [
+                  { perspective: 1000 },
+                  {
+                    rotateY: flip.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0deg", "180deg"],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            {renderSummaryCard(false)}
+          </Animated.View>
+          <Animated.View
+            pointerEvents={amountsVisible ? "auto" : "none"}
+            style={[
+              styles.flipFace,
+              styles.flipBack,
+              {
+                opacity: flip.interpolate({
+                  inputRange: [0, 0.4999, 0.5, 1],
+                  outputRange: [0, 0, 1, 1],
+                }),
+                transform: [
+                  { perspective: 1000 },
+                  {
+                    rotateY: flip.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["180deg", "360deg"],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            {renderSummaryCard(true)}
+          </Animated.View>
         </View>
 
         <View style={styles.toolbarRow}>
@@ -1515,6 +1587,8 @@ export default function TrackerScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  flipFace: { backfaceVisibility: "hidden" },
+  flipBack: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   summaryCard: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.xxl,
