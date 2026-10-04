@@ -1,32 +1,49 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors, FontSize, Spacing, Radius } from "@/constants/theme";
+import * as WebBrowser from "expo-web-browser";
+import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
-import { appStorage } from "@/lib/storage";
+import type { TrackerIconName } from "@/lib/tracker-categories";
 import {
   TRACKER_CONSENT_VERSION,
-  TRACKER_CONSENT_STORAGE_KEY,
+  setTrackerConsentLocal,
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
 
-const TRACK_ITEMS = [
-  "Needs / mandatory expenses — rent, groceries, utilities",
-  "Wants / non-mandatory expenses — dining, entertainment",
-  "Habit expenses — tea, coffee, cigarettes",
-  "Loans & credit card payments",
-  "Investments & savings",
-  "Medical, transport, shopping & more",
-] as const;
+type TrackItem =
+  | { kind: "tracker"; icon: TrackerIconName; label: string }
+  | { kind: "app"; icon: AppIconName; label: string };
+
+const TRACK_ITEMS: TrackItem[] = [
+  {
+    kind: "tracker",
+    icon: "home",
+    label: "Needs / mandatory expenses — rent, groceries, utilities",
+  },
+  {
+    kind: "tracker",
+    icon: "party",
+    label: "Wants / non-mandatory expenses — dining, entertainment",
+  },
+  {
+    kind: "tracker",
+    icon: "coffee",
+    label: "Habit expenses — tea, coffee, cigarettes",
+  },
+  { kind: "app", icon: "card", label: "Loans & credit card payments" },
+  { kind: "app", icon: "trending", label: "Investments & savings" },
+  { kind: "app", icon: "hospital", label: "Medical & insurance" },
+  { kind: "tracker", icon: "cab", label: "Transport & fuel" },
+  { kind: "tracker", icon: "shirt", label: "Shopping & lifestyle" },
+];
+
+const PRIVACY_URL = `${(
+  process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
+).replace(/\/$/, "")}/legal/privacy`;
 
 type Props = {
   onAccept: () => void;
@@ -49,10 +66,7 @@ export function TrackerConsent({ onAccept }: Props) {
         consent_version: TRACKER_CONSENT_VERSION,
       });
       if (error) console.warn("tracker_consent upsert:", error.message);
-      await appStorage.setItem(
-        TRACKER_CONSENT_STORAGE_KEY,
-        TRACKER_CONSENT_VERSION,
-      );
+      setTrackerConsentLocal();
       onAccept();
     } finally {
       setSaving(false);
@@ -74,46 +88,73 @@ export function TrackerConsent({ onAccept }: Props) {
 
           <View style={styles.listBox}>
             <Text style={styles.listHead}>WHAT YOU CAN TRACK</Text>
-            {TRACK_ITEMS.map((label) => (
-              <Text key={label} style={styles.listItem}>
-                · {label}
-              </Text>
+            {TRACK_ITEMS.map((item) => (
+              <View key={item.label} style={styles.listRow}>
+                {item.kind === "tracker" ? (
+                  <TrackerIcon
+                    name={item.icon}
+                    size={16}
+                    color={Colors.primary}
+                  />
+                ) : (
+                  <AppIcon name={item.icon} size={16} color={Colors.primary} />
+                )}
+                <Text style={styles.listItem}>{item.label}</Text>
+              </View>
             ))}
           </View>
 
           <View style={styles.privacyBox}>
-            <AppIcon name="shield" size={16} color={Colors.primary} />
+            <AppIcon name="lock" size={16} color={Colors.primary} />
             <Text style={styles.privacyText}>
-              Your expenses stay private to your account. Sensitive amounts are
-              encrypted. Delete anytime from settings.
+              Your expenses and credit-card nicknames, optional last-4 digits,
+              and billing/due dates stay private to your account. Sensitive
+              health-check amounts are encrypted. Delete anytime from settings.
+            </Text>
+          </View>
+
+          <View style={styles.checkRow}>
+            <Pressable
+              onPress={() => setChecked((c) => !c)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked }}
+              accessibilityLabel="I agree to store expense and card data for insights"
+              style={[styles.checkbox, checked && styles.checkboxOn]}
+            >
+              {checked ? (
+                <AppIcon
+                  name="check"
+                  size={12}
+                  color="#FFFFFF"
+                  strokeWidth={2.5}
+                />
+              ) : null}
+            </Pressable>
+            <Text
+              style={styles.checkLabel}
+              onPress={() => setChecked((c) => !c)}
+            >
+              I understand that Finkoin will store my expense entries and saved
+              card details (nickname, optional last 4, billing/due days) to
+              power spend tracking and bill suggestions. I can delete this data
+              anytime. I agree to the{" "}
+              <Text
+                style={styles.link}
+                onPress={() => void WebBrowser.openBrowserAsync(PRIVACY_URL)}
+              >
+                Privacy Policy
+              </Text>
             </Text>
           </View>
 
           <Pressable
-            style={styles.checkRow}
-            onPress={() => setChecked((c) => !c)}
-          >
-            <View style={[styles.checkbox, checked && styles.checkboxOn]}>
-              {checked ? <Text style={styles.checkMark}>✓</Text> : null}
-            </View>
-            <Text style={styles.checkLabel}>
-              I understand that Finkoin will store my expense entries to power
-              spend tracking. I can delete this data anytime.
-            </Text>
-          </Pressable>
-
-          <Pressable
             disabled={!checked || saving}
             onPress={() => void handleAccept()}
-            style={[styles.startBtn, (!checked || saving) && styles.startOff]}
+            style={[styles.startBtn, !checked && styles.startOff]}
           >
-            {saving ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <Text style={[styles.startText, !checked && styles.startTextOff]}>
-                Start tracking
-              </Text>
-            )}
+            <Text style={[styles.startText, !checked && styles.startTextOff]}>
+              {saving ? "Starting…" : "Start tracking"}
+            </Text>
           </Pressable>
 
           <Pressable
@@ -131,7 +172,8 @@ export function TrackerConsent({ onAccept }: Props) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
     paddingBottom: 120,
     maxWidth: 520,
     width: "100%",
@@ -140,7 +182,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    padding: 28,
+    paddingVertical: 32,
+    paddingHorizontal: 28,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -151,19 +194,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#111110",
+    color: Colors.textPrimary,
     textAlign: "center",
     marginBottom: 8,
   },
   sub: {
     fontSize: 14,
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 22,
   },
   listBox: {
-    backgroundColor: "#F7F7F4",
+    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -173,18 +216,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.primary,
     marginBottom: 12,
-    letterSpacing: 0.4,
+  },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
   },
   listItem: {
+    flex: 1,
     fontSize: 13,
-    color: "#5F5E5A",
-    marginBottom: 8,
+    color: Colors.textSecondary,
     lineHeight: 18,
   },
   privacyBox: {
     backgroundColor: Colors.primaryLight,
     borderRadius: 12,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     marginBottom: 20,
     flexDirection: "row",
     gap: 8,
@@ -194,7 +243,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: Colors.primary,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   checkRow: {
     flexDirection: "row",
@@ -216,13 +265,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primary,
   },
-  checkMark: { color: "#FFF", fontWeight: "800", fontSize: 16 },
   checkLabel: {
     flex: 1,
     fontSize: 13,
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
     lineHeight: 20,
   },
+  link: { color: Colors.primary, textDecorationLine: "underline" },
   startBtn: {
     height: 48,
     borderRadius: 12,
@@ -231,8 +280,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   startOff: { backgroundColor: Colors.border },
-  startText: { color: "#FFF", fontSize: 15, fontWeight: "800" },
+  startText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
   startTextOff: { color: Colors.textMuted },
-  later: { marginTop: 10, padding: 8, alignItems: "center" },
+  later: {
+    marginTop: 10,
+    minHeight: 44,
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   laterText: { color: Colors.textMuted, fontSize: 13, fontWeight: "600" },
 });

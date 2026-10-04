@@ -81,20 +81,28 @@ export function MonthSafetyPulse({
           <SectionPrivacyEye
             visible={amountsVisible}
             onToggle={() => setLocalVisible((v) => !v)}
+            style={styles.eyeBtn}
           />
         </View>
       </View>
 
-      {pulse.reasons.length > 0
-        ? pulse.reasons.map((r) => (
-            <Text key={r} style={styles.reason}>
-              · {amountsVisible ? r : r.replace(/₹[\d,]+/g, "₹••••••")}
-            </Text>
-          ))
-        : null}
+      {pulse.reasons.length > 0 ? (
+        <View style={styles.reasons}>
+          {pulse.reasons.map((r) => (
+            <View key={r} style={styles.reasonRow}>
+              <Text style={styles.reason}>•</Text>
+              <Text style={[styles.reason, { flex: 1 }]}>
+                {amountsVisible ? r : r.replace(/₹[\d,]+/g, "₹••••••")}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       {pulse.action ? (
-        <View style={styles.actionBox}>
+        <View
+          style={[styles.actionBox, { marginBottom: showComparison ? 12 : 0 }]}
+        >
           <Text style={styles.actionLabel}>Do this</Text>
           <Text style={styles.actionText}>
             {amountsVisible
@@ -159,17 +167,26 @@ export function MonthSafetyPulse({
         </View>
       ) : null}
 
-      {pulse.dailySafeSpend != null &&
+      {pulse.isCurrentCalendarMonth &&
+      pulse.dailySafeSpend != null &&
       pulse.daysLeftInMonth != null &&
-      pulse.isCurrentCalendarMonth ? (
+      pulse.daysLeftInMonth > 0 &&
+      pulse.status !== "unknown" ? (
         <Text style={styles.dailySafe}>
-          Safe daily spend: {maskOrShow(pulse.dailySafeSpend, amountsVisible)} ·{" "}
           {pulse.daysLeftInMonth} day
-          {pulse.daysLeftInMonth === 1 ? "" : "s"} left
+          {pulse.daysLeftInMonth === 1 ? "" : "s"} left · safe daily spend ≈{" "}
+          <Text style={styles.dailySafeAmount}>
+            {maskOrShow(pulse.dailySafeSpend, amountsVisible)}
+          </Text>
         </Text>
       ) : null}
 
-      {children ? <View style={styles.children}>{children}</View> : null}
+      {children ? (
+        <View style={styles.children}>
+          <Text style={styles.childrenLabel}>Bills & calendar</Text>
+          {children}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -206,6 +223,13 @@ const styles = StyleSheet.create({
     color: "#111110",
     lineHeight: 20,
   },
+  eyeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderColor: "#D4D2F5",
+    backgroundColor: "#FFFFFF",
+  },
   badge: {
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -215,20 +239,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
+  reasons: { marginBottom: 12, paddingLeft: 4 },
+  reasonRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
   reason: {
     fontSize: 13,
     color: "#3C3489",
     lineHeight: 20,
-    marginBottom: 4,
   },
   actionBox: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginTop: 8,
-    marginBottom: 8,
   },
   actionLabel: {
     fontSize: 10,
@@ -289,8 +313,22 @@ const styles = StyleSheet.create({
   dailySafe: {
     marginTop: 12,
     fontSize: 12,
-    fontWeight: "600",
+    lineHeight: 17,
     color: "#3C3489",
   },
-  children: { marginTop: 4 },
+  dailySafeAmount: { fontWeight: "700", color: "#111110" },
+  children: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(83,74,183,0.15)",
+  },
+  childrenLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
 });
