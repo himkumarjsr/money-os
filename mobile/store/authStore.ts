@@ -25,6 +25,7 @@ export interface User {
   id: string;
   name: string | null;
   email: string | null;
+  photoURL: string | null;
   subscriptionTier: string;
   fkBalance: number;
 }
@@ -47,6 +48,7 @@ interface AuthState {
   handleIncomingAuthUrl: (url: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
+  updateUser: (patch: Partial<User>) => void;
   refreshUser: () => Promise<void>;
 }
 
@@ -133,10 +135,15 @@ function mapAuthUser(user: {
     (meta.full_name as string | undefined) ||
     user.email?.split("@")[0] ||
     null;
+  const photoURL =
+    (meta.avatar_url as string | undefined) ||
+    (meta.picture as string | undefined) ||
+    null;
   return {
     id: user.id,
     name,
     email: user.email || null,
+    photoURL,
     subscriptionTier: "free",
     fkBalance: 0,
   };
@@ -288,7 +295,7 @@ export const useAuthStore = create<AuthState>()(
           try {
             const { data: profile } = await supabase
               .from("users")
-              .select("name, subscription_tier, fk_balance")
+              .select("name, subscription_tier, fk_balance, avatar_url")
               .eq("id", sessionUser.id)
               .maybeSingle();
             if (profile?.name) next = { ...next, name: profile.name };
@@ -300,6 +307,13 @@ export const useAuthStore = create<AuthState>()(
             }
             if (typeof profile?.fk_balance === "number") {
               next = { ...next, fkBalance: profile.fk_balance };
+            }
+            // DB row wins over OAuth-provider metadata (matches web).
+            if (
+              typeof profile?.avatar_url === "string" &&
+              profile.avatar_url.length > 0
+            ) {
+              next = { ...next, photoURL: profile.avatar_url };
             }
           } catch {
             /* profile optional */
@@ -538,6 +552,9 @@ export const useAuthStore = create<AuthState>()(
           };
         }
       },
+
+      updateUser: (patch) =>
+        set((s) => (s.user ? { user: { ...s.user, ...patch } } : {})),
     }),
     {
       name: "finkoin-auth-mobile",

@@ -33,10 +33,20 @@ export type TrackerTxn = {
   payment_method: string | null;
 };
 
+export type SavedExpense = {
+  id: string;
+  amount: number;
+  bucket: string;
+  category: string;
+  subcategory: string;
+  description: string | null;
+  isEdit: boolean;
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (saved: SavedExpense) => void;
   defaultDate: string;
   maxDate?: string;
   defaultBucket?: string;
@@ -202,6 +212,7 @@ export function AddExpenseSheet({
         year,
       };
 
+      let savedId = editExpense?.id ?? "";
       if (isEdit && editExpense?.id) {
         const { error: err } = await supabase
           .from("expense_transactions")
@@ -210,12 +221,23 @@ export function AddExpenseSheet({
           .eq("user_id", user.id);
         if (err) throw err;
       } else {
-        const { error: err } = await supabase
+        const { data, error: err } = await supabase
           .from("expense_transactions")
-          .insert(payload);
+          .insert(payload)
+          .select("id")
+          .single();
         if (err) throw err;
+        savedId = String((data as { id?: string } | null)?.id ?? "");
       }
-      onSaved();
+      onSaved({
+        id: savedId,
+        amount,
+        bucket,
+        category: subcategory,
+        subcategory,
+        description: payload.description,
+        isEdit,
+      });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save");
