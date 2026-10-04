@@ -79,6 +79,11 @@ export const TRACKER_CATEGORIES = {
     cap: 30,
     subcategories: [
       { id: "rent", label: "Rent", icon: "home" as const },
+      {
+        id: "maintenance",
+        label: "Maintenance (society / rent)",
+        icon: "building" as const,
+      },
       { id: "groceries", label: "Groceries", icon: "cart" as const },
       { id: "vegetables", label: "Vegetables & fruits", icon: "leaf" as const },
       { id: "milk", label: "Milk & dairy", icon: "milk" as const },
