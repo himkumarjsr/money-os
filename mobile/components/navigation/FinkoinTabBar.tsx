@@ -1,22 +1,35 @@
 /**
- * Floating glass dock — Phase 1:
- * Home · Report · Track(+) · Split · Profile
+ * Floating glass dock — matches the PWA's mobile bottom nav exactly:
+ * Home · Report · Track(+) · Calculators · Profile
  */
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  Pressable,
+  StyleSheet,
+  Platform,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import Svg, { Path, Circle } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
 import { Colors } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { AppIcon } from "@/components/ui/AppIcon";
 
-const ORDER = ["index", "analyse", "tracker", "split", "profile"] as const;
+const ORDER = [
+  "index",
+  "analyse",
+  "tracker",
+  "calculators",
+  "profile",
+] as const;
 
 const LABELS: Record<(typeof ORDER)[number], string> = {
   index: "Home",
   analyse: "Report",
   tracker: "Track",
-  split: "Split",
+  calculators: "Calculators",
   profile: "Profile",
 };
 
@@ -47,21 +60,6 @@ function ReportSvg({ color }: { color: string }) {
         stroke={color}
         strokeWidth={1.5}
         strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
-function SplitSvg({ color }: { color: string }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-      <Circle cx={9} cy={8} r={3} stroke={color} strokeWidth={1.5} />
-      <Circle cx={16} cy={9} r={2.5} stroke={color} strokeWidth={1.5} />
-      <Path
-        d="M4 19c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5M14 15.5c1.8.2 3.5 1.4 3.5 3.5"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinecap="round"
       />
     </Svg>
   );
@@ -151,12 +149,19 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                       <HomeSvg color={color} />
                     ) : name === "analyse" ? (
                       <ReportSvg color={color} />
-                    ) : name === "split" ? (
-                      <SplitSvg color={color} />
+                    ) : name === "calculators" ? (
+                      <AppIcon name="calculator" size={22} color={color} />
                     ) : name === "profile" ? (
                       isLoggedIn ? (
                         <View style={styles.avatar}>
-                          <Text style={styles.avatarLetter}>{letter}</Text>
+                          {user?.photoURL ? (
+                            <Image
+                              source={{ uri: user.photoURL }}
+                              style={styles.avatarImg}
+                            />
+                          ) : (
+                            <Text style={styles.avatarLetter}>{letter}</Text>
+                          )}
                           <View style={styles.fkBadge}>
                             <Text style={styles.fkText}>
                               {fk > 999 ? "999+" : String(fk)}
@@ -311,6 +316,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#E8E6F0",
+    overflow: "hidden",
+  },
+  avatarImg: {
+    height: 28,
+    width: 28,
+    borderRadius: 999,
   },
   avatarLetter: {
     color: "#FFFFFF",

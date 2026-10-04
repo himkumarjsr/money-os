@@ -2,8 +2,10 @@ import { Tabs } from "expo-router";
 import { FinkoinTabBar } from "@/components/navigation/FinkoinTabBar";
 
 /**
- * Phase 1 tabs: Home · Report · Track · Split · Profile
- * Calculators remains in stack but hidden from dock.
+ * Dock tabs match the PWA's mobile bottom nav exactly:
+ * Home · Report · Track · Calculators · Profile.
+ * Split remains in the stack (reachable from Home's quick tools) but
+ * hidden from the dock, same as on web.
  */
 export default function TabLayout() {
   return (
@@ -22,12 +24,9 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="analyse" options={{ title: "Report" }} />
       <Tabs.Screen name="tracker" options={{ title: "Track" }} />
-      <Tabs.Screen name="split" options={{ title: "Split" }} />
+      <Tabs.Screen name="calculators" options={{ title: "Calculators" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-      <Tabs.Screen
-        name="calculators"
-        options={{ title: "Calculators", href: null }}
-      />
+      <Tabs.Screen name="split" options={{ title: "Split", href: null }} />
     </Tabs>
   );
 }

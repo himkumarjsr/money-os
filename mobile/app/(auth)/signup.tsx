@@ -9,8 +9,10 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
+import * as Linking from "expo-linking";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useAuthStore, getOAuthRedirectUri } from "@/store/authStore";
+import { siteBase } from "@/lib/googleAuth";
 import { Colors, Spacing, FontSize } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -136,6 +138,24 @@ export default function SignupScreen() {
           />
         </View>
 
+        <Text style={styles.legalText}>
+          By signing up you agree to our{" "}
+          <Text
+            style={styles.legalLink}
+            onPress={() => void Linking.openURL(`${siteBase()}/legal/terms`)}
+          >
+            Terms
+          </Text>{" "}
+          and{" "}
+          <Text
+            style={styles.legalLink}
+            onPress={() => void Linking.openURL(`${siteBase()}/legal/privacy`)}
+          >
+            Privacy Policy
+          </Text>
+          .
+        </Text>
+
         <TouchableOpacity
           onPress={() =>
             router.replace({
@@ -179,6 +199,14 @@ const styles = StyleSheet.create({
   },
   tagline: { fontSize: FontSize.md, color: Colors.textMuted },
   form: { gap: Spacing.lg },
+  legalText: {
+    marginTop: Spacing.lg,
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  legalLink: { color: Colors.primary, fontWeight: "600" },
   linkWrap: { marginTop: Spacing.xl, alignItems: "center" },
   link: { fontSize: FontSize.md, color: Colors.textMuted },
   linkStrong: { color: Colors.primary, fontWeight: "700" },

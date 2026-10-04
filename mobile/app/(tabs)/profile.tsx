@@ -13,6 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { uploadAvatar } from "@/lib/avatarUpload";
+import { deleteMyAccount } from "@/lib/accountDeletion";
 import { Colors, FontSize, Spacing, Radius } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -26,8 +27,36 @@ export default function ProfileScreen() {
   const signOut = useAuthStore((s) => s.signOut);
   const updateUser = useAuthStore((s) => s.updateUser);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const initials = (user?.name?.trim()?.charAt(0) || "U").toUpperCase();
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account permanently?",
+      "This removes your profile, tracker history, analyse results, and all other Finkoin data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            setDeleteBusy(true);
+            void deleteMyAccount()
+              .then(async ({ error }) => {
+                if (error) {
+                  Alert.alert("Could not delete account", error);
+                  return;
+                }
+                await signOut();
+                router.replace("/(tabs)");
+              })
+              .finally(() => setDeleteBusy(false));
+          },
+        },
+      ],
+    );
+  };
 
   const handlePickPhoto = async () => {
     if (!user?.id || photoBusy) return;
@@ -99,10 +128,7 @@ export default function ProfileScreen() {
         <View style={styles.avatarRow}>
           <View style={styles.avatarWrap}>
             {user?.photoURL ? (
-              <Image
-                source={{ uri: user.photoURL }}
-                style={styles.avatarImg}
-              />
+              <Image source={{ uri: user.photoURL }} style={styles.avatarImg} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitials}>{initials}</Text>
@@ -149,6 +175,15 @@ export default function ProfileScreen() {
               },
             ]);
           }}
+        />
+
+        <Button
+          label={deleteBusy ? "Deleting…" : "Delete account permanently"}
+          variant="ghost"
+          disabled={deleteBusy}
+          onPress={handleDeleteAccount}
+          style={{ marginTop: 8 }}
+          textStyle={{ color: Colors.error }}
         />
       </ScrollView>
     </View>
