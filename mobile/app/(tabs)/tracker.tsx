@@ -16,7 +16,10 @@ import { supabase, getSupabase } from "@/lib/supabase";
 import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionPrivacyEye, EyeIcon } from "@/components/ui/PrivacyEye";
-import { TrackerIcon, TrackerIconBadge } from "@/components/tracker/TrackerIcons";
+import {
+  TrackerIcon,
+  TrackerIconBadge,
+} from "@/components/tracker/TrackerIcons";
 import { TrackerConsent } from "@/components/tracker/TrackerConsent";
 import {
   AddExpenseSheet,
@@ -45,13 +48,18 @@ import {
   shouldLearnObligationFromExpense,
 } from "@/lib/obligationLearn";
 import {
-  countsTowardCashSpend,
+  creditCardBillPaymentDescription,
   displayExpenseDescription,
   hasTrackerConsentLocal,
+  isCreditCardBillPayment,
   isCreditCardPaymentMethod,
+  loadCreditCardsMerged,
+  parsePayBillLabel,
   sumCashSpend,
   sumOnCardsSpend,
+  type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
+import { CreditCardDues } from "@/components/tracker/CreditCardDues";
 import {
   EXPENSE_SUBCATEGORY_TO_OBLIGATION,
   SAVINGS_CARRY_FORWARD_DESC,
@@ -68,10 +76,18 @@ import {
   planObligationExpenseSync,
 } from "@/lib/trackerObligationSync";
 
-const BUCKETS: BucketType[] = ["needs", "wants", "habits", "loans", "investment"];
+const BUCKETS: BucketType[] = [
+  "needs",
+  "wants",
+  "habits",
+  "loans",
+  "investment",
+];
 
 function formatMasked(n: number, visible: boolean) {
-  return visible ? `₹${Math.round(Math.abs(n)).toLocaleString("en-IN")}` : "₹••••••";
+  return visible
+    ? `₹${Math.round(Math.abs(n)).toLocaleString("en-IN")}`
+    : "₹••••••";
 }
 
 export default function TrackerScreen() {
@@ -91,7 +107,18 @@ export default function TrackerScreen() {
   });
 
   const [transactions, setTransactions] = useState<TrackerTxn[]>([]);
-  const [previousTransactions, setPreviousTransactions] = useState<TrackerTxn[]>([]);
+  const [previousTransactions, setPreviousTransactions] = useState<
+    TrackerTxn[]
+  >([]);
+  /** prev-2 + prev months — CC carry-forward + obligation learning only (never Safety Pulse). */
+  const [ccBillHistory, setCcBillHistory] = useState<TrackerTxn[]>([]);
+  const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
+  const [pendingCcPayCardId, setPendingCcPayCardId] = useState<string | null>(
+    null,
+  );
+  const [ccOptimisticPayments, setCcOptimisticPayments] = useState<
+    Array<{ cardId: string; amount: number }>
+  >([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -116,19 +143,29 @@ export default function TrackerScreen() {
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [trackerStart, setTrackerStart] = useState<{ month: number; year: number } | null>(
-    null,
-  );
+  const [trackerStart, setTrackerStart] = useState<{
+    month: number;
+    year: number;
+  } | null>(null);
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
 
   const [amountsVisible, setAmountsVisible] = useState(false);
-  const [sectionVisible, setSectionVisible] = useState<Record<string, boolean>>({});
+  const [sectionVisible, setSectionVisible] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const isSectionVisible = (key: string) => sectionVisible[key] === true;
   const toggleSectionVisible = (key: string) =>
     setSectionVisible((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const privacyKeys = ["income", "needs", "wants", "habits", "loans", "investment"] as const;
+  const privacyKeys = [
+    "income",
+    "needs",
+    "wants",
+    "habits",
+    "loans",
+    "investment",
+  ] as const;
   const allVisible =
     amountsVisible && privacyKeys.every((k) => sectionVisible[k] === true);
   const toggleShowAll = () => {
@@ -142,9 +179,12 @@ export default function TrackerScreen() {
   };
 
   const fetchReqId = useRef(0);
-  const currentMonth = new Date(selectedYear, selectedMonth, 1).toLocaleString("en-IN", {
-    month: "long",
-  });
+  const currentMonth = new Date(selectedYear, selectedMonth, 1).toLocaleString(
+    "en-IN",
+    {
+      month: "long",
+    },
+  );
   const currentYear = selectedYear;
 
   // Keep obligations in sync with health-check data once analyse completes.
@@ -208,7 +248,8 @@ export default function TrackerScreen() {
       if (!soft) setLoading(true);
       try {
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
-        const [currentRes, prevRes] = await Promise.all([
+        const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
+        const [currentRes, prevRes, prev2Res] = await Promise.all([
           supabase
             .from("expense_transactions")
             .select("*")
@@ -223,25 +264,82 @@ export default function TrackerScreen() {
             .eq("month", prev.monthName)
             .eq("year", prev.year)
             .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", prev2.monthName)
+            .eq("year", prev2.year)
+            .order("date", { ascending: false }),
         ]);
         if (fetchReqId.current !== myId) return;
+        const prevRows = (prevRes.data as TrackerTxn[]) || [];
+        const prev2Rows = (prev2Res.data as TrackerTxn[]) || [];
         setTransactions((currentRes.data as TrackerTxn[]) || []);
-        setPreviousTransactions((prevRes.data as TrackerTxn[]) || []);
+        setPreviousTransactions(prevRows);
+        setCcBillHistory([...prev2Rows, ...prevRows]);
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker fetch failed", e);
         setTransactions([]);
         setPreviousTransactions([]);
+        setCcBillHistory([]);
       } finally {
         if (fetchReqId.current === myId) setLoading(false);
       }
     },
-    [hasConsent, user?.id, currentMonth, currentYear, selectedMonth, selectedYear],
+    [
+      hasConsent,
+      user?.id,
+      currentMonth,
+      currentYear,
+      selectedMonth,
+      selectedYear,
+    ],
   );
 
   useEffect(() => {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
+
+  // Re-runs when the sheet closes so a card added inside it shows up immediately.
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const cards = await loadCreditCardsMerged(user.id);
+      if (!cancelled) setSavedCards(cards);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasConsent, user?.id, showSheet]);
+
+  // Drop optimistic CC pay credits once a matching bill payment is fetched.
+  useEffect(() => {
+    if (ccOptimisticPayments.length === 0) return;
+    setCcOptimisticPayments((prev) =>
+      prev.filter((p) => {
+        const pool = [...transactions, ...ccBillHistory];
+        const id = p.cardId.toLowerCase();
+        return !pool.some((t) => {
+          if (!isCreditCardBillPayment(t)) return false;
+          const desc = (t.description || "").toLowerCase();
+          if (desc.includes(`[#${id}]`)) return true;
+          const payLabel = (
+            parsePayBillLabel(t.description) || ""
+          ).toLowerCase();
+          if (payLabel && (payLabel === id || desc.includes(id))) return true;
+          // Any loans → credit_card cash pay after a Pay CTA (covers orphan "Credit card").
+          return (
+            t.bucket === "loans" &&
+            (t.subcategory === "credit_card" || t.category === "credit_card") &&
+            Math.abs(Number(t.amount) - p.amount) < 0.02
+          );
+        });
+      }),
+    );
+  }, [transactions, ccBillHistory, ccOptimisticPayments.length]);
 
   useEffect(() => {
     if (!hasConsent || !user?.id) return;
@@ -285,9 +383,11 @@ export default function TrackerScreen() {
         };
         const consentStart = fromDate(consentRes.data?.consent_at ?? null);
         let txnStart: { month: number; year: number } | null = null;
-        const row = txnRes.data as
-          | { date?: string; month?: string; year?: number }
-          | null;
+        const row = txnRes.data as {
+          date?: string;
+          month?: string;
+          year?: number;
+        } | null;
         if (row) {
           let month = -1;
           let year = typeof row.year === "number" ? row.year : Number(row.year);
@@ -302,7 +402,10 @@ export default function TrackerScreen() {
           }
         }
         const start = consentStart ||
-          txnStart || { month: new Date().getMonth(), year: new Date().getFullYear() };
+          txnStart || {
+            month: new Date().getMonth(),
+            year: new Date().getFullYear(),
+          };
         setTrackerStart(start);
       } catch {
         /* ignore — nav stays unbounded */
@@ -344,7 +447,11 @@ export default function TrackerScreen() {
       salaryAmount: plan.salaryAmount,
       savingsAmount: plan.savingsAmount,
     });
-    if (!plan.needsSalaryRow && !plan.needsSavingsRow && !cleanupPreview.needsWork) {
+    if (
+      !plan.needsSalaryRow &&
+      !plan.needsSavingsRow &&
+      !cleanupPreview.needsWork
+    ) {
       return;
     }
 
@@ -355,10 +462,11 @@ export default function TrackerScreen() {
     let cancelled = false;
     void (async () => {
       try {
-        const monthName = new Date(selectedYear, selectedMonth, 1).toLocaleString(
-          "en-IN",
-          { month: "long" },
-        );
+        const monthName = new Date(
+          selectedYear,
+          selectedMonth,
+          1,
+        ).toLocaleString("en-IN", { month: "long" });
         const date = localISODate(new Date(selectedYear, selectedMonth, 1));
 
         const { data: fresh, error: freshErr } = await supabase
@@ -443,7 +551,9 @@ export default function TrackerScreen() {
           });
         }
         if (rows.length > 0) {
-          const { error } = await supabase.from("expense_transactions").insert(rows);
+          const { error } = await supabase
+            .from("expense_transactions")
+            .insert(rows);
           if (error) {
             incomeSyncKeyRef.current = null;
             return;
@@ -488,7 +598,10 @@ export default function TrackerScreen() {
       await store.generateChecklist(user.id, checklistMonth);
       if (cancelled) return;
       const { checklist } = useObligationStore.getState();
-      const plan = planObligationExpenseSync({ checklist, expenses: transactions });
+      const plan = planObligationExpenseSync({
+        checklist,
+        expenses: transactions,
+      });
       if (plan.markPaid.length === 0 && plan.markUnpaid.length === 0) {
         obligationSyncKeyRef.current = monthKey;
         return;
@@ -508,7 +621,14 @@ export default function TrackerScreen() {
     return () => {
       cancelled = true;
     };
-  }, [hasConsent, user?.id, obligationChecklistMonth, selectedMonth, selectedYear, transactions]);
+  }, [
+    hasConsent,
+    user?.id,
+    obligationChecklistMonth,
+    selectedMonth,
+    selectedYear,
+    transactions,
+  ]);
 
   const safetyPulse = useMemo(
     () =>
@@ -519,7 +639,13 @@ export default function TrackerScreen() {
         monthIndex: selectedMonth,
         year: selectedYear,
       }),
-    [transactions, previousTransactions, profileMonthlyFromDb, selectedMonth, selectedYear],
+    [
+      transactions,
+      previousTransactions,
+      profileMonthlyFromDb,
+      selectedMonth,
+      selectedYear,
+    ],
   );
 
   const deleteTransaction = useCallback(
@@ -576,7 +702,11 @@ export default function TrackerScreen() {
   const confirmDelete = (txn: TrackerTxn) => {
     Alert.alert("Remove this entry?", undefined, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => void deleteTransaction(txn) },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => void deleteTransaction(txn),
+      },
     ]);
   };
 
@@ -624,7 +754,8 @@ export default function TrackerScreen() {
     ? selectedMonth === trackerStart.month && selectedYear === trackerStart.year
     : false;
   const viewingCurrentMonth =
-    selectedMonth === new Date().getMonth() && selectedYear === new Date().getFullYear();
+    selectedMonth === new Date().getMonth() &&
+    selectedYear === new Date().getFullYear();
   const prevMeta = previousCalendarMonth(selectedMonth, selectedYear);
 
   const goToPrevMonth = () => {
@@ -650,7 +781,9 @@ export default function TrackerScreen() {
     setExpandedIncome(true);
     setExpandedBucket(null);
     setDefaultBucket("income");
-    const salaryTxn = incomeTxns.find((t) => (t.subcategory || t.category) === "salary");
+    const salaryTxn = incomeTxns.find(
+      (t) => (t.subcategory || t.category) === "salary",
+    );
     if (salaryTxn) {
       setSheetDefaults({});
       setEditingExpense(salaryTxn);
@@ -658,7 +791,8 @@ export default function TrackerScreen() {
       setEditingExpense(null);
       setSheetDefaults({
         subcategory: "salary",
-        amount: incomePlan.salaryAmount > 0 ? incomePlan.salaryAmount : undefined,
+        amount:
+          incomePlan.salaryAmount > 0 ? incomePlan.salaryAmount : undefined,
         description: "Salary",
       });
     }
@@ -670,13 +804,20 @@ export default function TrackerScreen() {
     setExpandedBucket(null);
     setDefaultBucket("income");
     setEditingExpense(null);
-    const hasSalary = incomeTxns.some((t) => (t.subcategory || t.category) === "salary");
+    const hasSalary = incomeTxns.some(
+      (t) => (t.subcategory || t.category) === "salary",
+    );
     if (hasSalary) {
-      setSheetDefaults({ subcategory: "other_income", amount: undefined, description: "" });
+      setSheetDefaults({
+        subcategory: "other_income",
+        amount: undefined,
+        description: "",
+      });
     } else {
       setSheetDefaults({
         subcategory: "salary",
-        amount: incomePlan.salaryAmount > 0 ? incomePlan.salaryAmount : undefined,
+        amount:
+          incomePlan.salaryAmount > 0 ? incomePlan.salaryAmount : undefined,
         description: "Salary",
       });
     }
@@ -686,7 +827,10 @@ export default function TrackerScreen() {
   const maxDate = localISODate(new Date(selectedYear, selectedMonth + 1, 0));
   const defaultDateForSheet = (() => {
     const today = new Date();
-    if (today.getFullYear() === selectedYear && today.getMonth() === selectedMonth) {
+    if (
+      today.getFullYear() === selectedYear &&
+      today.getMonth() === selectedMonth
+    ) {
       return localISODate(today);
     }
     if (
@@ -700,10 +844,18 @@ export default function TrackerScreen() {
 
   const onSheetSaved = (saved: SavedExpense) => {
     void fetchTransactions({ soft: true });
+    if (pendingCcPayCardId && saved.amount != null) {
+      setCcOptimisticPayments((prev) => [
+        ...prev,
+        { cardId: pendingCcPayCardId, amount: Number(saved.amount) || 0 },
+      ]);
+    }
+    setPendingCcPayCardId(null);
     if (!saved.isEdit && user?.id && saved.bucket !== "income") {
       const subKey = (saved.subcategory || saved.category || "").trim();
       const obligationCategory = obligationCategoryFromExpense(saved);
-      const isCcBillPay = subKey === "credit_card" || obligationCategory === "credit_card";
+      const isCcBillPay =
+        subKey === "credit_card" || obligationCategory === "credit_card";
       if (!isCcBillPay) {
         void (async () => {
           const store = useObligationStore.getState();
@@ -728,9 +880,11 @@ export default function TrackerScreen() {
                 amount: saved.amount,
                 category: obligationCategory,
                 existing: obligations,
-                priorTransactions: previousTransactions,
+                priorTransactions: ccBillHistory,
               });
-              const fromSub = Boolean(EXPENSE_SUBCATEGORY_TO_OBLIGATION[subKey]);
+              const fromSub = Boolean(
+                EXPENSE_SUBCATEGORY_TO_OBLIGATION[subKey],
+              );
               const learn = shouldLearnObligationFromExpense({
                 obligationCategory,
                 decision,
@@ -772,7 +926,11 @@ export default function TrackerScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: Spacing.xl, paddingBottom: 140 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+          />
         }
       >
         {/* Summary card */}
@@ -788,7 +946,9 @@ export default function TrackerScreen() {
             <Text style={styles.monthTitle} numberOfLines={1}>
               {currentMonth} {currentYear}
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
               <SectionPrivacyEye
                 visible={amountsVisible}
                 onToggle={() => setAmountsVisible((v) => !v)}
@@ -840,7 +1000,9 @@ export default function TrackerScreen() {
           {onCardsSpend > 0 ? (
             <Text style={styles.onCardsText}>
               On cards this month:{" "}
-              {amountsVisible ? `₹${Math.round(onCardsSpend).toLocaleString("en-IN")}` : "₹••••"}
+              {amountsVisible
+                ? `₹${Math.round(onCardsSpend).toLocaleString("en-IN")}`
+                : "₹••••"}
             </Text>
           ) : null}
 
@@ -857,7 +1019,11 @@ export default function TrackerScreen() {
                 {
                   width: amountsVisible ? `${spentPercent}%` : "0%",
                   backgroundColor:
-                    spentPercent > 90 ? "#FF6B6B" : spentPercent > 70 ? "#FFD93D" : "#6BCB77",
+                    spentPercent > 90
+                      ? "#FF6B6B"
+                      : spentPercent > 70
+                        ? "#FFD93D"
+                        : "#6BCB77",
                 },
               ]}
             />
@@ -866,7 +1032,9 @@ export default function TrackerScreen() {
 
         <Pressable onPress={toggleShowAll} style={styles.showAllBtn}>
           <EyeIcon open={allVisible} size={14} color={Colors.primary} />
-          <Text style={styles.showAllText}>{allVisible ? "Hide all" : "Show all"}</Text>
+          <Text style={styles.showAllText}>
+            {allVisible ? "Hide all" : "Show all"}
+          </Text>
         </Pressable>
 
         {loading ? <LoadingSpinner /> : null}
@@ -893,8 +1061,10 @@ export default function TrackerScreen() {
               <View style={{ flexShrink: 1 }}>
                 <Text style={styles.sectionTitle}>{incomeCat.label}</Text>
                 <Text style={styles.sectionSub}>
-                  {incomeTxns.length} {incomeTxns.length === 1 ? "entry" : "entries"}
-                  {listSavingsCarryForward(incomeTxns).length > 0 || incomePlan.needsSavingsRow
+                  {incomeTxns.length}{" "}
+                  {incomeTxns.length === 1 ? "entry" : "entries"}
+                  {listSavingsCarryForward(incomeTxns).length > 0 ||
+                  incomePlan.needsSavingsRow
                     ? " · includes saving from last month"
                     : monthlyIncome === 0 && profileMonthlyFromDb > 0
                       ? " · synced from profile"
@@ -918,12 +1088,18 @@ export default function TrackerScreen() {
             <View style={styles.sectionBody}>
               {incomeTxns.length > 0 ? (
                 incomeTxns.map((txn) => {
-                  const sub = findSubcategory("income", txn.subcategory ?? txn.category);
+                  const sub = findSubcategory(
+                    "income",
+                    txn.subcategory ?? txn.category,
+                  );
                   return (
                     <View key={txn.id} style={styles.txnRow}>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.txnAmount}>
-                          {formatMasked(Number(txn.amount), isSectionVisible("income"))}
+                          {formatMasked(
+                            Number(txn.amount),
+                            isSectionVisible("income"),
+                          )}
                         </Text>
                         <Text style={styles.txnMeta} numberOfLines={1}>
                           {sub?.label ?? txn.category} ·{" "}
@@ -946,7 +1122,10 @@ export default function TrackerScreen() {
                         >
                           <Text style={styles.editLink}>Edit</Text>
                         </Pressable>
-                        <Pressable onPress={() => confirmDelete(txn)} hitSlop={6}>
+                        <Pressable
+                          onPress={() => confirmDelete(txn)}
+                          hitSlop={6}
+                        >
                           <Text style={styles.deleteLink}>Delete</Text>
                         </Pressable>
                       </View>
@@ -975,10 +1154,13 @@ export default function TrackerScreen() {
             .filter((t) => countsTowardTrackerTotals(t))
             .reduce((a, t) => a + Number(t.amount), 0);
           const isExpanded = expandedBucket === bucketKey;
-          const budgetAmount = displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
+          const budgetAmount =
+            displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
           const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
           const progressPercent =
-            budgetAmount > 0 ? Math.min((bucketTotal / budgetAmount) * 100, 100) : 0;
+            budgetAmount > 0
+              ? Math.min((bucketTotal / budgetAmount) * 100, 100)
+              : 0;
           const bySubcategory: Record<string, TrackerTxn[]> = {};
           for (const t of bucketTxns) {
             const key = t.subcategory || "other";
@@ -1026,7 +1208,10 @@ export default function TrackerScreen() {
                   <View style={styles.sectionHeadRight}>
                     <View style={{ alignItems: "flex-end" }}>
                       <Text
-                        style={[styles.sectionAmount, overBudget && { color: Colors.error }]}
+                        style={[
+                          styles.sectionAmount,
+                          overBudget && { color: Colors.error },
+                        ]}
                       >
                         {formatMasked(bucketTotal, visible)}
                       </Text>
@@ -1063,7 +1248,8 @@ export default function TrackerScreen() {
                 ) : null}
                 {overBudget ? (
                   <Text style={styles.overBudgetText}>
-                    Over budget by {formatMasked(bucketTotal - budgetAmount, visible)}
+                    Over budget by{" "}
+                    {formatMasked(bucketTotal - budgetAmount, visible)}
                   </Text>
                 ) : null}
               </Pressable>
@@ -1077,11 +1263,19 @@ export default function TrackerScreen() {
                       setEditingExpense(null);
                       setShowSheet(true);
                     }}
-                    style={[styles.addBtn, { borderColor: cat.color, backgroundColor: `${cat.color}15` }]}
+                    style={[
+                      styles.addBtn,
+                      {
+                        borderColor: cat.color,
+                        backgroundColor: `${cat.color}15`,
+                      },
+                    ]}
                   >
                     <Text style={[styles.addBtnText, { color: cat.color }]}>
-                      {bucketKey === "investment" ? "+ Add savings" : "+ Add expense"} ·{" "}
-                      {cat.label}
+                      {bucketKey === "investment"
+                        ? "+ Add savings"
+                        : "+ Add expense"}{" "}
+                      · {cat.label}
                     </Text>
                   </Pressable>
 
@@ -1094,36 +1288,68 @@ export default function TrackerScreen() {
                       return (
                         <View key={subId} style={styles.subGroup}>
                           <View style={styles.subHead}>
-                            <TrackerIcon name={sub?.icon ?? "other"} size={18} color={cat.color} />
+                            <TrackerIcon
+                              name={sub?.icon ?? "other"}
+                              size={18}
+                              color={cat.color}
+                            />
                             <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text style={styles.subLabel}>{sub?.label || subId}</Text>
+                              <Text style={styles.subLabel}>
+                                {sub?.label || subId}
+                              </Text>
                               <Text style={styles.subMeta}>
-                                {txns.length} {txns.length === 1 ? "transaction" : "transactions"}
+                                {txns.length}{" "}
+                                {txns.length === 1
+                                  ? "transaction"
+                                  : "transactions"}
                               </Text>
                             </View>
-                            <Text style={styles.subTotal}>{formatMasked(subTotal, visible)}</Text>
+                            <Text style={styles.subTotal}>
+                              {formatMasked(subTotal, visible)}
+                            </Text>
                           </View>
                           {txns.map((txn) => {
-                            const onCard = isCreditCardPaymentMethod(txn.payment_method);
+                            const onCard = isCreditCardPaymentMethod(
+                              txn.payment_method,
+                            );
                             return (
                               <View key={txn.id} style={styles.txnRow}>
                                 <View style={{ flex: 1, minWidth: 0 }}>
-                                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <View
+                                    style={{
+                                      flexDirection: "row",
+                                      alignItems: "center",
+                                      gap: 6,
+                                    }}
+                                  >
                                     <Text style={styles.txnAmount}>
-                                      {formatMasked(Number(txn.amount), visible)}
+                                      {formatMasked(
+                                        Number(txn.amount),
+                                        visible,
+                                      )}
                                     </Text>
                                     {onCard ? (
                                       <View style={styles.cardChip}>
-                                        <Text style={styles.cardChipText}>Card</Text>
+                                        <Text style={styles.cardChipText}>
+                                          Card
+                                        </Text>
                                       </View>
                                     ) : null}
                                   </View>
-                                  <Text style={styles.txnMeta} numberOfLines={1}>
-                                    {displayExpenseDescription(txn.description) ||
-                                      new Date(txn.date).toLocaleDateString("en-IN", {
-                                        day: "numeric",
-                                        month: "short",
-                                      })}
+                                  <Text
+                                    style={styles.txnMeta}
+                                    numberOfLines={1}
+                                  >
+                                    {displayExpenseDescription(
+                                      txn.description,
+                                    ) ||
+                                      new Date(txn.date).toLocaleDateString(
+                                        "en-IN",
+                                        {
+                                          day: "numeric",
+                                          month: "short",
+                                        },
+                                      )}
                                   </Text>
                                 </View>
                                 <View style={{ flexDirection: "row", gap: 4 }}>
@@ -1137,8 +1363,13 @@ export default function TrackerScreen() {
                                   >
                                     <Text style={styles.editLink}>Edit</Text>
                                   </Pressable>
-                                  <Pressable onPress={() => confirmDelete(txn)} hitSlop={6}>
-                                    <Text style={styles.deleteLink}>Delete</Text>
+                                  <Pressable
+                                    onPress={() => confirmDelete(txn)}
+                                    hitSlop={6}
+                                  >
+                                    <Text style={styles.deleteLink}>
+                                      Delete
+                                    </Text>
                                   </Pressable>
                                 </View>
                               </View>
@@ -1158,25 +1389,62 @@ export default function TrackerScreen() {
           );
         })}
 
-        <MonthSafetyPulse pulse={safetyPulse} previousMonthLabel={prevMeta.monthName} forceVisible={allVisible}>
+        <MonthSafetyPulse
+          pulse={safetyPulse}
+          previousMonthLabel={prevMeta.monthName}
+          forceVisible={allVisible}
+        >
+          {(viewingCurrentMonth || isAtForwardLimit) &&
+          (savedCards.length > 0 ||
+            ccBillHistory.some((t) =>
+              isCreditCardPaymentMethod(t.payment_method),
+            ) ||
+            previousTransactions.some((t) =>
+              isCreditCardPaymentMethod(t.payment_method),
+            ) ||
+            transactions.some(
+              (t) =>
+                (t.bucket === "loans" && t.subcategory === "credit_card") ||
+                isCreditCardPaymentMethod(t.payment_method),
+            )) ? (
+            <CreditCardDues
+              previousTransactions={ccBillHistory}
+              currentTransactions={transactions}
+              cards={savedCards}
+              monthlySalary={displayIncome}
+              optimisticPayments={ccOptimisticPayments}
+              asOf={obligationChecklistMonth}
+              onCardsChange={() => {
+                if (!user?.id) return;
+                void loadCreditCardsMerged(user.id).then(setSavedCards);
+              }}
+              onPayBill={(amount, label, cardId) => {
+                setEditingExpense(null);
+                setPendingCcPayCardId(cardId);
+                setDefaultBucket("loans");
+                setSheetDefaults({
+                  subcategory: "credit_card",
+                  amount,
+                  description: creditCardBillPaymentDescription(label, cardId),
+                  paymentMethod: "upi",
+                });
+                setShowSheet(true);
+              }}
+            />
+          ) : null}
           <TrackerNestedPanels
-            onCards={(viewingCurrentMonth || isAtForwardLimit) ? onCardsSpend : 0}
+            onCards={0}
             obligationsCount={obligationsCount}
             amountsVisible={allVisible}
-            onAddFromCards={() => {
-              setEditingExpense(null);
-              setDefaultBucket("loans");
-              setSheetDefaults({ subcategory: "credit_card", paymentMethod: "upi" });
-              setShowSheet(true);
-            }}
           />
         </MonthSafetyPulse>
 
         {learnedObligation ? (
           <View style={styles.learnedBanner}>
             <Text style={styles.learnedText}>
-              Add "{learnedObligation.title}" (₹{learnedObligation.amount.toLocaleString("en-IN")}) as a
-              recurring obligation?
+              Add "{learnedObligation.title}" (₹
+              {learnedObligation.amount.toLocaleString("en-IN")}) as a recurring
+              obligation?
             </Text>
             <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
               <Pressable
@@ -1199,7 +1467,10 @@ export default function TrackerScreen() {
               >
                 <Text style={styles.learnedAddText}>Yes, add it</Text>
               </Pressable>
-              <Pressable onPress={() => setLearnedObligation(null)} style={styles.learnedDismissBtn}>
+              <Pressable
+                onPress={() => setLearnedObligation(null)}
+                style={styles.learnedDismissBtn}
+              >
                 <Text style={styles.learnedDismissText}>Not now</Text>
               </Pressable>
             </View>
@@ -1226,15 +1497,24 @@ export default function TrackerScreen() {
           setEditingExpense(null);
           setSheetDefaults({});
           setDefaultBucket("");
+          setPendingCcPayCardId(null);
         }}
         onSaved={onSheetSaved}
         defaultDate={defaultDateForSheet}
         maxDate={maxDate}
-        defaultBucket={editingExpense ? editingExpense.bucket : defaultBucket || undefined}
-        defaultSubcategory={editingExpense ? undefined : sheetDefaults.subcategory}
+        defaultBucket={
+          editingExpense ? editingExpense.bucket : defaultBucket || undefined
+        }
+        defaultSubcategory={
+          editingExpense ? undefined : sheetDefaults.subcategory
+        }
         defaultAmount={editingExpense ? undefined : sheetDefaults.amount}
-        defaultDescription={editingExpense ? undefined : sheetDefaults.description}
-        defaultPaymentMethod={editingExpense ? undefined : sheetDefaults.paymentMethod}
+        defaultDescription={
+          editingExpense ? undefined : sheetDefaults.description
+        }
+        defaultPaymentMethod={
+          editingExpense ? undefined : sheetDefaults.paymentMethod
+        }
         editExpense={editingExpense}
       />
     </SafeAreaView>
@@ -1266,13 +1546,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   navBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  monthTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
-  summaryGrid: { flexDirection: "row", gap: Spacing.sm, marginBottom: Spacing.md },
-  summaryLabel: { fontSize: 10, color: "rgba(255,255,255,0.7)", marginBottom: 4 },
+  monthTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 4,
+  },
   summaryValue: { fontSize: FontSize.lg, fontWeight: "800", color: "#fff" },
   underline: { textDecorationLine: "underline" },
-  onCardsText: { fontSize: 11, color: "rgba(255,255,255,0.85)", marginBottom: Spacing.md },
-  progressRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
+  onCardsText: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: Spacing.md,
+  },
+  progressRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
   progressLabel: { fontSize: 11, color: "rgba(255,255,255,0.7)" },
   progressTrack: {
     height: 8,
@@ -1310,11 +1612,29 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     gap: Spacing.sm,
   },
-  sectionHeadLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 },
+  sectionHeadLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
   sectionHeadRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sectionTitle: { fontSize: FontSize.base, fontWeight: "700", color: Colors.textPrimary },
-  sectionSub: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
-  sectionAmount: { fontSize: FontSize.lg, fontWeight: "800", color: Colors.textPrimary },
+  sectionTitle: {
+    fontSize: FontSize.base,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  sectionSub: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  sectionAmount: {
+    fontSize: FontSize.lg,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
   budgetOf: { fontSize: 11, color: Colors.textSecondary },
   chevron: { fontSize: 14, color: Colors.textSecondary },
   bucketProgressTrack: {
@@ -1325,7 +1645,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   bucketProgressFill: { height: "100%", borderRadius: 3 },
-  overBudgetText: { fontSize: 11, color: Colors.error, fontWeight: "600", marginTop: 4 },
+  overBudgetText: {
+    fontSize: 11,
+    color: Colors.error,
+    fontWeight: "600",
+    marginTop: 4,
+  },
   sectionBody: {
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
@@ -1344,7 +1669,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   addBtnText: { fontSize: 13, fontWeight: "700" },
-  emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: "center", padding: Spacing.lg },
+  emptyText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    padding: Spacing.lg,
+  },
   txnRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1357,10 +1687,29 @@ const styles = StyleSheet.create({
   },
   txnAmount: { fontSize: 13, fontWeight: "700", color: Colors.textPrimary },
   txnMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  editLink: { color: Colors.primary, fontWeight: "700", fontSize: 13, padding: 6 },
-  deleteLink: { color: Colors.error, fontWeight: "700", fontSize: 13, padding: 6 },
-  subGroup: { borderBottomWidth: 1, borderBottomColor: Colors.borderLight, paddingBottom: Spacing.sm },
-  subHead: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: Spacing.sm },
+  editLink: {
+    color: Colors.primary,
+    fontWeight: "700",
+    fontSize: 13,
+    padding: 6,
+  },
+  deleteLink: {
+    color: Colors.error,
+    fontWeight: "700",
+    fontSize: 13,
+    padding: 6,
+  },
+  subGroup: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    paddingBottom: Spacing.sm,
+  },
+  subHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: Spacing.sm,
+  },
   subLabel: { fontSize: 14, color: Colors.textPrimary, fontWeight: "500" },
   subMeta: { fontSize: 12, color: Colors.textSecondary },
   subTotal: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
@@ -1386,7 +1735,11 @@ const styles = StyleSheet.create({
   },
   learnedAddText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   learnedDismissBtn: { paddingHorizontal: 14, paddingVertical: 8 },
-  learnedDismissText: { color: Colors.textSecondary, fontWeight: "600", fontSize: 13 },
+  learnedDismissText: {
+    color: Colors.textSecondary,
+    fontWeight: "600",
+    fontSize: 13,
+  },
   fab: {
     position: "absolute",
     bottom: 100,
