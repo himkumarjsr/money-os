@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
@@ -27,10 +28,8 @@ import {
   type SavedExpense,
   type TrackerTxn,
 } from "@/components/tracker/AddExpenseSheet";
-import {
-  MonthSafetyPulse,
-  TrackerNestedPanels,
-} from "@/components/tracker/MonthSafetyPulse";
+import { MonthSafetyPulse } from "@/components/tracker/MonthSafetyPulse";
+import { ObligationsChecklist } from "@/components/tracker/ObligationsChecklist";
 import {
   TRACKER_CATEGORIES,
   countsTowardTrackerTotals,
@@ -49,13 +48,18 @@ import {
   shouldLearnObligationFromExpense,
 } from "@/lib/obligationLearn";
 import {
-  countsTowardCashSpend,
+  creditCardBillPaymentDescription,
   displayExpenseDescription,
   hasTrackerConsentLocal,
+  isCreditCardBillPayment,
   isCreditCardPaymentMethod,
+  loadCreditCardsMerged,
+  parsePayBillLabel,
   sumCashSpend,
   sumOnCardsSpend,
+  type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
+import { CreditCardDues } from "@/components/tracker/CreditCardDues";
 import {
   EXPENSE_SUBCATEGORY_TO_OBLIGATION,
   SAVINGS_CARRY_FORWARD_DESC,
@@ -91,8 +95,6 @@ export default function TrackerScreen() {
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analyseResult = useFinancialStore((s) => s.result);
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
-  const obligationsCount = useObligationStore((s) => s.checklist.length);
-
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
       if (hasTrackerConsentLocal()) return true;
@@ -105,6 +107,15 @@ export default function TrackerScreen() {
   const [transactions, setTransactions] = useState<TrackerTxn[]>([]);
   const [previousTransactions, setPreviousTransactions] = useState<
     TrackerTxn[]
+  >([]);
+  /** prev-2 + prev months — CC carry-forward + obligation learning only (never Safety Pulse). */
+  const [ccBillHistory, setCcBillHistory] = useState<TrackerTxn[]>([]);
+  const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
+  const [pendingCcPayCardId, setPendingCcPayCardId] = useState<string | null>(
+    null,
+  );
+  const [ccOptimisticPayments, setCcOptimisticPayments] = useState<
+    Array<{ cardId: string; amount: number }>
   >([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -235,7 +246,8 @@ export default function TrackerScreen() {
       if (!soft) setLoading(true);
       try {
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
-        const [currentRes, prevRes] = await Promise.all([
+        const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
+        const [currentRes, prevRes, prev2Res] = await Promise.all([
           supabase
             .from("expense_transactions")
             .select("*")
@@ -250,15 +262,26 @@ export default function TrackerScreen() {
             .eq("month", prev.monthName)
             .eq("year", prev.year)
             .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", prev2.monthName)
+            .eq("year", prev2.year)
+            .order("date", { ascending: false }),
         ]);
         if (fetchReqId.current !== myId) return;
+        const prevRows = (prevRes.data as TrackerTxn[]) || [];
+        const prev2Rows = (prev2Res.data as TrackerTxn[]) || [];
         setTransactions((currentRes.data as TrackerTxn[]) || []);
-        setPreviousTransactions((prevRes.data as TrackerTxn[]) || []);
+        setPreviousTransactions(prevRows);
+        setCcBillHistory([...prev2Rows, ...prevRows]);
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker fetch failed", e);
         setTransactions([]);
         setPreviousTransactions([]);
+        setCcBillHistory([]);
       } finally {
         if (fetchReqId.current === myId) setLoading(false);
       }
@@ -276,6 +299,61 @@ export default function TrackerScreen() {
   useEffect(() => {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
+
+  // Soft refresh when returning to the tab (e.g. after editing in the month drill-down).
+  // Refs keep the callback stable so it fires on focus only, and never mid-edit.
+  const focusRefreshRef = useRef({ fetchTransactions, showSheet, first: true });
+  focusRefreshRef.current.fetchTransactions = fetchTransactions;
+  focusRefreshRef.current.showSheet = showSheet;
+  useFocusEffect(
+    useCallback(() => {
+      const r = focusRefreshRef.current;
+      if (r.first) {
+        r.first = false;
+        return;
+      }
+      if (hasConsent && !r.showSheet) void r.fetchTransactions({ soft: true });
+    }, [hasConsent]),
+  );
+
+  // Re-runs when the sheet closes so a card added inside it shows up immediately.
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const cards = await loadCreditCardsMerged(user.id);
+      if (!cancelled) setSavedCards(cards);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasConsent, user?.id, showSheet]);
+
+  // Drop optimistic CC pay credits once a matching bill payment is fetched.
+  useEffect(() => {
+    if (ccOptimisticPayments.length === 0) return;
+    setCcOptimisticPayments((prev) =>
+      prev.filter((p) => {
+        const pool = [...transactions, ...ccBillHistory];
+        const id = p.cardId.toLowerCase();
+        return !pool.some((t) => {
+          if (!isCreditCardBillPayment(t)) return false;
+          const desc = (t.description || "").toLowerCase();
+          if (desc.includes(`[#${id}]`)) return true;
+          const payLabel = (
+            parsePayBillLabel(t.description) || ""
+          ).toLowerCase();
+          if (payLabel && (payLabel === id || desc.includes(id))) return true;
+          // Any loans → credit_card cash pay after a Pay CTA (covers orphan "Credit card").
+          return (
+            t.bucket === "loans" &&
+            (t.subcategory === "credit_card" || t.category === "credit_card") &&
+            Math.abs(Number(t.amount) - p.amount) < 0.02
+          );
+        });
+      }),
+    );
+  }, [transactions, ccBillHistory, ccOptimisticPayments.length]);
 
   useEffect(() => {
     if (!hasConsent || !user?.id) return;
@@ -781,6 +859,13 @@ export default function TrackerScreen() {
 
   const onSheetSaved = (saved: SavedExpense) => {
     void fetchTransactions({ soft: true });
+    if (pendingCcPayCardId && saved.amount != null) {
+      setCcOptimisticPayments((prev) => [
+        ...prev,
+        { cardId: pendingCcPayCardId, amount: Number(saved.amount) || 0 },
+      ]);
+    }
+    setPendingCcPayCardId(null);
     if (!saved.isEdit && user?.id && saved.bucket !== "income") {
       const subKey = (saved.subcategory || saved.category || "").trim();
       const obligationCategory = obligationCategoryFromExpense(saved);
@@ -810,7 +895,7 @@ export default function TrackerScreen() {
                 amount: saved.amount,
                 category: obligationCategory,
                 existing: obligations,
-                priorTransactions: previousTransactions,
+                priorTransactions: ccBillHistory,
               });
               const fromSub = Boolean(
                 EXPENSE_SUBCATEGORY_TO_OBLIGATION[subKey],
@@ -961,12 +1046,25 @@ export default function TrackerScreen() {
           </View>
         </View>
 
-        <Pressable onPress={toggleShowAll} style={styles.showAllBtn}>
-          <EyeIcon open={allVisible} size={14} color={Colors.primary} />
-          <Text style={styles.showAllText}>
-            {allVisible ? "Hide all" : "Show all"}
-          </Text>
-        </Pressable>
+        <View style={styles.toolbarRow}>
+          <Pressable
+            onPress={() =>
+              router.push(
+                `/tracker/${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`,
+              )
+            }
+            accessibilityRole="link"
+            style={styles.allTxnLink}
+          >
+            <Text style={styles.allTxnText}>All transactions →</Text>
+          </Pressable>
+          <Pressable onPress={toggleShowAll} style={styles.showAllBtn}>
+            <EyeIcon open={allVisible} size={14} color={Colors.primary} />
+            <Text style={styles.showAllText}>
+              {allVisible ? "Hide all" : "Show all"}
+            </Text>
+          </Pressable>
+        </View>
 
         {loading ? <LoadingSpinner /> : null}
 
@@ -1325,59 +1423,54 @@ export default function TrackerScreen() {
           previousMonthLabel={prevMeta.monthName}
           forceVisible={allVisible}
         >
-          <TrackerNestedPanels
-            onCards={viewingCurrentMonth || isAtForwardLimit ? onCardsSpend : 0}
-            obligationsCount={obligationsCount}
-            amountsVisible={allVisible}
-            onAddFromCards={() => {
-              setEditingExpense(null);
-              setDefaultBucket("loans");
-              setSheetDefaults({
-                subcategory: "credit_card",
-                paymentMethod: "upi",
-              });
-              setShowSheet(true);
-            }}
-          />
+          {(viewingCurrentMonth || isAtForwardLimit) &&
+          (savedCards.length > 0 ||
+            ccBillHistory.some((t) =>
+              isCreditCardPaymentMethod(t.payment_method),
+            ) ||
+            previousTransactions.some((t) =>
+              isCreditCardPaymentMethod(t.payment_method),
+            ) ||
+            transactions.some(
+              (t) =>
+                (t.bucket === "loans" && t.subcategory === "credit_card") ||
+                isCreditCardPaymentMethod(t.payment_method),
+            )) ? (
+            <CreditCardDues
+              previousTransactions={ccBillHistory}
+              currentTransactions={transactions}
+              cards={savedCards}
+              monthlySalary={displayIncome}
+              optimisticPayments={ccOptimisticPayments}
+              asOf={obligationChecklistMonth}
+              onCardsChange={() => {
+                if (!user?.id) return;
+                void loadCreditCardsMerged(user.id).then(setSavedCards);
+              }}
+              onPayBill={(amount, label, cardId) => {
+                setEditingExpense(null);
+                setPendingCcPayCardId(cardId);
+                setDefaultBucket("loans");
+                setSheetDefaults({
+                  subcategory: "credit_card",
+                  amount,
+                  description: creditCardBillPaymentDescription(label, cardId),
+                  paymentMethod: "upi",
+                });
+                setShowSheet(true);
+              }}
+            />
+          ) : null}
+          {user?.id ? (
+            <ObligationsChecklist
+              userId={user.id}
+              checklistMonth={obligationChecklistMonth}
+              analyseCompleted={analyseCompleted}
+              learnedSuggestion={learnedObligation}
+              onDismissLearn={() => setLearnedObligation(null)}
+            />
+          ) : null}
         </MonthSafetyPulse>
-
-        {learnedObligation ? (
-          <View style={styles.learnedBanner}>
-            <Text style={styles.learnedText}>
-              Add "{learnedObligation.title}" (₹
-              {learnedObligation.amount.toLocaleString("en-IN")}) as a recurring
-              obligation?
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-              <Pressable
-                onPress={() => {
-                  if (user?.id) {
-                    void useObligationStore.getState().addObligation({
-                      title: learnedObligation.title,
-                      category: learnedObligation.category,
-                      amount: learnedObligation.amount,
-                      frequency: "monthly",
-                      source: "tracker_learned",
-                      user_id: user.id,
-                      is_active: true,
-                      remind_days_before: 7,
-                    });
-                  }
-                  setLearnedObligation(null);
-                }}
-                style={styles.learnedAddBtn}
-              >
-                <Text style={styles.learnedAddText}>Yes, add it</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setLearnedObligation(null)}
-                style={styles.learnedDismissBtn}
-              >
-                <Text style={styles.learnedDismissText}>Not now</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
       </ScrollView>
 
       <Pressable
@@ -1399,6 +1492,7 @@ export default function TrackerScreen() {
           setEditingExpense(null);
           setSheetDefaults({});
           setDefaultBucket("");
+          setPendingCcPayCardId(null);
         }}
         onSaved={onSheetSaved}
         defaultDate={defaultDateForSheet}
@@ -1484,10 +1578,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   progressFill: { height: "100%", borderRadius: 4 },
+  toolbarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.md,
+  },
+  allTxnLink: { minHeight: 44, justifyContent: "center" },
+  allTxnText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   showAllBtn: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-end",
     gap: 6,
     height: 36,
     paddingHorizontal: 14,
@@ -1495,7 +1596,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: "#F9F9FC",
-    marginBottom: Spacing.md,
   },
   showAllText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   sectionCard: {
@@ -1621,26 +1721,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
   },
   cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primary },
-  learnedBanner: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  learnedText: { fontSize: 13, color: Colors.textPrimary, fontWeight: "600" },
-  learnedAddBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  learnedAddText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  learnedDismissBtn: { paddingHorizontal: 14, paddingVertical: 8 },
-  learnedDismissText: {
-    color: Colors.textSecondary,
-    fontWeight: "600",
-    fontSize: 13,
-  },
   fab: {
     position: "absolute",
     bottom: 100,

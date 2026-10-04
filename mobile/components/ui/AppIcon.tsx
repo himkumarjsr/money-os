@@ -32,7 +32,14 @@ export type AppIconName =
   | "target"
   | "mail"
   | "lock"
-  | "camera";
+  | "camera"
+  | "trash"
+  | "pencil"
+  | "check"
+  | "card"
+  | "chevronDown"
+  | "chevronRight"
+  | "calendar";
 
 type Props = {
   name: AppIconName;
@@ -208,6 +215,40 @@ function IconPaths({ name }: { name: AppIconName }) {
         <>
           <Path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
           <Circle cx="12" cy="13" r="3.5" />
+        </>
+      );
+    case "trash":
+      return (
+        <>
+          <Path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+          <Path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M10 11v6M14 11v6" />
+        </>
+      );
+    case "pencil":
+      return (
+        <>
+          <Path d="M4 20h4l10-10-4-4L4 16v4z" />
+          <Path d="M13.5 6.5l4 4" />
+        </>
+      );
+    case "check":
+      return <Path d="M5 12l4.5 4.5L19 7" />;
+    case "card":
+      return (
+        <>
+          <Rect x="3" y="6" width="18" height="12" rx="2" />
+          <Path d="M3 10h18M7 14h4" />
+        </>
+      );
+    case "chevronDown":
+      return <Path d="M6 9l6 6 6-6" />;
+    case "chevronRight":
+      return <Path d="M9 6l6 6-6 6" />;
+    case "calendar":
+      return (
+        <>
+          <Rect x="3" y="5" width="18" height="16" rx="2" />
+          <Path d="M8 3v4M16 3v4M3 11h18" />
         </>
       );
     default:
