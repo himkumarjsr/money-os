@@ -4,7 +4,7 @@
  * Profile opens dropdown panel (not full profile page).
  */
 import { useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -56,7 +56,14 @@ export function AppHeader({ homeOnLogo = true }: Props) {
           >
             {isLoggedIn ? (
               <View style={styles.avatarFill}>
-                <Text style={styles.avatarLetter}>{letter}</Text>
+                {user?.photoURL ? (
+                  <Image
+                    source={{ uri: user.photoURL }}
+                    style={styles.avatarImg}
+                  />
+                ) : (
+                  <Text style={styles.avatarLetter}>{letter}</Text>
+                )}
               </View>
             ) : (
               <AppIcon name="user" size={18} color={Colors.primary} />
@@ -126,5 +133,10 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700",
+  },
+  avatarImg: {
+    height: 36,
+    width: 36,
+    borderRadius: 999,
   },
 });
