@@ -20,7 +20,25 @@ import {
 } from "@/lib/tracker-categories";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
-import { displayExpenseDescription } from "@/lib/trackerCreditCards";
+import {
+  deleteSavedCreditCard,
+  displayExpenseDescription,
+  encodeCreditCardPaymentMethod,
+  formatCreditCardLabel,
+  loadCreditCardsMerged,
+  loadSavedCreditCards,
+  parseCreditCardPaymentMethod,
+  suggestDueDayFromBilling,
+  upsertSavedCreditCard,
+  type SavedCreditCard,
+} from "@/lib/trackerCreditCards";
+
+const SAVE_TIMEOUT_MS = 15_000;
+
+function parseDay(raw: string): number | undefined {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= 31 ? n : undefined;
+}
 
 export type TrackerTxn = {
   id: string;
@@ -108,6 +126,13 @@ export function AddExpenseSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState("");
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [newCardName, setNewCardName] = useState("");
+  const [newBillingDay, setNewBillingDay] = useState("");
+  const [newDueDay, setNewDueDay] = useState("");
+
   useEffect(() => {
     if (!visible) return;
     setDate(editExpense?.date || defaultDate);
@@ -119,9 +144,14 @@ export function AddExpenseSheet({
         editExpense?.description || defaultDescription || "",
       ),
     );
-    let pm = editExpense?.payment_method || defaultPaymentMethod || "upi";
-    if (pm.startsWith("credit_card")) pm = "credit_card";
-    setPaymentMethod(pm || "upi");
+    const rawPm = editExpense?.payment_method || defaultPaymentMethod || "upi";
+    const { cardId } = parseCreditCardPaymentMethod(rawPm);
+    setSelectedCardId(cardId ?? "");
+    setPaymentMethod(rawPm.startsWith("credit_card") ? "credit_card" : rawPm);
+    setShowAddCard(false);
+    setNewCardName("");
+    setNewBillingDay("");
+    setNewDueDay("");
     setError("");
   }, [
     visible,
@@ -133,6 +163,68 @@ export function AddExpenseSheet({
     defaultDescription,
     defaultPaymentMethod,
   ]);
+
+  // Local cache first so the picker is instant; DB merge fills in after.
+  useEffect(() => {
+    if (!visible || !user?.id) return;
+    const userId = user.id;
+    setSavedCards(loadSavedCreditCards(userId));
+    let cancelled = false;
+    void loadCreditCardsMerged(userId).then((cards) => {
+      if (!cancelled) setSavedCards(cards);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, user?.id]);
+
+  function selectPayment(id: string) {
+    setPaymentMethod(id);
+    if (id !== "credit_card") return;
+    if (savedCards.length === 0) {
+      setShowAddCard(true);
+    } else if (savedCards.length === 1 && !selectedCardId) {
+      setSelectedCardId(savedCards[0].id);
+    }
+  }
+
+  function onBillingDayChange(raw: string) {
+    setNewBillingDay(raw);
+    const billing = parseDay(raw);
+    if (billing && !newDueDay.trim()) {
+      setNewDueDay(String(suggestDueDayFromBilling(billing)));
+    }
+  }
+
+  function addCard(): SavedCreditCard | null {
+    if (!user?.id) return null;
+    const nickname = newCardName.trim();
+    if (!nickname) {
+      setError("Enter a card name, e.g. HDFC Regalia.");
+      return null;
+    }
+    const card = upsertSavedCreditCard(user.id, {
+      nickname,
+      billingDay: parseDay(newBillingDay),
+      dueDay: parseDay(newDueDay),
+    });
+    setSavedCards(loadSavedCreditCards(user.id));
+    setSelectedCardId(card.id);
+    setShowAddCard(false);
+    setNewCardName("");
+    setNewBillingDay("");
+    setNewDueDay("");
+    setError("");
+    return card;
+  }
+
+  function removeCard(cardId: string) {
+    if (!user?.id) return;
+    deleteSavedCreditCard(user.id, cardId);
+    const next = loadSavedCreditCards(user.id);
+    setSavedCards(next);
+    if (selectedCardId === cardId) setSelectedCardId(next[0]?.id ?? "");
+  }
 
   // Loans → credit card payment should use cash rails (UPI/cash), not card charge
   useEffect(() => {
@@ -196,6 +288,35 @@ export function AddExpenseSheet({
       return;
     }
 
+    let paymentToStore: string | null = isIncome
+      ? null
+      : paymentMethod || "upi";
+    if (!isIncome && paymentMethod === "credit_card") {
+      let card = savedCards.find((c) => c.id === selectedCardId) ?? null;
+      // Typed a new card but didn't tap "Save card" — save it now.
+      if (!card && showAddCard && newCardName.trim()) card = addCard();
+      if (!card) {
+        setError("Select a credit card or add a new one.");
+        setShowAddCard(true);
+        return;
+      }
+      paymentToStore = encodeCreditCardPaymentMethod(card);
+    }
+
+    // Keep "Pay bill · {card}" phrasing so the Credit card dues panel can
+    // still match this payment if the user retyped the note.
+    let descriptionToStore = displayExpenseDescription(description.trim());
+    if (bucket === "loans" && subcategory === "credit_card" && defaultDescription) {
+      const fallback = displayExpenseDescription(defaultDescription);
+      if (
+        fallback &&
+        !/^pay bill/i.test(descriptionToStore || "") &&
+        /^pay bill/i.test(fallback)
+      ) {
+        descriptionToStore = fallback;
+      }
+    }
+
     setSaving(true);
     try {
       const { month, year } = monthYearFromDate(finalDate);
@@ -205,29 +326,52 @@ export function AddExpenseSheet({
         amount,
         category: subcategory,
         subcategory,
-        description: description.trim() || null,
+        description: descriptionToStore || null,
         bucket,
-        payment_method: isIncome ? null : paymentMethod || "upi",
+        payment_method: paymentToStore,
         month,
         year,
       };
 
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new Error(
+                "Save is taking too long. Check your connection and try again.",
+              ),
+            ),
+          SAVE_TIMEOUT_MS,
+        );
+      });
+
       let savedId = editExpense?.id ?? "";
-      if (isEdit && editExpense?.id) {
-        const { error: err } = await supabase
-          .from("expense_transactions")
-          .update(payload)
-          .eq("id", editExpense.id)
-          .eq("user_id", user.id);
-        if (err) throw err;
-      } else {
-        const { data, error: err } = await supabase
-          .from("expense_transactions")
-          .insert(payload)
-          .select("id")
-          .single();
-        if (err) throw err;
-        savedId = String((data as { id?: string } | null)?.id ?? "");
+      try {
+        if (isEdit && editExpense?.id) {
+          const { error: err } = await Promise.race([
+            supabase
+              .from("expense_transactions")
+              .update(payload)
+              .eq("id", editExpense.id)
+              .eq("user_id", user.id),
+            timeout,
+          ]);
+          if (err) throw err;
+        } else {
+          const { data, error: err } = await Promise.race([
+            supabase
+              .from("expense_transactions")
+              .insert(payload)
+              .select("id")
+              .single(),
+            timeout,
+          ]);
+          if (err) throw err;
+          savedId = String((data as { id?: string } | null)?.id ?? "");
+        }
+      } finally {
+        clearTimeout(timer);
       }
       onSaved({
         id: savedId,
@@ -377,7 +521,7 @@ export function AddExpenseSheet({
                     return (
                       <Pressable
                         key={p.id}
-                        onPress={() => setPaymentMethod(p.id)}
+                        onPress={() => selectPayment(p.id)}
                         style={[styles.chip, on && styles.chipOn]}
                       >
                         <Text
@@ -389,6 +533,116 @@ export function AddExpenseSheet({
                     );
                   })}
                 </View>
+
+                {bucket === "loans" && subcategory === "credit_card" ? (
+                  <Text style={styles.hint}>
+                    Paying your card bill by UPI, cash, net banking or wallet
+                    reduces Money Left.
+                  </Text>
+                ) : null}
+
+                {paymentMethod === "credit_card" ? (
+                  <View style={styles.cardBox}>
+                    {savedCards.map((c) => {
+                      const on = c.id === selectedCardId;
+                      const sub = [
+                        c.billingDay ? `Bill day ${c.billingDay}` : null,
+                        c.dueDay ? `Due day ${c.dueDay}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ");
+                      return (
+                        <View
+                          key={c.id}
+                          style={[styles.cardRow, on && styles.cardRowOn]}
+                        >
+                          <Pressable
+                            onPress={() => setSelectedCardId(c.id)}
+                            style={styles.cardMain}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: on }}
+                          >
+                            <View style={[styles.radio, on && styles.radioOn]}>
+                              {on ? <View style={styles.radioDot} /> : null}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.cardLabel}>
+                                {formatCreditCardLabel(c)}
+                              </Text>
+                              {sub ? (
+                                <Text style={styles.cardSub}>{sub}</Text>
+                              ) : null}
+                            </View>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => removeCard(c.id)}
+                            hitSlop={8}
+                          >
+                            <Text style={styles.cardDelete}>Delete</Text>
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+
+                    {showAddCard ? (
+                      <View style={styles.addCardForm}>
+                        <Input
+                          label="Card name"
+                          value={newCardName}
+                          onChangeText={setNewCardName}
+                          placeholder="e.g. HDFC Regalia"
+                        />
+                        <View style={styles.dayRow}>
+                          <View style={{ flex: 1 }}>
+                            <Input
+                              label="Billing day"
+                              value={newBillingDay}
+                              onChangeText={onBillingDayChange}
+                              placeholder="1–31"
+                              keyboardType="number-pad"
+                              maxLength={2}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Input
+                              label="Due day"
+                              value={newDueDay}
+                              onChangeText={setNewDueDay}
+                              placeholder="1–31"
+                              keyboardType="number-pad"
+                              maxLength={2}
+                            />
+                          </View>
+                        </View>
+                        <View style={styles.dayRow}>
+                          <Pressable
+                            onPress={() => void addCard()}
+                            style={[styles.chip, styles.chipOn]}
+                          >
+                            <Text style={[styles.chipText, styles.chipTextOn]}>
+                              Save card
+                            </Text>
+                          </Pressable>
+                          {savedCards.length > 0 ? (
+                            <Pressable
+                              onPress={() => setShowAddCard(false)}
+                              style={styles.chip}
+                            >
+                              <Text style={styles.chipText}>Cancel</Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => setShowAddCard(true)}
+                        hitSlop={6}
+                      >
+                        <Text style={styles.addCardLink}>+ Add new card</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ) : null}
               </>
             ) : null}
 
@@ -506,6 +760,64 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   chipTextOn: { color: Colors.primary, fontWeight: "700" },
+  hint: {
+    marginTop: 4,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryLight,
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 17,
+  },
+  cardBox: { marginTop: 8, gap: 8 },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  cardRowOn: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  cardMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioOn: { borderColor: Colors.primary },
+  radioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
+  cardLabel: { fontSize: 14, fontWeight: "700", color: "#111110" },
+  cardSub: { marginTop: 2, fontSize: 12, color: Colors.textMuted },
+  cardDelete: { fontSize: 12, fontWeight: "700", color: Colors.error },
+  addCardForm: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    gap: 10,
+  },
+  dayRow: { flexDirection: "row", gap: 10 },
+  addCardLink: {
+    paddingVertical: 6,
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
   error: {
     marginTop: 12,
     color: Colors.error,
