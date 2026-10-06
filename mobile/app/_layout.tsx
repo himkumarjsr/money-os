@@ -7,6 +7,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { useAuthStore } from "@/store/authStore";
 import { hydrateSyncKv } from "@/lib/syncKv";
+import { PushNotificationsManager } from "@/components/PushNotificationsManager";
+import { MorningTipPopup } from "@/components/MorningTipPopup";
 
 void hydrateSyncKv();
 
@@ -45,7 +47,10 @@ export default function RootLayout() {
           <Stack.Screen name="tracker/[month]" />
           <Stack.Screen name="split/[groupId]/index" />
           <Stack.Screen name="split/[groupId]/add-expense" />
+          <Stack.Screen name="notifications" />
         </Stack>
+        <PushNotificationsManager />
+        <MorningTipPopup />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
