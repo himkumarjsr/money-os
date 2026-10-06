@@ -42,7 +42,10 @@ export type AppIconName =
   | "calendar"
   | "rupee"
   | "hospital"
-  | "phone";
+  | "phone"
+  | "menu"
+  | "close"
+  | "heart";
 
 type Props = {
   name: AppIconName;
@@ -274,6 +277,14 @@ function IconPaths({ name }: { name: AppIconName }) {
           <Rect x="7" y="3" width="10" height="18" rx="2" />
           <Path d="M11 18h2" />
         </>
+      );
+    case "menu":
+      return <Path d="M4 7h16M4 12h16M4 17h16" />;
+    case "close":
+      return <Path d="M6 6l12 12M18 6L6 18" />;
+    case "heart":
+      return (
+        <Path d="M12 20s-7-4.5-7-9.5A3.7 3.7 0 0 1 12 7a3.7 3.7 0 0 1 7 3.5C19 15.5 12 20 12 20z" />
       );
     default:
       return null;
