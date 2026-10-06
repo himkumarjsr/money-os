@@ -5,6 +5,7 @@ import * as Linking from "expo-linking";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { appStorage } from "@/lib/storage";
+import { unregisterPushToken } from "@/lib/pushNotifications";
 import {
   getNativeAppCallbackUri,
   getGoogleWebClientId,
@@ -508,6 +509,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signOut: async () => {
+        const uid = get().user?.id;
+        if (uid) await unregisterPushToken(uid);
         try {
           await supabase.auth.signOut();
         } catch {

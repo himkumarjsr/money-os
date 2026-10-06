@@ -14,6 +14,7 @@ interface NumberInputProps {
   max?: number;
   step?: number;
   disabled?: boolean;
+  error?: string;
 }
 
 export default function NumberInput({
@@ -27,6 +28,7 @@ export default function NumberInput({
   max,
   step = 0.01,
   disabled = false,
+  error,
 }: NumberInputProps) {
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState(value === 0 ? "" : String(value));
@@ -130,6 +132,9 @@ export default function NumberInput({
           </span>
         ) : null}
       </div>
+      {error ? (
+        <p style={{ marginTop: 4, fontSize: 14, color: "#E24B4A" }}>{error}</p>
+      ) : null}
     </div>
   );
 }

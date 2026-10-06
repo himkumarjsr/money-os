@@ -4,13 +4,23 @@ import {
   getCachedPlan,
   hashProfile,
   setCachedPlan,
-  clearCache,
   enginePlanFingerprint,
+  FIX_PLAN_RATE_LIMIT_MESSAGE,
   isCachedAiStale,
+  tryStartForcedRefresh,
 } from "@/lib/cache";
-import { downloadOptimizerPDF } from "@/lib/generatePDF";
+import {
+  LOADING_MESSAGES,
+  mergeEnginePriorityPlan,
+  monthsForPriority,
+  noGainProjectionMessage,
+  openPriorities,
+  reconcileExplanations,
+  scoreProjectionGain,
+} from "@/lib/fixPlanMerge";
 import { Analytics } from "@/lib/analytics";
-import { buildPriorityPlan } from "@/lib/priorityEngine";
+import { scoreBand } from "@/lib/financialEngine";
+import { buildPriorityPlan, debtPayoffNumbers } from "@/lib/priorityEngine";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -24,116 +34,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const fixPlanInFlight = new Map<string, Promise<void>>();
-
-const LOADING_MESSAGES = [
-  "Reading your profile...",
-  "Calculating insurance gaps...",
-  "Building debt strategy...",
-  "Generating 12-month roadmap...",
-  "Almost ready...",
-];
-
-/** Engine numbers always win — AI/cache must not resurrect closed medical/emergency gaps. */
-function mergeEnginePriorityPlan(
-  engine: any,
-  overlay: any,
-  monthsForPriority: (id: string, gap: number, monthly: number) => number,
-) {
-  return {
-    ...engine,
-    ...overlay,
-    priorities: (engine.priorities || []).map((p: any) => {
-      const match =
-        (overlay.priorities || []).find((o: any) => o?.id === p.id) || {};
-      const monthly = Math.max(0, Number(p.monthlyContribution || 0));
-      const gap = Math.max(0, Number(p.gap || 0));
-      const isComplete = gap <= 0 || monthly <= 0 || p.status === "complete";
-      return {
-        ...p,
-        rank: p.rank,
-        gap,
-        monthlyContribution: monthly,
-        monthlyRequired: Number(p.monthlyRequired || monthly),
-        monthsToComplete: monthsForPriority(String(p.id || ""), gap, monthly),
-        surplusBefore: Number(p.surplusBefore || 0),
-        surplusAfterThis: Number(p.surplusAfterThis || 0),
-        title: isComplete ? p.title : match.title || p.title,
-        instrument: isComplete
-          ? p.instrument
-          : match.instrument || p.instrument,
-        actionThisWeek: isComplete
-          ? "Maintain this completed bucket and continue monitoring monthly."
-          : p.actionThisWeek,
-        whyThisMatters: isComplete
-          ? "This bucket is already on track. Keep it funded and shift new surplus to the next gap."
-          : match.whyThisMatters || p.whyThisMatters,
-      };
-    }),
-    // Deterministic allocation — never take AI/cache monthlyPlan
-    debts: engine.debts,
-    goals: engine.goals,
-    monthlyIncome: engine.monthlyIncome,
-    monthlySurplus: engine.monthlySurplus,
-    surplusBreakdown: engine.surplusBreakdown,
-    monthlyPlan: engine.monthlyPlan,
-    scoreToday: engine.scoreToday,
-    scoreAfter12Months: engine.scoreAfter12Months,
-    topAction: engine.topAction,
-  };
-}
-
-function incompletePriorities(plan: any) {
-  return (plan?.priorities || []).filter(
-    (p: any) =>
-      p.status !== "complete" &&
-      (Number(p.gap || 0) > 0 || Number(p.monthlyContribution || 0) > 0),
-  );
-}
-
-/** Drop stale AI copy that still mentions closed gaps (e.g. medical when funded). */
-function reconcileExplanations(explanations: any, plan: any, analysis: any) {
-  const open = incompletePriorities(plan);
-  const surplus = Math.round(plan?.monthlySurplus || 0);
-  const score = analysis?.overallScore ?? plan?.scoreToday ?? 0;
-  const issueLine = open
-    .slice(0, 2)
-    .map(
-      (p: any) =>
-        `${p.title}${Number(p.gap || 0) > 0 ? ` gap of ₹${Number(p.gap || 0).toLocaleString("en-IN")}` : ""}`,
-    )
-    .join(" and ");
-  const goal = plan?.goals?.[0];
-  const goalBit = goal
-    ? ` Primary goal (${goal.goalType}): target ₹${Number(goal.targetAmount || 0).toLocaleString("en-IN")}, ~₹${Number(goal.monthlyRequired || 0).toLocaleString("en-IN")}/mo.`
-    : "";
-
-  const base =
-    explanations && typeof explanations === "object" ? explanations : {};
-  const summaryMentionsClosedMedical =
-    typeof base.overallSummary === "string" &&
-    /medical/i.test(base.overallSummary) &&
-    !(open || []).some((p: any) => p.id === "medical_fund");
-
-  return {
-    ...base,
-    greeting:
-      open.length > 0
-        ? `Based on your financial profile, we identified ${open.length} area${open.length === 1 ? "" : "s"} that need attention.`
-        : "Based on your financial profile, core safety buckets look funded.",
-    overallSummary:
-      summaryMentionsClosedMedical || !base.overallSummary
-        ? `You have a monthly surplus of ₹${surplus.toLocaleString("en-IN")} and a health score of ${score}/100.${
-            issueLine
-              ? ` Focus next on ${issueLine}.`
-              : " Keep allocating surplus to your primary goal."
-          }${goalBit}`
-        : base.overallSummary,
-    goalAdvice:
-      goal && (!base.goalAdvice || summaryMentionsClosedMedical)
-        ? `${goal.goalType}: aim for ₹${Number(goal.targetAmount || 0).toLocaleString("en-IN")} via ${goal.instrument} (~₹${Number(goal.monthlyRequired || 0).toLocaleString("en-IN")}/mo over ~${goal.yearsToGoal}y).`
-        : base.goalAdvice,
-  };
-}
 
 export default function FixPlanPage() {
   const router = useRouter();
@@ -152,13 +52,9 @@ export default function FixPlanPage() {
   const [aiError, setAiError] = useState("");
   const [aiPlan, setAiPlan] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
+  const [refreshNotice, setRefreshNotice] = useState("");
   const [messageIndex, setMessageIndex] = useState(0);
-  const monthsFromGap = (gap: number, monthly: number) =>
-    monthly > 0 ? Math.max(1, Math.ceil(gap / monthly)) : 0;
-  const monthsForPriority = (id: string, gap: number, monthly: number) => {
-    if (id === "term_insurance" || id === "health_insurance") return 1;
-    return monthsFromGap(gap, monthly);
-  };
 
   useEffect(() => {
     const id = setInterval(
@@ -173,8 +69,9 @@ export default function FixPlanPage() {
   }, []);
 
   const loadFixPlan = useCallback(
-    async (forceRefresh = false) => {
+    async (requestedRefresh = false) => {
       if (!profile || !result) return;
+      const forceRefresh = requestedRefresh && tryStartForcedRefresh();
       const currentHash = hashProfile(profile, result);
       const enginePriorityPlan = buildPriorityPlan(profile, result);
       const currentFingerprint = enginePlanFingerprint(enginePriorityPlan);
@@ -225,6 +122,13 @@ export default function FixPlanPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ profile, analysis: result }),
           });
+          if (response.status === 429) {
+            if (hasPlanRef.current) {
+              setRefreshNotice(FIX_PLAN_RATE_LIMIT_MESSAGE);
+              return;
+            }
+            throw new Error(FIX_PLAN_RATE_LIMIT_MESSAGE);
+          }
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || "AI failed");
           const aiPriorityPlan = data.priorityPlan || {};
@@ -341,13 +245,7 @@ export default function FixPlanPage() {
 
   const lastSubmission = profile;
   const aiData = aiPlan;
-  const visiblePriorities = (aiPlan?.priorityPlan?.priorities || []).filter(
-    (p: any) => {
-      const gap = Number(p?.gap || 0);
-      const monthly = Number(p?.monthlyContribution || 0);
-      return gap > 0 || monthly > 0;
-    },
-  );
+  const visiblePriorities = openPriorities(aiPlan?.priorityPlan);
   const attentionCount = visiblePriorities.length;
   const monthlyPlanRows = aiPlan?.priorityPlan?.monthlyPlan || [];
   const showEmergencyCol = monthlyPlanRows.some(
@@ -370,114 +268,52 @@ export default function FixPlanPage() {
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
+    setPdfError("");
     try {
-      const pp = aiData?.priorityPlan;
-      const expl = aiData?.explanations;
-      const pri = [...(pp?.priorities || [])].sort(
-        (a: any, b: any) => (a.rank || 0) - (b.rank || 0),
-      );
-      const phase1Tasks = pri
-        .filter((p: any) => p.rank === 1)
-        .map((p: any) =>
-          `${p.title}: ${p.actionThisWeek || p.description || p.whyThisMatters || ""}`.trim(),
+      let timeZone: string | undefined;
+      try {
+        timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch {
+        timeZone = undefined;
+      }
+      const res = await fetch("/api/analyse/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profile: lastSubmission,
+          result,
+          priorityPlan: aiData?.priorityPlan,
+          explanations: aiData?.explanations ?? {},
+          timeZone,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          (data as { error?: string }).error ||
+            "Could not generate the PDF. Please try again.",
         );
-      const phase2Tasks = pri
-        .filter((p: any) => p.rank === 2 || p.rank === 3)
-        .map(
-          (p: any) =>
-            `${p.title}${p.actionThisWeek ? ` — ${p.actionThisWeek}` : ""}`,
-        );
-      const phase3Tasks = pri
-        .filter((p: any) => (p.rank || 0) > 3)
-        .map((p: any) => p.title);
-      const emerg = pri.find((p: any) => p.id === "emergency_fund");
-      const term = pri.find((p: any) => p.id === "term_insurance");
-      const health = pri.find((p: any) => p.id === "health_insurance");
-      const keySnapshot = [
-        `Monthly surplus: ₹${Math.round(pp?.monthlySurplus || 0).toLocaleString("en-IN")}`,
-        ...(pp?.debts?.length
-          ? (pp.debts as any[]).map(
-              (d) =>
-                `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")} @ ${d.rate}% · EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo · extra ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo · ~${d.monthsToClearWithExtra || 0} mo to clear`,
-            )
-          : ["Debt: none in engine plan"]),
-        emerg && Number(emerg.gap || 0) > 0
-          ? `Emergency fund gap: ₹${Number(emerg.gap || 0).toLocaleString("en-IN")}`
-          : null,
-        term && Number(term.gap || 0) > 0
-          ? `Term cover gap: ₹${Number(term.gap || 0).toLocaleString("en-IN")}`
-          : null,
-        health && Number(health.gap || 0) > 0
-          ? `Health cover gap: ₹${Number(health.gap || 0).toLocaleString("en-IN")}`
-          : null,
-      ].filter(Boolean) as string[];
-
-      const phases = [
-        {
-          phase: 1,
-          title: "Phase 1 — Immediate (This Week)",
-          subtitle: "Highest-ranked actions",
-          color: [226, 75, 74] as [number, number, number],
-          tasks:
-            phase1Tasks.length > 0
-              ? phase1Tasks
-              : ["Complete your financial review"],
-          outcomes: [
-            `Address top risk: ${pri[0]?.title || "safety and liquidity"}`,
-          ],
-        },
-        {
-          phase: 2,
-          title: "Phase 2 — Short term (1–3 months)",
-          subtitle: "Protection and foundation",
-          color: [186, 117, 23] as [number, number, number],
-          tasks:
-            phase2Tasks.length > 0
-              ? phase2Tasks
-              : ["Build financial foundation"],
-          outcomes: [
-            typeof expl?.in12Months === "string"
-              ? expl.in12Months.slice(0, 160)
-              : "Improved financial health",
-          ],
-        },
-        {
-          phase: 3,
-          title: "Phase 3 — Medium term (3–12 months)",
-          subtitle: "Wealth and consistency",
-          color: [29, 158, 117] as [number, number, number],
-          tasks:
-            phase3Tasks.length > 0
-              ? phase3Tasks
-              : ["Grow wealth systematically"],
-          outcomes: ["Financial independence on track"],
-        },
-        {
-          phase: 4,
-          title: "Phase 4 — Year end",
-          subtitle: "Review and upgrade",
-          color: [83, 74, 183] as [number, number, number],
-          tasks: [
-            "80C / tax-saving check — use actual salary and 80C numbers next run",
-            "Re-analyse on Finkoin with updated balances",
-            "Review insurance covers vs income",
-          ],
-          outcomes: ["Year 1 complete", "Year 2 plan ready"],
-        },
-      ];
-
-      await downloadOptimizerPDF(
-        lastSubmission,
-        result,
-        aiData?.priorityPlan,
-        aiData?.explanations,
-        {
-          phases,
-          keySnapshot,
-        },
-      );
+      }
+      const blob = await res.blob();
+      const name =
+        res.headers
+          .get("Content-Disposition")
+          ?.match(/filename="?([^";]+)"?/i)?.[1] || "Finkoin-Fix-Plan.pdf";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (err) {
       console.error("PDF error:", err);
+      setPdfError(
+        err instanceof Error
+          ? err.message
+          : "Could not generate the PDF. Please try again.",
+      );
     } finally {
       setDownloading(false);
     }
@@ -539,6 +375,9 @@ export default function FixPlanPage() {
               ? "ℹ️ Showing estimated plan — AI analysis will load shortly"
               : "✓ AI personalised analysis"}
           </p>
+          {refreshNotice ? (
+            <p className="mt-1 text-xs text-white/90">{refreshNotice}</p>
+          ) : null}
         </section>
 
         {aiPlan.priorityPlan?.surplusBreakdown ? (
@@ -616,103 +455,85 @@ export default function FixPlanPage() {
           </details>
         ) : null}
 
-        {visiblePriorities
-          .filter(
-            (p: any) =>
-              ![
-                "emergency_fund",
-                "medical_fund",
-                "term_insurance",
-                "start_sip",
-                "accelerate_debt",
-                "home_downpayment",
-                "car_purchase_fund",
-                "kids_education_sip",
-                "boost_emergency",
-                "premium_reserve",
-              ].includes(String(p.id)),
-          )
-          .map((p: any) => (
-            <section
-              key={p.id}
-              className={`rounded-2xl border-l-4 bg-white p-4 shadow-sm ${(p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "critical" ? "border-[#E24B4A]" : (p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "high" ? "border-[#BA7517]" : "border-[#1D9E75]"}`}
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-lg font-semibold">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#EEEDFE] text-sm text-[#534AB7]">
-                    {p.rank}
-                  </span>
-                  <span>
-                    {p.id === "term_insurance" && p.status === "partial"
-                      ? "Consider term top-up plan"
-                      : p.title}
-                  </span>
-                </h3>
-                <span className="rounded-full bg-[#F7F6FE] px-2 py-1 text-xs uppercase text-[#534AB7]">
-                  {p.id === "term_insurance" && p.status === "partial"
-                    ? "high"
-                    : p.urgency}
+        {visiblePriorities.map((p: any) => (
+          <section
+            key={p.id}
+            className={`rounded-2xl border-l-4 bg-white p-4 shadow-sm ${(p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "critical" ? "border-[#E24B4A]" : (p.id === "term_insurance" && p.status === "partial" ? "high" : p.urgency) === "high" ? "border-[#BA7517]" : "border-[#1D9E75]"}`}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-lg font-semibold">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#EEEDFE] text-sm text-[#534AB7]">
+                  {p.rank}
                 </span>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
-                  Gap ₹{p.gap?.toLocaleString("en-IN")}
-                </div>
-                <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
-                  Monthly ₹{p.monthlyContribution?.toLocaleString("en-IN")}
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    From your ₹
-                    {Math.round(
-                      aiPlan.priorityPlan?.monthlySurplus || 0,
-                    ).toLocaleString("en-IN")}{" "}
-                    surplus
-                    {" · "}₹
-                    {Math.round(p.surplusAfterThis || 0).toLocaleString(
-                      "en-IN",
-                    )}{" "}
-                    left after this step
-                  </p>
-                </div>
-                <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
-                  Timeline{" "}
-                  {monthsForPriority(
-                    String(p.id || ""),
-                    Number(p.gap || 0),
-                    Number(p.monthlyContribution || 0),
-                  )}{" "}
-                  months
-                </div>
-              </div>
-              <p className="mt-2 text-sm text-[#534AB7]">
-                Where to invest: {p.instrument || "As recommended in your plan"}
-              </p>
-              <p className="mt-2 text-sm italic text-[#7A7871]">
-                {p.id === "term_insurance" && p.status === "partial"
-                  ? `You have ₹${((p.currentAmount || 0) / 10000000).toFixed(1)}Cr term cover which is good. For your current income and family situation, ₹${((p.targetAmount || 0) / 10000000).toFixed(1)}Cr is recommended. IMPORTANT: Do NOT cancel your existing policy. Instead buy a separate top-up or additional term plan from a different insurer. This costs less than a new full policy and gives you the extra coverage needed.`
-                  : aiPlan.explanations?.priorityExplanations?.[p.id] ||
-                    p.whyThisMatters}
-              </p>
-              <p className="mt-2 rounded-xl bg-[#E7F6F4] p-3 text-sm">
-                <strong>This week:</strong> {p.actionThisWeek}
-              </p>
-              {p.id === "term_insurance" || p.id === "health_insurance" ? (
-                <Link
-                  href={
-                    p.id === "term_insurance"
-                      ? "/learn/term-insurance-vs-endowment-why-most-indians-buy-wrong"
-                      : "/learn/what-is-health-insurance-floater"
-                  }
-                  className="mt-3 inline-flex rounded-lg border border-[#534AB7]/30 bg-[#F7F6FE] px-3 py-2 text-sm font-semibold text-[#534AB7] hover:bg-[#EEEDFE]"
-                >
+                <span>
                   {p.id === "term_insurance" && p.status === "partial"
-                    ? "How term top-ups work (educational) →"
-                    : p.id === "term_insurance"
-                      ? "Term cover guide (educational) →"
-                      : "Health cover guide (educational) →"}
-                </Link>
-              ) : null}
-            </section>
-          ))}
+                    ? "Consider term top-up plan"
+                    : p.title}
+                </span>
+              </h3>
+              <span className="rounded-full bg-[#F7F6FE] px-2 py-1 text-xs uppercase text-[#534AB7]">
+                {p.id === "term_insurance" && p.status === "partial"
+                  ? "high"
+                  : p.urgency}
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
+                Gap ₹{p.gap?.toLocaleString("en-IN")}
+              </div>
+              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
+                Monthly ₹{p.monthlyContribution?.toLocaleString("en-IN")}
+                <p className="mt-0.5 text-xs text-gray-500">
+                  From your ₹
+                  {Math.round(
+                    aiPlan.priorityPlan?.monthlySurplus || 0,
+                  ).toLocaleString("en-IN")}{" "}
+                  surplus
+                  {" · "}₹
+                  {Math.round(p.surplusAfterThis || 0).toLocaleString("en-IN")}{" "}
+                  left after this step
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
+                Timeline{" "}
+                {monthsForPriority(
+                  String(p.id || ""),
+                  Number(p.gap || 0),
+                  Number(p.monthlyContribution || 0),
+                )}{" "}
+                months
+              </div>
+            </div>
+            <p className="mt-2 text-sm text-[#534AB7]">
+              Where to invest: {p.instrument || "As recommended in your plan"}
+            </p>
+            <p className="mt-2 text-sm italic text-[#7A7871]">
+              {p.id === "term_insurance" && p.status === "partial"
+                ? `You have ₹${((p.currentAmount || 0) / 10000000).toFixed(1)}Cr term cover which is good. For your current income and family situation, ₹${((p.targetAmount || 0) / 10000000).toFixed(1)}Cr is recommended. IMPORTANT: Do NOT cancel your existing policy. Instead buy a separate top-up or additional term plan from a different insurer. This costs less than a new full policy and gives you the extra coverage needed.`
+                : aiPlan.explanations?.priorityExplanations?.[p.id] ||
+                  p.whyThisMatters}
+            </p>
+            <p className="mt-2 rounded-xl bg-[#E7F6F4] p-3 text-sm">
+              <strong>This week:</strong> {p.actionThisWeek}
+            </p>
+            {p.id === "term_insurance" || p.id === "health_insurance" ? (
+              <Link
+                href={
+                  p.id === "term_insurance"
+                    ? "/learn/term-insurance-vs-endowment-why-most-indians-buy-wrong"
+                    : "/learn/what-is-health-insurance-floater"
+                }
+                className="mt-3 inline-flex rounded-lg border border-[#534AB7]/30 bg-[#F7F6FE] px-3 py-2 text-sm font-semibold text-[#534AB7] hover:bg-[#EEEDFE]"
+              >
+                {p.id === "term_insurance" && p.status === "partial"
+                  ? "How term top-ups work (educational) →"
+                  : p.id === "term_insurance"
+                    ? "Term cover guide (educational) →"
+                    : "Health cover guide (educational) →"}
+              </Link>
+            ) : null}
+          </section>
+        ))}
 
         {visiblePriorities.length > 0 ? (
           <section className="rounded-2xl border border-[#E8E6F0] bg-white p-4 shadow-sm">
@@ -875,57 +696,14 @@ export default function FixPlanPage() {
                     Debt Payoff Strategy (Avalanche Method)
                   </div>
                   {debts.map((debt: any, i: number) => {
-                    const extraPayment = Number(debt.extraEMIRecommended || 0);
-                    const rateM =
-                      Number(debt.rate || debt.interestRate || 12) / 100 / 12;
-                    const outstanding = Number(
-                      debt.outstanding || debt.balance || 0,
-                    );
-                    const currentEMI = Number(debt.emi || debt.monthlyEMI || 0);
-                    const totalPayment = currentEMI + extraPayment;
-                    let monthsNow =
-                      extraPayment > 0 &&
-                      totalPayment > 0 &&
-                      rateM > 0 &&
-                      outstanding > 0
-                        ? Math.ceil(
-                            -Math.log(
-                              1 - (rateM * outstanding) / totalPayment,
-                            ) / Math.log(1 + rateM),
-                          )
-                        : Number(debt.monthsToClearWithExtra || 0);
-                    if (
-                      !Number.isFinite(monthsNow) ||
-                      monthsNow < 0 ||
-                      monthsNow > 600
-                    ) {
-                      monthsNow = Number(debt.monthsToClearWithExtra || 0);
-                    }
-                    let monthsOriginal =
-                      currentEMI > 0 && rateM > 0 && outstanding > 0
-                        ? Math.ceil(
-                            -Math.log(1 - (rateM * outstanding) / currentEMI) /
-                              Math.log(1 + rateM),
-                          )
-                        : 0;
-                    if (
-                      !Number.isFinite(monthsOriginal) ||
-                      monthsOriginal < 0 ||
-                      monthsOriginal > 600
-                    ) {
-                      monthsOriginal = 0;
-                    }
-                    const monthsSaved = Math.max(0, monthsOriginal - monthsNow);
-                    const interestSaved = Math.round(
-                      extraPayment > 0
-                        ? Math.max(0, Number(debt.extraEMIRecommended || 0)) *
-                            Math.max(
-                              0,
-                              Number(debt.monthsToClearWithExtra || 0),
-                            ) *
-                            0.35
-                        : 0,
-                    );
+                    const {
+                      extraPayment,
+                      outstanding,
+                      currentEMI,
+                      monthsNow,
+                      monthsSaved,
+                      interestSaved,
+                    } = debtPayoffNumbers(debt);
                     const label =
                       debt.displayName || debt.label || debt.name || debt.type;
                     return (
@@ -1041,16 +819,18 @@ export default function FixPlanPage() {
                                 ? ` (save ${monthsSaved} months vs EMI-only)`
                                 : ""}
                             </span>
-                            <span
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 700,
-                                color: "#1D9E75",
-                              }}
-                            >
-                              Save ₹{interestSaved.toLocaleString("en-IN")}{" "}
-                              (est.)
-                            </span>
+                            {interestSaved > 0 ? (
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#1D9E75",
+                                }}
+                              >
+                                Save ₹{interestSaved.toLocaleString("en-IN")}{" "}
+                                interest
+                              </span>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
@@ -1104,11 +884,15 @@ export default function FixPlanPage() {
           ? (() => {
               const scoreToday = aiData?.priorityPlan?.scoreToday || 0;
               const scoreAfter = aiData?.priorityPlan?.scoreAfter12Months || 0;
-              const scoreGain = scoreAfter - scoreToday;
+              const scoreGain = scoreProjectionGain(aiData?.priorityPlan);
               const getScoreColor = (s: number) =>
-                s < 40 ? "#E24B4A" : s < 70 ? "#BA7517" : "#1D9E75";
+                ({ critical: "#E24B4A", warning: "#BA7517", good: "#1D9E75" })[
+                  scoreBand(s)
+                ];
               const getScoreBg = (s: number) =>
-                s < 40 ? "#FCEBEB" : s < 70 ? "#FAEEDA" : "#E1F5EE";
+                ({ critical: "#FCEBEB", warning: "#FAEEDA", good: "#E1F5EE" })[
+                  scoreBand(s)
+                ];
 
               return (
                 <div
@@ -1129,125 +913,172 @@ export default function FixPlanPage() {
                   >
                     Score projection
                   </div>
-                  <div
-                    style={{ fontSize: 13, color: "#9B9A94", marginBottom: 24 }}
-                  >
-                    Follow this plan for 12 months
-                  </div>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 12 }}
-                  >
-                    <div style={{ textAlign: "center" }}>
+                  {scoreGain > 0 ? (
+                    <>
                       <div
                         style={{
-                          fontSize: 11,
-                          fontWeight: 600,
+                          fontSize: 13,
                           color: "#9B9A94",
-                          marginBottom: 8,
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
+                          marginBottom: 24,
                         }}
                       >
-                        Today
+                        Follow this plan for 12 months
                       </div>
                       <div
                         style={{
-                          width: 80,
-                          height: 80,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ textAlign: "center" }}>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#9B9A94",
+                              marginBottom: 8,
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            Today
+                          </div>
+                          <div
+                            style={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: "50%",
+                              background: getScoreBg(scoreToday),
+                              border: `3px solid ${getScoreColor(scoreToday)}`,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              margin: "0 auto",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 22,
+                                fontWeight: 800,
+                                color: getScoreColor(scoreToday),
+                                lineHeight: 1,
+                              }}
+                            >
+                              {scoreToday}
+                            </div>
+                            <div style={{ fontSize: 10, color: "#9B9A94" }}>
+                              /100
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                          <div
+                            style={{
+                              fontSize: 28,
+                              color: "#534AB7",
+                              lineHeight: 1,
+                            }}
+                          >
+                            →
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 700,
+                              color: "#1D9E75",
+                              marginTop: 6,
+                            }}
+                          >
+                            +{scoreGain} pts
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: "#9B9A94",
+                              marginTop: 2,
+                            }}
+                          >
+                            in 12 months
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#9B9A94",
+                              marginBottom: 8,
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            Month 12
+                          </div>
+                          <div
+                            style={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: "50%",
+                              background: getScoreBg(scoreAfter),
+                              border: `3px solid ${getScoreColor(scoreAfter)}`,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              margin: "0 auto",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 22,
+                                fontWeight: 800,
+                                color: getScoreColor(scoreAfter),
+                                lineHeight: 1,
+                              }}
+                            >
+                              {scoreAfter}
+                            </div>
+                            <div style={{ fontSize: 10, color: "#9B9A94" }}>
+                              /100
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 16,
+                        marginTop: 12,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 64,
+                          height: 64,
                           borderRadius: "50%",
                           background: getScoreBg(scoreToday),
                           border: `3px solid ${getScoreColor(scoreToday)}`,
                           display: "flex",
-                          flexDirection: "column",
                           alignItems: "center",
                           justifyContent: "center",
-                          margin: "0 auto",
+                          fontSize: 20,
+                          fontWeight: 800,
+                          color: getScoreColor(scoreToday),
+                          flexShrink: 0,
                         }}
                       >
-                        <div
-                          style={{
-                            fontSize: 22,
-                            fontWeight: 800,
-                            color: getScoreColor(scoreToday),
-                            lineHeight: 1,
-                          }}
-                        >
-                          {scoreToday}
-                        </div>
-                        <div style={{ fontSize: 10, color: "#9B9A94" }}>
-                          /100
-                        </div>
+                        {scoreToday}
+                      </div>
+                      <div style={{ fontSize: 14, color: "#1D5C3A" }}>
+                        {noGainProjectionMessage(scoreToday)}
                       </div>
                     </div>
-                    <div style={{ flex: 1, textAlign: "center" }}>
-                      <div
-                        style={{
-                          fontSize: 28,
-                          color: "#534AB7",
-                          lineHeight: 1,
-                        }}
-                      >
-                        →
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: "#1D9E75",
-                          marginTop: 6,
-                        }}
-                      >
-                        +{scoreGain} pts
-                      </div>
-                      <div
-                        style={{ fontSize: 11, color: "#9B9A94", marginTop: 2 }}
-                      >
-                        in 12 months
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: "#9B9A94",
-                          marginBottom: 8,
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        Month 12
-                      </div>
-                      <div
-                        style={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: "50%",
-                          background: getScoreBg(scoreAfter),
-                          border: `3px solid ${getScoreColor(scoreAfter)}`,
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          margin: "0 auto",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 22,
-                            fontWeight: 800,
-                            color: getScoreColor(scoreAfter),
-                            lineHeight: 1,
-                          }}
-                        >
-                          {scoreAfter}
-                        </div>
-                        <div style={{ fontSize: 10, color: "#9B9A94" }}>
-                          /100
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               );
             })()
@@ -1296,6 +1127,12 @@ export default function FixPlanPage() {
             </span>
           )}
         </button>
+
+        {pdfError ? (
+          <p role="alert" className="text-center text-sm text-[#991B1B]">
+            {pdfError}
+          </p>
+        ) : null}
 
         <p className="pb-4 text-center text-xs text-[#9B9A94]">
           Educational guidance only. Not SEBI registered investment advice.

@@ -1,51 +1,312 @@
-import { View, Text, StyleSheet } from "react-native";
+/**
+ * Fix Plan — port of web app/analyse/fixplan/page.tsx.
+ * Engine plan merged with the /api/ai/analyse overlay (engine numbers win).
+ */
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Colors, FontSize, Spacing } from "@/constants/theme";
-import Button from "@/components/ui/Button";
+import { useAuthStore } from "@/store/authStore";
+import { useFinancialStore } from "@/store/financialStore";
+import { canViewFixPlan } from "@/lib/analyseEntitlement";
+import { shareFixPlanPdf } from "@/lib/fixPlanPdf";
+import { AnalyseErrorBoundary } from "@/components/analyse/AnalyseErrorBoundary";
+import { AppIcon } from "@/components/ui/AppIcon";
+import { useFixPlan } from "@/components/analyse/fixplan/useFixPlan";
+import { FixPlanHero } from "@/components/analyse/fixplan/FixPlanHero";
+import { SurplusBreakdown } from "@/components/analyse/fixplan/SurplusBreakdown";
+import { PriorityCard } from "@/components/analyse/fixplan/PriorityCard";
+import { SurplusAllocationSummary } from "@/components/analyse/fixplan/SurplusAllocationSummary";
+import { MonthlyPlanTable } from "@/components/analyse/fixplan/MonthlyPlanTable";
+import { DebtStrategy } from "@/components/analyse/fixplan/DebtStrategy";
+import { GoalPlanCard } from "@/components/analyse/fixplan/GoalPlanCard";
+import { ScoreProjection } from "@/components/analyse/fixplan/ScoreProjection";
+import {
+  DoThisFirst,
+  Encouragement,
+  FdSuggestionCard,
+} from "@/components/analyse/fixplan/Callouts";
+import {
+  FixPlanEmpty,
+  FixPlanError,
+  FixPlanLoader,
+} from "@/components/analyse/fixplan/FixPlanStates";
+import { openPriorities } from "@/lib/fixPlanMerge";
+import type { PriorityItem } from "@/lib/priorityEngine";
+import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
 
-export default function FixPlanScreen() {
+function FixPlanScreen() {
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const user = useAuthStore((s) => s.user);
+  const profile = useFinancialStore((s) => s.lastSubmission);
+  const result = useFinancialStore((s) => s.result);
+  const storeHydrated = useFinancialStore((s) => s.hasHydrated);
+  const [downloading, setDownloading] = useState(false);
+
+  const hasAccess = canViewFixPlan(user?.subscriptionTier);
+  const allowed = hasInitialized && isLoggedIn && hasAccess;
+
+  useEffect(() => {
+    if (!hasInitialized) return;
+    if (!isLoggedIn) {
+      router.replace({
+        pathname: "/(auth)/login",
+        params: { next: "/analyse/fixplan" },
+      });
+      return;
+    }
+    if (!hasAccess) router.replace("/analyse/result");
+  }, [hasInitialized, isLoggedIn, hasAccess]);
+
+  const { aiPlan, aiLoading, aiError, refreshing, notice, retry, refresh } =
+    useFixPlan({
+      profile,
+      result,
+      userId: user?.id,
+      enabled: allowed && storeHydrated && !!profile && !!result,
+    });
+
+  const goBack = () =>
+    router.canGoBack() ? router.back() : router.replace("/analyse/result");
+
+  const header = (
+    <View style={styles.header}>
+      <Pressable
+        onPress={goBack}
+        style={styles.back}
+        accessibilityRole="button"
+        hitSlop={8}
+      >
+        <Text style={styles.backText}>← Back to report</Text>
+      </Pressable>
+    </View>
+  );
+
+  if (!allowed || !storeHydrated) {
+    return <FixPlanLoader label="Loading…" />;
+  }
+  if (!profile || !result) {
+    return (
+      <>
+        {header}
+        <FixPlanEmpty />
+      </>
+    );
+  }
+  if (!aiPlan) {
+    if (aiLoading) return <FixPlanLoader />;
+    return (
+      <>
+        {header}
+        <FixPlanError message={aiError} onRetry={() => void retry()} />
+      </>
+    );
+  }
+
+  const pp = aiPlan.priorityPlan;
+  const expl = aiPlan.explanations;
+  const visiblePriorities: PriorityItem[] = openPriorities(pp);
+  const monthlyPlanRows = pp?.monthlyPlan || [];
+  const goal = pp?.goals?.[0];
+
+  const handleDownloadPDF = async () => {
+    setDownloading(true);
+    try {
+      const res = await shareFixPlanPdf({
+        profile,
+        result,
+        priorityPlan: pp,
+        explanations: expl,
+      });
+      if (res.error) Alert.alert("Couldn't create PDF", res.error);
+    } catch (err) {
+      console.error("PDF error:", err);
+      Alert.alert(
+        "Couldn't create PDF",
+        err instanceof Error ? err.message : "Please try again.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <>
+      {header}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
+        {notice ? (
+          <View
+            style={styles.info}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
+            <Text style={styles.infoText}>{notice}</Text>
+          </View>
+        ) : null}
+
+        {aiError ? (
+          <View style={styles.notice}>
+            <Text style={styles.noticeText}>
+              Couldn&apos;t refresh your plan. {aiError}
+            </Text>
+            <Pressable
+              onPress={() => void refresh()}
+              style={styles.noticeBtn}
+              accessibilityRole="button"
+            >
+              <Text style={styles.noticeBtnText}>Try again</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <FixPlanHero
+          attentionCount={visiblePriorities.length}
+          overallSummary={expl?.overallSummary}
+          isFallback={aiPlan.isFallback}
+        />
+
+        {pp?.surplusBreakdown ? (
+          <SurplusBreakdown breakdown={pp.surplusBreakdown} />
+        ) : null}
+
+        {visiblePriorities.map((p: PriorityItem) => (
+          <PriorityCard
+            key={p.id}
+            priority={p}
+            monthlySurplus={pp?.monthlySurplus || 0}
+            explanation={expl?.priorityExplanations?.[p.id]}
+          />
+        ))}
+
+        {visiblePriorities.length > 0 ? (
+          <SurplusAllocationSummary
+            priorities={visiblePriorities}
+            monthlySurplus={pp?.monthlySurplus || 0}
+          />
+        ) : null}
+
+        {monthlyPlanRows.length > 0 ? (
+          <MonthlyPlanTable rows={monthlyPlanRows} />
+        ) : null}
+
+        {pp?.debts?.length > 0 ? (
+          <DebtStrategy debts={pp.debts} debtStrategy={expl?.debtStrategy} />
+        ) : null}
+
+        {goal ? <GoalPlanCard goal={goal} /> : null}
+
+        <ScoreProjection plan={pp} />
+
+        {pp?.fdSuggestion ? <FdSuggestionCard fd={pp.fdSuggestion} /> : null}
+
+        <DoThisFirst text={expl?.thisWeekAction || pp?.topAction} />
+        <Encouragement text={expl?.encouragement} />
+
+        <Pressable
+          onPress={() => void handleDownloadPDF()}
+          disabled={downloading}
+          style={[styles.pdfBtn, downloading && styles.pdfBtnDisabled]}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: downloading, busy: downloading }}
+        >
+          {downloading ? (
+            <Text style={styles.pdfText}>Generating PDF...</Text>
+          ) : (
+            <View style={styles.pdfInner}>
+              <AppIcon name="doc" size={18} color={Colors.primary} />
+              <Text style={styles.pdfText}>Download full report PDF</Text>
+            </View>
+          )}
+        </Pressable>
+
+        <Text style={styles.disclaimer}>
+          Educational guidance only. Not SEBI registered investment advice.
+        </Text>
+      </ScrollView>
+    </>
+  );
+}
+
+export default function FixPlanRoute() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.center}>
-        <Text style={styles.emoji}>✨</Text>
-        <Text style={styles.title}>Fix plan</Text>
-        <Text style={styles.sub}>
-          Full personalised fix plan ships in the next mobile release. Your
-          health score on Report is ready now.
-        </Text>
-        <Button
-          label="Back to health check"
-          onPress={() => router.replace("/(tabs)/analyse")}
-          style={{ marginTop: 24 }}
-        />
-      </View>
+      <AnalyseErrorBoundary label="FixPlanErrorBoundary">
+        <FixPlanScreen />
+      </AnalyseErrorBoundary>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
   },
-  center: {
-    flex: 1,
-    padding: Spacing.xl,
+  back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
+  backText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  content: { padding: Spacing.lg, paddingBottom: 40 },
+  notice: {
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  noticeText: { fontSize: FontSize.md, color: "#B91C1C", lineHeight: 18 },
+  info: {
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.primaryMedium,
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  infoText: { fontSize: 14, color: Colors.primaryDark, lineHeight: 20 },
+  noticeBtn: {
+    marginTop: Spacing.sm,
+    minHeight: 44,
     justifyContent: "center",
+    alignSelf: "flex-start",
+  },
+  noticeBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  pdfBtn: {
+    minHeight: 48,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.lg,
   },
-  emoji: { fontSize: 48, marginBottom: 16 },
-  title: {
-    fontSize: FontSize.xl,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: 10,
-  },
-  sub: {
-    fontSize: FontSize.base,
-    color: Colors.textMuted,
+  pdfBtnDisabled: { opacity: 0.7 },
+  pdfInner: { flexDirection: "row", alignItems: "center", gap: 8 },
+  pdfText: { fontSize: 15, fontWeight: "700", color: Colors.primary },
+  disclaimer: {
+    paddingBottom: Spacing.lg,
     textAlign: "center",
-    lineHeight: 22,
+    fontSize: 12,
+    color: Colors.textMuted,
   },
 });

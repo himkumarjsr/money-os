@@ -3,6 +3,7 @@
 import MoneyInput from "@/components/ui/MoneyInput";
 import { handleMoneyInput } from "@/lib/formatters";
 import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
+import { useKeyboardInset } from "@/lib/useKeyboardInset";
 import { getSupabase } from "@/lib/supabase";
 import {
   TRACKER_CATEGORIES,
@@ -128,6 +129,7 @@ export default function AddExpenseModal({
   const [newCardDueDay, setNewCardDueDay] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const keyboardInset = useKeyboardInset();
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -424,6 +426,7 @@ export default function AddExpenseModal({
         display: "flex",
         alignItems: "flex-end",
         justifyContent: "center",
+        paddingBottom: keyboardInset,
       }}
       role="presentation"
       onClick={onClose}
@@ -437,8 +440,9 @@ export default function AddExpenseModal({
           padding: "24px",
           width: "100%",
           maxWidth: 480,
-          maxHeight: "90vh",
+          maxHeight: `calc((100dvh - ${keyboardInset}px) * 0.92)`,
           overflowY: "auto",
+          overscrollBehavior: "contain",
         }}
         onClick={(e) => e.stopPropagation()}
       >

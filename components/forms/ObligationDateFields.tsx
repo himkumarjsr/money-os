@@ -24,6 +24,8 @@ export function MonthDaySelects({
   onDay,
   hint,
   label,
+  error,
+  showMonth = true,
 }: {
   month?: number;
   day?: number;
@@ -31,6 +33,8 @@ export function MonthDaySelects({
   onDay: (d: number | undefined) => void;
   hint?: string;
   label: string;
+  error?: string;
+  showMonth?: boolean;
 }) {
   return (
     <div className="mt-4 space-y-2">
@@ -39,20 +43,22 @@ export function MonthDaySelects({
         {hint ? <FieldTooltip text={hint} /> : null}
       </label>
       <div className="flex gap-2.5">
-        <select
-          value={month || ""}
-          onChange={(e) =>
-            onMonth(e.target.value ? parseInt(e.target.value, 10) : undefined)
-          }
-          className="h-12 flex-1 rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none"
-        >
-          <option value="">Month</option>
-          {MONTHS.map((m, i) => (
-            <option key={m} value={i + 1}>
-              {m}
-            </option>
-          ))}
-        </select>
+        {showMonth ? (
+          <select
+            value={month || ""}
+            onChange={(e) =>
+              onMonth(e.target.value ? parseInt(e.target.value, 10) : undefined)
+            }
+            className="h-12 flex-1 rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none"
+          >
+            <option value="">Month</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <select
           value={day || ""}
           onChange={(e) =>
@@ -68,11 +74,12 @@ export function MonthDaySelects({
           ))}
         </select>
       </div>
+      {error ? <p className="text-sm text-[#E24B4A]">{error}</p> : null}
     </div>
   );
 }
 
-/** Recurring EMI debit: month + day only (no year). */
+/** Recurring debit: month + day (no year); day only when no month field is bound. */
 export function DayOfMonthPicker({
   value,
   onChange,
@@ -80,6 +87,7 @@ export function DayOfMonthPicker({
   onMonth,
   label,
   hint,
+  error,
 }: {
   value?: number;
   onChange: (day: number | undefined) => void;
@@ -87,6 +95,7 @@ export function DayOfMonthPicker({
   onMonth?: (m: number | undefined) => void;
   label: string;
   hint?: string;
+  error?: string;
 }) {
   return (
     <MonthDaySelects
@@ -96,6 +105,8 @@ export function DayOfMonthPicker({
       day={value}
       onMonth={(m) => onMonth?.(m)}
       onDay={onChange}
+      error={error}
+      showMonth={Boolean(onMonth)}
     />
   );
 }
@@ -112,6 +123,7 @@ export function YearSelect({
   minYear,
   maxYear,
   placeholder = "Select year",
+  error,
 }: {
   label: string;
   value?: number;
@@ -120,6 +132,7 @@ export function YearSelect({
   minYear?: number;
   maxYear?: number;
   placeholder?: string;
+  error?: string;
 }) {
   const now = new Date().getFullYear();
   const min = minYear ?? now;
@@ -147,6 +160,7 @@ export function YearSelect({
           </option>
         ))}
       </select>
+      {error ? <p className="text-sm text-[#E24B4A]">{error}</p> : null}
     </div>
   );
 }
@@ -161,6 +175,7 @@ export function PremiumDueFields({
   monthlyLabel = "Which date is the premium debited? (optional)",
   yearlyLabel = "When is your premium due each year? (optional)",
   hint = "We'll remind you before the due date so you can keep the amount ready",
+  error,
 }: {
   frequency?: "monthly" | "yearly";
   month?: number;
@@ -170,6 +185,7 @@ export function PremiumDueFields({
   monthlyLabel?: string;
   yearlyLabel?: string;
   hint?: string;
+  error?: string;
 }) {
   if (frequency === "yearly") {
     return (
@@ -180,6 +196,7 @@ export function PremiumDueFields({
         day={day}
         onMonth={onMonth}
         onDay={onDay}
+        error={error}
       />
     );
   }
@@ -191,6 +208,7 @@ export function PremiumDueFields({
       onChange={onDay}
       month={month}
       onMonth={onMonth}
+      error={error}
     />
   );
 }

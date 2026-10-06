@@ -1,9 +1,12 @@
 /**
  * FK Split store — mobile parity with PWA store/splitStore.ts.
- * Reads/writes Supabase with the user session; balances via lib/splitBalances.
+ * Reads via Supabase with the user session; writes go through the web
+ * /api/split/* routes (server checks + notifications), falling back to direct
+ * Supabase writes only when the server can't take the request.
  */
 import { create } from "zustand";
 import { getSupabase } from "@/lib/supabase";
+import { siteBase, splitApi } from "@/lib/splitApi";
 import {
   computeGroupBalances,
   type NetBalance,
@@ -108,11 +111,23 @@ function makeInviteCode() {
   ).join("");
 }
 
-function siteBase() {
-  return (process.env.EXPO_PUBLIC_SITE_URL || "https://finkoin.com").replace(
-    /\/$/,
-    "",
-  );
+export function groupCodeLink(inviteCode: string | null | undefined) {
+  if (!inviteCode) return "";
+  return `${siteBase()}/split/join?code=${encodeURIComponent(inviteCode)}`;
+}
+
+function pickSplitMaps(input: {
+  splitType: SplitType;
+  exactAmounts?: Record<string, number>;
+  percentages?: Record<string, number>;
+  shareCounts?: Record<string, number>;
+}) {
+  return {
+    exactAmounts: input.splitType === "exact" ? input.exactAmounts : undefined,
+    percentages:
+      input.splitType === "percentage" ? input.percentages : undefined,
+    shareCounts: input.splitType === "shares" ? input.shareCounts : undefined,
+  };
 }
 
 type SplitStore = {
@@ -141,7 +156,30 @@ type SplitStore = {
   }) => Promise<{ groupId: string | null; error?: string }>;
   inviteLink: (
     groupId: string,
+    groupName?: string,
   ) => Promise<{ inviteUrl?: string; error?: string }>;
+  inviteByEmail: (input: {
+    groupId: string;
+    groupName: string;
+    email: string;
+  }) => Promise<{
+    inviteUrl?: string;
+    emailSent?: boolean;
+    emailError?: string | null;
+    error?: string;
+  }>;
+  joinInvite: (input: {
+    token?: string;
+    code?: string;
+    userId: string;
+    userEmail: string;
+    userName: string;
+  }) => Promise<{
+    groupId?: string;
+    groupName?: string;
+    error?: string;
+    status?: number;
+  }>;
   addExpense: (input: {
     groupId: string;
     title: string;
@@ -188,6 +226,7 @@ type SplitStore = {
     userEmail: string;
     userName?: string;
     paymentMethod?: string;
+    notes?: string;
   }) => Promise<{ error?: string }>;
   deleteGroup: (groupId: string) => Promise<boolean>;
   deleteExpense: (
@@ -333,9 +372,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       const expenses = (expensesRes.data as SplitExpense[]) ?? [];
       const settlements = (settlementsRes.data as SplitSettlement[]) ?? [];
 
-      const balanceMembers = members
-        .filter((m) => m.status === "active")
-        .map((m) => ({
+      const balanceMembers = members.map((m) => ({
           email: m.email,
           display_name: m.display_name,
         }));
@@ -372,6 +409,23 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   },
 
   createGroup: async (input) => {
+    const api = await splitApi<{ groupId?: string }>("/api/split/groups", {
+      method: "POST",
+      body: {
+        name: input.name.trim(),
+        emoji: input.emoji?.trim() || "",
+        type: input.type || "general",
+        displayName: input.userName,
+      },
+    });
+    if (api.ok && api.data.groupId) {
+      set({ lastFetched: {} });
+      return { groupId: api.data.groupId };
+    }
+    if (!api.ok && !api.unavailable) {
+      return { groupId: null, error: api.error };
+    }
+
     try {
       const supabase = getSupabase();
       const email = input.userEmail.toLowerCase().trim();
@@ -425,7 +479,18 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     }
   },
 
-  inviteLink: async (groupId) => {
+  inviteLink: async (groupId, groupName) => {
+    const api = await splitApi<{ inviteUrl?: string }>("/api/split/invite", {
+      method: "POST",
+      body: {
+        groupId,
+        groupName: groupName ?? get().activeGroup?.name ?? "",
+        linkOnly: true,
+      },
+    });
+    if (api.ok && api.data.inviteUrl) return { inviteUrl: api.data.inviteUrl };
+    if (!api.ok && !api.unavailable) return { error: api.error };
+
     try {
       const supabase = getSupabase();
       const { data: group, error } = await supabase
@@ -444,9 +509,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
           .eq("id", groupId);
       }
 
-      return {
-        inviteUrl: `${siteBase()}/split/join?code=${encodeURIComponent(code)}`,
-      };
+      return { inviteUrl: groupCodeLink(code) };
     } catch (err) {
       return {
         error: err instanceof Error ? err.message : "Could not create invite",
@@ -454,7 +517,54 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     }
   },
 
+  inviteByEmail: async (input) => {
+    const api = await splitApi<{
+      inviteUrl?: string;
+      emailSent?: boolean;
+      emailError?: string | null;
+    }>("/api/split/invite", {
+      method: "POST",
+      body: {
+        groupId: input.groupId,
+        groupName: input.groupName,
+        invitedEmail: input.email.trim().toLowerCase(),
+        linkOnly: false,
+      },
+    });
+    if (!api.ok) return { error: api.error };
+    void get().fetchGroupDetail(input.groupId);
+    return {
+      inviteUrl: api.data.inviteUrl,
+      emailSent: Boolean(api.data.emailSent),
+      emailError: api.data.emailError ?? null,
+    };
+  },
+
   addExpense: async (input) => {
+    const api = await splitApi("/api/split/expenses", {
+      method: "POST",
+      body: {
+        groupId: input.groupId,
+        title: input.title.trim(),
+        amount: round2(input.amount),
+        category: input.category,
+        paidByEmail: input.paidByEmail.toLowerCase().trim(),
+        paidByName: input.paidByName,
+        paidByUserId: input.paidByUserId ?? null,
+        splitType: input.splitType,
+        expenseDate: input.expenseDate,
+        notes: input.notes?.trim() || "",
+        includedMembers: input.includedMembers,
+        ...pickSplitMaps(input),
+      },
+    });
+    if (api.ok) {
+      set({ lastFetched: {} });
+      void get().fetchGroupDetail(input.groupId);
+      return {};
+    }
+    if (!api.unavailable) return { error: api.error };
+
     try {
       const { shares, error: shareErr } = computeSplitShares({
         amount: input.amount,
@@ -527,6 +637,29 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   },
 
   editExpense: async (input) => {
+    const api = await splitApi(`/api/split/expenses/${input.expenseId}`, {
+      method: "PUT",
+      body: {
+        title: input.title.trim(),
+        amount: round2(input.amount),
+        category: input.category,
+        expenseDate: input.expenseDate,
+        notes: input.notes ?? null,
+        splitType: input.splitType,
+        includedMembers: input.includedMembers,
+        ...pickSplitMaps(input),
+        paidByEmail: input.paidByEmail.toLowerCase().trim(),
+        paidByName: input.paidByName,
+        paidByUserId: input.paidByUserId ?? null,
+      },
+    });
+    if (api.ok) {
+      set({ lastFetched: {} });
+      await get().fetchGroupDetail(input.groupId);
+      return {};
+    }
+    if (!api.unavailable) return { error: api.error };
+
     try {
       const { shares, error: shareErr } = computeSplitShares({
         amount: input.amount,
@@ -589,6 +722,23 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
   },
 
   settleUp: async (input) => {
+    const api = await splitApi("/api/split/settle", {
+      method: "POST",
+      body: {
+        groupId: input.groupId,
+        toEmail: input.toEmail.toLowerCase().trim(),
+        amount: round2(input.amount),
+        paymentMethod: input.paymentMethod,
+        notes: input.notes,
+      },
+    });
+    if (api.ok) {
+      set({ lastFetched: {} });
+      await get().fetchGroupDetail(input.groupId);
+      return {};
+    }
+    if (!api.unavailable) return { error: api.error };
+
     try {
       const supabase = getSupabase();
       const fromEmail = input.userEmail.toLowerCase().trim();
@@ -628,12 +778,18 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   deleteGroup: async (groupId) => {
     try {
-      const supabase = getSupabase();
-      const { error } = await supabase
-        .from("split_groups")
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .eq("id", groupId);
-      if (error) return false;
+      const api = await splitApi("/api/split/groups", {
+        method: "DELETE",
+        query: { groupId },
+      });
+      if (!api.ok && !api.unavailable) return false;
+      if (!api.ok) {
+        const { error } = await getSupabase()
+          .from("split_groups")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq("id", groupId);
+        if (error) return false;
+      }
 
       set((state) => ({
         groups: state.groups.filter((g) => g.id !== groupId),
@@ -653,12 +809,17 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   deleteExpense: async (groupId, expenseId) => {
     try {
-      const supabase = getSupabase();
-      const { error } = await supabase
-        .from("split_expenses")
-        .update({ is_deleted: true })
-        .eq("id", expenseId);
-      if (error) return { error: error.message };
+      const api = await splitApi(`/api/split/expenses/${expenseId}`, {
+        method: "DELETE",
+      });
+      if (!api.ok && !api.unavailable) return { error: api.error };
+      if (!api.ok) {
+        const { error } = await getSupabase()
+          .from("split_expenses")
+          .update({ is_deleted: true })
+          .eq("id", expenseId);
+        if (error) return { error: error.message };
+      }
 
       set({ lastFetched: {} });
       await get().fetchGroupDetail(groupId);
@@ -674,26 +835,43 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
     try {
       const me = userEmail.toLowerCase().trim();
       const target = (targetEmail ?? me).toLowerCase().trim();
-      const net = get().netBalances.find((n) => n.email === target)?.net ?? 0;
-      if (Math.abs(net) > 0.01) {
+
+      const api = await splitApi("/api/split/members", {
+        method: "DELETE",
+        query: {
+          groupId,
+          email: targetEmail && target !== me ? target : undefined,
+        },
+      });
+      if (!api.ok && !api.unavailable) {
+        const amount = Number(api.data.amount);
         return {
           success: false,
-          error: "Unsettled balances exist",
-          amount: Math.abs(net),
+          error: api.error,
+          amount: Number.isFinite(amount) ? amount : undefined,
         };
       }
 
-      const supabase = getSupabase();
-      const { error } = await supabase
-        .from("split_group_members")
-        .update({
-          status: "left",
-          left_at: new Date().toISOString(),
-        })
-        .eq("group_id", groupId)
-        .eq("email", target);
-
-      if (error) return { success: false, error: error.message };
+      if (!api.ok) {
+        const net =
+          get().netBalances.find((n) => n.email === target)?.net ?? 0;
+        if (Math.abs(net) > 0.01) {
+          return {
+            success: false,
+            error: "Unsettled balances exist",
+            amount: Math.abs(net),
+          };
+        }
+        const { error } = await getSupabase()
+          .from("split_group_members")
+          .update({
+            status: "left",
+            left_at: new Date().toISOString(),
+          })
+          .eq("group_id", groupId)
+          .eq("email", target);
+        if (error) return { success: false, error: error.message };
+      }
 
       set({ lastFetched: {} });
       if (target === me) {
@@ -710,6 +888,28 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
         error: err instanceof Error ? err.message : "Could not leave group",
       };
     }
+  },
+
+  joinInvite: async (input) => {
+    const token = input.token?.trim();
+    const code = input.code?.trim().toUpperCase();
+    if (!token && !code) return { error: "Invalid invite link" };
+
+    const api = await splitApi<{ groupId?: string; groupName?: string }>(
+      "/api/split/join",
+      { method: "POST", body: token ? { token } : { code } },
+    );
+    if (api.ok && api.data.groupId) {
+      set({ lastFetched: {} });
+      return { groupId: api.data.groupId, groupName: api.data.groupName };
+    }
+    if (!api.ok && !api.unavailable) {
+      return { error: api.error, status: api.status };
+    }
+    if (!code) {
+      return { error: api.ok ? "Could not join group" : api.error };
+    }
+    return get().joinByCode({ ...input, code });
   },
 
   joinByCode: async (input) => {

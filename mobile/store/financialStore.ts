@@ -1,6 +1,6 @@
 /**
  * RN-adapted financial store — mirrors web store/financialStore.ts
- * with AsyncStorage instead of localStorage. No AI plan module dependency.
+ * with AsyncStorage instead of localStorage.
  */
 import {
   analyseDefaultValues,
@@ -9,8 +9,10 @@ import {
   type FinancialProfile,
 } from "@/lib/analyse-form-schema";
 import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
+import type { FinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { useAuthStore } from "@/store/authStore";
 import { appStorage } from "@/lib/storage";
+import { clearCache } from "@/lib/cache";
 import { create } from "zustand";
 import {
   createJSONStorage,
@@ -66,16 +68,21 @@ type FinancialState = {
   result: AnalysisResult | null;
   profile: Partial<AnalyseFormValues> | null;
   currentStep: number;
+  aiPlan: FinkoinAIPlan | null;
   hasHydrated: boolean;
   setAnalysis: (patch: Partial<AnalyseFormValues>) => void;
   setFullAnalysis: (data: FinancialProfile) => void;
   updateProfile: (patch: Partial<AnalyseFormValues>) => void;
   setResult: (result: AnalysisResult | null) => void;
+  setAiPlan: (plan: FinkoinAIPlan | null) => void;
   setCurrentStep: (value: number | ((prev: number) => number)) => void;
   hydrateFromSnapshot: (
     profile: FinancialProfile,
     result: AnalysisResult,
-    options?: { analysisPatch?: Partial<AnalyseFormValues> },
+    options?: {
+      aiPlan?: FinkoinAIPlan | null;
+      analysisPatch?: Partial<AnalyseFormValues>;
+    },
   ) => void;
   runAnalysis: () => void;
   clearSubmission: () => void;
@@ -92,6 +99,7 @@ export const useFinancialStore = create<FinancialState>()(
       result: null,
       profile: analyseDefaultValues,
       currentStep: 0,
+      aiPlan: null,
       hasHydrated: false,
       setAnalysis: (patch) =>
         set((state) => ({
@@ -107,6 +115,8 @@ export const useFinancialStore = create<FinancialState>()(
           },
         })),
       setFullAnalysis: (data) => {
+        // Any new analysis must invalidate AI fix-plan cache so Groq re-evaluates.
+        clearCache();
         try {
           const result = analyseFinances(data);
           const form = {
@@ -118,6 +128,7 @@ export const useFinancialStore = create<FinancialState>()(
             result,
             profile: form,
             analysis: form,
+            aiPlan: null,
           });
         } catch (e) {
           console.error("[financialStore] setFullAnalysis failed:", e);
@@ -130,6 +141,7 @@ export const useFinancialStore = create<FinancialState>()(
             result: null,
             profile: form,
             analysis: form,
+            aiPlan: null,
           });
         }
       },
@@ -147,6 +159,7 @@ export const useFinancialStore = create<FinancialState>()(
           },
         })),
       setResult: (result) => set({ result }),
+      setAiPlan: (plan) => set({ aiPlan: plan }),
       setCurrentStep: (value) =>
         set((state) => {
           const next =
@@ -163,6 +176,7 @@ export const useFinancialStore = create<FinancialState>()(
         set({
           lastSubmission: profile,
           result,
+          aiPlan: options?.aiPlan ?? null,
           profile: mergedForm,
           analysis: mergedForm,
         });
@@ -176,11 +190,13 @@ export const useFinancialStore = create<FinancialState>()(
           console.error("[financialStore] runAnalysis error:", e);
         }
       },
-      clearSubmission: () => set({ lastSubmission: null, result: null }),
+      clearSubmission: () =>
+        set({ lastSubmission: null, result: null, aiPlan: null }),
       resetAll: () =>
         set({
           lastSubmission: null,
           result: null,
+          aiPlan: null,
           currentStep: 0,
           analysis: analyseDefaultValues,
           profile: analyseDefaultValues,
@@ -196,6 +212,7 @@ export const useFinancialStore = create<FinancialState>()(
         return {
           ...currentState,
           ...typed,
+          aiPlan: typed?.aiPlan ?? currentState.aiPlan,
           currentStep:
             typeof typed?.currentStep === "number"
               ? Math.max(0, Math.min(MAX_ANALYSE_STEP, typed.currentStep))
@@ -216,6 +233,7 @@ export const useFinancialStore = create<FinancialState>()(
         currentStep: state.currentStep,
         lastSubmission: state.lastSubmission,
         analysis: state.analysis,
+        aiPlan: state.aiPlan,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

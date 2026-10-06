@@ -91,6 +91,15 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ["recharts", "framer-motion"],
+    outputFileTracingIncludes: {
+      "/api/analyse/pdf": ["./lib/fonts/**"],
+    },
+  },
+  async rewrites() {
+    return [
+      { source: "/.well-known/assetlinks.json", destination: "/api/app-links/assetlinks" },
+      { source: "/.well-known/apple-app-site-association", destination: "/api/app-links/aasa" },
+    ];
   },
   async headers() {
     return [

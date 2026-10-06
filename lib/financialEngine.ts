@@ -220,6 +220,44 @@ export function medicalEmergencyTarget(data: FinancialProfile): number {
   return target;
 }
 
+/**
+ * Months of expenses the emergency fund should cover (6–12, life-stage aware).
+ * The single source for the engine target, the safety-net check, the Fix Plan
+ * emergency priority and the form's suggested target.
+ */
+export function emergencyFundMonthsNeeded(profile: {
+  lifeStage?: string;
+  parentsSupport?: number;
+  selfAge?: number;
+  kidsAges?: unknown;
+  kids?: unknown;
+}): number {
+  const raw = profile.lifeStage;
+  const stage =
+    raw === "married" || raw === "kids" || raw === "senior" ? raw : "bachelor";
+  const kids = Array.isArray(profile.kidsAges)
+    ? profile.kidsAges
+    : Array.isArray(profile.kids)
+      ? profile.kids
+      : [];
+  const age = profile.selfAge || 30;
+  if (stage === "bachelor") return (profile.parentsSupport || 0) === 0 ? 6 : 9;
+  if (stage === "married" && kids.length === 0) return 9;
+  if (stage === "kids" || stage === "senior") return 12;
+  return age >= 50 ? 12 : 6;
+}
+
+/** Score colour bands used by every score visual: >= good is green, >= warning is amber, below is red. */
+export const SCORE_BANDS = { good: 70, warning: 40 } as const;
+
+export type ScoreBand = "good" | "warning" | "critical";
+
+export function scoreBand(score: number): ScoreBand {
+  if (score >= SCORE_BANDS.good) return "good";
+  if (score >= SCORE_BANDS.warning) return "warning";
+  return "critical";
+}
+
 function fmt(amount: number): string {
   return `₹${Math.round(amount).toLocaleString("en-IN")}`;
 }
@@ -772,17 +810,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const debtRatio = totalIncome > 0 ? (monthlyLoans / totalIncome) * 100 : 0;
   const untrackedCash = getUnallocatedIncome(data);
 
-  const emergencyFundMonthsMin =
-    data.lifeStage === "bachelor"
-      ? 3
-      : data.lifeStage === "married"
-        ? 6
-        : data.lifeStage === "kids"
-          ? 9
-          : 6;
-  const emergencyFundMonthsMax =
-    data.lifeStage === "bachelor" ? 6 : data.lifeStage === "married" ? 9 : 12;
-  const emergencyFundTargetMin = monthlyExpenses * emergencyFundMonthsMin;
+  const emergencyFundMonthsMax = emergencyFundMonthsNeeded(data);
   const emergencyFundTargetMax = monthlyExpenses * emergencyFundMonthsMax;
   const er = computeRealEmergencyFund(data);
   if (process.env.NODE_ENV === "development") {
@@ -847,8 +875,9 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
 
   // 1. Emergency fund (weighted: savings 100%, liquid MF 95%, FD 70%, other liquid 50%, legacy field 100%)
   const monthsCov = er.monthsCovered;
-  const target6 = er.monthlyExpenses * 6;
-  const gapTo6 = Math.max(0, target6 - er.realTotal);
+  const efMonthsNeeded = emergencyFundMonthsMax;
+  const efTarget = er.monthlyExpenses * efMonthsNeeded;
+  const efGap = Math.max(0, efTarget - er.realTotal);
   let efStatus: SecurityItem["status"];
   let efDetail: string;
   let efAction: string | undefined;
@@ -860,12 +889,14 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   } else if (monthsCov < 3) {
     efStatus = "critical";
     efDetail = `Only ${monthsCov.toFixed(1)} months covered`;
-    efAction = `Target 6 months of expenses = ${fmt(target6)}`;
-  } else if (monthsCov < 6) {
+    efAction = `Target ${efMonthsNeeded} months of expenses = ${fmt(efTarget)}`;
+  } else if (monthsCov < efMonthsNeeded) {
     efStatus = "warning";
     efDetail = `${monthsCov.toFixed(1)} months covered — good start`;
     efAction =
-      gapTo6 > 0 ? `Build to 6 months — need ${fmt(gapTo6)} more` : undefined;
+      efGap > 0
+        ? `Build to ${efMonthsNeeded} months — need ${fmt(efGap)} more`
+        : undefined;
   } else {
     efStatus = "ok";
     efDetail = `${monthsCov.toFixed(1)} months covered — excellent. Well done — this is fully funded`;

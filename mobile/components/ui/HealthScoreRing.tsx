@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { scoreBand } from "@/lib/financialEngine";
 import { Colors, FontSize } from "@/constants/theme";
 
 type Props = {
@@ -8,10 +9,14 @@ type Props = {
   strokeWidth?: number;
 };
 
+const BAND_COLOR = {
+  good: Colors.success,
+  warning: Colors.warning,
+  critical: Colors.error,
+} as const;
+
 function scoreColor(s: number) {
-  if (s >= 75) return Colors.success;
-  if (s >= 50) return Colors.warning;
-  return Colors.error;
+  return BAND_COLOR[scoreBand(s)];
 }
 
 export function HealthScoreRing({ score, size = 72, strokeWidth = 6 }: Props) {

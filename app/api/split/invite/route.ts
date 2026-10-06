@@ -7,6 +7,7 @@ import {
 } from "@/lib/apiGuard";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
 import { isOpenSplitInvite, OPEN_SPLIT_INVITE_EMAIL } from "@/lib/splitInvite";
+import { notifySplitMemberAdded } from "@/lib/splitMemberNotify";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -137,6 +138,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (!isOpenSplitInvite(email)) {
+      const { data: existingMember } = await supabaseAdmin
+        .from("split_group_members")
+        .select("status")
+        .eq("group_id", groupId)
+        .eq("email", email)
+        .maybeSingle();
+      if (existingMember?.status === "active") {
+        return NextResponse.json(
+          { error: `${email} is already in this group` },
+          { status: 409 },
+        );
+      }
+    }
+
     const { data: invite, error } = await supabaseAdmin
       .from("split_invitations")
       .insert({
@@ -209,6 +225,14 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
+    const notify = notifySplitMemberAdded(supabaseAdmin, {
+      groupName: safeGroupName,
+      inviterName: invitedByName,
+      invitedEmail: email,
+      joinPath: `/split/join?token=${invite.token}`,
+      token: String(invite.token),
+    });
+
     let emailSent = false;
     let emailError: string | null = null;
 
@@ -244,12 +268,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const { notified } = await notify;
+
     return NextResponse.json({
       success: true,
       inviteUrl,
       token: invite.token,
       emailSent,
       emailError,
+      notified,
       linkOnly: false,
     });
   } catch (err: unknown) {
