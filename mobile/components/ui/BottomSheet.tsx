@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/theme";
+import { useKeyboardSheet } from "@/lib/useKeyboardSheet";
 
 /** Slide-up sheet (20px top radius, tap backdrop to close) — matches AddExpenseSheet chrome. */
 export function BottomSheet({
@@ -24,35 +24,44 @@ export function BottomSheet({
   scroll?: boolean;
 }) {
   const insets = useSafeAreaInsets();
-  const padBottom = Math.max(insets.bottom, 16) + 16;
+  const { height: windowHeight } = useWindowDimensions();
+  const { keyboardHeight, scrollRef, onScroll, onFocusWithin } =
+    useKeyboardSheet();
+  const padBottom = keyboardHeight > 0 ? 16 : Math.max(insets.bottom, 16) + 16;
   return (
     <Modal
       visible={visible}
       animationType="slide"
       transparent
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.backdrop}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <View style={[styles.backdrop, { paddingBottom: keyboardHeight }]}>
         <Pressable
           style={styles.backdropTap}
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel="Close"
         />
-        <View style={styles.sheet}>
+        <View
+          style={[
+            styles.sheet,
+            { maxHeight: (windowHeight - keyboardHeight - insets.top) * 0.94 },
+          ]}
+        >
           <View style={styles.handle} />
           {scroll ? (
             <ScrollView
+              ref={scrollRef}
+              onScroll={onScroll}
+              scrollEventThrottle={16}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={[
                 styles.body,
                 { paddingBottom: padBottom },
               ]}
             >
-              {children}
+              <View onFocus={onFocusWithin}>{children}</View>
             </ScrollView>
           ) : (
             <View style={[styles.body, { paddingBottom: padBottom }]}>
@@ -60,7 +69,7 @@ export function BottomSheet({
             </View>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -76,7 +85,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "90%",
   },
   handle: {
     alignSelf: "center",
