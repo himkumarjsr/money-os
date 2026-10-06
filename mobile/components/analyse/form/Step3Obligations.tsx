@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { useFormContext, type UseFieldArrayReturn } from "react-hook-form";
 import {
   clearLegacyLoanScalars,
   newAnalyseRowId,
@@ -15,6 +15,7 @@ import {
   ClampNumberField,
   DashedButton,
   DayOfMonthPicker,
+  ErrorText,
   MoneyField,
   Note,
   RemoveX,
@@ -23,18 +24,37 @@ import {
   UpperTextFormField,
   YesNoQuestion,
   formStyles,
+  useFieldError,
+  usePersistField,
 } from "./fields";
+import { syncKv } from "@/lib/syncKv";
+import { loansOffPatch, writeLoansCleared } from "./formState";
 import { LOAN_TYPE_OPTIONS, type StepProps } from "./shared";
 
-export function Step3Obligations({ live, ui, patchUi }: StepProps) {
-  const { control, watch, setValue, getValues } =
-    useFormContext<AnalyseFormValues>();
+export type UnifiedLoansArray = UseFieldArrayReturn<
+  AnalyseFormValues,
+  "unifiedLoans"
+>;
+
+export function Step3Obligations({
+  live,
+  ui,
+  patchUi,
+  loans,
+}: StepProps & { loans: UnifiedLoansArray }) {
+  const { watch, setValue, getValues } = useFormContext<AnalyseFormValues>();
   const setAnalysis = useFinancialStore((st) => st.setAnalysis);
+  const persistValue = usePersistField();
+  const loansError = useFieldError("unifiedLoans");
   const {
     fields: unifiedLoanFields,
     append: appendUnifiedLoan,
     remove: removeUnifiedLoan,
-  } = useFieldArray({ control, name: "unifiedLoans" });
+    replace: replaceUnifiedLoans,
+  } = loans;
+  /** Saved-card state is keyed by the persisted row id so it survives resume. */
+  const rowIdAt = (index: number, fallback: string) =>
+    getValues(`unifiedLoans.${index}.id` as const) || fallback;
 
   const syncLoansToStore = useCallback(
     (loans: AnalyseFormValues["unifiedLoans"]) => {
@@ -52,8 +72,8 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
   );
 
   const removeUnifiedLoanAt = useCallback(
-    (index: number, fieldId: string) => {
-      patchUi({ savedLoanIds: ui.savedLoanIds.filter((id) => id !== fieldId) });
+    (index: number, rowId: string) => {
+      patchUi({ savedLoanIds: ui.savedLoanIds.filter((id) => id !== rowId) });
       removeUnifiedLoan(index);
       const remaining = getValues().unifiedLoans ?? [];
       syncLoansToStore(remaining);
@@ -113,17 +133,17 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
             patchUi(
               next ? { hasLoans: true } : { hasLoans: false, savedLoanIds: [] },
             );
+            writeLoansCleared(syncKv, !next);
             if (!next) {
-              setValue("unifiedLoans", [], { shouldDirty: true });
-              setAnalysis({
-                ...getValues(),
-                unifiedLoans: [],
-                ...clearLegacyLoanScalars(),
-              });
-              setValue("homeLoanEMI", 0);
-              setValue("personalLoanEMI", 0);
-              setValue("carLoanEMI", 0);
-              setValue("bikeEMI", 0);
+              const patch = loansOffPatch();
+              replaceUnifiedLoans([]);
+              for (const [key, value] of Object.entries(patch)) {
+                if (key === "unifiedLoans") continue;
+                setValue(key as keyof AnalyseFormValues, value as never, {
+                  shouldDirty: true,
+                });
+              }
+              setAnalysis({ ...getValues(), ...patch });
             }
           }}
         />
@@ -132,10 +152,9 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
           <>
             <SectionTitle>My loans</SectionTitle>
             <Text style={formStyles.muted13}>
-              Add{" "}
-              <Text style={styles.strong}>home loan</Text> here if you pay EMI
-              on your residence or investment property, plus personal, car, PF,
-              education, OD, or any other loan.
+              Add <Text style={styles.strong}>home loan</Text> here if you pay
+              EMI on your residence or investment property, plus personal, car,
+              PF, education, OD, or any other loan.
             </Text>
 
             <View style={{ gap: 12 }}>
@@ -153,7 +172,8 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                 const typeLabel =
                   LOAN_TYPE_OPTIONS.find((o) => o.value === loanType)?.label ||
                   "Loan";
-                const isSaved = ui.savedLoanIds.includes(field.id);
+                const rowId = rowIdAt(index, field.id);
+                const isSaved = ui.savedLoanIds.includes(rowId);
                 const isOd = loanType === "overdraft";
 
                 if (isSaved) {
@@ -179,7 +199,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                           onPress={() =>
                             patchUi({
                               savedLoanIds: ui.savedLoanIds.filter(
-                                (id) => id !== field.id,
+                                (id) => id !== rowId,
                               ),
                             })
                           }
@@ -190,7 +210,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                         </Pressable>
                         <RemoveX
                           label="Remove loan"
-                          onPress={() => removeUnifiedLoanAt(index, field.id)}
+                          onPress={() => removeUnifiedLoanAt(index, rowId)}
                         />
                       </View>
                     </View>
@@ -203,7 +223,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                       <Text style={styles.loanTitle}>Loan {index + 1}</Text>
                       <RemoveX
                         label="Remove loan"
-                        onPress={() => removeUnifiedLoanAt(index, field.id)}
+                        onPress={() => removeUnifiedLoanAt(index, rowId)}
                       />
                     </View>
 
@@ -221,6 +241,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                         );
                         setAnalysis(getValues());
                       }}
+                      name={`unifiedLoans.${index}.loanType`}
                     />
                     <UpperTextFormField
                       name={`unifiedLoans.${index}.lenderName` as const}
@@ -258,7 +279,6 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                           setAnalysis(getValues());
                         }}
                         onChange={(day) => {
-                          setValue(`unifiedLoans.${index}.emiDay` as const, day);
                           const lt = watch(
                             `unifiedLoans.${index}.loanType` as const,
                           );
@@ -271,7 +291,13 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                           } else if (lt === "education_loan") {
                             setValue("educationLoanEMIDay", day);
                           }
+                          persistValue(
+                            `unifiedLoans.${index}.emiDay` as const,
+                            day,
+                          );
                         }}
+                        monthName={`unifiedLoans.${index}.emiMonth`}
+                        dayName={`unifiedLoans.${index}.emiDay`}
                       />
                     ) : null}
                     <MoneyField
@@ -288,9 +314,13 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                       }
                       onValueChange={(next) => {
                         if (isOd) {
-                          setValue(`unifiedLoans.${index}.odUsed` as const, next, {
-                            shouldDirty: true,
-                          });
+                          setValue(
+                            `unifiedLoans.${index}.odUsed` as const,
+                            next,
+                            {
+                              shouldDirty: true,
+                            },
+                          );
                         }
                       }}
                     />
@@ -313,6 +343,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                       min={0}
                       max={50}
                       helper="From loan statement"
+                      name={`unifiedLoans.${index}.interestRate`}
                     />
                     <ClampNumberField
                       label="Remaining months"
@@ -333,6 +364,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                       min={0}
                       max={360}
                       helper="Months left to pay"
+                      name={`unifiedLoans.${index}.remainingMonths`}
                     />
 
                     {isOd ? (
@@ -367,6 +399,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                           min={0}
                           max={10}
                           helper="Years before EMI starts"
+                          name={`unifiedLoans.${index}.odInterestOnlyYears`}
                         />
                       </View>
                     ) : null}
@@ -378,9 +411,9 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
                       onPress={() => {
                         if (!(loanEmi > 0)) return;
                         patchUi({
-                          savedLoanIds: ui.savedLoanIds.includes(field.id)
+                          savedLoanIds: ui.savedLoanIds.includes(rowId)
                             ? ui.savedLoanIds
-                            : [...ui.savedLoanIds, field.id],
+                            : [...ui.savedLoanIds, rowId],
                         });
                         if (loanType === "home_loan") {
                           setValue("homeLoanEMI", loanEmi, {
@@ -431,6 +464,7 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
               }
             />
 
+            <ErrorText message={loansError} />
             {unifiedLoanFields.length === 0 ? (
               <Text style={[formStyles.muted13, { textAlign: "center" }]}>
                 No loans added. Click above to add personal loan, car loan, PF
@@ -461,7 +495,8 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
               <DayOfMonthPicker
                 label="Which date is your credit-card bill usually due? (optional)"
                 value={watch("creditCardBillDay") || undefined}
-                onChange={(day) => setValue("creditCardBillDay", day)}
+                onChange={(day) => persistValue("creditCardBillDay", day)}
+                dayName="creditCardBillDay"
               />
             ) : null}
           </Card>
@@ -469,7 +504,9 @@ export function Step3Obligations({ live, ui, patchUi }: StepProps) {
       </View>
 
       {live.debtWarning ? <Note tone="red">{live.debtWarning}</Note> : null}
-      <View style={[styles.obligationsPanel, { backgroundColor: obligationsBg }]}>
+      <View
+        style={[styles.obligationsPanel, { backgroundColor: obligationsBg }]}
+      >
         <Text style={styles.obligationsLabel}>Total monthly obligations</Text>
         <View style={{ alignItems: "flex-end", flexShrink: 1 }}>
           <Text style={styles.obligationsAmount}>

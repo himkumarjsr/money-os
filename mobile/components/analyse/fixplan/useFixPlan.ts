@@ -7,11 +7,14 @@ import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { AnalysisResult } from "@/lib/financialEngine";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import {
+  FIX_PLAN_RATE_LIMIT_MESSAGE,
+  FIX_PLAN_REFRESH_UP_TO_DATE,
   enginePlanFingerprint,
   getCachedPlan,
   hashProfile,
   isCachedAiStale,
   setCachedPlan,
+  tryStartForcedRefresh,
 } from "@/lib/cache";
 import {
   mergeEnginePriorityPlan,
@@ -25,8 +28,16 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const AI_TIMEOUT_MS = 60_000;
 const FALLBACK_RETRY_MS = 5000;
+const NOTICE_MS = 5000;
 
 const fixPlanInFlight = new Map<string, Promise<void>>();
+
+class RateLimitError extends Error {
+  constructor() {
+    super(FIX_PLAN_RATE_LIMIT_MESSAGE);
+    this.name = "RateLimitError";
+  }
+}
 
 async function postAnalyse(
   profile: FinancialProfile,
@@ -63,6 +74,8 @@ async function postAnalyse(
     clearTimeout(timer);
   }
 
+  if (response.status === 429) throw new RateLimitError();
+
   let data: any = {};
   try {
     data = await response.json();
@@ -86,7 +99,22 @@ export function useFixPlan({ profile, result, userId, enabled }: Args) {
   const [aiError, setAiError] = useState("");
   const [aiPlan, setAiPlan] = useState<FixPlanData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [notice, setNotice] = useState("");
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasPlanRef = useRef(false);
+
+  const showNotice = useCallback((message: string) => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    setNotice(message);
+    noticeTimerRef.current = setTimeout(() => setNotice(""), NOTICE_MS);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    },
+    [],
+  );
   const lastLoadKeyRef = useRef<string | null>(null);
   const loadRef = useRef<((forceRefresh?: boolean) => Promise<void>) | null>(
     null,
@@ -178,7 +206,11 @@ export function useFixPlan({ profile, result, userId, enabled }: Args) {
           setAiError("");
           setAiPlan(combinedPlan);
         } catch (error) {
-          setAiError(error instanceof Error ? error.message : "AI failed");
+          if (error instanceof RateLimitError && hasPlanRef.current) {
+            showNotice(FIX_PLAN_RATE_LIMIT_MESSAGE);
+          } else {
+            setAiError(error instanceof Error ? error.message : "AI failed");
+          }
         } finally {
           setAiLoading(false);
         }
@@ -190,7 +222,7 @@ export function useFixPlan({ profile, result, userId, enabled }: Args) {
         if (!forceRefresh) fixPlanInFlight.delete(flowKey);
       }
     },
-    [profile, result, userId],
+    [profile, result, userId, showNotice],
   );
 
   loadRef.current = load;
@@ -204,23 +236,41 @@ export function useFixPlan({ profile, result, userId, enabled }: Args) {
     void loadRef.current?.(false);
   }, [enabled, profile, result]);
 
+  /** Forced regenerate, throttled by `tryStartForcedRefresh` (shared 2-minute window). */
+  const regenerate = useCallback(
+    async (notifyIfThrottled: boolean) => {
+      if (!tryStartForcedRefresh()) {
+        if (notifyIfThrottled) showNotice(FIX_PLAN_REFRESH_UP_TO_DATE);
+        if (!hasPlanRef.current) await loadRef.current?.(false);
+        return;
+      }
+      await loadRef.current?.(true);
+    },
+    [showNotice],
+  );
+
   useEffect(() => {
     // Silent background retry for fallback plans — do not remount the loader.
     if (!aiPlan?.isFallback) return;
     const timer = setTimeout(() => {
-      void loadRef.current?.(true);
+      void regenerate(false);
     }, FALLBACK_RETRY_MS);
     return () => clearTimeout(timer);
-  }, [aiPlan?.isFallback]);
+  }, [aiPlan?.isFallback, regenerate]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadRef.current?.(true);
+      await regenerate(true);
+    } catch {
+      // load() reports its own errors; this only guarantees the spinner stops.
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [regenerate]);
 
-  return { aiPlan, aiLoading, aiError, refreshing, load, refresh };
+  /** Initial-load retry when no plan is shown — cache first, network on miss. */
+  const retry = useCallback(() => loadRef.current?.(false), []);
+
+  return { aiPlan, aiLoading, aiError, refreshing, notice, retry, refresh };
 }

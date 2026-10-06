@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { rateLimit, tooManyRequests, unauthorized } from "@/lib/apiGuard";
 import { buildFixPlanPdfData } from "@/lib/fixPlanPdfData";
 import { buildFixPlanPdf } from "@/lib/generatePDF";
+import { loadPdfFonts } from "@/lib/pdfFonts.server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
@@ -29,7 +30,7 @@ function validTimeZone(tz: unknown): string | undefined {
   }
 }
 
-/** Server-rendered Fix Plan PDF (same layout as the web download) for the native app. */
+/** Server-rendered Fix Plan PDF for the web download (cookie auth) and the native app (Bearer). */
 export async function POST(req: Request) {
   let userId: string | null = null;
   try {
@@ -78,7 +79,10 @@ export async function POST(req: Request) {
       priorityPlan,
       expl,
       optimizerData,
-      { timeZone: validTimeZone(body.timeZone) },
+      {
+        timeZone: validTimeZone(body.timeZone),
+        fonts: loadPdfFonts() ?? undefined,
+      },
     );
     const bytes = new Uint8Array(doc.output("arraybuffer"));
     return new Response(bytes, {

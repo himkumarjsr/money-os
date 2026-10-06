@@ -72,7 +72,7 @@ describe("buildFixPlanPdfData", () => {
 
     expect(keySnapshot).toEqual([
       "Monthly surplus: ₹12,346",
-      "Personal loan: outstanding ₹5,00,000 @ 14% · EMI ₹15,000/mo · extra ₹5,000/mo · ~20 mo to clear",
+      "Personal loan: outstanding ₹5,00,000 @ 14% · EMI ₹15,000/mo · extra ₹5,000/mo · ~30 mo to clear",
       "car_loan: outstanding ₹0 @ 9% · EMI ₹0/mo · extra ₹0/mo · ~0 mo to clear",
       "Emergency fund gap: ₹1,50,000",
       "Term cover gap: ₹1,00,00,000",

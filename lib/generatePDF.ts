@@ -1,5 +1,13 @@
 import jsPDF from "jspdf";
+import {
+  CITY_TIER_LABELS,
+  LIFE_STAGE_LABELS,
+  PRIMARY_GOAL_LABELS,
+} from "@/lib/analyse-form-schema";
+import { humaniseEnum } from "@/lib/analyseResultModel";
 import { localISODate } from "@/lib/localDate";
+import { scoreBand } from "@/lib/financialEngine";
+import { debtPayoffNumbers } from "@/lib/priorityEngine";
 import { getUniversalBucketRows } from "@/lib/universal-buckets";
 
 const PURPLE = [83, 74, 183] as const;
@@ -65,7 +73,58 @@ function drawPieChart(
 export type FixPlanPdfOptions = {
   /** IANA zone for printed dates and the filename; defaults to the runtime's local zone. */
   timeZone?: string;
+  /** Base64 TTFs with ₹ glyphs (Noto Sans). Without them Helvetica is used and ₹ prints as "Rs.". */
+  fonts?: { regular: string; bold: string };
 };
+
+function labelOrDash(
+  labels: Record<string, string>,
+  value: string | null | undefined,
+): string {
+  if (!value) return "—";
+  return labels[value] ?? humaniseEnum(value);
+}
+
+const UNICODE_FONT = "NotoSans";
+const CHECKBOX_CELL = "\u0000checkbox";
+
+function registerUnicodeFont(
+  doc: jsPDF,
+  fonts: { regular: string; bold: string },
+) {
+  doc.addFileToVFS("NotoSans-Regular.ttf", fonts.regular);
+  doc.addFileToVFS("NotoSans-Bold.ttf", fonts.bold);
+  doc.addFont("NotoSans-Regular.ttf", UNICODE_FONT, "normal");
+  // No italic face is embedded; italic copy renders upright.
+  doc.addFont("NotoSans-Regular.ttf", UNICODE_FONT, "italic");
+  doc.addFont("NotoSans-Bold.ttf", UNICODE_FONT, "bold");
+}
+
+/** Helvetica (WinAnsi) has no ₹; keep amounts readable instead of printing garbage. */
+function applyRupeeFallback(doc: jsPDF) {
+  const original = doc.text.bind(doc) as (...args: any[]) => jsPDF;
+  const swap = (t: unknown): unknown =>
+    typeof t === "string"
+      ? t.replace(/₹\s?/g, "Rs. ")
+      : Array.isArray(t)
+        ? t.map(swap)
+        : t;
+  (doc as any).text = (text: unknown, ...rest: any[]) =>
+    original(swap(text), ...rest);
+}
+
+function drawCheckMark(
+  doc: jsPDF,
+  x: number,
+  baselineY: number,
+  color: readonly [number, number, number],
+) {
+  doc.setDrawColor(color[0], color[1], color[2]);
+  doc.setLineWidth(0.5);
+  doc.line(x, baselineY - 1.3, x + 1.1, baselineY - 0.2);
+  doc.line(x + 1.1, baselineY - 0.2, x + 3, baselineY - 2.8);
+  doc.setLineWidth(0.2);
+}
 
 function isoDateInZone(timeZone?: string): string {
   if (!timeZone) return localISODate();
@@ -105,8 +164,12 @@ export function buildFixPlanPdf(
   optimizerData: any,
   options: FixPlanPdfOptions = {},
 ): { doc: jsPDF; fileName: string } {
-  const { timeZone } = options;
+  const { timeZone, fonts } = options;
   const doc = new jsPDF("p", "mm", "a4");
+  const FONT = fonts ? UNICODE_FONT : "helvetica";
+  if (fonts) registerUnicodeFont(doc, fonts);
+  else applyRupeeFallback(doc);
+  doc.setFont(FONT, "normal");
   const userName =
     profile?.name?.trim() ||
     profile?.fullName?.trim() ||
@@ -118,28 +181,19 @@ export function buildFixPlanPdf(
   const UW = W - M * 2;
   let y = 0;
 
-  const addPageNumber = () => {
-    const pageNum = doc.getNumberOfPages();
-    doc.setFontSize(8);
-    doc.setTextColor(...GREY);
-    doc.text(`Finkoin · finkoin.com · Page ${pageNum}`, M, H - 8);
-    doc.text("Educational only. Not SEBI advice.", W - M - 60, H - 8);
-  };
-
   const newPage = () => {
     doc.addPage();
     y = 20;
     doc.setFillColor(248, 246, 255);
     doc.rect(0, 0, W, 14, "F");
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setTextColor(...PURPLE);
     doc.text("Finkoin Financial Health Report", M, 9);
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setTextColor(...GREY);
     doc.text(`Prepared for: ${userName}`, W - M - 60, 9);
-    addPageNumber();
   };
 
   const addText = (
@@ -150,7 +204,7 @@ export function buildFixPlanPdf(
     indent = 0,
   ) => {
     doc.setFontSize(fontSize);
-    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFont(FONT, bold ? "bold" : "normal");
     doc.setTextColor(...color);
     const lines = doc.splitTextToSize(text, UW - indent);
     lines.forEach((line: string) => {
@@ -183,7 +237,7 @@ export function buildFixPlanPdf(
     doc.setFillColor(240, 239, 248);
     doc.rect(M, y - 4, UW, 8, "F");
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setTextColor(...PURPLE);
 
     let x = M;
@@ -201,11 +255,16 @@ export function buildFixPlanPdf(
       }
 
       doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setTextColor(...DARK);
       x = M;
       row.forEach((cell, ci) => {
-        doc.text(String(cell).slice(0, 30), x + 2, y);
+        if (cell === CHECKBOX_CELL) {
+          doc.setDrawColor(...DARK);
+          doc.rect(x + 3, y - 3, 3.5, 3.5, "S");
+        } else {
+          doc.text(String(cell).slice(0, 30), x + 2, y);
+        }
         x += colWidths[ci];
       });
       y += 7;
@@ -348,11 +407,11 @@ export function buildFixPlanPdf(
   doc.setFillColor(...PURPLE);
   doc.rect(0, 0, W, 45, "F");
   doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT, "bold");
   doc.setTextColor(255, 255, 255);
   doc.text("FINKOIN · Personal Financial Fix Plan", M, 20);
   doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
   doc.setTextColor(175, 169, 236);
   doc.text(
     new Date().toLocaleDateString("en-IN", {
@@ -373,18 +432,17 @@ export function buildFixPlanPdf(
   doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
   doc.roundedRect(M, y, UW, 28, 3, 3, "F");
   doc.setFontSize(28);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT, "bold");
   doc.setTextColor(255, 255, 255);
   doc.text(`${score}/100`, M + 8, y + 18);
   doc.setFontSize(13);
   doc.setTextColor(255, 255, 255);
   doc.text("Financial Health Score", M + 50, y + 12);
-  const scoreLabel =
-    score < 40
-      ? "Needs urgent attention"
-      : score < 70
-        ? "On track"
-        : "Doing well";
+  const scoreLabel = {
+    critical: "Needs urgent attention",
+    warning: "On track",
+    good: "Doing well",
+  }[scoreBand(score)];
   doc.setFontSize(11);
   doc.text(scoreLabel, M + 50, y + 21);
   y += 36;
@@ -417,12 +475,12 @@ export function buildFixPlanPdf(
 
   doc.setFontSize(10);
   doc.setTextColor(...DARK);
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT, "normal");
   doc.text(
     [
-      `Life stage: ${profile?.lifeStage || "—"}`,
-      `City: ${profile?.cityTier || "—"}`,
-      `Goal: ${profile?.primaryGoal || "—"}`,
+      `Life stage: ${labelOrDash(LIFE_STAGE_LABELS, profile?.lifeStage)}`,
+      `City: ${labelOrDash(CITY_TIER_LABELS, profile?.cityTier)}`,
+      `Goal: ${labelOrDash(PRIMARY_GOAL_LABELS, profile?.primaryGoal)}`,
       `Monthly income: ${fmt((profile?.monthlySalary || 0) + (profile?.spouseIncome || 0))}`,
       `Monthly surplus: ${fmt(priorityPlan?.monthlySurplus || 0)}`,
     ],
@@ -433,7 +491,7 @@ export function buildFixPlanPdf(
   y += 50;
   if (explanations?.greeting) {
     doc.setFontSize(10);
-    doc.setFont("helvetica", "italic");
+    doc.setFont(FONT, "italic");
     doc.setTextColor(...GREY);
     const lines = doc.splitTextToSize(`"${explanations.greeting}"`, UW);
     doc.text(lines, M, y);
@@ -457,7 +515,6 @@ export function buildFixPlanPdf(
   (priorityPlan?.priorities || []).slice(0, 3).forEach((p: any, i: number) => {
     addText(`${i + 1}. ${p.actionThisWeek || p.title}`, 9, GREY);
   });
-  addPageNumber();
 
   newPage();
   addHeading("FINANCIAL SNAPSHOT — CORRECTED NUMBERS");
@@ -620,11 +677,11 @@ export function buildFixPlanPdf(
     doc.setFillColor(245, 244, 253);
     doc.rect(M + 3, y - 3, UW - 3, 20, "F");
     doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setTextColor(...PURPLE);
     doc.text(`${i + 1}. ${p.title}`, M + 6, y + 5);
     doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setTextColor(...GREY);
     doc.text(
       `Gap: ${fmtCr(p.gap || 0)} · Monthly: ${fmt(p.monthlyContribution || 0)} · ${p.monthsToComplete || 0} months`,
@@ -641,17 +698,17 @@ export function buildFixPlanPdf(
     y += 24;
     if (p.instrument) {
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont(FONT, "bold");
       doc.setTextColor(...DARK);
       doc.text("Where: ", M + 6, y);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.text(p.instrument, M + 22, y);
       y += 6;
     }
     const explanation = explanations?.priorityExplanations?.[p.id];
     if (explanation) {
       doc.setFontSize(9);
-      doc.setFont("helvetica", "italic");
+      doc.setFont(FONT, "italic");
       doc.setTextColor(...GREY);
       const lines = doc.splitTextToSize(explanation, UW - 6);
       lines.slice(0, 3).forEach((line: string) => {
@@ -663,10 +720,10 @@ export function buildFixPlanPdf(
       doc.setFillColor(235, 248, 243);
       doc.rect(M, y, UW, 10, "F");
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont(FONT, "bold");
       doc.setTextColor(...GREEN);
       doc.text("This week: ", M + 3, y + 6);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setTextColor(8, 80, 65);
       doc.text(
         doc.splitTextToSize(p.actionThisWeek, UW - 30)[0],
@@ -688,39 +745,40 @@ export function buildFixPlanPdf(
     }
     addSmallTable(
       ["Debt", "Rate", "EMI", "Extra/mo", "Payoff date", "Rank"],
-      debts.map((d: any) => [
-        d.displayName || d.type,
-        `${d.rate}%`,
-        fmt(d.emi),
-        fmt(d.extraEMIRecommended),
-        d.monthsToClearWithExtra > 0
-          ? new Date(
-              new Date().getFullYear(),
-              new Date().getMonth() + Number(d.monthsToClearWithExtra),
-              1,
-            ).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
-          : "—",
-        String(d.priorityRank),
-      ]),
+      debts.map((d: any) => {
+        const { monthsNow } = debtPayoffNumbers(d);
+        return [
+          d.displayName || d.type,
+          `${d.rate}%`,
+          fmt(d.emi),
+          fmt(d.extraEMIRecommended),
+          monthsNow > 0
+            ? new Date(
+                new Date().getFullYear(),
+                new Date().getMonth() + monthsNow,
+                1,
+              ).toLocaleDateString("en-IN", {
+                month: "short",
+                year: "numeric",
+              })
+            : "—",
+          String(d.priorityRank),
+        ];
+      }),
       [35, 15, 25, 25, 20, 15],
     );
-    const totalInterestSavedEstimate = debts.reduce(
-      (sum: number, d: any) =>
-        sum +
-        Math.max(
-          0,
-          Number(d.extraEMIRecommended || 0) *
-            Math.max(0, Number(d.monthsToClearWithExtra || 0)) *
-            0.35,
-        ),
+    const totalInterestSaved = debts.reduce(
+      (sum: number, d: any) => sum + debtPayoffNumbers(d).interestSaved,
       0,
     );
-    addText(
-      `Estimated interest saved by debt priority order: ${fmt(totalInterestSavedEstimate)}`,
-      9,
-      GREEN,
-      true,
-    );
+    if (totalInterestSaved > 0) {
+      addText(
+        `Interest saved by paying the recommended extra each month: ${fmt(totalInterestSaved)}`,
+        9,
+        GREEN,
+        true,
+      );
+    }
   }
 
   newPage();
@@ -755,13 +813,13 @@ export function buildFixPlanPdf(
     doc.setFillColor(phaseColor[0], phaseColor[1], phaseColor[2]);
     doc.rect(M, y, UW, 14, "F");
     doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setTextColor(255, 255, 255);
     doc.text(`PHASE ${phase.phase}: ${phase.title}`, M + 4, y + 9);
-    y += 16;
+    y += 19;
     if (phase.subtitle) {
       doc.setFontSize(9);
-      doc.setFont("helvetica", "italic");
+      doc.setFont(FONT, "italic");
       doc.setTextColor(...GREY);
       doc.text(phase.subtitle, M + 2, y);
       y += 8;
@@ -769,7 +827,7 @@ export function buildFixPlanPdf(
     phase.tasks?.forEach((task: string) => {
       if (y > H - 20) newPage();
       doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setTextColor(...DARK);
       doc.rect(M + 2, y - 3, 4, 4, "S");
       doc.text(doc.splitTextToSize(task, UW - 12), M + 10, y);
@@ -781,12 +839,13 @@ export function buildFixPlanPdf(
       const outH = phase.outcomes.length * 6 + 8;
       doc.rect(M, y, UW, outH, "F");
       doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
+      doc.setFont(FONT, "bold");
       doc.setTextColor(...GREEN);
       doc.text("BY END OF THIS PHASE:", M + 3, y + 6);
       phase.outcomes.forEach((outcome: string, i: number) => {
-        doc.setFont("helvetica", "normal");
-        doc.text(`✓ ${outcome}`, M + 3, y + 12 + i * 6);
+        doc.setFont(FONT, "normal");
+        drawCheckMark(doc, M + 3, y + 12 + i * 6, GREEN);
+        doc.text(outcome, M + 7.5, y + 12 + i * 6);
       });
       y += outH + 8;
     }
@@ -824,7 +883,7 @@ export function buildFixPlanPdf(
         String(idx + 1),
         idx === 0 ? "Month 1, Week 1" : `Month ${Math.min(12, idx + 1)}`,
         p.actionThisWeek || p.title,
-        "□",
+        CHECKBOX_CELL,
       ]);
     });
   if (checklistRows.length > 0) {
@@ -899,7 +958,7 @@ export function buildFixPlanPdf(
   doc.setFillColor(...PURPLE);
   doc.rect(0, 0, W, 20, "F");
   doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT, "bold");
   doc.setTextColor(255, 255, 255);
   doc.text("Finkoin", M, 13);
   y = 35;
@@ -928,7 +987,9 @@ export function buildFixPlanPdf(
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(...GREY);
-    doc.text(`finkoin.com · Page ${i} of ${totalPages}`, W - M - 35, H - 8);
+    doc.text(`finkoin.com · Page ${i} of ${totalPages}`, W - M, H - 8, {
+      align: "right",
+    });
     doc.text("Educational only. Not SEBI advice.", M, H - 8);
   }
 

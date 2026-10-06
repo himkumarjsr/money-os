@@ -3,7 +3,13 @@
  * monthly summary, net worth, category caps, gauges, safety net, issues,
  * fix-plan teaser + paywall, cross-sell links.
  */
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -100,21 +106,23 @@ function AnalyseResultContent() {
     };
   }, [hasHydrated, user?.id, result, lastSubmission, hydrateFromSnapshot]);
 
-  const priorityPlan = useMemo(
-    () =>
-      lastSubmission ? buildResultPriorityPlan(lastSubmission, result) : null,
-    [lastSubmission, result],
-  );
   const analysis = useMemo(
     () => (lastSubmission ? (result ?? analyseFinances(lastSubmission)) : null),
     [lastSubmission, result],
   );
-  const model = useMemo(
+  const priorityPlan = useMemo(
     () =>
       lastSubmission && analysis
-        ? buildResultModel(lastSubmission, analysis)
+        ? buildResultPriorityPlan(lastSubmission, analysis)
         : null,
     [lastSubmission, analysis],
+  );
+  const model = useMemo(
+    () =>
+      lastSubmission && analysis && priorityPlan
+        ? buildResultModel(lastSubmission, analysis, priorityPlan)
+        : null,
+    [lastSubmission, analysis, priorityPlan],
   );
 
   if (!hasHydrated || (restoring && !(result && lastSubmission))) {
@@ -188,7 +196,10 @@ function AnalyseResultContent() {
           <View>
             <Text style={styles.sectionTitle}>What needs attention</Text>
             {issues.map((issue, i) => (
-              <View key={`${issue.code}-${i}`} style={{ marginBottom: Spacing.md }}>
+              <View
+                key={`${issue.code}-${i}`}
+                style={{ marginBottom: Spacing.md }}
+              >
                 <IssueCard severity={issue.severity} title={issue.message} />
               </View>
             ))}
@@ -197,7 +208,7 @@ function AnalyseResultContent() {
 
         <PlanTeaserSection
           model={model}
-          priorityPlan={priorityPlan}
+          surplusBreakdown={!!priorityPlan.surplusBreakdown}
           onUnlock={handleUnlock}
         />
 

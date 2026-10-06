@@ -7,10 +7,13 @@ import {
   step6Schema,
   step7Schema,
   type AnalyseFormValues,
-  type FinancialProfile,
   type UnifiedLoanType,
 } from "@/lib/analyse-form-schema";
 import { formatIndian } from "@/lib/formatters";
+import {
+  emergencyFundSuggestionFor,
+  type AnalyseFormUiState,
+} from "./formState";
 
 export const STEPS = [
   { title: "Personal profile", short: "Profile" },
@@ -71,35 +74,9 @@ export const MONTHS = [
   "December",
 ] as const;
 
-/** UI-only toggles that are not schema fields (web keeps these in component state). */
-export type AnalyseFormUiState = {
-  isRenting: boolean;
-  hasLoans: boolean;
-  hasCreditCardOutstanding: boolean;
-  hasVehicleToggle: boolean;
-  /** RHF field-array keys of loan cards collapsed to a summary. */
-  savedLoanIds: string[];
-};
+export { initialUiState, type AnalyseFormUiState } from "./formState";
 
 export type PatchUi = (patch: Partial<AnalyseFormUiState>) => void;
-
-export function initialUiState(
-  lastSubmission: FinancialProfile | null | undefined,
-): AnalyseFormUiState {
-  return {
-    isRenting: (lastSubmission?.rentAmount || 0) > 0,
-    hasLoans:
-      (lastSubmission?.unifiedLoans?.length ?? 0) > 0 ||
-      (lastSubmission?.homeLoanEMI || 0) > 0 ||
-      (lastSubmission?.personalLoanEMI || 0) > 0 ||
-      (lastSubmission?.carLoanEMI || 0) > 0,
-    hasCreditCardOutstanding: (lastSubmission?.creditCardBillMonthly || 0) > 0,
-    hasVehicleToggle:
-      (lastSubmission?.carLoanEMI || 0) > 0 ||
-      (lastSubmission?.carMarketValue || 0) > 0,
-    savedLoanIds: [],
-  };
-}
 
 export function detectLastStep(
   profile: Partial<AnalyseFormValues> | null,
@@ -225,10 +202,8 @@ export function computeLiveTotals(v: Partial<AnalyseFormValues>) {
     v.parentsSupport,
   ]);
 
-  const emergencyFundSuggestion =
-    monthlyLivingExpenses + fixedObligations > 0
-      ? (monthlyLivingExpenses + fixedObligations) * 6
-      : undefined;
+  const { months: emergencyFundMonths, amount: emergencyFundSuggestion } =
+    emergencyFundSuggestionFor(v, monthlyLivingExpenses + fixedObligations);
 
   const selfAge = v.selfAge;
   const retirementAge = v.retirementAge ?? 60;
@@ -263,7 +238,8 @@ export function computeLiveTotals(v: Partial<AnalyseFormValues>) {
   const erLiqCounted = erLiq * 0.95;
   const erFdCounted = erFd * 0.7;
   const erOtherCounted = erOther * 0.5;
-  const erTotal = erSavingsCounted + erLiqCounted + erFdCounted + erOtherCounted;
+  const erTotal =
+    erSavingsCounted + erLiqCounted + erFdCounted + erOtherCounted;
   const erMonths =
     monthlyNeedsForEmergency > 0 ? erTotal / monthlyNeedsForEmergency : 0;
   const erMonthsColor =
@@ -350,6 +326,7 @@ export function computeLiveTotals(v: Partial<AnalyseFormValues>) {
     fixedObligations,
     monthlyLivingExpenses,
     emergencyFundSuggestion,
+    emergencyFundMonths,
     retirementYears,
     hasEligibleGirlChild,
     investmentsEmpty,

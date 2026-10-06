@@ -18,18 +18,21 @@ import {
   getInHandOutflow,
   getUnallocatedIncome,
   getUniversalBucketActuals,
-  type UniversalBucketKey,
 } from "@/lib/universal-buckets";
 import { getBucketBreakdown } from "@/lib/bucket-breakdown";
 import type { BandLabel } from "./format";
+import {
+  bucketCapRows,
+  deriveCtaCopy,
+  derivePlanTeaser,
+  emergencyFundCheck,
+  scoreBandLabel,
+  type BucketCapRow,
+  type CtaCopy,
+} from "./resultDerivations";
 
-export type BucketView = {
-  key: UniversalBucketKey;
-  label: string;
-  capPercent: number;
+export type BucketView = BucketCapRow & {
   actual: number;
-  capAmount: number;
-  details: string;
   status: BandLabel;
   items: { label: string; value: number }[];
 };
@@ -45,32 +48,20 @@ export type SafetyItem = {
   icon: AppIconName;
 };
 
-export type CtaCopy = { title: string; subText: string };
-
 const rupees = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
 
+/** Same engine plan the Fix Plan screen starts from (real profile + full analysis). */
 export function buildResultPriorityPlan(
   profile: FinancialProfile,
   result: AnalysisResult | null,
 ): PriorityPlan {
-  const stableResult = result ?? analyseFinances(profile);
-  const bucketActualsForPlan = getUniversalBucketActuals(profile);
-  return buildPriorityPlan(profile, {
-    needsActual: bucketActualsForPlan.needs,
-    loansActual: bucketActualsForPlan.loans,
-    wantsActual: bucketActualsForPlan.wants,
-    investmentActual: bucketActualsForPlan.investment,
-    overallScore: stableResult.overallScore,
-  });
-}
-
-export function scoreBand(score: number): BandLabel {
-  return score < 40 ? "Critical" : score < 70 ? "Warning" : "Good";
+  return buildPriorityPlan(profile, result ?? analyseFinances(profile));
 }
 
 export function buildResultModel(
   profile: FinancialProfile,
   analysis: AnalysisResult,
+  priorityPlan: PriorityPlan,
 ) {
   const score = analysis.overallScore ?? 0;
   const bucketActuals = getUniversalBucketActuals(profile);
@@ -86,58 +77,27 @@ export function buildResultModel(
   const totalOutflow = getInHandOutflow(profile);
   const amountLeftInHand = getUnallocatedIncome(profile);
 
-  const rawBuckets: Omit<BucketView, "status" | "items">[] = [
-    {
-      key: "needs",
-      label: "Needs",
-      capPercent: 30,
-      actual: needsActual,
-      capAmount: income * 0.3,
-      details: "Housing + essentials + family support",
-    },
-    {
-      key: "wants",
-      label: "Wants",
-      capPercent: 5,
-      actual: lifestyleActual,
-      capAmount: income * 0.05,
-      details: "Shopping, entertainment and lifestyle spends",
-    },
-    {
-      key: "security",
-      label: "Insurance premiums",
-      capPercent: 5,
-      actual: securityActual,
-      capAmount: income * 0.05,
-      details: "Term, health, motor and other insurance premiums (monthly)",
-    },
-    {
-      key: "loans",
-      label: "Loans",
-      capPercent: 40,
-      actual: loansActual,
-      capAmount: income * 0.4,
-      details: "All monthly debt obligations",
-    },
-    {
-      key: "investment",
-      label: "Investment",
-      capPercent: 20,
-      actual: investmentActual,
-      capAmount: income * 0.2,
-      details: "SIP, RD, NPS, PPF, EPF, SSY and other monthly contributions",
-    },
-  ];
-  const buckets: BucketView[] = rawBuckets.map((b) => ({
-    ...b,
-    status:
-      b.actual > b.capAmount * 1.15
-        ? "Critical"
-        : b.actual > b.capAmount
-          ? "Warning"
-          : "Good",
-    items: getBucketBreakdown(b.key, profile) ?? [],
-  }));
+  const actualByKey = {
+    needs: needsActual,
+    wants: lifestyleActual,
+    security: securityActual,
+    loans: loansActual,
+    investment: investmentActual,
+  };
+  const buckets: BucketView[] = bucketCapRows(profile, income).map((b) => {
+    const actual = actualByKey[b.key];
+    return {
+      ...b,
+      actual,
+      status:
+        actual > b.capAmount * 1.15
+          ? "Critical"
+          : actual > b.capAmount
+            ? "Warning"
+            : "Good",
+      items: getBucketBreakdown(b.key, profile) ?? [],
+    };
+  });
 
   const termAssessment = assessTermCover({
     hasTermInsurance: profile.hasTermInsurance ?? false,
@@ -148,9 +108,11 @@ export function buildResultModel(
   const medEmergencyTargetAmount = medicalEmergencyTarget(profile);
   const medEmergencyCurrent = profile.medicalEmergencyFund || 0;
 
-  const emergencyTarget =
-    needsMonthly *
-    (profile.lifeStage === "kids" ? 12 : profile.lifeStage === "married" ? 9 : 6);
+  const emergency = emergencyFundCheck(
+    profile,
+    needsMonthly,
+    analysis.realEmergencyFund?.monthsCovered || 0,
+  );
   const termCover = profile.termInsuranceSumAssured || 0;
   const termNeeded = analysis.termInsuranceNeeded || 0;
   const healthCover = profile.healthInsuranceSumInsured || 0;
@@ -162,14 +124,8 @@ export function buildResultModel(
       id: "emergency",
       title: "Emergency fund",
       currentText: rupees(analysis.realEmergencyFund?.total || 0),
-      targetText: rupees(emergencyTarget),
-      isOk:
-        (analysis.realEmergencyFund?.monthsCovered || 0) >=
-        (profile.lifeStage === "kids"
-          ? 9
-          : profile.lifeStage === "married"
-            ? 6
-            : 6),
+      targetText: rupees(emergency.target),
+      isOk: emergency.isOk,
       icon: "shield",
     },
     {
@@ -189,7 +145,9 @@ export function buildResultModel(
             ? "Term cover"
             : "Term insurance",
       currentText:
-        termCover === 0 ? "None" : `₹${(termCover / 10000000).toFixed(1)} crore`,
+        termCover === 0
+          ? "None"
+          : `₹${(termCover / 10000000).toFixed(1)} crore`,
       targetText:
         termStatus === "partial" || termStatus === "baseline_ok"
           ? `₹${(termNeeded / 10000000).toFixed(1)} crore at today's income`
@@ -203,7 +161,9 @@ export function buildResultModel(
       id: "health",
       title: healthCover > 0 ? "Health insurance" : "Health cover",
       currentText:
-        healthCover === 0 ? "None" : `₹${(healthCover / 100000).toFixed(0)} lakh`,
+        healthCover === 0
+          ? "None"
+          : `₹${(healthCover / 100000).toFixed(0)} lakh`,
       targetText: `₹${(healthTarget / 100000).toFixed(0)} lakh`,
       isOk: healthCover >= healthTarget,
       icon: "hospital",
@@ -219,35 +179,17 @@ export function buildResultModel(
   ];
   const completeCount = safetyItems.filter((i) => i.isOk).length;
 
-  const hasCriticalIssues = (analysis.criticalIssueCount || 0) > 0;
-  const ctaCopy: CtaCopy = hasCriticalIssues
-    ? {
-        title: "Get my personalised fix plan →",
-        subText: "See exactly how to fix these gaps",
-      }
-    : score < 50
-      ? {
-          title: "See my complete recovery plan →",
-          subText: "12-month step by step roadmap",
-        }
-      : score <= 70
-        ? {
-            title: "Get my optimisation plan →",
-            subText: "Turn gaps into growth",
-          }
-        : score > 70
-          ? {
-              title: "Get my wealth building plan →",
-              subText: "Next steps to financial freedom",
-            }
-          : {
-              title: "Get my complete financial plan →",
-              subText: "Your next steps are ready",
-            };
+  const planTeaser = derivePlanTeaser(priorityPlan);
+  const ctaCopy: CtaCopy = deriveCtaCopy({
+    score,
+    openCount: planTeaser.openCount,
+    topPriorityTitle: planTeaser.first?.title ?? null,
+    hasCriticalIssues: (analysis.criticalIssueCount || 0) > 0,
+  });
 
   return {
     score,
-    band: scoreBand(score),
+    band: scoreBandLabel(score),
     income,
     needsActual,
     loansActual,
@@ -264,6 +206,7 @@ export function buildResultModel(
     safetyItems,
     completeCount,
     termStatus,
+    planTeaser,
     ctaCopy,
   };
 }

@@ -19,6 +19,7 @@ import {
   RadioCards,
   formStyles,
 } from "./fields";
+import { resizeKidSlots } from "./formState";
 
 /** Web caps kid cards at 3; product decided mobile renders one per kid (schema max 6). */
 const MAX_KID_CARDS = 6;
@@ -27,6 +28,7 @@ export function Step1Profile() {
   const {
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useFormContext<AnalyseFormValues>();
   const lifeStage = watch("lifeStage");
@@ -67,12 +69,27 @@ export function Step1Profile() {
 
       {lifeStage === "kids" ? (
         <View style={{ gap: 20 }}>
-          <AgeField name="numberOfKids" label="Number of kids" />
+          <AgeField
+            name="numberOfKids"
+            label="Number of kids"
+            onCommit={(count) => {
+              const n = Math.min(Number(count) || 0, MAX_KID_CARDS);
+              setValue("kidsAges", resizeKidSlots(getValues("kidsAges"), n), {
+                shouldDirty: true,
+              });
+              setValue(
+                "kidsGenders",
+                (getValues("kidsGenders") ?? []).slice(0, n),
+                { shouldDirty: true },
+              );
+            }}
+          />
           {Array.from({ length: kidCount }).map((_, index) => (
             <Card key={index}>
               <AgeField
                 name={`kidsAges.${index}` as const}
                 label={`Kid ${index + 1} age`}
+                blankAsUndefined
               />
               <View style={{ gap: 8 }}>
                 <Text style={formStyles.rowTitle}>Kid {index + 1} gender</Text>

@@ -15,7 +15,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { hasAnalyseConsent } from "@/lib/analyseConsent";
-import type { AnalysisResult } from "@/lib/financialEngine";
+import { scoreBand, type AnalysisResult } from "@/lib/financialEngine";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { Colors, Spacing, Radius, FontSize } from "@/constants/theme";
 import Card from "@/components/ui/Card";
@@ -24,15 +24,14 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ResultCard } from "@/components/analyse/ResultCard";
 import { IssueCard } from "@/components/analyse/IssueCard";
 
-/** Plan score colours: Critical < 40, Warning < 70, Good otherwise. */
+const SCORE_TONES = {
+  critical: { bg: "#FDEDED", fg: "#991B1B", label: "Take action now" },
+  warning: { bg: "#FFF4E5", fg: "#92400E", label: "Needs attention" },
+  good: { bg: "#DCFCE7", fg: "#166534", label: "Great shape" },
+} as const;
+
 function scoreTone(s: number) {
-  if (s < 40) {
-    return { bg: "#FDEDED", fg: "#991B1B", label: "Take action now" };
-  }
-  if (s < 70) {
-    return { bg: "#FFF4E5", fg: "#92400E", label: "Needs attention" };
-  }
-  return { bg: "#DCFCE7", fg: "#166534", label: "Great shape" };
+  return SCORE_TONES[scoreBand(s)];
 }
 
 async function goToHealthCheck(userId: string | undefined) {

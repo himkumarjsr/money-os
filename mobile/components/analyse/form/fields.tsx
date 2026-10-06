@@ -1,4 +1,10 @@
-import { useEffect, useState, type ReactNode, type Ref } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react";
 import {
   Pressable,
   StyleSheet,
@@ -9,22 +15,52 @@ import {
   type ViewStyle,
 } from "react-native";
 import {
+  get,
   useController,
   useFormContext,
   type FieldPath,
 } from "react-hook-form";
-import MoneyInput from "@/components/ui/MoneyInput";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors, Radius } from "@/constants/theme";
+import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
 import { formatIndian, formatInWords } from "@/lib/formatters";
 import {
   parseMoneyInput,
   type AnalyseFormValues,
   type PremiumFrequency,
 } from "@/lib/analyse-form-schema";
+import { useFinancialStore } from "@/store/financialStore";
+import {
+  clampYearOnBlur,
+  moneyTextOnFocus,
+  moneyValueOnBlur,
+} from "./formState";
 import { MONTHS, type NoteTone } from "./shared";
 
-type FormPath = FieldPath<AnalyseFormValues>;
+export type FormPath = FieldPath<AnalyseFormValues>;
+
+/** Inline error for any form path, including field-array rows (`unifiedLoans.0.monthlyEMI`). */
+export function useFieldError(name?: FormPath): string | undefined {
+  const ctx = useFormContext<AnalyseFormValues>();
+  const errors = ctx?.formState.errors;
+  if (!name || !errors) return undefined;
+  const err = get(errors, name) as
+    | { message?: string; root?: { message?: string } }
+    | undefined;
+  return err?.message ?? err?.root?.message;
+}
+
+/** setValue + immediate draft write — same `setAnalysis` the autosave subscription uses. */
+export function usePersistField() {
+  const { setValue, getValues } = useFormContext<AnalyseFormValues>();
+  const setAnalysis = useFinancialStore((st) => st.setAnalysis);
+  return useCallback(
+    (name: FormPath, value: unknown) => {
+      setValue(name, value as never, { shouldDirty: true, shouldTouch: true });
+      setAnalysis(getValues());
+    },
+    [getValues, setAnalysis, setValue],
+  );
+}
 
 function toNumber(v: unknown): number {
   const n = typeof v === "number" ? v : parseMoneyInput(v);
@@ -38,7 +74,12 @@ function formatMoneyText(raw: string): string {
   const dot = clean.indexOf(".");
   const intRaw = dot === -1 ? clean : clean.slice(0, dot);
   const decRaw =
-    dot === -1 ? undefined : clean.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+    dot === -1
+      ? undefined
+      : clean
+          .slice(dot + 1)
+          .replace(/\./g, "")
+          .slice(0, 2);
   const intPart = intRaw ? formatIndian(Number(intRaw)) : "0";
   return decRaw === undefined ? intPart : `${intPart}.${decRaw}`;
 }
@@ -80,9 +121,7 @@ export function Hint({
 }) {
   const info = tone === "info";
   return (
-    <View
-      style={[s.hint, { backgroundColor: info ? "#EEEDFE" : "#FAEEDA" }]}
-    >
+    <View style={[s.hint, { backgroundColor: info ? "#EEEDFE" : "#FAEEDA" }]}>
       <Text style={[s.hintText, { color: info ? "#3C3489" : "#633806" }]}>
         {children}
       </Text>
@@ -120,7 +159,10 @@ export function ErrorText({ message }: { message?: string }) {
 }
 
 /**
- * RHF-bound wrapper around the shared `MoneyInput`. Empty ⇄ 0 (placeholder shows 0).
+ * RHF-bound money input (same look as `components/ui/MoneyInput`, which can't
+ * take focus/blur handlers without losing its focus border).
+ * Web convention: focus blanks the text only when the value is 0/empty; blur
+ * snaps to 0 only when the text is empty after stripping `,` spaces `₹`.
  * `hideLabel` is only used inside `PremiumField`, which renders the error itself.
  */
 export function MoneyField({
@@ -144,6 +186,7 @@ export function MoneyField({
   const { field, fieldState } = useController({ control, name });
   const num = toNumber(field.value);
   const [text, setText] = useState(() => (num ? formatIndian(num) : ""));
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if ((parseMoneyInput(text) ?? 0) !== num) {
@@ -155,22 +198,52 @@ export function MoneyField({
   const fullLabel = hideLabel
     ? undefined
     : `${label}${required ? " *" : ""}${optional ? " (optional)" : ""}`;
+  const error = hideLabel ? undefined : fieldState.error?.message;
 
   return (
-    <MoneyInput
-      label={fullLabel}
-      accessibilityLabel={label}
-      helper={helper}
-      error={hideLabel ? undefined : fieldState.error?.message}
-      value={text}
-      onChange={(raw) => {
-        const next = formatMoneyText(raw);
-        setText(next);
-        const n = parseMoneyInput(next) ?? 0;
-        field.onChange(n);
-        onValueChange?.(n);
-      }}
-    />
+    <View style={s.fieldWrap}>
+      {fullLabel ? <Text style={s.moneyLabel}>{fullLabel}</Text> : null}
+      <View
+        style={[
+          s.moneyRow,
+          focused && s.inputFocused,
+          error ? s.inputError : null,
+        ]}
+      >
+        <Text style={s.moneyRupee}>₹</Text>
+        <TextInput
+          style={s.moneyInput}
+          value={text}
+          keyboardType="numeric"
+          placeholder="0"
+          placeholderTextColor={Colors.textMuted}
+          accessibilityLabel={label}
+          onChangeText={(raw) => {
+            const next = formatMoneyText(raw.replace(/[^\d.,]/g, ""));
+            setText(next);
+            const n = parseMoneyInput(next) ?? 0;
+            field.onChange(n);
+            onValueChange?.(n);
+          }}
+          onFocus={() => {
+            setFocused(true);
+            setText((current) => moneyTextOnFocus(current, field.value));
+          }}
+          onBlur={() => {
+            setFocused(false);
+            const { value, empty } = moneyValueOnBlur(text);
+            setText(empty ? "" : formatIndian(value));
+            if (value !== num) {
+              field.onChange(value);
+              onValueChange?.(value);
+            }
+            field.onBlur();
+          }}
+        />
+      </View>
+      {helper && !error ? <Text style={s.helper}>{helper}</Text> : null}
+      <ErrorText message={error} />
+    </View>
   );
 }
 
@@ -186,6 +259,7 @@ const inputBase = {
 /**
  * Web `AgeNumberInput` + `bindWholeNumberField`: value is `parseMoneyInput(text)`,
  * focus clears 0 → empty (undefined), blur on empty snaps to 0.
+ * `blankAsUndefined` (kid ages): blank stays undefined and a typed 0 is kept.
  */
 export function AgeField({
   name,
@@ -193,21 +267,23 @@ export function AgeField({
   helper,
   required,
   placeholder = "0",
+  blankAsUndefined = false,
+  onCommit,
 }: {
   name: FormPath;
   label: string;
   helper?: string;
   required?: boolean;
   placeholder?: string;
+  blankAsUndefined?: boolean;
+  onCommit?: (value: number | undefined) => void;
 }) {
   const { control } = useFormContext<AnalyseFormValues>();
   const { field, fieldState } = useController({ control, name });
   const [focused, setFocused] = useState(false);
   const value = field.value as unknown;
   const display =
-    value === undefined || value === null || value === ""
-      ? ""
-      : String(value);
+    value === undefined || value === null || value === "" ? "" : String(value);
 
   return (
     <View style={s.fieldWrap}>
@@ -226,6 +302,7 @@ export function AgeField({
         onChangeText={(raw) => field.onChange(parseMoneyInput(raw))}
         onFocus={() => {
           setFocused(true);
+          if (blankAsUndefined) return;
           const num = typeof value === "number" ? value : Number(value);
           if (num === 0 || value === "" || value == null) {
             field.onChange(undefined);
@@ -233,10 +310,18 @@ export function AgeField({
         }}
         onBlur={() => {
           setFocused(false);
-          if (value === undefined || value === null || value === "") {
-            field.onChange(0);
-          }
+          const blank = value === undefined || value === null || value === "";
+          if (blank && !blankAsUndefined) field.onChange(0);
           field.onBlur();
+          onCommit?.(
+            blank
+              ? blankAsUndefined
+                ? undefined
+                : 0
+              : typeof value === "number"
+                ? value
+                : parseMoneyInput(value),
+          );
         }}
       />
       {helper ? <Text style={s.helper}>{helper}</Text> : null}
@@ -245,7 +330,11 @@ export function AgeField({
   );
 }
 
-/** Web `NumberInput`: clamps on every keystroke + blur; 0 renders as empty. */
+/**
+ * Web `NumberInput`: clamps on every keystroke + blur; 0 renders as empty.
+ * `clampOnBlur` (years / ages): typing is never clamped mid-entry — the raw
+ * whole number is stored while typing and clamped once on blur.
+ */
 export function ClampNumberField({
   label,
   value,
@@ -256,6 +345,8 @@ export function ClampNumberField({
   placeholder = "0",
   helper,
   decimal = true,
+  clampOnBlur = false,
+  name,
 }: {
   label: string;
   value: number;
@@ -266,7 +357,11 @@ export function ClampNumberField({
   placeholder?: string;
   helper?: string;
   decimal?: boolean;
+  clampOnBlur?: boolean;
+  /** Form path whose validation error renders under the input. */
+  name?: FormPath;
 }) {
+  const error = useFieldError(name);
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState(value === 0 ? "" : String(value));
 
@@ -288,7 +383,13 @@ export function ClampNumberField({
   return (
     <View style={s.fieldWrap}>
       <FieldLabel>{label}</FieldLabel>
-      <View style={[s.suffixRow, focused && s.inputFocused]}>
+      <View
+        style={[
+          s.suffixRow,
+          focused && s.inputFocused,
+          error ? s.inputError : null,
+        ]}
+      >
         <TextInput
           style={s.suffixInput}
           value={draft}
@@ -300,20 +401,28 @@ export function ClampNumberField({
             const raw = text.replace(/,/g, "");
             if (raw !== "" && !/^\d*\.?\d*$/.test(raw)) return;
             setDraft(raw);
+            if (clampOnBlur) {
+              const parsed = raw === "" || raw === "." ? 0 : Number(raw);
+              onChange(Number.isFinite(parsed) ? Math.round(parsed) : 0);
+              return;
+            }
             if (raw === "" || raw === "." || raw.endsWith(".")) return;
             onChange(parseAndClamp(raw));
           }}
           onFocus={() => setFocused(true)}
           onBlur={() => {
             setFocused(false);
-            const next = parseAndClamp(draft);
+            const next = clampOnBlur
+              ? clampYearOnBlur(draft, min, max)
+              : parseAndClamp(draft);
             onChange(next);
             setDraft(next === 0 ? "" : String(next));
           }}
         />
         {suffix ? <Text style={s.suffix}>{suffix}</Text> : null}
       </View>
-      {helper ? <Text style={s.helper}>{helper}</Text> : null}
+      {helper && !error ? <Text style={s.helper}>{helper}</Text> : null}
+      <ErrorText message={error} />
     </View>
   );
 }
@@ -588,6 +697,7 @@ export function SelectField<T extends string | number>({
   allowEmpty = false,
   helper,
   style,
+  name,
 }: {
   label?: string;
   value: T | undefined;
@@ -597,7 +707,10 @@ export function SelectField<T extends string | number>({
   allowEmpty?: boolean;
   helper?: string;
   style?: StyleProp<ViewStyle>;
+  /** Form path whose validation error renders under the select. */
+  name?: FormPath;
 }) {
+  const error = useFieldError(name);
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
   return (
@@ -607,7 +720,7 @@ export function SelectField<T extends string | number>({
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={label ?? placeholder}
-        style={s.selectBtn}
+        style={[s.selectBtn, error ? s.inputError : null]}
       >
         <Text
           style={[s.selectText, !current && { color: Colors.textMuted }]}
@@ -618,6 +731,7 @@ export function SelectField<T extends string | number>({
         <Text style={s.selectChevron}>▾</Text>
       </Pressable>
       {helper ? <Text style={s.helper}>{helper}</Text> : null}
+      <ErrorText message={error} />
       <BottomSheet visible={open} onClose={() => setOpen(false)} scroll>
         {label ? <Text style={s.sheetTitle}>{label}</Text> : null}
         {allowEmpty ? (
@@ -663,6 +777,7 @@ const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({
   label: String(i + 1),
 }));
 
+/** Month + day selects; without `onMonth` only the day renders (no field to store a month). */
 export function MonthDaySelects({
   month,
   day,
@@ -670,41 +785,49 @@ export function MonthDaySelects({
   onDay,
   hint,
   label,
+  monthName,
+  dayName,
 }: {
   month?: number;
   day?: number;
-  onMonth: (m: number | undefined) => void;
+  onMonth?: (m: number | undefined) => void;
   onDay: (d: number | undefined) => void;
   hint?: string;
   label: string;
+  monthName?: FormPath;
+  dayName?: FormPath;
 }) {
   return (
     <View style={s.fieldWrap}>
       <FieldLabel>{label}</FieldLabel>
       {hint ? <Text style={s.helper}>{hint}</Text> : null}
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <SelectField
-          value={month || undefined}
-          options={MONTH_OPTIONS}
-          onChange={onMonth}
-          placeholder="Month"
-          allowEmpty
-          style={{ flex: 1 }}
-        />
+        {onMonth ? (
+          <SelectField
+            value={month || undefined}
+            options={MONTH_OPTIONS}
+            onChange={onMonth}
+            placeholder="Month"
+            allowEmpty
+            style={{ flex: 1 }}
+            name={monthName}
+          />
+        ) : null}
         <SelectField
           value={day || undefined}
           options={DAY_OPTIONS}
           onChange={onDay}
           placeholder="Day"
           allowEmpty
-          style={{ width: 110 }}
+          style={onMonth ? { width: 110 } : { width: 140 }}
+          name={dayName}
         />
       </View>
     </View>
   );
 }
 
-/** Recurring EMI debit: month + day only (no year). */
+/** Recurring debit date: month + day (no year), or day only when there's no month field. */
 export function DayOfMonthPicker({
   value,
   onChange,
@@ -712,6 +835,8 @@ export function DayOfMonthPicker({
   onMonth,
   label,
   hint,
+  monthName,
+  dayName,
 }: {
   value?: number;
   onChange: (day: number | undefined) => void;
@@ -719,6 +844,8 @@ export function DayOfMonthPicker({
   onMonth?: (m: number | undefined) => void;
   label: string;
   hint?: string;
+  monthName?: FormPath;
+  dayName?: FormPath;
 }) {
   return (
     <MonthDaySelects
@@ -726,8 +853,10 @@ export function DayOfMonthPicker({
       hint={hint}
       month={month}
       day={value}
-      onMonth={(m) => onMonth?.(m)}
+      onMonth={onMonth}
       onDay={onChange}
+      monthName={monthName}
+      dayName={dayName}
     />
   );
 }
@@ -742,6 +871,8 @@ export function PremiumDueFields({
   monthlyLabel = "Which date is the premium debited? (optional)",
   yearlyLabel = "When is your premium due each year? (optional)",
   hint = "We'll remind you before the due date so you can keep the amount ready",
+  monthName,
+  dayName,
 }: {
   frequency?: PremiumFrequency;
   month?: number;
@@ -751,27 +882,19 @@ export function PremiumDueFields({
   monthlyLabel?: string;
   yearlyLabel?: string;
   hint?: string;
+  monthName?: FormPath;
+  dayName?: FormPath;
 }) {
-  if (frequency === "yearly") {
-    return (
-      <MonthDaySelects
-        label={yearlyLabel}
-        hint={hint}
-        month={month}
-        day={day}
-        onMonth={onMonth}
-        onDay={onDay}
-      />
-    );
-  }
   return (
-    <DayOfMonthPicker
-      label={monthlyLabel}
+    <MonthDaySelects
+      label={frequency === "yearly" ? yearlyLabel : monthlyLabel}
       hint={hint}
-      value={day}
-      onChange={onDay}
       month={month}
+      day={day}
       onMonth={onMonth}
+      onDay={onDay}
+      monthName={monthName}
+      dayName={dayName}
     />
   );
 }
@@ -784,6 +907,7 @@ export function YearSelect({
   minYear,
   maxYear,
   placeholder = "Select year",
+  name,
 }: {
   label: string;
   value?: number;
@@ -792,12 +916,14 @@ export function YearSelect({
   minYear?: number;
   maxYear?: number;
   placeholder?: string;
+  name?: FormPath;
 }) {
   const now = new Date().getFullYear();
   const min = minYear ?? now;
   const max = maxYear ?? now + 40;
   const years: SelectOption<number>[] = [];
-  for (let y = min; y <= max; y += 1) years.push({ value: y, label: String(y) });
+  for (let y = min; y <= max; y += 1)
+    years.push({ value: y, label: String(y) });
   return (
     <SelectField
       label={label}
@@ -807,6 +933,7 @@ export function YearSelect({
       onChange={(y) => onChange(y ?? 0)}
       placeholder={placeholder}
       allowEmpty
+      name={name}
     />
   );
 }
@@ -832,9 +959,7 @@ export function TotalPanel({
         { backgroundColor: bg ?? (purple ? "#EEEDFE" : "#ECFDF5") },
       ]}
     >
-      <Text
-        style={[s.totalLabel, { color: purple ? "#3C3489" : "#334155" }]}
-      >
+      <Text style={[s.totalLabel, { color: purple ? "#3C3489" : "#334155" }]}>
         {label}
       </Text>
       <View style={{ alignItems: "flex-end", flexShrink: 1 }}>
@@ -843,9 +968,7 @@ export function TotalPanel({
         >
           ₹{formatIndian(amount)}
         </Text>
-        <Text
-          style={[s.totalWords, { color: purple ? "#7F77DD" : "#64748B" }]}
-        >
+        <Text style={[s.totalWords, { color: purple ? "#7F77DD" : "#64748B" }]}>
           {formatInWords(wordsAmount ?? amount)}
         </Text>
       </View>
@@ -961,6 +1084,34 @@ const s = StyleSheet.create({
   },
   inputFocused: { borderColor: Colors.primary },
   inputError: { borderColor: Colors.error },
+  moneyLabel: {
+    fontSize: FontSize.md,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+  moneyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 52,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.lg,
+    gap: 6,
+  },
+  moneyRupee: {
+    fontSize: FontSize.base,
+    fontWeight: "700",
+    color: Colors.textMuted,
+  },
+  moneyInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.primary,
+    height: "100%",
+  },
   suffixRow: {
     ...inputBase,
     flexDirection: "row",

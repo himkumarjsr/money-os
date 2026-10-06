@@ -91,6 +91,9 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ["recharts", "framer-motion"],
+    outputFileTracingIncludes: {
+      "/api/analyse/pdf": ["./lib/fonts/**"],
+    },
   },
   async rewrites() {
     return [

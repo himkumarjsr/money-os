@@ -1,5 +1,6 @@
 import {
   Alert,
+  BackHandler,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,9 +19,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   FormProvider,
+  useFieldArray,
   useForm,
   type FieldPath,
   type UseFormSetError,
@@ -39,10 +41,9 @@ import {
   clearLegacyLoanScalars,
   coalesceInsuranceToggles,
   financialProfileToFormValues,
-  mergeAnalyseDraftWithProfile,
+  findFirstInvalidAnalyseStep,
   newAnalyseRowId,
   normalizeAnalyseFormValues,
-  step7Schema,
   type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
 import {
@@ -72,23 +73,19 @@ import { Step4Expenses } from "@/components/analyse/form/Step4Expenses";
 import { Step5Insurance } from "@/components/analyse/form/Step5Insurance";
 import { Step6Assets } from "@/components/analyse/form/Step6Assets";
 import { Step7Goals } from "@/components/analyse/form/Step7Goals";
+import {
+  cleanLoansAndObligations,
+  loanUiFromRows,
+  LOANS_CLEARED_KEY,
+  mergeResumeValues,
+  readLoansCleared,
+  ownsCarOffPatch,
+  shouldAutoFillEmergencyTarget,
+  startFreshUiState,
+} from "@/components/analyse/form/formState";
 
 const FINANCIAL_PERSIST_NAME = "finkoin-financial-mobile";
 const AI_CACHE_KEY = "finkoin_ai_cache";
-
-const UNIFIED_LOAN_TYPES = [
-  "home_loan",
-  "personal_loan",
-  "car_loan",
-  "bike_loan",
-  "education_loan",
-  "pf_loan",
-  "overdraft",
-  "gold_loan",
-  "business_loan",
-  "credit_card",
-  "other",
-] as const;
 
 function wipeAnalyseLocalCaches() {
   try {
@@ -96,6 +93,7 @@ function wipeAnalyseLocalCaches() {
     void appStorage.removeItem(`${FINANCIAL_PERSIST_NAME}:${uid}`);
     void appStorage.removeItem(FINANCIAL_PERSIST_NAME);
     syncKv.removeItem(AI_CACHE_KEY);
+    syncKv.removeItem(LOANS_CLEARED_KEY);
   } catch {
     /* ignore */
   }
@@ -141,7 +139,10 @@ export default function AnalyseFormScreen() {
     mode: "onSubmit",
     shouldUnregister: false,
   });
-  const { watch, setValue, reset, setError, clearErrors, getValues } = methods;
+  const { control, watch, setValue, reset, setError, clearErrors, getValues } =
+    methods;
+  const loans = useFieldArray({ control, name: "unifiedLoans" });
+  const replaceLoans = loans.replace;
 
   const [ui, setUi] = useState<AnalyseFormUiState>(() =>
     initialUiState(useFinancialStore.getState().lastSubmission),
@@ -171,8 +172,13 @@ export default function AnalyseFormScreen() {
   const prevOwnsCarRef = useRef<boolean | undefined>(undefined);
   const prevPostOfficeRef = useRef<boolean | undefined>(undefined);
   const prevParentsSupportRef = useRef<number | undefined>(undefined);
+  const emergencyAutoFilledRef = useRef(false);
 
   const values = watch();
+  const isFormDirty = methods.formState.isDirty;
+  const emergencyTargetEdited =
+    !!methods.formState.dirtyFields.emergencyFundTarget ||
+    !!methods.formState.touchedFields.emergencyFundTarget;
   const live = computeLiveTotals(values);
   const lifeStage = values.lifeStage;
   const hasHealthInsurance = values.hasHealthInsurance;
@@ -186,25 +192,13 @@ export default function AnalyseFormScreen() {
   const primaryGoal = values.primaryGoal;
   const { hasEligibleGirlChild, emergencyFundSuggestion } = live;
 
-  // Web seeds these from `lastSubmission` at mount; mobile store may hydrate after mount.
-  useEffect(() => {
-    if (!hasHydrated || uiSeededRef.current) return;
-    uiSeededRef.current = true;
-    setUi(initialUiState(useFinancialStore.getState().lastSubmission));
-  }, [hasHydrated]);
-
   useEffect(() => {
     if ((values.rentAmount ?? 0) > 0) patchUi({ isRenting: true });
     if ((values.creditCardBillMonthly ?? 0) > 0)
       patchUi({ hasCreditCardOutstanding: true });
   }, [values.rentAmount, values.creditCardBillMonthly, patchUi]);
 
-  useEffect(() => {
-    if ((values.carLoanEMI || 0) > 0 || (values.carMarketValue || 0) > 0) {
-      patchUi({ hasVehicleToggle: true });
-    }
-  }, [values.carLoanEMI, values.carMarketValue, patchUi]);
-
+  // Mobile store may hydrate after mount, so form + loan UI are restored here, not at mount.
   useLayoutEffect(() => {
     if (!hasHydrated) return;
     const { analysis: draft } = useFinancialStore.getState();
@@ -214,15 +208,25 @@ export default function AnalyseFormScreen() {
     }
     delete cached.nscMonthly;
     const cachedTyped = cached as Partial<AnalyseFormValues>;
-    const merged = {
+    const merged = coalesceInsuranceToggles({
       ...analyseDefaultValues,
-      ...mergeAnalyseDraftWithProfile(
+      ...mergeResumeValues(
         lastSubmission ? financialProfileToFormValues(lastSubmission) : {},
         cachedTyped,
+        readLoansCleared(syncKv),
       ),
-    };
-    reset(coalesceInsuranceToggles(merged as AnalyseFormValues));
-  }, [hasHydrated, lastSubmission, reset]);
+    } as AnalyseFormValues);
+    const resumedLoans = merged.unifiedLoans ?? [];
+    reset(merged);
+    replaceLoans(resumedLoans);
+    const loanUi = loanUiFromRows(resumedLoans);
+    if (!uiSeededRef.current) {
+      uiSeededRef.current = true;
+      setUi({ ...initialUiState(lastSubmission), ...loanUi });
+    } else {
+      patchUi(loanUi);
+    }
+  }, [hasHydrated, lastSubmission, reset, replaceLoans, patchUi]);
 
   useEffect(() => {
     skipCloudHydrateRef.current = false;
@@ -304,7 +308,10 @@ export default function AnalyseFormScreen() {
   useEffect(() => {
     const prev = prevLifeStageRef.current;
     if (prev !== null && prev !== "bachelor" && lifeStage === "bachelor") {
-      setValue("spouseIncome", 0, { shouldDirty: false, shouldValidate: false });
+      setValue("spouseIncome", 0, {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
       setValue("spouseAge", 0, { shouldDirty: false, shouldValidate: false });
     }
     if (prev !== null && lifeStage !== "kids" && prev === "kids") {
@@ -372,10 +379,9 @@ export default function AnalyseFormScreen() {
   useEffect(() => {
     const prev = prevOwnsCarRef.current;
     if (prev === true && ownsCar === false) {
-      setValue("carMarketValue", 0);
-      setValue("carLoanOutstanding", 0);
-      setValue("carPurchaseTarget", 0);
-      setValue("carPurchaseYear", 0);
+      for (const [key, value] of Object.entries(ownsCarOffPatch())) {
+        setValue(key as keyof AnalyseFormValues, value as never);
+      }
     }
     prevOwnsCarRef.current = ownsCar;
   }, [ownsCar, setValue]);
@@ -408,20 +414,31 @@ export default function AnalyseFormScreen() {
   }, [parentsSupport, setValue]);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (
-      primaryGoal === "build_emergency_fund" &&
-      emergencyFundSuggestion &&
-      emergencyFundSuggestion > 0
+      !shouldAutoFillEmergencyTarget({
+        alreadyFired: emergencyAutoFilledRef.current,
+        primaryGoal,
+        suggestion: emergencyFundSuggestion,
+        currentValue: getValues("emergencyFundTarget"),
+        userEdited: emergencyTargetEdited,
+      })
     ) {
-      const current = getValues("emergencyFundTarget") ?? 0;
-      if (current <= 0) {
-        setValue("emergencyFundTarget", Math.round(emergencyFundSuggestion), {
-          shouldDirty: true,
-          shouldValidate: false,
-        });
-      }
+      return;
     }
-  }, [primaryGoal, emergencyFundSuggestion, setValue, getValues]);
+    emergencyAutoFilledRef.current = true;
+    setValue("emergencyFundTarget", Math.round(emergencyFundSuggestion ?? 0), {
+      shouldDirty: false,
+      shouldValidate: false,
+    });
+  }, [
+    hasHydrated,
+    primaryGoal,
+    emergencyFundSuggestion,
+    emergencyTargetEdited,
+    setValue,
+    getValues,
+  ]);
 
   const scrollStepIntoView = useCallback(() => {
     requestAnimationFrame(() => {
@@ -429,55 +446,39 @@ export default function AnalyseFormScreen() {
     });
   }, [scrollRef]);
 
+  /** Writes sanitised loan / obligation arrays back into the form (only when they changed). */
+  const applyCleanedLoans = useCallback(
+    (formValues: AnalyseFormValues) => {
+      const cleaned = cleanLoansAndObligations(formValues);
+      if (
+        cleaned.additionalObligations.length !==
+        (formValues.additionalObligations?.length ?? 0)
+      ) {
+        setValue("additionalObligations", cleaned.additionalObligations, {
+          shouldDirty: true,
+        });
+      }
+      if (
+        JSON.stringify(cleaned.unifiedLoans) !==
+        JSON.stringify(formValues.unifiedLoans ?? [])
+      ) {
+        replaceLoans(cleaned.unifiedLoans);
+      }
+      return cleaned;
+    },
+    [replaceLoans, setValue],
+  );
+
   const forceNext = useCallback(() => {
     clearErrors();
     setStepNavError(null);
     const formValues = getValues();
     // Keep form state aligned with schema sanitizers so Next isn't blocked by
     // stale additionalObligations / legacy loanType labels with no visible fields.
-    const cleanedObligations = (formValues.additionalObligations ?? []).filter(
-      (row) => {
-        const type = String(row?.type ?? "").trim();
-        const amt = Number(row?.monthlyAmount ?? 0);
-        return type.length > 0 && Number.isFinite(amt) && amt > 0;
-      },
-    );
-    if (
-      cleanedObligations.length !==
-      (formValues.additionalObligations?.length ?? 0)
-    ) {
-      setValue("additionalObligations", cleanedObligations, {
-        shouldDirty: true,
-      });
-    }
-    const cleanedLoans = (formValues.unifiedLoans ?? [])
-      .filter((row) => Number(row?.monthlyEMI ?? 0) > 0)
-      .map((row) => {
-        const raw = String(row?.loanType ?? "").trim();
-        const ok = (UNIFIED_LOAN_TYPES as readonly string[]).includes(raw);
-        const lenderName =
-          typeof row?.lenderName === "string"
-            ? row.lenderName.toUpperCase().trim()
-            : row?.lenderName;
-        const outstanding = Number(row?.outstandingAmount ?? 0) || 0;
-        return {
-          ...row,
-          loanType: ok ? row.loanType : ("other" as const),
-          lenderName,
-          outstandingAmount: outstanding,
-          odUsed:
-            (ok ? row.loanType : "other") === "overdraft"
-              ? outstanding || Number(row?.odUsed ?? 0) || 0
-              : Number(row?.odUsed ?? 0) || 0,
-        };
-      });
-    if (
-      cleanedLoans.length !== (formValues.unifiedLoans?.length ?? 0) ||
-      JSON.stringify(cleanedLoans) !==
-        JSON.stringify(formValues.unifiedLoans ?? [])
-    ) {
-      setValue("unifiedLoans", cleanedLoans, { shouldDirty: true });
-    }
+    const {
+      unifiedLoans: cleanedLoans,
+      additionalObligations: cleanedObligations,
+    } = applyCleanedLoans(formValues);
     const loanPatch: Partial<AnalyseFormValues> = {
       unifiedLoans: cleanedLoans,
       additionalObligations: cleanedObligations,
@@ -511,6 +512,7 @@ export default function AnalyseFormScreen() {
     setStep((current) => Math.min(current + 1, STEPS.length - 1));
     scrollStepIntoView();
   }, [
+    applyCleanedLoans,
     clearErrors,
     getValues,
     patchUi,
@@ -518,7 +520,6 @@ export default function AnalyseFormScreen() {
     setAnalysis,
     setError,
     setStep,
-    setValue,
     step,
   ]);
 
@@ -542,27 +543,45 @@ export default function AnalyseFormScreen() {
   const handleFinalSubmit = useCallback(async () => {
     clearErrors();
     setSubmitError(null);
+    setStepNavError(null);
+    applyCleanedLoans(getValues());
+    if (!getValues("primaryGoal")?.trim()) {
+      setValue("primaryGoal", "grow_wealth");
+    }
     const formValues = getValues();
-    const finalParsed = step7Schema.safeParse({
-      ...formValues,
-      primaryGoal: formValues.primaryGoal?.trim()
-        ? formValues.primaryGoal
-        : "grow_wealth",
-    });
-    if (!finalParsed.success) {
-      setSubmitError(
-        applyZodIssues(
-          finalParsed.error,
-          setError,
-          "Please fix the highlighted fields, then try again.",
-        ),
+    const invalid = findFirstInvalidAnalyseStep(formValues);
+    if (invalid) {
+      const stepIndex = Math.max(
+        0,
+        Math.min(invalid.step - 1, STEPS.length - 1),
       );
+      const fallback = `Please fix the highlighted fields in ${STEPS[stepIndex]?.title ?? "this step"}, then try again.`;
+      const message =
+        invalid.issues.find((i) => i.path.length > 0)?.message ??
+        invalid.issues[0]?.message ??
+        fallback;
+      const seen = new Set<string>();
+      for (const issue of invalid.issues) {
+        const key = issue.path.join(".");
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        setError(key as FieldPath<AnalyseFormValues>, {
+          type: "manual",
+          message: issue.message,
+        });
+      }
+      setStep(stepIndex);
+      if (stepIndex === STEPS.length - 1) setSubmitError(message);
+      else setStepNavError(message);
       scrollStepIntoView();
       return;
     }
 
     if (!useAuthStore.getState().user?.id) {
-      Alert.alert("Sign in required", "Please log in to save your health check.");
+      Alert.alert(
+        "Sign in required",
+        "Please log in to save your health check.",
+      );
       router.push("/(auth)/login");
       return;
     }
@@ -642,12 +661,15 @@ export default function AnalyseFormScreen() {
       setIsSubmitting(false);
     }
   }, [
+    applyCleanedLoans,
     clearErrors,
     getValues,
     scrollStepIntoView,
     setAnalysis,
     setError,
     setFullAnalysis,
+    setStep,
+    setValue,
   ]);
 
   const handleStartFresh = useCallback(() => {
@@ -663,15 +685,51 @@ export default function AnalyseFormScreen() {
         customInvestments: [],
       } as AnalyseFormValues),
     );
-    patchUi({
-      isRenting: false,
-      hasCreditCardOutstanding: false,
-      hasVehicleToggle: false,
-    });
+    replaceLoans([]);
+    setUi(startFreshUiState());
+    emergencyAutoFilledRef.current = false;
+    clearErrors();
+    setStepNavError(null);
+    setSubmitError(null);
     setShowResumeOption(false);
     setShowResumeBanner(false);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, [reset, patchUi, scrollRef]);
+  }, [reset, replaceLoans, clearErrors, scrollRef]);
+
+  const leaveForm = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/");
+  }, []);
+
+  /** Shared by the header ← and Android hardware back: step back, or leave from step 1. */
+  const handleBack = useCallback(() => {
+    if (step > 0) {
+      goBack();
+      return;
+    }
+    if (!isFormDirty) {
+      leaveForm();
+      return;
+    }
+    Alert.alert(
+      "Leave the health check?",
+      "Your progress is saved as a draft — you can pick up where you left off.",
+      [
+        { text: "Stay", style: "cancel" },
+        { text: "Leave", onPress: leaveForm },
+      ],
+    );
+  }, [step, goBack, leaveForm, isFormDirty]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+        handleBack();
+        return true;
+      });
+      return () => sub.remove();
+    }, [handleBack]),
+  );
 
   const isLastStep = step === STEPS.length - 1;
   const footerError = isLastStep ? submitError : stepNavError;
@@ -682,7 +740,7 @@ export default function AnalyseFormScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => (step > 0 ? goBack() : router.back())}
+            onPress={handleBack}
             style={styles.backBtn}
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -733,9 +791,11 @@ export default function AnalyseFormScreen() {
 
             {step === 0 ? <Step1Profile /> : null}
             {step === 1 ? <Step2Income live={live} /> : null}
-            {step === 2 ? <Step3Obligations {...stepProps} /> : null}
+            {step === 2 ? (
+              <Step3Obligations {...stepProps} loans={loans} />
+            ) : null}
             {step === 3 ? <Step4Expenses live={live} /> : null}
-            {step === 4 ? <Step5Insurance {...stepProps} /> : null}
+            {step === 4 ? <Step5Insurance /> : null}
             {step === 5 ? <Step6Assets live={live} /> : null}
             {step === 6 ? <Step7Goals live={live} /> : null}
           </View>
@@ -768,7 +828,9 @@ export default function AnalyseFormScreen() {
                 accessibilityRole="button"
                 style={[
                   styles.primaryBtn,
-                  { backgroundColor: isSubmitting ? "#AFA9EC" : Colors.primary },
+                  {
+                    backgroundColor: isSubmitting ? "#AFA9EC" : Colors.primary,
+                  },
                 ]}
               >
                 <Text style={styles.primaryText}>

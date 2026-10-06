@@ -1,10 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text, TextInput, View } from "react-native";
-import {
-  useFieldArray,
-  useFormContext,
-  type FieldPath,
-} from "react-hook-form";
+import { useFieldArray, useFormContext } from "react-hook-form";
 import {
   newAnalyseRowId,
   type AnalyseFormValues,
@@ -14,7 +10,6 @@ import {
   ErrorText,
   Hint,
   MoneyField,
-  Note,
   PremiumDueFields,
   PremiumField,
   RemoveX,
@@ -24,10 +19,11 @@ import {
   YearSelect,
   YesNoQuestion,
   formStyles,
+  usePersistField,
 } from "./fields";
-import type { StepProps } from "./shared";
+import { deriveHasVehicle, resolveVehicleToggle } from "./formState";
 
-export function Step5Insurance({ live, ui, patchUi }: StepProps) {
+export function Step5Insurance() {
   const {
     control,
     watch,
@@ -52,16 +48,18 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
     return () => clearTimeout(t);
   }, [otherInsuranceFields]);
 
-  const persistValue = (name: FieldPath<AnalyseFormValues>, value: unknown) =>
-    setValue(name, value as never, { shouldDirty: true, shouldTouch: true });
+  const persistValue = usePersistField();
 
   const hasHealthInsurance = watch("hasHealthInsurance");
   const hasTermInsurance = watch("hasTermInsurance");
   const hasOtherInsurance = watch("hasOtherInsurance");
-  const hasCarInForm =
-    (watch("carLoanEMI") || 0) > 0 ||
-    (watch("carMarketValue") || 0) > 0 ||
-    ui.hasVehicleToggle === true;
+  // Screen-local answer so "Yes" can open the section before any number exists;
+  // never persisted, so on revisit the section follows the numbers again.
+  const [vehicleAnswer, setVehicleAnswer] = useState<boolean | null>(null);
+  const hasCarInForm = resolveVehicleToggle(
+    vehicleAnswer,
+    deriveHasVehicle(watch()),
+  );
 
   const otherRootError =
     errors.otherInsurancePremiums?.message ??
@@ -94,11 +92,15 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
             </PremiumField>
             {(watch("healthInsurancePremiumInput") ?? 0) > 0 ? (
               <PremiumDueFields
-                frequency={watch("healthInsurancePremiumFrequency") ?? "monthly"}
+                frequency={
+                  watch("healthInsurancePremiumFrequency") ?? "monthly"
+                }
                 month={watch("healthInsuranceRenewalMonth") || undefined}
                 day={watch("healthInsuranceRenewalDay") || undefined}
                 onMonth={(m) => persistValue("healthInsuranceRenewalMonth", m)}
                 onDay={(d) => persistValue("healthInsuranceRenewalDay", d)}
+                monthName="healthInsuranceRenewalMonth"
+                dayName="healthInsuranceRenewalDay"
                 yearlyLabel="When is your health insurance renewal? (optional)"
                 monthlyLabel="Which date is the health premium debited? (optional)"
               />
@@ -137,6 +139,7 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
               onChange={(year) =>
                 persistValue("termInsurancePremiumTillYear", year)
               }
+              name="termInsurancePremiumTillYear"
               minYear={2024}
               maxYear={2060}
             />
@@ -147,6 +150,8 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
                 day={watch("termInsuranceRenewalDay") || undefined}
                 onMonth={(m) => persistValue("termInsuranceRenewalMonth", m)}
                 onDay={(d) => persistValue("termInsuranceRenewalDay", d)}
+                monthName="termInsuranceRenewalMonth"
+                dayName="termInsuranceRenewalDay"
                 hint="Optional renewal reminder — calendar day/month when premium is due, not health waiting-period days"
                 yearlyLabel="Term premium renewal month & day (optional)"
                 monthlyLabel="Term premium debit date each month (optional)"
@@ -162,7 +167,7 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
           question="Do you have a vehicle?"
           value={hasCarInForm}
           onChange={(next) => {
-            patchUi({ hasVehicleToggle: next });
+            setVehicleAnswer(next);
             if (!next) {
               setValue("carInsurancePremiumInput", 0);
               setValue("bikeInsurancePremiumInput", 0);
@@ -192,6 +197,8 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
                 day={watch("carInsuranceRenewalDay") || undefined}
                 onMonth={(m) => persistValue("carInsuranceRenewalMonth", m)}
                 onDay={(d) => persistValue("carInsuranceRenewalDay", d)}
+                monthName="carInsuranceRenewalMonth"
+                dayName="carInsuranceRenewalDay"
                 yearlyLabel="When is your car insurance renewal? (optional)"
                 monthlyLabel="Which date is the car premium debited? (optional)"
               />
@@ -217,6 +224,8 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
                 day={watch("bikeInsuranceRenewalDay") || undefined}
                 onMonth={(m) => persistValue("bikeInsuranceRenewalMonth", m)}
                 onDay={(d) => persistValue("bikeInsuranceRenewalDay", d)}
+                monthName="bikeInsuranceRenewalMonth"
+                dayName="bikeInsuranceRenewalDay"
                 yearlyLabel="When is your two-wheeler insurance renewal? (optional)"
                 monthlyLabel="Which date is the two-wheeler premium debited? (optional)"
               />
@@ -337,6 +346,8 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
                           d,
                         )
                       }
+                      monthName={`otherInsurancePremiums.${index}.renewalMonth`}
+                      dayName={`otherInsurancePremiums.${index}.renewalDay`}
                     />
                   ) : null}
                   <MoneyField
@@ -362,6 +373,7 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
                     }
                     minYear={new Date().getFullYear()}
                     maxYear={2060}
+                    name={`otherInsurancePremiums.${index}.maturityYear`}
                   />
                   <Hint tone="warn">
                     ⚠️ If this is a ULIP or endowment plan, the fix plan will
@@ -373,8 +385,6 @@ export function Step5Insurance({ live, ui, patchUi }: StepProps) {
           </View>
         ) : null}
       </Card>
-
-      {live.debtWarning ? <Note tone="red">{live.debtWarning}</Note> : null}
     </View>
   );
 }

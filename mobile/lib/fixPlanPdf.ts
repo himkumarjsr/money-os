@@ -4,19 +4,10 @@ import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { AnalysisResult } from "@/lib/financialEngine";
 import type { PriorityPlan } from "@/lib/priorityEngine";
 import { siteBase } from "@/lib/splitApi";
+import type { FixPlanExplanations } from "@/lib/fixPlanMerge";
 import { getSupabase } from "@/lib/supabase";
 
-export type FixPlanExplanations = {
-  greeting?: string;
-  overallSummary?: string;
-  debtStrategy?: string;
-  goalAdvice?: string;
-  thisWeekAction?: string;
-  in12Months?: string;
-  encouragement?: string;
-  disclaimer?: string;
-  priorityExplanations?: Record<string, string>;
-};
+export type { FixPlanExplanations };
 
 export type FixPlanPdfInput = {
   profile: FinancialProfile;

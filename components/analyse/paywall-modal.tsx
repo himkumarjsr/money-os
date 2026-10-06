@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
+import { paywallConfirmLabel } from "@/lib/paywallCopy";
 import { Analytics } from "@/lib/analytics";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -313,7 +314,11 @@ export function PaywallModal({
           disabled={rzpLoading}
           className="mt-5 h-12 w-full rounded-xl bg-[#534AB7] font-semibold text-white disabled:opacity-70"
         >
-          {rzpLoading ? "Opening secure checkout..." : "Confirm and unlock"}
+          {paywallConfirmLabel({
+            paymentsEnabled: true,
+            priceInr: 99,
+            loading: rzpLoading,
+          })}
         </button>
 
         <p className="mt-3 text-center text-xs text-[#9B9A94]">Educational only.</p>

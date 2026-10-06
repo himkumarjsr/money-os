@@ -25,7 +25,7 @@ import {
   clearLegacyLoanScalars,
   coalesceInsuranceToggles,
   financialProfileToFormValues,
-  mergeAnalyseDraftWithProfile,
+  findFirstInvalidAnalyseStep,
   newAnalyseRowId,
   normalizeAnalyseFormValues,
   parseMoneyInput,
@@ -37,10 +37,33 @@ import {
   step6Schema,
   step7Schema,
   type AnalyseFormValues,
+  type AnalyseSubmitIssue,
   type FinancialProfile,
   type PostOfficeSchemeId,
   type PremiumFrequency,
 } from "@/lib/analyse-form-schema";
+import { emergencyFundMonthsNeeded } from "@/lib/financialEngine";
+import {
+  clampYearOnBlur,
+  decideEmergencyAutoFill,
+  emergencyFundSuggestion as computeEmergencyFundSuggestion,
+  issuesToFieldErrors,
+  loansOffDraft,
+  LOANS_CLEARED_KEY,
+  mergeResumeDraft,
+  readLoansCleared,
+  writeLoansCleared,
+  ownsCarOffPatch,
+  parseKidAgeInput,
+  parseYearDraft,
+  resizeKidsAges,
+  resumeLoanUiState,
+  startFreshLoanUiState,
+  vehicleFromAssets,
+  vehicleOffPatch,
+  vehicleToggleOn,
+  type EmergencyAutoFillState,
+} from "@/components/forms/analyse-form-state";
 import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { formatCurrency } from "@/lib/finance";
 import { formatIndian, formatInWords } from "@/lib/formatters";
@@ -80,9 +103,14 @@ function wipeAnalyseLocalCaches() {
     localStorage.removeItem(`finkoin-financial:${uid}`);
     localStorage.removeItem("finkoin-financial");
     localStorage.removeItem("finkoin_ai_cache");
+    localStorage.removeItem(LOANS_CLEARED_KEY);
   } catch {
     /* ignore */
   }
+}
+
+function browserStorage(): Storage | null {
+  return typeof window === "undefined" ? null : window.localStorage;
 }
 
 const STEPS = [
@@ -288,14 +316,77 @@ const TextInput = forwardRef<
   );
 });
 
+function YearInput({
+  id,
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  placeholder,
+  helper,
+  error,
+}: {
+  id: string;
+  label: string;
+  value?: number;
+  onChange: (year: number) => void;
+  min: number;
+  max: number;
+  placeholder?: string;
+  helper?: string;
+  error?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState(value ? String(value) : "");
+
+  useEffect(() => {
+    if (focused) return;
+    setDraft(value ? String(value) : "");
+  }, [value, focused]);
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label htmlFor={id} className="text-[14px] font-medium text-[#5F5E5A]">
+        {label}
+      </label>
+      <input
+        id={id}
+        inputMode="numeric"
+        autoComplete="off"
+        maxLength={4}
+        className="h-12 min-w-0 rounded-[10px] border-[1.5px] border-[#E8E6F0] bg-white px-[14px] text-[15px] text-[#111110] outline-none focus:border-[#534AB7] focus:shadow-[0_0_0_3px_rgba(83,74,183,0.1)] placeholder:text-slate-400"
+        placeholder={placeholder}
+        value={draft}
+        onFocus={() => setFocused(true)}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
+          setDraft(raw);
+          onChange(parseYearDraft(raw) ?? 0);
+        }}
+        onBlur={() => {
+          setFocused(false);
+          const next = clampYearOnBlur(draft, min, max) ?? 0;
+          onChange(next);
+          setDraft(next ? String(next) : "");
+        }}
+      />
+      {helper ? <p className={FIELD_HELPER}>{helper}</p> : null}
+      {error ? <p className="text-sm text-[#E24B4A]">{error}</p> : null}
+    </div>
+  );
+}
+
 function LoanTypeSelect({
   id,
   value,
   onChange,
+  error,
 }: {
   id: string;
   value: string;
   onChange: (value: (typeof UNIFIED_LOAN_TYPE_VALUES)[number]) => void;
+  error?: string;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -359,6 +450,7 @@ function LoanTypeSelect({
           ))}
         </ul>
       ) : null}
+      {error ? <p className="mt-1 text-sm text-[#E24B4A]">{error}</p> : null}
     </div>
   );
 }
@@ -395,19 +487,19 @@ function Note({
   );
 }
 
-function applyZodFieldErrors(
-  flat: { fieldErrors: Record<string, string[] | undefined> },
+/** Sets one RHF error per dotted issue path; returns the first message for the step banner. */
+function applyIssueErrors(
+  issues: ReadonlyArray<AnalyseSubmitIssue>,
   setError: (
     name: FieldPath<AnalyseFormValues>,
     error: { message: string },
   ) => void,
-) {
-  for (const key of Object.keys(flat.fieldErrors)) {
-    const message = flat.fieldErrors[key]?.[0];
-    if (message) {
-      setError(key as FieldPath<AnalyseFormValues>, { message });
-    }
+): string | undefined {
+  const fieldErrors = issuesToFieldErrors(issues);
+  for (const { name, message } of fieldErrors) {
+    setError(name as FieldPath<AnalyseFormValues>, { message });
   }
+  return fieldErrors[0]?.message ?? issues[0]?.message;
 }
 
 function sum(values: Array<number | undefined>) {
@@ -577,12 +669,14 @@ export function AnalyseOnboardingForm() {
   const [hasCreditCardOutstanding, setHasCreditCardOutstanding] = useState(
     (lastSubmission?.creditCardBillMonthly || 0) > 0,
   );
-  const [hasVehicleToggle, setHasVehicleToggle] = useState(
-    (lastSubmission?.carLoanEMI || 0) > 0 ||
-      (lastSubmission?.carMarketValue || 0) > 0,
-  );
-  /** Loan cards the user marked as saved (collapsed summary). Form values stay intact. */
+  /** Tapped "Yes" on vehicle before entering any number; ignored once values derive it. */
+  const [vehicleOptIn, setVehicleOptIn] = useState(false);
+  /** Loan row ids the user marked as saved (collapsed summary). Form values stay intact. */
   const [savedLoanIds, setSavedLoanIds] = useState<string[]>([]);
+  const emergencyAutoFillRef = useRef<EmergencyAutoFillState>({
+    fired: false,
+    userEdited: false,
+  });
   const pendingOtherInsId = useRef<string | null>(null);
   const otherInsCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const otherInsPolicyRefs = useRef<Record<string, HTMLInputElement | null>>(
@@ -700,10 +794,17 @@ export function AnalyseOnboardingForm() {
     [register, setValue, getValues],
   );
 
+  const bindKidAgeField = useCallback(
+    (index: number) =>
+      register(`kidsAges.${index}` as const, { setValueAs: parseKidAgeInput }),
+    [register],
+  );
+
   const {
     fields: unifiedLoanFields,
     append: appendUnifiedLoan,
     remove: removeUnifiedLoan,
+    replace: replaceUnifiedLoans,
   } = useFieldArray({
     control,
     name: "unifiedLoans",
@@ -816,23 +917,13 @@ export function AnalyseOnboardingForm() {
   const primaryGoal = watch("primaryGoal");
 
   const watchedValues = watch();
-  const hasCarInForm =
-    (watchedValues.carLoanEMI || 0) > 0 ||
-    (watchedValues.carMarketValue || 0) > 0 ||
-    hasVehicleToggle === true;
+  const hasVehicle = vehicleToggleOn(watchedValues, vehicleOptIn);
+  const vehicleLockedOn = vehicleFromAssets(watchedValues);
   useEffect(() => {
     if ((watchedValues.rentAmount ?? 0) > 0) setIsRenting(true);
     if ((watchedValues.creditCardBillMonthly ?? 0) > 0)
       setHasCreditCardOutstanding(true);
   }, [watchedValues.rentAmount, watchedValues.creditCardBillMonthly]);
-  useEffect(() => {
-    if (
-      (watchedValues.carLoanEMI || 0) > 0 ||
-      (watchedValues.carMarketValue || 0) > 0
-    ) {
-      setHasVehicleToggle(true);
-    }
-  }, [watchedValues.carLoanEMI, watchedValues.carMarketValue]);
 
   /** Hidden fields keep react-hook-form values from a prior run — only sum what the current step UI collects. */
   const totalIncome: number = sum([
@@ -891,10 +982,11 @@ export function AnalyseOnboardingForm() {
     lifeStage === "kids" ? watchedValues.kidsActivities : 0,
     watchedValues.parentsSupport,
   ]);
-  const emergencyFundSuggestion =
-    monthlyLivingExpenses + fixedObligations > 0
-      ? (monthlyLivingExpenses + fixedObligations) * 6
-      : undefined;
+  const emergencyMonthsNeeded = emergencyFundMonthsNeeded(watchedValues);
+  const emergencyFundSuggestion = computeEmergencyFundSuggestion(
+    watchedValues,
+    monthlyLivingExpenses + fixedObligations,
+  );
   const retirementYears =
     selfAge && retirementAge ? Math.max(0, retirementAge - selfAge) : undefined;
   const hasEligibleGirlChild = useMemo(
@@ -989,13 +1081,19 @@ export function AnalyseOnboardingForm() {
     const cachedTyped = cached as Partial<AnalyseFormValues>;
     const merged = {
       ...analyseDefaultValues,
-      ...mergeAnalyseDraftWithProfile(
+      ...mergeResumeDraft(
         lastSubmission ? financialProfileToFormValues(lastSubmission) : {},
         cachedTyped,
+        readLoansCleared(browserStorage()),
       ),
     };
     reset(coalesceInsuranceToggles(merged as AnalyseFormValues));
-  }, [hasHydrated, lastSubmission, reset]);
+    const loans = merged.unifiedLoans ?? [];
+    replaceUnifiedLoans(loans);
+    const loanUi = resumeLoanUiState(loans);
+    setHasLoans(loanUi.hasLoans);
+    setSavedLoanIds(loanUi.savedLoanIds);
+  }, [hasHydrated, lastSubmission, reset, replaceUnifiedLoans]);
 
   useEffect(() => {
     skipCloudHydrateRef.current = false;
@@ -1149,10 +1247,9 @@ export function AnalyseOnboardingForm() {
   useEffect(() => {
     const prev = prevOwnsCarRef.current;
     if (prev === true && ownsCar === false) {
-      setValue("carMarketValue", 0);
-      setValue("carLoanOutstanding", 0);
-      setValue("carPurchaseTarget", 0);
-      setValue("carPurchaseYear", 0);
+      for (const [key, value] of Object.entries(ownsCarOffPatch())) {
+        setValue(key as FieldPath<AnalyseFormValues>, value as never);
+      }
     }
     prevOwnsCarRef.current = ownsCar;
   }, [ownsCar, setValue]);
@@ -1187,20 +1284,41 @@ export function AnalyseOnboardingForm() {
   }, [parentsSupport, setValue]);
 
   useEffect(() => {
-    if (
-      primaryGoal === "build_emergency_fund" &&
-      emergencyFundSuggestion &&
-      emergencyFundSuggestion > 0
-    ) {
-      const current = watch("emergencyFundTarget") ?? 0;
-      if (current <= 0) {
-        setValue("emergencyFundTarget", Math.round(emergencyFundSuggestion), {
-          shouldDirty: true,
-          shouldValidate: false,
-        });
-      }
+    if (lifeStage !== "kids") return;
+    const count = Math.min(Math.max(numberOfKids, 0), 6);
+    const current = getValues("kidsAges") ?? [];
+    const next = resizeKidsAges(current, count);
+    const changed =
+      current.length !== next.length ||
+      next.some((age, index) => current[index] !== age);
+    if (changed) {
+      setValue("kidsAges", next, { shouldDirty: true, shouldValidate: false });
     }
-  }, [primaryGoal, emergencyFundSuggestion, setValue, watch]);
+    const genders = getValues("kidsGenders") ?? [];
+    if (genders.length > count) {
+      setValue("kidsGenders", genders.slice(0, count), {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
+    }
+  }, [lifeStage, numberOfKids, getValues, setValue]);
+
+  useEffect(() => {
+    const { fill, next } = decideEmergencyAutoFill({
+      state: emergencyAutoFillRef.current,
+      eligible:
+        primaryGoal === "build_emergency_fund" && step === STEPS.length - 1,
+      suggestion: emergencyFundSuggestion,
+      currentValue: getValues("emergencyFundTarget"),
+    });
+    emergencyAutoFillRef.current = next;
+    if (fill !== null) {
+      setValue("emergencyFundTarget", fill, {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
+    }
+  }, [primaryGoal, step, emergencyFundSuggestion, getValues, setValue]);
 
   const scrollStepIntoView = useCallback(() => {
     requestAnimationFrame(() => {
@@ -1297,16 +1415,9 @@ export function AnalyseOnboardingForm() {
       unifiedLoans: cleanedLoans,
     });
     if (!parsed.success) {
-      applyZodFieldErrors(parsed.error.flatten(), setError);
-      const flat = parsed.error.flatten();
-      const firstField = Object.values(flat.fieldErrors).find(
-        (msgs) => msgs?.[0],
-      )?.[0];
-      const firstForm = flat.formErrors[0];
+      const firstMessage = applyIssueErrors(parsed.error.issues, setError);
       setStepNavError(
-        firstField ||
-          firstForm ||
-          "Please fix the highlighted fields before continuing.",
+        firstMessage || "Please fix the highlighted fields before continuing.",
       );
       return;
     }
@@ -1346,21 +1457,31 @@ export function AnalyseOnboardingForm() {
   const handleFinalSubmit = useCallback(async () => {
     clearErrors();
     setSubmitError(null);
+    setStepNavError(null);
     const values = getValues();
-    const finalParsed = step7Schema.safeParse({
+    const invalid = findFirstInvalidAnalyseStep({
       ...values,
       primaryGoal: values.primaryGoal?.trim()
         ? values.primaryGoal
         : "grow_wealth",
     });
-    if (!finalParsed.success) {
-      applyZodFieldErrors(finalParsed.error.flatten(), setError);
-      const flat = finalParsed.error.flatten();
-      const firstMsg =
-        Object.values(flat.fieldErrors).find((m) => m?.[0])?.[0] ??
-        flat.formErrors[0] ??
+    if (invalid) {
+      const targetIndex = Math.max(
+        0,
+        Math.min(invalid.step - 1, STEPS.length - 1),
+      );
+      if (targetIndex !== step) {
+        setDirection("back");
+        setStep(targetIndex);
+      }
+      const message =
+        applyIssueErrors(invalid.issues, setError) ??
         "Please fix the highlighted fields, then try again.";
-      setSubmitError(firstMsg);
+      if (targetIndex === STEPS.length - 1) {
+        setSubmitError(message);
+      } else {
+        setStepNavError(message);
+      }
       scrollStepIntoView();
       return;
     }
@@ -1442,7 +1563,21 @@ export function AnalyseOnboardingForm() {
     setAnalysis,
     setError,
     setFullAnalysis,
+    setStep,
+    step,
   ]);
+
+  const emergencyFundTargetBinding = bindMoneyField("emergencyFundTarget");
+  const emergencyFundTargetField = {
+    ...emergencyFundTargetBinding,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      emergencyAutoFillRef.current = {
+        ...emergencyAutoFillRef.current,
+        userEdited: true,
+      };
+      return emergencyFundTargetBinding.onChange(e);
+    },
+  };
 
   const debtWarning =
     totalIncome > 0 && fixedObligations > totalIncome * 0.5
@@ -1496,14 +1631,19 @@ export function AnalyseOnboardingForm() {
         customInvestments: [],
       } as AnalyseFormValues),
     );
+    const freshLoans = startFreshLoanUiState();
+    replaceUnifiedLoans(freshLoans.unifiedLoans);
+    setHasLoans(freshLoans.hasLoans);
+    setSavedLoanIds(freshLoans.savedLoanIds);
     setIsRenting(false);
     setHasCreditCardOutstanding(false);
-    setHasVehicleToggle(false);
+    setVehicleOptIn(false);
+    emergencyAutoFillRef.current = { fired: false, userEdited: false };
     setShowResumeOption(false);
     setShowResumeBanner(false);
     setAdvisorOpen(true);
     window.scrollTo(0, 0);
-  }, [reset]);
+  }, [reset, replaceUnifiedLoans]);
 
   return (
     <AnalyseAdvisorModal
@@ -1738,7 +1878,7 @@ export function AnalyseOnboardingForm() {
                         </div>
                         <div className="grid gap-5 sm:grid-cols-3">
                           {Array.from({
-                            length: Math.min(numberOfKids, 3),
+                            length: Math.min(Math.max(numberOfKids, 0), 6),
                           }).map((_, index) => (
                             <div
                               key={index}
@@ -1748,9 +1888,7 @@ export function AnalyseOnboardingForm() {
                                 id={`kidsAges.${index}`}
                                 label={`Kid ${index + 1} age`}
                                 error={errors.kidsAges?.[index]?.message}
-                                {...bindWholeNumberField(
-                                  `kidsAges.${index}` as const,
-                                )}
+                                {...bindKidAgeField(index)}
                               />
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-slate-700">
@@ -1848,6 +1986,7 @@ export function AnalyseOnboardingForm() {
                         </span>
                       </span>
                     </div>
+                    {debtWarning ? <Note tone="red">{debtWarning}</Note> : null}
                   </div>
                 ) : null}
 
@@ -1917,20 +2056,15 @@ export function AnalyseOnboardingForm() {
                             onChange={(value) => {
                               const next = value === "yes";
                               setHasLoans(next);
+                              writeLoansCleared(browserStorage(), !next);
                               if (!next) {
-                                setValue("unifiedLoans", [], {
-                                  shouldDirty: true,
-                                });
+                                replaceUnifiedLoans([]);
                                 setSavedLoanIds([]);
-                                setAnalysis({
-                                  ...getValues(),
-                                  unifiedLoans: [],
-                                  ...clearLegacyLoanScalars(),
-                                });
                                 setValue("homeLoanEMI", 0);
                                 setValue("personalLoanEMI", 0);
                                 setValue("carLoanEMI", 0);
                                 setValue("bikeEMI", 0);
+                                setAnalysis(loansOffDraft(getValues()));
                               }
                             }}
                           />
@@ -1969,7 +2103,11 @@ export function AnalyseOnboardingForm() {
                                 LOAN_TYPE_OPTIONS.find(
                                   (o) => o.value === loanType,
                                 )?.label || "Loan";
-                              const isSaved = savedLoanIds.includes(field.id);
+                              const loanRowId =
+                                watch(`unifiedLoans.${index}.id` as const) ||
+                                field.id;
+                              const loanErrors = errors.unifiedLoans?.[index];
+                              const isSaved = savedLoanIds.includes(loanRowId);
 
                               if (isSaved) {
                                 return (
@@ -2003,7 +2141,7 @@ export function AnalyseOnboardingForm() {
                                           onClick={() =>
                                             setSavedLoanIds((ids) =>
                                               ids.filter(
-                                                (id) => id !== field.id,
+                                                (id) => id !== loanRowId,
                                               ),
                                             )
                                           }
@@ -2016,7 +2154,7 @@ export function AnalyseOnboardingForm() {
                                           onClick={() => {
                                             setSavedLoanIds((ids) =>
                                               ids.filter(
-                                                (id) => id !== field.id,
+                                                (id) => id !== loanRowId,
                                               ),
                                             );
                                             removeUnifiedLoanAt(index);
@@ -2041,7 +2179,7 @@ export function AnalyseOnboardingForm() {
                                     type="button"
                                     onClick={() => {
                                       setSavedLoanIds((ids) =>
-                                        ids.filter((id) => id !== field.id),
+                                        ids.filter((id) => id !== loanRowId),
                                       );
                                       removeUnifiedLoanAt(index);
                                     }}
@@ -2058,6 +2196,7 @@ export function AnalyseOnboardingForm() {
                                     <LoanTypeSelect
                                       id={`unifiedLoans.${index}.loanType`}
                                       value={loanType ?? "personal_loan"}
+                                      error={loanErrors?.loanType?.message}
                                       onChange={(next) => {
                                         setValue(
                                           `unifiedLoans.${index}.loanType` as const,
@@ -2075,6 +2214,9 @@ export function AnalyseOnboardingForm() {
                                           id={`unifiedLoans.${index}.lenderName`}
                                           label="Lender name"
                                           placeholder="e.g. HDFC, ICICI"
+                                          error={
+                                            loanErrors?.lenderName?.message
+                                          }
                                           value={lenderField.value ?? ""}
                                           onChange={(e) => {
                                             const caps =
@@ -2108,6 +2250,9 @@ export function AnalyseOnboardingForm() {
                                         <MoneyInput
                                           id={`unifiedLoans.${index}.monthlyEMI`}
                                           label="Monthly EMI *"
+                                          error={
+                                            loanErrors?.monthlyEMI?.message
+                                          }
                                           helper={
                                             watch(
                                               `unifiedLoans.${index}.loanType` as const,
@@ -2146,6 +2291,10 @@ export function AnalyseOnboardingForm() {
                                       <DayOfMonthPicker
                                         label="Which date is this EMI debited? (optional)"
                                         hint="We'll remind you a few days before. Pick month and day only — no year."
+                                        error={
+                                          loanErrors?.emiDay?.message ??
+                                          loanErrors?.emiMonth?.message
+                                        }
                                         value={
                                           watch(
                                             `unifiedLoans.${index}.emiDay` as const,
@@ -2157,15 +2306,14 @@ export function AnalyseOnboardingForm() {
                                           ) || undefined
                                         }
                                         onMonth={(m) => {
-                                          setValue(
+                                          persistValue(
                                             `unifiedLoans.${index}.emiMonth` as const,
                                             m,
-                                            { shouldDirty: true },
                                           );
                                           setAnalysis(getValues());
                                         }}
                                         onChange={(day) => {
-                                          setValue(
+                                          persistValue(
                                             `unifiedLoans.${index}.emiDay` as const,
                                             day,
                                           );
@@ -2202,6 +2350,10 @@ export function AnalyseOnboardingForm() {
                                         return (
                                           <MoneyInput
                                             id={`unifiedLoans.${index}.outstandingAmount`}
+                                            error={
+                                              loanErrors?.outstandingAmount
+                                                ?.message
+                                            }
                                             label={
                                               isOd
                                                 ? "Amount currently used"
@@ -2236,6 +2388,7 @@ export function AnalyseOnboardingForm() {
                                   <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     <NumberInput
                                       label="Interest rate %"
+                                      error={loanErrors?.interestRate?.message}
                                       value={
                                         watch(
                                           `unifiedLoans.${index}.interestRate` as const,
@@ -2259,6 +2412,9 @@ export function AnalyseOnboardingForm() {
                                     />
                                     <NumberInput
                                       label="Remaining months"
+                                      error={
+                                        loanErrors?.remainingMonths?.message
+                                      }
                                       value={
                                         watch(
                                           `unifiedLoans.${index}.remainingMonths` as const,
@@ -2292,6 +2448,7 @@ export function AnalyseOnboardingForm() {
                                         render={({ field }) => (
                                           <MoneyInput
                                             id={`unifiedLoans.${index}.odLimit`}
+                                            error={loanErrors?.odLimit?.message}
                                             label="OD limit"
                                             helper="Maximum overdraft limit sanctioned by the bank"
                                             value={field.value ?? 0}
@@ -2313,6 +2470,10 @@ export function AnalyseOnboardingForm() {
                                       </p>
                                       <NumberInput
                                         label="Interest-only period (years)"
+                                        error={
+                                          loanErrors?.odInterestOnlyYears
+                                            ?.message
+                                        }
                                         value={
                                           watch(
                                             `unifiedLoans.${index}.odInterestOnlyYears` as const,
@@ -2343,9 +2504,9 @@ export function AnalyseOnboardingForm() {
                                     onClick={() => {
                                       if (!(loanEmi > 0)) return;
                                       setSavedLoanIds((ids) =>
-                                        ids.includes(field.id)
+                                        ids.includes(loanRowId)
                                           ? ids
-                                          : [...ids, field.id],
+                                          : [...ids, loanRowId],
                                       );
                                       if (loanType === "home_loan") {
                                         setValue("homeLoanEMI", loanEmi, {
@@ -2396,6 +2557,14 @@ export function AnalyseOnboardingForm() {
                             + Add a loan
                           </button>
 
+                          {errors.unifiedLoans?.message ||
+                          errors.unifiedLoans?.root?.message ? (
+                            <p className="text-sm text-[#E24B4A]">
+                              {errors.unifiedLoans?.message ??
+                                errors.unifiedLoans?.root?.message}
+                            </p>
+                          ) : null}
+
                           {unifiedLoanFields.length === 0 ? (
                             <p className="mt-2 text-center text-[13px] text-[#9B9A94]">
                               No loans added. Click above to add personal loan,
@@ -2440,8 +2609,9 @@ export function AnalyseOnboardingForm() {
                               label="Which date is your credit-card bill usually due? (optional)"
                               value={watch("creditCardBillDay") || undefined}
                               onChange={(day) =>
-                                setValue("creditCardBillDay", day)
+                                persistValue("creditCardBillDay", day)
                               }
+                              error={errors.creditCardBillDay?.message}
                             />
                           ) : null}
                         </div>
@@ -2586,6 +2756,11 @@ export function AnalyseOnboardingForm() {
                                 </option>
                               ))}
                             </select>
+                            {errors.parentsCity?.message ? (
+                              <p className="text-sm text-[#E24B4A]">
+                                {errors.parentsCity.message}
+                              </p>
+                            ) : null}
                           </div>
                           <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
                             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2727,6 +2902,10 @@ export function AnalyseOnboardingForm() {
                                   persistValue("healthInsuranceRenewalDay", d)
                                 }
                                 yearlyLabel="When is your health insurance renewal? (optional)"
+                                error={
+                                  errors.healthInsuranceRenewalDay?.message ??
+                                  errors.healthInsuranceRenewalMonth?.message
+                                }
                                 monthlyLabel="Which date is the health premium debited? (optional)"
                               />
                             </div>
@@ -2789,6 +2968,7 @@ export function AnalyseOnboardingForm() {
                             onChange={(year) =>
                               persistValue("termInsurancePremiumTillYear", year)
                             }
+                            error={errors.termInsurancePremiumTillYear?.message}
                             minYear={2024}
                             maxYear={2060}
                           />
@@ -2814,6 +2994,10 @@ export function AnalyseOnboardingForm() {
                                 }
                                 hint="Optional renewal reminder — calendar day/month when premium is due, not health waiting-period days"
                                 yearlyLabel="Term premium renewal month & day (optional)"
+                                error={
+                                  errors.termInsuranceRenewalDay?.message ??
+                                  errors.termInsuranceRenewalMonth?.message
+                                }
                                 monthlyLabel="Term premium debit date each month (optional)"
                               />
                             </div>
@@ -2834,19 +3018,31 @@ export function AnalyseOnboardingForm() {
                               { label: "Yes", value: "yes" },
                               { label: "No", value: "no" },
                             ]}
-                            value={hasCarInForm ? "yes" : "no"}
+                            value={hasVehicle ? "yes" : "no"}
                             onChange={(value) => {
                               const next = value === "yes";
-                              setHasVehicleToggle(next);
+                              setVehicleOptIn(next);
                               if (!next) {
-                                setValue("carInsurancePremiumInput", 0);
-                                setValue("bikeInsurancePremiumInput", 0);
+                                for (const [key, patchValue] of Object.entries(
+                                  vehicleOffPatch(),
+                                )) {
+                                  persistValue(
+                                    key as FieldPath<AnalyseFormValues>,
+                                    patchValue,
+                                  );
+                                }
                               }
                             }}
                           />
                         </div>
                       </div>
-                      {hasCarInForm ? (
+                      {vehicleLockedOn ? (
+                        <p className="text-xs text-[#9B9A94]">
+                          Set to Yes because you entered a car / two-wheeler
+                          loan or car value. Remove those to turn this off.
+                        </p>
+                      ) : null}
+                      {hasVehicle ? (
                         <div className="grid gap-5">
                           <PremiumField
                             inputId="carInsurancePremiumInput"
@@ -2885,6 +3081,10 @@ export function AnalyseOnboardingForm() {
                                 persistValue("carInsuranceRenewalDay", d)
                               }
                               yearlyLabel="When is your car insurance renewal? (optional)"
+                              error={
+                                errors.carInsuranceRenewalDay?.message ??
+                                errors.carInsuranceRenewalMonth?.message
+                              }
                               monthlyLabel="Which date is the car premium debited? (optional)"
                             />
                           ) : null}
@@ -2928,6 +3128,10 @@ export function AnalyseOnboardingForm() {
                                 persistValue("bikeInsuranceRenewalDay", d)
                               }
                               yearlyLabel="When is your two-wheeler insurance renewal? (optional)"
+                              error={
+                                errors.bikeInsuranceRenewalDay?.message ??
+                                errors.bikeInsuranceRenewalMonth?.message
+                              }
                               monthlyLabel="Which date is the two-wheeler premium debited? (optional)"
                             />
                           ) : null}
@@ -2969,9 +3173,11 @@ export function AnalyseOnboardingForm() {
                               Add
                             </Button>
                           </div>
-                          {errors.otherInsurancePremiums?.message ? (
+                          {errors.otherInsurancePremiums?.message ||
+                          errors.otherInsurancePremiums?.root?.message ? (
                             <p className="text-sm text-[#E24B4A]">
-                              {errors.otherInsurancePremiums.message}
+                              {errors.otherInsurancePremiums?.message ??
+                                errors.otherInsurancePremiums?.root?.message}
                             </p>
                           ) : null}
                           <div className="space-y-4">
@@ -3031,7 +3237,7 @@ export function AnalyseOnboardingForm() {
                                       ) ?? "monthly"
                                     }
                                     onFrequencyChange={(value) =>
-                                      setValue(
+                                      persistValue(
                                         `otherInsurancePremiums.${index}.frequency` as const,
                                         value,
                                       )
@@ -3077,6 +3283,12 @@ export function AnalyseOnboardingForm() {
                                           d,
                                         )
                                       }
+                                      error={
+                                        errors.otherInsurancePremiums?.[index]
+                                          ?.renewalDay?.message ??
+                                        errors.otherInsurancePremiums?.[index]
+                                          ?.renewalMonth?.message
+                                      }
                                     />
                                   ) : null}
                                   <MoneyInput
@@ -3105,6 +3317,10 @@ export function AnalyseOnboardingForm() {
                                         year,
                                       )
                                     }
+                                    error={
+                                      errors.otherInsurancePremiums?.[index]
+                                        ?.maturityYear?.message
+                                    }
                                     minYear={new Date().getFullYear()}
                                     maxYear={2060}
                                   />
@@ -3120,8 +3336,6 @@ export function AnalyseOnboardingForm() {
                         </div>
                       ) : null}
                     </div>
-
-                    {debtWarning ? <Note tone="red">{debtWarning}</Note> : null}
                   </div>
                 ) : null}
 
@@ -3142,8 +3356,9 @@ export function AnalyseOnboardingForm() {
                               label="FD interest rate % (optional)"
                               value={watch("fdRate") || 0}
                               onChange={(val: number) =>
-                                setValue("fdRate", val)
+                                persistValue("fdRate", val)
                               }
+                              error={errors.fdRate?.message}
                               placeholder="e.g. 7.1"
                               suffix="%"
                               min={0}
@@ -3156,12 +3371,13 @@ export function AnalyseOnboardingForm() {
                               helper="Year your FD matures"
                               value={watch("fdMaturityYear") || 0}
                               onChange={(year) => {
-                                setValue("fdMaturityYear", year);
+                                persistValue("fdMaturityYear", year);
                                 const now = new Date().getFullYear();
                                 if (year >= now) {
-                                  setValue("fdTenureYears", year - now);
+                                  persistValue("fdTenureYears", year - now);
                                 }
                               }}
+                              error={errors.fdMaturityYear?.message}
                               minYear={new Date().getFullYear()}
                               maxYear={2060}
                             />
@@ -3439,8 +3655,9 @@ export function AnalyseOnboardingForm() {
                                 label="Which date is your SIP auto-debited? (optional)"
                                 value={watch("sipAutoDebitDay") || undefined}
                                 onChange={(day) =>
-                                  setValue("sipAutoDebitDay", day)
+                                  persistValue("sipAutoDebitDay", day)
                                 }
+                                error={errors.sipAutoDebitDay?.message}
                               />
                             </div>
                           ) : null}
@@ -3451,8 +3668,9 @@ export function AnalyseOnboardingForm() {
                                 label="Which date do you deposit to PPF? (optional)"
                                 value={watch("ppfDepositDay") || undefined}
                                 onChange={(day) =>
-                                  setValue("ppfDepositDay", day)
+                                  persistValue("ppfDepositDay", day)
                                 }
+                                error={errors.ppfDepositDay?.message}
                               />
                             </div>
                           ) : null}
@@ -3500,6 +3718,10 @@ export function AnalyseOnboardingForm() {
                             <TextInput
                               id={`customInvestments.${index}.label`}
                               label="Investment name"
+                              error={
+                                errors.customInvestments?.[index]?.label
+                                  ?.message
+                              }
                               {...register(
                                 `customInvestments.${index}.label` as const,
                               )}
@@ -3523,10 +3745,23 @@ export function AnalyseOnboardingForm() {
                                 <option value="real_estate">Real estate</option>
                                 <option value="other">Other</option>
                               </select>
+                              {errors.customInvestments?.[index]?.type
+                                ?.message ? (
+                                <p className="text-sm text-[#E24B4A]">
+                                  {
+                                    errors.customInvestments[index]?.type
+                                      ?.message
+                                  }
+                                </p>
+                              ) : null}
                             </div>
                             <MoneyInput
                               id={`customInvestments.${index}.currentValue`}
                               label="Current value"
+                              error={
+                                errors.customInvestments?.[index]?.currentValue
+                                  ?.message
+                              }
                               {...bindMoneyField(
                                 `customInvestments.${index}.currentValue` as const,
                               )}
@@ -3534,6 +3769,10 @@ export function AnalyseOnboardingForm() {
                             <MoneyInput
                               id={`customInvestments.${index}.monthlyContribution`}
                               label="Monthly contribution"
+                              error={
+                                errors.customInvestments?.[index]
+                                  ?.monthlyContribution?.message
+                              }
                               {...bindMoneyField(
                                 `customInvestments.${index}.monthlyContribution` as const,
                               )}
@@ -3599,10 +3838,14 @@ export function AnalyseOnboardingForm() {
                                   value={watch("homeLoanEMIDay") || undefined}
                                   month={watch("homeLoanEMIMonth") || undefined}
                                   onMonth={(m) =>
-                                    setValue("homeLoanEMIMonth", m)
+                                    persistValue("homeLoanEMIMonth", m)
                                   }
                                   onChange={(day) =>
-                                    setValue("homeLoanEMIDay", day)
+                                    persistValue("homeLoanEMIDay", day)
+                                  }
+                                  error={
+                                    errors.homeLoanEMIDay?.message ??
+                                    errors.homeLoanEMIMonth?.message
                                   }
                                 />
                               </div>
@@ -3807,6 +4050,15 @@ export function AnalyseOnboardingForm() {
                                           </option>
                                         ))}
                                       </select>
+                                      {errors.postOfficeSchemes?.[index]?.scheme
+                                        ?.message ? (
+                                        <p className="text-sm text-[#E24B4A]">
+                                          {
+                                            errors.postOfficeSchemes[index]
+                                              ?.scheme?.message
+                                          }
+                                        </p>
+                                      ) : null}
                                     </div>
                                     <Controller
                                       control={control}
@@ -3815,6 +4067,10 @@ export function AnalyseOnboardingForm() {
                                         <MoneyInput
                                           id={`postOfficeSchemes.${index}.amount`}
                                           label="Current holding / deposit"
+                                          error={
+                                            errors.postOfficeSchemes?.[index]
+                                              ?.amount?.message
+                                          }
                                           helper="Principal or balance you hold today"
                                           value={amountField.value ?? 0}
                                           onChange={(e) =>
@@ -3836,10 +4092,14 @@ export function AnalyseOnboardingForm() {
                                         ) || 0
                                       }
                                       onChange={(year) =>
-                                        setValue(
+                                        persistValue(
                                           `postOfficeSchemes.${index}.maturityYear` as const,
                                           year,
                                         )
+                                      }
+                                      error={
+                                        errors.postOfficeSchemes?.[index]
+                                          ?.maturityYear?.message
                                       }
                                       minYear={new Date().getFullYear()}
                                       maxYear={2060}
@@ -3935,16 +4195,17 @@ export function AnalyseOnboardingForm() {
                               error={errors.homePurchaseTarget?.message}
                               {...bindMoneyField("homePurchaseTarget")}
                             />
-                            <NumberInput
+                            <YearInput
+                              id="homePurchaseYear"
                               label="Target year"
                               value={watch("homePurchaseYear") || 0}
-                              onChange={(val: number) =>
-                                setValue("homePurchaseYear", Math.round(val))
+                              onChange={(year) =>
+                                persistValue("homePurchaseYear", year)
                               }
                               placeholder="e.g. 2028"
-                              min={2024}
+                              min={new Date().getFullYear()}
                               max={2060}
-                              step={1}
+                              error={errors.homePurchaseYear?.message}
                             />
                             <p className="sm:col-span-2 text-xs text-[#534AB7]">
                               Rule: Save 60% as down payment first.
@@ -3970,6 +4231,7 @@ export function AnalyseOnboardingForm() {
                               onChange={(val: number) =>
                                 setValue("retirementAge", Math.round(val))
                               }
+                              error={errors.retirementAge?.message}
                               placeholder="e.g. 60"
                               min={30}
                               max={100}
@@ -3977,14 +4239,25 @@ export function AnalyseOnboardingForm() {
                             />
                           </>
                         ) : null}
-                        {primaryGoal === "kids_education" ? (
+                        {lifeStage === "kids" ||
+                        primaryGoal === "kids_education" ? (
                           <>
                             <MoneyInput
                               id="kidsEducationFundTarget"
                               label="Kids education fund target"
+                              required={lifeStage === "kids"}
                               error={errors.kidsEducationFundTarget?.message}
                               {...bindMoneyField("kidsEducationFundTarget")}
                             />
+                            {lifeStage === "kids" ? (
+                              <MoneyInput
+                                id="kidsMarriageFundTarget"
+                                label="Kids marriage fund target"
+                                optional
+                                error={errors.kidsMarriageFundTarget?.message}
+                                {...bindMoneyField("kidsMarriageFundTarget")}
+                              />
+                            ) : null}
                             <p className="sm:col-span-2 text-xs text-[#534AB7]">
                               Add per-child target if you have multiple kids.
                             </p>
@@ -3997,11 +4270,11 @@ export function AnalyseOnboardingForm() {
                               label="Emergency fund target"
                               helper={
                                 emergencyFundSuggestion
-                                  ? `Suggested baseline: ${formatCurrency(emergencyFundSuggestion, "en-IN", "INR")}`
+                                  ? `Suggested baseline: ${formatCurrency(emergencyFundSuggestion, "en-IN", "INR")} (${emergencyMonthsNeeded} months of expenses)`
                                   : undefined
                               }
                               error={errors.emergencyFundTarget?.message}
-                              {...bindMoneyField("emergencyFundTarget")}
+                              {...emergencyFundTargetField}
                             />
                           </>
                         ) : null}
@@ -4013,16 +4286,17 @@ export function AnalyseOnboardingForm() {
                               error={errors.carPurchaseTarget?.message}
                               {...bindMoneyField("carPurchaseTarget")}
                             />
-                            <NumberInput
+                            <YearInput
+                              id="carPurchaseYear"
                               label="Target year"
                               value={watch("carPurchaseYear") || 0}
-                              onChange={(val: number) =>
-                                setValue("carPurchaseYear", Math.round(val))
+                              onChange={(year) =>
+                                persistValue("carPurchaseYear", year)
                               }
                               placeholder="e.g. 2028"
-                              min={2024}
+                              min={new Date().getFullYear()}
                               max={2060}
-                              step={1}
+                              error={errors.carPurchaseYear?.message}
                             />
                           </>
                         ) : null}

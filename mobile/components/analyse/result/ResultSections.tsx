@@ -5,13 +5,17 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
-import type { PriorityPlan } from "@/lib/priorityEngine";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { FIX_PLAN_PRICE_INR } from "@/lib/analyseEntitlement";
 import { Colors } from "@/constants/theme";
 import { ResultColors as C, badgeTone, inr } from "./format";
 import type { BucketView, ResultModel } from "./model";
+import {
+  profileSummaryLabels,
+  safetyNetHeading,
+  scoreGaugeTone,
+} from "./resultDerivations";
 import { SpeedoMeterMulti, SpeedoMeterSingle } from "./SpeedoMeter";
 
 const leftColor = (v: number) => (v >= 0 ? C.teal : C.red);
@@ -29,7 +33,7 @@ export function ResultHero({
       <Text style={styles.heroEyebrow}>Health report</Text>
       <Text style={styles.heroTitle}>Your financial health</Text>
       <Text style={styles.heroMeta}>
-        {profile.lifeStage} · {profile.cityTier} · {profile.primaryGoal}
+        {profileSummaryLabels(profile).join(" · ")}
       </Text>
       <View style={[styles.badge, { backgroundColor: tone.bg }]}>
         <Text style={[styles.badgeText, { color: tone.fg }]}>{model.band}</Text>
@@ -38,7 +42,7 @@ export function ResultHero({
         <Text style={styles.heroGaugeLabel}>Health score</Text>
         <SpeedoMeterSingle
           score={model.score}
-          tone={model.score < 40 ? "red" : model.score < 70 ? "amber" : "green"}
+          tone={scoreGaugeTone(model.score)}
           width={210}
           textColor="#FFFFFF"
           subTextColor="rgba(255,255,255,0.85)"
@@ -77,7 +81,10 @@ export function MonthlySummaryCard({ model }: { model: ResultModel }) {
           {inr(Math.abs(left))}
         </Text>
         <Text
-          style={[styles.tileFoot, { color: leftColor(left), fontWeight: "600" }]}
+          style={[
+            styles.tileFoot,
+            { color: leftColor(left), fontWeight: "600" },
+          ]}
         >
           {left >= 0 ? "available to invest" : "overspending"}
         </Text>
@@ -92,7 +99,9 @@ export function NetWorthCard({ model }: { model: ResultModel }) {
       <Text style={styles.eyebrow}>Live net worth summary</Text>
       <View style={styles.nwRow}>
         <Text style={styles.tileLabel}>Total assets</Text>
-        <Text style={[styles.nwValue, { color: C.ink }]}>{inr(model.assets)}</Text>
+        <Text style={[styles.nwValue, { color: C.ink }]}>
+          {inr(model.assets)}
+        </Text>
       </View>
       <View style={styles.nwRow}>
         <Text style={styles.tileLabel}>Total liabilities</Text>
@@ -107,8 +116,8 @@ export function NetWorthCard({ model }: { model: ResultModel }) {
         </Text>
       </View>
       <Text style={styles.smallNote}>
-        You are around the 62nd percentile compared to similar users by
-        life-stage and city tier.
+        Net worth is your total assets minus total liabilities, based on the
+        values you entered.
       </Text>
     </View>
   );
@@ -166,7 +175,9 @@ function BucketRow({ b }: { b: BucketView }) {
       {open ? (
         <View style={styles.items}>
           {b.items.length === 0 ? (
-            <Text style={styles.noItems}>No line items in this category yet.</Text>
+            <Text style={styles.noItems}>
+              No line items in this category yet.
+            </Text>
           ) : null}
           {b.items.map((item) => (
             <View key={item.label} style={styles.itemRow}>
@@ -211,11 +222,16 @@ export function BucketCapsSection({ model }: { model: ResultModel }) {
             </Text>
           </View>
           <View style={[styles.totalsRow, styles.totalsDivider]}>
-            <Text style={[styles.totalsLabel, { color: C.ink, fontWeight: "600" }]}>
+            <Text
+              style={[styles.totalsLabel, { color: C.ink, fontWeight: "600" }]}
+            >
               Amount left
             </Text>
             <Text
-              style={[styles.totalsValue, { color: leftColor(left), fontWeight: "700" }]}
+              style={[
+                styles.totalsValue,
+                { color: leftColor(left), fontWeight: "700" },
+              ]}
             >
               {inr(left)}
             </Text>
@@ -264,12 +280,12 @@ export function SafetyNetSection({
   onTermLearn: () => void;
 }) {
   const term = model.safetyItems.find((i) => i.id === "term");
+  const total = model.safetyItems.length;
   return (
     <View style={[styles.card, { borderWidth: 0 }]}>
-      <Text style={styles.h2}>Your financial safety net</Text>
+      <Text style={styles.h2}>{safetyNetHeading(total)}</Text>
       <Text style={styles.sub}>
-        Emergency fund · insurance cover · medical reserve · debt protection ·
-        goal readiness
+        {model.safetyItems.map((i) => i.title).join(" · ")}
       </Text>
       <View style={{ marginTop: 12, gap: 8 }}>
         {model.safetyItems.map((item) => {
@@ -300,7 +316,9 @@ export function SafetyNetSection({
         })}
       </View>
       {term?.infoText ? (
-        <Text style={[styles.smallNote, { marginTop: 8 }]}>{term.infoText}</Text>
+        <Text style={[styles.smallNote, { marginTop: 8 }]}>
+          {term.infoText}
+        </Text>
       ) : null}
       {model.termStatus === "missing" ? (
         <Pressable
@@ -313,12 +331,16 @@ export function SafetyNetSection({
           </Text>
         </Pressable>
       ) : null}
-      <Text style={styles.progressLabel}>{model.completeCount} of 5 in place</Text>
+      <Text style={styles.progressLabel}>
+        {model.completeCount} of {total} in place
+      </Text>
       <View style={styles.progressTrack}>
         <View
           style={[
             styles.progressFill,
-            { width: `${(model.completeCount / 5) * 100}%` },
+            {
+              width: `${total > 0 ? (model.completeCount / total) * 100 : 0}%`,
+            },
           ]}
         />
       </View>
@@ -334,42 +356,55 @@ const PAYWALL_CHECKLIST = [
   "Insurance gap checklist (educational)",
 ];
 
-function LockedStep({ n }: { n: number }) {
+function LockedStep({ n, title }: { n: number; title: string }) {
   return (
     <View style={styles.lockedRow} accessibilityLabel={`Step ${n} locked`}>
       <AppIcon name="lock" size={14} color={C.body} />
-      <Text style={styles.lockedText}>Step {n}: [blurred] — unlock to see</Text>
+      <Text style={styles.lockedText}>
+        Step {n}: {title} — unlock to see
+      </Text>
     </View>
   );
 }
 
 export function PlanTeaserSection({
   model,
-  priorityPlan,
+  surplusBreakdown,
   onUnlock,
 }: {
   model: ResultModel;
-  priorityPlan: PriorityPlan;
+  surplusBreakdown: boolean;
   onUnlock: () => void;
 }) {
-  const first = priorityPlan.priorities[0];
+  const { first, teaserTitles, moreCount } = model.planTeaser;
   return (
     <View style={[styles.card, { borderColor: "#DCD8F4" }]}>
       <Text style={styles.h2}>Your personalised 12-month plan</Text>
       <View style={styles.teaserBox}>
-        <Text style={styles.teaserStep}>
-          ✓ Step 1: {first?.title || "Emergency fund"}
-        </Text>
-        <Text style={styles.teaserAction}>
-          {first?.actionThisWeek || "Start building your safety layer."}
-        </Text>
-        <View style={{ marginTop: 12 }}>
-          <LockedStep n={2} />
-          <LockedStep n={3} />
-        </View>
-        <Text style={[styles.smallNote, { marginTop: 8 }]}>
-          + 8 more personalised steps
-        </Text>
+        {first ? (
+          <>
+            <Text style={styles.teaserStep}>✓ Step 1: {first.title}</Text>
+            {first.actionThisWeek ? (
+              <Text style={styles.teaserAction}>{first.actionThisWeek}</Text>
+            ) : null}
+          </>
+        ) : (
+          <Text style={styles.teaserAction}>
+            No open gaps right now. The full plan shows how to keep it that way.
+          </Text>
+        )}
+        {teaserTitles.length > 0 ? (
+          <View style={{ marginTop: 12 }}>
+            {teaserTitles.map((title, i) => (
+              <LockedStep key={`${i}-${title}`} n={i + 2} title={title} />
+            ))}
+          </View>
+        ) : null}
+        {moreCount > 0 ? (
+          <Text style={[styles.smallNote, { marginTop: 8 }]}>
+            + {moreCount} more personalised {moreCount === 1 ? "step" : "steps"}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.paywallCard}>
@@ -382,7 +417,7 @@ export function PlanTeaserSection({
           Finkoin — use them on partner perks where available. FK do not reduce
           this unlock price.
         </Text>
-        {priorityPlan.surplusBreakdown ? (
+        {surplusBreakdown ? (
           <View style={styles.surplus}>
             <SurplusRow label="Monthly Income" value={inr(model.income)} />
             <SurplusRow
@@ -419,9 +454,12 @@ export function PlanTeaserSection({
         <Pressable
           onPress={onUnlock}
           accessibilityRole="button"
-          style={({ pressed }) => [styles.unlockBtn, pressed && { opacity: 0.9 }]}
+          style={({ pressed }) => [
+            styles.unlockBtn,
+            pressed && { opacity: 0.9 },
+          ]}
         >
-          <Text style={styles.unlockText}>Get my complete financial plan →</Text>
+          <Text style={styles.unlockText}>{model.ctaCopy.title}</Text>
         </Pressable>
         <Text style={styles.ctaSub}>{model.ctaCopy.subText}</Text>
         <Text style={styles.ctaSub}>Educational only</Text>
@@ -484,8 +522,17 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
-  heroEyebrow: { fontSize: 14, fontWeight: "500", color: "rgba(255,255,255,0.9)" },
-  heroTitle: { marginTop: 4, fontSize: 28, fontWeight: "700", color: "#FFFFFF" },
+  heroEyebrow: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.9)",
+  },
+  heroTitle: {
+    marginTop: 4,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
   heroMeta: {
     marginTop: 4,
     fontSize: 14,
@@ -541,7 +588,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  tileLabel: { fontSize: 12, fontWeight: "600", color: C.label, marginBottom: 4 },
+  tileLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: C.label,
+    marginBottom: 4,
+  },
   tileValue: {
     fontSize: 22,
     fontWeight: "800",
@@ -550,7 +602,12 @@ const styles = StyleSheet.create({
   tileFoot: { marginTop: 4, fontSize: 12, fontWeight: "500", color: C.label },
   nwRow: { marginBottom: 12 },
   nwValue: { fontSize: 22, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  smallNote: { fontSize: 12, fontWeight: "500", lineHeight: 18, color: C.label },
+  smallNote: {
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 18,
+    color: C.label,
+  },
   bucket: {
     borderRadius: 16,
     borderWidth: 1,
@@ -693,7 +750,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   termLearnText: { fontSize: 12, fontWeight: "600", color: "#FFFFFF" },
-  progressLabel: { marginTop: 12, fontSize: 14, fontWeight: "600", color: C.body },
+  progressLabel: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.body,
+  },
   progressTrack: {
     marginTop: 8,
     height: 8,
@@ -733,7 +795,12 @@ const styles = StyleSheet.create({
   },
   paywallTitle: { fontSize: 18, fontWeight: "600", color: C.ink },
   paywallPrice: { fontSize: 14, fontWeight: "500", color: C.body },
-  paywallFk: { marginTop: 8, fontSize: 14, lineHeight: 20, color: Colors.primary },
+  paywallFk: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.primary,
+  },
   surplus: {
     marginTop: 12,
     borderRadius: 8,
@@ -757,7 +824,11 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
     paddingTop: 8,
   },
-  surplusTotalText: { fontSize: 14, fontWeight: "600", color: Colors.primaryDark },
+  surplusTotalText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.primaryDark,
+  },
   checkItem: { fontSize: 14, color: C.label },
   unlockBtn: {
     marginTop: 16,
@@ -775,7 +846,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: C.label,
   },
-  linksRow: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", columnGap: 16 },
+  linksRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 16,
+  },
   linkBtn: { minHeight: 44, justifyContent: "center" },
   linkText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
 });

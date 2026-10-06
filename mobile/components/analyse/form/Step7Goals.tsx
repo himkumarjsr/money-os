@@ -22,6 +22,7 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
     formState: { errors },
   } = useFormContext<AnalyseFormValues>();
   const primaryGoal = watch("primaryGoal");
+  const hasKids = watch("lifeStage") === "kids";
 
   return (
     <View style={formStyles.stepWrap}>
@@ -40,7 +41,9 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
                 accessibilityState={{ selected }}
                 style={[styles.goalCard, selected && styles.goalCardOn]}
               >
-                <Text style={styles.goalText}>{PRIMARY_GOAL_LABELS[value]}</Text>
+                <Text style={styles.goalText}>
+                  {PRIMARY_GOAL_LABELS[value]}
+                </Text>
               </Pressable>
             );
           })}
@@ -52,7 +55,10 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
         <SectionTitle>Goal amounts and timelines</SectionTitle>
         {primaryGoal === "buy_home" ? (
           <>
-            <MoneyField name="homePurchaseTarget" label="Home purchase target" />
+            <MoneyField
+              name="homePurchaseTarget"
+              label="Home purchase target"
+            />
             <ClampNumberField
               label="Target year"
               value={watch("homePurchaseYear") || 0}
@@ -61,6 +67,8 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
               min={2024}
               max={2060}
               decimal={false}
+              clampOnBlur
+              name="homePurchaseYear"
             />
             <Text style={styles.purpleNote}>
               Rule: Save 60% as down payment first.
@@ -86,15 +94,24 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
               min={30}
               max={100}
               decimal={false}
+              clampOnBlur
+              name="retirementAge"
             />
           </>
         ) : null}
-        {primaryGoal === "kids_education" ? (
+        {hasKids || primaryGoal === "kids_education" ? (
           <>
             <MoneyField
               name="kidsEducationFundTarget"
               label="Kids education fund target"
+              required={hasKids}
             />
+            {hasKids ? (
+              <MoneyField
+                name="kidsMarriageFundTarget"
+                label="Kids marriage fund target"
+              />
+            ) : null}
             <Text style={styles.purpleNote}>
               Add per-child target if you have multiple kids.
             </Text>
@@ -106,8 +123,8 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
             label="Emergency fund target"
             helper={
               live.emergencyFundSuggestion
-                ? `Suggested baseline: ${formatCurrencyINR(live.emergencyFundSuggestion)}`
-                : undefined
+                ? `Suggested: ${formatCurrencyINR(live.emergencyFundSuggestion)} — ${live.emergencyFundMonths} months of your monthly expenses and obligations, based on your life stage`
+                : `We recommend ${live.emergencyFundMonths} months of expenses for your life stage — add expenses to see an amount`
             }
           />
         ) : null}
@@ -122,6 +139,8 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
               min={2024}
               max={2060}
               decimal={false}
+              clampOnBlur
+              name="carPurchaseYear"
             />
           </>
         ) : null}

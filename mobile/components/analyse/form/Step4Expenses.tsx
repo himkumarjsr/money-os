@@ -99,6 +99,7 @@ export function Step4Expenses({ live }: Pick<StepProps, "live">) {
             placeholder="Select"
             allowEmpty
             onChange={(v) => setValue("parentsCity", v)}
+            name="parentsCity"
           />
           <Card>
             <YesNoQuestion

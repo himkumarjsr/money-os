@@ -1,3 +1,5 @@
+import { debtPayoffNumbers } from "@/lib/priorityEngine";
+
 export type FixPlanPdfPhase = {
   phase: number;
   title: string;
@@ -39,7 +41,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
     ...(pp?.debts?.length
       ? (pp.debts as any[]).map(
           (d) =>
-            `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")} @ ${d.rate}% · EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo · extra ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo · ~${d.monthsToClearWithExtra || 0} mo to clear`,
+            `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")} @ ${d.rate}% · EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo · extra ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo · ~${debtPayoffNumbers(d).monthsNow} mo to clear`,
         )
       : ["Debt: none in engine plan"]),
     emerg && Number(emerg.gap || 0) > 0
@@ -73,9 +75,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
       subtitle: "Protection and foundation",
       color: [186, 117, 23] as [number, number, number],
       tasks:
-        phase2Tasks.length > 0
-          ? phase2Tasks
-          : ["Build financial foundation"],
+        phase2Tasks.length > 0 ? phase2Tasks : ["Build financial foundation"],
       outcomes: [
         typeof expl?.in12Months === "string"
           ? expl.in12Months.slice(0, 160)
@@ -88,9 +88,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
       subtitle: "Wealth and consistency",
       color: [29, 158, 117] as [number, number, number],
       tasks:
-        phase3Tasks.length > 0
-          ? phase3Tasks
-          : ["Grow wealth systematically"],
+        phase3Tasks.length > 0 ? phase3Tasks : ["Grow wealth systematically"],
       outcomes: ["Financial independence on track"],
     },
     {

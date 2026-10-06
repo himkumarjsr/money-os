@@ -39,6 +39,7 @@ import {
   FixPlanError,
   FixPlanLoader,
 } from "@/components/analyse/fixplan/FixPlanStates";
+import { openPriorities } from "@/lib/fixPlanMerge";
 import type { PriorityItem } from "@/lib/priorityEngine";
 import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
 
@@ -66,14 +67,13 @@ function FixPlanScreen() {
     if (!hasAccess) router.replace("/analyse/result");
   }, [hasInitialized, isLoggedIn, hasAccess]);
 
-  const { aiPlan, aiLoading, aiError, refreshing, load, refresh } = useFixPlan(
-    {
+  const { aiPlan, aiLoading, aiError, refreshing, notice, retry, refresh } =
+    useFixPlan({
       profile,
       result,
       userId: user?.id,
       enabled: allowed && storeHydrated && !!profile && !!result,
-    },
-  );
+    });
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace("/analyse/result");
@@ -107,20 +107,14 @@ function FixPlanScreen() {
     return (
       <>
         {header}
-        <FixPlanError message={aiError} onRetry={() => void load(true)} />
+        <FixPlanError message={aiError} onRetry={() => void retry()} />
       </>
     );
   }
 
   const pp = aiPlan.priorityPlan;
   const expl = aiPlan.explanations;
-  const visiblePriorities = (pp?.priorities || []).filter(
-    (p: PriorityItem) => {
-      const gap = Number(p?.gap || 0);
-      const monthly = Number(p?.monthlyContribution || 0);
-      return gap > 0 || monthly > 0;
-    },
-  );
+  const visiblePriorities: PriorityItem[] = openPriorities(pp);
   const monthlyPlanRows = pp?.monthlyPlan || [];
   const goal = pp?.goals?.[0];
 
@@ -159,13 +153,23 @@ function FixPlanScreen() {
           />
         }
       >
+        {notice ? (
+          <View
+            style={styles.info}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
+            <Text style={styles.infoText}>{notice}</Text>
+          </View>
+        ) : null}
+
         {aiError ? (
           <View style={styles.notice}>
             <Text style={styles.noticeText}>
               Couldn&apos;t refresh your plan. {aiError}
             </Text>
             <Pressable
-              onPress={() => void load(true)}
+              onPress={() => void refresh()}
               style={styles.noticeBtn}
               accessibilityRole="button"
             >
@@ -210,10 +214,7 @@ function FixPlanScreen() {
 
         {goal ? <GoalPlanCard goal={goal} /> : null}
 
-        <ScoreProjection
-          scoreToday={pp?.scoreToday || 0}
-          scoreAfter={pp?.scoreAfter12Months || 0}
-        />
+        <ScoreProjection plan={pp} />
 
         {pp?.fdSuggestion ? <FdSuggestionCard fd={pp.fdSuggestion} /> : null}
 
@@ -273,6 +274,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   noticeText: { fontSize: FontSize.md, color: "#B91C1C", lineHeight: 18 },
+  info: {
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.primaryMedium,
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  infoText: { fontSize: 14, color: Colors.primaryDark, lineHeight: 20 },
   noticeBtn: {
     marginTop: Spacing.sm,
     minHeight: 44,

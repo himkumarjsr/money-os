@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { useFormContext } from "react-hook-form";
 import type { AnalyseFormValues } from "@/lib/analyse-form-schema";
-import { MoneyField, TotalPanel, formStyles } from "./fields";
+import { MoneyField, Note, TotalPanel, formStyles } from "./fields";
 import type { StepProps } from "./shared";
 
 export function Step2Income({ live }: Pick<StepProps, "live">) {
@@ -22,6 +22,7 @@ export function Step2Income({ live }: Pick<StepProps, "live">) {
         name="otherIncome"
         label="Other income — freelance, rental, business"
       />
+      {live.debtWarning ? <Note tone="red">{live.debtWarning}</Note> : null}
       <TotalPanel label="Total monthly income" amount={live.totalIncome} />
     </View>
   );

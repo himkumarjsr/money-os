@@ -717,6 +717,50 @@ const formShape = {
 
 const baseFormSchema = z.object(formShape);
 
+/** A row only counts when it has a real premium; a defaulted 0 is not an answer. */
+function refineOtherInsurance(
+  data: {
+    hasOtherInsurance?: boolean;
+    otherInsurancePremiumInput?: number;
+    otherInsurancePremiums?: { premiumAmount?: number }[];
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (!data.hasOtherInsurance || (data.otherInsurancePremiumInput ?? 0) > 0) {
+    return;
+  }
+  const rows = data.otherInsurancePremiums ?? [];
+  if (!rows.some((row) => (row.premiumAmount ?? 0) > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["otherInsurancePremiums"],
+      message: "Add at least one other insurance premium",
+    });
+  }
+  rows.forEach((row, index) => {
+    if (!((row.premiumAmount ?? 0) > 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["otherInsurancePremiums", index, "premiumAmount"],
+        message: "Enter premium amount",
+      });
+    }
+  });
+}
+
+function refineKidsEducationTarget(
+  data: { lifeStage?: string; kidsEducationFundTarget?: number },
+  ctx: z.RefinementCtx,
+) {
+  if (data.lifeStage === "kids" && !((data.kidsEducationFundTarget ?? 0) > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["kidsEducationFundTarget"],
+      message: "Enter kids education fund target",
+    });
+  }
+}
+
 const formSchema = baseFormSchema.superRefine((data, ctx) => {
   if (data.lifeStage === "kids") {
     if (!data.numberOfKids) {
@@ -780,28 +824,7 @@ const formSchema = baseFormSchema.superRefine((data, ctx) => {
     }
   }
 
-  if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
-    const validRows =
-      data.otherInsurancePremiums?.filter(
-        (row) => row.premiumAmount !== undefined,
-      ) ?? [];
-    if (validRows.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["otherInsurancePremiums"],
-        message: "Add at least one other insurance premium",
-      });
-    }
-    data.otherInsurancePremiums?.forEach((row, index) => {
-      if (row.premiumAmount === undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["otherInsurancePremiums", index, "premiumAmount"],
-          message: "Enter premium amount",
-        });
-      }
-    });
-  }
+  refineOtherInsurance(data, ctx);
 
   if (data.ownsHome) {
     if (!data.homeMarketValue && data.homeMarketValue !== 0) {
@@ -837,13 +860,7 @@ const formSchema = baseFormSchema.superRefine((data, ctx) => {
     }
   }
 
-  if (data.lifeStage === "kids" && data.kidsEducationFundTarget === undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["kidsEducationFundTarget"],
-      message: "Enter kids education fund target",
-    });
-  }
+  refineKidsEducationTarget(data, ctx);
 });
 
 export const step1Schema = baseFormSchema
@@ -1013,28 +1030,7 @@ export const step5Schema = baseFormSchema
       }
     }
 
-    if (data.hasOtherInsurance && !data.otherInsurancePremiumInput) {
-      const validRows =
-        data.otherInsurancePremiums?.filter(
-          (row) => row.premiumAmount !== undefined,
-        ) ?? [];
-      if (validRows.length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["otherInsurancePremiums"],
-          message: "Add at least one other insurance premium",
-        });
-      }
-      data.otherInsurancePremiums?.forEach((row, index) => {
-        if (row.premiumAmount === undefined) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["otherInsurancePremiums", index, "premiumAmount"],
-            message: "Enter premium amount",
-          });
-        }
-      });
-    }
+    refineOtherInsurance(data, ctx);
   });
 
 export const step6Schema = baseFormSchema
@@ -1130,19 +1126,60 @@ export const step7Schema = baseFormSchema
     lifeStage: true,
   })
   .superRefine((data, ctx) => {
-    if (
-      data.lifeStage === "kids" &&
-      data.kidsEducationFundTarget === undefined
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["kidsEducationFundTarget"],
-        message: "Enter kids education fund target",
-      });
-    }
+    refineKidsEducationTarget(data, ctx);
   });
 
 export const fullAnalyseSchema = formSchema;
+
+const STEP_SCHEMAS = [
+  step1Schema,
+  step2Schema,
+  step3Schema,
+  step4Schema,
+  step5Schema,
+  step6Schema,
+  step7Schema,
+] as const;
+
+function stepFieldNames(schema: z.ZodTypeAny): string[] {
+  const inner = schema instanceof z.ZodEffects ? schema.innerType() : schema;
+  return inner instanceof z.ZodObject ? Object.keys(inner.shape) : [];
+}
+
+const STEP_FIELDS: string[][] = STEP_SCHEMAS.map(stepFieldNames);
+
+/** 1-based step that owns a field; fields not on any step map to the last step. */
+export function analyseStepForField(field: string): number {
+  // lifeStage is picked into step 7 for its rules but is entered on step 1.
+  const index = STEP_FIELDS.findIndex((fields) => fields.includes(field));
+  return index === -1 ? STEP_SCHEMAS.length : index + 1;
+}
+
+export type AnalyseSubmitIssue = { path: (string | number)[]; message: string };
+
+/**
+ * Final-submit check against the full cross-field schema. Returns the earliest
+ * step with a problem and its issues, or null when the profile is complete.
+ */
+export function findFirstInvalidAnalyseStep(
+  values: unknown,
+): { step: number; issues: AnalyseSubmitIssue[] } | null {
+  const parsed = fullAnalyseSchema.safeParse(values);
+  if (parsed.success) return null;
+  const issues = parsed.error.issues.map((issue) => ({
+    path: issue.path,
+    message: issue.message,
+  }));
+  const step = Math.min(
+    ...issues.map((issue) => analyseStepForField(String(issue.path[0] ?? ""))),
+  );
+  return {
+    step,
+    issues: issues.filter(
+      (issue) => analyseStepForField(String(issue.path[0] ?? "")) === step,
+    ),
+  };
+}
 
 export function toMonthlyEquivalent(
   amount: number | undefined,

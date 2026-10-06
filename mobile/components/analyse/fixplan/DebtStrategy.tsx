@@ -1,57 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
+import { debtPayoffNumbers } from "@/lib/priorityEngine";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { shared } from "./shared";
 
 type Props = { debts: any[]; debtStrategy?: string };
-
-/** Payoff maths copied from the web page's inline debt card. */
-function debtNumbers(debt: any) {
-  const extraPayment = Number(debt.extraEMIRecommended || 0);
-  const rateM = Number(debt.rate || debt.interestRate || 12) / 100 / 12;
-  const outstanding = Number(debt.outstanding || debt.balance || 0);
-  const currentEMI = Number(debt.emi || debt.monthlyEMI || 0);
-  const totalPayment = currentEMI + extraPayment;
-  let monthsNow =
-    extraPayment > 0 && totalPayment > 0 && rateM > 0 && outstanding > 0
-      ? Math.ceil(
-          -Math.log(1 - (rateM * outstanding) / totalPayment) /
-            Math.log(1 + rateM),
-        )
-      : Number(debt.monthsToClearWithExtra || 0);
-  if (!Number.isFinite(monthsNow) || monthsNow < 0 || monthsNow > 600) {
-    monthsNow = Number(debt.monthsToClearWithExtra || 0);
-  }
-  let monthsOriginal =
-    currentEMI > 0 && rateM > 0 && outstanding > 0
-      ? Math.ceil(
-          -Math.log(1 - (rateM * outstanding) / currentEMI) /
-            Math.log(1 + rateM),
-        )
-      : 0;
-  if (
-    !Number.isFinite(monthsOriginal) ||
-    monthsOriginal < 0 ||
-    monthsOriginal > 600
-  ) {
-    monthsOriginal = 0;
-  }
-  const monthsSaved = Math.max(0, monthsOriginal - monthsNow);
-  const interestSaved = Math.round(
-    extraPayment > 0
-      ? Math.max(0, Number(debt.extraEMIRecommended || 0)) *
-          Math.max(0, Number(debt.monthsToClearWithExtra || 0)) *
-          0.35
-      : 0,
-  );
-  return {
-    extraPayment,
-    outstanding,
-    currentEMI,
-    monthsNow,
-    monthsSaved,
-    interestSaved,
-  };
-}
 
 export function DebtStrategy({ debts, debtStrategy }: Props) {
   return (
@@ -64,7 +16,7 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
           </Text>
         </View>
         {debts.map((debt, i) => {
-          const n = debtNumbers(debt);
+          const n = debtPayoffNumbers(debt);
           const label =
             debt.displayName || debt.label || debt.name || debt.type;
           const cells: [string, string][] = [
@@ -107,9 +59,11 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
                       ? ` (save ${n.monthsSaved} months vs EMI-only)`
                       : ""}
                   </Text>
-                  <Text style={styles.saveAmount}>
-                    Save ₹{n.interestSaved.toLocaleString("en-IN")} (est.)
-                  </Text>
+                  {n.interestSaved > 0 ? (
+                    <Text style={styles.saveAmount}>
+                      Save ₹{n.interestSaved.toLocaleString("en-IN")} interest
+                    </Text>
+                  ) : null}
                 </View>
               ) : null}
             </View>

@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { scoreBand } from "@/lib/financialEngine";
 import { Colors, Radius, Shadow, Spacing } from "@/constants/theme";
 
 /** `Math.round(n).toLocaleString("en-IN")` — the web page's most common money format. */
@@ -15,11 +16,21 @@ export const urgencyColor = (urgency: string) =>
       ? "#BA7517"
       : "#1D9E75";
 
-export const getScoreColor = (s: number) =>
-  s < 40 ? "#E24B4A" : s < 70 ? "#BA7517" : "#1D9E75";
+const SCORE_COLOR = {
+  critical: "#E24B4A",
+  warning: "#BA7517",
+  good: "#1D9E75",
+} as const;
 
-export const getScoreBg = (s: number) =>
-  s < 40 ? "#FCEBEB" : s < 70 ? "#FAEEDA" : "#E1F5EE";
+const SCORE_BG = {
+  critical: "#FCEBEB",
+  warning: "#FAEEDA",
+  good: "#E1F5EE",
+} as const;
+
+export const getScoreColor = (s: number) => SCORE_COLOR[scoreBand(s)];
+
+export const getScoreBg = (s: number) => SCORE_BG[scoreBand(s)];
 
 export const shared = StyleSheet.create({
   card: {

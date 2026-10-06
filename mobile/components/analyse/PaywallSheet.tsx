@@ -6,7 +6,11 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { FIX_PLAN_PRICE_INR } from "@/lib/analyseEntitlement";
+import {
+  FIX_PLAN_PRICE_INR,
+  PAYMENTS_ENABLED,
+} from "@/lib/analyseEntitlement";
+import { paywallConfirmLabel, paywallPriceNote } from "@/lib/paywallCopy";
 import { Colors } from "@/constants/theme";
 
 const DEFAULT_BULLETS = [
@@ -34,6 +38,7 @@ export function PaywallSheet({
   subtitle = "Your complete AI roadmap is ready to unlock.",
   bulletPoints = DEFAULT_BULLETS,
 }: Props) {
+  const priceNote = paywallPriceNote(PAYMENTS_ENABLED);
   const handleConfirm = () => {
     onClose();
     router.push("/analyse/fixplan");
@@ -70,6 +75,7 @@ export function PaywallSheet({
       <View style={styles.priceCard}>
         <Text style={styles.priceEyebrow}>Price</Text>
         <Text style={styles.price}>{priceLabel}</Text>
+        {priceNote ? <Text style={styles.priceNote}>{priceNote}</Text> : null}
       </View>
 
       <View style={styles.bullets}>
@@ -85,7 +91,12 @@ export function PaywallSheet({
         accessibilityRole="button"
         style={({ pressed }) => [styles.cta, pressed && { opacity: 0.9 }]}
       >
-        <Text style={styles.ctaText}>Confirm and unlock</Text>
+        <Text style={styles.ctaText}>
+          {paywallConfirmLabel({
+            paymentsEnabled: PAYMENTS_ENABLED,
+            priceInr: FIX_PLAN_PRICE_INR,
+          })}
+        </Text>
       </Pressable>
 
       <Text style={styles.foot}>Educational only.</Text>
@@ -137,6 +148,7 @@ const styles = StyleSheet.create({
     color: "#7A7871",
   },
   price: { fontSize: 24, fontWeight: "700", color: "#111110" },
+  priceNote: { marginTop: 4, fontSize: 13, color: "#5F5E5A" },
   bullets: { marginTop: 16, gap: 8 },
   bullet: { fontSize: 14, color: "#334155" },
   cta: {

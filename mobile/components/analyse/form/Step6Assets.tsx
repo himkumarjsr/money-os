@@ -26,6 +26,7 @@ import {
   YearSelect,
   YesNoQuestion,
   formStyles,
+  usePersistField,
 } from "./fields";
 import {
   CUSTOM_INVESTMENT_TYPE_OPTIONS,
@@ -47,6 +48,7 @@ const INVESTMENT_CACHE_HELPER = "Investment cache";
 
 export function Step6Assets({ live }: Pick<StepProps, "live">) {
   const { control, watch, setValue } = useFormContext<AnalyseFormValues>();
+  const persistValue = usePersistField();
   const [liquidMfInfoOpen, setLiquidMfInfoOpen] = useState(false);
   const {
     fields: customInvestmentFields,
@@ -73,6 +75,7 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
           label="FD interest rate % (optional)"
           value={watch("fdRate") || 0}
           onChange={(val) => setValue("fdRate", val)}
+          name="fdRate"
           placeholder="e.g. 7.1"
           suffix="%"
           min={0}
@@ -84,14 +87,13 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
           helper="Year your FD matures"
           value={watch("fdMaturityYear") || 0}
           onChange={(year) => {
-            setValue("fdMaturityYear", year);
             const now = new Date().getFullYear();
-            if (year >= now) {
-              setValue("fdTenureYears", year - now);
-            }
+            if (year >= now) setValue("fdTenureYears", year - now);
+            persistValue("fdMaturityYear", year);
           }}
           minYear={nowYear}
           maxYear={2060}
+          name="fdMaturityYear"
         />
         <Hint tone="info">
           💡 RBI insures max ₹5 lakh per depositor per bank. Keep FD in multiple
@@ -141,8 +143,7 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
           {liquidMfInfoOpen ? (
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
-                A liquid mutual fund invests in government securities and
-                bonds.
+                A liquid mutual fund invests in government securities and bonds.
               </Text>
               <Text style={styles.infoText}>
                 <Text style={styles.infoStrong}>Returns:</Text> 6.5-7% per year
@@ -153,17 +154,20 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
                 Why better than FD for emergency:
               </Text>
               <Text style={styles.infoText}>
-                {"•  No penalty to withdraw\n•  Money in account within 24 hours\n•  Same or slightly lower returns\n•  Can invest ₹500 minimum"}
+                {
+                  "•  No penalty to withdraw\n•  Money in account within 24 hours\n•  Same or slightly lower returns\n•  Can invest ₹500 minimum"
+                }
               </Text>
               <Text style={[styles.infoText, styles.infoStrong]}>
                 Good options to consider:
               </Text>
               <Text style={styles.infoText}>
-                {"•  SBI Liquid Fund\n•  HDFC Liquid Fund\n•  Parag Parikh Liquid Fund"}
+                {
+                  "•  SBI Liquid Fund\n•  HDFC Liquid Fund\n•  Parag Parikh Liquid Fund"
+                }
               </Text>
               <Text style={formStyles.small}>
-                This is not investment advice. Please research before
-                investing.
+                This is not investment advice. Please research before investing.
               </Text>
             </View>
           ) : null}
@@ -196,7 +200,9 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
         />
 
         <View style={styles.erPanel}>
-          <Text style={formStyles.rowTitle}>Your accessible emergency fund</Text>
+          <Text style={formStyles.rowTitle}>
+            Your accessible emergency fund
+          </Text>
           <View style={{ gap: 6, marginTop: 12 }}>
             <ErRow
               label="Savings"
@@ -268,7 +274,8 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
             <DayOfMonthPicker
               label="Which date is your SIP auto-debited? (optional)"
               value={watch("sipAutoDebitDay") || undefined}
-              onChange={(day) => setValue("sipAutoDebitDay", day)}
+              onChange={(day) => persistValue("sipAutoDebitDay", day)}
+              dayName="sipAutoDebitDay"
             />
           ) : null}
           {(watch("monthlyPPFContribution") ?? 0) > 0 ||
@@ -276,7 +283,8 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
             <DayOfMonthPicker
               label="Which date do you deposit to PPF? (optional)"
               value={watch("ppfDepositDay") || undefined}
-              onChange={(day) => setValue("ppfDepositDay", day)}
+              onChange={(day) => persistValue("ppfDepositDay", day)}
+              dayName="ppfDepositDay"
             />
           ) : null}
         </Card>
@@ -290,7 +298,9 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
         </Card>
         <Card style={{ gap: 12 }}>
           <View style={styles.rowBetween}>
-            <Text style={[styles.cardSub, { flex: 1 }]}>Custom investments</Text>
+            <Text style={[styles.cardSub, { flex: 1 }]}>
+              Custom investments
+            </Text>
             <SecondaryButton
               label="Add other investment +"
               disabled={customInvestmentFields.length >= 5}
@@ -317,8 +327,10 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
                 }
                 options={CUSTOM_INVESTMENT_TYPE_OPTIONS}
                 onChange={(v) => {
-                  if (v) setValue(`customInvestments.${index}.type` as const, v);
+                  if (v)
+                    setValue(`customInvestments.${index}.type` as const, v);
                 }}
+                name={`customInvestments.${index}.type`}
               />
               <MoneyField
                 name={`customInvestments.${index}.currentValue` as const}
@@ -366,8 +378,10 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
                   label="Which date is your home loan EMI debited? (optional)"
                   value={watch("homeLoanEMIDay") || undefined}
                   month={watch("homeLoanEMIMonth") || undefined}
-                  onMonth={(m) => setValue("homeLoanEMIMonth", m)}
-                  onChange={(day) => setValue("homeLoanEMIDay", day)}
+                  onMonth={(m) => persistValue("homeLoanEMIMonth", m)}
+                  onChange={(day) => persistValue("homeLoanEMIDay", day)}
+                  monthName="homeLoanEMIMonth"
+                  dayName="homeLoanEMIDay"
                 />
               ) : null}
             </>
@@ -464,7 +478,12 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
             <View style={{ gap: 16 }}>
               {postOfficeSchemeFields.map((field, index) => (
                 <View key={field.id} style={styles.innerCard}>
-                  <View style={[styles.rowBetween, { marginTop: -8, marginRight: -10 }]}>
+                  <View
+                    style={[
+                      styles.rowBetween,
+                      { marginTop: -8, marginRight: -10 },
+                    ]}
+                  >
                     <Text style={formStyles.rowTitle}>Scheme {index + 1}</Text>
                     <RemoveX onPress={() => removePostOfficeScheme(index)} />
                   </View>
@@ -477,10 +496,15 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
                     options={SCHEME_OPTIONS}
                     onChange={(v) => {
                       if (!v) return;
-                      setValue(`postOfficeSchemes.${index}.scheme` as const, v, {
-                        shouldDirty: true,
-                      });
+                      setValue(
+                        `postOfficeSchemes.${index}.scheme` as const,
+                        v,
+                        {
+                          shouldDirty: true,
+                        },
+                      );
                     }}
+                    name={`postOfficeSchemes.${index}.scheme`}
                   />
                   <MoneyField
                     name={`postOfficeSchemes.${index}.amount` as const}
@@ -496,13 +520,14 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
                       ) || 0
                     }
                     onChange={(year) =>
-                      setValue(
+                      persistValue(
                         `postOfficeSchemes.${index}.maturityYear` as const,
                         year,
                       )
                     }
                     minYear={nowYear}
                     maxYear={2060}
+                    name={`postOfficeSchemes.${index}.maturityYear`}
                   />
                 </View>
               ))}

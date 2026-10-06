@@ -1,4 +1,5 @@
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import type { PriorityItem } from "@/lib/priorityEngine";
 import { monthsForPriority } from "@/lib/fixPlanMerge";
 import { siteBase } from "@/lib/splitApi";
@@ -11,7 +12,11 @@ type Props = {
   explanation?: string;
 };
 
-export function PriorityCard({ priority: p, monthlySurplus, explanation }: Props) {
+export function PriorityCard({
+  priority: p,
+  monthlySurplus,
+  explanation,
+}: Props) {
   const isTermTopUp = p.id === "term_insurance" && p.status === "partial";
   const urgency = isTermTopUp ? "high" : p.urgency;
   const isInsurance = p.id === "term_insurance" || p.id === "health_insurance";
@@ -89,7 +94,9 @@ export function PriorityCard({ priority: p, monthlySurplus, explanation }: Props
 
       {isInsurance ? (
         <Pressable
-          onPress={() => void Linking.openURL(`${siteBase()}${learnPath}`)}
+          onPress={() =>
+            void WebBrowser.openBrowserAsync(`${siteBase()}${learnPath}`)
+          }
           style={styles.learn}
           accessibilityRole="link"
         >

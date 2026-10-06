@@ -16,14 +16,23 @@ import {
   assessTermCover,
   medicalEmergencyTarget,
   monthlyTotalIncome,
+  scoreBand,
 } from "@/lib/financialEngine";
 import {
   getEpfContributionMonthly,
   getInHandOutflow,
   getUnallocatedIncome,
   getUniversalBucketActuals,
+  getUniversalCaps,
 } from "@/lib/universal-buckets";
 import { getBucketBreakdown } from "@/lib/bucket-breakdown";
+import {
+  SCORE_BAND_UI,
+  deriveCtaCopy,
+  derivePlanTeaser,
+  emergencyFundCheck,
+  profileSummaryLabels,
+} from "./resultModel";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
@@ -73,24 +82,17 @@ export default function AnalyseResultPage() {
     void restoreData();
   }, [user?.id, result, lastSubmission, hydrateFromSnapshot]);
 
-  const priorityPlan = useMemo(() => {
-    if (!lastSubmission) return null;
-    const stableResult = result ?? analyseFinances(lastSubmission);
-    const bucketActualsForPlan = getUniversalBucketActuals(lastSubmission);
-    return buildPriorityPlan(lastSubmission, {
-      needsActual: bucketActualsForPlan.needs,
-      loansActual: bucketActualsForPlan.loans,
-      wantsActual: bucketActualsForPlan.wants,
-      investmentActual: bucketActualsForPlan.investment,
-      overallScore: stableResult.overallScore,
-    });
-  }, [lastSubmission, result]);
-
-  const reportScore = result?.overallScore ?? 0;
   const analysis = useMemo(() => {
     if (!lastSubmission) return null;
     return result ?? analyseFinances(lastSubmission);
   }, [lastSubmission, result]);
+
+  const priorityPlan = useMemo(() => {
+    if (!lastSubmission || !analysis) return null;
+    return buildPriorityPlan(lastSubmission, analysis);
+  }, [lastSubmission, analysis]);
+
+  const reportScore = result?.overallScore ?? 0;
 
   useEffect(() => {
     if (!hasHydrated || !result || !lastSubmission || !priorityPlan) return;
@@ -166,13 +168,7 @@ export default function AnalyseResultPage() {
   const profile = lastSubmission;
   const score = result?.overallScore ?? analysis?.overallScore ?? 0;
 
-  const scoreBadgeTone =
-    score < 40
-      ? "bg-[#FDEDED] text-[#991B1B]"
-      : score < 70
-        ? "bg-[#FFF4E5] text-[#92400E]"
-        : "bg-[#DCFCE7] text-[#166534]";
-  const scoreLabel = score < 40 ? "Critical" : score < 70 ? "Warning" : "Good";
+  const scoreUi = SCORE_BAND_UI[scoreBand(score)];
 
   const assets = analysis?.totalAssets || 0;
   const liabilities = analysis?.totalLiabilities || 0;
@@ -210,48 +206,45 @@ export default function AnalyseResultPage() {
   // EPF is deducted at source — not paid from in-hand, so exclude from surplus/outflow.
   const totalOutflow = getInHandOutflow(profile);
   const amountLeftInHand = getUnallocatedIncome(profile);
-  const buckets = [
-    {
-      key: "needs",
-      label: "Needs",
-      capPercent: 30,
-      actual: needsActual,
-      capAmount: income * 0.3,
-      details: "Housing + essentials + family support",
-    },
-    {
-      key: "wants",
-      label: "Wants",
-      capPercent: 5,
-      actual: lifestyleActual,
-      capAmount: income * 0.05,
-      details: "Shopping, entertainment and lifestyle spends",
-    },
-    {
-      key: "security",
-      label: "Insurance premiums",
-      capPercent: 5,
-      actual: securityActual,
-      capAmount: income * 0.05,
-      details: "Term, health, motor and other insurance premiums (monthly)",
-    },
-    {
-      key: "loans",
-      label: "Loans",
-      capPercent: 40,
-      actual: loansActual,
-      capAmount: income * 0.4,
-      details: "All monthly debt obligations",
-    },
-    {
-      key: "investment",
-      label: "Investment",
-      capPercent: 20,
-      actual: investmentActual,
-      capAmount: income * 0.2,
-      details: "SIP, RD, NPS, PPF, EPF, SSY and other monthly contributions",
-    },
-  ];
+  const caps = getUniversalCaps(profile);
+  const buckets = (
+    [
+      {
+        key: "needs",
+        label: "Needs",
+        actual: needsActual,
+        details: "Housing + essentials + family support",
+      },
+      {
+        key: "wants",
+        label: "Wants",
+        actual: lifestyleActual,
+        details: "Shopping, entertainment and lifestyle spends",
+      },
+      {
+        key: "security",
+        label: "Insurance premiums",
+        actual: securityActual,
+        details: "Term, health, motor and other insurance premiums (monthly)",
+      },
+      {
+        key: "loans",
+        label: "Loans",
+        actual: loansActual,
+        details: "All monthly debt obligations",
+      },
+      {
+        key: "investment",
+        label: "Investment",
+        actual: investmentActual,
+        details: "SIP, RD, NPS, PPF, EPF, SSY and other monthly contributions",
+      },
+    ] as const
+  ).map((b) => ({
+    ...b,
+    capPercent: Math.round(caps[b.key] * 100),
+    capAmount: income * caps[b.key],
+  }));
 
   const termAssessment = assessTermCover({
     hasTermInsurance: profile?.hasTermInsurance ?? false,
@@ -265,27 +258,21 @@ export default function AnalyseResultPage() {
     : 200_000;
   const medEmergencyCurrent = profile?.medicalEmergencyFund || 0;
 
+  const emergency = emergencyFundCheck(
+    profile,
+    needsMonthly,
+    analysis?.realEmergencyFund?.monthsCovered || 0,
+  );
+
   const safetyItems = [
     {
       id: "emergency",
       title: "Emergency fund",
       current: analysis?.realEmergencyFund?.total || 0,
-      target:
-        needsMonthly *
-        (profile?.lifeStage === "kids"
-          ? 12
-          : profile?.lifeStage === "married"
-            ? 9
-            : 6),
+      target: emergency.target,
       formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
       formatTarget: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
-      isOk:
-        (analysis?.realEmergencyFund?.monthsCovered || 0) >=
-        (profile?.lifeStage === "kids"
-          ? 9
-          : profile?.lifeStage === "married"
-            ? 6
-            : 6),
+      isOk: emergency.isOk,
       icon: "shield",
     },
     {
@@ -349,31 +336,16 @@ export default function AnalyseResultPage() {
     },
   ];
   const completeCount = safetyItems.filter((i) => i.isOk).length;
+  const safetyNetSubtitle = safetyItems.map((i) => i.title).join(" · ");
   const hasCriticalIssues = (analysis?.criticalIssueCount || 0) > 0;
-  const ctaCopy = hasCriticalIssues
-    ? {
-        title: "Get my personalised fix plan →",
-        subText: "See exactly how to fix these gaps",
-      }
-    : score < 50
-      ? {
-          title: "See my complete recovery plan →",
-          subText: "12-month step by step roadmap",
-        }
-      : score <= 70
-        ? {
-            title: "Get my optimisation plan →",
-            subText: "Turn gaps into growth",
-          }
-        : score > 70
-          ? {
-              title: "Get my wealth building plan →",
-              subText: "Next steps to financial freedom",
-            }
-          : {
-              title: "Get my complete financial plan →",
-              subText: "Your next steps are ready",
-            };
+  const planTeaser = derivePlanTeaser(priorityPlan);
+  const ctaCopy = deriveCtaCopy({
+    score,
+    openCount: planTeaser.openCount,
+    topPriorityTitle: planTeaser.first?.title ?? null,
+    hasCriticalIssues,
+  });
+  const profileLabels = profileSummaryLabels(profile);
 
   const handleUnlockClick = async () => {
     console.log("=== UNLOCK CLICKED ===");
@@ -441,14 +413,15 @@ export default function AnalyseResultPage() {
                 <p className="mt-1 text-3xl font-bold text-white">
                   Your financial health
                 </p>
-                <p className="mt-1 text-sm text-white/85">
-                  {lastSubmission?.lifeStage} · {lastSubmission?.cityTier} ·{" "}
-                  {lastSubmission?.primaryGoal}
-                </p>
+                {profileLabels.length > 0 ? (
+                  <p className="mt-1 text-sm text-white/85">
+                    {profileLabels.join(" · ")}
+                  </p>
+                ) : null}
                 <span
-                  className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${scoreBadgeTone}`}
+                  className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${scoreUi.badgeTone}`}
                 >
-                  {scoreLabel}
+                  {scoreUi.label}
                 </span>
               </div>
               <div className="mx-auto w-full max-w-[280px] rounded-2xl bg-white/15 p-3 text-center md:mx-0 md:ml-auto md:mr-0 md:max-w-[240px] md:bg-white/10 md:p-2">
@@ -463,9 +436,7 @@ export default function AnalyseResultPage() {
                   investment={0}
                   title=""
                   singleScore={score}
-                  singleTone={
-                    score < 40 ? "red" : score < 70 ? "amber" : "green"
-                  }
+                  singleTone={scoreUi.gaugeTone}
                   className="border-0 bg-transparent p-0 shadow-none [&_svg]:mx-auto [&_svg]:h-[132px] [&_svg]:w-[min(100%,220px)] sm:[&_svg]:h-[120px] sm:[&_svg]:w-[180px]"
                 />
               </div>
@@ -561,8 +532,8 @@ export default function AnalyseResultPage() {
               </div>
             </div>
             <p className="mt-3 text-xs font-medium leading-relaxed text-[#5F5E5A]">
-              You are around the 62nd percentile compared to similar users by
-              life-stage and city tier.
+              Net worth is your total assets minus total liabilities, based on
+              the values you entered.
             </p>
           </section>
 
@@ -889,16 +860,20 @@ export default function AnalyseResultPage() {
             </div>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm font-medium leading-relaxed text-[#454442]">
               <li>Needs should stay close to cap for stability.</li>
-              <li>Loan ratio under 40% improves flexibility.</li>
+              <li>
+                Loan ratio under {Math.round(caps.loans * 100)}% improves
+                flexibility.
+              </li>
               <li>Investment consistency drives score growth.</li>
             </ul>
           </section>
 
           <section className="rounded-2xl bg-white p-5">
-            <h2 className="text-xl font-semibold">Your financial safety net</h2>
+            <h2 className="text-xl font-semibold">
+              {`Your financial safety net — ${safetyItems.length} checks`}
+            </h2>
             <p className="text-sm font-medium leading-relaxed text-[#454442]">
-              Emergency fund · insurance cover · medical reserve · debt
-              protection · goal readiness
+              {safetyNetSubtitle}
             </p>
             <div className="mt-3 space-y-2">
               {safetyItems.map((item) => (
@@ -960,12 +935,14 @@ export default function AnalyseResultPage() {
               </Link>
             ) : null}
             <p className="mt-3 text-sm font-semibold text-[#454442]">
-              {completeCount} of 5 in place
+              {completeCount} of {safetyItems.length} in place
             </p>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ECEAF5]">
               <div
                 className="h-full bg-[#534AB7]"
-                style={{ width: `${(completeCount / 5) * 100}%` }}
+                style={{
+                  width: `${(completeCount / safetyItems.length) * 100}%`,
+                }}
               />
             </div>
           </section>
@@ -975,29 +952,39 @@ export default function AnalyseResultPage() {
               Your personalised 12-month plan
             </h2>
             <div className="mt-3 rounded-xl bg-[#F7F6FE] p-3 text-sm">
-              <p className="font-medium">
-                ✓ Step 1:{" "}
-                {priorityPlan.priorities[0]?.title || "Emergency fund"}
-              </p>
-              <p className="mt-1 font-medium leading-relaxed text-[#454442]">
-                {priorityPlan.priorities[0]?.actionThisWeek ||
-                  "Start building your safety layer."}
-              </p>
-              <p className="mt-3 blur-[2px]">
-                <span className="inline-flex items-center gap-2">
-                  <AppIcon name="lock" size={14} color="currentColor" />
-                  Step 2: [blurred] — unlock to see
-                </span>
-              </p>
-              <p className="blur-[2px]">
-                <span className="inline-flex items-center gap-2">
-                  <AppIcon name="lock" size={14} color="currentColor" />
-                  Step 3: [blurred] — unlock to see
-                </span>
-              </p>
-              <p className="mt-2 text-xs font-medium text-[#5F5E5A]">
-                + 8 more personalised steps
-              </p>
+              {planTeaser.first ? (
+                <>
+                  <p className="font-medium">
+                    ✓ Step 1: {planTeaser.first.title}
+                  </p>
+                  {planTeaser.first.actionThisWeek ? (
+                    <p className="mt-1 font-medium leading-relaxed text-[#454442]">
+                      {planTeaser.first.actionThisWeek}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="font-medium">
+                  ✓ No open gaps right now — keep your current plan on track.
+                </p>
+              )}
+              {planTeaser.teaserTitles.map((title, i) => (
+                <p
+                  key={`teaser-${i}`}
+                  className={`blur-[2px] ${i === 0 ? "mt-3" : ""}`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <AppIcon name="lock" size={14} color="currentColor" />
+                    Step {i + 2}: {title} — unlock to see
+                  </span>
+                </p>
+              ))}
+              {planTeaser.moreCount > 0 ? (
+                <p className="mt-2 text-xs font-medium text-[#5F5E5A]">
+                  + {planTeaser.moreCount} more personalised{" "}
+                  {planTeaser.moreCount === 1 ? "step" : "steps"}
+                </p>
+              ) : null}
             </div>
             <div className="mt-4 rounded-xl border border-[#E8E6F0] p-4">
               <p className="text-lg font-semibold">
@@ -1065,7 +1052,7 @@ export default function AnalyseResultPage() {
                 onClick={() => void handleUnlockClick()}
                 className="mt-4 h-12 w-full rounded-xl bg-[#534AB7] font-bold text-white"
               >
-                Get my complete financial plan →
+                {ctaCopy.title}
               </button>
               <p className="mt-2 text-center text-xs font-medium text-[#5F5E5A]">
                 {ctaCopy.subText}
