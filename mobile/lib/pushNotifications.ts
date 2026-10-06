@@ -126,15 +126,32 @@ export async function unregisterPushToken(userId: string): Promise<void> {
   syncKv.removeItem(TOKEN_KEY);
 }
 
+function queryParam(query: string, key: string): string | null {
+  for (const part of query.split("&")) {
+    const [k, v = ""] = part.split("=");
+    if (decodeURIComponent(k ?? "") === key) {
+      return decodeURIComponent(v.replace(/\+/g, " ")) || null;
+    }
+  }
+  return null;
+}
+
 /** Map a PWA deep link from push `data.url` to an in-app route. */
 export function routeForPushUrl(url: unknown): Href {
   const raw = typeof url === "string" ? url : "";
   const [path, query = ""] = raw.split("?");
   if (path === "/notifications" || path === "") {
-    const id = new URLSearchParams(query).get("id");
+    const id = queryParam(query, "id");
     return id
       ? { pathname: "/notifications", params: { id } }
       : "/notifications";
+  }
+  if (path === "/split/join") {
+    const token = queryParam(query, "token");
+    const code = queryParam(query, "code");
+    if (token) return { pathname: "/split/join", params: { token } };
+    if (code) return { pathname: "/split/join", params: { code } };
+    return "/(tabs)/split";
   }
   const split = /^\/split\/([^/]+)$/.exec(path);
   if (split) {

@@ -11,6 +11,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.finkoin.app",
       "buildNumber": "1",
+      "associatedDomains": ["applinks:www.finkoin.com", "applinks:finkoin.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -29,6 +30,23 @@
           "data": [
             {
               "scheme": "finkoin"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.finkoin.com",
+              "pathPrefix": "/split/join"
+            },
+            {
+              "scheme": "https",
+              "host": "finkoin.com",
+              "pathPrefix": "/split/join"
             }
           ]
         }

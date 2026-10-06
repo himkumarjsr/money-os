@@ -15,6 +15,13 @@ import {
   shouldOfferOpenInApp,
   tryOpenHttpsInAndroidApp,
 } from "@/lib/pwaLaunch";
+import {
+  hasNativeOpenAttempted,
+  markNativeOpenAttempted,
+  nativeAppStoreUrl,
+  openNativeApp,
+  shouldTryNativeApp,
+} from "@/lib/nativeAppLaunch";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -79,6 +86,19 @@ function joinPath(token: string | null, code: string | null): string {
   return `/split/join?code=${encodeURIComponent(code!)}`;
 }
 
+/** This page with `app=0`, so returning from a failed app hand-off stays in the browser. */
+function browserFallbackUrl(): string {
+  const u = new URL(window.location.href);
+  u.searchParams.set("app", "0");
+  return u.toString();
+}
+
+/** Invite path without the browser-only `app` flag, for the native app. */
+function nativeJoinPath(token: string | null, code: string | null): string {
+  if (token) return `/split/join?token=${encodeURIComponent(token)}`;
+  return `/split/join?code=${encodeURIComponent(code ?? "")}`;
+}
+
 function persistInvite(token: string | null, code: string | null) {
   if (token) saveSplitInviteToken(token);
   saveSplitInviteRedirect(joinPath(token, code));
@@ -89,6 +109,7 @@ export default function JoinSplitGroupClient() {
   const params = useSearchParams();
   const token = params?.get("token") ?? null;
   const code = params?.get("code") ?? null;
+  const stayInBrowser = params?.get("app") === "0";
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [status, setStatus] = useState<JoinStatus>("checking");
@@ -97,15 +118,26 @@ export default function JoinSplitGroupClient() {
   const attemptRef = useRef(0);
   const finishedKey = useRef<string | null>(null);
 
+  const storeUrl = typeof window !== "undefined" ? nativeAppStoreUrl() : null;
+
   const continueInBrowser = () => {
     persistInvite(token, code);
+    if (useAuthStore.getState().isLoggedIn) {
+      window.location.replace(browserFallbackUrl());
+      return;
+    }
     const currentUrl = joinPath(token, code);
     router.replace(`/login?next=${encodeURIComponent(currentUrl)}`);
   };
 
   const openInApp = () => {
     persistInvite(token, code);
-    if (typeof window !== "undefined" && isAndroidUserAgent()) {
+    if (typeof window === "undefined") return;
+    if (shouldTryNativeApp()) {
+      void openNativeApp(nativeJoinPath(token, code), browserFallbackUrl());
+      return;
+    }
+    if (isAndroidUserAgent()) {
       tryOpenHttpsInAndroidApp(window.location.href);
       return;
     }
@@ -127,6 +159,24 @@ export default function JoinSplitGroupClient() {
 
     const process = async () => {
       setStatus("checking");
+
+      const nativeKey = `native:${joinKey}`;
+      if (
+        !stayInBrowser &&
+        shouldTryNativeApp() &&
+        !hasNativeOpenAttempted(nativeKey)
+      ) {
+        markNativeOpenAttempted(nativeKey);
+        const opened = await openNativeApp(
+          nativeJoinPath(token, code),
+          browserFallbackUrl(),
+        );
+        if (attempt !== attemptRef.current) return;
+        if (opened) {
+          setStatus("open_app");
+          return;
+        }
+      }
 
       let authenticated = false;
       try {
@@ -198,7 +248,7 @@ export default function JoinSplitGroupClient() {
     };
 
     void process();
-  }, [hasInitialized, isLoggedIn, router, token, code]);
+  }, [hasInitialized, isLoggedIn, router, token, code, stayInBrowser]);
 
   const showLoader = status === "checking" || status === "joining";
 
@@ -234,6 +284,14 @@ export default function JoinSplitGroupClient() {
             >
               Open in Finkoin app
             </button>
+            {storeUrl ? (
+              <a
+                href={storeUrl}
+                className="mt-3 block w-full rounded-xl border border-[#534AB7] bg-white px-4 py-3 text-sm font-bold text-[#534AB7]"
+              >
+                Get the Finkoin app
+              </a>
+            ) : null}
             <button
               type="button"
               onClick={continueInBrowser}

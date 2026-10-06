@@ -47,6 +47,7 @@ export default function RootLayout() {
           <Stack.Screen name="tracker/[month]" />
           <Stack.Screen name="split/[groupId]/index" />
           <Stack.Screen name="split/[groupId]/add-expense" />
+          <Stack.Screen name="split/join" />
           <Stack.Screen name="notifications" />
         </Stack>
         <PushNotificationsManager />

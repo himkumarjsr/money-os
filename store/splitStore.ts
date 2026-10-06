@@ -137,6 +137,9 @@ type EditExpenseInput = {
   exactAmounts?: Record<string, number>;
   percentages?: Record<string, number>;
   shareCounts?: Record<string, number>;
+  paidByEmail?: string;
+  paidByName?: string;
+  paidByUserId?: string | null;
 };
 
 type SplitStore = {
@@ -557,6 +560,9 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
           exactAmounts: input.exactAmounts,
           percentages: input.percentages,
           shareCounts: input.shareCounts,
+          paidByEmail: input.paidByEmail,
+          paidByName: input.paidByName,
+          paidByUserId: input.paidByUserId,
         }),
       });
       const json = (await res.json()) as {

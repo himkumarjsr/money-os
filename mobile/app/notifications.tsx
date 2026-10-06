@@ -39,7 +39,9 @@ function formatWhen(iso: string) {
 }
 
 function categoryLabel(category: string) {
-  if (category === "split_expense") return "Split";
+  if (category === "split_expense" || category === "split_invite") {
+    return "Split";
+  }
   if (category === "obligation_reminder") return "Reminder";
   return "Finance tip";
 }
