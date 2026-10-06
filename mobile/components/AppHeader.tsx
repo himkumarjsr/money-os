@@ -1,14 +1,15 @@
 /**
  * Top bar matching PWA GlobalNavbar (mobile):
- * logo | NotificationBell + profile avatar
+ * hamburger + "Finkoin" | NotificationBell + profile avatar
+ * Hamburger opens NavDrawer (PWA footer links).
  * Profile opens dropdown panel (not full profile page).
  */
 import { useState } from "react";
 import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { NavDrawer } from "@/components/NavDrawer";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { Colors } from "@/constants/theme";
@@ -23,21 +24,39 @@ export function AppHeader({ homeOnLogo = true }: Props) {
   const user = useAuthStore((s) => s.user);
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <View style={styles.wash} pointerEvents="none" />
       <View style={styles.bar}>
-        <Pressable
-          onPress={() => {
-            if (homeOnLogo) router.push("/(tabs)");
-          }}
-          style={styles.brand}
-          accessibilityRole="link"
-          accessibilityLabel="Finkoin home"
-        >
-          <BrandLogo size={32} withWordmark />
-        </Pressable>
+        <View style={styles.brand}>
+          <Pressable
+            onPress={() => setMenuOpen(true)}
+            style={styles.menuBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Open menu"
+          >
+            <AppIcon
+              name="menu"
+              size={22}
+              color={Colors.primary}
+              strokeWidth={2}
+            />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (homeOnLogo) router.push("/(tabs)");
+            }}
+            style={styles.wordmarkBtn}
+            accessibilityRole="link"
+            accessibilityLabel="Finkoin home"
+          >
+            <Text style={styles.wordmark} numberOfLines={1}>
+              Finkoin
+            </Text>
+          </Pressable>
+        </View>
 
         <View style={styles.right}>
           {isLoggedIn ? <NotificationBell /> : null}
@@ -72,6 +91,8 @@ export function AppHeader({ homeOnLogo = true }: Props) {
         </View>
       </View>
 
+      <NavDrawer visible={menuOpen} onClose={() => setMenuOpen(false)} />
+
       {isLoggedIn ? (
         <ProfileMenu
           visible={profileOpen}
@@ -102,8 +123,24 @@ const styles = StyleSheet.create({
   brand: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
     minWidth: 0,
     flexShrink: 1,
+  },
+  menuBtn: {
+    width: 44,
+    height: 44,
+    marginLeft: -10,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  wordmarkBtn: { minHeight: 44, justifyContent: "center" },
+  wordmark: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.primary,
+    letterSpacing: -0.5,
   },
   right: {
     flexDirection: "row",
