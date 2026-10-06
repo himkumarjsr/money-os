@@ -11,6 +11,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.finkoin.app",
       "buildNumber": "1",
+      "associatedDomains": [
+        "applinks:www.finkoin.com",
+        "applinks:finkoin.com"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -25,10 +29,33 @@
       "intentFilters": [
         {
           "action": "VIEW",
-          "category": ["BROWSABLE", "DEFAULT"],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
           "data": [
             {
               "scheme": "finkoin"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.finkoin.com",
+              "pathPrefix": "/split/join"
+            },
+            {
+              "scheme": "https",
+              "host": "finkoin.com",
+              "pathPrefix": "/split/join"
             }
           ]
         }
@@ -38,6 +65,14 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#534AB7",
+          "defaultChannel": "default"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -52,7 +87,8 @@
           "photosPermission": "Finkoin needs access to your photos so you can set a profile picture.",
           "cameraPermission": "Finkoin needs access to your camera so you can take a profile picture."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

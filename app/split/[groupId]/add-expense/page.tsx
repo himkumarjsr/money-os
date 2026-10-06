@@ -437,6 +437,9 @@ function AddSplitExpenseInner() {
             exactAmounts: payload.exactAmounts,
             percentages: payload.percentages,
             shareCounts: payload.shareCounts,
+            paidByEmail: payload.paidByEmail,
+            paidByName: payload.paidByName,
+            paidByUserId: payload.paidByUserId,
           })
         : await addExpense(payload);
 

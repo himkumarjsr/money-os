@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatINR } from "@/lib/formatINR";
 import { sendWebPushToUser } from "@/lib/webPush";
+import { sendExpoPushToUser } from "@/lib/expoPush";
 
 export type SplitExpenseNotifyInput = {
   groupId: string;
@@ -143,13 +144,17 @@ export async function notifySplitExpenseAdded(
         ? `/notifications?id=${encodeURIComponent(notifId)}`
         : url;
 
-      const result = await sendWebPushToUser(admin, userId, {
+      const pushPayload = {
         title: copy.title,
         body: copy.body,
         url: pushUrl,
         tag,
-      });
-      pushed += result.pushed;
+      };
+      const [result, expoResult] = await Promise.all([
+        sendWebPushToUser(admin, userId, pushPayload),
+        sendExpoPushToUser(admin, userId, pushPayload),
+      ]);
+      pushed += result.pushed + expoResult.pushed;
     }),
   );
 

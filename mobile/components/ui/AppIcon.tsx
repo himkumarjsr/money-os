@@ -45,7 +45,8 @@ export type AppIconName =
   | "phone"
   | "menu"
   | "close"
-  | "heart";
+  | "heart"
+  | "sunrise";
 
 type Props = {
   name: AppIconName;
@@ -285,6 +286,13 @@ function IconPaths({ name }: { name: AppIconName }) {
     case "heart":
       return (
         <Path d="M12 20s-7-4.5-7-9.5A3.7 3.7 0 0 1 12 7a3.7 3.7 0 0 1 7 3.5C19 15.5 12 20 12 20z" />
+      );
+    case "sunrise":
+      return (
+        <>
+          <Path d="M3 18h18M6.5 18a5.5 5.5 0 0 1 11 0" />
+          <Path d="M12 4v3M4.5 8.5l1.5 1.5M19.5 8.5L18 10" />
+        </>
       );
     default:
       return null;

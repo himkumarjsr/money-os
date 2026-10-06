@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isWebPushConfigured, sendWebPushToUser } from "@/lib/webPush";
+import { sendExpoPushToUser } from "@/lib/expoPush";
 
 function authorizeRequest(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
@@ -145,17 +146,21 @@ async function handleDeliverTip(req: NextRequest) {
               ? `/notifications?id=${encodeURIComponent(notifId)}`
               : "/notifications";
 
-            const pushResult = await sendWebPushToUser(supabaseAdmin, user.id, {
+            const pushPayload = {
               title: title || "Finkoin tip",
               body: content || "Your daily finance tip is ready.",
               url: openUrl,
               tag: `tip-${tipId || notifId || "daily"}`,
-            });
+            };
+            const [pushResult, expoResult] = await Promise.all([
+              sendWebPushToUser(supabaseAdmin, user.id, pushPayload),
+              sendExpoPushToUser(supabaseAdmin, user.id, pushPayload),
+            ]);
 
             return {
               status: "delivered" as const,
-              pushed: pushResult.pushed,
-              cleaned: pushResult.cleaned,
+              pushed: pushResult.pushed + expoResult.pushed,
+              cleaned: pushResult.cleaned + expoResult.cleaned,
             };
           } catch (err) {
             console.error(`deliver-tip: error for user ${user.id}`, err);

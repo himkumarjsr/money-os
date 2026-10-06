@@ -235,7 +235,8 @@ export default function NotificationsClient() {
                       letterSpacing: 0.4,
                     }}
                   >
-                    {focused.category === "split_expense"
+                    {focused.category === "split_expense" ||
+                    focused.category === "split_invite"
                       ? "Split"
                       : focused.category === "obligation_reminder"
                         ? "Reminder"

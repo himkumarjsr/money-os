@@ -1,9 +1,45 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
-/** Route Handlers / Server Components that must read the logged-in user from cookies. */
+function bearerToken(): string | null {
+  try {
+    const auth = headers().get("authorization") ?? "";
+    if (!auth.startsWith("Bearer ")) return null;
+    return auth.slice("Bearer ".length).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Supabase client acting as the caller. The native app has no cookies, so it
+ * sends `Authorization: Bearer <access_token>`; queries then run under that
+ * user's RLS and `auth.getUser()` validates the token.
+ */
+function createBearerClient(token: string) {
+  const client = createClient(
+    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim(),
+    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim(),
+    {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    },
+  );
+  const getUser = client.auth.getUser.bind(client.auth);
+  client.auth.getUser = (jwt?: string) => getUser(jwt ?? token);
+  return client;
+}
+
+/** Route Handlers / Server Components that must read the logged-in user (cookie session, or Bearer token from the app). */
 export async function createSupabaseServerClient() {
+  const token = bearerToken();
+  if (token) return createBearerClient(token);
+
   const cookieStore = cookies();
 
   return createServerClient(

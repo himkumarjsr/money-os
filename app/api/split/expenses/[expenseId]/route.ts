@@ -21,6 +21,10 @@ type PutBody = {
   exactAmounts?: Record<string, number>;
   percentages?: Record<string, number>;
   shareCounts?: Record<string, number>;
+  /** Optional payer change; must be an active member of the group. */
+  paidByEmail?: string;
+  paidByName?: string;
+  paidByUserId?: string | null;
   /** Precomputed share rows (optional; recomputed when splitType + members given). */
   shares?: Array<{
     email: string;
@@ -96,6 +100,29 @@ export async function PUT(
       );
     }
 
+    let payerUpdate: Record<string, string | null> = {};
+    const payerEmail = body.paidByEmail?.toLowerCase().trim();
+    if (payerEmail) {
+      const { data: payer } = await admin
+        .from("split_group_members")
+        .select("user_id, display_name")
+        .eq("group_id", expense.group_id)
+        .eq("email", payerEmail)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!payer) {
+        return NextResponse.json(
+          { error: "Payer must be a member of this group" },
+          { status: 400 },
+        );
+      }
+      payerUpdate = {
+        paid_by_email: payerEmail,
+        paid_by_name: body.paidByName?.trim() || payer.display_name,
+        paid_by_user_id: payer.user_id ?? null,
+      };
+    }
+
     let shareRows: Array<{
       expense_id: string;
       group_id: string;
@@ -164,6 +191,7 @@ export async function PUT(
         expense_date: expenseDate,
         notes: body.notes ?? null,
         ...(body.splitType ? { split_type: body.splitType } : {}),
+        ...payerUpdate,
         updated_at: new Date().toISOString(),
       })
       .eq("id", expenseId)

@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
 import { notifySplitExpenseAdded } from "@/lib/splitExpenseNotify";
 import { computeSplitShares } from "@/lib/splitShares";
-import { getSupabaseAdmin } from "@/lib/supabaseServer";
+import {
+  createSupabaseServerClient,
+  getSupabaseAdmin,
+} from "@/lib/supabaseServer";
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-        },
-      },
-    );
+    const supabase = await createSupabaseServerClient();
     const {
       data: { user },
       error: authError,

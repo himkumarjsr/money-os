@@ -13,8 +13,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Colors } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -53,8 +55,36 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (!isLoggedIn || !user?.id) return;
-    void fetchNotifications(user.id);
+    const uid = user.id;
+    void fetchNotifications(uid);
+
+    const sub = supabase
+      .channel(`notifications:${uid}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
+          filter: `user_id=eq.${uid}`,
+        },
+        () => {
+          void fetchNotifications(uid);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(sub);
+    };
   }, [isLoggedIn, user?.id, fetchNotifications]);
+
+  const openInbox = (id?: string) => {
+    setOpen(false);
+    router.push(
+      id ? { pathname: "/notifications", params: { id } } : "/notifications",
+    );
+  };
 
   if (!isLoggedIn) return null;
 
@@ -95,7 +125,14 @@ export function NotificationBell() {
           <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
             <View style={styles.panelHead}>
               <View style={styles.headLeft}>
-                <Text style={styles.panelTitle}>Finance Tips</Text>
+                <Pressable
+                  onPress={() => openInbox()}
+                  hitSlop={10}
+                  accessibilityRole="link"
+                  accessibilityLabel="Open all notifications"
+                >
+                  <Text style={styles.panelTitle}>Finance Tips</Text>
+                </Pressable>
                 {unreadCount > 0 ? (
                   <View style={styles.newPill}>
                     <Text style={styles.newPillText}>{unreadCount} new</Text>
@@ -122,8 +159,10 @@ export function NotificationBell() {
                 </View>
               ) : (
                 notifications.map((n, i) => (
-                  <View
+                  <Pressable
                     key={n.id}
+                    onPress={() => openInbox(n.id)}
+                    accessibilityRole="button"
                     style={[
                       styles.row,
                       i < notifications.length - 1 && styles.rowBorder,
@@ -150,7 +189,7 @@ export function NotificationBell() {
                         })}
                       </Text>
                     </View>
-                  </View>
+                  </Pressable>
                 ))
               )}
             </ScrollView>

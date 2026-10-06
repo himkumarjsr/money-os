@@ -1,5 +1,8 @@
 import { calculateOutstanding } from "@/lib/amortisation";
-import { medicalEmergencyTarget } from "@/lib/financialEngine";
+import {
+  emergencyFundMonthsNeeded,
+  medicalEmergencyTarget,
+} from "@/lib/financialEngine";
 
 export interface PriorityItem {
   rank: number;
@@ -104,6 +107,74 @@ function normalizeStage(
   if (lifeStage === "kids") return "kids";
   if (lifeStage === "senior") return "senior";
   return "bachelor";
+}
+
+const MAX_PAYOFF_MONTHS = 600;
+
+/** Month-by-month amortisation; null when the payment never clears the balance within 50 years. */
+export function simulateLoanPayoff(
+  outstanding: number,
+  annualRatePercent: number,
+  monthlyPayment: number,
+): { months: number; totalInterest: number } | null {
+  if (!(outstanding > 0)) return { months: 0, totalInterest: 0 };
+  if (!(monthlyPayment > 0)) return null;
+  const r = Math.max(0, annualRatePercent) / 100 / 12;
+  let balance = outstanding;
+  let totalInterest = 0;
+  let months = 0;
+  while (balance > 0.5) {
+    if (months >= MAX_PAYOFF_MONTHS) return null;
+    const interest = balance * r;
+    if (monthlyPayment <= interest) return null;
+    totalInterest += interest;
+    balance = balance + interest - monthlyPayment;
+    months += 1;
+  }
+  return { months, totalInterest };
+}
+
+export type DebtPayoffNumbers = {
+  extraPayment: number;
+  outstanding: number;
+  currentEMI: number;
+  /** Months to clear with the extra payment applied. */
+  monthsNow: number;
+  monthsSaved: number;
+  /** Interest at current EMI minus interest with the extra payment; 0 when not computable. */
+  interestSaved: number;
+};
+
+/** Payoff figures for a debt card / PDF row (accepts engine and AI debt shapes). */
+export function debtPayoffNumbers(debt: any): DebtPayoffNumbers {
+  const extraPayment = Math.max(0, Number(debt?.extraEMIRecommended || 0));
+  const rate = Number(debt?.rate || debt?.interestRate || 12);
+  const outstanding = Number(debt?.outstanding || debt?.balance || 0);
+  const currentEMI = Number(debt?.emi || debt?.monthlyEMI || 0);
+  const fallbackMonths = Math.max(0, Number(debt?.monthsToClearWithExtra || 0));
+
+  const base = simulateLoanPayoff(outstanding, rate, currentEMI);
+  const withExtra =
+    extraPayment > 0
+      ? simulateLoanPayoff(outstanding, rate, currentEMI + extraPayment)
+      : base;
+
+  const monthsNow = withExtra && outstanding > 0 ? withExtra.months : fallbackMonths;
+  const monthsSaved =
+    base && withExtra ? Math.max(0, base.months - withExtra.months) : 0;
+  const interestSaved =
+    extraPayment > 0 && base && withExtra
+      ? Math.max(0, Math.round(base.totalInterest - withExtra.totalInterest))
+      : 0;
+
+  return {
+    extraPayment,
+    outstanding,
+    currentEMI,
+    monthsNow,
+    monthsSaved,
+    interestSaved,
+  };
 }
 
 export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
@@ -222,20 +293,12 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   const priorities: PriorityItem[] = [];
   let rank = 1;
 
-  const emergencyMonthsNeeded =
-    stage === "bachelor" && (profile.parentsSupport || 0) === 0
-      ? 6
-      : stage === "bachelor"
-        ? 9
-        : stage === "married" && kids.length === 0
-          ? 9
-          : stage === "kids"
-            ? 12
-            : stage === "senior"
-              ? 12
-              : age >= 50
-                ? 12
-                : 6;
+  const emergencyMonthsNeeded = emergencyFundMonthsNeeded({
+    lifeStage: stage,
+    parentsSupport: profile.parentsSupport,
+    selfAge: age,
+    kidsAges: kids,
+  });
 
   // Keep emergency target consistent with report expectation:
   // emergency buffer should also account for housing EMI continuity risk.

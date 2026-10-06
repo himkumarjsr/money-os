@@ -1,7 +1,7 @@
 /**
  * Group detail — PWA `/split/[groupId]` parity.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -12,91 +12,223 @@ import {
   Alert,
   Share,
   TextInput,
+  Linking,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import { useAuthStore } from "@/store/authStore";
 import {
   useSplitStore,
+  formatSplitRupee,
   formatSplitRupeeExact,
-  getMyBalanceFromEdges,
+  getMyNetBalance,
+  groupCodeLink,
 } from "@/store/splitStore";
-import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
-import Button from "@/components/ui/Button";
+import { getSupabase } from "@/lib/supabase";
+import type { TrackerIconName } from "@/lib/tracker-categories";
+import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import { AppIcon } from "@/components/ui/AppIcon";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 
 type Tab = "expenses" | "members" | "settlements";
+type PaymentMethod = "upi" | "cash" | "bank";
 
-const CAT_ICON: Record<string, string> = {
-  food: "🍽️",
-  transport: "🚕",
-  accommodation: "🏨",
-  entertainment: "🎉",
-  shopping: "🛍️",
-  utilities: "⚡",
-  medical: "💊",
-  other: "🧾",
-  general: "🧾",
+const PRIMARY = "#534AB7";
+const INK = "#111110";
+const MUTED = "#9B9A94";
+const BODY = "#5F5E5A";
+const BORDER = "#E8E6F0";
+const SOFT = "#F7F7F4";
+const GREEN = "#1D9E75";
+const RED = "#E24B4A";
+
+const SPLIT_CATEGORY_ICON: Record<string, TrackerIconName> = {
+  food: "utensils",
+  transport: "cab",
+  accommodation: "building",
+  entertainment: "party",
+  shopping: "cart",
+  utilities: "bolt",
+  medical: "pill",
+  other: "package",
+  general: "package",
 };
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function formatDateIN(iso: string | null | undefined) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+async function copyText(text: string) {
+  if (!text) return false;
+  try {
+    await Clipboard.setStringAsync(text);
+    return true;
+  } catch {
+    return shareText(text);
+  }
+}
+
+async function shareText(message: string) {
+  try {
+    const res = await Share.share({ message });
+    return res.action !== Share.dismissedAction;
+  } catch {
+    return false;
+  }
+}
 
 export default function GroupDetailScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const user = useAuthStore((s) => s.user);
-  const {
-    activeGroup,
-    expenses,
-    settlements,
-    balances,
-    netBalances,
-    loading,
-    fetchGroupDetail,
-    deleteGroup,
-    deleteExpense,
-    settleUp,
-    leaveGroup,
-    inviteLink,
-    clearActive,
-  } = useSplitStore();
-
-  const [tab, setTab] = useState<Tab>("expenses");
-  const [refreshing, setRefreshing] = useState(false);
-  const [showSettle, setShowSettle] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
-  const [inviteUrl, setInviteUrl] = useState("");
-  const [settleTo, setSettleTo] = useState("");
-  const [settleAmt, setSettleAmt] = useState("");
-  const [payMethod, setPayMethod] = useState<"upi" | "cash" | "bank">("upi");
-  const [savingSettle, setSavingSettle] = useState(false);
-
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const myEmail = (user?.email ?? "").toLowerCase();
+
+  const loading = useSplitStore((s) => s.loading);
+  const group = useSplitStore((s) => s.activeGroup);
+  const expenses = useSplitStore((s) => s.expenses);
+  const settlements = useSplitStore((s) => s.settlements);
+  const balances = useSplitStore((s) => s.balances);
+  const netBalances = useSplitStore((s) => s.netBalances);
+  const fetchGroupDetail = useSplitStore((s) => s.fetchGroupDetail);
+  const inviteLink = useSplitStore((s) => s.inviteLink);
+  const inviteByEmail = useSplitStore((s) => s.inviteByEmail);
+  const settleUp = useSplitStore((s) => s.settleUp);
+  const deleteExpense = useSplitStore((s) => s.deleteExpense);
+  const deleteGroup = useSplitStore((s) => s.deleteGroup);
+  const leaveGroup = useSplitStore((s) => s.leaveGroup);
+
+  const [activeTab, setActiveTab] = useState<Tab>("expenses");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [inviteMsg, setInviteMsg] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleToEmail, setSettleToEmail] = useState("");
+  const [settleAmount, setSettleAmount] = useState("");
+  const [settleBusy, setSettleBusy] = useState(false);
+  const [settleMsg, setSettleMsg] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
+  const [upiNote, setUpiNote] = useState("");
 
   useFocusEffect(
     useCallback(() => {
       if (groupId) void fetchGroupDetail(groupId);
-      return () => {
-        /* keep cache for back/forward */
-      };
     }, [groupId, fetchGroupDetail]),
   );
 
-  const members = useMemo(
-    () => (activeGroup?.members ?? []).filter((m) => m.status === "active"),
-    [activeGroup?.members],
+  useEffect(() => {
+    if (!groupId || !isLoggedIn) return;
+    const supabase = getSupabase();
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        void fetchGroupDetail(groupId);
+      }, 400);
+    };
+    const sub = supabase
+      .channel(`split:${groupId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "split_expenses",
+          filter: `group_id=eq.${groupId}`,
+        },
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "split_expense_shares",
+          filter: `group_id=eq.${groupId}`,
+        },
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "split_settlements",
+          filter: `group_id=eq.${groupId}`,
+        },
+        refresh,
+      )
+      .subscribe();
+
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      void supabase.removeChannel(sub);
+    };
+  }, [fetchGroupDetail, groupId, isLoggedIn]);
+
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
   );
 
-  const youOwe = useMemo(() => {
-    return balances
-      .filter((e) => e.from_email.toLowerCase() === myEmail)
-      .reduce((s, e) => s + e.amount, 0);
+  const groupInviteLink = groupCodeLink(group?.invite_code);
+  const members = group?.members ?? [];
+
+  const myNet = useMemo(
+    () => getMyNetBalance(myEmail, netBalances),
+    [netBalances, myEmail],
+  );
+
+  const headerTotals = useMemo(() => {
+    const youOwe = balances
+      .filter((b) => b.from_email?.toLowerCase() === myEmail)
+      .reduce((s, b) => s + Number(b.amount ?? 0), 0);
+    const youAreOwed = balances
+      .filter((b) => b.to_email?.toLowerCase() === myEmail)
+      .reduce((s, b) => s + Number(b.amount ?? 0), 0);
+    return { youOwe, youAreOwed };
   }, [balances, myEmail]);
 
-  const youAreOwed = useMemo(() => {
-    return balances
-      .filter((e) => e.to_email.toLowerCase() === myEmail)
-      .reduce((s, e) => s + e.amount, 0);
-  }, [balances, myEmail]);
+  const myOwedEdges = useMemo(
+    () => balances.filter((b) => b.from_email?.toLowerCase() === myEmail),
+    [balances, myEmail],
+  );
 
-  const myNet = getMyBalanceFromEdges(myEmail, balances);
-  const isCreator = activeGroup?.created_by === user?.id;
+  const otherMembers = useMemo(
+    () => members.filter((m) => m.email?.toLowerCase() !== myEmail),
+    [members, myEmail],
+  );
+
+  const isCreator = Boolean(group?.created_by) && group?.created_by === user?.id;
 
   const onRefresh = async () => {
     if (!groupId) return;
@@ -105,906 +237,1365 @@ export default function GroupDetailScreen() {
     setRefreshing(false);
   };
 
-  const openInvite = async () => {
-    if (!groupId) return;
-    const res = await inviteLink(groupId);
-    if (res.error) {
-      Alert.alert("Invite", res.error);
-      return;
-    }
-    setInviteUrl(res.inviteUrl || "");
-    setShowInvite(true);
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/split");
   };
 
-  const confirmDeleteGroup = () => {
+  const openInviteModal = () => {
+    setInviteEmail("");
+    setInviteUrl("");
+    setInviteMsg("");
+    setCopied(false);
+    setInviteOpen(true);
+    if (!groupId || !group?.name) return;
+    setInviteBusy(true);
+    void inviteLink(groupId, group.name).then((res) => {
+      setInviteBusy(false);
+      if (res.error) {
+        setInviteMsg(res.error);
+        return;
+      }
+      if (res.inviteUrl) setInviteUrl(res.inviteUrl);
+    });
+  };
+
+  const copyInviteLink = async () => {
+    if (!(await copyText(inviteUrl))) return;
+    setCopied(true);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 2000);
+  };
+
+  const openWhatsApp = () => {
+    const text = `Join "${group?.name ?? "Split"}" on Finkoin Split and we'll track shared expenses together: ${inviteUrl}`;
+    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`).catch(
+      () => void shareText(text),
+    );
+  };
+
+  const copyGroupLink = async () => {
+    if (await copyText(groupInviteLink)) setInviteMsg("Link copied!");
+  };
+
+  const handleSendInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!groupId || !group?.name) return;
+    if (!email) {
+      setInviteMsg("Enter an email address.");
+      return;
+    }
+
+    setInviteBusy(true);
+    setInviteMsg("");
+    const res = await inviteByEmail({
+      groupId,
+      groupName: group.name,
+      email,
+    });
+    setInviteBusy(false);
+
+    if (res.error) {
+      setInviteMsg(res.error);
+      return;
+    }
+
+    if (res.emailSent) {
+      setInviteMsg(`Invite sent to ${email} ✓`);
+      setInviteEmail("");
+    } else if (res.inviteUrl) {
+      setInviteUrl(res.inviteUrl);
+      setInviteMsg(
+        res.emailError
+          ? `${res.emailError} Share the link below instead:`
+          : "Email not sent — share the link below:",
+      );
+    } else {
+      setInviteMsg("Invite created.");
+    }
+  };
+
+  const openSettle = (toEmail?: string, amount?: number) => {
+    setSettleMsg("");
+    setSettleBusy(false);
+    setPaymentMethod("upi");
+    setUpiNote("");
+    const firstOwed = myOwedEdges[0];
+    setSettleToEmail(toEmail ?? firstOwed?.to_email ?? "");
+    setSettleAmount(
+      amount != null
+        ? String(Math.round(amount))
+        : firstOwed
+          ? String(Math.round(Number(firstOwed.amount ?? 0)))
+          : "",
+    );
+    setSettleOpen(true);
+  };
+
+  const handleConfirmSettle = async () => {
+    const actorId = user?.id;
+    if (!groupId || !actorId || !myEmail) return;
+    const toEmail = settleToEmail.trim().toLowerCase();
+    const amount = Number(settleAmount);
+    if (!toEmail) {
+      setSettleMsg("Choose who you paid.");
+      return;
+    }
+    if (toEmail === myEmail) {
+      setSettleMsg("You cannot settle up with yourself.");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setSettleMsg("Enter a valid amount.");
+      return;
+    }
+    setSettleBusy(true);
+    const res = await settleUp({
+      groupId,
+      toEmail,
+      amount,
+      userId: actorId,
+      userEmail: myEmail,
+      userName: user?.name || undefined,
+      paymentMethod,
+      notes:
+        paymentMethod === "upi" && upiNote.trim() ? upiNote.trim() : undefined,
+    });
+    setSettleBusy(false);
+    if (res.error) {
+      setSettleMsg(res.error);
+      return;
+    }
+    setSettleOpen(false);
+    setActiveTab("settlements");
+  };
+
+  const confirmDeleteExpense = (expenseId: string) => {
+    if (!groupId) return;
     Alert.alert(
-      "Close group?",
-      `Close "${activeGroup?.name}"? Only the group creator can do this.`,
+      "Delete this expense?",
+      "This cannot be undone. Balances will be updated.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Yes, delete group",
+          text: "Yes, delete",
           style: "destructive",
           onPress: async () => {
-            if (!groupId) return;
-            const ok = await deleteGroup(groupId);
-            if (ok) {
-              clearActive();
-              router.replace("/(tabs)/split");
-            } else Alert.alert("Error", "Could not close group");
+            const res = await deleteExpense(groupId, expenseId);
+            if (res.error) Alert.alert(res.error);
           },
         },
       ],
     );
   };
 
-  const recordSettlement = async () => {
-    if (!user || !groupId || !settleTo || !settleAmt) {
-      Alert.alert("Missing fields", "Pick who you paid and an amount");
+  const handleLeaveOrRemove = async (email?: string) => {
+    if (!groupId) return;
+    const res = await leaveGroup(groupId, myEmail, email);
+    if (!res.success) {
+      const amt =
+        res.amount != null ? ` (≈ ${formatSplitRupee(res.amount)})` : "";
+      Alert.alert((res.error || "Could not update member") + amt);
       return;
     }
-    setSavingSettle(true);
-    const res = await settleUp({
-      groupId,
-      toEmail: settleTo,
-      amount: parseFloat(settleAmt),
-      userId: user.id,
-      userEmail: user.email!,
-      userName: user.name || undefined,
-      paymentMethod: payMethod,
-    });
-    setSavingSettle(false);
-    if (res.error) {
-      Alert.alert("Error", res.error);
+    if (!email) {
+      router.replace("/(tabs)/split");
       return;
     }
-    setShowSettle(false);
-    setSettleAmt("");
-    setTab("settlements");
+    void fetchGroupDetail(groupId);
   };
+
+  const confirmDeleteGroup = () => {
+    if (!groupId || !group?.name) return;
+    Alert.alert(
+      `Delete "${group.name}"?`,
+      "This will remove the group for all members. Expense history will be saved but the group will be closed. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes, delete group",
+          style: "destructive",
+          onPress: async () => {
+            const ok = await deleteGroup(groupId);
+            if (!ok) {
+              Alert.alert("Could not delete group.");
+              return;
+            }
+            router.replace("/(tabs)/split");
+          },
+        },
+      ],
+    );
+  };
+
+  const tone = myNet > 0 ? "owed" : myNet < 0 ? "owe" : "settled";
+  const netLabel =
+    tone === "owed"
+      ? "You are owed"
+      : tone === "owe"
+        ? "You owe"
+        : "All settled";
+  const netColor = tone === "owed" ? GREEN : tone === "owe" ? RED : MUTED;
 
   if (!groupId) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.muted}>Missing group</Text>
+        <Text style={styles.emptyText}>Missing group</Text>
       </SafeAreaView>
     );
   }
+
+  const settleDisabled = settleBusy || !settleToEmail || !settleAmount;
+  const inviteDisabled = inviteBusy || !inviteEmail.trim();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.primary}
+            tintColor={PRIMARY}
           />
         }
       >
-        {/* Purple header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backBtn}
-            >
-              <Text style={styles.backText}>←</Text>
-            </TouchableOpacity>
-            {isCreator ? (
+            <View style={styles.headerLeft}>
               <TouchableOpacity
-                onPress={confirmDeleteGroup}
-                style={styles.moreBtn}
+                onPress={goBack}
+                style={styles.backBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
               >
-                <Text style={styles.moreText}>…</Text>
+                <View style={styles.backCircle}>
+                  <Text style={styles.backArrow}>←</Text>
+                </View>
+                <Text style={styles.backText}>Back</Text>
               </TouchableOpacity>
-            ) : (
-              <View style={{ width: 40 }} />
-            )}
+              <View style={styles.titleRow}>
+                <View style={styles.emojiTile}>
+                  {group?.emoji ? (
+                    <Text style={styles.emojiText}>{group.emoji}</Text>
+                  ) : (
+                    <AppIcon name="users" size={22} color="#FFFFFF" />
+                  )}
+                </View>
+                <View style={styles.titleCol}>
+                  <Text style={styles.groupName} numberOfLines={1}>
+                    {group?.name || "Group"}
+                  </Text>
+                  <Text style={styles.groupMeta}>
+                    {members.length} members · INR
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.headerActions}>
+              {isCreator ? (
+                <TouchableOpacity
+                  onPress={confirmDeleteGroup}
+                  style={styles.moreBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Group options"
+                >
+                  <Text style={styles.moreText}>...</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                onPress={openInviteModal}
+                style={styles.inviteBtn}
+                accessibilityRole="button"
+              >
+                <Text style={styles.inviteBtnText}>Invite</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.headerEmoji}>{activeGroup?.emoji || "💰"}</Text>
-          <Text style={styles.headerName}>
-            {activeGroup?.name || (loading ? "Loading…" : "Group")}
-          </Text>
-          <Text style={styles.headerMeta}>{members.length} members · INR</Text>
-          <TouchableOpacity style={styles.inviteBtn} onPress={openInvite}>
-            <Text style={styles.inviteBtnText}>Invite</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Stat tiles */}
-        <View style={styles.statsRow}>
-          <View style={styles.statTile}>
-            <Text style={styles.statLabel}>You owe</Text>
-            <Text style={[styles.statVal, { color: Colors.error }]}>
-              {formatSplitRupeeExact(youOwe)}
-            </Text>
-          </View>
-          <View style={styles.statTile}>
-            <Text style={styles.statLabel}>You are owed</Text>
-            <Text style={[styles.statVal, { color: Colors.success }]}>
-              {formatSplitRupeeExact(youAreOwed)}
-            </Text>
-          </View>
-          <View style={styles.statTile}>
-            <Text style={styles.statLabel}>
-              {myNet > 0.5
-                ? "You are owed"
-                : myNet < -0.5
-                  ? "You owe"
-                  : "Status"}
-            </Text>
-            <Text
-              style={[
-                styles.statVal,
-                {
-                  color:
-                    myNet > 0.5
-                      ? Colors.success
-                      : myNet < -0.5
-                        ? Colors.error
-                        : Colors.textMuted,
-                },
-              ]}
-            >
-              {Math.abs(myNet) <= 0.5
-                ? "All settled"
-                : formatSplitRupeeExact(Math.abs(myNet))}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.ctaRow}>
-          <TouchableOpacity
-            style={styles.ctaSecondary}
-            onPress={() => {
-              const first =
-                balances.find((b) => b.from_email.toLowerCase() === myEmail) ||
-                balances[0];
-              setSettleTo(first?.to_email || "");
-              setSettleAmt(
-                first && first.from_email.toLowerCase() === myEmail
-                  ? String(first.amount)
-                  : "",
-              );
-              setShowSettle(true);
-            }}
-          >
-            <Text style={styles.ctaSecondaryText}>Settle up</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.ctaPrimary}
-            onPress={() => router.push(`/split/${groupId}/add-expense`)}
-          >
-            <Text style={styles.ctaPrimaryText}>+ Add expense</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Tabs */}
-        <View style={styles.tabs}>
-          {(["expenses", "members", "settlements"] as Tab[]).map((t) => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => setTab(t)}
-              style={[styles.tab, tab === t && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+          <View style={styles.statsRow}>
+            <View style={styles.statTile}>
+              <Text style={styles.statLabel}>You owe</Text>
+              <Text style={styles.statVal} numberOfLines={1} adjustsFontSizeToFit>
+                {formatSplitRupee(headerTotals.youOwe)}
               </Text>
+            </View>
+            <View style={styles.statTile}>
+              <Text style={styles.statLabel}>You are owed</Text>
+              <Text style={styles.statVal} numberOfLines={1} adjustsFontSizeToFit>
+                {formatSplitRupee(headerTotals.youAreOwed)}
+              </Text>
+            </View>
+            <View style={styles.statTile}>
+              <Text style={styles.statLabel}>{netLabel}</Text>
+              <Text
+                style={[styles.statVal, { color: netColor }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {formatSplitRupee(Math.abs(myNet))}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.ctaRow}>
+            <TouchableOpacity
+              style={styles.ctaSecondary}
+              onPress={() => openSettle()}
+              accessibilityRole="button"
+            >
+              <Text style={styles.ctaSecondaryText}>Settle up</Text>
             </TouchableOpacity>
-          ))}
+            <TouchableOpacity
+              style={styles.ctaPrimary}
+              onPress={() =>
+                router.push({
+                  pathname: "/split/[groupId]/add-expense",
+                  params: { groupId },
+                })
+              }
+              accessibilityRole="button"
+            >
+              <Text style={styles.ctaPrimaryText}>+ Add expense</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {tab === "expenses" ? (
-          <View style={styles.section}>
-            {/* Simplified edges */}
-            <Text style={styles.blockTitle}>Simplified settle-up</Text>
-            {balances.length === 0 ? (
-              <Text style={styles.muted}>All settled up — nothing to pay.</Text>
-            ) : (
-              balances.map((e, i) => {
-                const iPay = e.from_email.toLowerCase() === myEmail;
-                const iGet = e.to_email.toLowerCase() === myEmail;
-                const from =
-                  e.from_email.toLowerCase() === myEmail ? "You" : e.from_name;
-                const to =
-                  e.to_email.toLowerCase() === myEmail ? "You" : e.to_name;
-                return (
-                  <View
-                    key={`${e.from_email}-${e.to_email}-${i}`}
-                    style={styles.edgeRow}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.edgeText}>
-                        {from} → {to}
-                      </Text>
-                      <Text style={styles.edgeAmt}>
-                        {formatSplitRupeeExact(e.amount)}
-                      </Text>
-                    </View>
-                    {iPay ? (
-                      <TouchableOpacity
-                        style={styles.miniSettle}
-                        onPress={() => {
-                          setSettleTo(e.to_email);
-                          setSettleAmt(String(e.amount));
-                          setShowSettle(true);
-                        }}
-                      >
-                        <Text style={styles.miniSettleText}>Settle</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    {iGet ? <Text style={styles.waiting}>Waiting</Text> : null}
+        <View style={styles.tabs}>
+          {(["expenses", "members", "settlements"] as const).map((t) => {
+            const active = activeTab === t;
+            return (
+              <TouchableOpacity
+                key={t}
+                onPress={() => setActiveTab(t)}
+                style={[
+                  styles.tab,
+                  { borderBottomColor: active ? PRIMARY : "transparent" },
+                ]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.tabText, { color: active ? PRIMARY : MUTED }]}>
+                  {t}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {activeTab === "expenses" ? (
+          <>
+            <View style={styles.sectionLg}>
+              <View style={styles.sectionHeadRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>Simplified settle-up</Text>
+                  <Text style={styles.sectionSub}>
+                    Fewest payments to clear everyone.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => void fetchGroupDetail(groupId)}
+                  style={styles.refreshBtn}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.refreshText}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.stack}>
+                {loading ? (
+                  <View style={[styles.card, styles.loaderCard]}>
+                    <ActivityIndicator color={PRIMARY} />
+                    <Text style={styles.loaderText}>Loading…</Text>
                   </View>
-                );
-              })
-            )}
+                ) : null}
+
+                {!loading && balances.length === 0 ? (
+                  <View style={[styles.card, { padding: 24 }]}>
+                    <Text style={styles.bodyText}>
+                      All settled up. Add an expense to start splitting.
+                    </Text>
+                  </View>
+                ) : null}
+
+                {balances.map((b, idx) => {
+                  const iPay = b.from_email?.toLowerCase() === myEmail;
+                  return (
+                    <View
+                      key={`${b.from_email}-${b.to_email}-${idx}`}
+                      style={[styles.card, styles.edgeCard]}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.edgeTitle} numberOfLines={1}>
+                          {iPay ? "You" : b.from_name}{" "}
+                          <Text style={{ color: "#94A3B8" }}>→</Text>{" "}
+                          {b.to_name}
+                        </Text>
+                        <Text style={styles.edgeSub} numberOfLines={1}>
+                          {iPay ? "You pay" : `${b.from_name} pays`} {b.to_name}
+                        </Text>
+                      </View>
+                      <View style={styles.edgeRight}>
+                        <Text style={styles.edgeAmt}>
+                          {formatSplitRupee(Number(b.amount ?? 0))}
+                        </Text>
+                        {iPay ? (
+                          <TouchableOpacity
+                            onPress={() =>
+                              openSettle(b.to_email, Number(b.amount ?? 0))
+                            }
+                            style={styles.settleBtn}
+                            accessibilityRole="button"
+                          >
+                            <Text style={styles.settleBtnText}>Settle</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
 
             {netBalances.some((n) => Math.abs(n.net) > 0.5) ? (
-              <>
-                <Text style={[styles.blockTitle, { marginTop: 20 }]}>
-                  Balances
-                </Text>
-                {netBalances
-                  .filter((n) => Math.abs(n.net) > 0.5)
-                  .map((n) => (
-                    <View key={n.email} style={styles.balanceRow}>
-                      <Text style={styles.balanceName}>
-                        {n.email.toLowerCase() === myEmail ? "You" : n.name}
-                      </Text>
-                      <Text
-                        style={{
-                          fontWeight: "800",
-                          color: n.net > 0 ? Colors.success : Colors.error,
-                        }}
-                      >
-                        {n.net > 0
-                          ? `gets back ${formatSplitRupeeExact(n.net)}`
-                          : `owes ${formatSplitRupeeExact(-n.net)}`}
-                      </Text>
-                    </View>
-                  ))}
-              </>
+              <View style={styles.sectionLg}>
+                <Text style={styles.sectionTitle}>Balances</Text>
+                <View style={styles.stack}>
+                  {netBalances
+                    .filter((n) => Math.abs(n.net) > 0.5)
+                    .map((n) => {
+                      const isMe = n.email === myEmail;
+                      const owed = n.net > 0;
+                      return (
+                        <View key={n.email} style={[styles.card, styles.balanceCard]}>
+                          <Text style={styles.balanceName} numberOfLines={1}>
+                            {isMe ? "You" : n.name}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.balanceAmt,
+                              { color: owed ? GREEN : RED },
+                            ]}
+                          >
+                            {owed ? "gets back" : "owes"}{" "}
+                            {formatSplitRupee(Math.abs(n.net))}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                </View>
+              </View>
             ) : null}
 
-            <Text style={[styles.blockTitle, { marginTop: 20 }]}>Expenses</Text>
-            {expenses.length === 0 ? (
-              <Text style={styles.muted}>
-                No expenses yet. Tap + Add expense.
-              </Text>
-            ) : (
-              expenses.map((exp) => {
-                const myShare =
-                  exp.shares?.find((s) => s.email.toLowerCase() === myEmail)
-                    ?.share_amount ?? 0;
-                const canEdit =
-                  exp.created_by === user?.id ||
-                  exp.paid_by_email?.toLowerCase() === myEmail;
-                return (
-                  <TouchableOpacity
-                    key={exp.id}
-                    style={styles.expCard}
-                    onPress={() => {
-                      if (canEdit) {
-                        router.push(
-                          `/split/${groupId}/add-expense?edit=${exp.id}`,
-                        );
-                      }
-                    }}
-                  >
-                    <Text style={styles.expIcon}>
-                      {CAT_ICON[exp.category || "other"] || "🧾"}
-                    </Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.expTitle}>{exp.title}</Text>
-                      <Text style={styles.expMeta}>
-                        {exp.paid_by_name} · {exp.expense_date}
-                        {myShare > 0
-                          ? ` · you ${formatSplitRupeeExact(myShare)}`
-                          : ""}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
+            <View style={styles.sectionLg}>
+              <Text style={styles.sectionTitle}>Expenses</Text>
+              <View style={[styles.card, styles.listCard, { marginTop: 12 }]}>
+                {expenses.length === 0 && !loading ? (
+                  <Text style={[styles.bodyText, styles.listEmpty]}>
+                    No expenses yet.
+                  </Text>
+                ) : null}
+
+                {expenses.map((e, i, arr) => {
+                  const myShare = (e.shares ?? [])
+                    .filter((s) => s.email?.toLowerCase() === myEmail)
+                    .reduce((sum, s) => sum + Number(s.share_amount ?? 0), 0);
+                  const isExpenseCreator = Boolean(
+                    user?.id && e.created_by === user.id,
+                  );
+                  return (
+                    <View
+                      key={e.id}
+                      style={[
+                        styles.expRow,
+                        i < arr.length - 1 && styles.rowDivider,
+                      ]}
+                    >
+                      <View style={styles.catCircle}>
+                        <TrackerIcon
+                          name={
+                            SPLIT_CATEGORY_ICON[e.category ?? "general"] ??
+                            "package"
+                          }
+                          size={16}
+                          color={BODY}
+                        />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.expTitle} numberOfLines={1}>
+                          {e.title}
+                        </Text>
+                        <Text style={styles.expMeta} numberOfLines={1}>
+                          {e.paid_by_name} · {e.expense_date}
+                          {myShare > 0
+                            ? ` · you ${formatSplitRupeeExact(myShare)}`
+                            : ""}
+                        </Text>
+                      </View>
                       <Text style={styles.expAmt}>
-                        {formatSplitRupeeExact(exp.amount)}
+                        {formatSplitRupeeExact(Number(e.amount ?? 0))}
                       </Text>
-                      {canEdit ? (
-                        <TouchableOpacity
-                          onPress={() => {
-                            Alert.alert(
-                              "Delete expense?",
-                              `Remove "${exp.title}"?`,
-                              [
-                                { text: "Cancel", style: "cancel" },
-                                {
-                                  text: "Yes, delete",
-                                  style: "destructive",
-                                  onPress: async () => {
-                                    const r = await deleteExpense(
-                                      groupId,
-                                      exp.id,
-                                    );
-                                    if (r.error) Alert.alert("Error", r.error);
-                                  },
-                                },
-                              ],
-                            );
-                          }}
-                        >
-                          <Text style={styles.delMini}>Delete</Text>
-                        </TouchableOpacity>
+                      {isExpenseCreator ? (
+                        <View style={styles.expActions}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              router.push({
+                                pathname: "/split/[groupId]/add-expense",
+                                params: { groupId, edit: e.id },
+                              })
+                            }
+                            style={styles.iconBtn}
+                            accessibilityRole="button"
+                            accessibilityLabel="Edit expense"
+                          >
+                            <AppIcon name="pencil" size={15} color={PRIMARY} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => confirmDeleteExpense(e.id)}
+                            style={styles.iconBtn}
+                            accessibilityRole="button"
+                            accessibilityLabel="Delete expense"
+                          >
+                            <AppIcon name="trash" size={15} color={RED} />
+                          </TouchableOpacity>
+                        </View>
                       ) : null}
                     </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
+                  );
+                })}
+              </View>
+            </View>
+          </>
         ) : null}
 
-        {tab === "members" ? (
-          <View style={styles.section}>
-            {members.map((m) => {
-              const isMe = m.email.toLowerCase() === myEmail;
-              return (
-                <View key={m.id} style={styles.memberCard}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {(m.display_name || m.email)[0]?.toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.memberName}>
-                      {m.display_name}
-                      {isMe ? " (You)" : ""}
-                    </Text>
-                    <Text style={styles.memberMeta}>
-                      {m.role} · {m.email}
-                    </Text>
-                  </View>
-                  {isCreator && !isMe && m.role !== "admin" ? (
-                    <TouchableOpacity
-                      onPress={async () => {
-                        const r = await leaveGroup(groupId, myEmail, m.email);
-                        if (!r.success) {
-                          Alert.alert(
-                            "Can't remove",
-                            r.error +
-                              (r.amount
-                                ? ` (${formatSplitRupeeExact(r.amount)})`
-                                : ""),
-                          );
-                        }
-                      }}
-                    >
-                      <Text style={styles.delMini}>Remove</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {!isCreator && isMe ? (
-                    <TouchableOpacity
-                      onPress={async () => {
-                        const r = await leaveGroup(groupId, myEmail);
-                        if (!r.success) {
-                          Alert.alert(
-                            "Can't leave",
-                            r.error +
-                              (r.amount
-                                ? ` — settle ${formatSplitRupeeExact(r.amount)} first`
-                                : ""),
-                          );
-                          return;
-                        }
-                        router.replace("/(tabs)/split");
-                      }}
-                    >
-                      <Text style={styles.delMini}>Leave</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              );
-            })}
-          </View>
-        ) : null}
-
-        {tab === "settlements" ? (
-          <View style={styles.section}>
-            {settlements.length === 0 ? (
-              <Text style={styles.muted}>No settlements yet</Text>
-            ) : (
-              settlements.map((s) => {
-                const iPaid = s.from_email.toLowerCase() === myEmail;
-                const label = iPaid
-                  ? `You paid ${s.to_name || s.to_email}`
-                  : s.to_email.toLowerCase() === myEmail
-                    ? `${s.from_name || s.from_email} paid you`
-                    : `${s.from_name || s.from_email} → ${s.to_name || s.to_email}`;
+        {activeTab === "members" ? (
+          <View style={styles.sectionMd}>
+            <View style={[styles.card, styles.listCard]}>
+              {members.map((member, i, arr) => {
+                const email = member.email.toLowerCase();
+                const isMe = email === myEmail;
+                const initials = (member.display_name || email)
+                  .substring(0, 2)
+                  .toUpperCase();
                 return (
-                  <View key={s.id} style={styles.settleCard}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.expTitle}>{label}</Text>
-                      <Text style={styles.expMeta}>
-                        {(s.completed_at || s.created_at || "")
-                          .toString()
-                          .slice(0, 10)}{" "}
-                        · {(s.payment_method || "upi").toUpperCase()}
+                  <View
+                    key={member.id || email}
+                    style={[
+                      styles.memberRow,
+                      i < arr.length - 1 && styles.rowDivider,
+                    ]}
+                  >
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{initials}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.memberName} numberOfLines={1}>
+                        {isMe
+                          ? `${member.display_name} (You)`
+                          : member.display_name}
+                      </Text>
+                      <Text style={styles.memberMeta} numberOfLines={1}>
+                        {member.role} · {member.email}
                       </Text>
                     </View>
-                    <Text style={[styles.expAmt, { color: Colors.success }]}>
-                      {formatSplitRupeeExact(s.amount)}
-                    </Text>
+                    {member.role !== "admin" && isCreator && !isMe ? (
+                      <TouchableOpacity
+                        onPress={() => void handleLeaveOrRemove(member.email)}
+                        style={styles.pillTarget}
+                        accessibilityRole="button"
+                      >
+                        <View style={styles.dangerPill}>
+                          <Text style={styles.dangerPillText}>Remove</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : null}
+                    {isMe && !isCreator ? (
+                      <TouchableOpacity
+                        onPress={() => void handleLeaveOrRemove()}
+                        style={styles.pillTarget}
+                        accessibilityRole="button"
+                      >
+                        <View style={styles.dangerPill}>
+                          <Text style={styles.dangerPillText}>Leave</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 );
-              })
+              })}
+            </View>
+          </View>
+        ) : null}
+
+        {activeTab === "settlements" ? (
+          <View style={styles.sectionMd}>
+            {settlements.length === 0 ? (
+              <View style={[styles.card, styles.settleEmpty]}>
+                <Text style={styles.settleEmptyText}>No settlements yet</Text>
+              </View>
+            ) : (
+              <View style={[styles.card, styles.listCard]}>
+                {settlements.map((s, i) => {
+                  const isFromMe = s.from_email?.toLowerCase() === myEmail;
+                  const isToMe = s.to_email?.toLowerCase() === myEmail;
+                  return (
+                    <View
+                      key={s.id}
+                      style={[
+                        styles.memberRow,
+                        i < settlements.length - 1 && styles.rowDivider,
+                      ]}
+                    >
+                      <View style={styles.checkCircle}>
+                        <Text style={styles.checkText}>✓</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.settleTitle}>
+                          {isFromMe ? "You" : s.from_email?.split("@")[0]} paid{" "}
+                          {isToMe ? "you" : s.to_email?.split("@")[0]}
+                        </Text>
+                        <Text style={styles.memberMeta}>
+                          {formatDateIN(s.completed_at)}
+                          {s.payment_method
+                            ? ` · ${s.payment_method.toUpperCase()}`
+                            : ""}
+                        </Text>
+                      </View>
+                      <Text style={styles.settleAmt}>
+                        {formatSplitRupee(Number(s.amount ?? 0))}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
             )}
           </View>
         ) : null}
       </ScrollView>
 
-      {/* Settle sheet */}
-      {showSettle ? (
-        <View style={styles.sheetOverlay}>
+      <BottomSheet
+        visible={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        scroll
+      >
+        <View style={styles.sheetHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sheetTitle}>Invite friends</Text>
+            <Text style={styles.sheetSub}>
+              Share a link, or email someone directly.
+            </Text>
+          </View>
           <TouchableOpacity
-            style={styles.sheetBackdrop}
-            onPress={() => setShowSettle(false)}
-          />
-          <View style={styles.sheet}>
-            <View style={styles.handle} />
+            onPress={() => setInviteOpen(false)}
+            style={styles.closeBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <AppIcon name="close" size={16} color={PRIMARY} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sheetBody}>
+          {inviteBusy && !inviteUrl ? (
+            <Text style={styles.mutedSm}>Generating invite link…</Text>
+          ) : null}
+
+          {inviteUrl ? (
+            <View style={{ gap: 12 }}>
+              <View style={styles.linkBox}>
+                <Text style={styles.linkLabel}>Invite link</Text>
+                <Text style={styles.linkUrl} selectable>
+                  {inviteUrl}
+                </Text>
+              </View>
+              <View style={styles.shareRow}>
+                <TouchableOpacity
+                  onPress={() => void copyInviteLink()}
+                  style={styles.copyBtn}
+                  accessibilityRole="button"
+                >
+                  <AppIcon
+                    name={copied ? "check" : "doc"}
+                    size={16}
+                    color={PRIMARY}
+                  />
+                  <Text style={styles.copyBtnText}>
+                    {copied ? "Copied" : "Copy"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={openWhatsApp}
+                  style={styles.waBtn}
+                  accessibilityRole="button"
+                >
+                  <AppIcon name="phone" size={16} color="#FFFFFF" />
+                  <Text style={styles.waBtnText}>WhatsApp</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
+
+          {groupInviteLink ? (
+            <View style={styles.groupLinkSection}>
+              <Text style={styles.upperLabel}>Or share group link</Text>
+              <View style={styles.groupLinkBox}>
+                <Text style={styles.groupLinkUrl} selectable>
+                  {groupInviteLink}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => void copyGroupLink()}
+                  style={styles.groupCopyBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.groupCopyText}>Copy</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.hint}>
+                Anyone with this link can join the group
+              </Text>
+            </View>
+          ) : null}
+
+          <View>
+            <Text style={styles.fieldLabel}>Or invite by email</Text>
+            <TextInput
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+              placeholder="friend@example.com"
+              placeholderTextColor={MUTED}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              returnKeyType="send"
+              onSubmitEditing={() => {
+                if (!inviteDisabled) void handleSendInvite();
+              }}
+              style={styles.input}
+            />
+          </View>
+
+          {inviteMsg ? <Text style={styles.inviteMsg}>{inviteMsg}</Text> : null}
+
+          <TouchableOpacity
+            disabled={inviteDisabled}
+            onPress={() => void handleSendInvite()}
+            style={[styles.primaryBtn, inviteDisabled && styles.disabled]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.primaryBtnText}>
+              {inviteBusy ? "Sending…" : "Send email invite"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
+
+      <BottomSheet
+        visible={settleOpen}
+        onClose={() => setSettleOpen(false)}
+        scroll
+      >
+        <View style={styles.sheetHead}>
+          <View style={{ flex: 1 }}>
             <Text style={styles.sheetTitle}>Record a payment</Text>
-            <Text style={styles.fieldLabel}>You paid</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{ marginBottom: 12 }}
-            >
-              {members
-                .filter((m) => m.email.toLowerCase() !== myEmail)
-                .map((m) => (
+            <Text style={styles.sheetSub}>
+              Log money you paid to a group member.
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setSettleOpen(false)}
+            style={styles.closeBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <AppIcon name="close" size={16} color={PRIMARY} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ marginTop: 20 }}>
+          <Text style={styles.fieldLabel}>You paid</Text>
+          {otherMembers.length === 0 ? (
+            <Text style={[styles.mutedSm, { marginTop: 4 }]}>
+              Select member…
+            </Text>
+          ) : (
+            <View style={styles.chipWrap}>
+              {otherMembers.map((m) => {
+                const active =
+                  settleToEmail.toLowerCase() === m.email.toLowerCase();
+                return (
                   <TouchableOpacity
                     key={m.email}
-                    onPress={() => setSettleTo(m.email)}
-                    style={[
-                      styles.chip,
-                      settleTo === m.email && styles.chipActive,
-                    ]}
+                    onPress={() => setSettleToEmail(m.email)}
+                    style={[styles.chip, active && styles.chipActive]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
                   >
                     <Text
-                      style={[
-                        styles.chipText,
-                        settleTo === m.email && styles.chipTextActive,
-                      ]}
+                      style={[styles.chipText, active && styles.chipTextActive]}
+                      numberOfLines={1}
                     >
                       {m.display_name}
                     </Text>
+                    <Text style={styles.chipSub} numberOfLines={1}>
+                      {m.email}
+                    </Text>
                   </TouchableOpacity>
-                ))}
-            </ScrollView>
-            <Text style={styles.fieldLabel}>Amount (₹)</Text>
-            <TextInput
-              style={styles.input}
-              value={settleAmt}
-              onChangeText={setSettleAmt}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor={Colors.textMuted}
-            />
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>
-              Payment method
-            </Text>
-            <View style={styles.methodRow}>
-              {(["upi", "cash", "bank"] as const).map((m) => (
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        <View style={{ marginTop: 16 }}>
+          <Text style={styles.fieldLabel}>Amount (₹)</Text>
+          <TextInput
+            value={settleAmount}
+            onChangeText={setSettleAmount}
+            keyboardType="decimal-pad"
+            placeholder="0"
+            placeholderTextColor={MUTED}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={{ marginTop: 16 }}>
+          <Text style={[styles.upperLabel, { marginBottom: 8 }]}>
+            Payment method
+          </Text>
+          <View style={styles.methodRow}>
+            {(["upi", "cash", "bank"] as const).map((method) => {
+              const active = paymentMethod === method;
+              return (
                 <TouchableOpacity
-                  key={m}
-                  onPress={() => setPayMethod(m)}
+                  key={method}
+                  onPress={() => setPaymentMethod(method)}
                   style={[
-                    styles.methodChip,
-                    payMethod === m && styles.methodChipActive,
+                    styles.methodBtn,
+                    {
+                      borderColor: active ? PRIMARY : BORDER,
+                      backgroundColor: active ? "#EEEDFE" : "#FFFFFF",
+                    },
                   ]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
                 >
                   <Text
-                    style={[
-                      styles.methodText,
-                      payMethod === m && styles.methodTextActive,
-                    ]}
+                    style={[styles.methodText, { color: active ? PRIMARY : MUTED }]}
                   >
-                    {m.toUpperCase()}
+                    {method === "upi"
+                      ? "UPI"
+                      : method === "bank"
+                        ? "Bank"
+                        : "Cash"}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            <Button
-              label={savingSettle ? "Saving…" : "Record payment"}
-              onPress={recordSettlement}
-              loading={savingSettle}
-              style={{ marginTop: 16 }}
-            />
+              );
+            })}
           </View>
+          {paymentMethod === "upi" ? (
+            <TextInput
+              value={upiNote}
+              onChangeText={setUpiNote}
+              placeholder="UPI reference / note (optional)"
+              placeholderTextColor={MUTED}
+              style={[styles.input, { marginTop: 10 }]}
+            />
+          ) : null}
         </View>
-      ) : null}
 
-      {/* Invite sheet */}
-      {showInvite ? (
-        <View style={styles.sheetOverlay}>
-          <TouchableOpacity
-            style={styles.sheetBackdrop}
-            onPress={() => setShowInvite(false)}
-          />
-          <View style={styles.sheet}>
-            <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>Invite friends</Text>
-            <View style={styles.inviteBox}>
-              <Text style={styles.inviteUrl} selectable>
-                {inviteUrl}
-              </Text>
-            </View>
-            {activeGroup?.invite_code ? (
-              <Text style={styles.codeHint}>
-                Or share code:{" "}
-                <Text style={{ fontWeight: "900", color: Colors.primary }}>
-                  {activeGroup.invite_code}
-                </Text>
-              </Text>
-            ) : null}
-            <Button
-              label="Share link"
-              onPress={() =>
-                Share.share({
-                  message: `Join "${activeGroup?.name}" on Finkoin Split: ${inviteUrl}`,
-                })
-              }
-              style={{ marginTop: 16 }}
-            />
-            <Button
-              label="Done"
-              variant="ghost"
-              onPress={() => setShowInvite(false)}
-              style={{ marginTop: 8 }}
-            />
-          </View>
-        </View>
-      ) : null}
+        {settleMsg ? <Text style={styles.settleMsg}>{settleMsg}</Text> : null}
+
+        <TouchableOpacity
+          disabled={settleDisabled}
+          onPress={() => void handleConfirmSettle()}
+          style={[
+            styles.primaryBtn,
+            { marginTop: 20 },
+            settleDisabled && styles.disabled,
+          ]}
+          accessibilityRole="button"
+        >
+          <Text style={styles.primaryBtnText}>
+            {settleBusy ? "Saving…" : "Record payment"}
+          </Text>
+        </TouchableOpacity>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
 
+const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: SOFT },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 120 },
+
   header: {
-    backgroundColor: Colors.primary,
-    margin: Spacing.xl,
-    borderRadius: Radius.xxl,
-    padding: Spacing.xl,
-    alignItems: "center",
-    ...Shadow.strong,
+    backgroundColor: PRIMARY,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    shadowColor: PRIMARY,
+    shadowOpacity: 0.25,
+    shadowRadius: 25,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 8,
   },
   headerTop: {
     flexDirection: "row",
-    width: "100%",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 8,
+    gap: 16,
   },
+  headerLeft: { flex: 1, minWidth: 0 },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backText: { color: "#fff", fontSize: 20, fontWeight: "700" },
-  moreBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  moreText: { color: "#fff", fontSize: 22, fontWeight: "800" },
-  headerEmoji: { fontSize: 40 },
-  headerName: {
-    fontSize: FontSize.xl,
-    fontWeight: "800",
-    color: "#fff",
-    marginTop: 8,
-    textAlign: "center",
-  },
-  headerMeta: {
-    fontSize: FontSize.md,
-    color: "rgba(255,255,255,0.75)",
-    marginTop: 4,
-  },
-  inviteBtn: {
-    marginTop: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: Radius.round,
-    backgroundColor: "rgba(255,255,255,0.2)",
-  },
-  inviteBtnText: { color: "#fff", fontWeight: "800" },
-  statsRow: {
     flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: Spacing.xl,
+    alignItems: "center",
+    gap: 6,
+    minHeight: 44,
+    alignSelf: "flex-start",
   },
+  backCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backArrow: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  backText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  titleRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  emojiTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emojiText: { fontSize: 20 },
+  titleCol: { flex: 1, minWidth: 0 },
+  groupName: { color: "#FFFFFF", fontSize: 20, fontWeight: "800" },
+  groupMeta: {
+    marginTop: 2,
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+  },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  moreBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  moreText: { color: "#FFFFFF", fontSize: 18, fontWeight: "700" },
+  inviteBtn: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inviteBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+
+  statsRow: { marginTop: 20, flexDirection: "row", gap: 12 },
   statTile: {
     flex: 1,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
+    borderColor: "rgba(255,255,255,0.15)",
+    padding: 14,
   },
   statLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-    fontWeight: "700",
-    marginBottom: 4,
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 11,
+    fontWeight: "600",
   },
-  statVal: { fontSize: FontSize.md, fontWeight: "800" },
-  ctaRow: {
-    flexDirection: "row",
-    gap: 10,
-    padding: Spacing.xl,
+  statVal: {
+    marginTop: 4,
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
   },
+
+  ctaRow: { marginTop: 20, flexDirection: "row", gap: 12 },
   ctaSecondary: {
     flex: 1,
     height: 48,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaSecondaryText: {
-    fontWeight: "800",
-    color: Colors.primary,
-    fontSize: FontSize.base,
-  },
+  ctaSecondaryText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
   ctaPrimary: {
     flex: 1,
     height: 48,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000000",
+    shadowOpacity: 0.12,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
   },
-  ctaPrimaryText: {
-    fontWeight: "800",
-    color: "#fff",
-    fontSize: FontSize.base,
-  },
+  ctaPrimaryText: { color: PRIMARY, fontSize: 14, fontWeight: "800" },
+
   tabs: {
+    marginTop: 16,
     flexDirection: "row",
-    marginHorizontal: Spacing.xl,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 4,
+    borderColor: BORDER,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
   },
   tab: {
     flex: 1,
-    height: 40,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: Radius.md,
+    borderBottomWidth: 2,
   },
-  tabActive: { backgroundColor: Colors.primary },
   tabText: {
-    fontSize: FontSize.md,
+    fontSize: 14,
     fontWeight: "600",
-    color: Colors.textMuted,
     textTransform: "capitalize",
   },
-  tabTextActive: { color: "#fff", fontWeight: "800" },
-  section: { padding: Spacing.xl },
-  blockTitle: {
-    fontSize: FontSize.base,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
-  muted: { color: Colors.textMuted, fontSize: FontSize.md, lineHeight: 20 },
-  edgeRow: {
+
+  sectionLg: { marginTop: 32 },
+  sectionMd: { marginTop: 24 },
+  sectionHeadRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
-    marginBottom: 8,
-  },
-  edgeText: { fontWeight: "700", color: Colors.textPrimary },
-  edgeAmt: { color: Colors.textMuted, marginTop: 2, fontSize: FontSize.md },
-  miniSettle: {
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: Radius.round,
-  },
-  miniSettleText: {
-    color: Colors.primary,
-    fontWeight: "800",
-    fontSize: FontSize.sm,
-  },
-  waiting: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    fontWeight: "600",
-  },
-  balanceRow: {
-    flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    gap: 12,
   },
-  balanceName: { fontWeight: "700", color: Colors.textPrimary },
-  expCard: {
+  sectionTitle: {
+    color: MUTED,
+    fontSize: 14,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  sectionSub: { marginTop: 4, color: MUTED, fontSize: 12 },
+  refreshBtn: {
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  refreshText: { color: PRIMARY, fontSize: 12, fontWeight: "700" },
+  stack: { marginTop: 12, gap: 8 },
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  listCard: { overflow: "hidden" },
+  loaderCard: {
+    minHeight: 100,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  loaderText: { color: MUTED, fontSize: 12 },
+  bodyText: { color: BODY, fontSize: 14 },
+  emptyText: { color: MUTED, fontSize: 14, padding: 24 },
+  listEmpty: { paddingHorizontal: 16, paddingVertical: 20 },
+
+  edgeCard: {
+    minHeight: 64,
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.md,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
-    marginBottom: 8,
+    gap: 12,
   },
-  expIcon: { fontSize: 22 },
-  expTitle: {
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    fontSize: FontSize.base,
+  edgeTitle: { color: INK, fontSize: 14, fontWeight: "700" },
+  edgeSub: { marginTop: 4, color: MUTED, fontSize: 12 },
+  edgeRight: { flexDirection: "row", alignItems: "center", gap: 12 },
+  edgeAmt: { color: INK, fontSize: 14, fontWeight: "800" },
+  settleBtn: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  expMeta: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  expAmt: {
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    fontSize: FontSize.base,
-  },
-  delMini: {
-    color: Colors.error,
-    fontSize: FontSize.sm,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  memberCard: {
+  settleBtnText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+
+  balanceCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.md,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
-    marginBottom: 8,
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  balanceName: { flex: 1, color: INK, fontSize: 14, fontWeight: "700" },
+  balanceAmt: { fontSize: 14, fontWeight: "800" },
+
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: SOFT },
+  expRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 10,
+    minHeight: 60,
+  },
+  catCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F4F4F0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expTitle: { color: INK, fontSize: 14, fontWeight: "700" },
+  expMeta: { marginTop: 2, color: MUTED, fontSize: 11 },
+  expAmt: { color: INK, fontSize: 14, fontWeight: "800", textAlign: "right" },
+  expActions: { flexDirection: "row", alignItems: "center" },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryLight,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#EEEDFE",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: {
-    color: Colors.primary,
-    fontWeight: "800",
+  avatarText: { color: PRIMARY, fontSize: 13, fontWeight: "700" },
+  memberName: { color: INK, fontSize: 14, fontWeight: "600" },
+  memberMeta: { marginTop: 2, color: MUTED, fontSize: 11 },
+  pillTarget: { minHeight: 44, justifyContent: "center" },
+  dangerPill: {
+    borderRadius: 6,
+    backgroundColor: "#FCEBEB",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  memberName: { fontWeight: "700", color: Colors.textPrimary },
-  memberMeta: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    marginTop: 2,
+  dangerPillText: { color: RED, fontSize: 11, fontWeight: "700" },
+
+  settleEmpty: { paddingHorizontal: 24, paddingVertical: 40 },
+  settleEmptyText: { color: MUTED, fontSize: 14, textAlign: "center" },
+  checkCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#E1F5EE",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  settleCard: {
+  checkText: { color: GREEN, fontSize: 18 },
+  settleTitle: { color: INK, fontSize: 13, fontWeight: "600" },
+  settleAmt: { color: GREEN, fontSize: 14, fontWeight: "700" },
+
+  sheetHead: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  sheetTitle: { color: INK, fontSize: 16, fontWeight: "800" },
+  sheetSub: { marginTop: 4, color: MUTED, fontSize: 12 },
+  closeBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: SOFT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetBody: { marginTop: 20, gap: 16 },
+  mutedSm: { color: MUTED, fontSize: 14 },
+
+  linkBox: {
+    borderRadius: 12,
+    backgroundColor: SOFT,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  linkLabel: {
+    color: MUTED,
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  linkUrl: {
+    marginTop: 4,
+    color: PRIMARY,
+    fontSize: 12,
+    fontWeight: "500",
+    fontFamily: MONO,
+  },
+  shareRow: { flexDirection: "row", gap: 8 },
+  copyBtn: {
+    flex: 1,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
+    borderColor: BORDER,
+    backgroundColor: "#FFFFFF",
+  },
+  copyBtnText: { color: PRIMARY, fontSize: 14, fontWeight: "700" },
+  waBtn: {
+    flex: 1,
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 12,
+    backgroundColor: "#25D366",
+  },
+  waBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+
+  groupLinkSection: {
+    borderTopWidth: 1,
+    borderTopColor: SOFT,
+    paddingTop: 16,
+  },
+  upperLabel: {
     marginBottom: 8,
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
   },
-  sheetOverlay: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: "flex-end",
-    zIndex: 50,
-  },
-  sheetBackdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  sheet: {
-    backgroundColor: Colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: Spacing.xl,
-    paddingBottom: 40,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: Spacing.xl,
-  },
-  sheetTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: Spacing.lg,
-  },
-  fieldLabel: {
-    fontSize: FontSize.md,
-    fontWeight: "700",
-    color: Colors.textSecondary,
-    marginBottom: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
+  groupLinkBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 10,
+    backgroundColor: SOFT,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: Radius.round,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    marginRight: 8,
   },
-  chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+  groupLinkUrl: {
+    flex: 1,
+    color: PRIMARY,
+    fontSize: 12,
+    fontFamily: MONO,
   },
-  chipText: { fontWeight: "600", color: Colors.textMuted },
-  chipTextActive: { color: Colors.primary, fontWeight: "800" },
+  groupCopyBtn: {
+    borderRadius: 8,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  groupCopyText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
+  hint: { marginTop: 6, color: MUTED, fontSize: 11 },
+
+  fieldLabel: { color: BODY, fontSize: 12, fontWeight: "600" },
   input: {
-    height: 52,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.lg,
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.primary,
+    marginTop: 4,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: INK,
+    backgroundColor: "#FFFFFF",
   },
+  inviteMsg: { color: BODY, fontSize: 14, fontWeight: "500" },
+  primaryBtn: {
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  primaryBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  disabled: { opacity: 0.5 },
+
+  chipWrap: { marginTop: 6, flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    minHeight: 44,
+    maxWidth: "100%",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    backgroundColor: "#FFFFFF",
+  },
+  chipActive: { borderColor: PRIMARY, backgroundColor: "#EEEDFE" },
+  chipText: { color: INK, fontSize: 14, fontWeight: "600" },
+  chipTextActive: { color: PRIMARY, fontWeight: "800" },
+  chipSub: { color: MUTED, fontSize: 11 },
+
   methodRow: { flexDirection: "row", gap: 8 },
-  methodChip: {
+  methodBtn: {
     flex: 1,
     height: 44,
-    borderRadius: Radius.lg,
+    borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  methodChipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  methodText: { fontWeight: "700", color: Colors.textMuted },
-  methodTextActive: { color: Colors.primary },
-  inviteBox: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-  },
-  inviteUrl: {
-    color: Colors.primary,
+  methodText: {
+    fontSize: 12,
     fontWeight: "600",
-    fontSize: FontSize.md,
+    textTransform: "uppercase",
   },
-  codeHint: {
+  settleMsg: {
     marginTop: 12,
-    color: Colors.textMuted,
-    fontSize: FontSize.md,
+    color: "#C0392B",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

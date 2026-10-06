@@ -56,6 +56,7 @@ const OWNED_TABLES = [
   "user_policies",
   "notification_preferences",
   "push_subscriptions",
+  "expo_push_tokens",
   "user_notifications",
   "user_tip_history",
   "app_feedback",
