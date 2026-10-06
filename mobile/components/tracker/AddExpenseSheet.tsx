@@ -7,10 +7,11 @@ import {
   Pressable,
   ScrollView,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   AppState,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useKeyboardSheet } from "@/lib/useKeyboardSheet";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { DateField } from "@/components/tracker/DateField";
@@ -109,6 +110,10 @@ export function AddExpenseSheet({
 }: Props) {
   const user = useAuthStore((s) => s.user);
   const isEdit = Boolean(editExpense?.id);
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const { keyboardHeight, scrollRef, onScroll, onFocusWithin } =
+    useKeyboardSheet();
 
   const [today, setToday] = useState(() => localISODate());
   const dateMax = maxDate && maxDate > today ? maxDate : today;
@@ -441,14 +446,21 @@ export function AddExpenseSheet({
       visible={visible}
       animationType="slide"
       transparent
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.backdrop}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <View style={[styles.backdrop, { paddingBottom: keyboardHeight }]}>
         <Pressable style={styles.backdropTap} onPress={onClose} />
-        <View style={styles.sheet}>
+        <View
+          style={[
+            styles.sheet,
+            {
+              maxHeight: (windowHeight - keyboardHeight - insets.top) * 0.94,
+              paddingBottom:
+                keyboardHeight > 0 ? 8 : Math.max(insets.bottom, 16),
+            },
+          ]}
+        >
           <View style={styles.headRow}>
             <Text style={styles.title}>{title}</Text>
             <Pressable
@@ -463,311 +475,323 @@ export function AddExpenseSheet({
           </View>
 
           <ScrollView
+            ref={scrollRef}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.body}
           >
-            <View style={{ marginBottom: 8 }}>
-              <MoneyInput
-                label={isIncome ? "Income amount (₹)" : "Expense amount (₹)"}
-                value={amount}
-                onChangeValue={setAmount}
-                placeholder="0"
-              />
-            </View>
-
-            <View style={styles.block}>
-              <DateField value={date} onChange={setDate} max={dateMax} />
-            </View>
-
-            {!defaultBucket ? (
-              <View style={styles.block}>
-                <Text style={styles.fieldLabelTight}>Category</Text>
-                <View style={styles.catGrid}>
-                  {Object.entries(TRACKER_CATEGORIES).map(([key, cat]) => {
-                    const on = bucket === key;
-                    return (
-                      <Pressable
-                        key={key}
-                        onPress={() => {
-                          setBucket(key);
-                          setSubcategory("");
-                        }}
-                        style={[
-                          styles.catCell,
-                          on && {
-                            borderColor: cat.color,
-                            backgroundColor: `${cat.color}15`,
-                          },
-                        ]}
-                      >
-                        <TrackerIconBadge
-                          name={cat.icon}
-                          size={36}
-                          iconSize={18}
-                          color={cat.color}
-                        />
-                        <Text
-                          style={[styles.catText, on && { color: cat.color }]}
-                          numberOfLines={2}
-                        >
-                          {cat.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+            <View onFocus={onFocusWithin}>
+              <View style={{ marginBottom: 8 }}>
+                <MoneyInput
+                  label={isIncome ? "Income amount (₹)" : "Expense amount (₹)"}
+                  value={amount}
+                  onChangeValue={setAmount}
+                  placeholder="0"
+                />
               </View>
-            ) : null}
 
-            {selectedBucket ? (
               <View style={styles.block}>
-                <Text style={styles.fieldLabelTight}>Type</Text>
-                <View style={styles.wrapChips}>
-                  {subs.map((sub) => {
-                    const on = subcategory === sub.id;
-                    return (
-                      <Pressable
-                        key={sub.id}
-                        onPress={() => setSubcategory(sub.id)}
-                        style={[
-                          styles.chip,
-                          on && {
-                            borderColor: selectedBucket.color,
-                            backgroundColor: `${selectedBucket.color}15`,
-                          },
-                        ]}
-                      >
-                        <TrackerIcon
-                          name={sub.icon}
-                          size={16}
-                          color={selectedBucket.color}
-                        />
-                        <Text
+                <DateField value={date} onChange={setDate} max={dateMax} />
+              </View>
+
+              {!defaultBucket ? (
+                <View style={styles.block}>
+                  <Text style={styles.fieldLabelTight}>Category</Text>
+                  <View style={styles.catGrid}>
+                    {Object.entries(TRACKER_CATEGORIES).map(([key, cat]) => {
+                      const on = bucket === key;
+                      return (
+                        <Pressable
+                          key={key}
+                          onPress={() => {
+                            setBucket(key);
+                            setSubcategory("");
+                          }}
                           style={[
-                            styles.chipText,
+                            styles.catCell,
                             on && {
-                              color: selectedBucket.color,
-                              fontWeight: "700",
+                              borderColor: cat.color,
+                              backgroundColor: `${cat.color}15`,
                             },
                           ]}
                         >
-                          {sub.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : null}
-
-            <View style={styles.block}>
-              <Text style={styles.fieldLabel}>Note (optional)</Text>
-              <TextInput
-                value={description}
-                onChangeText={setDescription}
-                placeholder="e.g. Zomato dinner order"
-                placeholderTextColor={Colors.textMuted}
-                style={styles.textInput}
-              />
-            </View>
-
-            {!isIncome ? (
-              <View style={{ marginBottom: 20 }}>
-                <Text style={styles.fieldLabelTight}>Paid via</Text>
-                {isCcBillPay ? (
-                  <Text style={styles.ccHint}>
-                    Paying the card bill with UPI, cash, net banking or wallet{" "}
-                    <Text style={styles.ccHintStrong}>reduces Money Left</Text>{" "}
-                    on the purple card.
-                  </Text>
-                ) : null}
-                <View style={styles.wrapChips}>
-                  {PAYMENT_OPTIONS.filter((pm) =>
-                    isCcBillPay ? pm.id !== "credit_card" : true,
-                  ).map((pm) => {
-                    const on = paymentMethod === pm.id;
-                    return (
-                      <Pressable
-                        key={pm.id}
-                        onPress={() => {
-                          setPaymentMethod(pm.id);
-                          if (pm.id === "credit_card") {
-                            if (savedCards.length === 0) setShowAddCard(true);
-                            else if (!selectedCardId && savedCards[0]) {
-                              setSelectedCardId(savedCards[0].id);
-                            }
-                          } else {
-                            setShowAddCard(false);
-                          }
-                        }}
-                        style={[styles.chip, on && styles.payChipOn]}
-                      >
-                        <AppIcon
-                          name={pm.icon}
-                          size={15}
-                          color={on ? Colors.primary : Colors.textPrimary}
-                        />
-                        <Text
-                          style={[styles.payChipText, on && styles.payTextOn]}
-                        >
-                          {pm.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                {paymentMethod === "credit_card" ? (
-                  <View style={styles.cardPanel}>
-                    <Text style={styles.cardPanelLabel}>
-                      Which credit card?
-                    </Text>
-                    {savedCards.length > 0 ? (
-                      <View style={{ marginBottom: showAddCard ? 12 : 0 }}>
-                        <View style={{ gap: 8 }}>
-                          {savedCards.map((c) => {
-                            const on = selectedCardId === c.id;
-                            return (
-                              <View
-                                key={c.id}
-                                style={[styles.cardRow, on && styles.cardRowOn]}
-                              >
-                                <Pressable
-                                  onPress={() => {
-                                    setSelectedCardId(c.id);
-                                    setShowAddCard(false);
-                                  }}
-                                  accessibilityRole="radio"
-                                  accessibilityState={{ selected: on }}
-                                  style={styles.cardPick}
-                                >
-                                  <Text style={styles.cardName}>
-                                    {formatCreditCardLabel(c)}
-                                  </Text>
-                                  {c.billingDay || c.dueDay ? (
-                                    <Text style={styles.cardMeta}>
-                                      {c.billingDay
-                                        ? `Bill day ${c.billingDay}`
-                                        : ""}
-                                      {c.billingDay && c.dueDay ? " · " : ""}
-                                      {c.dueDay ? `Due day ${c.dueDay}` : ""}
-                                    </Text>
-                                  ) : null}
-                                </Pressable>
-                                <Pressable
-                                  onPress={() => handleDeleteCard(c.id)}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={`Delete ${c.nickname}`}
-                                  style={styles.cardDelete}
-                                >
-                                  <Text style={styles.cardDeleteText}>
-                                    Delete
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            );
-                          })}
-                        </View>
-                        <Pressable
-                          onPress={() => setShowAddCard(true)}
-                          style={styles.addCardBtn}
-                        >
-                          <Text style={styles.addCardText}>+ Add new card</Text>
-                        </Pressable>
-                      </View>
-                    ) : null}
-
-                    {showAddCard || savedCards.length === 0 ? (
-                      <View style={{ gap: 10, marginTop: 4 }}>
-                        <View>
-                          <Text style={styles.smallLabel}>Card name</Text>
-                          <TextInput
-                            value={newCardNickname}
-                            onChangeText={setNewCardNickname}
-                            placeholder="e.g. HDFC Millennia"
-                            placeholderTextColor={Colors.textMuted}
-                            style={styles.textInput}
+                          <TrackerIconBadge
+                            name={cat.icon}
+                            size={36}
+                            iconSize={18}
+                            color={cat.color}
                           />
-                        </View>
-                        <View style={{ flexDirection: "row", gap: 10 }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.smallLabel}>Billing day</Text>
-                            <TextInput
-                              value={newCardBillingDay}
-                              onChangeText={(v) => {
-                                const clean = v
-                                  .replace(/[^\d]/g, "")
-                                  .slice(0, 2);
-                                setNewCardBillingDay(clean);
-                                const b = Number(clean);
-                                if (
-                                  Number.isFinite(b) &&
-                                  b >= 1 &&
-                                  b <= 31 &&
-                                  !newCardDueDay
-                                ) {
-                                  setNewCardDueDay(
-                                    String(suggestDueDayFromBilling(b)),
-                                  );
-                                }
-                              }}
-                              keyboardType="number-pad"
-                              placeholder="e.g. 15"
-                              placeholderTextColor={Colors.textMuted}
-                              style={styles.textInput}
-                            />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.smallLabel}>Due day</Text>
-                            <TextInput
-                              value={newCardDueDay}
-                              onChangeText={(v) =>
-                                setNewCardDueDay(
-                                  v.replace(/[^\d]/g, "").slice(0, 2),
-                                )
-                              }
-                              keyboardType="number-pad"
-                              placeholder={`~+${DEFAULT_DUE_OFFSET_DAYS}d`}
-                              placeholderTextColor={Colors.textMuted}
-                              style={styles.textInput}
-                            />
-                          </View>
-                        </View>
-                        <Pressable
-                          onPress={handleAddCard}
-                          style={styles.saveCardBtn}
-                        >
-                          <Text style={styles.saveCardText}>Save card</Text>
+                          <Text
+                            style={[styles.catText, on && { color: cat.color }]}
+                            numberOfLines={2}
+                          >
+                            {cat.label}
+                          </Text>
                         </Pressable>
-                        <Text style={styles.cardFootnote}>
-                          Nickname + billing/due days sync to your account. No
-                          full card number. Due day defaults to ~
-                          {DEFAULT_DUE_OFFSET_DAYS} days after statement (not
-                          the ~45-day interest-free period).
-                        </Text>
-                      </View>
-                    ) : null}
+                      );
+                    })}
                   </View>
-                ) : null}
-              </View>
-            ) : null}
+                </View>
+              ) : null}
 
-            {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
+              {selectedBucket ? (
+                <View style={styles.block}>
+                  <Text style={styles.fieldLabelTight}>Type</Text>
+                  <View style={styles.wrapChips}>
+                    {subs.map((sub) => {
+                      const on = subcategory === sub.id;
+                      return (
+                        <Pressable
+                          key={sub.id}
+                          onPress={() => setSubcategory(sub.id)}
+                          style={[
+                            styles.chip,
+                            on && {
+                              borderColor: selectedBucket.color,
+                              backgroundColor: `${selectedBucket.color}15`,
+                            },
+                          ]}
+                        >
+                          <TrackerIcon
+                            name={sub.icon}
+                            size={16}
+                            color={selectedBucket.color}
+                          />
+                          <Text
+                            style={[
+                              styles.chipText,
+                              on && {
+                                color: selectedBucket.color,
+                                fontWeight: "700",
+                              },
+                            ]}
+                          >
+                            {sub.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
 
-            <Pressable
-              onPress={() => void handleSave()}
-              disabled={saving}
-              style={[styles.saveBtn, saving && styles.saveBtnBusy]}
-            >
-              <Text style={styles.saveText}>{primaryCta}</Text>
-            </Pressable>
+              <View style={styles.block}>
+                <Text style={styles.fieldLabel}>Note (optional)</Text>
+                <TextInput
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="e.g. Zomato dinner order"
+                  placeholderTextColor={Colors.textMuted}
+                  style={styles.textInput}
+                />
+              </View>
+
+              {!isIncome ? (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={styles.fieldLabelTight}>Paid via</Text>
+                  {isCcBillPay ? (
+                    <Text style={styles.ccHint}>
+                      Paying the card bill with UPI, cash, net banking or wallet{" "}
+                      <Text style={styles.ccHintStrong}>
+                        reduces Money Left
+                      </Text>{" "}
+                      on the purple card.
+                    </Text>
+                  ) : null}
+                  <View style={styles.wrapChips}>
+                    {PAYMENT_OPTIONS.filter((pm) =>
+                      isCcBillPay ? pm.id !== "credit_card" : true,
+                    ).map((pm) => {
+                      const on = paymentMethod === pm.id;
+                      return (
+                        <Pressable
+                          key={pm.id}
+                          onPress={() => {
+                            setPaymentMethod(pm.id);
+                            if (pm.id === "credit_card") {
+                              if (savedCards.length === 0) setShowAddCard(true);
+                              else if (!selectedCardId && savedCards[0]) {
+                                setSelectedCardId(savedCards[0].id);
+                              }
+                            } else {
+                              setShowAddCard(false);
+                            }
+                          }}
+                          style={[styles.chip, on && styles.payChipOn]}
+                        >
+                          <AppIcon
+                            name={pm.icon}
+                            size={15}
+                            color={on ? Colors.primary : Colors.textPrimary}
+                          />
+                          <Text
+                            style={[styles.payChipText, on && styles.payTextOn]}
+                          >
+                            {pm.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {paymentMethod === "credit_card" ? (
+                    <View style={styles.cardPanel}>
+                      <Text style={styles.cardPanelLabel}>
+                        Which credit card?
+                      </Text>
+                      {savedCards.length > 0 ? (
+                        <View style={{ marginBottom: showAddCard ? 12 : 0 }}>
+                          <View style={{ gap: 8 }}>
+                            {savedCards.map((c) => {
+                              const on = selectedCardId === c.id;
+                              return (
+                                <View
+                                  key={c.id}
+                                  style={[
+                                    styles.cardRow,
+                                    on && styles.cardRowOn,
+                                  ]}
+                                >
+                                  <Pressable
+                                    onPress={() => {
+                                      setSelectedCardId(c.id);
+                                      setShowAddCard(false);
+                                    }}
+                                    accessibilityRole="radio"
+                                    accessibilityState={{ selected: on }}
+                                    style={styles.cardPick}
+                                  >
+                                    <Text style={styles.cardName}>
+                                      {formatCreditCardLabel(c)}
+                                    </Text>
+                                    {c.billingDay || c.dueDay ? (
+                                      <Text style={styles.cardMeta}>
+                                        {c.billingDay
+                                          ? `Bill day ${c.billingDay}`
+                                          : ""}
+                                        {c.billingDay && c.dueDay ? " · " : ""}
+                                        {c.dueDay ? `Due day ${c.dueDay}` : ""}
+                                      </Text>
+                                    ) : null}
+                                  </Pressable>
+                                  <Pressable
+                                    onPress={() => handleDeleteCard(c.id)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Delete ${c.nickname}`}
+                                    style={styles.cardDelete}
+                                  >
+                                    <Text style={styles.cardDeleteText}>
+                                      Delete
+                                    </Text>
+                                  </Pressable>
+                                </View>
+                              );
+                            })}
+                          </View>
+                          <Pressable
+                            onPress={() => setShowAddCard(true)}
+                            style={styles.addCardBtn}
+                          >
+                            <Text style={styles.addCardText}>
+                              + Add new card
+                            </Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
+
+                      {showAddCard || savedCards.length === 0 ? (
+                        <View style={{ gap: 10, marginTop: 4 }}>
+                          <View>
+                            <Text style={styles.smallLabel}>Card name</Text>
+                            <TextInput
+                              value={newCardNickname}
+                              onChangeText={setNewCardNickname}
+                              placeholder="e.g. HDFC Millennia"
+                              placeholderTextColor={Colors.textMuted}
+                              style={styles.textInput}
+                            />
+                          </View>
+                          <View style={{ flexDirection: "row", gap: 10 }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.smallLabel}>Billing day</Text>
+                              <TextInput
+                                value={newCardBillingDay}
+                                onChangeText={(v) => {
+                                  const clean = v
+                                    .replace(/[^\d]/g, "")
+                                    .slice(0, 2);
+                                  setNewCardBillingDay(clean);
+                                  const b = Number(clean);
+                                  if (
+                                    Number.isFinite(b) &&
+                                    b >= 1 &&
+                                    b <= 31 &&
+                                    !newCardDueDay
+                                  ) {
+                                    setNewCardDueDay(
+                                      String(suggestDueDayFromBilling(b)),
+                                    );
+                                  }
+                                }}
+                                keyboardType="number-pad"
+                                placeholder="e.g. 15"
+                                placeholderTextColor={Colors.textMuted}
+                                style={styles.textInput}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.smallLabel}>Due day</Text>
+                              <TextInput
+                                value={newCardDueDay}
+                                onChangeText={(v) =>
+                                  setNewCardDueDay(
+                                    v.replace(/[^\d]/g, "").slice(0, 2),
+                                  )
+                                }
+                                keyboardType="number-pad"
+                                placeholder={`~+${DEFAULT_DUE_OFFSET_DAYS}d`}
+                                placeholderTextColor={Colors.textMuted}
+                                style={styles.textInput}
+                              />
+                            </View>
+                          </View>
+                          <Pressable
+                            onPress={handleAddCard}
+                            style={styles.saveCardBtn}
+                          >
+                            <Text style={styles.saveCardText}>Save card</Text>
+                          </Pressable>
+                          <Text style={styles.cardFootnote}>
+                            Nickname + billing/due days sync to your account. No
+                            full card number. Due day defaults to ~
+                            {DEFAULT_DUE_OFFSET_DAYS} days after statement (not
+                            the ~45-day interest-free period).
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              <Pressable
+                onPress={() => void handleSave()}
+                disabled={saving}
+                style={[styles.saveBtn, saving && styles.saveBtnBusy]}
+              >
+                <Text style={styles.saveText}>{primaryCta}</Text>
+              </Pressable>
+            </View>
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -783,8 +807,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "90%",
-    paddingBottom: Platform.OS === "ios" ? 28 : 16,
   },
   headRow: {
     flexDirection: "row",
