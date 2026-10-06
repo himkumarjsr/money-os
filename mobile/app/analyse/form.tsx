@@ -1,684 +1,795 @@
 import {
-  View,
-  Text,
+  Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { router } from "expo-router";
+import {
+  FormProvider,
+  useForm,
+  type FieldPath,
+  type UseFormSetError,
+} from "react-hook-form";
+import type { ZodError } from "zod";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import { useObligationStore } from "@/store/obligationStore";
 import { supabase } from "@/lib/supabase";
-import { analyseFinances } from "@/lib/financialEngine";
+import { appStorage } from "@/lib/storage";
+import { syncKv } from "@/lib/syncKv";
+import { useKeyboardSheet } from "@/lib/useKeyboardSheet";
+import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import {
   analyseDefaultValues,
+  clearLegacyLoanScalars,
+  coalesceInsuranceToggles,
+  financialProfileToFormValues,
+  mergeAnalyseDraftWithProfile,
+  newAnalyseRowId,
   normalizeAnalyseFormValues,
+  step7Schema,
+  type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
-import { upsertUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import {
+  fetchUserAnalyseSnapshot,
+  upsertUserAnalyseSnapshot,
+} from "@/lib/userAnalyseSnapshot";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
-import { useObligationStore } from "@/store/obligationStore";
-import { Colors, Spacing, Radius, FontSize } from "@/constants/theme";
-import MoneyInput from "@/components/ui/MoneyInput";
-import Input from "@/components/ui/Input";
-import Button from "@/components/ui/Button";
+import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import {
+  STEPS,
+  STEP_SCHEMAS,
+  computeLiveTotals,
+  detectLastStep,
+  initialUiState,
+  type AnalyseFormUiState,
+  type PatchUi,
+} from "@/components/analyse/form/shared";
+import {
+  ProgressPills,
+  ResumeBanner,
+  ResumeOptionRow,
+} from "@/components/analyse/form/FormChrome";
+import { Step1Profile } from "@/components/analyse/form/Step1Profile";
+import { Step2Income } from "@/components/analyse/form/Step2Income";
+import { Step3Obligations } from "@/components/analyse/form/Step3Obligations";
+import { Step4Expenses } from "@/components/analyse/form/Step4Expenses";
+import { Step5Insurance } from "@/components/analyse/form/Step5Insurance";
+import { Step6Assets } from "@/components/analyse/form/Step6Assets";
+import { Step7Goals } from "@/components/analyse/form/Step7Goals";
 
-const TOTAL_STEPS = 7;
+const FINANCIAL_PERSIST_NAME = "finkoin-financial-mobile";
+const AI_CACHE_KEY = "finkoin_ai_cache";
 
-const LIFE_STAGES = [
-  { value: "bachelor", label: "Single", emoji: "🧑" },
-  { value: "married", label: "Married", emoji: "💑" },
-  { value: "kids", label: "With Kids", emoji: "👨‍👩‍👧" },
-  { value: "senior", label: "Senior", emoji: "🧓" },
+const UNIFIED_LOAN_TYPES = [
+  "home_loan",
+  "personal_loan",
+  "car_loan",
+  "bike_loan",
+  "education_loan",
+  "pf_loan",
+  "overdraft",
+  "gold_loan",
+  "business_loan",
+  "credit_card",
+  "other",
 ] as const;
 
-const CITY_TIERS = [
-  {
-    value: "metro",
-    label: "Metro",
-    sub: "Mumbai, Delhi, Bengaluru",
-  },
-  {
-    value: "tier2",
-    label: "Tier 2",
-    sub: "Pune, Hyderabad, Ahmedabad",
-  },
-  {
-    value: "tier3",
-    label: "Tier 3",
-    sub: "Smaller cities and towns",
-  },
-] as const;
+function wipeAnalyseLocalCaches() {
+  try {
+    const uid = useAuthStore.getState().user?.id ?? "__guest__";
+    void appStorage.removeItem(`${FINANCIAL_PERSIST_NAME}:${uid}`);
+    void appStorage.removeItem(FINANCIAL_PERSIST_NAME);
+    syncKv.removeItem(AI_CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
-const GOALS = [
-  { value: "emergency_fund", label: "Build emergency fund", emoji: "🛡️" },
-  { value: "buy_home", label: "Buy a home", emoji: "🏠" },
-  { value: "retire_early", label: "Retire early", emoji: "🌴" },
-  { value: "grow_wealth", label: "Grow wealth", emoji: "📈" },
-  { value: "clear_debt", label: "Clear debt", emoji: "💳" },
-  { value: "childs_education", label: "Child's education", emoji: "🎓" },
-] as const;
-
-type FormState = {
-  lifeStage: string;
-  selfAge: string;
-  spouseAge: string;
-  numberOfKids: string;
-  cityTier: string;
-  monthlySalary: string;
-  spouseIncome: string;
-  otherIncome: string;
-  homeLoanEMI: string;
-  carLoanEMI: string;
-  personalLoanEMI: string;
-  rentAmount: string;
-  creditCardBillMonthly: string;
-  foodTotal: string;
-  transportTotal: string;
-  utilityTotal: string;
-  lifestyleTotal: string;
-  hasHealthInsurance: boolean;
-  healthInsuranceSumInsured: string;
-  healthInsurancePremiumInput: string;
-  healthInsurancePremiumFrequency: "monthly" | "yearly";
-  hasTermInsurance: boolean;
-  termInsuranceSumAssured: string;
-  termInsurancePremiumInput: string;
-  termInsurancePremiumFrequency: "monthly" | "yearly";
-  savingsAccountBalance: string;
-  fdValue: string;
-  liquidMFValue: string;
-  totalEquityValue: string;
-  ppfBalance: string;
-  epfBalance: string;
-  monthlySIP: string;
-  primaryGoal: string;
-};
+/** Every Zod issue → RHF error at its dotted path; returns the banner message. */
+function applyZodIssues(
+  error: ZodError,
+  setError: UseFormSetError<AnalyseFormValues>,
+  fallback: string,
+): string {
+  const seen = new Set<string>();
+  for (const issue of error.issues) {
+    const key = issue.path.join(".");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    setError(key as FieldPath<AnalyseFormValues>, {
+      type: "manual",
+      message: issue.message,
+    });
+  }
+  return (
+    error.issues.find((i) => i.path.length > 0)?.message ??
+    error.issues.find((i) => i.path.length === 0)?.message ??
+    fallback
+  );
+}
 
 export default function AnalyseFormScreen() {
-  const { user } = useAuthStore();
-  const [step, setStep] = useState(1);
-  const [saving, setSaving] = useState(false);
+  const insets = useSafeAreaInsets();
+  const { keyboardHeight, scrollRef, onScroll, onFocusWithin } =
+    useKeyboardSheet();
+  const authUserId = useAuthStore((s) => s.user?.id ?? null);
+  const lastSubmission = useFinancialStore((s) => s.lastSubmission);
+  const hasHydrated = useFinancialStore((s) => s.hasHydrated);
+  const step = useFinancialStore((s) => s.currentStep);
+  const setStep = useFinancialStore((s) => s.setCurrentStep);
+  const setAnalysis = useFinancialStore((s) => s.setAnalysis);
+  const setFullAnalysis = useFinancialStore((s) => s.setFullAnalysis);
 
-  const [form, setForm] = useState<FormState>({
-    lifeStage: "bachelor",
-    selfAge: "",
-    spouseAge: "",
-    numberOfKids: "",
-    cityTier: "metro",
-    monthlySalary: "",
-    spouseIncome: "",
-    otherIncome: "",
-    homeLoanEMI: "",
-    carLoanEMI: "",
-    personalLoanEMI: "",
-    rentAmount: "",
-    creditCardBillMonthly: "",
-    foodTotal: "",
-    transportTotal: "",
-    utilityTotal: "",
-    lifestyleTotal: "",
-    hasHealthInsurance: false,
-    healthInsuranceSumInsured: "",
-    healthInsurancePremiumInput: "",
-    healthInsurancePremiumFrequency: "yearly",
-    hasTermInsurance: false,
-    termInsuranceSumAssured: "",
-    termInsurancePremiumInput: "",
-    termInsurancePremiumFrequency: "yearly",
-    savingsAccountBalance: "",
-    fdValue: "",
-    liquidMFValue: "",
-    totalEquityValue: "",
-    ppfBalance: "",
-    epfBalance: "",
-    monthlySIP: "",
-    primaryGoal: "grow_wealth",
+  const methods = useForm<AnalyseFormValues>({
+    defaultValues: analyseDefaultValues,
+    mode: "onSubmit",
+    shouldUnregister: false,
   });
+  const { watch, setValue, reset, setError, clearErrors, getValues } = methods;
 
-  const update = (patch: Partial<FormState>) =>
-    setForm((prev) => ({ ...prev, ...patch }));
+  const [ui, setUi] = useState<AnalyseFormUiState>(() =>
+    initialUiState(useFinancialStore.getState().lastSubmission),
+  );
+  const patchUi: PatchUi = useCallback(
+    (patch) => setUi((prev) => ({ ...prev, ...patch })),
+    [],
+  );
+  const uiSeededRef = useRef(useFinancialStore.getState().hasHydrated);
 
-  const next = () => {
-    if (step < TOTAL_STEPS) setStep((s) => s + 1);
-    else void handleSubmit();
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [stepNavError, setStepNavError] = useState<string | null>(null);
+  const [showResumeBanner, setShowResumeBanner] = useState(false);
+  const [showResumeOption, setShowResumeOption] = useState(false);
+  const resumeCheckedRef = useRef(false);
+  /** Per-user: avoid re-fetching cloud snapshot every mount; cleared when auth user changes. */
+  const cloudHydrateKey = useRef<string | null>(null);
+  /** After "Start fresh", do not immediately pull server snapshot for this account. */
+  const skipCloudHydrateRef = useRef(false);
 
-  const back = () => {
-    if (step > 1) setStep((s) => s - 1);
-    else router.back();
-  };
+  const prevLifeStageRef = useRef<AnalyseFormValues["lifeStage"] | null>(null);
+  const prevHasHealthRef = useRef<boolean | undefined>(undefined);
+  const prevHasTermRef = useRef<boolean | undefined>(undefined);
+  const prevHasOtherInsuranceRef = useRef<boolean | undefined>(undefined);
+  const prevOwnsHomeRef = useRef<boolean | undefined>(undefined);
+  const prevOwnsCarRef = useRef<boolean | undefined>(undefined);
+  const prevPostOfficeRef = useRef<boolean | undefined>(undefined);
+  const prevParentsSupportRef = useRef<number | undefined>(undefined);
 
-  const handleSubmit = async () => {
-    if (!user?.id) {
-      Alert.alert(
-        "Sign in required",
-        "Please log in to save your health check.",
+  const values = watch();
+  const live = computeLiveTotals(values);
+  const lifeStage = values.lifeStage;
+  const hasHealthInsurance = values.hasHealthInsurance;
+  const hasTermInsurance = values.hasTermInsurance;
+  const hasOtherInsurance = values.hasOtherInsurance;
+  const otherInsuranceCount = values.otherInsurancePremiums?.length ?? 0;
+  const ownsHome = values.ownsHome;
+  const ownsCar = values.ownsCar;
+  const hasPostOfficeSchemes = values.hasPostOfficeSchemes;
+  const parentsSupport = values.parentsSupport ?? 0;
+  const primaryGoal = values.primaryGoal;
+  const { hasEligibleGirlChild, emergencyFundSuggestion } = live;
+
+  // Web seeds these from `lastSubmission` at mount; mobile store may hydrate after mount.
+  useEffect(() => {
+    if (!hasHydrated || uiSeededRef.current) return;
+    uiSeededRef.current = true;
+    setUi(initialUiState(useFinancialStore.getState().lastSubmission));
+  }, [hasHydrated]);
+
+  useEffect(() => {
+    if ((values.rentAmount ?? 0) > 0) patchUi({ isRenting: true });
+    if ((values.creditCardBillMonthly ?? 0) > 0)
+      patchUi({ hasCreditCardOutstanding: true });
+  }, [values.rentAmount, values.creditCardBillMonthly, patchUi]);
+
+  useEffect(() => {
+    if ((values.carLoanEMI || 0) > 0 || (values.carMarketValue || 0) > 0) {
+      patchUi({ hasVehicleToggle: true });
+    }
+  }, [values.carLoanEMI, values.carMarketValue, patchUi]);
+
+  useLayoutEffect(() => {
+    if (!hasHydrated) return;
+    const { analysis: draft } = useFinancialStore.getState();
+    const cached = { ...(draft ?? {}) } as Record<string, unknown>;
+    if (cached.nscMonthly != null && cached.nscDepositAmount == null) {
+      cached.nscDepositAmount = cached.nscMonthly;
+    }
+    delete cached.nscMonthly;
+    const cachedTyped = cached as Partial<AnalyseFormValues>;
+    const merged = {
+      ...analyseDefaultValues,
+      ...mergeAnalyseDraftWithProfile(
+        lastSubmission ? financialProfileToFormValues(lastSubmission) : {},
+        cachedTyped,
+      ),
+    };
+    reset(coalesceInsuranceToggles(merged as AnalyseFormValues));
+  }, [hasHydrated, lastSubmission, reset]);
+
+  useEffect(() => {
+    skipCloudHydrateRef.current = false;
+    cloudHydrateKey.current = null;
+  }, [authUserId]);
+
+  useEffect(() => {
+    if (!hasHydrated || !authUserId) return;
+    const doneKey = authUserId;
+    if (cloudHydrateKey.current === doneKey) return;
+    if (skipCloudHydrateRef.current) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+
+    const st = useFinancialStore.getState();
+    if (st.lastSubmission) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+    if (st.currentStep !== 0) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+    if ((st.profile?.monthlySalary ?? 0) > 0) {
+      cloudHydrateKey.current = doneKey;
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const remote = await fetchUserAnalyseSnapshot(authUserId);
+        if (cancelled) return;
+        if (
+          remote?.lastSubmission &&
+          remote.result &&
+          isValidStoredAnalysis(remote.result)
+        ) {
+          useFinancialStore
+            .getState()
+            .hydrateFromSnapshot(remote.lastSubmission, remote.result, {
+              analysisPatch: remote.analysis ?? undefined,
+            });
+        }
+      } finally {
+        if (!cancelled) cloudHydrateKey.current = doneKey;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, authUserId, lastSubmission, step]);
+
+  // Web runs this on mount (store is synchronously hydrated there).
+  useEffect(() => {
+    if (!hasHydrated || resumeCheckedRef.current) return;
+    resumeCheckedRef.current = true;
+    const store = useFinancialStore.getState();
+    if (store.result) {
+      setShowResumeOption(true);
+    } else if (
+      (store.profile?.monthlySalary ?? 0) > 0 ||
+      store.currentStep > 0
+    ) {
+      setShowResumeBanner(true);
+    }
+  }, [hasHydrated]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    const subscription = watch(() => {
+      setAnalysis(getValues());
+    });
+    return () => subscription.unsubscribe();
+  }, [hasHydrated, setAnalysis, watch, getValues]);
+
+  useEffect(() => {
+    const prev = prevLifeStageRef.current;
+    if (prev !== null && prev !== "bachelor" && lifeStage === "bachelor") {
+      setValue("spouseIncome", 0, { shouldDirty: false, shouldValidate: false });
+      setValue("spouseAge", 0, { shouldDirty: false, shouldValidate: false });
+    }
+    if (prev !== null && lifeStage !== "kids" && prev === "kids") {
+      setValue("numberOfKids", undefined);
+      setValue("kidsAges", []);
+      setValue("kidsGenders", []);
+      setValue("kidsSchoolFees", 0);
+      setValue("kidsActivities", 0);
+      setValue("ssy", 0);
+    }
+    prevLifeStageRef.current = lifeStage;
+  }, [lifeStage, setValue]);
+
+  useEffect(() => {
+    const prev = prevHasHealthRef.current;
+    if (prev === true && hasHealthInsurance === false) {
+      setValue("healthInsuranceSumInsured", 0);
+      setValue("healthInsurancePremiumInput", 0);
+      setValue("healthInsurancePremiumFrequency", "monthly");
+    }
+    prevHasHealthRef.current = hasHealthInsurance;
+  }, [hasHealthInsurance, setValue]);
+
+  useEffect(() => {
+    const prev = prevHasTermRef.current;
+    if (prev === true && hasTermInsurance === false) {
+      setValue("termInsuranceSumAssured", 0);
+      setValue("termInsurancePremiumInput", 0);
+      setValue("termInsurancePremiumFrequency", "monthly");
+    }
+    prevHasTermRef.current = hasTermInsurance;
+  }, [hasTermInsurance, setValue]);
+
+  useEffect(() => {
+    const prev = prevHasOtherInsuranceRef.current;
+    if (hasOtherInsurance && prev === false && otherInsuranceCount === 0) {
+      setValue("otherInsurancePremiums", [
+        {
+          id: newAnalyseRowId(),
+          policyName: "",
+          premiumAmount: 0,
+          frequency: "monthly",
+          maturityAmount: 0,
+          maturityYear: 0,
+        },
+      ]);
+    }
+    if (prev === true && hasOtherInsurance === false) {
+      setValue("otherInsurancePremiums", []);
+    }
+    prevHasOtherInsuranceRef.current = hasOtherInsurance;
+  }, [hasOtherInsurance, otherInsuranceCount, setValue]);
+
+  useEffect(() => {
+    const prev = prevOwnsHomeRef.current;
+    if (prev === true && ownsHome === false) {
+      setValue("homeMarketValue", 0);
+      setValue("homeLoanOutstanding", 0);
+      setValue("homeLoanEMI", 0);
+      setValue("homeLoanEMIDay", undefined);
+    }
+    prevOwnsHomeRef.current = ownsHome;
+  }, [ownsHome, setValue]);
+
+  useEffect(() => {
+    const prev = prevOwnsCarRef.current;
+    if (prev === true && ownsCar === false) {
+      setValue("carMarketValue", 0);
+      setValue("carLoanOutstanding", 0);
+      setValue("carPurchaseTarget", 0);
+      setValue("carPurchaseYear", 0);
+    }
+    prevOwnsCarRef.current = ownsCar;
+  }, [ownsCar, setValue]);
+
+  useEffect(() => {
+    if (!hasEligibleGirlChild) {
+      setValue("ssy", 0);
+    }
+  }, [hasEligibleGirlChild, setValue]);
+
+  useEffect(() => {
+    const prev = prevPostOfficeRef.current;
+    if (prev === true && hasPostOfficeSchemes === false) {
+      setValue("postOfficeSchemes", []);
+      setValue("nscDepositAmount", 0);
+      setValue("nscMaturityYear", 0);
+      setValue("investsInNsc", false);
+    }
+    prevPostOfficeRef.current = hasPostOfficeSchemes;
+  }, [hasPostOfficeSchemes, setValue]);
+
+  useEffect(() => {
+    const prev = prevParentsSupportRef.current;
+    if (prev !== undefined && prev > 0 && parentsSupport <= 0) {
+      setValue("parentsCity", undefined);
+      setValue("parentsHealthInsuranceSumInsured", 0);
+      setValue("parentsEmergencyCash", 0);
+    }
+    prevParentsSupportRef.current = parentsSupport;
+  }, [parentsSupport, setValue]);
+
+  useEffect(() => {
+    if (
+      primaryGoal === "build_emergency_fund" &&
+      emergencyFundSuggestion &&
+      emergencyFundSuggestion > 0
+    ) {
+      const current = getValues("emergencyFundTarget") ?? 0;
+      if (current <= 0) {
+        setValue("emergencyFundTarget", Math.round(emergencyFundSuggestion), {
+          shouldDirty: true,
+          shouldValidate: false,
+        });
+      }
+    }
+  }, [primaryGoal, emergencyFundSuggestion, setValue, getValues]);
+
+  const scrollStepIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  }, [scrollRef]);
+
+  const forceNext = useCallback(() => {
+    clearErrors();
+    setStepNavError(null);
+    const formValues = getValues();
+    // Keep form state aligned with schema sanitizers so Next isn't blocked by
+    // stale additionalObligations / legacy loanType labels with no visible fields.
+    const cleanedObligations = (formValues.additionalObligations ?? []).filter(
+      (row) => {
+        const type = String(row?.type ?? "").trim();
+        const amt = Number(row?.monthlyAmount ?? 0);
+        return type.length > 0 && Number.isFinite(amt) && amt > 0;
+      },
+    );
+    if (
+      cleanedObligations.length !==
+      (formValues.additionalObligations?.length ?? 0)
+    ) {
+      setValue("additionalObligations", cleanedObligations, {
+        shouldDirty: true,
+      });
+    }
+    const cleanedLoans = (formValues.unifiedLoans ?? [])
+      .filter((row) => Number(row?.monthlyEMI ?? 0) > 0)
+      .map((row) => {
+        const raw = String(row?.loanType ?? "").trim();
+        const ok = (UNIFIED_LOAN_TYPES as readonly string[]).includes(raw);
+        const lenderName =
+          typeof row?.lenderName === "string"
+            ? row.lenderName.toUpperCase().trim()
+            : row?.lenderName;
+        const outstanding = Number(row?.outstandingAmount ?? 0) || 0;
+        return {
+          ...row,
+          loanType: ok ? row.loanType : ("other" as const),
+          lenderName,
+          outstandingAmount: outstanding,
+          odUsed:
+            (ok ? row.loanType : "other") === "overdraft"
+              ? outstanding || Number(row?.odUsed ?? 0) || 0
+              : Number(row?.odUsed ?? 0) || 0,
+        };
+      });
+    if (
+      cleanedLoans.length !== (formValues.unifiedLoans?.length ?? 0) ||
+      JSON.stringify(cleanedLoans) !==
+        JSON.stringify(formValues.unifiedLoans ?? [])
+    ) {
+      setValue("unifiedLoans", cleanedLoans, { shouldDirty: true });
+    }
+    const loanPatch: Partial<AnalyseFormValues> = {
+      unifiedLoans: cleanedLoans,
+      additionalObligations: cleanedObligations,
+    };
+    if (cleanedLoans.length === 0) {
+      Object.assign(loanPatch, clearLegacyLoanScalars());
+      patchUi({ hasLoans: false });
+    }
+    // Keep draft/cache in sync with lender names before leaving the step.
+    setAnalysis({
+      ...getValues(),
+      ...loanPatch,
+    });
+
+    const currentSchema = STEP_SCHEMAS[step];
+    const parsed = currentSchema.safeParse({
+      ...formValues,
+      additionalObligations: cleanedObligations,
+      unifiedLoans: cleanedLoans,
+    });
+    if (!parsed.success) {
+      setStepNavError(
+        applyZodIssues(
+          parsed.error,
+          setError,
+          "Please fix the highlighted fields before continuing.",
+        ),
       );
+      return;
+    }
+    setStep((current) => Math.min(current + 1, STEPS.length - 1));
+    scrollStepIntoView();
+  }, [
+    clearErrors,
+    getValues,
+    patchUi,
+    scrollStepIntoView,
+    setAnalysis,
+    setError,
+    setStep,
+    setValue,
+    step,
+  ]);
+
+  const goBack = useCallback(() => {
+    clearErrors();
+    setStepNavError(null);
+    setStep((current) => Math.max(current - 1, 0));
+    scrollStepIntoView();
+  }, [clearErrors, scrollStepIntoView, setStep]);
+
+  const jumpToStep = useCallback(
+    (index: number) => {
+      clearErrors();
+      setStepNavError(null);
+      setStep(Math.max(0, Math.min(index, STEPS.length - 1)));
+      scrollStepIntoView();
+    },
+    [clearErrors, scrollStepIntoView, setStep],
+  );
+
+  const handleFinalSubmit = useCallback(async () => {
+    clearErrors();
+    setSubmitError(null);
+    const formValues = getValues();
+    const finalParsed = step7Schema.safeParse({
+      ...formValues,
+      primaryGoal: formValues.primaryGoal?.trim()
+        ? formValues.primaryGoal
+        : "grow_wealth",
+    });
+    if (!finalParsed.success) {
+      setSubmitError(
+        applyZodIssues(
+          finalParsed.error,
+          setError,
+          "Please fix the highlighted fields, then try again.",
+        ),
+      );
+      scrollStepIntoView();
+      return;
+    }
+
+    if (!useAuthStore.getState().user?.id) {
+      Alert.alert("Sign in required", "Please log in to save your health check.");
       router.push("/(auth)/login");
       return;
     }
-    setSaving(true);
+
+    setIsSubmitting(true);
 
     try {
-      const num = (v: string) => {
-        const n = Number(String(v).replace(/,/g, ""));
-        return Number.isFinite(n) ? n : 0;
-      };
-
-      const payload = {
-        ...analyseDefaultValues,
-        lifeStage: form.lifeStage as "bachelor" | "married" | "kids" | "senior",
-        selfAge: num(form.selfAge) || 28,
-        spouseAge: num(form.spouseAge) || undefined,
-        numberOfKids:
-          form.lifeStage === "kids" ? num(form.numberOfKids) || 1 : undefined,
-        cityTier: form.cityTier as "metro" | "tier2" | "tier3",
-        monthlySalary: num(form.monthlySalary),
-        spouseIncome: num(form.spouseIncome),
-        otherIncome: num(form.otherIncome),
-        homeLoanEMI: num(form.homeLoanEMI),
-        carLoanEMI: num(form.carLoanEMI),
-        personalLoanEMI: num(form.personalLoanEMI),
-        rentAmount: num(form.rentAmount),
-        creditCardBillMonthly: num(form.creditCardBillMonthly),
-        foodTotal: num(form.foodTotal),
-        transportTotal: num(form.transportTotal),
-        utilityTotal: num(form.utilityTotal),
-        lifestyleTotal: num(form.lifestyleTotal),
-        hasHealthInsurance: form.hasHealthInsurance,
-        healthInsuranceSumInsured: num(form.healthInsuranceSumInsured),
-        healthInsurancePremiumInput: num(form.healthInsurancePremiumInput),
-        healthInsurancePremiumFrequency: form.healthInsurancePremiumFrequency,
-        hasTermInsurance: form.hasTermInsurance,
-        termInsuranceSumAssured: num(form.termInsuranceSumAssured),
-        termInsurancePremiumInput: num(form.termInsurancePremiumInput),
-        termInsurancePremiumFrequency: form.termInsurancePremiumFrequency,
-        savingsAccountBalance: num(form.savingsAccountBalance),
-        fdValue: num(form.fdValue),
-        liquidMFValue: num(form.liquidMFValue),
-        totalEquityValue: num(form.totalEquityValue),
-        ppfBalance: num(form.ppfBalance),
-        epfBalance: num(form.epfBalance),
-        monthlySIP: num(form.monthlySIP),
-        primaryGoal: form.primaryGoal,
-      };
-
-      const normalized = normalizeAnalyseFormValues(payload as never);
-      const analysisResult = analyseFinances(normalized);
-
-      // Canonical store + snapshot (web parity — B1)
-      useFinancialStore
-        .getState()
-        .hydrateFromSnapshot(normalized, analysisResult, {
-          analysisPatch: payload as never,
-        });
-
-      const { error: snapErr } = await upsertUserAnalyseSnapshot(user.id, {
-        profile: normalized,
-        result: analysisResult,
-        submittedAt: new Date().toISOString(),
-        version: "1.0",
-        analysis: payload as never,
+      const mergedValues = coalesceInsuranceToggles({
+        ...formValues,
+        primaryGoal: formValues.primaryGoal || "grow_wealth",
+        monthlySalary: formValues.monthlySalary ?? 0,
       });
-      if (snapErr) throw snapErr;
+      setAnalysis(mergedValues);
+      const normalized = normalizeAnalyseFormValues(mergedValues);
+      try {
+        setFullAnalysis(normalized);
+      } catch (e) {
+        console.error("Submit / setFullAnalysis error:", e);
+        setSubmitError("Analysis failed. Please try again.");
+        return;
+      }
 
-      // Legacy table kept for older clients / back-compat
-      const { error } = await supabase.from("user_analysis").upsert(
-        {
-          user_id: user.id,
-          profile: normalized,
-          analysis_result: analysisResult,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" },
-      );
-      if (error) throw error;
+      const { result: nextResult, lastSubmission: savedProfile } =
+        useFinancialStore.getState();
+      if (!nextResult || !savedProfile) {
+        setSubmitError("Analysis failed. Please try again.");
+        return;
+      }
 
-      await useObligationStore
-        .getState()
-        .syncFromHealthCheck(user.id, normalized);
+      // Navigate immediately — cloud save must not block the report.
+      router.push("/analyse/result");
 
-      await invalidateProfileMonthlySalaryCache(user.id);
+      void (async () => {
+        try {
+          const uid = useAuthStore.getState().user?.id;
+          if (!uid) return;
 
-      router.replace("/(tabs)/analyse");
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
-      Alert.alert("Error", message);
+          const { error } = await upsertUserAnalyseSnapshot(uid, {
+            profile: savedProfile,
+            result: nextResult,
+            submittedAt: new Date().toISOString(),
+            version: "1.0",
+            analysis: mergedValues,
+          });
+          if (error) console.warn("Snapshot save failed:", error.message);
+          else void invalidateProfileMonthlySalaryCache(uid);
+
+          // Legacy table kept for older clients / back-compat
+          void supabase
+            .from("user_analysis")
+            .upsert(
+              {
+                user_id: uid,
+                profile: savedProfile,
+                analysis_result: nextResult,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id" },
+            )
+            .then(({ error: legacyErr }) => {
+              if (legacyErr)
+                console.warn("Legacy analysis save failed:", legacyErr.message);
+            });
+
+          void useObligationStore
+            .getState()
+            .syncFromHealthCheck(uid, savedProfile)
+            .catch((err) => console.warn("Obligation sync failed:", err));
+        } catch (err) {
+          console.warn("Post-submit snapshot failed:", err);
+        }
+      })();
+    } catch (e) {
+      console.error("Submit error:", e);
+      setSubmitError("Something went wrong. Please try again.");
     } finally {
-      setSaving(false);
+      setIsSubmitting(false);
     }
-  };
+  }, [
+    clearErrors,
+    getValues,
+    scrollStepIntoView,
+    setAnalysis,
+    setError,
+    setFullAnalysis,
+  ]);
 
-  const progress = (step / TOTAL_STEPS) * 100;
+  const handleStartFresh = useCallback(() => {
+    skipCloudHydrateRef.current = true;
+    wipeAnalyseLocalCaches();
+    useFinancialStore.getState().resetStore();
+    reset(
+      coalesceInsuranceToggles({
+        ...analyseDefaultValues,
+        unifiedLoans: [],
+        additionalObligations: [],
+        otherInsurancePremiums: [],
+        customInvestments: [],
+      } as AnalyseFormValues),
+    );
+    patchUi({
+      isRenting: false,
+      hasCreditCardOutstanding: false,
+      hasVehicleToggle: false,
+    });
+    setShowResumeOption(false);
+    setShowResumeBanner(false);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [reset, patchUi, scrollRef]);
+
+  const isLastStep = step === STEPS.length - 1;
+  const footerError = isLastStep ? submitError : stepNavError;
+  const stepProps = { live, ui, patchUi };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={back} style={styles.backBtn}>
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.stepInfo}>
-          <Text style={styles.stepLabel}>
-            Step {step} of {TOTAL_STEPS}
-          </Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+    <FormProvider {...methods}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => (step > 0 ? goBack() : router.back())}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Text style={styles.backText}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.stepInfo}>
+            <Text style={styles.stepLabel}>
+              Step {step + 1} of {STEPS.length}
+            </Text>
+            <Text style={styles.stepTitle} numberOfLines={1}>
+              {STEPS[step]?.title ?? "Profile"}
+            </Text>
           </View>
         </View>
-      </View>
+        <ProgressPills step={step} onJump={jumpToStep} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
         <ScrollView
+          ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 32 + keyboardHeight },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
-          {step === 1 && <Step1Profile form={form} update={update} />}
-          {step === 2 && <Step2Income form={form} update={update} />}
-          {step === 3 && <Step3Loans form={form} update={update} />}
-          {step === 4 && <Step4Expenses form={form} update={update} />}
-          {step === 5 && <Step5Insurance form={form} update={update} />}
-          {step === 6 && <Step6Assets form={form} update={update} />}
-          {step === 7 && <Step7Goals form={form} update={update} />}
+          <View onFocus={onFocusWithin}>
+            {showResumeOption ? (
+              <ResumeOptionRow
+                onViewReport={() => router.push("/analyse/result")}
+                onStartFresh={handleStartFresh}
+              />
+            ) : null}
+            {showResumeBanner ? (
+              <ResumeBanner
+                onResume={() => {
+                  setShowResumeBanner(false);
+                  const last = detectLastStep(
+                    useFinancialStore.getState().profile,
+                  );
+                  jumpToStep(last);
+                }}
+                onStartFresh={handleStartFresh}
+              />
+            ) : null}
 
-          <View style={styles.navButtons}>
-            <Button
-              label={step === TOTAL_STEPS ? "Get my score →" : "Next →"}
-              onPress={next}
-              loading={saving}
-              style={{ marginTop: 24 }}
-            />
+            {step === 0 ? <Step1Profile /> : null}
+            {step === 1 ? <Step2Income live={live} /> : null}
+            {step === 2 ? <Step3Obligations {...stepProps} /> : null}
+            {step === 3 ? <Step4Expenses live={live} /> : null}
+            {step === 4 ? <Step5Insurance {...stepProps} /> : null}
+            {step === 5 ? <Step6Assets live={live} /> : null}
+            {step === 6 ? <Step7Goals live={live} /> : null}
           </View>
-          <View style={{ height: 40 }} />
         </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
 
-type StepProps = {
-  form: FormState;
-  update: (p: Partial<FormState>) => void;
-};
-
-function Step1Profile({ form, update }: StepProps) {
-  return (
-    <View style={stepStyles.container}>
-      <Text style={stepStyles.title}>Tell us about yourself</Text>
-      <Text style={stepStyles.sub}>
-        This helps us calculate the right targets for you
-      </Text>
-
-      <Text style={stepStyles.fieldLabel}>Life stage</Text>
-      <View style={stepStyles.chipGrid}>
-        {LIFE_STAGES.map((s) => (
-          <TouchableOpacity
-            key={s.value}
-            onPress={() => update({ lifeStage: s.value })}
-            style={[
-              stepStyles.chip,
-              form.lifeStage === s.value && stepStyles.chipActive,
-            ]}
-          >
-            <Text style={stepStyles.chipEmoji}>{s.emoji}</Text>
-            <Text
-              style={[
-                stepStyles.chipLabel,
-                form.lifeStage === s.value && stepStyles.chipLabelActive,
-              ]}
-            >
-              {s.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={{ marginTop: 16 }}>
-        <Input
-          label="Your age"
-          value={form.selfAge}
-          onChangeText={(v) => update({ selfAge: v })}
-          keyboardType="numeric"
-          placeholder="28"
-        />
-      </View>
-
-      {(form.lifeStage === "married" || form.lifeStage === "kids") && (
-        <View style={{ marginTop: 12 }}>
-          <Input
-            label="Spouse age"
-            value={form.spouseAge}
-            onChangeText={(v) => update({ spouseAge: v })}
-            keyboardType="numeric"
-            placeholder="26"
-          />
-        </View>
-      )}
-
-      {form.lifeStage === "kids" && (
-        <View style={{ marginTop: 12 }}>
-          <Input
-            label="Number of kids"
-            value={form.numberOfKids}
-            onChangeText={(v) => update({ numberOfKids: v })}
-            keyboardType="numeric"
-            placeholder="1"
-          />
-        </View>
-      )}
-
-      <Text style={[stepStyles.fieldLabel, { marginTop: 20 }]}>City tier</Text>
-      {CITY_TIERS.map((tier) => (
-        <TouchableOpacity
-          key={tier.value}
-          onPress={() => update({ cityTier: tier.value })}
-          style={[
-            stepStyles.tierCard,
-            form.cityTier === tier.value && stepStyles.tierCardActive,
-          ]}
-        >
-          <View
-            style={[
-              stepStyles.tierDot,
-              form.cityTier === tier.value && stepStyles.tierDotActive,
-            ]}
-          />
-          <View>
-            <Text
-              style={[
-                stepStyles.tierLabel,
-                form.cityTier === tier.value && stepStyles.tierLabelActive,
-              ]}
-            >
-              {tier.label}
-            </Text>
-            <Text style={stepStyles.tierSub}>{tier.sub}</Text>
-          </View>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-function Step2Income({ form, update }: StepProps) {
-  return (
-    <View style={stepStyles.container}>
-      <Text style={stepStyles.title}>Your income</Text>
-      <Text style={stepStyles.sub}>Monthly take-home salary (after tax)</Text>
-
-      <MoneyInput
-        label="Monthly salary"
-        value={form.monthlySalary}
-        onChange={(v) => update({ monthlySalary: v })}
-        helper="Your take-home after all deductions"
-      />
-
-      {(form.lifeStage === "married" || form.lifeStage === "kids") && (
-        <View style={{ marginTop: 16 }}>
-          <MoneyInput
-            label="Spouse income (optional)"
-            value={form.spouseIncome}
-            onChange={(v) => update({ spouseIncome: v })}
-          />
-        </View>
-      )}
-
-      <View style={{ marginTop: 16 }}>
-        <MoneyInput
-          label="Other income (optional)"
-          value={form.otherIncome}
-          onChange={(v) => update({ otherIncome: v })}
-          helper="Freelance, rental, business etc"
-        />
-      </View>
-    </View>
-  );
-}
-
-function Step3Loans({ form, update }: StepProps) {
-  return (
-    <View style={stepStyles.container}>
-      <Text style={stepStyles.title}>Loans and rent</Text>
-      <Text style={stepStyles.sub}>Monthly outgoing payments</Text>
-
-      <MoneyInput
-        label="Home loan EMI (if any)"
-        value={form.homeLoanEMI}
-        onChange={(v) => update({ homeLoanEMI: v })}
-      />
-      <View style={{ marginTop: 12 }}>
-        <MoneyInput
-          label="Car loan EMI (if any)"
-          value={form.carLoanEMI}
-          onChange={(v) => update({ carLoanEMI: v })}
-        />
-      </View>
-      <View style={{ marginTop: 12 }}>
-        <MoneyInput
-          label="Personal loan EMI (if any)"
-          value={form.personalLoanEMI}
-          onChange={(v) => update({ personalLoanEMI: v })}
-        />
-      </View>
-      <View style={{ marginTop: 12 }}>
-        <MoneyInput
-          label="Monthly rent (if renting)"
-          value={form.rentAmount}
-          onChange={(v) => update({ rentAmount: v })}
-        />
-      </View>
-      <View style={{ marginTop: 12 }}>
-        <MoneyInput
-          label="Credit card bill (monthly)"
-          value={form.creditCardBillMonthly}
-          onChange={(v) => update({ creditCardBillMonthly: v })}
-        />
-      </View>
-    </View>
-  );
-}
-
-function Step4Expenses({ form, update }: StepProps) {
-  return (
-    <View style={stepStyles.container}>
-      <Text style={stepStyles.title}>Monthly expenses</Text>
-      <Text style={stepStyles.sub}>Approximate monthly spending</Text>
-
-      {(
-        [
-          ["foodTotal", "Food and groceries", "🍽️"],
-          ["transportTotal", "Transport", "🚕"],
-          ["utilityTotal", "Utilities and bills", "⚡"],
-          ["lifestyleTotal", "Lifestyle and personal", "🎉"],
-        ] as const
-      ).map(([key, label, emoji]) => (
-        <View key={key} style={{ marginTop: 12 }}>
-          <MoneyInput
-            label={`${emoji} ${label}`}
-            value={form[key]}
-            onChange={(v) => update({ [key]: v })}
-          />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function Step5Insurance({ form, update }: StepProps) {
-  return (
-    <View style={stepStyles.container}>
-      <Text style={stepStyles.title}>Insurance</Text>
-      <Text style={stepStyles.sub}>Your current insurance cover</Text>
-
-      <TouchableOpacity
-        onPress={() => update({ hasHealthInsurance: !form.hasHealthInsurance })}
-        style={[
-          stepStyles.toggleCard,
-          form.hasHealthInsurance && stepStyles.toggleCardActive,
-        ]}
-      >
-        <Text style={stepStyles.toggleEmoji}>🏥</Text>
-        <View style={{ flex: 1 }}>
-          <Text
-            style={[
-              stepStyles.toggleLabel,
-              form.hasHealthInsurance && stepStyles.toggleLabelActive,
-            ]}
-          >
-            Health Insurance
-          </Text>
-          <Text style={stepStyles.toggleSub}>Individual or family floater</Text>
-        </View>
         <View
           style={[
-            stepStyles.checkbox,
-            form.hasHealthInsurance && stepStyles.checkboxActive,
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, 12) },
           ]}
         >
-          {form.hasHealthInsurance ? (
-            <Text style={{ color: "#fff", fontWeight: "800" }}>✓</Text>
+          {footerError ? (
+            <View style={styles.errorBanner} accessibilityRole="alert">
+              <Text style={styles.errorBannerText}>{footerError}</Text>
+            </View>
           ) : null}
-        </View>
-      </TouchableOpacity>
-
-      {form.hasHealthInsurance ? (
-        <View style={stepStyles.subFields}>
-          <MoneyInput
-            label="Sum insured"
-            value={form.healthInsuranceSumInsured}
-            onChange={(v) => update({ healthInsuranceSumInsured: v })}
-            helper="Total cover amount (e.g. 500000 for ₹5L)"
-          />
-          <View style={{ marginTop: 12 }}>
-            <MoneyInput
-              label="Premium paid"
-              value={form.healthInsurancePremiumInput}
-              onChange={(v) => update({ healthInsurancePremiumInput: v })}
-            />
-          </View>
-        </View>
-      ) : null}
-
-      <TouchableOpacity
-        onPress={() => update({ hasTermInsurance: !form.hasTermInsurance })}
-        style={[
-          stepStyles.toggleCard,
-          form.hasTermInsurance && stepStyles.toggleCardActive,
-          { marginTop: 12 },
-        ]}
-      >
-        <Text style={stepStyles.toggleEmoji}>🛡️</Text>
-        <View style={{ flex: 1 }}>
-          <Text
-            style={[
-              stepStyles.toggleLabel,
-              form.hasTermInsurance && stepStyles.toggleLabelActive,
-            ]}
-          >
-            Term Life Insurance
-          </Text>
-          <Text style={stepStyles.toggleSub}>Pure protection plan</Text>
-        </View>
-        <View
-          style={[
-            stepStyles.checkbox,
-            form.hasTermInsurance && stepStyles.checkboxActive,
-          ]}
-        >
-          {form.hasTermInsurance ? (
-            <Text style={{ color: "#fff", fontWeight: "800" }}>✓</Text>
-          ) : null}
-        </View>
-      </TouchableOpacity>
-
-      {form.hasTermInsurance ? (
-        <View style={stepStyles.subFields}>
-          <MoneyInput
-            label="Sum assured"
-            value={form.termInsuranceSumAssured}
-            onChange={(v) => update({ termInsuranceSumAssured: v })}
-            helper="Total life cover"
-          />
-          <View style={{ marginTop: 12 }}>
-            <MoneyInput
-              label="Annual premium"
-              value={form.termInsurancePremiumInput}
-              onChange={(v) => update({ termInsurancePremiumInput: v })}
-            />
-          </View>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function Step6Assets({ form, update }: StepProps) {
-  return (
-    <View style={stepStyles.container}>
-      <Text style={stepStyles.title}>Assets and savings</Text>
-      <Text style={stepStyles.sub}>Current value of what you own</Text>
-
-      {(
-        [
-          ["savingsAccountBalance", "Savings account balance", "🏦"],
-          ["fdValue", "Fixed deposits (FD)", "📜"],
-          ["liquidMFValue", "Liquid mutual funds", "💧"],
-          ["totalEquityValue", "Equity (MF + stocks + ESOP)", "📈"],
-          ["ppfBalance", "PPF balance", "💰"],
-          ["epfBalance", "EPF balance", "🏢"],
-          ["monthlySIP", "Monthly SIP", "🔄"],
-        ] as const
-      ).map(([key, label, emoji]) => (
-        <View key={key} style={{ marginTop: 12 }}>
-          <MoneyInput
-            label={`${emoji} ${label}`}
-            value={form[key]}
-            onChange={(v) => update({ [key]: v })}
-          />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function Step7Goals({ form, update }: StepProps) {
-  return (
-    <View style={stepStyles.container}>
-      <Text style={stepStyles.title}>Your primary goal</Text>
-      <Text style={stepStyles.sub}>What matters most to you right now?</Text>
-
-      <View style={stepStyles.goalGrid}>
-        {GOALS.map((g) => (
-          <TouchableOpacity
-            key={g.value}
-            onPress={() => update({ primaryGoal: g.value })}
-            style={[
-              stepStyles.goalCard,
-              form.primaryGoal === g.value && stepStyles.goalCardActive,
-            ]}
-          >
-            <Text style={stepStyles.goalEmoji}>{g.emoji}</Text>
-            <Text
-              style={[
-                stepStyles.goalLabel,
-                form.primaryGoal === g.value && stepStyles.goalLabelActive,
-              ]}
+          <View style={styles.footerRow}>
+            <Pressable
+              onPress={goBack}
+              disabled={step === 0}
+              accessibilityRole="button"
+              style={[styles.backNavBtn, step === 0 && { opacity: 0.5 }]}
             >
-              {g.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
+              <Text style={styles.backNavText}>Back</Text>
+            </Pressable>
+            {isLastStep ? (
+              <Pressable
+                onPress={() => void handleFinalSubmit()}
+                disabled={isSubmitting}
+                accessibilityRole="button"
+                style={[
+                  styles.primaryBtn,
+                  { backgroundColor: isSubmitting ? "#AFA9EC" : Colors.primary },
+                ]}
+              >
+                <Text style={styles.primaryText}>
+                  {isSubmitting
+                    ? "Analysing your finances…"
+                    : "Analyse my finances →"}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={forceNext}
+                accessibilityRole="button"
+                style={[styles.primaryBtn, { backgroundColor: Colors.primary }]}
+              >
+                <Text style={styles.primaryText}>Next</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      </SafeAreaView>
+    </FormProvider>
   );
 }
 
@@ -690,13 +801,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
     gap: Spacing.md,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: Radius.md,
     backgroundColor: Colors.card,
     alignItems: "center",
@@ -708,195 +820,63 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     color: Colors.textSecondary,
   },
-  stepInfo: { flex: 1, gap: 6 },
+  stepInfo: { flex: 1, gap: 2 },
   stepLabel: {
     fontSize: FontSize.md,
     color: Colors.textMuted,
     fontWeight: "600",
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
+  stepTitle: {
+    fontSize: FontSize.lg,
+    color: Colors.textPrimary,
+    fontWeight: "800",
   },
   scroll: { flex: 1 },
   scrollContent: {
     padding: Spacing.xl,
   },
-  navButtons: {
-    marginTop: Spacing.md,
-  },
-});
-
-const stepStyles = StyleSheet.create({
-  container: { gap: 4 },
-  title: {
-    fontSize: FontSize.xl,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: 6,
-  },
-  sub: {
-    fontSize: FontSize.base,
-    color: Colors.textMuted,
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  fieldLabel: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 10,
-  },
-  chipGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    backgroundColor: Colors.card,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
     gap: 10,
   },
-  chip: {
-    width: "47%",
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
-    alignItems: "center",
-    gap: 6,
-  },
-  chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  chipEmoji: { fontSize: 28 },
-  chipLabel: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
-  chipLabelActive: {
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-  tierCard: {
+  footerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.md,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
-    marginBottom: 8,
+    gap: 12,
   },
-  tierCardActive: {
-    borderColor: Colors.primary,
+  backNavBtn: {
+    minHeight: 52,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     backgroundColor: Colors.primaryLight,
-  },
-  tierDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  tierDotActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary,
-  },
-  tierLabel: {
-    fontSize: FontSize.base,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-  },
-  tierLabelActive: {
-    color: Colors.primary,
-  },
-  tierSub: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-  },
-  toggleCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
-    marginBottom: 8,
-  },
-  toggleCardActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  toggleEmoji: { fontSize: 24 },
-  toggleLabel: {
-    fontSize: FontSize.base,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-  },
-  toggleLabelActive: {
-    color: Colors.primary,
-  },
-  toggleSub: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  subFields: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: 8,
-  },
-  goalGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 8,
-  },
-  goalCard: {
-    width: "47%",
-    backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    padding: Spacing.lg,
+  backNavText: { fontSize: 15, fontWeight: "600", color: Colors.primary },
+  primaryBtn: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 12,
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    paddingHorizontal: 16,
   },
-  goalCardActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+  primaryText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
+  errorBanner: {
+    borderRadius: 8,
+    backgroundColor: "#FCEBEB",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  goalEmoji: { fontSize: 28 },
-  goalLabel: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textSecondary,
+  errorBannerText: {
+    fontSize: 13,
+    color: "#791F1F",
     textAlign: "center",
-  },
-  goalLabelActive: {
-    color: Colors.primary,
-    fontWeight: "700",
   },
 });

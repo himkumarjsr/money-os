@@ -62,6 +62,23 @@ function drawPieChart(
   });
 }
 
+export type FixPlanPdfOptions = {
+  /** IANA zone for printed dates and the filename; defaults to the runtime's local zone. */
+  timeZone?: string;
+};
+
+function isoDateInZone(timeZone?: string): string {
+  if (!timeZone) return localISODate();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
 export async function downloadOptimizerPDF(
   profile: any,
   analysis: any,
@@ -69,6 +86,26 @@ export async function downloadOptimizerPDF(
   explanations: any,
   optimizerData: any,
 ) {
+  const { doc, fileName } = buildFixPlanPdf(
+    profile,
+    analysis,
+    priorityPlan,
+    explanations,
+    optimizerData,
+  );
+  doc.save(fileName);
+}
+
+/** Builds the Fix Plan PDF without saving it, so it can run in the browser or on the server. */
+export function buildFixPlanPdf(
+  profile: any,
+  analysis: any,
+  priorityPlan: any,
+  explanations: any,
+  optimizerData: any,
+  options: FixPlanPdfOptions = {},
+): { doc: jsPDF; fileName: string } {
+  const { timeZone } = options;
   const doc = new jsPDF("p", "mm", "a4");
   const userName =
     profile?.name?.trim() ||
@@ -322,6 +359,7 @@ export async function downloadOptimizerPDF(
       day: "numeric",
       month: "long",
       year: "numeric",
+      timeZone,
     }),
     M,
     30,
@@ -880,7 +918,7 @@ export async function downloadOptimizerPDF(
   );
   y += 8;
   addText(
-    `Generated on ${new Date().toLocaleDateString("en-IN")} · finkoin.com`,
+    `Generated on ${new Date().toLocaleDateString("en-IN", { timeZone })} · finkoin.com`,
     9,
     GREY,
   );
@@ -899,6 +937,6 @@ export async function downloadOptimizerPDF(
       .replace(/[^a-zA-Z0-9-_ ]/g, "")
       .trim()
       .replace(/\s+/g, "-") || "User";
-  const fileName = `Finkoin-Report-${safeUser}-${localISODate()}.pdf`;
-  doc.save(fileName);
+  const fileName = `Finkoin-Report-${safeUser}-${isoDateInZone(timeZone)}.pdf`;
+  return { doc, fileName };
 }
