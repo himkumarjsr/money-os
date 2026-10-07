@@ -28,6 +28,7 @@ import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -48,6 +49,7 @@ export default function FixPlanPage() {
   const user = useAuthStore((s) => s.user);
   const profile = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
+  useRestoreAnalyseSnapshot(user?.id);
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState("");
   const [aiPlan, setAiPlan] = useState<any>(null);

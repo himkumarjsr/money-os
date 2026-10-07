@@ -104,6 +104,8 @@ function wipeAnalyseLocalCaches() {
     localStorage.removeItem("finkoin-financial");
     localStorage.removeItem("finkoin_ai_cache");
     localStorage.removeItem(LOANS_CLEARED_KEY);
+    sessionStorage.removeItem(`finkoin-financial:${uid}`);
+    sessionStorage.removeItem("finkoin_ai_cache");
   } catch {
     /* ignore */
   }

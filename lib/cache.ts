@@ -1,4 +1,5 @@
 import {
+  AI_CACHE_KEY,
   createAiPlanCache,
   type KeyValueStorage,
 } from "@/lib/aiPlanCache";
@@ -13,11 +14,18 @@ export {
   type CachedPlan,
 } from "@/lib/aiPlanCache";
 
-const cache = createAiPlanCache(() =>
-  typeof localStorage === "undefined"
-    ? null
-    : (localStorage as KeyValueStorage),
-);
+/** AI plans quote the user's exact numbers — keep them session-only. */
+function sessionKv(): KeyValueStorage | null {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    localStorage.removeItem(AI_CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+  return sessionStorage as KeyValueStorage;
+}
+
+const cache = createAiPlanCache(sessionKv);
 
 export const {
   getCachedPlan,
