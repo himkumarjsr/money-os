@@ -35,11 +35,27 @@ function parseAiPlan(raw: unknown): FinkoinAIPlan | null {
 }
 
 /**
- * One row per user: full profile + engine result (+ optional AI plan) after final submit only.
+ * Writes are queued per user and reads wait for queued writes, so a read that
+ * starts right after a submit (e.g. the result page's loan sync) never sees
+ * the previous submission and writes it back over the new one.
  */
-export async function upsertUserAnalyseSnapshot(
+const pendingWrites = new Map<string, Promise<unknown>>();
+
+function enqueueWrite<T>(userId: string, write: () => Promise<T>): Promise<T> {
+  const prev = pendingWrites.get(userId) ?? Promise.resolve();
+  const next = prev.catch(() => undefined).then(write);
+  pendingWrites.set(userId, next);
+  void next
+    .finally(() => {
+      if (pendingWrites.get(userId) === next) pendingWrites.delete(userId);
+    })
+    .catch(() => undefined);
+  return next;
+}
+
+async function writePayload(
   userId: string,
-  payload: UserAnalyseSnapshotPayload,
+  payload: Record<string, unknown>,
 ): Promise<{ error: Error | null }> {
   if (!supabase) {
     return { error: new Error("Supabase not configured") };
@@ -47,7 +63,7 @@ export async function upsertUserAnalyseSnapshot(
   const { error } = await supabase.from("user_analyse_snapshots").upsert(
     {
       user_id: userId,
-      payload: payload as unknown as Record<string, unknown>,
+      payload,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
@@ -55,10 +71,9 @@ export async function upsertUserAnalyseSnapshot(
   return { error: error ? new Error(error.message) : null };
 }
 
-/** Supports legacy payloads that used `lastSubmission` instead of `profile`. */
-export async function fetchUserAnalyseSnapshot(
+async function readPayload(
   userId: string,
-): Promise<FetchedUserAnalyseSnapshot | null> {
+): Promise<Record<string, unknown> | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("user_analyse_snapshots")
@@ -66,8 +81,41 @@ export async function fetchUserAnalyseSnapshot(
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data?.payload) return null;
+  return data.payload as Record<string, unknown>;
+}
 
-  const raw = data.payload as Record<string, unknown>;
+/**
+ * One row per user: full profile + engine result (+ optional AI plan) after final submit only.
+ */
+export function upsertUserAnalyseSnapshot(
+  userId: string,
+  payload: UserAnalyseSnapshotPayload,
+): Promise<{ error: Error | null }> {
+  return enqueueWrite(userId, () =>
+    writePayload(userId, payload as unknown as Record<string, unknown>),
+  );
+}
+
+/** Attach an AI plan to whatever snapshot is stored now, without touching the profile. */
+export function saveUserAnalyseSnapshotAiPlan(
+  userId: string,
+  aiPlan: FinkoinAIPlan | null,
+): Promise<{ error: Error | null }> {
+  return enqueueWrite(userId, async () => {
+    const raw = await readPayload(userId);
+    if (!raw) return { error: null };
+    return writePayload(userId, { ...raw, aiPlan });
+  });
+}
+
+/** Supports legacy payloads that used `lastSubmission` instead of `profile`. */
+export async function fetchUserAnalyseSnapshot(
+  userId: string,
+): Promise<FetchedUserAnalyseSnapshot | null> {
+  await pendingWrites.get(userId)?.catch(() => undefined);
+  const raw = await readPayload(userId);
+  if (!raw) return null;
+
   const lastSubmission = (raw.profile ?? raw.lastSubmission) as FinancialProfile | undefined;
   if (!lastSubmission) return null;
 

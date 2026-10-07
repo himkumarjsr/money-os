@@ -74,6 +74,7 @@ import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome"
 import {
   ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
+  saveUserAnalyseSnapshotAiPlan,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
 import { supabase } from "@/lib/supabaseClient";
@@ -1516,27 +1517,38 @@ export function AnalyseOnboardingForm() {
         return;
       }
 
+      const uid = useAuthStore.getState().user?.id;
+      // Queued before navigating so the result page's snapshot reads wait for it.
+      const snapshotSaved =
+        uid && supabase
+          ? upsertUserAnalyseSnapshot(uid, {
+              profile: savedProfile,
+              result: nextResult,
+              submittedAt: new Date().toISOString(),
+              version: ANALYSE_SNAPSHOT_VERSION,
+              aiPlan: null,
+              analysis: mergedValues,
+            })
+          : null;
+
       // Navigate immediately — AI + cloud save must not block the report.
       router.push("/analyse/result");
 
       void (async () => {
         try {
+          if (snapshotSaved && uid) {
+            const { error } = await snapshotSaved;
+            if (error) console.warn("Snapshot save failed:", error.message);
+            else invalidateProfileMonthlySalaryCache(uid);
+          }
+
           const { plan: aiPlan } = await getAIFixPlan(savedProfile, nextResult);
           useFinancialStore.getState().setAiPlan(aiPlan);
 
-          const uid = useAuthStore.getState().user?.id;
           if (!uid || !supabase) return;
-
-          const { error } = await upsertUserAnalyseSnapshot(uid, {
-            profile: savedProfile,
-            result: nextResult,
-            submittedAt: new Date().toISOString(),
-            version: ANALYSE_SNAPSHOT_VERSION,
-            aiPlan,
-            analysis: mergedValues,
+          void saveUserAnalyseSnapshotAiPlan(uid, aiPlan).then(({ error }) => {
+            if (error) console.warn("AI plan save failed:", error.message);
           });
-          if (error) console.warn("Snapshot save failed:", error.message);
-          else invalidateProfileMonthlySalaryCache(uid);
 
           void useObligationStore
             .getState()
