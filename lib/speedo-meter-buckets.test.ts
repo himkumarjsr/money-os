@@ -7,15 +7,28 @@ describe("buildSpeedoMeterProps", () => {
     expect(props.income).toBe(0);
     expect(props.needs).toBe(0);
     expect(props.wants).toBe(0);
+    expect(props.security).toBe(0);
     expect(props.loans).toBe(0);
     expect(props.investment).toBe(0);
     expect(props.hasHomeLoan).toBe(false);
     expect(props.caps).toEqual({
       needs: 0.3,
       wants: 0.05,
+      security: 0.05,
       loans: 0.4,
       investment: 0.2,
     });
+  });
+
+  it("feeds monthly insurance premiums into the Security gauge", () => {
+    const props = buildSpeedoMeterProps({
+      monthlySalary: 100000,
+      hasHealthInsurance: true,
+      healthInsurancePremiumMonthly: 1500,
+      hasTermInsurance: true,
+      termInsurancePremiumMonthly: 1000,
+    } as never);
+    expect(props.security).toBe(2500);
   });
 
   it("maps income and bucket actuals from profile fields", () => {

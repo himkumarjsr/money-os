@@ -16,10 +16,11 @@ const INVEST_WARN_PCT = 17;
 function resolveCaps(
   hasHomeLoan: boolean,
   caps?: SpeedoMeterCaps,
-): SpeedoMeterCaps {
+): Required<SpeedoMeterCaps> {
   return {
     needs: caps?.needs ?? (hasHomeLoan ? 0.3 : 0.2),
     wants: caps?.wants ?? 0.05,
+    security: caps?.security ?? 0.05,
     loans: caps?.loans ?? 0.4,
     investment: caps?.investment ?? (hasHomeLoan ? 0.2 : 0.3),
   };
@@ -34,6 +35,7 @@ const R_PROGRESS = (R_OUT + R_IN) / 2;
 const COLORS = {
   needs: "#534AB7",
   wants: "#BA7517",
+  security: "#2E7DB5",
   loans: "#E24B4A",
   investment: "#1D9E75",
   green: "#1D9E75",
@@ -162,6 +164,7 @@ function chipLabelInvest(st: Status): string {
 type AnimFracs = {
   needs: number;
   wants: number;
+  security: number;
   loans: number;
   investment: number;
 };
@@ -170,12 +173,14 @@ function useAnimatedFracs(targets: AnimFracs, durationMs = 600): AnimFracs {
   const [out, setOut] = useState<AnimFracs>({
     needs: 0,
     wants: 0,
+    security: 0,
     loans: 0,
     investment: 0,
   });
   const fromRef = useRef<AnimFracs>({
     needs: 0,
     wants: 0,
+    security: 0,
     loans: 0,
     investment: 0,
   });
@@ -192,6 +197,7 @@ function useAnimatedFracs(targets: AnimFracs, durationMs = 600): AnimFracs {
       setOut({
         needs: from.needs + (targets.needs - from.needs) * ease,
         wants: from.wants + (targets.wants - from.wants) * ease,
+        security: from.security + (targets.security - from.security) * ease,
         loans: from.loans + (targets.loans - from.loans) * ease,
         investment:
           from.investment + (targets.investment - from.investment) * ease,
@@ -410,6 +416,7 @@ function GaugesBlock({
     income,
     needs,
     wants,
+    security = 0,
     loans,
     investment,
     hasHomeLoan = false,
@@ -418,6 +425,7 @@ function GaugesBlock({
   const {
     needs: needsCap,
     wants: wantsCap,
+    security: securityCap,
     loans: loansCap,
     investment: investCap,
   } = resolveCaps(hasHomeLoan, caps);
@@ -425,19 +433,21 @@ function GaugesBlock({
   const pct = {
     needs: income > 0 ? (needs / income) * 100 : 0,
     wants: income > 0 ? (wants / income) * 100 : 0,
+    security: income > 0 ? (security / income) * 100 : 0,
     loans: income > 0 ? (loans / income) * 100 : 0,
     investment: income > 0 ? (investment / income) * 100 : 0,
   };
 
   const stN = spendStatus(pct.needs, needsCap * 100);
   const stW = spendStatus(pct.wants, wantsCap * 100);
+  const stS = spendStatus(pct.security, securityCap * 100);
   const stL = spendStatus(pct.loans, loansCap * 100);
   const stI = investStatus(pct.investment);
 
   const investCapLabel = `min ${INVEST_FLOOR_PCT}% · cap ${Math.round(investCap * 100)}%`;
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
       <GaugeColumn
         title="Needs"
         labelColor={COLORS.needs}
@@ -473,6 +483,25 @@ function GaugesBlock({
           rangeMultiplier={SPEND_RANGE_MULT}
           capLabel={`cap ${Math.round(wantsCap * 100)}%`}
           needleFrac={anim.wants}
+          compact={compact}
+        />
+      </GaugeColumn>
+      <GaugeColumn
+        title="Insurance"
+        labelColor={COLORS.security}
+        amount={security}
+        chipClass={CHIP[stS]}
+        chipText={`${income > 0 ? pct.security.toFixed(0) : "—"}% · ${chipLabelSpend(stS)}`}
+        compact={compact}
+      >
+        <GaugeSvg
+          kind="spend"
+          amount={security}
+          income={income}
+          capFraction={securityCap}
+          rangeMultiplier={SPEND_RANGE_MULT}
+          capLabel={`cap ${Math.round(securityCap * 100)}%`}
+          needleFrac={anim.security}
           compact={compact}
         />
       </GaugeColumn>
@@ -523,6 +552,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
     income,
     needs,
     wants,
+    security = 0,
     loans,
     investment,
     hasHomeLoan = false,
@@ -531,16 +561,19 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
   const {
     needs: needsCap,
     wants: wantsCap,
+    security: securityCap,
     loans: loansCap,
   } = resolveCaps(hasHomeLoan, caps);
   const pct = {
     n: income > 0 ? (needs / income) * 100 : 0,
     w: income > 0 ? (wants / income) * 100 : 0,
+    s: income > 0 ? (security / income) * 100 : 0,
     l: income > 0 ? (loans / income) * 100 : 0,
     i: income > 0 ? (investment / income) * 100 : 0,
   };
   const stN = spendStatus(pct.n, needsCap * 100);
   const stW = spendStatus(pct.w, wantsCap * 100);
+  const stS = spendStatus(pct.s, securityCap * 100);
   const stL = spendStatus(pct.l, loansCap * 100);
   const stI = investStatus(pct.i);
 
@@ -563,6 +596,15 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
       >
         Wants {income > 0 ? `${pct.w.toFixed(0)}%` : "—"} ·{" "}
         {chipLabelSpend(stW)}
+      </span>
+      <span
+        className={cn(
+          "rounded-full px-3 py-1 text-xs font-semibold",
+          CHIP[stS],
+        )}
+      >
+        Insurance {income > 0 ? `${pct.s.toFixed(0)}%` : "—"} ·{" "}
+        {chipLabelSpend(stS)}
       </span>
       <span
         className={cn(
@@ -591,6 +633,7 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
     income,
     needs,
     wants,
+    security = 0,
     loans,
     investment,
     hasHomeLoan = false,
@@ -599,14 +642,17 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
   const {
     needs: needsCap,
     wants: wantsCap,
+    security: securityCap,
     loans: loansCap,
   } = resolveCaps(hasHomeLoan, caps);
   const needsCapPct = Math.round(needsCap * 100);
   const wantsCapPct = Math.round(wantsCap * 100);
+  const securityCapPct = Math.round(securityCap * 100);
   const loansCapPct = Math.round(loansCap * 100);
   const pct = {
     n: income > 0 ? (needs / income) * 100 : 0,
     w: income > 0 ? (wants / income) * 100 : 0,
+    s: income > 0 ? (security / income) * 100 : 0,
     l: income > 0 ? (loans / income) * 100 : 0,
     i: income > 0 ? (investment / income) * 100 : 0,
   };
@@ -623,6 +669,15 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
       `Wants are over the ${wantsCapPct}% cap — ease discretionary spend.`,
     );
   }
+  if (income > 0 && security <= 0) {
+    issues.push(
+      "No insurance premiums on file — health and term cover protect everything else.",
+    );
+  } else if (spendStatus(pct.s, securityCapPct) !== "good") {
+    issues.push(
+      `Insurance premiums are above the ${securityCapPct}% guide — review overlapping or investment-linked policies.`,
+    );
+  }
   if (spendStatus(pct.l, loansCapPct) !== "good") {
     issues.push(`Loan outflows exceed the ${loansCapPct}% safety guide.`);
   }
@@ -633,7 +688,7 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
         : `Investment flow is under ${INVEST_FLOOR_PCT}% — try to step up toward ${INVEST_FLOOR_PCT}% of income.`,
     );
   }
-  const t = needs + wants + loans + investment;
+  const t = needs + wants + security + loans + investment;
   if (income > 0 && t > income + 1e-6) {
     issues.push("Total allocations exceed take-home — recheck inputs.");
   }
@@ -778,6 +833,7 @@ function SpeedoMeterMulti({
     income,
     needs,
     wants,
+    security = 0,
     loans,
     investment,
     hasHomeLoan = false,
@@ -788,6 +844,12 @@ function SpeedoMeterMulti({
     return {
       needs: needleTargetFrac(needs, income, c.needs, SPEND_RANGE_MULT),
       wants: needleTargetFrac(wants, income, c.wants, SPEND_RANGE_MULT),
+      security: needleTargetFrac(
+        security,
+        income,
+        c.security,
+        SPEND_RANGE_MULT,
+      ),
       loans: needleTargetFrac(loans, income, c.loans, SPEND_RANGE_MULT),
       investment: needleTargetFrac(
         investment,
@@ -796,7 +858,7 @@ function SpeedoMeterMulti({
         INVEST_RANGE_MULT,
       ),
     };
-  }, [income, needs, wants, loans, investment, hasHomeLoan, caps]);
+  }, [income, needs, wants, security, loans, investment, hasHomeLoan, caps]);
   const anim = useAnimatedFracs(targets);
 
   return (
@@ -825,6 +887,7 @@ export function SpeedoMeterCompact({
     income,
     needs,
     wants,
+    security = 0,
     loans,
     investment,
     hasHomeLoan = false,
@@ -835,6 +898,12 @@ export function SpeedoMeterCompact({
     return {
       needs: needleTargetFrac(needs, income, c.needs, SPEND_RANGE_MULT),
       wants: needleTargetFrac(wants, income, c.wants, SPEND_RANGE_MULT),
+      security: needleTargetFrac(
+        security,
+        income,
+        c.security,
+        SPEND_RANGE_MULT,
+      ),
       loans: needleTargetFrac(loans, income, c.loans, SPEND_RANGE_MULT),
       investment: needleTargetFrac(
         investment,
@@ -843,7 +912,7 @@ export function SpeedoMeterCompact({
         INVEST_RANGE_MULT,
       ),
     };
-  }, [income, needs, wants, loans, investment, hasHomeLoan, caps]);
+  }, [income, needs, wants, security, loans, investment, hasHomeLoan, caps]);
   const anim = useAnimatedFracs(targets);
 
   return (
