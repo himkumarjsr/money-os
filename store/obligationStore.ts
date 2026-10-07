@@ -7,9 +7,14 @@ import {
 } from "@/lib/analyse-form-schema";
 import { analyseFinances } from "@/lib/financialEngine";
 import {
+  applyLoanDetails,
+  loanDrift,
+  loansNeedingDetails,
   mergeTrackerLoansIntoProfile,
   planLoanObligationSync,
+  type LoanDriftItem,
   type LoanObligationLike,
+  type UnifiedLoan,
 } from "@/lib/loanObligationSync";
 import { getSupabase } from "@/lib/supabase";
 import {
@@ -137,7 +142,21 @@ interface ObligationState {
   ) => Promise<void>;
   /** Tracker → Analyse: fold Tracker loan EMIs into the saved report. */
   syncLoansToAnalyse: (userId: string) => Promise<void>;
+  /** Syncs, then reports when the numbers were saved, loan drift, and imported loans missing details. */
+  loanReportStatus: (userId: string) => Promise<LoanReportStatus>;
+  /** One-time outstanding/rate answer (or skip) for a loan imported from Tracker. */
+  saveLoanDetails: (
+    userId: string,
+    loanId: string,
+    details: { outstandingAmount?: number; interestRate?: number } | "skip",
+  ) => Promise<boolean>;
 }
+
+export type LoanReportStatus = {
+  submittedAt: string | null;
+  drift: LoanDriftItem[];
+  needDetails: UnifiedLoan[];
+};
 
 const LOAN_COLUMNS = "id,title,category,amount,due_day,is_active,source,updated_at";
 
@@ -836,33 +855,14 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       try {
         const snap = await fetchUserAnalyseSnapshot(userId);
         if (!snap) return;
-        const { profile, changed } = mergeTrackerLoansIntoProfile(
-          snap.lastSubmission,
-          await fetchLoanObligations(userId),
-          { closedAfter: snap.submittedAt },
-        );
+        const { profile, changed, numbersChanged } =
+          mergeTrackerLoansIntoProfile(
+            snap.lastSubmission,
+            await fetchLoanObligations(userId),
+            { closedAfter: snap.submittedAt },
+          );
         if (!changed) return;
-        const result = analyseFinances(profile);
-        const analysis = {
-          ...(snap.analysis ?? {}),
-          unifiedLoans: financialProfileToFormValues(profile).unifiedLoans,
-        };
-        const { error } = await upsertUserAnalyseSnapshot(userId, {
-          profile,
-          result,
-          submittedAt: new Date().toISOString(),
-          version: ANALYSE_SNAPSHOT_VERSION,
-          aiPlan: snap.aiPlan,
-          analysis,
-        });
-        if (error) {
-          console.warn("syncLoansToAnalyse save failed:", error.message);
-          return;
-        }
-        useFinancialStore.getState().hydrateFromSnapshot(profile, result, {
-          aiPlan: snap.aiPlan,
-          analysisPatch: analysis,
-        });
+        await saveSnapshotProfile(userId, snap, profile, numbersChanged);
       } catch (err) {
         console.warn("syncLoansToAnalyse failed:", err);
       } finally {
@@ -871,4 +871,56 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     })();
     return loanSyncInFlight;
   },
+
+  loanReportStatus: async (userId) => {
+    await get().syncLoansToAnalyse(userId);
+    const snap = await fetchUserAnalyseSnapshot(userId);
+    if (!snap) return { submittedAt: null, drift: [], needDetails: [] };
+    return {
+      submittedAt: snap.submittedAt,
+      drift: loanDrift(snap.lastSubmission, await fetchLoanObligations(userId)),
+      needDetails: loansNeedingDetails(snap.lastSubmission),
+    };
+  },
+
+  saveLoanDetails: async (userId, loanId, details) => {
+    const snap = await fetchUserAnalyseSnapshot(userId);
+    if (!snap) return false;
+    const profile = applyLoanDetails(snap.lastSubmission, loanId, details);
+    return saveSnapshotProfile(userId, snap, profile, details !== "skip");
+  },
 }));
+
+/** Re-runs the engine on `profile`, saves the snapshot and refreshes the screen. */
+async function saveSnapshotProfile(
+  userId: string,
+  snap: NonNullable<Awaited<ReturnType<typeof fetchUserAnalyseSnapshot>>>,
+  profile: FinancialProfile,
+  numbersChanged: boolean,
+): Promise<boolean> {
+  const result = analyseFinances(profile);
+  const analysis = {
+    ...(snap.analysis ?? {}),
+    unifiedLoans: financialProfileToFormValues(profile).unifiedLoans,
+  };
+  const { error } = await upsertUserAnalyseSnapshot(userId, {
+    profile,
+    result,
+    submittedAt:
+      numbersChanged || !snap.submittedAt
+        ? new Date().toISOString()
+        : snap.submittedAt,
+    version: ANALYSE_SNAPSHOT_VERSION,
+    aiPlan: snap.aiPlan,
+    analysis,
+  });
+  if (error) {
+    console.warn("Analyse snapshot save failed:", error.message);
+    return false;
+  }
+  useFinancialStore.getState().hydrateFromSnapshot(profile, result, {
+    aiPlan: snap.aiPlan,
+    analysisPatch: analysis,
+  });
+  return true;
+}

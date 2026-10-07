@@ -216,6 +216,10 @@ export interface FinancialProfile {
     emiDay?: number;
     /** Calendar month of debit (1–12). Year is not collected. */
     emiMonth?: number;
+    /** Tracker `financial_obligations.id` this loan is linked to (either direction). */
+    trackerObligationId?: string;
+    /** User skipped the one-time "outstanding + rate" ask for an imported Tracker loan. */
+    detailsSkipped?: boolean;
   }>;
 
   /** @deprecated Use `foodTotal`; kept for backward compatibility. */
@@ -497,7 +501,22 @@ const unifiedLoanSchema = z.object({
   odInterestOnlyYears: optionalWholeNumber,
   emiDay: optionalWholeNumber,
   emiMonth: optionalWholeNumber,
+  trackerObligationId: z.string().optional(),
+  detailsSkipped: z.boolean().optional(),
 });
+
+/** Tracker link + skipped-details flag, carried through every loan copy. */
+function loanLinkFields(row: {
+  trackerObligationId?: unknown;
+  detailsSkipped?: unknown;
+}): { trackerObligationId?: string; detailsSkipped?: boolean } {
+  const out: { trackerObligationId?: string; detailsSkipped?: boolean } = {};
+  if (typeof row.trackerObligationId === "string" && row.trackerObligationId) {
+    out.trackerObligationId = row.trackerObligationId;
+  }
+  if (row.detailsSkipped === true) out.detailsSkipped = true;
+  return out;
+}
 
 /** Coerce legacy loanType labels so Next isn't blocked by invisible enum errors. */
 function sanitizeUnifiedLoansInput(val: unknown) {
@@ -1395,6 +1414,7 @@ function migrateLegacyAnalysePartial(
         odInterestOnlyYears: row.odInterestOnlyYears ?? 0,
         emiDay: row.emiDay == null ? undefined : Number(row.emiDay),
         emiMonth: row.emiMonth == null ? undefined : Number(row.emiMonth),
+        ...loanLinkFields(row),
       };
     });
   }
@@ -1506,6 +1526,7 @@ export function mergeAnalyseDraftWithProfile(
         odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
         emiDay: loan.emiDay,
         emiMonth: loan.emiMonth,
+        ...loanLinkFields(loan),
       };
     });
     if ((dUnified ?? []).length === 0) {
@@ -1530,6 +1551,7 @@ export function mergeAnalyseDraftWithProfile(
         odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
         emiDay: loan.emiDay,
         emiMonth: loan.emiMonth,
+        ...loanLinkFields(loan),
       };
     });
   }
@@ -1678,6 +1700,7 @@ export function financialProfileToFormValues(
             odInterestOnlyYears: loan.odInterestOnlyYears ?? 0,
             emiDay: loan.emiDay,
             emiMonth: loan.emiMonth,
+            ...loanLinkFields(loan),
           };
         })
       : [];

@@ -73,8 +73,24 @@ export function lenderFromTitle(title: string): string {
   return title.replace(LOAN_WORDS, " ").replace(/\s+/g, " ").trim();
 }
 
-function strongMatch(loan: UnifiedLoan, ob: LoanObligationLike): boolean {
-  if (loan.id && loan.id === `${TRACKER_LOAN_ID_PREFIX}${ob.id}`) return true;
+/** Tracker row id this loan is linked to: the stored link, else a `tracker:` import id. */
+export function linkedObligationId(loan: UnifiedLoan): string | undefined {
+  if (loan.trackerObligationId) return loan.trackerObligationId;
+  if (loan.id?.startsWith(TRACKER_LOAN_ID_PREFIX)) {
+    return loan.id.slice(TRACKER_LOAN_ID_PREFIX.length);
+  }
+  return undefined;
+}
+
+type MatchFn = (
+  loan: UnifiedLoan,
+  ob: LoanObligationLike,
+  link: string | undefined,
+) => boolean;
+
+/** A live link is authoritative: a linked loan only ever pairs with its own row. */
+const strongMatch: MatchFn = (loan, ob, link) => {
+  if (link) return link === ob.id;
   if (ob.title === loanObligationTitle(loan)) return true;
   const lender = loan.lenderName?.trim().toLowerCase() ?? "";
   if (lender.length >= 3 && ob.title.toLowerCase().includes(lender)) {
@@ -82,30 +98,39 @@ function strongMatch(loan: UnifiedLoan, ob: LoanObligationLike): boolean {
     return obType === "other" || obType === loan.loanType;
   }
   return false;
-}
+};
 
-function amountMatch(loan: UnifiedLoan, ob: LoanObligationLike): boolean {
-  return Math.abs(Number(loan.monthlyEMI ?? 0) - Number(ob.amount ?? 0)) < 1;
-}
+const amountMatch: MatchFn = (loan, ob, link) =>
+  !link &&
+  Math.abs(Number(loan.monthlyEMI ?? 0) - Number(ob.amount ?? 0)) < 1;
 
 /**
  * Pair each loan obligation with at most one loan: strong matches first
  * (link id / title / lender), then same-EMI matches for the leftovers.
+ * `knownIds` is every Tracker row id that still exists; a link to a row that
+ * was hard-deleted is ignored so the loan can re-pair instead of duplicating.
  */
 export function pairLoansWithObligations(
   loans: UnifiedLoan[],
   obligations: LoanObligationLike[],
+  knownIds: Set<string> = new Set(obligations.map((o) => o.id)),
 ): Map<string, number> {
   const pairs = new Map<string, number>();
   const usedLoans = new Set<number>();
   const loanObs = obligations.filter((o) => o.category === "loan_emi");
+  const links = loans.map((l) => {
+    const link = linkedObligationId(l);
+    return link && knownIds.has(link) ? link : undefined;
+  });
   for (const pass of [strongMatch, amountMatch]) {
     for (const ob of loanObs) {
       if (pairs.has(ob.id)) continue;
       // Closed rows only pair on a strong match so a coincidental EMI amount
       // can't remove an unrelated loan.
       if (pass === amountMatch && !ob.is_active) continue;
-      const idx = loans.findIndex((l, i) => !usedLoans.has(i) && pass(l, ob));
+      const idx = loans.findIndex(
+        (l, i) => !usedLoans.has(i) && pass(l, ob, links[i]),
+      );
       if (idx >= 0) {
         pairs.set(ob.id, idx);
         usedLoans.add(idx);
@@ -122,27 +147,34 @@ function profileLoans(profile: FinancialProfile): UnifiedLoan[] {
 /**
  * Tracker → Analyse. Active Tracker loans missing from the profile are added,
  * EMI/day edits made in Tracker win, and loans closed in Tracker are dropped.
- * `closedAfter` (the report's submittedAt) ignores rows closed before the
- * report was saved, so a loan re-added in the form isn't dropped again.
+ * `closedAfter` (the report's submittedAt) ignores unlinked rows closed before
+ * the report was saved, so a loan re-added in the form isn't dropped again.
+ * A loan linked to a closed row is the same loan, so it is always dropped.
  */
 export function mergeTrackerLoansIntoProfile(
   profile: FinancialProfile,
   allObligations: LoanObligationLike[],
   opts: { closedAfter?: string | null } = {},
-): { profile: FinancialProfile; changed: boolean } {
+): { profile: FinancialProfile; changed: boolean; numbersChanged: boolean } {
   const closedAfter = opts.closedAfter ? Date.parse(opts.closedAfter) : NaN;
+  const form = financialProfileToFormValues(profile);
+  const loans: UnifiedLoan[] = [...(form.unifiedLoans ?? [])];
+  const knownIds = new Set(allObligations.map((o) => o.id));
+  const linkedIds = new Set(
+    loans.map(linkedObligationId).filter((id): id is string => !!id),
+  );
   const obligations = allObligations.filter(
     (o) =>
       o.is_active ||
+      linkedIds.has(o.id) ||
       !Number.isFinite(closedAfter) ||
       !o.updated_at ||
       Date.parse(o.updated_at) > closedAfter,
   );
-  const form = financialProfileToFormValues(profile);
-  const loans: UnifiedLoan[] = [...(form.unifiedLoans ?? [])];
-  const pairs = pairLoansWithObligations(loans, obligations);
+  const pairs = pairLoansWithObligations(loans, obligations, knownIds);
   const drop = new Set<number>();
   let changed = false;
+  let numbersChanged = false;
 
   for (const ob of obligations) {
     if (ob.category !== "loan_emi") continue;
@@ -161,14 +193,19 @@ export function mergeTrackerLoansIntoProfile(
         odUsed: 0,
         odInterestOnlyYears: 0,
         emiDay: ob.due_day ?? undefined,
+        trackerObligationId: ob.id,
       });
-      changed = true;
+      changed = numbersChanged = true;
       continue;
     }
     if (!ob.is_active) {
       drop.add(idx);
-      changed = true;
+      changed = numbersChanged = true;
       continue;
+    }
+    if (loans[idx].trackerObligationId !== ob.id) {
+      loans[idx] = { ...loans[idx], trackerObligationId: ob.id };
+      changed = true;
     }
     const loan = loans[idx];
     const emiChanged = Math.abs(Number(loan.monthlyEMI ?? 0) - ob.amount) >= 1;
@@ -180,15 +217,93 @@ export function mergeTrackerLoansIntoProfile(
         emiDay: dayChanged ? (ob.due_day ?? undefined) : loan.emiDay,
       };
       changed = true;
+      if (emiChanged) numbersChanged = true;
     }
   }
 
-  if (!changed) return { profile, changed: false };
+  if (!changed) return { profile, changed: false, numbersChanged: false };
   const next = normalizeAnalyseFormValues({
     ...form,
     unifiedLoans: loans.filter((_, i) => !drop.has(i)),
   });
-  return { profile: next, changed: true };
+  return { profile: next, changed: true, numbersChanged };
+}
+
+/** Loan imported from Tracker that still needs the one-time outstanding/rate ask. */
+export function needsLoanDetails(loan: UnifiedLoan): boolean {
+  return (
+    !!loan.id?.startsWith(TRACKER_LOAN_ID_PREFIX) &&
+    !(Number(loan.outstandingAmount ?? 0) > 0) &&
+    !loan.detailsSkipped
+  );
+}
+
+export function loansNeedingDetails(profile: FinancialProfile): UnifiedLoan[] {
+  return profileLoans(profile).filter(
+    (l) => l.loanType !== "credit_card" && needsLoanDetails(l),
+  );
+}
+
+/** Saves the one-time answer (or skip) for an imported loan. */
+export function applyLoanDetails(
+  profile: FinancialProfile,
+  loanId: string,
+  details: { outstandingAmount?: number; interestRate?: number } | "skip",
+): FinancialProfile {
+  const form = financialProfileToFormValues(profile);
+  const unifiedLoans = (form.unifiedLoans ?? []).map((l) => {
+    if (l.id !== loanId) return l;
+    if (details === "skip") return { ...l, detailsSkipped: true };
+    return {
+      ...l,
+      outstandingAmount: Math.max(0, Math.round(details.outstandingAmount ?? 0)),
+      interestRate: Math.max(0, Number(details.interestRate ?? 0)),
+      detailsSkipped: false,
+    };
+  });
+  return normalizeAnalyseFormValues({ ...form, unifiedLoans });
+}
+
+export type LoanDriftItem = {
+  label: string;
+  kind: "not_active_in_tracker" | "not_in_report" | "emi_changed";
+};
+
+/**
+ * Loans in the report vs loan EMIs in Tracker. Empty when they agree or the
+ * user has never tracked a loan (nothing to compare against).
+ */
+export function loanDrift(
+  profile: FinancialProfile,
+  obligations: LoanObligationLike[],
+): LoanDriftItem[] {
+  const loanObs = obligations.filter((o) => o.category === "loan_emi");
+  if (loanObs.length === 0) return [];
+  const loans = profileLoans(profile).filter(
+    (l) => l.loanType !== "credit_card" && Number(l.monthlyEMI ?? 0) > 0,
+  );
+  const pairs = pairLoansWithObligations(loans, loanObs);
+  const obForLoan = new Map<number, LoanObligationLike>();
+  for (const ob of loanObs) {
+    const idx = pairs.get(ob.id);
+    if (idx !== undefined) obForLoan.set(idx, ob);
+  }
+  const items: LoanDriftItem[] = [];
+  loans.forEach((loan, idx) => {
+    const ob = obForLoan.get(idx);
+    const label = loanObligationTitle(loan).replace(/ EMI\b/, "");
+    if (!ob || !ob.is_active) {
+      items.push({ label, kind: "not_active_in_tracker" });
+    } else if (Math.abs(Number(loan.monthlyEMI ?? 0) - ob.amount) >= 1) {
+      items.push({ label, kind: "emi_changed" });
+    }
+  });
+  for (const ob of loanObs) {
+    if (ob.is_active && ob.amount > 0 && !pairs.has(ob.id)) {
+      items.push({ label: ob.title, kind: "not_in_report" });
+    }
+  }
+  return items;
 }
 
 export type LoanObligationPlan = {
@@ -221,7 +336,8 @@ export function planLoanObligationSync(
     (l) => l.loanType !== "credit_card" && Number(l.monthlyEMI ?? 0) > 0,
   );
   const loanObs = existing.filter((o) => o.category === "loan_emi");
-  const pairs = pairLoansWithObligations(loans, loanObs);
+  const knownIds = new Set(loanObs.map((o) => o.id));
+  const pairs = pairLoansWithObligations(loans, loanObs, knownIds);
   const pairedLoan = new Set(pairs.values());
   const plan: LoanObligationPlan = { inserts: [], updates: [], deactivate: [] };
 
@@ -229,6 +345,9 @@ export function planLoanObligationSync(
     const idx = pairs.get(ob.id);
     if (idx !== undefined) {
       const loan = loans[idx];
+      // Closed in Tracker wins for a linked loan; the next Tracker → Analyse
+      // pass drops it from the report instead of the form reopening it.
+      if (!ob.is_active && linkedObligationId(loan) === ob.id) continue;
       const amount = Number(loan.monthlyEMI);
       const dueDay = loan.emiDay || ob.due_day || 5;
       if (
@@ -242,7 +361,9 @@ export function planLoanObligationSync(
     }
     if (!ob.is_active) continue;
     const sawIt = previous
-      ? pairLoansWithObligations(profileLoans(previous), [ob]).has(ob.id)
+      ? pairLoansWithObligations(profileLoans(previous), [ob], knownIds).has(
+          ob.id,
+        )
       : false;
     if (ob.source === "health_check" || sawIt) plan.deactivate.push(ob.id);
   }

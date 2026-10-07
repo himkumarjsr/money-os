@@ -97,6 +97,45 @@ describe("Fix Plan PDF text", () => {
     expect(raw).not.toContain("Prepared for: User");
   });
 
+  it("prints Data as of, the loan drift warning, and labels estimated debts", () => {
+    const profile = {
+      ...buildUserAnalyseScenarioProfile(),
+      additionalObligations: [
+        { type: "Other Loan", lenderName: "BF", monthlyAmount: 2_151 },
+      ],
+    } as any;
+    const result = analyseFinances(profile);
+    const engine = buildPriorityPlan(profile, result);
+    const bf = engine.debts.find((d: any) => d.lenderName === "BF");
+    expect(bf).toMatchObject({
+      outstanding: 38_718,
+      outstandingEstimated: true,
+      rateEstimated: true,
+    });
+    const { doc } = buildFixPlanPdf(
+      profile,
+      result,
+      engine,
+      {},
+      buildFixPlanPdfData(engine, {}),
+      {
+        dataAsOf: "2026-09-14T10:00:00.000Z",
+        timeZone: "Asia/Kolkata",
+        loanDrift: [{ label: "Loan · BF", kind: "not_active_in_tracker" }],
+      },
+    );
+    const raw = Buffer.from(doc.output("arraybuffer")).toString("latin1");
+    const text = Array.from(
+      raw.matchAll(/\((.*?)(?<!\\)\) Tj/g),
+      (m) => m[1].replace(/\\([()])/g, "$1"),
+    ).join(" ");
+    expect(text).toContain("Data as of 14 September 2026");
+    expect(text).toContain("Loans out of date");
+    expect(text).toContain("Other Loan (BF) (balance est.)");
+    expect(text).toContain("Not entered");
+    expect(text).toMatch(/outstanding .{0,12}38,718 \(est\.\)/);
+  });
+
   it("uses on-track copy for completed priorities", () => {
     const completed = plan.priorities.filter(
       (p: any) => p.gap <= 0 || p.monthlyContribution <= 0,

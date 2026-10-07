@@ -1,5 +1,11 @@
 import { StyleSheet, Text, View } from "react-native";
 import { debtPayoffNumbers } from "@/lib/priorityEngine";
+import {
+  DEBT_ESTIMATE_NOTE,
+  debtIsEstimated,
+  debtRateLabel,
+  estSuffix,
+} from "@/lib/fixPlanMerge";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { shared } from "./shared";
 
@@ -20,7 +26,10 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
           const label =
             debt.displayName || debt.label || debt.name || debt.type;
           const cells: [string, string][] = [
-            ["Outstanding", `₹${n.outstanding.toLocaleString("en-IN")}`],
+            [
+              "Outstanding",
+              `₹${n.outstanding.toLocaleString("en-IN")}${debt.outstandingEstimated ? " (est.)" : ""}`,
+            ],
             ["Current EMI", `₹${n.currentEMI.toLocaleString("en-IN")}/mo`],
             [
               "Extra payment",
@@ -38,7 +47,9 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
                 <Text style={styles.debtLabel}>{label}</Text>
                 <View style={styles.ratePill}>
                   <Text style={styles.rateText}>
-                    {debt.rate || debt.interestRate || 0}% interest
+                    {debt.rateEstimated
+                      ? `${debtRateLabel(debt)} interest`
+                      : `${debt.rate || debt.interestRate || 0}% interest`}
                   </Text>
                 </View>
               </View>
@@ -58,10 +69,12 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
                     {n.monthsSaved > 0
                       ? ` (save ${n.monthsSaved} months vs EMI-only)`
                       : ""}
+                    {estSuffix(debt)}
                   </Text>
                   {n.interestSaved > 0 ? (
                     <Text style={styles.saveAmount}>
                       Save ₹{n.interestSaved.toLocaleString("en-IN")} interest
+                      {estSuffix(debt)}
                     </Text>
                   ) : null}
                 </View>
@@ -70,6 +83,9 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
           );
         })}
       </View>
+      {debts.some(debtIsEstimated) ? (
+        <Text style={styles.estimateNote}>{DEBT_ESTIMATE_NOTE}</Text>
+      ) : null}
       <Text style={styles.strategy}>
         {debtStrategy ||
           "Clear high-interest debt first, then roll freed EMI into the next debt."}
@@ -142,6 +158,15 @@ const styles = StyleSheet.create({
   },
   saveText: { fontSize: 12, color: "#1D5C3A" },
   saveAmount: { fontSize: 12, fontWeight: "700", color: "#1D9E75" },
+  estimateNote: {
+    marginBottom: Spacing.sm,
+    borderRadius: Radius.sm,
+    backgroundColor: "#FFF8E6",
+    padding: Spacing.md,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#7A5A12",
+  },
   strategy: {
     marginTop: 4,
     fontSize: 14,

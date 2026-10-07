@@ -45,6 +45,10 @@ export interface DebtItem {
   extraEMIRecommended: number;
   monthsToClearWithExtra: number;
   icon: string;
+  /** Outstanding was guessed from the EMI — the user never entered it. */
+  outstandingEstimated?: boolean;
+  /** Rate was not entered: a typical rate for the loan type, or 0 when unknown. */
+  rateEstimated?: boolean;
 }
 
 export interface GoalItem {
@@ -1081,8 +1085,11 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       const monthsKey = config.profileKey
         .replace("EMI", "RemainingMonths")
         .replace("BillMonthly", "RemainingMonths");
-      const rate = (profile as any)[rateKey] || config.rate;
+      const enteredRate = Number((profile as any)[rateKey]) || 0;
+      const rate = enteredRate || config.rate;
       const remainingMonths = (profile as any)[monthsKey] || 0;
+      const outstandingEstimated =
+        !explicitOutstanding && !(rate > 0 && remainingMonths > 0);
       const outstanding =
         explicitOutstanding ||
         (rate > 0 && remainingMonths > 0
@@ -1134,6 +1141,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         extraEMIRecommended: extraEMI,
         monthsToClearWithExtra: monthsToClear,
         icon: config.icon,
+        outstandingEstimated,
+        rateEstimated: enteredRate <= 0,
       });
     }
   });
@@ -1159,6 +1168,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
 
   additionalDebts.forEach((debt: any, i: number) => {
     const emi = debt.monthlyAmount || 0;
+    const outstandingEstimated = !(Number(debt.outstandingAmount) > 0);
     const outstanding = debt.outstandingAmount || emi * 18;
     const rate = debt.rateOfInterest || debt.loanTakenYear || 0;
     const remainingMonths = debt.remainingMonths || debt.tenureMonths || 18;
@@ -1178,6 +1188,9 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       ),
       monthsToClearWithExtra: remainingMonths,
       icon: "🏦",
+      outstandingEstimated,
+      // A real 0% loan is only trusted when the user also gave the balance.
+      rateEstimated: !(rate > 0) && outstandingEstimated,
     });
   });
 

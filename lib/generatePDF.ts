@@ -9,7 +9,16 @@ import {
 import { humaniseEnum } from "@/lib/analyseResultModel";
 import { localISODate } from "@/lib/localDate";
 import { scoreBand } from "@/lib/financialEngine";
-import { COMPLETE_WHY, isPriorityComplete } from "@/lib/fixPlanMerge";
+import {
+  COMPLETE_WHY,
+  DEBT_ESTIMATE_NOTE,
+  LOAN_DRIFT_LABELS,
+  debtIsEstimated,
+  debtRateLabel,
+  estSuffix,
+  isPriorityComplete,
+} from "@/lib/fixPlanMerge";
+import type { LoanDriftItem } from "@/lib/loanObligationSync";
 import { debtPayoffNumbers } from "@/lib/priorityEngine";
 import { getUniversalBucketRows } from "@/lib/universal-buckets";
 
@@ -80,6 +89,10 @@ export type FixPlanPdfOptions = {
   fonts?: { regular: string; bold: string };
   /** Signed-in account's display name; the Analyse profile has no name field. */
   userName?: string;
+  /** When the report's numbers were last saved (snapshot submittedAt). */
+  dataAsOf?: string;
+  /** Report loans that no longer match Tracker (see loanDrift). */
+  loanDrift?: LoanDriftItem[];
 };
 
 function labelOrDash(
@@ -200,7 +213,7 @@ export function buildFixPlanPdf(
   optimizerData: any,
   options: FixPlanPdfOptions = {},
 ): { doc: jsPDF; fileName: string } {
-  const { timeZone, fonts } = options;
+  const { timeZone, fonts, dataAsOf, loanDrift = [] } = options;
   const doc = new jsPDF("p", "mm", "a4");
   const FONT = fonts ? UNICODE_FONT : "helvetica";
   if (fonts) registerUnicodeFont(doc, fonts);
@@ -472,7 +485,40 @@ export function buildFixPlanPdf(
     30,
   );
   doc.text(`Prepared for: ${userName}`, M, 38);
+  const asOf = dataAsOf ? new Date(dataAsOf) : null;
+  if (asOf && Number.isFinite(asOf.getTime())) {
+    doc.text(
+      `Data as of ${asOf.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone,
+      })}`,
+      W - M,
+      38,
+      { align: "right" },
+    );
+  }
   y = 60;
+
+  if (loanDrift.length > 0) {
+    const lines = doc.splitTextToSize(
+      `Your loans changed in Tracker since this report: ${loanDrift
+        .map((d) => `${d.label} (${LOAN_DRIFT_LABELS[d.kind]})`)
+        .join(", ")}. EMI totals, surplus and the debt plan below may be out of date. Update your Loans step and re-run the report.`,
+      UW - 8,
+    ) as string[];
+    const boxH = lines.length * 4.5 + 10;
+    doc.setFillColor(255, 248, 230);
+    doc.rect(M, y - 4, UW, boxH, "F");
+    doc.setFontSize(9);
+    doc.setFont(FONT, "bold");
+    doc.setTextColor(122, 90, 18);
+    doc.text("Loans out of date", M + 4, y + 2);
+    doc.setFont(FONT, "normal");
+    lines.forEach((line, i) => doc.text(line, M + 4, y + 7 + i * 4.5));
+    y += boxH + 4;
+  }
 
   const score = analysis?.overallScore || 0;
   const scoreColor: readonly [number, number, number] =
@@ -801,19 +847,19 @@ export function buildFixPlanPdf(
       debts.map((d: any) => {
         const { monthsNow } = debtPayoffNumbers(d);
         return [
-          d.displayName || humaniseEnum(d.type),
-          `${d.rate}%`,
+          `${d.displayName || humaniseEnum(d.type)}${d.outstandingEstimated ? " (balance est.)" : ""}`,
+          debtRateLabel(d),
           fmt(d.emi),
           fmt(d.extraEMIRecommended),
           monthsNow > 0
-            ? new Date(
+            ? `${new Date(
                 new Date().getFullYear(),
                 new Date().getMonth() + monthsNow,
                 1,
               ).toLocaleDateString("en-IN", {
                 month: "short",
                 year: "numeric",
-              })
+              })}${estSuffix(d)}`
             : "—",
           String(d.priorityRank),
         ];
@@ -824,14 +870,16 @@ export function buildFixPlanPdf(
       (sum: number, d: any) => sum + debtPayoffNumbers(d).interestSaved,
       0,
     );
+    const anyEstimated = debts.some(debtIsEstimated);
     if (totalInterestSaved > 0) {
       addText(
-        `Interest saved by paying the recommended extra each month: ${fmt(totalInterestSaved)}`,
+        `Interest saved by paying the recommended extra each month: ${fmt(totalInterestSaved)}${anyEstimated ? " (includes estimates)" : ""}`,
         9,
         GREEN,
         true,
       );
     }
+    if (anyEstimated) addText(DEBT_ESTIMATE_NOTE, 8, GREY);
   }
 
   newPage();

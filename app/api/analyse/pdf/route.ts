@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { rateLimit, tooManyRequests, unauthorized } from "@/lib/apiGuard";
 import { buildFixPlanPdfData } from "@/lib/fixPlanPdfData";
+import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { buildFixPlanPdf } from "@/lib/generatePDF";
+import { loanDrift, type LoanDriftItem } from "@/lib/loanObligationSync";
 import { loadPdfFonts } from "@/lib/pdfFonts.server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -30,6 +32,14 @@ function validTimeZone(tz: unknown): string | undefined {
   }
 }
 
+function validIsoDate(v: unknown): string | undefined {
+  if (typeof v !== "string" || v.length > 40) return undefined;
+  const t = Date.parse(v);
+  return Number.isFinite(t) && t <= Date.now() + 86_400_000
+    ? new Date(t).toISOString()
+    : undefined;
+}
+
 function metaName(meta: Record<string, unknown> | undefined): string | undefined {
   for (const key of ["name", "full_name"]) {
     const v = meta?.[key];
@@ -42,8 +52,10 @@ function metaName(meta: Record<string, unknown> | undefined): string | undefined
 export async function POST(req: Request) {
   let userId: string | null = null;
   let userName: string | undefined;
+  let supabase: Awaited<ReturnType<typeof createSupabaseServerClient>> | null =
+    null;
   try {
-    const supabase = await createSupabaseServerClient();
+    supabase = await createSupabaseServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -97,6 +109,30 @@ export async function POST(req: Request) {
   }
   const expl = explanations ?? {};
 
+  let drift: LoanDriftItem[] = [];
+  if (supabase) {
+    try {
+      const { data } = await supabase
+        .from("financial_obligations")
+        .select("id, title, category, amount, due_day, is_active")
+        .eq("user_id", userId)
+        .eq("category", "loan_emi");
+      drift = loanDrift(
+        profile as unknown as FinancialProfile,
+        ((data as Record<string, unknown>[] | null) ?? []).map((r) => ({
+          id: String(r.id),
+          title: String(r.title ?? ""),
+          category: String(r.category ?? ""),
+          amount: Number(r.amount ?? 0),
+          due_day: r.due_day == null ? null : Number(r.due_day),
+          is_active: r.is_active !== false,
+        })),
+      );
+    } catch {
+      drift = [];
+    }
+  }
+
   try {
     const optimizerData = buildFixPlanPdfData(priorityPlan, expl);
     const { doc, fileName } = buildFixPlanPdf(
@@ -108,6 +144,8 @@ export async function POST(req: Request) {
       {
         timeZone: validTimeZone(body.timeZone),
         userName,
+        dataAsOf: validIsoDate(body.dataAsOf),
+        loanDrift: drift,
         fonts: loadPdfFonts() ?? undefined,
       },
     );
