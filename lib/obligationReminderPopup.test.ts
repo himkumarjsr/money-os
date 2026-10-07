@@ -222,6 +222,39 @@ describe("isPopupNotificationRelevant", () => {
     ).toBe(true);
   });
 
+  it("hides a monthly EMI reminder once that month is marked paid", async () => {
+    const emi = {
+      id: "ob-icici",
+      user_id: USER,
+      title: "ICICI LOAN EMI",
+      frequency: "monthly",
+      due_day: 5,
+      due_month: null,
+      is_active: true,
+    };
+    const emiReminder = {
+      title: "ICICI LOAN EMI due in 7 days",
+      category: "obligation_reminder",
+      created_at: new Date(2026, 8, 28, 9).toISOString(),
+    };
+    const supabase = fakeSupabase({
+      financial_obligations: [emi],
+      obligation_checklist: [
+        {
+          user_id: USER,
+          obligation_id: "ob-icici",
+          checklist_month: "2026-10-01",
+          status: "paid",
+        },
+      ],
+    });
+    for (const now of [new Date(2026, 9, 3), new Date(2026, 9, 7)]) {
+      expect(
+        await isPopupNotificationRelevant(supabase, USER, emiReminder, now),
+      ).toBe(false);
+    }
+  });
+
   it("hides a reminder whose due date has passed even if unpaid", async () => {
     const supabase = fakeSupabase({ financial_obligations: [nivaBupa] });
     expect(
