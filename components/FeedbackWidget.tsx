@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -46,7 +47,7 @@ export default function FeedbackWidget({
         score_at_time: result?.overallScore ?? null,
       };
 
-      const res = await fetch("/api/feedback", {
+      const res = await apiFetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -91,7 +92,7 @@ export async function enableWebPush(): Promise<{
       return { ok: false, reason: "bad_subscription" };
     }
 
-    const res = await fetch("/api/notifications/push-subscribe", {
+    const res = await apiFetch("/api/notifications/push-subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -140,7 +141,7 @@ export async function disableWebPush(): Promise<{ ok: boolean }> {
     }
   }
 
-  await fetch("/api/notifications/push-subscribe", {
+  await apiFetch("/api/notifications/push-subscribe", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ endpoint: endpoint ?? null }),

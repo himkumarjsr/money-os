@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import {
   getCachedPlan,
   hashProfile,
@@ -119,11 +120,17 @@ export default function FixPlanPage() {
         // Keep existing plan visible on silent retries; only show loader on first load.
         if (!hasPlanRef.current) setAiLoading(true);
         try {
-          const response = await fetch("/api/ai/analyse", {
+          const response = await apiFetch("/api/ai/analyse", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ profile, analysis: result }),
           });
+          if (response.status === 401) {
+            router.replace(
+              loginHrefPreserveRef("/login?redirect=/analyse/fixplan"),
+            );
+            return;
+          }
           if (response.status === 429) {
             if (hasPlanRef.current) {
               setRefreshNotice(FIX_PLAN_RATE_LIMIT_MESSAGE);
@@ -278,7 +285,7 @@ export default function FixPlanPage() {
       } catch {
         timeZone = undefined;
       }
-      const res = await fetch("/api/analyse/pdf", {
+      const res = await apiFetch("/api/analyse/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { Button } from "@/components/ui/button";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
@@ -1541,7 +1542,7 @@ export function AnalyseOnboardingForm() {
             .syncFromHealthCheck(uid, savedProfile, previousProfile)
             .catch((err) => console.warn("Obligation sync failed:", err));
 
-          void fetch("/api/financial-data", {
+          void apiFetch("/api/financial-data", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ submission: savedProfile }),

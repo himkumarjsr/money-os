@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/apiFetch";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { AnalysisResult } from "@/lib/financialEngine";
 import {
@@ -102,7 +103,7 @@ export async function getAIFixPlan(
       });
     }
 
-    const response = await fetch("/api/ai/analyse", {
+    const response = await apiFetch("/api/ai/analyse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ profile, analysis }),
