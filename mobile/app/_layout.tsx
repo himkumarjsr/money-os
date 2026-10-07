@@ -45,6 +45,7 @@ export default function RootLayout() {
           />
           <Stack.Screen name="analyse/result" />
           <Stack.Screen name="tracker/[month]" />
+          <Stack.Screen name="calculators/[id]" />
           <Stack.Screen name="split/[groupId]/index" />
           <Stack.Screen name="split/[groupId]/add-expense" />
           <Stack.Screen name="split/join" />

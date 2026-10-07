@@ -39,28 +39,25 @@ const COLUMNS: Array<{ heading: string; links: NavLink[] }> = [
       { label: "FK Split", route: "/(tabs)/split" },
       {
         label: "Tax Calculator",
-        route: {
-          pathname: "/(tabs)/calculators",
-          params: { tool: "tax-regime" },
-        },
+        route: "/calculators/tax-regime" as Href,
       },
       {
         label: "SIP Calculator",
-        route: { pathname: "/(tabs)/calculators", params: { tool: "sip" } },
+        route: "/calculators/sip" as Href,
       },
       {
         label: "SWP Calculator",
-        route: { pathname: "/(tabs)/calculators", params: { tool: "swp" } },
+        route: "/calculators/swp" as Href,
       },
       {
         label: "EMI Calculator",
-        route: { pathname: "/(tabs)/calculators", params: { tool: "emi" } },
+        route: "/calculators/emi" as Href,
       },
       { label: "Portfolio Analysis", web: "/portfolio" },
       { label: "Learn", web: "/learn" },
       {
         label: "Calculators",
-        route: { pathname: "/(tabs)/calculators", params: { tool: "" } },
+        route: "/(tabs)/calculators",
       },
     ],
   },

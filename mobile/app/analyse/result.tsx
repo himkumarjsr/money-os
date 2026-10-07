@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -214,10 +214,7 @@ function AnalyseResultContent() {
 
         <KeepGoingSection
           onTax={() =>
-            router.push({
-              pathname: "/(tabs)/calculators",
-              params: { tool: "tax-regime" },
-            })
+            router.push("/calculators/tax-regime" as Href)
           }
           onTracker={() => router.push("/(tabs)/tracker")}
           onLearn={() => void WebBrowser.openBrowserAsync(`${SITE}/learn`)}

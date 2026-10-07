@@ -66,10 +66,7 @@ export function QuickTools() {
       return;
     }
     if (t.calcTool) {
-      router.push({
-        pathname: t.route as never,
-        params: { tool: t.calcTool },
-      });
+      router.push(`/calculators/${t.calcTool}` as never);
       return;
     }
     router.push(t.route as any);
