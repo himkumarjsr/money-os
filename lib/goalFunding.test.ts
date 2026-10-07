@@ -204,3 +204,84 @@ describe("instrument split per funded goal", () => {
     expect(modest.items.every((i) => i.allocation.realEstateNote === null)).toBe(true);
   });
 });
+
+describe("retirement SIP (pinned)", () => {
+  // Age 30, retire at 60 (30 years), ₹5 crore target in today's rupees.
+  const base: Partial<AnalyseFormValues> = {
+    selfAge: 30,
+    retirementAge: 60,
+    retirementTargetCorpus: 5_00_00_000,
+  };
+  const retirementSip = (over: Partial<AnalyseFormValues>) => {
+    const plan = buildGoalFundingPlan(profile({ ...base, ...over }), 0, NOW);
+    return plan.items.find((i) => i.goalId === "retirement")!;
+  };
+
+  /** Independent reference: real 12% equity, EPF 8.15% / PPF 7.1% / NPS 10%, 6% inflation. */
+  const reference = (equity: number, accounts: Array<[number, number, number]>) => {
+    const real = (nom: number) => (1 + nom) / 1.06 - 1;
+    const years = 30;
+    const fv = (bal: number, monthly: number, nom: number) => {
+      const r = Math.pow(1 + real(nom), 1 / 12) - 1;
+      const g = Math.pow(1 + r, years * 12);
+      return bal * g + monthly * ((g - 1) / r);
+    };
+    const eqReal = real(0.12);
+    const projected =
+      equity * Math.pow(1 + eqReal, years) +
+      accounts.reduce((s, [bal, mo, nom]) => s + fv(bal, mo, nom), 0);
+    const gap = Math.max(0, 5_00_00_000 - projected);
+    const r = (eqReal * 100) / 100 / 12;
+    return Math.round((gap * r) / (Math.pow(1 + r, 360) - 1));
+  };
+
+  it("only EPF/PPF/NPS", () => {
+    const item = retirementSip({
+      epfBalance: 5_00_000,
+      monthlyEPFContribution: 7_200,
+      ppfBalance: 2_00_000,
+      monthlyPPFContribution: 5_000,
+      npsBalance: 1_00_000,
+      monthlyNPSContribution: 4_000,
+    });
+    expect(item.monthlyRequired).toBe(
+      reference(0, [
+        [5_00_000, 7_200, 0.0815],
+        [2_00_000, 5_000, 0.071],
+        [1_00_000, 4_000, 0.1],
+      ]),
+    );
+    expect(item.monthlyRequired).toBe(PINNED.pfOnly);
+    expect(item.currentSaved).toBe(8_00_000);
+  });
+
+  it("mutual funds via totalEquityValue (not added on top of mfValue)", () => {
+    const item = retirementSip({ totalEquityValue: 10_00_000, mfValue: 10_00_000 });
+    expect(item.monthlyRequired).toBe(reference(10_00_000, []));
+    expect(item.monthlyRequired).toBe(PINNED.totalEquity);
+    expect(item.currentSaved).toBe(10_00_000);
+  });
+
+  it("individual stocks / US / RSU fields with no totalEquityValue", () => {
+    const item = retirementSip({
+      indianStocksValue: 3_00_000,
+      usStocksValueINR: 2_00_000,
+      usMFValueINR: 1_00_000,
+      rsuValueINR: 4_00_000,
+    });
+    expect(item.monthlyRequired).toBe(reference(10_00_000, []));
+    expect(item.monthlyRequired).toBe(PINNED.individualEquity);
+    expect(item.currentSaved).toBe(10_00_000);
+  });
+
+  it("existing equity is grown, so it cuts the SIP far more than its face value", () => {
+    const none = retirementSip({}).monthlyRequired;
+    const withEquity = retirementSip({ totalEquityValue: 10_00_000 }).monthlyRequired;
+    const faceValueOnly = Math.round(
+      (none * (5_00_00_000 - 10_00_000)) / 5_00_00_000,
+    );
+    expect(withEquity).toBeLessThan(faceValueOnly);
+  });
+});
+
+const PINNED = { pfOnly: 42_702, totalEquity: 47_558, individualEquity: 47_558 };

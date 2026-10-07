@@ -9,6 +9,7 @@
  */
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
+  existingEquityValue,
   LONG_RUN_INFLATION,
   projectRetirementAccounts,
 } from "@/lib/financialEngine";
@@ -151,14 +152,7 @@ function startingAssets(p: FinancialProfile) {
     x.hasPostOfficeSchemes && (x.postOfficeSchemes?.length ?? 0) > 0
       ? x.postOfficeSchemes!.reduce((s, r) => s + num(r.amount), 0)
       : num(p.nscDepositAmount);
-  const equity =
-    num(p.totalEquityValue) > 0
-      ? num(p.totalEquityValue)
-      : num(p.mfValue) +
-        num(p.indianStocksValue) +
-        num(p.usStocksValueINR) +
-        num(p.usMFValueINR) +
-        num(p.rsuValueINR);
+  const equity = existingEquityValue(p);
   return {
     cash:
       num(p.savingsAccountBalance) +

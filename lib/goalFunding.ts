@@ -7,6 +7,7 @@
  */
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
+  existingEquityValue,
   LONG_RUN_INFLATION,
   projectRetirementAccounts,
 } from "@/lib/financialEngine";
@@ -173,11 +174,15 @@ function retirementNeed(
   profile: FinancialProfile,
   goal: DetectedGoal,
 ): { currentSaved: number; monthlyRequired: number } {
-  const equity = (profile.mfValue || 0) + (profile.totalEquityValue || 0);
+  const equity = existingEquityValue(profile);
+  const realEquityReturn = realReturnPct(HORIZON_ASSUMPTIONS["7y+"].nominalReturn);
+  // Today's equity compounds to retirement like EPF/PPF/NPS do (real terms).
+  const projectedEquity =
+    equity * Math.pow(1 + realEquityReturn / 100, goal.yearsToGoal);
   const projectedPf = projectRetirementAccounts(profile, goal.yearsToGoal, {
     real: true,
   }).total;
-  const gap = Math.max(0, goal.targetAmount - equity - projectedPf);
+  const gap = Math.max(0, goal.targetAmount - projectedEquity - projectedPf);
   return {
     currentSaved: Math.round(
       equity +
@@ -185,11 +190,7 @@ function retirementNeed(
         (profile.ppfBalance || 0) +
         (profile.npsBalance || 0),
     ),
-    monthlyRequired: monthlySipForGoal(
-      gap,
-      realReturnPct(HORIZON_ASSUMPTIONS["7y+"].nominalReturn),
-      goal.yearsToGoal,
-    ),
+    monthlyRequired: monthlySipForGoal(gap, realEquityReturn, goal.yearsToGoal),
   };
 }
 

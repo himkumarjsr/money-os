@@ -166,6 +166,18 @@ function n(v: number | undefined): number {
   return v ?? 0;
 }
 
+/** Market-linked equity holdings: the summary total when given, otherwise the sum of the individual fields. */
+export function existingEquityValue(data: Partial<FinancialProfile>): number {
+  if (n(data.totalEquityValue) > 0) return n(data.totalEquityValue);
+  return (
+    n(data.mfValue) +
+    n(data.indianStocksValue) +
+    n(data.usStocksValueINR) +
+    n(data.usMFValueINR) +
+    n(data.rsuValueINR)
+  );
+}
+
 /** Outstanding loan principal used for net worth. Prefer unified loan rows; assets-step home/car are additive when absent from unified list. */
 export function totalLoanLiabilities(data: FinancialProfile): number {
   const credit = n(data.creditCardBillMonthly) * 3;
@@ -1208,13 +1220,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     savingsVal +
     fdVal +
     (data.liquidMFValue || 0) +
-    (n(data.totalEquityValue) > 0
-      ? n(data.totalEquityValue)
-      : (data.mfValue || 0) +
-        (data.indianStocksValue || 0) +
-        (data.usStocksValueINR || 0) +
-        (data.usMFValueINR || 0) +
-        (data.rsuValueINR || 0)) +
+    existingEquityValue(data) +
     (data.ppfBalance || 0) +
     (data.npsBalance || 0) +
     (data.epfBalance || 0) +
