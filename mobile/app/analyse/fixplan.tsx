@@ -212,7 +212,9 @@ function FixPlanScreen() {
           <DebtStrategy debts={pp.debts} debtStrategy={expl?.debtStrategy} />
         ) : null}
 
-        {goals.length > 0 ? <GoalPlanCard goals={goals} /> : null}
+        {goals.length > 0 ? (
+          <GoalPlanCard goals={goals} plans={expl?.goalPlans} />
+        ) : null}
 
         <ScoreProjection plan={pp} />
 

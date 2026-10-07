@@ -856,7 +856,10 @@ export default function FixPlanPage() {
         ) : null}
 
         {aiPlan.priorityPlan?.goals?.length ? (
-          <GoalSplitCard goals={aiPlan.priorityPlan.goals} />
+          <GoalSplitCard
+            goals={aiPlan.priorityPlan.goals}
+            plans={aiPlan.explanations?.goalPlans}
+          />
         ) : null}
 
         {profile
@@ -1134,7 +1137,16 @@ type GoalSplitRow = {
   instrument: string;
 };
 
-function GoalSplitCard({ goals }: { goals: GoalSplitRow[] }) {
+function GoalSplitCard({
+  goals,
+  plans,
+}: {
+  goals: GoalSplitRow[];
+  plans?: Record<
+    string,
+    { why: string; instrumentRationale: string; watchOut: string }
+  >;
+}) {
   const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
   const parallel = goals.some((g) => g.monthlyAllocated != null);
   const budget = goals.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
@@ -1192,6 +1204,15 @@ function GoalSplitCard({ goals }: { goals: GoalSplitRow[] }) {
                   : `${funded}% of the ${inr(g.monthlyRequired)}/mo needed`}
               </p>
               <p className="text-xs text-[#7A7871]">Instrument: {g.instrument}</p>
+              {g.goalId && plans?.[g.goalId] ? (
+                <div className="mt-2 space-y-1 border-t border-[#ECEAF5] pt-2 text-[13px] leading-snug text-[#454442]">
+                  <p>{plans[g.goalId].why}</p>
+                  <p>{plans[g.goalId].instrumentRationale}</p>
+                  <p className="text-[#8C5A0A]">
+                    Watch out: {plans[g.goalId].watchOut}
+                  </p>
+                </div>
+              ) : null}
             </div>
           );
         })}

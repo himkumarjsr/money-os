@@ -1,10 +1,17 @@
 import { StyleSheet, Text, View } from "react-native";
+import type { GoalAdvice } from "@/lib/fixPlanMerge";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { Colors, Spacing } from "@/constants/theme";
 import { loc, shared } from "./shared";
 
 /** Every goal funded in parallel (weighted split from goalFunding), largest share first. */
-export function GoalPlanCard({ goals }: { goals: GoalItem[] }) {
+export function GoalPlanCard({
+  goals,
+  plans,
+}: {
+  goals: GoalItem[];
+  plans?: Record<string, GoalAdvice>;
+}) {
   const parallel = goals.some((g) => g.monthlyAllocated != null);
   const budget = goals.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
   const shortfall = goals.reduce(
@@ -54,6 +61,17 @@ export function GoalPlanCard({ goals }: { goals: GoalItem[] }) {
               <Text style={[styles.line, styles.muted]}>
                 Instrument: {g.instrument}
               </Text>
+              {g.goalId && plans?.[g.goalId] ? (
+                <View style={styles.advice}>
+                  <Text style={styles.adviceText}>{plans[g.goalId].why}</Text>
+                  <Text style={styles.adviceText}>
+                    {plans[g.goalId].instrumentRationale}
+                  </Text>
+                  <Text style={[styles.adviceText, styles.watch]}>
+                    Watch out: {plans[g.goalId].watchOut}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           );
         })}
@@ -110,4 +128,13 @@ const styles = StyleSheet.create({
   fill: { height: "100%", backgroundColor: Colors.primary },
   line: { marginTop: 6, fontSize: 12, fontWeight: "500", color: "#454442" },
   muted: { marginTop: 2, color: "#7A7871" },
+  advice: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: "#ECEAF5",
+    gap: 4,
+  },
+  adviceText: { fontSize: 13, lineHeight: 18, color: "#454442" },
+  watch: { color: "#8C5A0A" },
 });

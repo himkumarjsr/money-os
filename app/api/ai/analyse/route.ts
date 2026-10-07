@@ -1,3 +1,8 @@
+import {
+  adviseGoals,
+  assembleGoalAdvice,
+  goalsForAdvice,
+} from "@/lib/ai/goalAdvisor";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { formatForPrompt, retrieveKnowledge } from "@/lib/rag/retriever";
 import {
@@ -22,7 +27,14 @@ CRITICAL RULES:
 8. overallSummary MUST mention the user's actual monthly surplus, actual score, and top 2 specific issues with rupee amounts. NEVER invent gaps for priorities whose status is "complete" or gap is 0 (especially medical_fund / emergency_fund).
 9. thisWeekAction MUST be one specific action with an exact rupee amount or exact step.
 10. in12Months MUST describe the user's specific financial state in 12 months using their actual numbers.
-11. goalAdvice MUST cover every goal in priorityPlan.goals — they are funded in parallel, not one at a time. For each, use its exact label, monthlyAllocated, sharePct, targetAmount and yearsToGoal. Explain why near-deadline goals get a bigger share and why long-horizon goals (retirement, a young child's education) are still funded now. If goalFunding.shortfall > 0, say how much more per month would fund every goal on time. Do not default everything to retirement SIP.`;
+11. Goals in priorityPlan.goals are funded in parallel and explained separately per goal — do not write per-goal advice here. When a field mentions goals, use the exact monthlyAllocated figures and never imply only one goal is funded.`;
+
+/**
+ * Hourly AI budget per user, in model calls: a report costs 1 (main) + one
+ * per funded goal. 40 keeps ~10 single-goal reports/hour, as before.
+ */
+const AI_HOURLY_BUDGET = 40;
+const AI_MODEL = () => process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b";
 
 export async function POST(req: NextRequest) {
   const groqKey = process.env.GROQ_API_KEY;
@@ -38,22 +50,47 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return unauthorized();
   }
-  const limit = rateLimit(`ai-analyse:${user.id}`, 10, 60 * 60 * 1000);
+
+  let profile: any = null;
+  try {
+    const body = await req.json();
+    profile = body?.profile;
+    analysis = body?.analysis;
+  } catch {
+    // handled below
+  }
+  if (!profile || !analysis) {
+    return NextResponse.json({ error: "Missing data" }, { status: 400 });
+  }
+
+  try {
+    priorityPlan = buildPriorityPlan(profile, analysis);
+  } catch (error: any) {
+    console.error("AI route plan error:", error?.message);
+    return NextResponse.json({ error: "Could not build plan" }, { status: 400 });
+  }
+  const adviceGoals = goalsForAdvice(priorityPlan.goals);
+  const limit = rateLimit(
+    `ai-analyse:${user.id}`,
+    AI_HOURLY_BUDGET,
+    60 * 60 * 1000,
+    1 + adviceGoals.length,
+  );
   if (!limit.ok) {
     return tooManyRequests(limit.retryAfter);
   }
 
-  try {
-    const { profile, analysis: analysisBody } = await req.json();
-    analysis = analysisBody;
-    if (!profile || !analysis) {
-      return NextResponse.json({ error: "Missing data" }, { status: 400 });
-    }
+  const groq = new Groq({ apiKey: groqKey });
+  const goalPlansPromise = adviseGoals(groq, AI_MODEL(), adviceGoals, {
+    selfAge: profile.selfAge,
+    lifeStage: profile.lifeStage,
+    riskTolerance: profile.riskTolerance,
+    kidsAges: profile.kidsAges,
+  });
 
-    priorityPlan = buildPriorityPlan(profile, analysis);
+  try {
     const knowledgeChunks = await retrieveKnowledge(profile, analysis, 10);
     const knowledgeContext = formatForPrompt(knowledgeChunks);
-    const groq = new Groq({ apiKey: groqKey });
 
     const monthlySurplus =
       priorityPlan?.monthlySurplus ||
@@ -118,7 +155,6 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
     "<priority_id>": "Explanation with exact amounts from that priority row"
   },
   "debtStrategy": "Exact debt payoff plan with all numbers: outstanding, rate, EMI, extra payment, months, interest saved",
-  "goalAdvice": "Specific advice based on their primary goal with amounts and timeline",
   "thisWeekAction": "One specific action with exact rupee amount or step",
   "in12Months": "Their specific financial state in 12 months with actual numbers",
   "encouragement": "Personalised encouragement referencing their actual situation",
@@ -126,7 +162,7 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
 }`;
 
     const completion = await groq.chat.completions.create({
-      model: process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b",
+      model: AI_MODEL(),
       max_tokens: 3000,
       temperature: 0.25,
       messages: [
@@ -146,9 +182,14 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
     }
 
     const explanations = JSON.parse(raw.slice(start, end + 1));
+    const goalPlans = await goalPlansPromise;
     return NextResponse.json({
       priorityPlan,
-      explanations,
+      explanations: {
+        ...explanations,
+        goalPlans,
+        goalAdvice: assembleGoalAdvice(adviceGoals, goalPlans),
+      },
       knowledgeUsed: knowledgeChunks.map((c) => c.title),
     });
   } catch (error: any) {
@@ -192,14 +233,6 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
           ]),
         ),
         debtStrategy: debtLines,
-        goalAdvice: priorityPlan.goals?.length
-          ? `Your goals are funded in parallel: ${priorityPlan.goals
-              .map(
-                (g: any) =>
-                  `${g.label || g.goalType} ₹${Number(g.monthlyAllocated ?? g.monthlyRequired ?? 0).toLocaleString("en-IN")}/mo${g.sharePct != null ? ` (${g.sharePct}%)` : ""} toward ₹${Number(g.targetAmount || 0).toLocaleString("en-IN")} in ~${g.yearsToGoal}y`,
-              )
-              .join("; ")}.`
-          : "Work through the priority items above before focusing heavily on goals.",
         thisWeekAction: priorityPlan.topAction,
         in12Months: `Following this plan your score could improve from ${priorityPlan.scoreToday} to ${priorityPlan.scoreAfter12Months} (with ~₹${surplus.toLocaleString("en-IN")}/mo deployable surplus in the model).`,
         encouragement:
@@ -208,9 +241,14 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
           "Educational guidance only. Not SEBI registered investment advice.",
       };
 
+      const goalPlans = await goalPlansPromise;
       return NextResponse.json({
         priorityPlan,
-        explanations: fallbackExplanations,
+        explanations: {
+          ...fallbackExplanations,
+          goalPlans,
+          goalAdvice: assembleGoalAdvice(adviceGoals, goalPlans),
+        },
         knowledgeUsed: [],
         isFallback: true,
       });

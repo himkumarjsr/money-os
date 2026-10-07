@@ -69,6 +69,7 @@ import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { formatCurrency } from "@/lib/finance";
 import { formatIndian, formatInWords } from "@/lib/formatters";
 import { cn } from "@/lib/cn";
+import RiskQuiz from "@/components/analyse/RiskQuiz";
 import { getAIFixPlan } from "@/lib/aiService";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
 import {
@@ -4335,6 +4336,19 @@ export function AnalyseOnboardingForm() {
                           </p>
                         ) : null}
                       </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <SectionTitle>How you handle risk</SectionTitle>
+                      <RiskQuiz
+                        answers={watch("riskAnswers")}
+                        onAnswer={(qi, score) => {
+                          const next = [...(getValues("riskAnswers") ?? [])];
+                          while (next.length < 3) next.push(null);
+                          next[qi] = score;
+                          setValue("riskAnswers", next, { shouldDirty: true });
+                        }}
+                      />
                     </div>
                   </div>
                 ) : null}

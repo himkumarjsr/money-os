@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  RISK_TOLERANCE_VALUES,
+  scoreRiskTolerance,
+  type RiskTolerance,
+} from "@/lib/riskProfile";
 
 /** Stable id for obligation / other-insurance field-array rows (persisted in profile + drafts). */
 export function newAnalyseRowId(): string {
@@ -387,6 +392,10 @@ export interface FinancialProfile {
   babyFundYear?: number;
   /** Implied goal ids the user removed from their goal list. */
   dismissedGoals?: string[];
+  /** Risk quiz answers (index = RISK_QUESTIONS index, 0–2 each). */
+  riskAnswers?: (number | null)[];
+  /** Derived from riskAnswers once all are answered. */
+  riskTolerance?: RiskTolerance;
 }
 
 export type AdditionalObligation =
@@ -729,6 +738,11 @@ const formShape = {
   babyFundTarget: optionalMoney,
   babyFundYear: optionalWholeNumber,
   dismissedGoals: z.array(z.string()).max(40).optional(),
+  riskAnswers: z
+    .array(z.number().int().min(0).max(2).nullable())
+    .max(3)
+    .optional(),
+  riskTolerance: z.enum(RISK_TOLERANCE_VALUES).optional(),
 
   healthInsurancePremiumMonthly: optionalMoney,
   termInsurancePremiumMonthly: optionalMoney,
@@ -1951,6 +1965,8 @@ export function financialProfileToFormValues(
     babyFundTarget: p.babyFundTarget,
     babyFundYear: p.babyFundYear,
     dismissedGoals: p.dismissedGoals,
+    riskAnswers: p.riskAnswers,
+    riskTolerance: p.riskTolerance,
   };
 }
 
@@ -2560,6 +2576,8 @@ export function normalizeAnalyseFormValues(
     babyFundTarget: form.babyFundTarget,
     babyFundYear: form.babyFundYear,
     dismissedGoals: form.dismissedGoals,
+    riskAnswers: form.riskAnswers,
+    riskTolerance: scoreRiskTolerance(form.riskAnswers) ?? form.riskTolerance,
   };
 
 
