@@ -21,3 +21,14 @@ export function msUntilNextLocalMidnight(d: Date = new Date()): number {
   const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
   return Math.max(1000, next.getTime() - d.getTime() + 50);
 }
+
+/** "2 Oct" for an expense's YYYY-MM-DD date, read as a local calendar day. */
+export function formatExpenseDate(date: string | null | undefined): string {
+  const ymd = String(date ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return "";
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+}

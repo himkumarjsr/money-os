@@ -38,7 +38,7 @@ import {
   findSubcategory,
   type BucketType,
 } from "@/lib/tracker-categories";
-import { localISODate } from "@/lib/localDate";
+import { formatExpenseDate, localISODate } from "@/lib/localDate";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
   computeMonthSafetyPulse,
@@ -1201,11 +1201,12 @@ export default function TrackerScreen() {
                         </Text>
                         <Text style={styles.txnMeta} numberOfLines={1}>
                           {sub?.label ?? txn.category} ·{" "}
-                          {txn.description?.trim() ||
-                            new Date(txn.date).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                            })}
+                          {[
+                            txn.description?.trim(),
+                            formatExpenseDate(txn.date),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </Text>
                       </View>
                       <View style={{ flexDirection: "row", gap: 4 }}>
@@ -1438,16 +1439,14 @@ export default function TrackerScreen() {
                                     style={styles.txnMeta}
                                     numberOfLines={1}
                                   >
-                                    {displayExpenseDescription(
-                                      txn.description,
-                                    ) ||
-                                      new Date(txn.date).toLocaleDateString(
-                                        "en-IN",
-                                        {
-                                          day: "numeric",
-                                          month: "short",
-                                        },
-                                      )}
+                                    {[
+                                      displayExpenseDescription(
+                                        txn.description,
+                                      ),
+                                      formatExpenseDate(txn.date),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
                                   </Text>
                                 </View>
                                 <View style={{ flexDirection: "row", gap: 4 }}>

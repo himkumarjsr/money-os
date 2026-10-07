@@ -20,7 +20,11 @@ import {
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
-import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
+import {
+  formatExpenseDate,
+  localISODate,
+  msUntilNextLocalMidnight,
+} from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
@@ -1616,7 +1620,9 @@ function TrackerContent() {
                           }}
                         >
                           {sub?.label ?? txn.category} ·{" "}
-                          {txn.description?.trim() || dateLabel}
+                          {txn.description?.trim()
+                            ? `${txn.description.trim()} · ${dateLabel}`
+                            : dateLabel}
                         </div>
                       </div>
                       <div
@@ -2128,16 +2134,18 @@ function TrackerContent() {
                                       whiteSpace: "nowrap",
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
-                                      maxWidth: 220,
+                                      maxWidth: 260,
                                     }}
                                   >
+                                    {displayExpenseDescription(txn.description)}
                                     {displayExpenseDescription(
                                       txn.description,
-                                    ) ||
-                                      new Date(txn.date).toLocaleDateString(
-                                        "en-IN",
-                                        { day: "numeric", month: "short" },
-                                      )}
+                                    ) && formatExpenseDate(txn.date)
+                                      ? " · "
+                                      : ""}
+                                    <span style={{ color: "#9B9A94" }}>
+                                      {formatExpenseDate(txn.date)}
+                                    </span>
                                   </div>
                                 </div>
                                 <div
