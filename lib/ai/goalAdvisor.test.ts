@@ -10,7 +10,8 @@ import {
   engineGoalAdvice,
   GOAL_ADVISOR_MAX_GOALS,
   goalAdvisorContext,
-  goalsForAdvice,
+  goalAdvisorCallCount,
+  fundedGoals,
   parseGoalAdvice,
 } from "@/lib/ai/goalAdvisor";
 import { allocateGoalPortfolio } from "@/lib/portfolioAllocation";
@@ -34,19 +35,26 @@ function goal(over: Partial<GoalItem>): GoalItem {
   } as GoalItem;
 }
 
-describe("goalsForAdvice", () => {
-  it("keeps only funded goals with an id, capped", () => {
+describe("fundedGoals", () => {
+  it("keeps every funded goal with an id — no cap", () => {
     const goals = [
       goal({ goalId: "a" }),
       goal({ goalId: undefined }),
       goal({ goalId: "b", monthlyAllocated: 0 }),
       ...Array.from({ length: 10 }, (_, i) => goal({ goalId: `g${i}` })),
     ];
-    const out = goalsForAdvice(goals);
+    const out = fundedGoals(goals);
     expect(out[0].goalId).toBe("a");
-    expect(out.every((g) => g.goalId && (g.monthlyAllocated ?? 0) > 0)).toBe(true);
-    expect(out).toHaveLength(GOAL_ADVISOR_MAX_GOALS);
-    expect(goalsForAdvice(undefined)).toEqual([]);
+    expect(out).toHaveLength(11);
+    expect(fundedGoals(undefined)).toEqual([]);
+  });
+
+  it("caps AI calls at 8 (married with two kids fits)", () => {
+    expect(GOAL_ADVISOR_MAX_GOALS).toBe(8);
+    const many = Array.from({ length: 12 }, (_, i) => goal({ goalId: `g${i}` }));
+    expect(goalAdvisorCallCount(many)).toBe(8);
+    expect(goalAdvisorCallCount(many.slice(0, 3))).toBe(3);
+    expect(goalAdvisorCallCount([])).toBe(0);
   });
 });
 
@@ -165,6 +173,32 @@ describe("adviseGoals", () => {
     expect(plans.home.source).toBe("engine");
     expect(create).toHaveBeenCalledTimes(2);
     expect(create.mock.calls[0][0].response_format).toEqual({ type: "json_object" });
+  });
+});
+
+describe("goals past the AI cap", () => {
+  it("still get engine text, and the summary covers every funded goal", async () => {
+    const create = vi.fn().mockResolvedValue({
+      choices: [
+        { message: { content: '{"why":"w","instrumentRationale":"i","watchOut":"o"}' } },
+      ],
+    });
+    const groq = { chat: { completions: { create } } } as any;
+    const goals = Array.from({ length: 10 }, (_, i) =>
+      goal({ goalId: `g${i}`, label: `Goal ${i}`, monthlyAllocated: 1_000 }),
+    );
+    const plans = await adviseGoals(groq, "m", goals, {});
+    expect(create).toHaveBeenCalledTimes(8);
+    expect(Object.keys(plans)).toHaveLength(10);
+    expect(goals.slice(0, 8).every((g) => plans[g.goalId!].source === "ai")).toBe(true);
+    expect(plans.g8.source).toBe("engine");
+    expect(plans.g9.source).toBe("engine");
+    expect(plans.g9.why).toContain("₹1,000");
+
+    const summary = assembleGoalAdvice(goals, plans);
+    expect(summary).toContain("10 goals");
+    expect(summary).toContain("₹10,000/month");
+    expect(summary).toContain("Goal 9 (₹1,000/mo");
   });
 });
 

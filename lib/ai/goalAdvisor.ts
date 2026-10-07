@@ -12,8 +12,8 @@ import type { GoalType } from "@/lib/goalDetection";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { retrieveGoalKnowledge } from "@/lib/rag/retriever";
 
-/** Upper bound on per-goal calls per report (cost + latency). */
-export const GOAL_ADVISOR_MAX_GOALS = 6;
+/** Upper bound on per-goal AI calls per report (covers married with 2 kids). Goals past it get engine copy. */
+export const GOAL_ADVISOR_MAX_GOALS = 8;
 const CALL_TIMEOUT_MS = 15_000;
 const FIELD_MAX_CHARS = 400;
 
@@ -36,11 +36,14 @@ export type GoalAdvisorProfile = {
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
-/** The goals that get their own call: funded by the split, capped. */
-export function goalsForAdvice(goals: GoalItem[] | undefined): GoalItem[] {
-  return (goals ?? [])
-    .filter((g) => g.goalId && (g.monthlyAllocated ?? 0) > 0)
-    .slice(0, GOAL_ADVISOR_MAX_GOALS);
+/** Every goal the split funds — each one must end up explained. */
+export function fundedGoals(goals: GoalItem[] | undefined): GoalItem[] {
+  return (goals ?? []).filter((g) => g.goalId && (g.monthlyAllocated ?? 0) > 0);
+}
+
+/** Model calls the goal advisor makes for these goals (rate-limit cost, excluding the main call). */
+export function goalAdvisorCallCount(goals: GoalItem[]): number {
+  return Math.min(goals.length, GOAL_ADVISOR_MAX_GOALS);
 }
 
 /** Minimal per-goal payload — the only user data that leaves for this call. */
@@ -188,23 +191,25 @@ Explain why this goal gets ${inr(goal.monthlyAllocated ?? 0)}/month now, why thi
   return { ...parsed, source: "ai" };
 }
 
-/** One call per goal, in parallel; a failed call falls back to engine copy for that goal only. */
+/**
+ * Advice for every goal passed in. The first GOAL_ADVISOR_MAX_GOALS get one AI
+ * call each, in parallel; goals past the cap and any failed call get engine copy.
+ */
 export async function adviseGoals(
   groq: Groq | null,
   model: string,
   goals: GoalItem[],
   profile: GoalAdvisorProfile,
 ): Promise<Record<string, GoalAdvice>> {
+  const withAi = groq ? goals.slice(0, GOAL_ADVISOR_MAX_GOALS) : [];
   const settled = await Promise.allSettled(
-    goals.map((g) =>
-      groq ? adviseOne(groq, model, g, profile) : Promise.reject(new Error("no ai")),
-    ),
+    withAi.map((g) => adviseOne(groq as Groq, model, g, profile)),
   );
   const out: Record<string, GoalAdvice> = {};
   goals.forEach((g, i) => {
     const r = settled[i];
     out[g.goalId as string] =
-      r.status === "fulfilled" ? r.value : engineGoalAdvice(g);
+      r?.status === "fulfilled" ? r.value : engineGoalAdvice(g);
   });
   return out;
 }

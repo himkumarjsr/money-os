@@ -1,7 +1,8 @@
 import {
   adviseGoals,
   assembleGoalAdvice,
-  goalsForAdvice,
+  fundedGoals,
+  goalAdvisorCallCount,
 } from "@/lib/ai/goalAdvisor";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { formatForPrompt, retrieveKnowledge } from "@/lib/rag/retriever";
@@ -30,8 +31,9 @@ CRITICAL RULES:
 11. Goals in priorityPlan.goals are funded in parallel and explained separately per goal — do not write per-goal advice here. When a field mentions goals, use the exact monthlyAllocated figures and never imply only one goal is funded.`;
 
 /**
- * Hourly AI budget per user, in model calls: a report costs 1 (main) + one
- * per funded goal. 40 keeps ~10 single-goal reports/hour, as before.
+ * Hourly AI budget per user, in model calls: a report costs 1 (main) + one per
+ * funded goal up to GOAL_ADVISOR_MAX_GOALS (so 2–9). 40 keeps ~10 single-goal
+ * reports/hour, as before.
  */
 const AI_HOURLY_BUDGET = 40;
 const AI_MODEL = () => process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b";
@@ -69,12 +71,12 @@ export async function POST(req: NextRequest) {
     console.error("AI route plan error:", error?.message);
     return NextResponse.json({ error: "Could not build plan" }, { status: 400 });
   }
-  const adviceGoals = goalsForAdvice(priorityPlan.goals);
+  const adviceGoals = fundedGoals(priorityPlan.goals);
   const limit = rateLimit(
     `ai-analyse:${user.id}`,
     AI_HOURLY_BUDGET,
     60 * 60 * 1000,
-    1 + adviceGoals.length,
+    1 + goalAdvisorCallCount(adviceGoals),
   );
   if (!limit.ok) {
     return tooManyRequests(limit.retryAfter);
