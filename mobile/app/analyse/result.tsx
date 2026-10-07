@@ -11,8 +11,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
+import { router, type Href } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -41,8 +40,8 @@ import {
   ResultHero,
   SafetyNetSection,
 } from "@/components/analyse/result/ResultSections";
+import { openContentHref } from "@/lib/contentLinks";
 
-const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com";
 
 function goBack() {
   if (router.canGoBack()) router.back();
@@ -186,8 +185,8 @@ function AnalyseResultContent() {
         <SafetyNetSection
           model={model}
           onTermLearn={() =>
-            void WebBrowser.openBrowserAsync(
-              `${SITE}/learn/term-insurance-vs-endowment-why-most-indians-buy-wrong`,
+            openContentHref(
+              "/learn/term-insurance-vs-endowment-why-most-indians-buy-wrong",
             )
           }
         />
@@ -213,14 +212,9 @@ function AnalyseResultContent() {
         />
 
         <KeepGoingSection
-          onTax={() =>
-            router.push({
-              pathname: "/(tabs)/calculators",
-              params: { tool: "tax-regime" },
-            })
-          }
+          onTax={() => router.push("/calculators/tax-regime" as Href)}
           onTracker={() => router.push("/(tabs)/tracker")}
-          onLearn={() => void WebBrowser.openBrowserAsync(`${SITE}/learn`)}
+          onLearn={() => openContentHref("/learn")}
         />
 
         <Button

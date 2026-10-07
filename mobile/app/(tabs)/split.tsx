@@ -28,6 +28,7 @@ import { getSupabase } from "@/lib/supabase";
 import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 const FEATURES = [
   {
@@ -257,9 +258,7 @@ function SplitHomeInner() {
   const [hasLoaded, setHasLoaded] = useState(groups.length > 0);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createStep, setCreateStep] = useState<"details" | "invite">(
-    "details",
-  );
+  const [createStep, setCreateStep] = useState<"details" | "invite">("details");
   const [gName, setGName] = useState("");
   const [gEmoji, setGEmoji] = useState("");
   const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
@@ -306,7 +305,7 @@ function SplitHomeInner() {
     if (!userId || !email) return;
     const supabase = getSupabase();
     const channel = supabase
-      .channel(`my_groups:${userId}`)
+      .channel(uniqueChannelName(`my_groups:${userId}`))
       .on(
         "postgres_changes",
         {
@@ -661,9 +660,7 @@ function SplitHomeInner() {
               onPress={() => void handleCreate()}
               activeOpacity={0.85}
             >
-              {busy ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : null}
+              {busy ? <ActivityIndicator color="#FFFFFF" size="small" /> : null}
               <Text style={styles.primaryBtnText}>
                 {busy ? "Creating…" : "Create & get invite link"}
               </Text>

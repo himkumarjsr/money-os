@@ -33,7 +33,7 @@ function getIstHour(): number {
 export default function MorningTipPopup() {
   const router = useRouter();
   const { user, isLoggedIn, hasInitialized } = useAuthStore();
-  const { fetchNotifications, getTodayUnshownPopup, markPopupShown } =
+  const { fetchNotifications, getNextRelevantPopup, markPopupShown } =
     useNotificationStore();
 
   const [tip, setTip] = useState<Notification | null>(null);
@@ -59,7 +59,7 @@ export default function MorningTipPopup() {
       await fetchNotifications(user.id);
       if (cancelled) return;
 
-      const todayTip = getTodayUnshownPopup();
+      const todayTip = await getNextRelevantPopup(user.id);
       if (todayTip && !cancelled) {
         timer = setTimeout(() => {
           if (!cancelled) {

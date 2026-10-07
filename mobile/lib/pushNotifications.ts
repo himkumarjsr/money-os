@@ -10,6 +10,7 @@ import * as Notifications from "expo-notifications";
 import type { Href } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { syncKv } from "@/lib/syncKv";
+import { nativeRouteForPath } from "@/lib/contentLinks";
 
 const ASKED_KEY = "finkoin_push_permission_asked";
 const TOKEN_KEY = "finkoin_expo_push_token";
@@ -161,5 +162,6 @@ export function routeForPushUrl(url: unknown): Href {
     };
   }
   if (path.startsWith("/tracker")) return "/(tabs)/tracker";
-  return "/notifications";
+  const native = nativeRouteForPath(raw);
+  return native === "/(tabs)" ? "/notifications" : (native as Href);
 }

@@ -14,6 +14,7 @@ import { getSupabase } from "@/lib/supabase";
 import type { TrackerIconName } from "@/lib/tracker-categories";
 import { useAuthStore } from "@/store/authStore";
 import { getMyNetBalance, useSplitStore } from "@/store/splitStore";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 const SPLIT_CATEGORY_ICON: Record<string, TrackerIconName> = {
   food: "utensils",
@@ -100,7 +101,7 @@ function SplitGroupInner() {
       }, 400);
     };
     const sub = supabase
-      .channel(`split:${groupId}`)
+      .channel(uniqueChannelName(`split:${groupId}`))
       .on(
         "postgres_changes",
         {

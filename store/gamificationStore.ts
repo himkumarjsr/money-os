@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { localISODate, localYesterdayISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 /** Normalize DB/API date values to YYYY-MM-DD for streak comparisons. */
 function asISODate(value: string | null | undefined): string | null {
@@ -216,7 +217,7 @@ export const useGamificationStore = create<GamificationState>()(
       subscribeToRealtime: (userId) => {
         const supabase = getSupabase();
         const subscription = supabase
-          .channel(`gamification:${userId}`)
+          .channel(uniqueChannelName(`gamification:${userId}`))
           .on(
             "postgres_changes",
             {

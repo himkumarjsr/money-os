@@ -17,13 +17,13 @@ export const QUICK_TOOLS: Array<{
   },
   {
     label: "Tax Calc",
-    route: "/(tabs)/calculators",
+    route: "/calculators/tax-regime",
     icon: "receipt",
     bg: "#E1F5EE",
   },
   {
     label: "SIP Calc",
-    route: "/(tabs)/calculators",
+    route: "/calculators/sip",
     icon: "trending",
     bg: "#FFF3E0",
   },
@@ -35,7 +35,7 @@ export const QUICK_TOOLS: Array<{
   },
   {
     label: "Home Loan",
-    route: "/(tabs)/calculators",
+    route: "/calculators/home",
     icon: "bank",
     bg: "#E8F5E9",
   },

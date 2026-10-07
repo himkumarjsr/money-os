@@ -36,7 +36,7 @@ const CARDS: Card[] = [
     title: "New vs old tax regime",
     body: "Compare regimes with HRA, 80C, NPS, and equity gains — built for FY 2025-26 planning.",
     cta: "Open calculator →",
-    route: "/(tabs)/calculators",
+    route: "/calculators/tax-regime",
     accent: "#F5F3FF",
     border: "rgba(221,214,254,0.9)",
     ctaColor: "#6D28D9",

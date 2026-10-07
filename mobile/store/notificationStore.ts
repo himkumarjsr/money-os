@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { isPopupNotificationRelevant } from "@/lib/obligationReminderPopup";
 
 export type AppNotification = {
   id: string;
@@ -35,7 +36,8 @@ type NotificationStore = {
   markAllRead: (userId: string) => Promise<void>;
   markRead: (notifId: string) => Promise<void>;
   markPopupShown: (notifId: string) => Promise<void>;
-  getTodayUnshownPopup: () => AppNotification | null;
+  /** Oldest unshown popup that is still accurate; outdated bill reminders are marked shown. */
+  getNextRelevantPopup: (userId: string) => Promise<AppNotification | null>;
   getById: (notifId: string) => AppNotification | null;
 };
 
@@ -145,15 +147,19 @@ export const useNotificationStore = create<NotificationStore>((set, get) => {
       }
     },
 
-    getTodayUnshownPopup: () => {
-      const unshown = get().notifications.filter((n) => !n.shown_as_popup);
-      if (unshown.length === 0) return null;
-      return (
-        [...unshown].sort(
+    getNextRelevantPopup: async (userId) => {
+      const unshown = get()
+        .notifications.filter((n) => !n.shown_as_popup)
+        .sort(
           (a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        )[0] ?? null
-      );
+            new Date(a.created_at).getTime() -
+            new Date(b.created_at).getTime(),
+        );
+      for (const n of unshown) {
+        if (await isPopupNotificationRelevant(supabase, userId, n)) return n;
+        await get().markPopupShown(n.id);
+      }
+      return null;
     },
 
     getById: (notifId) =>

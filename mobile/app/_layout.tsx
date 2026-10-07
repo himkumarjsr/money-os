@@ -1,6 +1,7 @@
 import "@/lib/cryptoPolyfill";
 import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Stack, type ErrorBoundaryProps } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -9,8 +10,11 @@ import { useAuthStore } from "@/store/authStore";
 import { hydrateSyncKv } from "@/lib/syncKv";
 import { PushNotificationsManager } from "@/components/PushNotificationsManager";
 import { MorningTipPopup } from "@/components/MorningTipPopup";
+import { installCrashReporter } from "@/lib/crashReporter";
+import { Colors } from "@/constants/theme";
 
 void hydrateSyncKv();
+installCrashReporter();
 
 // Closes the OAuth browser when the app regains focus after redirect.
 WebBrowser.maybeCompleteAuthSession();
@@ -19,6 +23,24 @@ export const unstable_settings = {
   // Prefer the tab shell as the main entry (not a blank stack index hop).
   initialRouteName: "(tabs)",
 };
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <SafeAreaProvider>
+      <View style={styles.errorBox}>
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorText}>{error.message}</Text>
+        <Pressable
+          onPress={() => void retry()}
+          style={styles.errorBtn}
+          accessibilityRole="button"
+        >
+          <Text style={styles.errorBtnText}>Try again</Text>
+        </Pressable>
+      </View>
+    </SafeAreaProvider>
+  );
+}
 
 export default function RootLayout() {
   const initAuth = useAuthStore((s) => s.initAuth);
@@ -45,6 +67,7 @@ export default function RootLayout() {
           />
           <Stack.Screen name="analyse/result" />
           <Stack.Screen name="tracker/[month]" />
+          <Stack.Screen name="calculators/[id]" />
           <Stack.Screen name="split/[groupId]/index" />
           <Stack.Screen name="split/[groupId]/add-expense" />
           <Stack.Screen name="split/join" />
@@ -56,3 +79,30 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  errorBox: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 24,
+    backgroundColor: Colors.background,
+  },
+  errorTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
+  errorText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
+  errorBtn: {
+    minHeight: 44,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+});

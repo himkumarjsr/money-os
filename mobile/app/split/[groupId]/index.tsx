@@ -32,6 +32,7 @@ import type { TrackerIconName } from "@/lib/tracker-categories";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 type Tab = "expenses" | "members" | "settlements";
 type PaymentMethod = "upi" | "cash" | "bank";
@@ -154,7 +155,7 @@ export default function GroupDetailScreen() {
       }, 400);
     };
     const sub = supabase
-      .channel(`split:${groupId}`)
+      .channel(uniqueChannelName(`split:${groupId}`))
       .on(
         "postgres_changes",
         {
@@ -228,7 +229,8 @@ export default function GroupDetailScreen() {
     [members, myEmail],
   );
 
-  const isCreator = Boolean(group?.created_by) && group?.created_by === user?.id;
+  const isCreator =
+    Boolean(group?.created_by) && group?.created_by === user?.id;
 
   const onRefresh = async () => {
     if (!groupId) return;
@@ -517,13 +519,21 @@ export default function GroupDetailScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statTile}>
               <Text style={styles.statLabel}>You owe</Text>
-              <Text style={styles.statVal} numberOfLines={1} adjustsFontSizeToFit>
+              <Text
+                style={styles.statVal}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {formatSplitRupee(headerTotals.youOwe)}
               </Text>
             </View>
             <View style={styles.statTile}>
               <Text style={styles.statLabel}>You are owed</Text>
-              <Text style={styles.statVal} numberOfLines={1} adjustsFontSizeToFit>
+              <Text
+                style={styles.statVal}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {formatSplitRupee(headerTotals.youAreOwed)}
               </Text>
             </View>
@@ -576,7 +586,9 @@ export default function GroupDetailScreen() {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
               >
-                <Text style={[styles.tabText, { color: active ? PRIMARY : MUTED }]}>
+                <Text
+                  style={[styles.tabText, { color: active ? PRIMARY : MUTED }]}
+                >
                   {t}
                 </Text>
               </TouchableOpacity>
@@ -668,7 +680,10 @@ export default function GroupDetailScreen() {
                       const isMe = n.email === myEmail;
                       const owed = n.net > 0;
                       return (
-                        <View key={n.email} style={[styles.card, styles.balanceCard]}>
+                        <View
+                          key={n.email}
+                          style={[styles.card, styles.balanceCard]}
+                        >
                           <Text style={styles.balanceName} numberOfLines={1}>
                             {isMe ? "You" : n.name}
                           </Text>
@@ -1083,7 +1098,10 @@ export default function GroupDetailScreen() {
                   accessibilityState={{ selected: active }}
                 >
                   <Text
-                    style={[styles.methodText, { color: active ? PRIMARY : MUTED }]}
+                    style={[
+                      styles.methodText,
+                      { color: active ? PRIMARY : MUTED },
+                    ]}
                   >
                     {method === "upi"
                       ? "UPI"

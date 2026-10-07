@@ -13,6 +13,8 @@ import {
   registerPushToken,
   routeForPushUrl,
 } from "@/lib/pushNotifications";
+import { supabase } from "@/lib/supabase";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -48,6 +50,30 @@ export function PushNotificationsManager() {
     void registerPushToken(userId);
   }, [userId]);
 
+  // One inbox subscription for the whole app; every header bell reads the store.
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = () =>
+      void useNotificationStore.getState().fetchNotifications(userId);
+    refresh();
+    const channel = supabase
+      .channel(uniqueChannelName(`notifications:${userId}`))
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        refresh,
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
   useEffect(() => {
     const open = (response: Notifications.NotificationResponse) => {
       const id = response.notification.request.identifier;
@@ -56,8 +82,20 @@ export function PushNotificationsManager() {
       }
       handled.current.add(id);
       syncKv.setItem(LAST_HANDLED_KEY, id);
-      const url = response.notification.request.content.data?.url;
-      router.push(routeForPushUrl(url));
+      const target = routeForPushUrl(
+        response.notification.request.content.data?.url,
+      );
+      try {
+        router.push(target);
+      } catch {
+        setTimeout(() => {
+          try {
+            router.push(target);
+          } catch {
+            /* navigator not ready; the inbox still has the message */
+          }
+        }, 800);
+      }
     };
 
     const received = Notifications.addNotificationReceivedListener(() => {

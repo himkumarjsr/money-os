@@ -6,6 +6,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useGamificationStore } from "@/store/gamificationStore";
 import { useEffect, useState } from "react";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 interface LeaderboardEntry {
   user_id: string;
@@ -96,7 +97,7 @@ function LeaderboardContent() {
 
     const supabase = getSupabase();
     const sub = supabase
-      .channel("leaderboard-updates")
+      .channel(uniqueChannelName("leaderboard-updates"))
       .on(
         "postgres_changes",
         {
