@@ -11,13 +11,19 @@ import {
   tryStartForcedRefresh,
 } from "@/lib/cache";
 import {
+  DEBT_ESTIMATE_NOTE,
   LOADING_MESSAGES,
+  debtIsEstimated,
+  debtRateLabel,
+  estSuffix,
   mergeEnginePriorityPlan,
   monthsForPriority,
   noGainProjectionMessage,
   openPriorities,
   reconcileExplanations,
+  remainingBuffer,
   scoreProjectionGain,
+  stepStartLabel,
 } from "@/lib/fixPlanMerge";
 import { Analytics } from "@/lib/analytics";
 import { scoreBand } from "@/lib/financialEngine";
@@ -40,7 +46,12 @@ import LifeMapCard from "@/components/analyse/LifeMapCard";
 import NetWorthTrajectoryCard from "@/components/analyse/NetWorthTrajectoryCard";
 import NoConflictNote from "@/components/analyse/NoConflictNote";
 import { projectNetWorth } from "@/lib/netWorthTrajectory";
+import LoanSyncNotices from "@/components/analyse/LoanSyncNotices";
 import { useAuthStore } from "@/store/authStore";
+import {
+  useObligationStore,
+  type LoanReportStatus,
+} from "@/store/obligationStore";
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
@@ -82,6 +93,34 @@ export default function FixPlanPage() {
   useEffect(() => {
     void loadPlannedProgress();
   }, [loadPlannedProgress]);
+  const [loanStatus, setLoanStatus] = useState<LoanReportStatus | null>(null);
+  const refreshLoanStatus = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setLoanStatus(
+        await useObligationStore.getState().loanReportStatus(user.id),
+      );
+    } catch {
+      setLoanStatus(null);
+    }
+  }, [user?.id]);
+  useEffect(() => {
+    void refreshLoanStatus();
+  }, [refreshLoanStatus]);
+  const saveLoanDetails = useCallback(
+    async (
+      loanId: string,
+      details: { outstandingAmount?: number; interestRate?: number } | "skip",
+    ) => {
+      if (!user?.id) return false;
+      const ok = await useObligationStore
+        .getState()
+        .saveLoanDetails(user.id, loanId, details);
+      if (ok) await refreshLoanStatus();
+      return ok;
+    },
+    [user?.id, refreshLoanStatus],
+  );
   const trajectory = useMemo(
     () =>
       profile && aiPlan?.priorityPlan
@@ -329,6 +368,7 @@ export default function FixPlanPage() {
           priorityPlan: aiData?.priorityPlan,
           explanations: aiData?.explanations ?? {},
           timeZone,
+          dataAsOf: loanStatus?.submittedAt ?? undefined,
         }),
       });
       if (!res.ok) {
@@ -423,6 +463,11 @@ export default function FixPlanPage() {
             <p className="mt-1 text-xs text-white/90">{refreshNotice}</p>
           ) : null}
         </section>
+
+        <LoanSyncNotices
+          status={loanStatus}
+          onSaveDetails={saveLoanDetails}
+        />
 
         {aiPlan.priorityPlan?.surplusBreakdown ? (
           <details className="rounded-xl bg-[#F7F7F4] p-4 text-sm">
@@ -601,6 +646,7 @@ export default function FixPlanPage() {
                 >
                   <span>
                     Step {idx + 1} — {p.title}
+                    {stepStartLabel(p)}
                   </span>
                   <span>
                     -₹
@@ -614,16 +660,9 @@ export default function FixPlanPage() {
                 <span>Remaining buffer</span>
                 <span>
                   ₹
-                  {Math.round(
-                    Math.max(
-                      0,
-                      (aiPlan.priorityPlan.monthlySurplus || 0) -
-                        visiblePriorities.reduce(
-                          (s: number, p: any) =>
-                            s + Number(p.monthlyContribution || 0),
-                          0,
-                        ),
-                    ),
+                  {remainingBuffer(
+                    aiPlan.priorityPlan,
+                    visiblePriorities,
                   ).toLocaleString("en-IN")}
                 </span>
               </div>
@@ -785,7 +824,9 @@ export default function FixPlanPage() {
                               borderRadius: 20,
                             }}
                           >
-                            {debt.rate || debt.interestRate || 0}% interest
+                            {debt.rateEstimated
+                              ? `${debtRateLabel(debt)} interest`
+                              : `${debt.rate || debt.interestRate || 0}% interest`}
                           </div>
                         </div>
                         <div
@@ -799,7 +840,7 @@ export default function FixPlanPage() {
                             [
                               [
                                 "Outstanding",
-                                `₹${outstanding.toLocaleString("en-IN")}`,
+                                `₹${outstanding.toLocaleString("en-IN")}${debt.outstandingEstimated ? " (est.)" : ""}`,
                               ],
                               [
                                 "Current EMI",
@@ -862,6 +903,7 @@ export default function FixPlanPage() {
                               {monthsSaved > 0
                                 ? ` (save ${monthsSaved} months vs EMI-only)`
                                 : ""}
+                              {estSuffix(debt)}
                             </span>
                             {interestSaved > 0 ? (
                               <span
@@ -872,7 +914,7 @@ export default function FixPlanPage() {
                                 }}
                               >
                                 Save ₹{interestSaved.toLocaleString("en-IN")}{" "}
-                                interest
+                                interest{estSuffix(debt)}
                               </span>
                             ) : null}
                           </div>
@@ -883,6 +925,11 @@ export default function FixPlanPage() {
                 </div>
               );
             })()}
+            {(aiPlan.priorityPlan.debts as any[]).some(debtIsEstimated) ? (
+              <p className="mb-2 rounded-lg bg-[#FFF8E6] p-3 text-xs text-[#7A5A12]">
+                {DEBT_ESTIMATE_NOTE}
+              </p>
+            ) : null}
             <p className="mt-1 text-sm italic text-[#7A7871]">
               {aiPlan.explanations?.debtStrategy ||
                 "Clear high-interest debt first, then roll freed EMI into the next debt."}

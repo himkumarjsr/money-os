@@ -16,6 +16,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import {
+  useObligationStore,
+  type LoanReportStatus,
+} from "@/store/obligationStore";
+import { LoanSyncNotices } from "@/components/analyse/fixplan/LoanSyncNotices";
 import { canViewFixPlan } from "@/lib/analyseEntitlement";
 import { shareFixPlanPdf } from "@/lib/fixPlanPdf";
 import { AnalyseErrorBoundary } from "@/components/analyse/AnalyseErrorBoundary";
@@ -74,6 +79,34 @@ function FixPlanScreen() {
   useEffect(() => {
     void loadPlannedProgress();
   }, [loadPlannedProgress]);
+  const [loanStatus, setLoanStatus] = useState<LoanReportStatus | null>(null);
+  const refreshLoanStatus = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setLoanStatus(
+        await useObligationStore.getState().loanReportStatus(user.id),
+      );
+    } catch {
+      setLoanStatus(null);
+    }
+  }, [user?.id]);
+  useEffect(() => {
+    void refreshLoanStatus();
+  }, [refreshLoanStatus]);
+  const saveLoanDetails = useCallback(
+    async (
+      loanId: string,
+      details: { outstandingAmount?: number; interestRate?: number } | "skip",
+    ) => {
+      if (!user?.id) return false;
+      const ok = await useObligationStore
+        .getState()
+        .saveLoanDetails(user.id, loanId, details);
+      if (ok) await refreshLoanStatus();
+      return ok;
+    },
+    [user?.id, refreshLoanStatus],
+  );
   const profile = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
   const storeHydrated = useFinancialStore((s) => s.hasHydrated);
@@ -160,6 +193,7 @@ function FixPlanScreen() {
         result,
         priorityPlan: pp,
         explanations: expl,
+        dataAsOf: loanStatus?.submittedAt ?? undefined,
       });
       if (res.error) Alert.alert("Couldn't create PDF", res.error);
     } catch (err) {
@@ -218,6 +252,8 @@ function FixPlanScreen() {
           isFallback={aiPlan.isFallback}
         />
 
+        <LoanSyncNotices status={loanStatus} onSaveDetails={saveLoanDetails} />
+
         {pp?.surplusBreakdown ? (
           <SurplusBreakdown breakdown={pp.surplusBreakdown} />
         ) : null}
@@ -235,6 +271,7 @@ function FixPlanScreen() {
           <SurplusAllocationSummary
             priorities={visiblePriorities}
             monthlySurplus={pp?.monthlySurplus || 0}
+            plan={pp}
           />
         ) : null}
 
