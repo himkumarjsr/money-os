@@ -17,7 +17,9 @@ import {
   noGainProjectionMessage,
   openPriorities,
   reconcileExplanations,
+  remainingBuffer,
   scoreProjectionGain,
+  stepStartLabel,
 } from "@/lib/fixPlanMerge";
 import { Analytics } from "@/lib/analytics";
 import { scoreBand } from "@/lib/financialEngine";
@@ -601,6 +603,7 @@ export default function FixPlanPage() {
                 >
                   <span>
                     Step {idx + 1} — {p.title}
+                    {stepStartLabel(p)}
                   </span>
                   <span>
                     -₹
@@ -614,16 +617,9 @@ export default function FixPlanPage() {
                 <span>Remaining buffer</span>
                 <span>
                   ₹
-                  {Math.round(
-                    Math.max(
-                      0,
-                      (aiPlan.priorityPlan.monthlySurplus || 0) -
-                        visiblePriorities.reduce(
-                          (s: number, p: any) =>
-                            s + Number(p.monthlyContribution || 0),
-                          0,
-                        ),
-                    ),
+                  {remainingBuffer(
+                    aiPlan.priorityPlan,
+                    visiblePriorities,
                   ).toLocaleString("en-IN")}
                 </span>
               </div>

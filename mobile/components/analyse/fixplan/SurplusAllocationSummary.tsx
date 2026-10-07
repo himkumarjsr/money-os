@@ -1,14 +1,23 @@
 import { StyleSheet, Text, View } from "react-native";
-import type { PriorityItem } from "@/lib/priorityEngine";
+import type { PriorityItem, PriorityPlan } from "@/lib/priorityEngine";
+import { remainingBuffer, stepStartLabel } from "@/lib/fixPlanMerge";
 import { Colors, Spacing } from "@/constants/theme";
 import { inr, shared } from "./shared";
 
-type Props = { priorities: PriorityItem[]; monthlySurplus: number };
+type Props = {
+  priorities: PriorityItem[];
+  monthlySurplus: number;
+  plan?: PriorityPlan;
+};
 
-export function SurplusAllocationSummary({ priorities, monthlySurplus }: Props) {
-  const allocated = priorities.reduce(
-    (s, p) => s + Number(p.monthlyContribution || 0),
-    0,
+export function SurplusAllocationSummary({
+  priorities,
+  monthlySurplus,
+  plan,
+}: Props) {
+  const remaining = remainingBuffer(
+    plan ?? { monthlySurplus },
+    priorities,
   );
   return (
     <View style={[shared.card, styles.card]}>
@@ -24,6 +33,7 @@ export function SurplusAllocationSummary({ priorities, monthlySurplus }: Props) 
           <View key={`surplus-line-${p.id}-${idx}`} style={shared.row}>
             <Text style={shared.rowLabel}>
               Step {idx + 1} — {p.title}
+              {stepStartLabel(p)}
             </Text>
             <Text style={shared.rowValue}>-₹{inr(p.monthlyContribution)}</Text>
           </View>
@@ -31,7 +41,7 @@ export function SurplusAllocationSummary({ priorities, monthlySurplus }: Props) 
         <View style={[shared.row, shared.totalRow]}>
           <Text style={[shared.totalText, { flex: 1 }]}>Remaining buffer</Text>
           <Text style={shared.totalText}>
-            ₹{inr(Math.max(0, (monthlySurplus || 0) - allocated))}
+            ₹{inr(remaining)}
           </Text>
         </View>
         <Text style={styles.note}>

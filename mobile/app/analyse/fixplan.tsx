@@ -235,6 +235,7 @@ function FixPlanScreen() {
           <SurplusAllocationSummary
             priorities={visiblePriorities}
             monthlySurplus={pp?.monthlySurplus || 0}
+            plan={pp}
           />
         ) : null}
 

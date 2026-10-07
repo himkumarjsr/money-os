@@ -85,6 +85,18 @@ describe("Fix Plan PDF text", () => {
     expect(text).toMatch(/at today's salary\./);
   });
 
+  it("prints the signed-in name passed by the route, not a profile default", () => {
+    const profile = buildUserAnalyseScenarioProfile() as any;
+    const result = analyseFinances(profile);
+    const engine = buildPriorityPlan(profile, result);
+    const { doc } = buildFixPlanPdf(profile, result, engine, {}, {}, {
+      userName: "Asha Rao",
+    });
+    const raw = Buffer.from(doc.output("arraybuffer")).toString("latin1");
+    expect(raw).toContain("Prepared for: Asha Rao");
+    expect(raw).not.toContain("Prepared for: User");
+  });
+
   it("uses on-track copy for completed priorities", () => {
     const completed = plan.priorities.filter(
       (p: any) => p.gap <= 0 || p.monthlyContribution <= 0,

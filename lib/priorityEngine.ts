@@ -774,10 +774,15 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         ((profile.kidsGenders as string[] | undefined)?.[i] || "boy") ===
           "girl" && kidAge < 10,
     ).length * 12500;
-  const postSafetyBudget = Math.max(
+  // Recurring steps (SSY, debt deploy, goals, leftover SIP) draw from the same
+  // steady-state budget the goal split uses — never from the month-1 leftover
+  // after emergency/medical top-ups, which are temporary.
+  const steadyStateBudget = Math.max(
     0,
-    monthlySurplus - termPremiumEst - healthPremiumEst - ssyReserve,
+    monthlySurplus - termPremiumEst - healthPremiumEst,
   );
+  let steadyRunning = steadyStateBudget;
+  const postSafetyBudget = Math.max(0, steadyStateBudget - ssyReserve);
   const debtDeployMonthly =
     primaryGoal === "clear_debt" ? Math.round(postSafetyBudget * 0.8) : 0;
   const safetyNetComplete = priorities
@@ -885,6 +890,9 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   girlChildrenUnder10.forEach((girl) => {
     const monthsLeft = (10 - girl.age) * 12;
     const isUrgent = girl.age >= 8;
+    const ssyBefore = steadyRunning;
+    const ssyMonthly = Math.max(0, Math.min(12500, steadyRunning));
+    steadyRunning = Math.max(0, steadyRunning - ssyMonthly);
 
     priorities.push({
       rank: rank++,
@@ -898,13 +906,10 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       currentAmount: 0,
       targetAmount: 1500000,
       gap: 1500000,
-      monthlyRequired: Math.max(0, Math.min(12500, runningSurplus)),
-      monthlyContribution: Math.max(0, Math.min(12500, runningSurplus)),
-      surplusBefore: runningSurplus,
-      surplusAfterThis: Math.max(
-        0,
-        runningSurplus - Math.max(0, Math.min(12500, runningSurplus)),
-      ),
+      monthlyRequired: ssyMonthly,
+      monthlyContribution: ssyMonthly,
+      surplusBefore: ssyBefore,
+      surplusAfterThis: steadyRunning,
       monthsToComplete: (21 - girl.age) * 12,
       instrument: "Sukanya Samriddhi Yojana at any Post Office or authorised bank",
       actionThisWeek: isUrgent
@@ -914,16 +919,12 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       icon: "👧",
       canBuyFromFinkoin: false,
     });
-    runningSurplus = Math.max(
-      0,
-      runningSurplus - Math.max(0, Math.min(12500, runningSurplus)),
-    );
   });
 
   if (debtDeployMonthly > 0) {
-    const before = runningSurplus;
-    const amount = Math.min(runningSurplus, debtDeployMonthly);
-    runningSurplus = Math.max(0, runningSurplus - amount);
+    const before = steadyRunning;
+    const amount = Math.min(steadyRunning, debtDeployMonthly);
+    steadyRunning = Math.max(0, steadyRunning - amount);
     priorities.push({
       rank: rank++,
       id: wealthDeploy.id,
@@ -937,7 +938,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       monthlyRequired: debtDeployMonthly,
       monthlyContribution: amount,
       surplusBefore: before,
-      surplusAfterThis: runningSurplus,
+      surplusAfterThis: steadyRunning,
       monthsToComplete: 1,
       instrument: wealthDeploy.instrument,
       actionThisWeek: wealthDeploy.action(
@@ -953,9 +954,10 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
 
   for (const item of goalFunding.items) {
     if (item.monthlyAllocated <= 0) continue;
-    const before = runningSurplus;
-    const amount = Math.min(runningSurplus, item.monthlyAllocated);
-    runningSurplus = Math.max(0, runningSurplus - amount);
+    const before = steadyRunning;
+    // Exactly the split amount: the goals table, actions and PDF all show it.
+    const amount = item.monthlyAllocated;
+    steadyRunning = Math.max(0, steadyRunning - amount);
     priorities.push({
       rank: rank++,
       id: `goal_${item.goalId.replace(":", "_")}`,
@@ -969,7 +971,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       monthlyRequired: item.monthlyRequired,
       monthlyContribution: amount,
       surplusBefore: before,
-      surplusAfterThis: runningSurplus,
+      surplusAfterThis: steadyRunning,
       monthsToComplete: item.yearsToGoal * 12,
       instrument: item.instrument,
       actionThisWeek: goalFundingAction(item, sipStartMonth),
@@ -981,9 +983,9 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   }
 
   if (goalFunding.unallocated > 0) {
-    const before = runningSurplus;
-    const amount = Math.min(runningSurplus, goalFunding.unallocated);
-    runningSurplus = Math.max(0, runningSurplus - amount);
+    const before = steadyRunning;
+    const amount = Math.min(steadyRunning, goalFunding.unallocated);
+    steadyRunning = Math.max(0, steadyRunning - amount);
     priorities.push({
       rank: rank++,
       id: "start_sip",
@@ -997,7 +999,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       monthlyRequired: goalFunding.unallocated,
       monthlyContribution: amount,
       surplusBefore: before,
-      surplusAfterThis: runningSurplus,
+      surplusAfterThis: steadyRunning,
       monthsToComplete: 1,
       instrument: "Nifty 50 index fund / flexi-cap fund SIP",
       actionThisWeek:
@@ -1311,7 +1313,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       investmentActual,
       existingInsurancePremiums,
       netSurplus: monthlySurplus,
-      afterAllPriorities: runningSurplus,
+      afterAllPriorities: steadyRunning,
     },
     allocationPlan: [],
     scoreToday,

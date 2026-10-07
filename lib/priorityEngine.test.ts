@@ -240,6 +240,40 @@ describe("buildPriorityPlan", () => {
     }
   });
 
+  it("gives each goal one monthly number while the emergency fund is still filling", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        lifeStage: "married",
+        numberOfKids: 0,
+        kidsAges: [],
+        kidsGenders: [],
+        planningBaby: true,
+        babyFundYear: new Date().getFullYear() + 2,
+      }),
+      { needsActual: 50_000, overallScore: 40 },
+    );
+    const emergency = plan.priorities.find((p) => p.id === "emergency_fund");
+    expect(emergency?.monthlyContribution).toBeGreaterThan(0);
+
+    const goalCards = plan.priorities.filter((p) => p.category === "goal");
+    expect(goalCards.length).toBe(plan.goalFunding?.items.length);
+    expect(goalCards.length).toBeGreaterThan(1);
+    for (const card of goalCards) {
+      const goal = plan.goals.find(
+        (g) => g.goalId && card.id === `goal_${g.goalId.replace(":", "_")}`,
+      );
+      expect(goal?.monthlyAllocated).toBeGreaterThan(0);
+      expect(card.monthlyContribution).toBe(goal?.monthlyAllocated);
+      expect(card.actionThisWeek).toContain(
+        `₹${Math.round(card.monthlyContribution).toLocaleString("en-IN")}/month`,
+      );
+    }
+    const recurring = plan.priorities
+      .filter((p) => (p.startMonth ?? 1) > 1 || p.id.startsWith("ssy_"))
+      .reduce((s, p) => s + p.monthlyContribution, 0);
+    expect(recurring).toBeLessThanOrEqual(plan.monthlySurplus);
+  });
+
   it("routes surplus to debt when primary goal is clear_debt", () => {
     const plan = buildPriorityPlan(
       profile({

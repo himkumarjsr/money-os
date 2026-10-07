@@ -78,6 +78,8 @@ export type FixPlanPdfOptions = {
   timeZone?: string;
   /** Base64 TTFs with ₹ glyphs (Noto Sans). Without them Helvetica is used and ₹ prints as "Rs.". */
   fonts?: { regular: string; bold: string };
+  /** Signed-in account's display name; the Analyse profile has no name field. */
+  userName?: string;
 };
 
 function labelOrDash(
@@ -205,6 +207,7 @@ export function buildFixPlanPdf(
   else applyRupeeFallback(doc);
   doc.setFont(FONT, "normal");
   const userName =
+    options.userName?.trim() ||
     profile?.name?.trim() ||
     profile?.fullName?.trim() ||
     profile?.email?.split("@")[0] ||
@@ -693,7 +696,7 @@ export function buildFixPlanPdf(
         `Step ${idx + 1}`,
         p.title,
         fmt(p.monthlyContribution || 0),
-        idx === 0 ? "Month 1+" : "Month 2+",
+        `Month ${Math.max(1, Number(p.startMonth) || 1)}+`,
         fmt(p.surplusAfterThis || 0),
       ]),
     [20, 70, 28, 25, 37],
@@ -992,7 +995,11 @@ export function buildFixPlanPdf(
     .forEach((p: any, idx: number) => {
       checklistRows.push([
         String(idx + 1),
-        idx === 0 ? "Month 1, Week 1" : `Month ${Math.min(12, idx + 1)}`,
+        (Number(p.startMonth) || 1) > 1
+          ? `Month ${Math.min(12, Number(p.startMonth))}`
+          : idx === 0
+            ? "Month 1, Week 1"
+            : "Month 1",
         p.actionThisWeek || p.title,
         CHECKBOX_CELL,
       ]);

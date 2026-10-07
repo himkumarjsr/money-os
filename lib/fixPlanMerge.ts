@@ -129,6 +129,26 @@ export function incompletePriorities(plan: any) {
   );
 }
 
+/** " (from month N)" for steps that only start after safety is funded. */
+export function stepStartLabel(p: { startMonth?: unknown }): string {
+  const start = Number(p.startMonth || 1);
+  return start > 1 ? ` (from month ${start})` : "";
+}
+
+/**
+ * What's left each month once safety is funded and every recurring step runs.
+ * Emergency/medical top-ups are temporary, so summing every step would double-count.
+ */
+export function remainingBuffer(plan: any, steps: any[]): number {
+  const after = Number(plan?.surplusBreakdown?.afterAllPriorities);
+  if (Number.isFinite(after)) return Math.max(0, Math.round(after));
+  const used = steps.reduce(
+    (s: number, p: any) => s + Number(p.monthlyContribution || 0),
+    0,
+  );
+  return Math.max(0, Math.round(Number(plan?.monthlySurplus || 0) - used));
+}
+
 /** Every priority that still needs money or a monthly contribution — rendered as a card on both platforms. */
 export function openPriorities(plan: any) {
   return (plan?.priorities || []).filter(

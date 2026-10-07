@@ -30,15 +30,41 @@ function validTimeZone(tz: unknown): string | undefined {
   }
 }
 
+function metaName(meta: Record<string, unknown> | undefined): string | undefined {
+  for (const key of ["name", "full_name"]) {
+    const v = meta?.[key];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
 /** Server-rendered Fix Plan PDF for the web download (cookie auth) and the native app (Bearer). */
 export async function POST(req: Request) {
   let userId: string | null = null;
+  let userName: string | undefined;
   try {
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     userId = user?.id ?? null;
+    if (user) {
+      let rowName: string | undefined;
+      try {
+        const { data: row } = await supabase
+          .from("users")
+          .select("name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (typeof row?.name === "string" && row.name.trim()) {
+          rowName = row.name.trim();
+        }
+      } catch {
+        rowName = undefined;
+      }
+      userName =
+        rowName || metaName(user.user_metadata) || user.email?.split("@")[0];
+    }
   } catch {
     userId = null;
   }
@@ -81,6 +107,7 @@ export async function POST(req: Request) {
       optimizerData,
       {
         timeZone: validTimeZone(body.timeZone),
+        userName,
         fonts: loadPdfFonts() ?? undefined,
       },
     );
