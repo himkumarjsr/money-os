@@ -13,6 +13,7 @@ import {
 } from "@/lib/loanObligationSync";
 import { getSupabase } from "@/lib/supabase";
 import {
+  ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
@@ -850,7 +851,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
           profile,
           result,
           submittedAt: new Date().toISOString(),
-          version: "1.0",
+          version: ANALYSE_SNAPSHOT_VERSION,
           aiPlan: snap.aiPlan,
           analysis,
         });

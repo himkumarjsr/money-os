@@ -47,6 +47,7 @@ import {
   type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
 import {
+  ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
@@ -624,7 +625,7 @@ export default function AnalyseFormScreen() {
             profile: savedProfile,
             result: nextResult,
             submittedAt: new Date().toISOString(),
-            version: "1.0",
+            version: ANALYSE_SNAPSHOT_VERSION,
             analysis: mergedValues,
           });
           if (error) console.warn("Snapshot save failed:", error.message);

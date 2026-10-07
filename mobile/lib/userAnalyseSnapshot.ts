@@ -7,6 +7,13 @@ import type { FinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { isValidFinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
+/**
+ * Bump when the payload shape changes. 1.1 adds per-child goal targets,
+ * prompted marriage/baby goals and dismissedGoals (all optional, so 1.0
+ * payloads still read fine).
+ */
+export const ANALYSE_SNAPSHOT_VERSION = "1.1";
+
 /** Stored inside `user_analyse_snapshots.payload` (current shape). */
 export type UserAnalyseSnapshotPayload = {
   profile: FinancialProfile;

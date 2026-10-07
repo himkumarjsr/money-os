@@ -7,6 +7,7 @@ import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
+import GoalsSection from "@/components/analyse/GoalsSection";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
@@ -922,6 +923,8 @@ export default function AnalyseResultPage() {
               />
             </div>
           </section>
+
+          <GoalsSection profile={profile} userId={user?.id} />
 
           <section className="rounded-2xl border border-[#DCD8F4] bg-white p-5">
             <h2 className="text-xl font-semibold">

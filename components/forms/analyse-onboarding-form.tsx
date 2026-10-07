@@ -72,6 +72,7 @@ import { cn } from "@/lib/cn";
 import { getAIFixPlan } from "@/lib/aiService";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
 import {
+  ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
@@ -1530,7 +1531,7 @@ export function AnalyseOnboardingForm() {
             profile: savedProfile,
             result: nextResult,
             submittedAt: new Date().toISOString(),
-            version: "1.0",
+            version: ANALYSE_SNAPSHOT_VERSION,
             aiPlan,
             analysis: mergedValues,
           });

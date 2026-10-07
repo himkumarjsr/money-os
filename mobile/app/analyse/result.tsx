@@ -41,6 +41,7 @@ import {
   ResultHero,
   SafetyNetSection,
 } from "@/components/analyse/result/ResultSections";
+import { GoalsSection } from "@/components/analyse/result/GoalsSection";
 import { openContentHref } from "@/lib/contentLinks";
 
 
@@ -194,6 +195,8 @@ function AnalyseResultContent() {
             )
           }
         />
+
+        <GoalsSection profile={lastSubmission} userId={user?.id} />
 
         {issues.length > 0 ? (
           <View>

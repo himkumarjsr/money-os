@@ -374,6 +374,19 @@ export interface FinancialProfile {
   homePurchaseYear?: number;
   carPurchaseTarget?: number;
   carPurchaseYear?: number;
+  /** Per-child targets (index = kidsAges index), today's rupees. */
+  kidsEducationFundTargets?: number[];
+  kidsMarriageFundTargets?: number[];
+  /** Prompted after the report (bachelors). undefined = not asked yet. */
+  planningMarriage?: boolean;
+  marriageFundTarget?: number;
+  marriageFundYear?: number;
+  /** Prompted after the report (married, no kids). undefined = not asked yet. */
+  planningBaby?: boolean;
+  babyFundTarget?: number;
+  babyFundYear?: number;
+  /** Implied goal ids the user removed from their goal list. */
+  dismissedGoals?: string[];
 }
 
 export type AdditionalObligation =
@@ -707,6 +720,15 @@ const formShape = {
   homePurchaseYear: optionalWholeNumber,
   carPurchaseTarget: optionalMoney,
   carPurchaseYear: optionalWholeNumber,
+  kidsEducationFundTargets: z.array(z.number().min(0)).max(6).optional(),
+  kidsMarriageFundTargets: z.array(z.number().min(0)).max(6).optional(),
+  planningMarriage: z.boolean().optional(),
+  marriageFundTarget: optionalMoney,
+  marriageFundYear: optionalWholeNumber,
+  planningBaby: z.boolean().optional(),
+  babyFundTarget: optionalMoney,
+  babyFundYear: optionalWholeNumber,
+  dismissedGoals: z.array(z.string()).max(40).optional(),
 
   healthInsurancePremiumMonthly: optionalMoney,
   termInsurancePremiumMonthly: optionalMoney,
@@ -1920,6 +1942,15 @@ export function financialProfileToFormValues(
     homePurchaseYear: p.homePurchaseYear,
     carPurchaseTarget: p.carPurchaseTarget,
     carPurchaseYear: p.carPurchaseYear,
+    kidsEducationFundTargets: p.kidsEducationFundTargets,
+    kidsMarriageFundTargets: p.kidsMarriageFundTargets,
+    planningMarriage: p.planningMarriage,
+    marriageFundTarget: p.marriageFundTarget,
+    marriageFundYear: p.marriageFundYear,
+    planningBaby: p.planningBaby,
+    babyFundTarget: p.babyFundTarget,
+    babyFundYear: p.babyFundYear,
+    dismissedGoals: p.dismissedGoals,
   };
 }
 
@@ -2518,15 +2549,19 @@ export function normalizeAnalyseFormValues(
       (form.rentAmount ?? 0) > 0 ? form.homePurchaseYear : undefined,
     carPurchaseTarget: form.ownsCar ? undefined : form.carPurchaseTarget,
     carPurchaseYear: form.ownsCar ? undefined : form.carPurchaseYear,
+    kidsEducationFundTargets:
+      form.lifeStage === "kids" ? form.kidsEducationFundTargets : undefined,
+    kidsMarriageFundTargets:
+      form.lifeStage === "kids" ? form.kidsMarriageFundTargets : undefined,
+    planningMarriage: form.planningMarriage,
+    marriageFundTarget: form.marriageFundTarget,
+    marriageFundYear: form.marriageFundYear,
+    planningBaby: form.planningBaby,
+    babyFundTarget: form.babyFundTarget,
+    babyFundYear: form.babyFundYear,
+    dismissedGoals: form.dismissedGoals,
   };
 
-  console.log("=== ALL LOANS NORMALIZED ===", {
-    personalLoanEMI: normalized.personalLoanEMI,
-    carLoanEMI: normalized.carLoanEMI,
-    bikeEMI: normalized.bikeEMI,
-    additionalObligations: JSON.stringify(normalized.additionalObligations),
-    totalLoanCount: 1 + (normalized.additionalObligations?.length || 0),
-  });
 
   return normalized;
 }
