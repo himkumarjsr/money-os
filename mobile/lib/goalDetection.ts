@@ -81,18 +81,25 @@ function hasLoans(p: Partial<FinancialProfile>): boolean {
   return getUniversalBucketActuals(p as never).loans > 0;
 }
 
-/** Bachelor → marriage toggle; married with no kids → baby toggle. Only until answered. */
+/**
+ * Bachelor → marriage toggle; married with no kids → baby toggle. Shown until
+ * answered. A "no" that isn't in dismissedGoals (stored by builds before "Not
+ * now" became hide) has nothing to restore, so it's asked again.
+ */
 export function promptedGoalOffers(
   p: Partial<FinancialProfile>,
 ): PromptedGoalOffer[] {
+  const dismissed = new Set(p.dismissedGoals ?? []);
+  const open = (answer: boolean | undefined, offer: PromptedGoalOffer) =>
+    answer === undefined || (answer === false && !dismissed.has(offer));
   const offers: PromptedGoalOffer[] = [];
-  if (p.lifeStage === "bachelor" && p.planningMarriage === undefined) {
+  if (p.lifeStage === "bachelor" && open(p.planningMarriage, "marriage")) {
     offers.push("marriage");
   }
   if (
     p.lifeStage === "married" &&
     kidCount(p) === 0 &&
-    p.planningBaby === undefined
+    open(p.planningBaby, "baby")
   ) {
     offers.push("baby");
   }

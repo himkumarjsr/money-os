@@ -115,6 +115,11 @@ describe("prompted goals", () => {
     expect(ids(answered)).not.toContain("marriage");
   });
 
+  it("re-asks when an older build stored a plain 'no' with nothing hidden", () => {
+    const legacy = { ...profile({ lifeStage: "bachelor" }), planningMarriage: false };
+    expect(promptedGoalOffers(legacy)).toEqual(["marriage"]);
+  });
+
   it("'Not now' hides the goal instead of discarding it, and restore re-asks", () => {
     for (const [lifeStage, offer] of [
       ["bachelor", "marriage"],
