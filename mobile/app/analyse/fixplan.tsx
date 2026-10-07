@@ -2,7 +2,7 @@
  * Fix Plan — port of web app/analyse/fixplan/page.tsx.
  * Engine plan merged with the /api/ai/analyse overlay (engine numbers win).
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -28,6 +28,13 @@ import { SurplusAllocationSummary } from "@/components/analyse/fixplan/SurplusAl
 import { MonthlyPlanTable } from "@/components/analyse/fixplan/MonthlyPlanTable";
 import { DebtStrategy } from "@/components/analyse/fixplan/DebtStrategy";
 import { GoalPlanCard } from "@/components/analyse/fixplan/GoalPlanCard";
+import { StartPlanSheet } from "@/components/analyse/fixplan/StartPlanSheet";
+import {
+  fetchPlannedInvestments,
+  plannedProgressBySource,
+  type GoalPlanProgress,
+} from "@/lib/plannedInvestments";
+import { getSupabase } from "@/lib/supabase";
 import { ScoreProjection } from "@/components/analyse/fixplan/ScoreProjection";
 import {
   DoThisFirst,
@@ -47,6 +54,22 @@ function FixPlanScreen() {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
+  const [plannedProgress, setPlannedProgress] = useState<
+    Record<string, GoalPlanProgress>
+  >({});
+  const [startPlanOpen, setStartPlanOpen] = useState(false);
+  const loadPlannedProgress = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const rows = await fetchPlannedInvestments(getSupabase(), user.id);
+      setPlannedProgress(plannedProgressBySource(rows));
+    } catch {
+      setPlannedProgress({});
+    }
+  }, [user?.id]);
+  useEffect(() => {
+    void loadPlannedProgress();
+  }, [loadPlannedProgress]);
   const profile = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
   const storeHydrated = useFinancialStore((s) => s.hasHydrated);
@@ -213,7 +236,22 @@ function FixPlanScreen() {
         ) : null}
 
         {goals.length > 0 ? (
-          <GoalPlanCard goals={goals} plans={expl?.goalPlans} />
+          <GoalPlanCard
+            goals={goals}
+            plans={expl?.goalPlans}
+            progress={plannedProgress}
+            onStart={user?.id ? () => setStartPlanOpen(true) : undefined}
+          />
+        ) : null}
+        {user?.id && goals.length > 0 ? (
+          <StartPlanSheet
+            visible={startPlanOpen}
+            onClose={() => setStartPlanOpen(false)}
+            userId={user.id}
+            goals={goals}
+            hasExisting={Object.keys(plannedProgress).length > 0}
+            onSaved={() => void loadPlannedProgress()}
+          />
         ) : null}
 
         <ScoreProjection plan={pp} />

@@ -1,5 +1,6 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { GoalAdvice } from "@/lib/fixPlanMerge";
+import { formatStartMonth, type GoalPlanProgress } from "@/lib/plannedInvestments";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { Colors, Spacing } from "@/constants/theme";
 import { loc, shared } from "./shared";
@@ -8,9 +9,13 @@ import { loc, shared } from "./shared";
 export function GoalPlanCard({
   goals,
   plans,
+  progress,
+  onStart,
 }: {
   goals: GoalItem[];
   plans?: Record<string, GoalAdvice>;
+  progress?: Record<string, GoalPlanProgress>;
+  onStart?: () => void;
 }) {
   const parallel = goals.some((g) => g.monthlyAllocated != null);
   const budget = goals.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
@@ -88,6 +93,15 @@ export function GoalPlanCard({
                   Instrument: {g.instrument}
                 </Text>
               )}
+              {g.goalId && progress?.[g.goalId] ? (
+                <Text style={styles.progress}>
+                  {progress[g.goalId].started >= progress[g.goalId].total
+                    ? "✓ Started"
+                    : progress[g.goalId].started > 0
+                      ? `${progress[g.goalId].started} of ${progress[g.goalId].total} started`
+                      : `Reminder set · starts ${formatStartMonth(progress[g.goalId].nextStart ?? "")}`}
+                </Text>
+              ) : null}
               {g.goalId && plans?.[g.goalId] ? (
                 <View style={styles.advice}>
                   <Text style={styles.adviceText}>{plans[g.goalId].why}</Text>
@@ -107,6 +121,25 @@ export function GoalPlanCard({
         <Text style={[styles.line, styles.muted, { marginTop: Spacing.md }]}>
           Another ₹{loc(shortfall)}/month would fund every goal on time.
         </Text>
+      ) : null}
+      {onStart && goals.some((g) => g.allocation?.slices.length) ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onStart}
+            style={styles.startBtn}
+          >
+            <Text style={styles.startText}>
+              {progress && Object.keys(progress).length > 0
+                ? "Update reminders"
+                : "Start this plan"}
+            </Text>
+          </Pressable>
+          <Text style={styles.startHint}>
+            Creates reminders and Tracker items only. Nothing is invested
+            automatically.
+          </Text>
+        </>
       ) : null}
     </View>
   );
@@ -156,6 +189,17 @@ const styles = StyleSheet.create({
   line: { marginTop: 6, fontSize: 12, fontWeight: "500", color: "#454442" },
   muted: { marginTop: 2, color: "#7A7871" },
   split: { marginTop: Spacing.sm, gap: 2 },
+  progress: { marginTop: Spacing.sm, fontSize: 12, fontWeight: "600", color: "#1D9E75" },
+  startBtn: {
+    marginTop: Spacing.lg,
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  startText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  startHint: { marginTop: 6, fontSize: 11, color: "#7A7871", textAlign: "center" },
   splitTitle: { fontSize: 12, fontWeight: "600", color: "#454442" },
   splitRow: {
     flexDirection: "row",

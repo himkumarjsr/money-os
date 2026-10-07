@@ -53,6 +53,7 @@ const OWNED_TABLES = [
   "user_credit_cards",
   "financial_obligations",
   "obligation_checklist",
+  "user_planned_investments",
   "user_policies",
   "notification_preferences",
   "push_subscriptions",

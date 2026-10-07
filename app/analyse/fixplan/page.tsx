@@ -29,6 +29,13 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { supabase } from "@/lib/supabase";
+import {
+  fetchPlannedInvestments,
+  formatStartMonth,
+  plannedProgressBySource,
+  type GoalPlanProgress,
+} from "@/lib/plannedInvestments";
+import StartPlanSheet from "@/components/analyse/StartPlanSheet";
 import { useAuthStore } from "@/store/authStore";
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
@@ -55,6 +62,22 @@ export default function FixPlanPage() {
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState("");
   const [aiPlan, setAiPlan] = useState<any>(null);
+  const [plannedProgress, setPlannedProgress] = useState<
+    Record<string, GoalPlanProgress>
+  >({});
+  const [startPlanOpen, setStartPlanOpen] = useState(false);
+  const loadPlannedProgress = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const rows = await fetchPlannedInvestments(supabase, user.id);
+      setPlannedProgress(plannedProgressBySource(rows));
+    } catch {
+      setPlannedProgress({});
+    }
+  }, [user?.id]);
+  useEffect(() => {
+    void loadPlannedProgress();
+  }, [loadPlannedProgress]);
   const [downloading, setDownloading] = useState(false);
   const [pdfError, setPdfError] = useState("");
   const [refreshNotice, setRefreshNotice] = useState("");
@@ -860,6 +883,18 @@ export default function FixPlanPage() {
           <GoalSplitCard
             goals={aiPlan.priorityPlan.goals}
             plans={aiPlan.explanations?.goalPlans}
+            progress={plannedProgress}
+            onStart={user?.id ? () => setStartPlanOpen(true) : undefined}
+          />
+        ) : null}
+        {user?.id && aiPlan.priorityPlan?.goals?.length ? (
+          <StartPlanSheet
+            isOpen={startPlanOpen}
+            onClose={() => setStartPlanOpen(false)}
+            userId={user.id}
+            goals={aiPlan.priorityPlan.goals}
+            hasExisting={Object.keys(plannedProgress).length > 0}
+            onSaved={() => void loadPlannedProgress()}
           />
         ) : null}
 
@@ -1142,8 +1177,12 @@ type GoalSplitRow = {
 function GoalSplitCard({
   goals,
   plans,
+  progress,
+  onStart,
 }: {
   goals: GoalSplitRow[];
+  progress?: Record<string, GoalPlanProgress>;
+  onStart?: () => void;
   plans?: Record<
     string,
     { why: string; instrumentRationale: string; watchOut: string }
@@ -1238,6 +1277,15 @@ function GoalSplitCard({
               ) : (
                 <p className="text-xs text-[#7A7871]">Instrument: {g.instrument}</p>
               )}
+              {g.goalId && progress?.[g.goalId] ? (
+                <p className="mt-2 text-xs font-semibold text-[#1D9E75]">
+                  {progress[g.goalId].started >= progress[g.goalId].total
+                    ? "✓ Started"
+                    : progress[g.goalId].started > 0
+                      ? `${progress[g.goalId].started} of ${progress[g.goalId].total} started`
+                      : `Reminder set · starts ${formatStartMonth(progress[g.goalId].nextStart ?? "")}`}
+                </p>
+              ) : null}
               {g.goalId && plans?.[g.goalId] ? (
                 <div className="mt-2 space-y-1 border-t border-[#ECEAF5] pt-2 text-[13px] leading-snug text-[#454442]">
                   <p>{plans[g.goalId].why}</p>
@@ -1255,6 +1303,23 @@ function GoalSplitCard({
         <p className="mt-3 text-xs font-medium leading-relaxed text-[#5F5E5A]">
           Another {inr(shortfall)}/month would fund every goal on time.
         </p>
+      ) : null}
+      {onStart && goals.some((g) => g.allocation?.slices.length) ? (
+        <>
+          <button
+            type="button"
+            onClick={onStart}
+            className="mt-4 min-h-[48px] w-full rounded-xl bg-[#534AB7] text-[15px] font-bold text-white"
+          >
+            {progress && Object.keys(progress).length > 0
+              ? "Update reminders"
+              : "Start this plan"}
+          </button>
+          <p className="mt-1.5 text-center text-[11px] text-[#7A7871]">
+            Creates reminders and Tracker items only. Nothing is invested
+            automatically.
+          </p>
+        </>
       ) : null}
     </section>
   );
