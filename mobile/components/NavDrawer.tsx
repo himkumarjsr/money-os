@@ -17,10 +17,10 @@ import {
 } from "react-native";
 import { router, type Href } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as WebBrowser from "expo-web-browser";
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { openWebPage } from "@/lib/openWebPage";
 
 const SITE = (
   process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
@@ -128,8 +128,7 @@ export function NavDrawer({
   const open = (link: NavLink) => {
     onClose();
     if ("route" in link) router.push(link.route);
-    else if ("web" in link)
-      void WebBrowser.openBrowserAsync(`${SITE}${link.web}`);
+    else if ("web" in link) openWebPage(`${SITE}${link.web}`);
     else void Linking.openURL(`mailto:${link.mail}`);
   };
 

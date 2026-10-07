@@ -19,6 +19,7 @@ import { Colors } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 function BellSvg({ color }: { color: string }) {
   return (
@@ -59,7 +60,7 @@ export function NotificationBell() {
     void fetchNotifications(uid);
 
     const sub = supabase
-      .channel(`notifications:${uid}`)
+      .channel(uniqueChannelName(`notifications:${uid}`))
       .on(
         "postgres_changes",
         {

@@ -13,6 +13,7 @@ import { clearBodyScrollLocks, lockBodyScroll } from "@/lib/bodyScrollLock";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 /**
  * Logged-out / crawlers: public marketing landing (SSR HTML).
@@ -116,7 +117,7 @@ function SplitHomeInner() {
     const supabase = getSupabase();
 
     const channel = supabase
-      .channel(`my_groups:${userId}`)
+      .channel(uniqueChannelName(`my_groups:${userId}`))
       .on(
         "postgres_changes",
         {

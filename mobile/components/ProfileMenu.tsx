@@ -8,13 +8,13 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Linking,
   Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { Colors } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
+import { openWebPage } from "@/lib/openWebPage";
 
 const SITE = "https://finkoin.com";
 
@@ -27,7 +27,7 @@ const MENU: Array<{
 }> = [
   { icon: "user", label: "My Profile", href: "/(tabs)/profile" },
   { icon: "notebook", label: "Expense Tracker", href: "/(tabs)/tracker" },
-  { icon: "users", label: "FK Split", href: `${SITE}/split`, external: true },
+  { icon: "users", label: "FK Split", href: "/(tabs)/split" },
   { icon: "chart", label: "My Analysis", href: "/(tabs)/analyse" },
   {
     icon: "shield",
@@ -95,7 +95,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
   const go = (item: (typeof MENU)[number]) => {
     onClose();
     if (item.external) {
-      void Linking.openURL(item.href);
+      openWebPage(item.href);
       return;
     }
     router.push(item.href as never);
@@ -103,7 +103,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
 
   const legal = (path: string) => {
     onClose();
-    void Linking.openURL(`${SITE}${path}`);
+    openWebPage(`${SITE}${path}`);
   };
 
   return (
@@ -201,7 +201,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                     { text: "Cancel", style: "cancel" },
                     {
                       text: "Open site",
-                      onPress: () => void Linking.openURL(SITE),
+                      onPress: () => openWebPage(SITE),
                     },
                   ],
                 );
