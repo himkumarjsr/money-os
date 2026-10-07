@@ -41,8 +41,8 @@ export function MorningTipPopup() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
-  const getTodayUnshownPopup = useNotificationStore(
-    (s) => s.getTodayUnshownPopup,
+  const getNextRelevantPopup = useNotificationStore(
+    (s) => s.getNextRelevantPopup,
   );
   const markPopupShown = useNotificationStore((s) => s.markPopupShown);
 
@@ -62,8 +62,8 @@ export function MorningTipPopup() {
     const init = async () => {
       await fetchNotifications(user.id);
       if (cancelled) return;
-      const todayTip = getTodayUnshownPopup();
-      if (todayTip) {
+      const todayTip = await getNextRelevantPopup(user.id);
+      if (todayTip && !cancelled) {
         timer = setTimeout(() => {
           if (!cancelled) {
             setTip(todayTip);
@@ -83,7 +83,7 @@ export function MorningTipPopup() {
     isLoggedIn,
     user?.id,
     fetchNotifications,
-    getTodayUnshownPopup,
+    getNextRelevantPopup,
   ]);
 
   useEffect(() => {

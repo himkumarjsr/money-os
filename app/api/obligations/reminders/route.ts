@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
+  SETTLED_CHECKLIST_STATUSES,
   buildObligationReminderCopy,
+  checklistMonthFor,
+  obligationReminderDueDate,
   obligationReminderEmoji,
   shouldSendObligationReminder,
 } from "@/lib/obligationReminders";
@@ -48,9 +51,28 @@ async function handleReminders(req: NextRequest) {
       return NextResponse.json({ success: true, reminded: 0 });
     }
 
+    // Reminders target a due date this month or next; skip cycles already settled.
+    const { data: settledRows, error: settledErr } = await supabaseAdmin
+      .from("obligation_checklist")
+      .select("obligation_id, checklist_month")
+      .in("checklist_month", [
+        checklistMonthFor(today),
+        checklistMonthFor(new Date(today.getFullYear(), today.getMonth() + 1, 1)),
+      ])
+      .in("status", [...SETTLED_CHECKLIST_STATUSES]);
+    if (settledErr) {
+      return NextResponse.json({ error: settledErr.message }, { status: 500 });
+    }
+    const settled = new Set(
+      (settledRows ?? []).map(
+        (r) => `${r.obligation_id}|${String(r.checklist_month).slice(0, 10)}`,
+      ),
+    );
+
     let reminded = 0;
 
     for (const ob of obligations as Array<{
+      id: string;
       user_id: string;
       title: string;
       amount: number;
@@ -61,6 +83,8 @@ async function handleReminders(req: NextRequest) {
       category?: string | null;
     }>) {
       if (!shouldSendObligationReminder(ob, today)) continue;
+      const due = obligationReminderDueDate(ob, today);
+      if (due && settled.has(`${ob.id}|${checklistMonthFor(due)}`)) continue;
 
       const remindBefore = ob.remind_days_before ?? 7;
       const { title, content } = buildObligationReminderCopy(ob, remindBefore);
