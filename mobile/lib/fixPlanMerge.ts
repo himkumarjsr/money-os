@@ -129,6 +129,59 @@ export function incompletePriorities(plan: any) {
   );
 }
 
+export const LOAN_DRIFT_LABELS: Record<
+  "not_active_in_tracker" | "not_in_report" | "emi_changed",
+  string
+> = {
+  not_active_in_tracker: "closed or not in Tracker",
+  not_in_report: "in Tracker, not in this report",
+  emi_changed: "EMI changed in Tracker",
+};
+
+export const DEBT_ESTIMATE_NOTE =
+  "est. = not entered by you. We estimated the outstanding balance from the EMI and/or used a typical interest rate, so payoff dates and interest saved for these loans are approximate. Add the real numbers in your Loans step.";
+
+export function debtIsEstimated(d: {
+  outstandingEstimated?: boolean;
+  rateEstimated?: boolean;
+}): boolean {
+  return !!(d.outstandingEstimated || d.rateEstimated);
+}
+
+export function debtRateLabel(d: { rate?: unknown; rateEstimated?: boolean }): string {
+  const rate = Number(d.rate || 0);
+  if (!d.rateEstimated) return `${rate}%`;
+  return rate > 0 ? `${rate}% (est.)` : "Not entered";
+}
+
+/** Suffix for any number derived from an estimated balance or rate. */
+export function estSuffix(d: {
+  outstandingEstimated?: boolean;
+  rateEstimated?: boolean;
+}): string {
+  return debtIsEstimated(d) ? " (est.)" : "";
+}
+
+/** " (from month N)" for steps that only start after safety is funded. */
+export function stepStartLabel(p: { startMonth?: unknown }): string {
+  const start = Number(p.startMonth || 1);
+  return start > 1 ? ` (from month ${start})` : "";
+}
+
+/**
+ * What's left each month once safety is funded and every recurring step runs.
+ * Emergency/medical top-ups are temporary, so summing every step would double-count.
+ */
+export function remainingBuffer(plan: any, steps: any[]): number {
+  const after = Number(plan?.surplusBreakdown?.afterAllPriorities);
+  if (Number.isFinite(after)) return Math.max(0, Math.round(after));
+  const used = steps.reduce(
+    (s: number, p: any) => s + Number(p.monthlyContribution || 0),
+    0,
+  );
+  return Math.max(0, Math.round(Number(plan?.monthlySurplus || 0) - used));
+}
+
 /** Every priority that still needs money or a monthly contribution — rendered as a card on both platforms. */
 export function openPriorities(plan: any) {
   return (plan?.priorities || []).filter(

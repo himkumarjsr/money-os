@@ -1,3 +1,4 @@
+import { debtRateLabel, estSuffix } from "@/lib/fixPlanMerge";
 import { debtPayoffNumbers } from "@/lib/priorityEngine";
 
 export type FixPlanPdfPhase = {
@@ -41,7 +42,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
     ...(pp?.debts?.length
       ? (pp.debts as any[]).map(
           (d) =>
-            `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")} @ ${d.rate}% · EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo · extra ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo · ~${debtPayoffNumbers(d).monthsNow} mo to clear`,
+            `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")}${d.outstandingEstimated ? " (est.)" : ""} @ ${debtRateLabel(d)} · EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo · extra ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo · ~${debtPayoffNumbers(d).monthsNow} mo to clear${estSuffix(d)}`,
         )
       : ["Debt: none in engine plan"]),
     emerg && Number(emerg.gap || 0) > 0

@@ -14,6 +14,8 @@ export type FixPlanPdfInput = {
   result: AnalysisResult;
   priorityPlan: PriorityPlan;
   explanations: FixPlanExplanations;
+  /** When the report's numbers were last saved; printed as "Data as of". */
+  dataAsOf?: string;
 };
 
 const TIMEOUT_MS = 60_000;
