@@ -1491,6 +1491,7 @@ export function AnalyseOnboardingForm() {
     setIsSubmitting(true);
 
     try {
+      const previousProfile = useFinancialStore.getState().lastSubmission;
       const mergedValues = coalesceInsuranceToggles({
         ...values,
         primaryGoal: values.primaryGoal || "grow_wealth",
@@ -1537,7 +1538,7 @@ export function AnalyseOnboardingForm() {
 
           void useObligationStore
             .getState()
-            .syncFromHealthCheck(uid, savedProfile)
+            .syncFromHealthCheck(uid, savedProfile, previousProfile)
             .catch((err) => console.warn("Obligation sync failed:", err));
 
           void fetch("/api/financial-data", {

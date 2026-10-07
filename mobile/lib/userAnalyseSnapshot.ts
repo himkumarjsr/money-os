@@ -22,6 +22,7 @@ export type FetchedUserAnalyseSnapshot = {
   result: AnalysisResult | null;
   analysis: Partial<AnalyseFormValues> | null;
   aiPlan: FinkoinAIPlan | null;
+  submittedAt: string | null;
 };
 
 function parseAiPlan(raw: unknown): FinkoinAIPlan | null {
@@ -74,5 +75,8 @@ export async function fetchUserAnalyseSnapshot(
   const analysis = (raw.analysis ?? null) as Partial<AnalyseFormValues> | null;
   const aiPlan = parseAiPlan(raw.aiPlan);
 
-  return { lastSubmission, result, analysis, aiPlan };
+  const submittedAt =
+    typeof raw.submittedAt === "string" ? raw.submittedAt : null;
+
+  return { lastSubmission, result, analysis, aiPlan, submittedAt };
 }

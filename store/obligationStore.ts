@@ -1,7 +1,22 @@
 "use client";
 
 import { create } from "zustand";
+import {
+  financialProfileToFormValues,
+  type FinancialProfile,
+} from "@/lib/analyse-form-schema";
+import { analyseFinances } from "@/lib/financialEngine";
+import {
+  mergeTrackerLoansIntoProfile,
+  planLoanObligationSync,
+  type LoanObligationLike,
+} from "@/lib/loanObligationSync";
 import { getSupabase } from "@/lib/supabase";
+import {
+  fetchUserAnalyseSnapshot,
+  upsertUserAnalyseSnapshot,
+} from "@/lib/userAnalyseSnapshot";
+import { useFinancialStore } from "@/store/financialStore";
 
 export interface FinancialObligation {
   id: string;
@@ -110,11 +125,42 @@ interface ObligationState {
   /** Hard-delete all obligations + checklist rows for the user. */
   resetAllObligations: (userId: string) => Promise<void>;
   generateChecklist: (userId: string, month?: Date) => Promise<void>;
+  /**
+   * `previous` = the profile the form was edited from; loans the user removed
+   * from it are closed in Tracker.
+   */
   syncFromHealthCheck: (
     userId: string,
     submission: ObligationSyncProfile,
+    previous?: FinancialProfile | null,
   ) => Promise<void>;
+  /** Tracker → Analyse: fold Tracker loan EMIs into the saved report. */
+  syncLoansToAnalyse: (userId: string) => Promise<void>;
 }
+
+const LOAN_COLUMNS = "id,title,category,amount,due_day,is_active,source,updated_at";
+
+async function fetchLoanObligations(
+  userId: string,
+): Promise<LoanObligationLike[]> {
+  const { data } = await getSupabase()
+    .from("financial_obligations")
+    .select(LOAN_COLUMNS)
+    .eq("user_id", userId)
+    .eq("category", "loan_emi");
+  return ((data as Record<string, unknown>[] | null) ?? []).map((r) => ({
+    id: String(r.id),
+    title: String(r.title ?? ""),
+    category: String(r.category ?? ""),
+    amount: Number(r.amount ?? 0),
+    due_day: r.due_day == null ? null : Number(r.due_day),
+    is_active: r.is_active !== false,
+    source: r.source == null ? null : String(r.source),
+    updated_at: r.updated_at == null ? null : String(r.updated_at),
+  }));
+}
+
+let loanSyncInFlight: Promise<void> | null = null;
 
 /** First day of month as local YYYY-MM-01 (avoid UTC shift from toISOString). */
 export function monthStartIso(month: Date): string {
@@ -227,6 +273,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         mapObligation(row as Record<string, unknown>),
       ),
     });
+    void get().syncLoansToAnalyse(userId);
   },
 
   fetchChecklist: async (userId, month = new Date()) => {
@@ -330,6 +377,9 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       set((state) => ({
         obligations: [...state.obligations, mapped],
       }));
+      if (mapped.category === "loan_emi") {
+        void get().syncLoansToAnalyse(mapped.user_id);
+      }
       return mapped.id;
     } catch (err) {
       console.error("addObligation error:", err);
@@ -393,12 +443,19 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         ...totals(checklist),
       };
     });
+    const edited = get().obligations.find((o) => o.id === id);
+    if (edited?.category === "loan_emi") {
+      void get().syncLoansToAnalyse(edited.user_id);
+    }
     return true;
   },
 
   closeObligation: async (id, month = new Date()) => {
     const supabase = getSupabase();
     const monthStart = monthStartIso(month);
+    const closing =
+      get().obligations.find((o) => o.id === id) ??
+      get().checklist.find((c) => c.obligation_id === id)?.obligation;
 
     // Stop forever — generate_monthly_checklist only picks is_active = true,
     // so next months never get a new row.
@@ -442,6 +499,9 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         ...totals(checklist),
       };
     });
+    if (closing?.category === "loan_emi") {
+      void get().syncLoansToAnalyse(closing.user_id);
+    }
     return true;
   },
 
@@ -572,7 +632,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     await get().fetchChecklist(userId, month);
   },
 
-  syncFromHealthCheck: async (userId, submission) => {
+  syncFromHealthCheck: async (userId, submission, previous) => {
     const supabase = getSupabase();
     const obligations: Array<Record<string, unknown>> = [];
 
@@ -668,88 +728,6 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       });
     }
 
-    const loans = submission.unifiedLoans ?? [];
-    const homeFromUnified = loans.find(
-      (l) => l.loanType === "home_loan" && (l.monthlyEMI ?? 0) > 0,
-    );
-    const homeEmi = homeFromUnified?.monthlyEMI ?? submission.homeLoanEMI ?? 0;
-    if (homeEmi > 0) {
-      obligations.push({
-        user_id: userId,
-        title: homeFromUnified?.lenderName
-          ? `Home Loan EMI · ${homeFromUnified.lenderName}`
-          : "Home Loan EMI",
-        category: "loan_emi",
-        amount: homeEmi,
-        frequency: "monthly",
-        due_day: homeFromUnified?.emiDay || submission.homeLoanEMIDay || 5,
-        source: "health_check",
-        remind_days_before: 3,
-        is_active: true,
-      });
-    }
-
-    const carFromUnified = loans.find(
-      (l) => l.loanType === "car_loan" && (l.monthlyEMI ?? 0) > 0,
-    );
-    const carEmi = carFromUnified?.monthlyEMI ?? submission.carLoanEMI ?? 0;
-    if (carEmi > 0) {
-      obligations.push({
-        user_id: userId,
-        title: carFromUnified?.lenderName
-          ? `Car Loan EMI · ${carFromUnified.lenderName}`
-          : "Car Loan EMI",
-        category: "loan_emi",
-        amount: carEmi,
-        frequency: "monthly",
-        due_day: carFromUnified?.emiDay || submission.carLoanEMIDay || 5,
-        source: "health_check",
-        remind_days_before: 3,
-        is_active: true,
-      });
-    }
-
-    const personalFromUnified = loans.find(
-      (l) => l.loanType === "personal_loan" && (l.monthlyEMI ?? 0) > 0,
-    );
-    const personalEmi =
-      personalFromUnified?.monthlyEMI ?? submission.personalLoanEMI ?? 0;
-    if (personalEmi > 0) {
-      obligations.push({
-        user_id: userId,
-        title: personalFromUnified?.lenderName
-          ? `Personal Loan EMI · ${personalFromUnified.lenderName}`
-          : "Personal Loan EMI",
-        category: "loan_emi",
-        amount: personalEmi,
-        frequency: "monthly",
-        due_day:
-          personalFromUnified?.emiDay || submission.personalLoanEMIDay || 5,
-        source: "health_check",
-        remind_days_before: 3,
-        is_active: true,
-      });
-    }
-
-    const eduFromUnified = loans.find(
-      (l) => l.loanType === "education_loan" && (l.monthlyEMI ?? 0) > 0,
-    );
-    if ((eduFromUnified?.monthlyEMI ?? 0) > 0) {
-      obligations.push({
-        user_id: userId,
-        title: eduFromUnified?.lenderName
-          ? `Education Loan EMI · ${eduFromUnified.lenderName}`
-          : "Education Loan EMI",
-        category: "loan_emi",
-        amount: eduFromUnified!.monthlyEMI!,
-        frequency: "monthly",
-        due_day: eduFromUnified?.emiDay || submission.educationLoanEMIDay || 5,
-        source: "health_check",
-        remind_days_before: 3,
-        is_active: true,
-      });
-    }
-
     if ((submission.monthlySIP ?? 0) > 0) {
       obligations.push({
         user_id: userId,
@@ -780,7 +758,53 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       });
     }
 
-    if (obligations.length === 0) return;
+    try {
+      const plan = planLoanObligationSync(
+        submission as FinancialProfile,
+        await fetchLoanObligations(userId),
+        previous,
+      );
+      for (const row of plan.inserts) {
+        obligations.push({
+          user_id: userId,
+          title: row.title,
+          category: "loan_emi",
+          amount: row.amount,
+          frequency: "monthly",
+          due_day: row.due_day,
+          source: "health_check",
+          remind_days_before: 3,
+          is_active: true,
+        });
+      }
+      const now = new Date().toISOString();
+      for (const row of plan.updates) {
+        await supabase
+          .from("financial_obligations")
+          .update({
+            amount: row.amount,
+            due_day: row.due_day,
+            is_active: true,
+            updated_at: now,
+          })
+          .eq("id", row.id);
+        await supabase
+          .from("obligation_checklist")
+          .update({ expected_amount: row.amount })
+          .eq("obligation_id", row.id)
+          .in("status", ["pending", "skipped"]);
+      }
+      for (const id of plan.deactivate) {
+        await get().closeObligation(id);
+      }
+    } catch (err) {
+      console.error("syncFromHealthCheck loans:", err);
+    }
+
+    if (obligations.length === 0) {
+      await get().fetchObligations(userId);
+      return;
+    }
 
     // Insert missing analyse-derived rows only. Never overwrite / reactivate
     // existing rows — closed (is_active=false) EMIs must stay closed so they
@@ -803,5 +827,47 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
     await get().generateChecklist(userId);
     await get().fetchObligations(userId);
+  },
+
+  syncLoansToAnalyse: (userId) => {
+    if (loanSyncInFlight) return loanSyncInFlight;
+    loanSyncInFlight = (async () => {
+      try {
+        const snap = await fetchUserAnalyseSnapshot(userId);
+        if (!snap) return;
+        const { profile, changed } = mergeTrackerLoansIntoProfile(
+          snap.lastSubmission,
+          await fetchLoanObligations(userId),
+          { closedAfter: snap.submittedAt },
+        );
+        if (!changed) return;
+        const result = analyseFinances(profile);
+        const analysis = {
+          ...(snap.analysis ?? {}),
+          unifiedLoans: financialProfileToFormValues(profile).unifiedLoans,
+        };
+        const { error } = await upsertUserAnalyseSnapshot(userId, {
+          profile,
+          result,
+          submittedAt: new Date().toISOString(),
+          version: "1.0",
+          aiPlan: snap.aiPlan,
+          analysis,
+        });
+        if (error) {
+          console.warn("syncLoansToAnalyse save failed:", error.message);
+          return;
+        }
+        useFinancialStore.getState().hydrateFromSnapshot(profile, result, {
+          aiPlan: snap.aiPlan,
+          analysisPatch: analysis,
+        });
+      } catch (err) {
+        console.warn("syncLoansToAnalyse failed:", err);
+      } finally {
+        loanSyncInFlight = null;
+      }
+    })();
+    return loanSyncInFlight;
   },
 }));

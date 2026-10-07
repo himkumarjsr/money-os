@@ -320,6 +320,7 @@ describe("mobile keeps byte-identical reminder logic", () => {
     "obligationReminders.ts",
     "obligationReminderPopup.ts",
     "trackerObligationSync.ts",
+    "loanObligationSync.ts",
   ])("%s", (file) => {
     const root = path.resolve(__dirname, "..");
     expect(readFileSync(path.join(root, "mobile/lib", file), "utf8")).toBe(

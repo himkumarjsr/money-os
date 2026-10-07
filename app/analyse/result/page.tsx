@@ -35,6 +35,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
+import { useObligationStore } from "@/store/obligationStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState } from "react";
@@ -53,6 +54,9 @@ export default function AnalyseResultPage() {
   };
 
   useRestoreAnalyseSnapshot(user?.id);
+  useEffect(() => {
+    if (user?.id) void useObligationStore.getState().syncLoansToAnalyse(user.id);
+  }, [user?.id]);
 
   const analysis = useMemo(() => {
     if (!lastSubmission) return null;
