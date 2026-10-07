@@ -13,6 +13,7 @@ import {
   goalsForAdvice,
   parseGoalAdvice,
 } from "@/lib/ai/goalAdvisor";
+import { allocateGoalPortfolio } from "@/lib/portfolioAllocation";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { GOAL_KNOWLEDGE } from "@/lib/rag/goalKnowledge";
 import { retrieveGoalKnowledge } from "@/lib/rag/retriever";
@@ -50,6 +51,15 @@ describe("goalsForAdvice", () => {
 });
 
 describe("goalAdvisorContext", () => {
+  it("passes the engine's instrument split, not a free choice", () => {
+    const ctx = goalAdvisorContext(
+      goal({ allocation: allocateGoalPortfolio({ yearsToGoal: 25, monthly: 6_000 }) }),
+      {},
+    );
+    expect(ctx.goal.instrumentSplit.map((s) => s.pct).reduce((a, b) => a + b, 0)).toBe(100);
+    expect(ctx.goal.instrumentSplit.some((s) => /Gold/.test(s.instrument))).toBe(true);
+  });
+
   it("sends only goal numbers and age/life stage/risk — no income or loans", () => {
     const profile = {
       selfAge: 34,
@@ -105,7 +115,16 @@ describe("engineGoalAdvice", () => {
     expect(a.source).toBe("engine");
     expect(a.why).toContain("₹6,000");
     expect(a.why).toContain("75%");
-    expect(a.instrumentRationale).toContain("Equity index fund SIP");
+    expect(a.instrumentRationale).toMatch(/compounding/);
+  });
+
+  it("mentions the gold hedge from the engine split", () => {
+    const a = engineGoalAdvice(
+      goal({
+        allocation: allocateGoalPortfolio({ yearsToGoal: 25, monthly: 6_000 }),
+      }),
+    );
+    expect(a.instrumentRationale).toContain("10% (₹600/month) goes to gold");
   });
 
   it("explains near-deadline goals as capital protection", () => {

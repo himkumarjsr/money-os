@@ -166,3 +166,41 @@ describe("buildGoalFundingPlan", () => {
     expect(retirement?.instrument).toMatch(/index/i);
   });
 });
+
+describe("instrument split per funded goal", () => {
+  it("attaches a split that matches each goal's allocation and risk profile", () => {
+    const plan = buildGoalFundingPlan(
+      profile({ riskAnswers: [2, 2, 2] }),
+      30_000,
+      NOW,
+    );
+    expect(plan.items.length).toBeGreaterThan(0);
+    for (const item of plan.items) {
+      expect(item.allocation.riskTolerance).toBe("aggressive");
+      expect(item.allocation.riskAssumed).toBe(false);
+      expect(item.allocation.slices.reduce((s, x) => s + x.monthly, 0)).toBe(
+        item.monthlyAllocated,
+      );
+      expect(item.allocation.horizon).toBe(item.horizon);
+    }
+  });
+
+  it("gates any real-estate mention on the safety net and liquid net worth", () => {
+    const rich = profile({ mfValue: 8_000_000 });
+    const withNet = buildGoalFundingPlan(rich, 100_000, NOW, {
+      safetyNetComplete: true,
+    });
+    const retirement = withNet.items.find((i) => i.type === "retirement");
+    expect(retirement?.allocation.realEstateNote).toMatch(/real estate/);
+
+    const noNet = buildGoalFundingPlan(rich, 100_000, NOW, {
+      safetyNetComplete: false,
+    });
+    expect(noNet.items.every((i) => i.allocation.realEstateNote === null)).toBe(true);
+
+    const modest = buildGoalFundingPlan(profile({ mfValue: 500_000 }), 100_000, NOW, {
+      safetyNetComplete: true,
+    });
+    expect(modest.items.every((i) => i.allocation.realEstateNote === null)).toBe(true);
+  });
+});

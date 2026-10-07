@@ -916,22 +916,40 @@ export function buildFixPlanPdf(
 
   newPage();
   addHeading("GOALS & SCORE PROJECTION");
-  const firstGoal = priorityPlan?.goals?.[0];
-  if (firstGoal) {
+  const pdfGoals: any[] = priorityPlan?.goals ?? [];
+  if (pdfGoals.length > 0) {
     addSmallTable(
-      ["Goal", "Target", "Saved", "Monthly needed", "Timeline"],
-      [
-        [
-          labelOrDash(PRIMARY_GOAL_LABELS, firstGoal.goalType),
-          fmt(firstGoal.targetAmount),
-          fmt(firstGoal.currentSaved),
-          fmt(firstGoal.monthlyRequired),
-          `${firstGoal.yearsToGoal}y`,
-        ],
-      ],
-      [35, 35, 35, 40, 30],
+      ["Goal", "Target", "Monthly", "Needed", "Timeline"],
+      pdfGoals.map((g) => [
+        g.label ?? labelOrDash(PRIMARY_GOAL_LABELS, g.goalType),
+        fmt(g.targetAmount),
+        fmt(g.monthlyAllocated ?? g.monthlyRequired),
+        fmt(g.monthlyRequired),
+        `${g.yearsToGoal}y`,
+      ]),
+      [45, 35, 30, 30, 35],
     );
-    addText(`Instrument: ${firstGoal.instrument || "—"}`, 10, DARK);
+    for (const g of pdfGoals) {
+      const slices: any[] = g.allocation?.slices ?? [];
+      addText(
+        `${g.label ?? g.goalType}: ${
+          slices.length
+            ? slices
+                .map((s) => `${s.label} ${fmt(s.monthly)}/mo (${s.pct}%)`)
+                .join(", ")
+            : g.instrument || "—"
+        }`,
+        9,
+        DARK,
+      );
+    }
+    if (pdfGoals.some((g) => g.allocation?.riskAssumed)) {
+      addText(
+        "Splits assume a moderate risk profile where the risk questions were skipped.",
+        8,
+        GREY,
+      );
+    }
   } else {
     addText("No goal data available.", 10, GREY);
   }

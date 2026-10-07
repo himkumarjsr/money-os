@@ -21,6 +21,7 @@ const SYSTEM = `You are Finkoin AI explaining ONE financial goal for a user in I
 RULES:
 1. The engine computed every number. Use them exactly; never invent numbers, returns or rates.
 2. Use only the reference notes for facts, tax rules and instrument behaviour.
+2a. The engine also fixed the instrument split (goal.instrumentSplit). Explain it as given; never change, add or drop an instrument or percentage.
 3. Finkoin does not sell any product. Never name a specific fund house, insurer, bank or scheme brand; talk in instrument categories.
 4. Educational guidance only, not SEBI-registered investment advice.
 5. Return JSON only: {"why": string, "instrumentRationale": string, "watchOut": string}.
@@ -62,7 +63,14 @@ export function goalAdvisorContext(goal: GoalItem, profile: GoalAdvisorProfile) 
       monthlyAllocated: goal.monthlyAllocated ?? 0,
       sharePctOfGoalBudget: goal.sharePct ?? null,
       currentSaved: goal.currentSaved,
-      engineInstrument: goal.instrument,
+      instrumentSplit: (goal.allocation?.slices ?? []).map((s) => ({
+        instrument: s.label,
+        pct: s.pct,
+        monthly: s.monthly,
+      })),
+      ...(goal.allocation?.realEstateNote
+        ? { realEstateNote: goal.allocation.realEstateNote }
+        : {}),
     },
     person: {
       age: profile.selfAge ?? null,
@@ -96,6 +104,7 @@ const WATCH_OUT: Partial<Record<GoalType, string>> = {
 export function engineGoalAdvice(goal: GoalItem): GoalAdvice {
   const monthly = goal.monthlyAllocated ?? goal.monthlyRequired;
   const year = new Date().getFullYear() + goal.yearsToGoal;
+  const gold = goal.allocation?.slices.find((s) => s.key === "gold");
   const funded =
     goal.monthlyRequired > 0
       ? Math.min(100, Math.round((monthly / goal.monthlyRequired) * 100))
@@ -109,12 +118,13 @@ export function engineGoalAdvice(goal: GoalItem): GoalAdvice {
       funded < 100
         ? `${why} That's ${funded}% of the ${inr(goal.monthlyRequired)}/month needed.`
         : why,
-    instrumentRationale:
+    instrumentRationale: `${
       goal.yearsToGoal <= 3
-        ? `${goal.instrument}: with ${goal.yearsToGoal} ${goal.yearsToGoal === 1 ? "year" : "years"} to go, protecting the money matters more than returns.`
+        ? `With ${goal.yearsToGoal} ${goal.yearsToGoal === 1 ? "year" : "years"} to go, protecting the money matters more than returns, so it sits in low-volatility instruments.`
         : goal.yearsToGoal <= 7
-          ? `${goal.instrument}: a ${goal.yearsToGoal}-year horizon blends growth with lower volatility.`
-          : `${goal.instrument}: over ${goal.yearsToGoal} years, equity's volatility evens out and compounding does the work.`,
+          ? `A ${goal.yearsToGoal}-year horizon blends growth with lower volatility.`
+          : `Over ${goal.yearsToGoal} years, equity's ups and downs even out and compounding does the work.`
+    }${gold ? ` ${gold.pct}% (${inr(gold.monthly)}/month) goes to gold as a hedge.` : ""}`,
     watchOut:
       WATCH_OUT[goal.goalType as GoalType] ??
       "Review this goal once a year and adjust the amount if your plans change.",
@@ -158,7 +168,7 @@ ${notes.map((n, i) => `[${i + 1}] ${n.title}\n${n.content}`).join("\n\n")}
 GOAL AND PERSON (engine numbers — use exactly):
 ${JSON.stringify(goalAdvisorContext(goal, profile), null, 2)}
 
-Explain why this goal gets ${inr(goal.monthlyAllocated ?? 0)}/month now, why the instrument category fits its horizon${profile.riskTolerance ? " and the person's risk profile" : ""}, and one thing to watch out for.`;
+Explain why this goal gets ${inr(goal.monthlyAllocated ?? 0)}/month now, why this instrument split fits its ${goal.yearsToGoal}-year horizon${profile.riskTolerance ? " and the person's risk profile" : ""} (including the gold hedge), and one thing to watch out for.`;
 
   const completion = await groq.chat.completions.create(
     {

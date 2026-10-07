@@ -11,6 +11,14 @@ import {
   projectRetirementAccounts,
 } from "@/lib/financialEngine";
 import { detectGoals, type DetectedGoal, type GoalType } from "@/lib/goalDetection";
+import {
+  allocateGoalPortfolio,
+  allocationSummary,
+  goalHorizon,
+  REAL_ESTATE_LIQUID_NET_WORTH,
+  type GoalHorizon,
+  type PortfolioAllocation,
+} from "@/lib/portfolioAllocation";
 import { monthlySipForGoal } from "@/lib/sipGoal";
 
 /** Each funded goal gets at least this share of the pool (or its full need, if smaller). */
@@ -18,27 +26,34 @@ export const GOAL_FLOOR_SHARE = 0.05;
 /** The user's chosen primaryGoal is weighted up, not made winner-takes-all. */
 export const PRIMARY_GOAL_BOOST = 1.5;
 
-export type GoalHorizon = "0-1y" | "1-3y" | "3-7y" | "7y+";
+export { goalHorizon, type GoalHorizon };
 
-/** Nominal expected return and a default instrument hint per horizon bucket. */
-export const HORIZON_ASSUMPTIONS: Record<
-  GoalHorizon,
-  { nominalReturn: number; instrument: string }
-> = {
-  "0-1y": { nominalReturn: 0.065, instrument: "Liquid fund / sweep-in FD" },
-  "1-3y": {
-    nominalReturn: 0.07,
-    instrument: "Bank FD / short-duration debt fund",
-  },
-  "3-7y": { nominalReturn: 0.1, instrument: "Hybrid fund + bonds" },
-  "7y+": { nominalReturn: 0.12, instrument: "Nifty 50 index fund SIP" },
+/** Nominal expected return per horizon bucket (instrument split: portfolioAllocation). */
+export const HORIZON_ASSUMPTIONS: Record<GoalHorizon, { nominalReturn: number }> = {
+  "0-1y": { nominalReturn: 0.065 },
+  "1-3y": { nominalReturn: 0.07 },
+  "3-7y": { nominalReturn: 0.1 },
+  "7y+": { nominalReturn: 0.12 },
 };
 
-export function goalHorizon(yearsToGoal: number): GoalHorizon {
-  if (yearsToGoal <= 1) return "0-1y";
-  if (yearsToGoal <= 3) return "1-3y";
-  if (yearsToGoal <= 7) return "3-7y";
-  return "7y+";
+/** Liquid investments minus non-mortgage debt — gates any real-estate mention. */
+export function liquidNetWorth(profile: FinancialProfile): number {
+  const p = profile as unknown as Record<string, unknown>;
+  const n = (k: string) => {
+    const v = Number(p[k]);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  };
+  const liquid = [
+    "savingsAccountBalance",
+    "fdValue",
+    "liquidMFValue",
+    "otherLiquidSavings",
+    "mfValue",
+    "indianStocksValue",
+    "usStocksValueINR",
+    "usMFValueINR",
+  ].reduce((s, k) => s + n(k), 0);
+  return liquid - n("personalLoanOutstanding") - n("carLoanOutstanding");
 }
 
 const realReturnPct = (nominal: number) =>
@@ -71,6 +86,8 @@ export type GoalFundingItem = {
   /** monthlyAllocated / monthlyRequired, 0–100. */
   fundedPct: number;
   instrument: string;
+  /** Deterministic instrument split of monthlyAllocated. */
+  allocation: PortfolioAllocation;
   isPrimary: boolean;
 };
 
@@ -180,7 +197,11 @@ export function buildGoalFundingPlan(
   profile: FinancialProfile,
   pool: number,
   now: Date = new Date(),
+  opts: { safetyNetComplete?: boolean } = {},
 ): GoalFundingPlan {
+  const realEstateEligible =
+    !!opts.safetyNetComplete &&
+    liquidNetWorth(profile) >= REAL_ESTATE_LIQUID_NET_WORTH;
   const primaryTypes = PRIMARY_GOAL_TYPES[String(profile.primaryGoal ?? "")] ?? [];
   // Debt-free is funded by the EMIs already in the loans bucket, not the goal pool.
   const goals = detectGoals(profile, now).filter((g) => g.type !== "debt_free");
@@ -223,6 +244,12 @@ export function buildGoalFundingPlan(
   );
   const items: GoalFundingItem[] = sized.map((s, idx) => {
     const monthlyAllocated = rounded[idx];
+    const allocation = allocateGoalPortfolio({
+      yearsToGoal: s.goal.yearsToGoal,
+      monthly: monthlyAllocated,
+      riskTolerance: profile.riskTolerance,
+      realEstateEligible,
+    });
     return {
       goalId: s.goal.id,
       type: s.goal.type,
@@ -239,10 +266,8 @@ export function buildGoalFundingPlan(
         s.monthlyRequired > 0
           ? Math.min(100, Math.round((monthlyAllocated / s.monthlyRequired) * 100))
           : 100,
-      instrument:
-        s.goal.type === "retirement"
-          ? "Nifty 50 index fund SIP + NPS / PPF"
-          : HORIZON_ASSUMPTIONS[s.horizon].instrument,
+      instrument: allocationSummary(allocation),
+      allocation,
       isPrimary: s.isPrimary,
     };
   });

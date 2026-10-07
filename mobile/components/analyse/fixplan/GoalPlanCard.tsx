@@ -58,9 +58,36 @@ export function GoalPlanCard({
                   ? "fully funded"
                   : `${funded}% of the ₹${loc(g.monthlyRequired)}/mo needed`}
               </Text>
-              <Text style={[styles.line, styles.muted]}>
-                Instrument: {g.instrument}
-              </Text>
+              {g.allocation?.slices.length ? (
+                <View style={styles.split}>
+                  <Text style={styles.splitTitle}>
+                    Where it goes
+                    {g.allocation.riskAssumed ? (
+                      <Text style={styles.muted}>
+                        {" "}
+                        · assumes a moderate risk profile
+                      </Text>
+                    ) : null}
+                  </Text>
+                  {g.allocation.slices.map((s) => (
+                    <View key={s.key} style={styles.splitRow}>
+                      <Text style={styles.splitLabel}>{s.label}</Text>
+                      <Text style={styles.splitAmount}>
+                        ₹{loc(s.monthly)}/mo · {s.pct}%
+                      </Text>
+                    </View>
+                  ))}
+                  {g.allocation.realEstateNote ? (
+                    <Text style={[styles.line, styles.muted]}>
+                      {g.allocation.realEstateNote}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : (
+                <Text style={[styles.line, styles.muted]}>
+                  Instrument: {g.instrument}
+                </Text>
+              )}
               {g.goalId && plans?.[g.goalId] ? (
                 <View style={styles.advice}>
                   <Text style={styles.adviceText}>{plans[g.goalId].why}</Text>
@@ -128,6 +155,15 @@ const styles = StyleSheet.create({
   fill: { height: "100%", backgroundColor: Colors.primary },
   line: { marginTop: 6, fontSize: 12, fontWeight: "500", color: "#454442" },
   muted: { marginTop: 2, color: "#7A7871" },
+  split: { marginTop: Spacing.sm, gap: 2 },
+  splitTitle: { fontSize: 12, fontWeight: "600", color: "#454442" },
+  splitRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+  splitLabel: { flex: 1, fontSize: 12, color: "#454442" },
+  splitAmount: { fontSize: 12, color: "#454442", fontVariant: ["tabular-nums"] },
   advice: {
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,

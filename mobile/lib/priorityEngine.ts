@@ -8,6 +8,7 @@ import {
   type GoalFundingItem,
   type GoalFundingPlan,
 } from "@/lib/goalFunding";
+import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 
 export interface PriorityItem {
   rank: number;
@@ -61,6 +62,7 @@ export interface GoalItem {
   label?: string;
   monthlyAllocated?: number;
   sharePct?: number;
+  allocation?: PortfolioAllocation;
 }
 
 export interface PriorityPlan {
@@ -778,9 +780,16 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   );
   const debtDeployMonthly =
     primaryGoal === "clear_debt" ? Math.round(postSafetyBudget * 0.8) : 0;
+  const safetyNetComplete = priorities
+    .filter((p) =>
+      ["emergency_fund", "medical_fund", "term_insurance", "health_insurance"].includes(p.id),
+    )
+    .every((p) => p.status === "complete");
   const goalFunding = buildGoalFundingPlan(
     profile,
     postSafetyBudget - debtDeployMonthly,
+    new Date(),
+    { safetyNetComplete },
   );
 
   for (let month = 1; month <= 12; month += 1) {
@@ -1237,6 +1246,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       sharePct: item.sharePct,
       yearsToGoal: item.yearsToGoal,
       instrument: item.instrument,
+      allocation: item.allocation,
       readyToStart: !blockingCritical,
       blockedBy: blockingCritical?.title || null,
       icon: GOAL_ICONS[item.type] ?? "🎯",

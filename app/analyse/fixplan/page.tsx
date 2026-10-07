@@ -22,6 +22,7 @@ import {
 import { Analytics } from "@/lib/analytics";
 import { scoreBand } from "@/lib/financialEngine";
 import { buildPriorityPlan, debtPayoffNumbers } from "@/lib/priorityEngine";
+import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -1135,6 +1136,7 @@ type GoalSplitRow = {
   sharePct?: number;
   yearsToGoal: number;
   instrument: string;
+  allocation?: PortfolioAllocation;
 };
 
 function GoalSplitCard({
@@ -1203,7 +1205,39 @@ function GoalSplitCard({
                   ? "fully funded"
                   : `${funded}% of the ${inr(g.monthlyRequired)}/mo needed`}
               </p>
-              <p className="text-xs text-[#7A7871]">Instrument: {g.instrument}</p>
+              {g.allocation?.slices.length ? (
+                <div className="mt-2">
+                  <p className="text-xs font-semibold text-[#454442]">
+                    Where it goes
+                    {g.allocation.riskAssumed ? (
+                      <span className="font-normal text-[#7A7871]">
+                        {" "}
+                        · assumes a moderate risk profile
+                      </span>
+                    ) : null}
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {g.allocation.slices.map((s) => (
+                      <li
+                        key={s.key}
+                        className="flex items-baseline justify-between gap-3 text-xs text-[#454442]"
+                      >
+                        <span>{s.label}</span>
+                        <span className="shrink-0 tabular-nums">
+                          {inr(s.monthly)}/mo · {s.pct}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {g.allocation.realEstateNote ? (
+                    <p className="mt-1 text-xs text-[#7A7871]">
+                      {g.allocation.realEstateNote}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-xs text-[#7A7871]">Instrument: {g.instrument}</p>
+              )}
               {g.goalId && plans?.[g.goalId] ? (
                 <div className="mt-2 space-y-1 border-t border-[#ECEAF5] pt-2 text-[13px] leading-snug text-[#454442]">
                   <p>{plans[g.goalId].why}</p>

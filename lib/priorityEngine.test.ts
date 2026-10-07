@@ -173,11 +173,17 @@ describe("buildPriorityPlan", () => {
     expect(car).toMatchObject({
       targetAmount: 800_000,
       yearsToGoal: 3,
-      instrument: "Bank FD / short-duration debt fund",
       readyToStart: true,
       blockedBy: null,
       icon: "🚗",
     });
+    expect(car?.allocation?.horizon).toBe("1-3y");
+    expect(car?.allocation?.slices.map((s) => s.key)).toContain("fd_cd");
+    expect(car?.allocation?.slices.find((s) => s.key === "gold")?.pct).toBe(5);
+    expect(
+      car?.allocation?.slices.reduce((s, x) => s + x.monthly, 0),
+    ).toBe(car?.monthlyAllocated);
+    expect(car?.instrument).toContain("Bank FD");
     // Big surplus: every goal is fully funded and the rest goes to a general SIP.
     expect(car?.monthlyAllocated).toBe(car?.monthlyRequired);
     expect(plan.goals.some((g) => g.goalType === "retirement")).toBe(true);
