@@ -2,7 +2,6 @@ import { useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { Colors } from "@/constants/theme";
@@ -13,6 +12,7 @@ import {
   setTrackerConsentLocal,
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
+import { openContentHref } from "@/lib/contentLinks";
 
 type TrackItem =
   | { kind: "tracker"; icon: TrackerIconName; label: string }
@@ -40,10 +40,6 @@ const TRACK_ITEMS: TrackItem[] = [
   { kind: "tracker", icon: "cab", label: "Transport & fuel" },
   { kind: "tracker", icon: "shirt", label: "Shopping & lifestyle" },
 ];
-
-const PRIVACY_URL = `${(
-  process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
-).replace(/\/$/, "")}/legal/privacy`;
 
 type Props = {
   onAccept: () => void;
@@ -140,7 +136,7 @@ export function TrackerConsent({ onAccept }: Props) {
               anytime. I agree to the{" "}
               <Text
                 style={styles.link}
-                onPress={() => void WebBrowser.openBrowserAsync(PRIVACY_URL)}
+                onPress={() => openContentHref("/legal/privacy")}
               >
                 Privacy Policy
               </Text>

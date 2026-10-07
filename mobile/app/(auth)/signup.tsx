@@ -11,12 +11,11 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useAuthStore, getOAuthRedirectUri } from "@/store/authStore";
-import { siteBase } from "@/lib/googleAuth";
 import { Colors, Spacing, FontSize } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import { openWebPage } from "@/lib/openWebPage";
+import { openContentHref } from "@/lib/contentLinks";
 
 /** Only allow in-app paths as post-signup targets. */
 function safeNext(next: unknown): Href {
@@ -142,14 +141,14 @@ export default function SignupScreen() {
           By signing up you agree to our{" "}
           <Text
             style={styles.legalLink}
-            onPress={() => openWebPage(`${siteBase()}/legal/terms`)}
+            onPress={() => openContentHref("/legal/terms")}
           >
             Terms
           </Text>{" "}
           and{" "}
           <Text
             style={styles.legalLink}
-            onPress={() => openWebPage(`${siteBase()}/legal/privacy`)}
+            onPress={() => openContentHref("/legal/privacy")}
           >
             Privacy Policy
           </Text>

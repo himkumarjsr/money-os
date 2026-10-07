@@ -12,7 +12,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as WebBrowser from "expo-web-browser";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Colors } from "@/constants/theme";
 import { syncKv } from "@/lib/syncKv";
@@ -21,10 +20,7 @@ import {
   useNotificationStore,
   type AppNotification,
 } from "@/store/notificationStore";
-
-const SITE = (
-  process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
-).replace(/\/$/, "");
+import { openContentHref } from "@/lib/contentLinks";
 
 /** IST wall clock without relying on Intl time zones (UTC+5:30, no DST). */
 function istNow(): Date {
@@ -106,7 +102,7 @@ export function MorningTipPopup() {
 
   const handleLearnMore = async () => {
     await handleClose();
-    void WebBrowser.openBrowserAsync(`${SITE}/learn`);
+    openContentHref("/learn");
   };
 
   if (!visible || !tip) return null;

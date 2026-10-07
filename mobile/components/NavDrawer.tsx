@@ -1,7 +1,7 @@
 /**
  * Hamburger drawer — every PWA footer item (components/landing/Footer.tsx):
  * CTA, Product / Company / Legal links, socials, trust strip, copyright.
- * In-app screens open natively; web-only pages open in the in-app browser.
+ * Every link opens a native in-app screen.
  */
 import { useEffect, useRef, useState } from "react";
 import {
@@ -20,16 +20,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import { openWebPage } from "@/lib/openWebPage";
 
-const SITE = (
-  process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
-).replace(/\/$/, "");
-
-type NavLink =
-  | { label: string; route: Href }
-  | { label: string; web: string }
-  | { label: string; mail: string };
+type NavLink = { label: string; route: Href } | { label: string; mail: string };
 
 const COLUMNS: Array<{ heading: string; links: NavLink[] }> = [
   {
@@ -53,8 +45,8 @@ const COLUMNS: Array<{ heading: string; links: NavLink[] }> = [
         label: "EMI Calculator",
         route: "/calculators/emi" as Href,
       },
-      { label: "Portfolio Analysis", web: "/portfolio" },
-      { label: "Learn", web: "/learn" },
+      { label: "Portfolio Analysis", route: "/portfolio" as Href },
+      { label: "Learn", route: "/learn" as Href },
       {
         label: "Calculators",
         route: "/(tabs)/calculators",
@@ -64,20 +56,20 @@ const COLUMNS: Array<{ heading: string; links: NavLink[] }> = [
   {
     heading: "Company",
     links: [
-      { label: "About Us", web: "/about" },
-      { label: "Blog", web: "/blog" },
-      { label: "Careers", web: "/careers" },
-      { label: "Press", web: "/press" },
+      { label: "About Us", route: "/about" as Href },
+      { label: "Blog", route: "/blog" as Href },
+      { label: "Careers", route: "/careers" as Href },
+      { label: "Press", route: "/press" as Href },
       { label: "Contact", mail: "hello@finkoin.com" },
     ],
   },
   {
     heading: "Legal",
     links: [
-      { label: "Privacy Policy", web: "/legal/privacy" },
-      { label: "Terms of Service", web: "/legal/terms" },
-      { label: "Refund Policy", web: "/legal/refund" },
-      { label: "Disclaimer", web: "/legal/disclaimer" },
+      { label: "Privacy Policy", route: "/legal/privacy" as Href },
+      { label: "Terms of Service", route: "/legal/terms" as Href },
+      { label: "Refund Policy", route: "/legal/refund" as Href },
+      { label: "Disclaimer", route: "/legal/disclaimer" as Href },
     ],
   },
 ];
@@ -128,7 +120,6 @@ export function NavDrawer({
   const open = (link: NavLink) => {
     onClose();
     if ("route" in link) router.push(link.route);
-    else if ("web" in link) openWebPage(`${SITE}${link.web}`);
     else void Linking.openURL(`mailto:${link.mail}`);
   };
 

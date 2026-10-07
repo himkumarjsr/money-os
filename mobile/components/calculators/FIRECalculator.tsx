@@ -1,10 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { computeFireNumbers } from "@/lib/fireCalculator";
 import { formatCurrency } from "@/lib/finance";
-import { siteBase } from "@/lib/splitApi";
 import {
   B,
   CALCULATOR_MONEY_MAX,
@@ -15,6 +13,7 @@ import {
   calcStyles,
   type InsightTone,
 } from "./calculator-ui";
+import { openContentHref } from "@/lib/contentLinks";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -213,9 +212,7 @@ export function FIRECalculator() {
           . Read the full framework in our{" "}
           <Text
             style={styles.link}
-            onPress={() =>
-              void WebBrowser.openBrowserAsync(`${siteBase()}${FIRE_GUIDE_PATH}`)
-            }
+            onPress={() => openContentHref(FIRE_GUIDE_PATH)}
             accessibilityRole="link"
           >
             FIRE number guide
@@ -257,7 +254,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  tipTitle: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: "#534AB7" },
+  tipTitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
+    color: "#534AB7",
+  },
   tipBody: { marginTop: 8, fontSize: 14, lineHeight: 23, color: "#3C3489" },
   link: { fontWeight: "600", textDecorationLine: "underline" },
   disclaimer: { fontSize: 12, lineHeight: 19.5, color: "#64748B" },

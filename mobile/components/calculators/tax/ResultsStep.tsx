@@ -1,6 +1,4 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import * as WebBrowser from "expo-web-browser";
-import { siteBase } from "@/lib/splitApi";
 import { TEACH } from "@/lib/taxTeachContent";
 import type { RegimeBreakdown } from "@/lib/taxRegimeComparisonFY2026";
 import { Insight } from "../calculator-ui";
@@ -13,6 +11,7 @@ import {
   StepCard,
 } from "./primitives";
 import type { TaxCalcState } from "./useTaxCalculatorState";
+import { openContentHref } from "@/lib/contentLinks";
 
 const LEARN_TAX_LINKS = [
   {
@@ -189,10 +188,14 @@ function ComparisonTable({
             >
               {row.label}
             </Text>
-            <Text style={[styles.tCell, styles.cVal, row.total && styles.tTotal]}>
+            <Text
+              style={[styles.tCell, styles.cVal, row.total && styles.tTotal]}
+            >
               {row.old}
             </Text>
-            <Text style={[styles.tCell, styles.cVal, row.total && styles.tTotal]}>
+            <Text
+              style={[styles.tCell, styles.cVal, row.total && styles.tTotal]}
+            >
               {row.next}
             </Text>
           </View>
@@ -413,9 +416,7 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
               {LEARN_TAX_LINKS.map((l) => (
                 <Pressable
                   key={l.href}
-                  onPress={() =>
-                    void WebBrowser.openBrowserAsync(`${siteBase()}${l.href}`)
-                  }
+                  onPress={() => openContentHref(l.href)}
                   accessibilityRole="link"
                   style={styles.linkRow}
                 >

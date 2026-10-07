@@ -56,8 +56,20 @@ export function PushNotificationsManager() {
       }
       handled.current.add(id);
       syncKv.setItem(LAST_HANDLED_KEY, id);
-      const url = response.notification.request.content.data?.url;
-      router.push(routeForPushUrl(url));
+      const target = routeForPushUrl(
+        response.notification.request.content.data?.url,
+      );
+      try {
+        router.push(target);
+      } catch {
+        setTimeout(() => {
+          try {
+            router.push(target);
+          } catch {
+            /* navigator not ready; the inbox still has the message */
+          }
+        }, 800);
+      }
     };
 
     const received = Notifications.addNotificationReceivedListener(() => {

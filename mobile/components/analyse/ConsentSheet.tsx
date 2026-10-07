@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
 import Button from "@/components/ui/Button";
 import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
-import { openWebPage } from "@/lib/openWebPage";
+import { openContentHref } from "@/lib/contentLinks";
 
 const COLLECT = [
   "Income and salary numbers",
@@ -83,7 +83,7 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
             financial data.
           </Text>
           <Pressable
-            onPress={() => openWebPage("https://www.finkoin.com/legal/privacy")}
+            onPress={() => openContentHref("/legal/privacy")}
             hitSlop={8}
             style={{ marginTop: 8 }}
           >

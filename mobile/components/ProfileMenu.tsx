@@ -9,63 +9,28 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Image,
 } from "react-native";
-import { router } from "expo-router";
+import { useState } from "react";
+import { router, type Href } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { Colors } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
-import { openWebPage } from "@/lib/openWebPage";
+import { FeedbackSheet } from "@/components/FeedbackSheet";
+import { useGamification } from "@/lib/useGamification";
 
-const SITE = "https://finkoin.com";
-
-const MENU: Array<{
-  icon: AppIconName;
-  label: string;
-  /** In-app route or external path under finkoin.com */
-  href: string;
-  external?: boolean;
-}> = [
+const MENU: Array<{ icon: AppIconName; label: string; href: Href }> = [
   { icon: "user", label: "My Profile", href: "/(tabs)/profile" },
   { icon: "notebook", label: "Expense Tracker", href: "/(tabs)/tracker" },
   { icon: "users", label: "FK Split", href: "/(tabs)/split" },
   { icon: "chart", label: "My Analysis", href: "/(tabs)/analyse" },
-  {
-    icon: "shield",
-    label: "My Policies",
-    href: `${SITE}/policies`,
-    external: true,
-  },
-  { icon: "target", label: "My Goals", href: `${SITE}/goals`, external: true },
-  {
-    icon: "trending",
-    label: "My Investments",
-    href: `${SITE}/investments`,
-    external: true,
-  },
-  {
-    icon: "trophy",
-    label: "Leaderboard",
-    href: `${SITE}/leaderboard`,
-    external: true,
-  },
-  {
-    icon: "gift",
-    label: "Rewards",
-    href: `${SITE}/rewards`,
-    external: true,
-  },
-  {
-    icon: "users",
-    label: "Refer & Earn",
-    href: `${SITE}/refer`,
-    external: true,
-  },
-  {
-    icon: "settings",
-    label: "Settings",
-    href: `${SITE}/settings`,
-    external: true,
-  },
+  { icon: "shield", label: "My Policies", href: "/policies" as Href },
+  { icon: "target", label: "My Goals", href: "/goals" as Href },
+  { icon: "trending", label: "My Investments", href: "/investments" as Href },
+  { icon: "trophy", label: "Leaderboard", href: "/leaderboard" as Href },
+  { icon: "gift", label: "Rewards", href: "/rewards" as Href },
+  { icon: "users", label: "Refer & Earn", href: "/refer" as Href },
+  { icon: "settings", label: "Settings", href: "/settings" as Href },
 ];
 
 type Props = {
@@ -78,10 +43,11 @@ export function ProfileMenu({ visible, onClose }: Props) {
   const signOut = useAuthStore((s) => s.signOut);
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
   const tier = user?.subscriptionTier || "free";
-  const fk = user?.fkBalance ?? 0;
-  // PWA gamification store — use 0 until mobile ports badges/streaks
-  const badges = 0;
-  const streakDays = 0;
+  const { stats } = useGamification(visible ? user?.id : undefined);
+  const fk = stats?.fkBalance ?? user?.fkBalance ?? 0;
+  const badges = stats?.badges.length ?? 0;
+  const streakDays = stats?.streakDays ?? 0;
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const tierLabel =
     tier === "promax" ? "Pro Max" : tier === "pro" ? "Pro" : "Free plan";
@@ -94,172 +60,171 @@ export function ProfileMenu({ visible, onClose }: Props) {
 
   const go = (item: (typeof MENU)[number]) => {
     onClose();
-    if (item.external) {
-      openWebPage(item.href);
-      return;
-    }
-    router.push(item.href as never);
+    router.push(item.href);
   };
 
   const legal = (path: string) => {
     onClose();
-    openWebPage(`${SITE}${path}`);
+    router.push(path as Href);
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <ScrollView
-            bounces={false}
-            contentContainerStyle={styles.scroll}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.identity}>
-              <View style={styles.avatarLg}>
-                <Text style={styles.avatarLgLetter}>{letter}</Text>
-              </View>
-              <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
-              <Text style={styles.contact}>
-                {user?.email ?? "No contact added"}
-              </Text>
-              <View style={[styles.tierPill, tierStyle]}>
-                <Text
-                  style={[
-                    styles.tierText,
-                    tier === "promax" && { color: "#FFFFFF" },
-                    tier === "pro" && { color: Colors.primary },
-                  ]}
-                >
-                  {tierLabel}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.stats}>
-              <View style={styles.stat}>
-                <View style={styles.statNumRow}>
-                  <AppIcon name="coin" size={15} color={Colors.primary} />
-                  <Text style={styles.statNum}>{fk}</Text>
-                </View>
-                <Text style={styles.statLabel}>tokens earned</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statNum}>{badges}</Text>
-                <Text style={styles.statLabel}>badges</Text>
-              </View>
-              <View style={styles.stat}>
-                <View style={styles.statNumRow}>
-                  <AppIcon name="flame" size={15} color={Colors.primary} />
-                  <Text style={styles.statNum}>{streakDays}</Text>
-                </View>
-                <Text style={styles.statLabel}>day streak</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.nav}>
-              {MENU.map((item) => (
-                <Pressable
-                  key={item.label}
-                  onPress={() => go(item)}
-                  style={({ pressed }) => [
-                    styles.menuRow,
-                    pressed && { backgroundColor: "#F8FAFC" },
-                  ]}
-                >
-                  <View style={styles.menuLeft}>
-                    <AppIcon
-                      name={item.icon}
-                      size={17}
-                      color={Colors.primary}
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
+            <ScrollView
+              bounces={false}
+              contentContainerStyle={styles.scroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.identity}>
+                <View style={styles.avatarLg}>
+                  {user?.photoURL ? (
+                    <Image
+                      source={{ uri: user.photoURL }}
+                      style={styles.avatarLgImg}
                     />
-                    <Text style={styles.menuLabel}>{item.label}</Text>
+                  ) : (
+                    <Text style={styles.avatarLgLetter}>{letter}</Text>
+                  )}
+                </View>
+                <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
+                <Text style={styles.contact}>
+                  {user?.email ?? "No contact added"}
+                </Text>
+                <View style={[styles.tierPill, tierStyle]}>
+                  <Text
+                    style={[
+                      styles.tierText,
+                      tier === "promax" && { color: "#FFFFFF" },
+                      tier === "pro" && { color: Colors.primary },
+                    ]}
+                  >
+                    {tierLabel}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.stats}>
+                <View style={styles.stat}>
+                  <View style={styles.statNumRow}>
+                    <AppIcon name="coin" size={15} color={Colors.primary} />
+                    <Text style={styles.statNum}>{fk}</Text>
                   </View>
-                  <Text style={styles.chev}>›</Text>
-                </Pressable>
-              ))}
-            </View>
+                  <Text style={styles.statLabel}>tokens earned</Text>
+                </View>
+                <View style={styles.stat}>
+                  <Text style={styles.statNum}>{badges}</Text>
+                  <Text style={styles.statLabel}>badges</Text>
+                </View>
+                <View style={styles.stat}>
+                  <View style={styles.statNumRow}>
+                    <AppIcon name="flame" size={15} color={Colors.primary} />
+                    <Text style={styles.statNum}>{streakDays}</Text>
+                  </View>
+                  <Text style={styles.statLabel}>day streak</Text>
+                </View>
+              </View>
 
-            <View style={styles.divider} />
+              <View style={styles.divider} />
 
-            <Pressable
-              onPress={() => {
-                onClose();
-                Alert.alert(
-                  "Feedback",
-                  "Share feedback at finkoin.com or email hello@finkoin.com",
+              <View style={styles.nav}>
+                {MENU.map((item) => (
+                  <Pressable
+                    key={item.label}
+                    onPress={() => go(item)}
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && { backgroundColor: "#F8FAFC" },
+                    ]}
+                  >
+                    <View style={styles.menuLeft}>
+                      <AppIcon
+                        name={item.icon}
+                        size={17}
+                        color={Colors.primary}
+                      />
+                      <Text style={styles.menuLabel}>{item.label}</Text>
+                    </View>
+                    <Text style={styles.chev}>›</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <View style={styles.divider} />
+
+              <Pressable
+                onPress={() => {
+                  onClose();
+                  setTimeout(() => setFeedbackOpen(true), 250);
+                }}
+                style={styles.feedbackBtn}
+              >
+                <Text style={styles.feedbackText}>Send feedback</Text>
+              </Pressable>
+
+              <View style={styles.divider} />
+
+              <View style={styles.legalRow}>
+                {(
                   [
+                    ["Privacy", "/legal/privacy"],
+                    ["Terms", "/legal/terms"],
+                    ["Refunds", "/legal/refund"],
+                    ["Disclaimer", "/legal/disclaimer"],
+                    ["Delete account", "/legal/delete-account"],
+                  ] as const
+                ).map(([label, path], i) => (
+                  <View key={label} style={styles.legalItem}>
+                    {i > 0 ? <Text style={styles.dot}>·</Text> : null}
+                    <Pressable onPress={() => legal(path)}>
+                      <Text style={styles.legalLink}>{label}</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.divider} />
+
+              <Pressable
+                onPress={() => {
+                  Alert.alert("Sign out?", "You can log in again anytime.", [
                     { text: "Cancel", style: "cancel" },
                     {
-                      text: "Open site",
-                      onPress: () => openWebPage(SITE),
+                      text: "Sign out",
+                      style: "destructive",
+                      onPress: () => {
+                        onClose();
+                        void signOut().then(() => router.replace("/(tabs)"));
+                      },
                     },
-                  ],
-                );
-              }}
-              style={styles.feedbackBtn}
-            >
-              <Text style={styles.feedbackText}>Send feedback</Text>
-            </Pressable>
-
-            <View style={styles.divider} />
-
-            <View style={styles.legalRow}>
-              {(
-                [
-                  ["Privacy", "/legal/privacy"],
-                  ["Terms", "/legal/terms"],
-                  ["Refunds", "/legal/refund"],
-                  ["Disclaimer", "/legal/disclaimer"],
-                  ["Delete account", "/legal/delete-account"],
-                ] as const
-              ).map(([label, path], i) => (
-                <View key={label} style={styles.legalItem}>
-                  {i > 0 ? <Text style={styles.dot}>·</Text> : null}
-                  <Pressable onPress={() => legal(path)}>
-                    <Text style={styles.legalLink}>{label}</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.divider} />
-
-            <Pressable
-              onPress={() => {
-                Alert.alert("Sign out?", "You can log in again anytime.", [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Sign out",
-                    style: "destructive",
-                    onPress: () => {
-                      onClose();
-                      void signOut().then(() => router.replace("/(tabs)"));
-                    },
-                  },
-                ]);
-              }}
-              style={styles.signOut}
-            >
-              <AppIcon name="logout" size={16} color="#DC2626" />
-              <Text style={styles.signOutText}>Sign out</Text>
-            </Pressable>
-            <Text style={styles.signedAs}>
-              Signed in as {user?.email ?? "user"}
-            </Text>
-          </ScrollView>
+                  ]);
+                }}
+                style={styles.signOut}
+              >
+                <AppIcon name="logout" size={16} color="#DC2626" />
+                <Text style={styles.signOutText}>Sign out</Text>
+              </Pressable>
+              <Text style={styles.signedAs}>
+                Signed in as {user?.email ?? "user"}
+              </Text>
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </Modal>
+      <FeedbackSheet
+        visible={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
+    </>
   );
 }
 
@@ -300,7 +265,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
+    overflow: "hidden",
   },
+  avatarLgImg: { width: 52, height: 52, borderRadius: 999 },
   avatarLgLetter: {
     color: "#FFFFFF",
     fontSize: 18,
