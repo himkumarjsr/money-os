@@ -126,7 +126,8 @@ describe("buildFixPlanPdf (server path)", () => {
     expect(bytes.byteLength).toBeGreaterThan(10_000);
     expect(text.startsWith("%PDF")).toBe(true);
     expect(text).toContain("12-MONTH ACTION PLAN");
-    expect(text).toContain("PHASE 1: Phase 1");
+    expect(text).toContain("Phase 1 ");
+    expect(text).not.toContain("PHASE 1: Phase 1");
     expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(9);
 
     const istDate = new Intl.DateTimeFormat("en-CA", {
