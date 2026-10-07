@@ -115,6 +115,22 @@ describe("prompted goals", () => {
     expect(ids(answered)).not.toContain("marriage");
   });
 
+  it("'Not now' hides the goal instead of discarding it, and restore re-asks", () => {
+    for (const [lifeStage, offer] of [
+      ["bachelor", "marriage"],
+      ["married", "baby"],
+    ] as const) {
+      const base = profile({ lifeStage });
+      const notNow = answerPromptedGoal(base, offer, false);
+      expect(notNow).toEqual(dismissGoal(answerPromptedGoal(base, offer, true), offer));
+      expect(notNow.dismissedGoals).toEqual([offer]);
+      expect(ids(notNow)).not.toContain(offer);
+      const restored = restoreDismissedGoals(notNow);
+      expect(promptedGoalOffers(restored)).toEqual([offer]);
+      expect(ids(answerPromptedGoal(restored, offer, true))).toContain(offer);
+    }
+  });
+
   it("adds the wedding fund only after the user says yes", () => {
     const yes = answerPromptedGoal(profile({ lifeStage: "bachelor" }), "marriage", true);
     expect(ids(yes)).toContain("marriage");

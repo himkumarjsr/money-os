@@ -376,14 +376,20 @@ export function restoreDismissedGoals(p: FinancialProfile): FinancialProfile {
   return next;
 }
 
-/** Answer to a prompted toggle ("Planning to get married?" / "Planning a baby?"). */
+/**
+ * Answer to a prompted toggle ("Planning to get married?" / "Planning a baby?").
+ * "Not now" is "yes, then hide": the goal sits under "Show N hidden goals" and
+ * restoring it asks the question again.
+ */
 export function answerPromptedGoal(
   p: FinancialProfile,
   offer: PromptedGoalOffer,
   yes: boolean,
 ): FinancialProfile {
   const dismissed = (p.dismissedGoals ?? []).filter((id) => id !== offer);
-  return offer === "marriage"
-    ? { ...p, planningMarriage: yes, dismissedGoals: dismissed }
-    : { ...p, planningBaby: yes, dismissedGoals: dismissed };
+  const added: FinancialProfile =
+    offer === "marriage"
+      ? { ...p, planningMarriage: true, dismissedGoals: dismissed }
+      : { ...p, planningBaby: true, dismissedGoals: dismissed };
+  return yes ? added : dismissGoal(added, offer);
 }
