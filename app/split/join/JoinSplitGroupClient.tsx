@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolveAuthenticated } from "@/lib/authSession";
@@ -40,7 +41,7 @@ async function joinWithRetry(
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), JOIN_TIMEOUT_MS);
     try {
-      const response = await fetch("/api/split/join", {
+      const response = await apiFetch("/api/split/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

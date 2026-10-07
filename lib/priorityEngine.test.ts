@@ -103,18 +103,19 @@ describe("buildPriorityPlan", () => {
         "medical_fund",
         "term_insurance",
         "health_insurance",
-        "home_downpayment",
+        "goal_home_purchase",
+        "goal_retirement",
         "ssy_girl_age_9",
       ]),
     );
     expect(plan.debts).toHaveLength(6);
     expect(plan.debts[0]?.type).toBe("Credit card");
-    expect(plan.goals[0]).toMatchObject({
-      goalType: "buy_home",
-      readyToStart: false,
-    });
+    expect(plan.goals.map((g) => g.goalType)).toEqual(
+      expect.arrayContaining(["home_purchase", "retirement"]),
+    );
+    expect(plan.goals.every((g) => !g.readyToStart)).toBe(true);
     const priorityIds = plan.priorities.map((item) => item.id);
-    const homeIdx = priorityIds.indexOf("home_downpayment");
+    const homeIdx = priorityIds.indexOf("goal_home_purchase");
     const ssyIdx = priorityIds.indexOf("ssy_girl_age_9");
     expect(homeIdx).toBeGreaterThan(ssyIdx);
     expect(priorityIds.indexOf("term_insurance")).toBeLessThan(homeIdx);
@@ -168,19 +169,26 @@ describe("buildPriorityPlan", () => {
     expect(plan.priorities.some((item) => item.id === "term_insurance")).toBe(
       false,
     );
-    expect(plan.goals).toEqual([
-      {
-        goalType: "buy_car",
-        targetAmount: 800_000,
-        currentSaved: 0,
-        monthlyRequired: expect.any(Number),
-        yearsToGoal: 2,
-        instrument: "Post Office RD or Liquid MF",
-        readyToStart: true,
-        blockedBy: null,
-        icon: "🚗",
-      },
-    ]);
+    const car = plan.goals.find((g) => g.goalType === "vehicle_purchase");
+    expect(car).toMatchObject({
+      targetAmount: 800_000,
+      yearsToGoal: 3,
+      readyToStart: true,
+      blockedBy: null,
+      icon: "🚗",
+    });
+    expect(car?.allocation?.horizon).toBe("1-3y");
+    expect(car?.allocation?.slices.map((s) => s.key)).toContain("fd_cd");
+    expect(car?.allocation?.slices.find((s) => s.key === "gold")?.pct).toBe(5);
+    expect(
+      car?.allocation?.slices.reduce((s, x) => s + x.monthly, 0),
+    ).toBe(car?.monthlyAllocated);
+    expect(car?.instrument).toContain("Bank FD");
+    // Big surplus: every goal is fully funded and the rest goes to a general SIP.
+    expect(car?.monthlyAllocated).toBe(car?.monthlyRequired);
+    expect(plan.goals.some((g) => g.goalType === "retirement")).toBe(true);
+    expect(plan.goalFunding?.shortfall).toBe(0);
+    expect(plan.priorities.some((p) => p.id === "start_sip")).toBe(true);
     expect(plan.fdSuggestion).toBeUndefined();
   });
 
@@ -201,13 +209,13 @@ describe("buildPriorityPlan", () => {
     expect(plan.monthlyPlan?.[0]?.medical).toBe(0);
   });
 
-  it("routes buy_home deploy after safety and SSY in priority order", () => {
+  it("routes goal funding after safety and SSY in priority order", () => {
     const plan = buildPriorityPlan(profile(), {
       needsActual: 50_000,
       overallScore: 40,
     });
     const priorityIds = plan.priorities.map((item) => item.id);
-    const homeIdx = priorityIds.indexOf("home_downpayment");
+    const homeIdx = priorityIds.indexOf("goal_home_purchase");
     const ssyIdx = priorityIds.indexOf("ssy_girl_age_9");
     expect(homeIdx).toBeGreaterThan(ssyIdx);
     expect(priorityIds.indexOf("term_insurance")).toBeLessThan(homeIdx);

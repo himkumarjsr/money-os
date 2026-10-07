@@ -5,6 +5,7 @@ import {
   type ObligationFormPayload,
 } from "@/components/tracker/AddObligationForm";
 import { CollapsiblePanel } from "@/components/tracker/CollapsiblePanel";
+import { PlannedInvestmentsSection } from "@/components/tracker/PlannedInvestmentsSection";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Colors } from "@/constants/theme";
@@ -476,6 +477,7 @@ export function ObligationsChecklist({
             </View>
           </View>
         )}
+        <PlannedInvestmentsSection userId={userId} />
       </CollapsiblePanel>
 
       <BottomSheet

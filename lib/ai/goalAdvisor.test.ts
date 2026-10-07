@@ -1,0 +1,236 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/supabaseServer", () => ({ supabaseAdmin: null }));
+
+import {
+  adviseGoals,
+  assembleGoalAdvice,
+  engineGoalAdvice,
+  GOAL_ADVISOR_MAX_GOALS,
+  goalAdvisorContext,
+  goalAdvisorCallCount,
+  fundedGoals,
+  parseGoalAdvice,
+} from "@/lib/ai/goalAdvisor";
+import { allocateGoalPortfolio } from "@/lib/portfolioAllocation";
+import type { GoalItem } from "@/lib/priorityEngine";
+import { GOAL_KNOWLEDGE } from "@/lib/rag/goalKnowledge";
+import { retrieveGoalKnowledge } from "@/lib/rag/retriever";
+
+function goal(over: Partial<GoalItem>): GoalItem {
+  return {
+    goalType: "retirement",
+    goalId: "retirement",
+    label: "Retirement",
+    targetAmount: 10_000_000,
+    yearsToGoal: 25,
+    currentSaved: 0,
+    monthlyRequired: 8_000,
+    monthlyAllocated: 6_000,
+    sharePct: 60,
+    instrument: "Equity index fund SIP",
+    ...over,
+  } as GoalItem;
+}
+
+describe("fundedGoals", () => {
+  it("keeps every funded goal with an id — no cap", () => {
+    const goals = [
+      goal({ goalId: "a" }),
+      goal({ goalId: undefined }),
+      goal({ goalId: "b", monthlyAllocated: 0 }),
+      ...Array.from({ length: 10 }, (_, i) => goal({ goalId: `g${i}` })),
+    ];
+    const out = fundedGoals(goals);
+    expect(out[0].goalId).toBe("a");
+    expect(out).toHaveLength(11);
+    expect(fundedGoals(undefined)).toEqual([]);
+  });
+
+  it("caps AI calls at 8 (married with two kids fits)", () => {
+    expect(GOAL_ADVISOR_MAX_GOALS).toBe(8);
+    const many = Array.from({ length: 12 }, (_, i) => goal({ goalId: `g${i}` }));
+    expect(goalAdvisorCallCount(many)).toBe(8);
+    expect(goalAdvisorCallCount(many.slice(0, 3))).toBe(3);
+    expect(goalAdvisorCallCount([])).toBe(0);
+  });
+});
+
+describe("goalAdvisorContext", () => {
+  it("passes the engine's instrument split, not a free choice", () => {
+    const ctx = goalAdvisorContext(
+      goal({ allocation: allocateGoalPortfolio({ yearsToGoal: 25, monthly: 6_000 }) }),
+      {},
+    );
+    expect(ctx.goal.instrumentSplit.map((s) => s.pct).reduce((a, b) => a + b, 0)).toBe(100);
+    expect(ctx.goal.instrumentSplit.some((s) => /Gold/.test(s.instrument))).toBe(true);
+  });
+
+  it("sends only goal numbers and age/life stage/risk — no income or loans", () => {
+    const profile = {
+      selfAge: 34,
+      lifeStage: "married_with_kids",
+      riskTolerance: "moderate",
+      kidsAges: [4, 9],
+      monthlySalary: 250_000,
+      homeLoanEMI: 40_000,
+    } as any;
+    const ctx = goalAdvisorContext(
+      goal({ goalType: "kid_education", goalId: "kid_education:1" }),
+      profile,
+    );
+    const json = JSON.stringify(ctx);
+    expect(json).not.toContain("250000");
+    expect(json).not.toContain("40000");
+    expect(json).not.toMatch(/salary|loan|emi/i);
+    expect(ctx.person).toEqual({
+      age: 34,
+      lifeStage: "married_with_kids",
+      riskTolerance: "moderate",
+      childAge: 9,
+    });
+  });
+});
+
+describe("parseGoalAdvice", () => {
+  it("accepts complete JSON, even with surrounding text", () => {
+    expect(
+      parseGoalAdvice('ok {"why":"a","instrumentRationale":"b","watchOut":"c"}'),
+    ).toEqual({ why: "a", instrumentRationale: "b", watchOut: "c" });
+  });
+
+  it("rejects missing fields and junk", () => {
+    expect(parseGoalAdvice('{"why":"a","instrumentRationale":"b"}')).toBeNull();
+    expect(parseGoalAdvice('{"why":"","instrumentRationale":"b","watchOut":"c"}')).toBeNull();
+    expect(parseGoalAdvice("no json")).toBeNull();
+    expect(parseGoalAdvice("{not json}")).toBeNull();
+  });
+
+  it("caps very long fields", () => {
+    const long = "x".repeat(2000);
+    const out = parseGoalAdvice(
+      JSON.stringify({ why: long, instrumentRationale: "b", watchOut: "c" }),
+    );
+    expect(out!.why.length).toBeLessThanOrEqual(400);
+  });
+});
+
+describe("engineGoalAdvice", () => {
+  it("uses the engine numbers and notes underfunding", () => {
+    const a = engineGoalAdvice(goal({}));
+    expect(a.source).toBe("engine");
+    expect(a.why).toContain("₹6,000");
+    expect(a.why).toContain("75%");
+    expect(a.instrumentRationale).toMatch(/compounding/);
+  });
+
+  it("mentions the gold hedge from the engine split", () => {
+    const a = engineGoalAdvice(
+      goal({
+        allocation: allocateGoalPortfolio({ yearsToGoal: 25, monthly: 6_000 }),
+      }),
+    );
+    expect(a.instrumentRationale).toContain("10% (₹600/month) goes to gold");
+  });
+
+  it("explains near-deadline goals as capital protection", () => {
+    const a = engineGoalAdvice(
+      goal({ goalType: "vehicle_purchase", yearsToGoal: 2, monthlyAllocated: 8_000 }),
+    );
+    expect(a.why).toMatch(/near deadline/);
+    expect(a.instrumentRationale).toMatch(/protecting/);
+  });
+});
+
+describe("adviseGoals", () => {
+  it("falls back to engine copy per goal when AI is unavailable", async () => {
+    const goals = [goal({ goalId: "retirement" }), goal({ goalId: "home", goalType: "home_purchase" })];
+    const plans = await adviseGoals(null, "m", goals, {});
+    expect(Object.keys(plans)).toEqual(["retirement", "home"]);
+    expect(plans.home.source).toBe("engine");
+  });
+
+  it("keeps AI answers and falls back only for the goal that failed", async () => {
+    const create = vi
+      .fn()
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: '{"why":"w","instrumentRationale":"i","watchOut":"o"}' } },
+        ],
+      })
+      .mockRejectedValueOnce(new Error("timeout"));
+    const groq = { chat: { completions: { create } } } as any;
+    const goals = [goal({ goalId: "retirement" }), goal({ goalId: "home", goalType: "home_purchase" })];
+    const plans = await adviseGoals(groq, "m", goals, {});
+    expect(plans.retirement).toEqual({
+      why: "w",
+      instrumentRationale: "i",
+      watchOut: "o",
+      source: "ai",
+    });
+    expect(plans.home.source).toBe("engine");
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(create.mock.calls[0][0].response_format).toEqual({ type: "json_object" });
+  });
+});
+
+describe("goals past the AI cap", () => {
+  it("still get engine text, and the summary covers every funded goal", async () => {
+    const create = vi.fn().mockResolvedValue({
+      choices: [
+        { message: { content: '{"why":"w","instrumentRationale":"i","watchOut":"o"}' } },
+      ],
+    });
+    const groq = { chat: { completions: { create } } } as any;
+    const goals = Array.from({ length: 10 }, (_, i) =>
+      goal({ goalId: `g${i}`, label: `Goal ${i}`, monthlyAllocated: 1_000 }),
+    );
+    const plans = await adviseGoals(groq, "m", goals, {});
+    expect(create).toHaveBeenCalledTimes(8);
+    expect(Object.keys(plans)).toHaveLength(10);
+    expect(goals.slice(0, 8).every((g) => plans[g.goalId!].source === "ai")).toBe(true);
+    expect(plans.g8.source).toBe("engine");
+    expect(plans.g9.source).toBe("engine");
+    expect(plans.g9.why).toContain("₹1,000");
+
+    const summary = assembleGoalAdvice(goals, plans);
+    expect(summary).toContain("10 goals");
+    expect(summary).toContain("₹10,000/month");
+    expect(summary).toContain("Goal 9 (₹1,000/mo");
+  });
+});
+
+describe("assembleGoalAdvice", () => {
+  it("summarises every goal with its allocation", () => {
+    const goals = [goal({ goalId: "a", label: "A" }), goal({ goalId: "b", label: "B", monthlyAllocated: 4_000 })];
+    const text = assembleGoalAdvice(goals, {});
+    expect(text).toContain("₹10,000/month");
+    expect(text).toContain("2 goals");
+    expect(text).toContain("A (₹6,000/mo");
+    expect(text).toContain("B (₹4,000/mo");
+  });
+
+  it("handles no funded goals", () => {
+    expect(assembleGoalAdvice([], {})).toMatch(/priority items/);
+  });
+});
+
+describe("goal knowledge", () => {
+  it("falls back to bundled notes without a database", async () => {
+    const notes = await retrieveGoalKnowledge("kid_education");
+    expect(notes.length).toBeGreaterThan(0);
+    expect(notes.some((n) => /education/i.test(n.title))).toBe(true);
+  });
+
+  it("migration 039 seeds every bundled entry", () => {
+    const sql = readFileSync(
+      join(__dirname, "../../supabase/migrations/039_goal_knowledge.sql"),
+      "utf8",
+    );
+    for (const entry of GOAL_KNOWLEDGE) {
+      expect(sql).toContain(`'${entry.title.replace(/'/g, "''")}'`);
+    }
+  });
+});

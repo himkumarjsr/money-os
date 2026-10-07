@@ -17,10 +17,11 @@ const INVEST_WARN_PCT = 17;
 function resolveCaps(
   hasHomeLoan: boolean,
   caps?: SpeedoMeterCaps,
-): SpeedoMeterCaps {
+): Required<SpeedoMeterCaps> {
   return {
     needs: caps?.needs ?? (hasHomeLoan ? 0.3 : 0.2),
     wants: caps?.wants ?? 0.05,
+    security: caps?.security ?? 0.05,
     loans: caps?.loans ?? 0.4,
     investment: caps?.investment ?? (hasHomeLoan ? 0.2 : 0.3),
   };
@@ -35,6 +36,7 @@ const R_PROGRESS = (R_OUT + R_IN) / 2;
 const COLORS = {
   needs: "#534AB7",
   wants: "#BA7517",
+  security: "#2E7DB5",
   loans: "#E24B4A",
   investment: "#1D9E75",
   green: "#1D9E75",
@@ -153,11 +155,18 @@ function chipLabelInvest(st: Status): string {
 type AnimFracs = {
   needs: number;
   wants: number;
+  security: number;
   loans: number;
   investment: number;
 };
 
-const ZERO_FRACS: AnimFracs = { needs: 0, wants: 0, loans: 0, investment: 0 };
+const ZERO_FRACS: AnimFracs = {
+  needs: 0,
+  wants: 0,
+  security: 0,
+  loans: 0,
+  investment: 0,
+};
 
 function useAnimatedFracs(targets: AnimFracs, durationMs = 600): AnimFracs {
   const [out, setOut] = useState<AnimFracs>(ZERO_FRACS);
@@ -175,6 +184,7 @@ function useAnimatedFracs(targets: AnimFracs, durationMs = 600): AnimFracs {
       setOut({
         needs: from.needs + (targets.needs - from.needs) * ease,
         wants: from.wants + (targets.wants - from.wants) * ease,
+        security: from.security + (targets.security - from.security) * ease,
         loans: from.loans + (targets.loans - from.loans) * ease,
         investment:
           from.investment + (targets.investment - from.investment) * ease,
@@ -424,12 +434,13 @@ export function SpeedoMeterSingle({
   );
 }
 
-/** Web: `SpeedoMeter` multi mode — 4 bucket gauges, chips, insights, footnote. */
+/** Web: `SpeedoMeter` multi mode — 5 bucket gauges, chips, insights, footnote. */
 export function SpeedoMeterMulti(props: SpeedoMeterProps) {
   const {
     income,
     needs,
     wants,
+    security = 0,
     loans,
     investment,
     hasHomeLoan = false,
@@ -440,6 +451,12 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
     () => ({
       needs: needleTargetFrac(needs, income, c.needs, SPEND_RANGE_MULT),
       wants: needleTargetFrac(wants, income, c.wants, SPEND_RANGE_MULT),
+      security: needleTargetFrac(
+        security,
+        income,
+        c.security,
+        SPEND_RANGE_MULT,
+      ),
       loans: needleTargetFrac(loans, income, c.loans, SPEND_RANGE_MULT),
       investment: needleTargetFrac(
         investment,
@@ -448,24 +465,39 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
         INVEST_RANGE_MULT,
       ),
     }),
-    [income, needs, wants, loans, investment, c.needs, c.wants, c.loans, c.investment],
+    [
+      income,
+      needs,
+      wants,
+      security,
+      loans,
+      investment,
+      c.needs,
+      c.wants,
+      c.security,
+      c.loans,
+      c.investment,
+    ],
   );
   const anim = useAnimatedFracs(targets);
 
   const pct = {
     needs: income > 0 ? (needs / income) * 100 : 0,
     wants: income > 0 ? (wants / income) * 100 : 0,
+    security: income > 0 ? (security / income) * 100 : 0,
     loans: income > 0 ? (loans / income) * 100 : 0,
     investment: income > 0 ? (investment / income) * 100 : 0,
   };
   const stN = spendStatus(pct.needs, c.needs * 100);
   const stW = spendStatus(pct.wants, c.wants * 100);
+  const stS = spendStatus(pct.security, c.security * 100);
   const stL = spendStatus(pct.loans, c.loans * 100);
   const stI = investStatus(pct.investment);
   const fmtPct = (v: number) => (income > 0 ? v.toFixed(0) : "—");
 
   const needsCapPct = Math.round(c.needs * 100);
   const wantsCapPct = Math.round(c.wants * 100);
+  const securityCapPct = Math.round(c.security * 100);
   const loansCapPct = Math.round(c.loans * 100);
   const issues: string[] = [];
   if (spendStatus(pct.needs, needsCapPct) !== "good") {
@@ -480,6 +512,15 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
       `Wants are over the ${wantsCapPct}% cap — ease discretionary spend.`,
     );
   }
+  if (income > 0 && security <= 0) {
+    issues.push(
+      "No insurance premiums on file — health and term cover protect everything else.",
+    );
+  } else if (spendStatus(pct.security, securityCapPct) !== "good") {
+    issues.push(
+      `Insurance premiums are above the ${securityCapPct}% guide — review overlapping or investment-linked policies.`,
+    );
+  }
   if (spendStatus(pct.loans, loansCapPct) !== "good") {
     issues.push(`Loan outflows exceed the ${loansCapPct}% safety guide.`);
   }
@@ -490,7 +531,7 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
         : `Investment flow is under ${INVEST_FLOOR_PCT}% — try to step up toward ${INVEST_FLOOR_PCT}% of income.`,
     );
   }
-  const t = needs + wants + loans + investment;
+  const t = needs + wants + security + loans + investment;
   if (income > 0 && t > income + 1e-6) {
     issues.push("Total allocations exceed take-home — recheck inputs.");
   }
@@ -530,6 +571,23 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
             rangeMultiplier={SPEND_RANGE_MULT}
             capLabel={`cap ${wantsCapPct}%`}
             needleFrac={anim.wants}
+          />
+        </GaugeColumn>
+        <GaugeColumn
+          title="Insurance"
+          labelColor={COLORS.security}
+          amount={security}
+          status={stS}
+          chipText={`${fmtPct(pct.security)}% · ${chipLabelSpend(stS)}`}
+        >
+          <GaugeSvg
+            kind="spend"
+            amount={security}
+            income={income}
+            capFraction={c.security}
+            rangeMultiplier={SPEND_RANGE_MULT}
+            capLabel={`cap ${securityCapPct}%`}
+            needleFrac={anim.security}
           />
         </GaugeColumn>
         <GaugeColumn
@@ -578,6 +636,10 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
           text={`Wants ${income > 0 ? `${pct.wants.toFixed(0)}%` : "—"} · ${chipLabelSpend(stW)}`}
         />
         <Chip
+          status={stS}
+          text={`Insurance ${income > 0 ? `${pct.security.toFixed(0)}%` : "—"} · ${chipLabelSpend(stS)}`}
+        />
+        <Chip
           status={stL}
           text={`Loans ${income > 0 ? `${pct.loans.toFixed(0)}%` : "—"} · ${chipLabelSpend(stL)}`}
         />
@@ -617,6 +679,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
     rowGap: 12,
   },
   gaugeCol: {

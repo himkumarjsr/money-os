@@ -7,10 +7,10 @@ import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
+import GoalsSection from "@/components/analyse/GoalsSection";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
-import { supabase } from "@/lib/supabase";
 import {
   analyseFinances,
   assessTermCover,
@@ -34,7 +34,9 @@ import {
   profileSummaryLabels,
 } from "./resultModel";
 import { useAuthStore } from "@/store/authStore";
+import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
+import { useObligationStore } from "@/store/obligationStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState } from "react";
@@ -42,8 +44,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 export default function AnalyseResultPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { result, lastSubmission, hasHydrated, hydrateFromSnapshot } =
-    useFinancialStore();
+  const { result, lastSubmission, hasHydrated } = useFinancialStore();
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showFeedback, setShowFeedback] = useState(true);
@@ -53,34 +54,10 @@ export default function AnalyseResultPage() {
     );
   };
 
+  useRestoreAnalyseSnapshot(user?.id);
   useEffect(() => {
-    const restoreData = async () => {
-      if (result && lastSubmission) return;
-      if (!user?.id) return;
-      if (!supabase) return;
-
-      try {
-        const { data } = await supabase
-          .from("user_analyse_snapshots")
-          .select("payload")
-          .eq("user_id", user.id)
-          .single();
-
-        if (data?.payload) {
-          const snapshot = data.payload as any;
-          if (snapshot.lastSubmission && snapshot.result) {
-            hydrateFromSnapshot(snapshot.lastSubmission, snapshot.result, {
-              setAiPlan: true,
-            } as any);
-          }
-        }
-      } catch (err) {
-        console.log("No snapshot found:", err);
-      }
-    };
-
-    void restoreData();
-  }, [user?.id, result, lastSubmission, hydrateFromSnapshot]);
+    if (user?.id) void useObligationStore.getState().syncLoansToAnalyse(user.id);
+  }, [user?.id]);
 
   const analysis = useMemo(() => {
     if (!lastSubmission) return null;
@@ -946,6 +923,8 @@ export default function AnalyseResultPage() {
               />
             </div>
           </section>
+
+          <GoalsSection profile={profile} userId={user?.id} />
 
           <section className="rounded-2xl border border-[#DCD8F4] bg-white p-5">
             <h2 className="text-xl font-semibold">

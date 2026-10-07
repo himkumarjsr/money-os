@@ -12,6 +12,7 @@ import {
   TRACKER_CATEGORIES,
   countsTowardTrackerTotals,
   findSubcategory,
+  normalizeTrackerBucket,
 } from "@/lib/tracker-categories";
 import {
   TrackerIconBadge,
@@ -20,7 +21,11 @@ import {
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
-import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
+import {
+  formatExpenseDate,
+  localISODate,
+  msUntilNextLocalMidnight,
+} from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
@@ -230,6 +235,7 @@ function TrackerContent() {
     "needs",
     "wants",
     "habits",
+    "security",
     "loans",
     "investment",
   ] as const;
@@ -414,9 +420,15 @@ function TrackerContent() {
           console.warn("tracker fetch:", currentRes.error.message);
         if (prevRes.error)
           console.warn("tracker prev fetch:", prevRes.error.message);
-        const prevRows = (prevRes.data as TrackerTransaction[]) || [];
-        const prev2Rows = (prev2Res.data as TrackerTransaction[]) || [];
-        setTransactions((currentRes.data as TrackerTransaction[]) || []);
+        const prevRows = ((prevRes.data as TrackerTransaction[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        const prev2Rows = ((prev2Res.data as TrackerTransaction[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        setTransactions(
+          ((currentRes.data as TrackerTransaction[]) || []).map(normalizeTrackerBucket),
+        );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
       } catch (e) {
@@ -1049,7 +1061,14 @@ function TrackerContent() {
       setSelectedMonth((m) => m + 1);
     }
   };
-  const buckets = ["needs", "wants", "habits", "loans", "investment"] as const;
+  const buckets = [
+    "needs",
+    "wants",
+    "habits",
+    "security",
+    "loans",
+    "investment",
+  ] as const;
   const incomeVisible = isSectionVisible("income");
 
   const summaryCardInner = (visible: boolean) => (
@@ -1616,7 +1635,9 @@ function TrackerContent() {
                           }}
                         >
                           {sub?.label ?? txn.category} ·{" "}
-                          {txn.description?.trim() || dateLabel}
+                          {txn.description?.trim()
+                            ? `${txn.description.trim()} · ${dateLabel}`
+                            : dateLabel}
                         </div>
                       </div>
                       <div
@@ -2128,16 +2149,18 @@ function TrackerContent() {
                                       whiteSpace: "nowrap",
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
-                                      maxWidth: 220,
+                                      maxWidth: 260,
                                     }}
                                   >
+                                    {displayExpenseDescription(txn.description)}
                                     {displayExpenseDescription(
                                       txn.description,
-                                    ) ||
-                                      new Date(txn.date).toLocaleDateString(
-                                        "en-IN",
-                                        { day: "numeric", month: "short" },
-                                      )}
+                                    ) && formatExpenseDate(txn.date)
+                                      ? " · "
+                                      : ""}
+                                    <span style={{ color: "#9B9A94" }}>
+                                      {formatExpenseDate(txn.date)}
+                                    </span>
                                   </div>
                                 </div>
                                 <div

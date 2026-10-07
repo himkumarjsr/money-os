@@ -94,3 +94,20 @@ describe("apiGuard helpers", () => {
     await expect(getAuthedUser()).resolves.toBeNull();
   });
 });
+
+describe("rateLimit cost weighting", () => {
+  it("spends cost units and refuses a request that would overshoot", () => {
+    const key = `weighted-${Math.random()}`;
+    expect(rateLimit(key, 10, 60_000, 4).ok).toBe(true);
+    expect(rateLimit(key, 10, 60_000, 4).ok).toBe(true);
+    const refused = rateLimit(key, 10, 60_000, 4);
+    expect(refused.ok).toBe(false);
+    expect(refused.retryAfter).toBeGreaterThan(0);
+    expect(rateLimit(key, 10, 60_000, 2).ok).toBe(true);
+    expect(rateLimit(key, 10, 60_000, 1).ok).toBe(false);
+  });
+
+  it("refuses a single request costing more than the whole budget", () => {
+    expect(rateLimit(`huge-${Math.random()}`, 5, 60_000, 6).ok).toBe(false);
+  });
+});

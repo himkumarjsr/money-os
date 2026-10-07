@@ -68,6 +68,14 @@ describe("Fix Plan PDF text", () => {
     expect(text).not.toMatch(/^0\.\d+%$/m);
   });
 
+  it("prints all five budget buckets, including the 5% insurance row", () => {
+    const table = text.slice(text.indexOf("Monthly Budget Allocation"));
+    const labels = table.split("\n").slice(6, 36);
+    for (const label of ["Needs", "Wants", "Insurance", "Loans", "Investment"])
+      expect(labels).toContain(label);
+    for (const cap of ["30%", "5%", "40%", "20%"]) expect(labels).toContain(cap);
+  });
+
   it("labels the goal instead of printing the enum", () => {
     expect(text).toContain("Retire early");
     expect(text).not.toContain("retire_early");

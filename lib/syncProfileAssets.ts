@@ -4,7 +4,10 @@ import {
   type FinancialProfile,
 } from "@/lib/analyse-form-schema";
 import { analyseFinances } from "@/lib/financialEngine";
-import { upsertUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import {
+  ANALYSE_SNAPSHOT_VERSION,
+  upsertUserAnalyseSnapshot,
+} from "@/lib/userAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
 
 /** Ensure we always have a workable profile even before first analysis submit. */
@@ -37,7 +40,7 @@ export async function syncProfileAssets(input: {
       profile,
       result,
       submittedAt: new Date().toISOString(),
-      version: "1.0",
+      version: ANALYSE_SNAPSHOT_VERSION,
       aiPlan: (input.aiPlan as never) ?? useFinancialStore.getState().aiPlan,
       analysis: useFinancialStore.getState().analysis ?? undefined,
     });

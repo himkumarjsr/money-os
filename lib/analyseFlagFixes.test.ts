@@ -395,8 +395,16 @@ describe("mobile keeps byte-identical copies of shared logic", () => {
     "analyseResultModel.ts",
     "financialEngine.ts",
     "fixPlanMerge.ts",
+    "goalDetection.ts",
+    "goalFunding.ts",
+    "netWorthTrajectory.ts",
     "paywallCopy.ts",
+    "plannedInvestments.ts",
+    "portfolioAllocation.ts",
     "priorityEngine.ts",
+    "reportTrust.ts",
+    "riskProfile.ts",
+    "saveAnalyseProfile.ts",
     "universal-buckets.ts",
   ];
   it.each(shared)("%s", (file) => {

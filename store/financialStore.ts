@@ -17,23 +17,31 @@ import {
 
 const FINANCIAL_PERSIST_NAME = "finkoin-financial";
 
-/** One localStorage key per auth user so drafts/results never leak across accounts. */
+/** Older builds kept exact salary / loans / cover in localStorage indefinitely. */
+function purgeLegacyLocalCopies(name: string) {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k === name || k?.startsWith(`${name}:`)) localStorage.removeItem(k);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * One sessionStorage key per auth user so drafts/results never leak across
+ * accounts. Session-only: the profile holds exact salary, loans and cover, so
+ * it is cleared when the tab closes; signed-in users restore from the server
+ * snapshot (useRestoreAnalyseSnapshot).
+ */
 function createUserScopedFinancialStorage(): StateStorage {
   return {
     getItem: (name) => {
+      purgeLegacyLocalCopies(name);
       const uid = useAuthStore.getState().user?.id ?? "__guest__";
-      const key = `${name}:${uid}`;
       try {
-        let value = localStorage.getItem(key);
-        if (value == null && uid === "__guest__") {
-          const legacy = localStorage.getItem(name);
-          if (legacy != null) {
-            localStorage.setItem(key, legacy);
-            localStorage.removeItem(name);
-            value = legacy;
-          }
-        }
-        return value;
+        return sessionStorage.getItem(`${name}:${uid}`);
       } catch {
         return null;
       }
@@ -41,7 +49,7 @@ function createUserScopedFinancialStorage(): StateStorage {
     setItem: (name, value) => {
       const uid = useAuthStore.getState().user?.id ?? "__guest__";
       try {
-        localStorage.setItem(`${name}:${uid}`, value);
+        sessionStorage.setItem(`${name}:${uid}`, value);
       } catch {
         /* ignore quota / private mode */
       }
@@ -49,7 +57,7 @@ function createUserScopedFinancialStorage(): StateStorage {
     removeItem: (name) => {
       const uid = useAuthStore.getState().user?.id ?? "__guest__";
       try {
-        localStorage.removeItem(`${name}:${uid}`);
+        sessionStorage.removeItem(`${name}:${uid}`);
       } catch {
         /* ignore */
       }

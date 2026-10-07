@@ -1,0 +1,43 @@
+-- Per-goal reference content for the goal advisor (lib/rag/goalKnowledge.ts is the source of truth).
+-- finkoin_knowledge is shared, non-user reference content: RLS stays as-is (read-only "knowledge_read").
+-- Idempotent: rows are skipped when a row with the same title already exists.
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'any', 'Match the instrument to when the money is needed', 'Money needed within 1 year belongs in a savings account, liquid fund or sweep-in FD — capital safety beats returns. 1–3 years: bank FDs, short-duration debt funds or arbitrage funds. 3–7 years: hybrid/balanced funds and bonds. 7+ years: equity index funds (Nifty 50 first, then flexi-cap) plus PPF/EPF/NPS. As a goal gets within 2–3 years of its date, shift its corpus step by step from equity to debt so a market fall can''t derail it. Gold is a 5–10% hedge, never a goal of its own.', array['goal:any']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Match the instrument to when the money is needed');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'any', 'How returns are taxed (FY2024-25 onwards)', 'Equity funds: gains on units held over 12 months are long-term, taxed at 12.5% above ₹1.25 lakh a year; under 12 months, 20%. Debt funds bought after 1 April 2023 are taxed at your income slab regardless of holding period, like FD interest. Arbitrage funds are taxed as equity, which makes them more tax-efficient than FDs for people in higher slabs on holds of 1–3 years. PPF and SSY interest and maturity are tax-free.', array['goal:any']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'How returns are taxed (FY2024-25 onwards)');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'kid_education', 'Child education: plan for education inflation', 'Higher-education costs in India have historically risen around 8–10% a year, faster than general inflation, so a target in today''s rupees grows quickly. For a child under 10, the fund has a long runway — equity index SIPs do most of the work, stepped up yearly with income. From about 3 years before college, move the accumulated corpus gradually to debt. For a daughter under 10, Sukanya Samriddhi Yojana gives a government-backed, tax-free return and can sit alongside equity SIPs. Avoid child ULIPs and endowment ''child plans'' — high charges, low cover.', array['goal:kid_education']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Child education: plan for education inflation');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'kid_marriage', 'Child''s marriage fund', 'A marriage fund 15–25 years away is a long-horizon equity goal; starting early means a far smaller monthly amount than starting at 15. Keep it separate from the education fund so one doesn''t quietly eat the other. Shift it to debt in the last 2–3 years. The amount is a family choice — Finkoin''s default is a planning number, not a recommendation to spend it.', array['goal:kid_marriage']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Child''s marriage fund');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'home_purchase', 'Home purchase: downpayment and the real cost of buying', 'Banks typically fund up to 75–80% of a home''s value, so plan a downpayment of at least 20% plus another 7–10% for stamp duty, registration and interiors. Keep the downpayment fund out of pure equity once the purchase is under 3 years away. Keep the EMI within about 30–35% of take-home income so the purchase doesn''t crowd out every other goal. Don''t drain the emergency fund for the downpayment.', array['goal:home_purchase']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Home purchase: downpayment and the real cost of buying');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'vehicle_purchase', 'Vehicle purchase: save, don''t finance depreciation', 'A car loses value from day one, so financing it at 9–12% means paying interest on a depreciating asset. Saving for 2–3 years in an RD, FD or short-duration debt fund lets you buy with cash or a much smaller loan. Budget for insurance, fuel and maintenance on top of the sticker price. Equity is too volatile for a purchase under 3 years away.', array['goal:vehicle_purchase']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Vehicle purchase: save, don''t finance depreciation');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'parents_eldercare', 'Parents'' eldercare: medical costs come first', 'Senior health insurance is expensive and often has waiting periods and co-pays for pre-existing conditions, so a dedicated medical buffer matters even with cover. Keep the eldercare fund in low-volatility instruments — FDs, Senior Citizens'' Savings Scheme in the parent''s name (if eligible), or short-duration debt funds. Premiums paid for parents'' health insurance qualify for an extra deduction under Section 80D.', array['goal:parents_eldercare']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Parents'' eldercare: medical costs come first');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'retirement', 'Retirement: the corpus has to last 25–30 years', 'A common planning rule is a corpus of about 25 times your annual expenses at retirement. EPF, PPF and NPS compound with you and count toward it. For anyone over 15 years from retirement, equity index funds should do most of the growth; time in the market absorbs volatility. NPS adds an extra ₹50,000 deduction under Section 80CCD(1B) in the old tax regime. Never pause retirement saving entirely for shorter goals — every year skipped is a year of compounding lost.', array['goal:retirement']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Retirement: the corpus has to last 25–30 years');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'marriage', 'Wedding fund: a hard deadline', 'A wedding 1–3 years out has a fixed date that can''t move if markets fall, so keep the fund in FDs, RDs or short-duration debt funds, not equity. Agree a budget early and fund it monthly rather than borrowing — personal loans for weddings typically cost 12–16% and follow you into married life. Keep the emergency fund separate.', array['goal:marriage']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Wedding fund: a hard deadline');
+
+insert into public.finkoin_knowledge (category, subcategory, title, content, keywords, applies_when, source, is_active)
+select 'goal_planning', 'baby', 'Baby fund: delivery, first year, and insurance timing', 'Delivery costs vary widely — a normal delivery at a private hospital in a metro can be under a lakh, a C-section or NICU stay several lakhs. Many health policies cover maternity only after a 2–4 year waiting period, so check your policy now. Keep this fund fully liquid (savings, liquid fund, FD). After the baby arrives, review term cover and add the child to the family floater.', array['goal:baby']::text[], 'per-goal advisor', 'finkoin goal advisor content', true
+where not exists (select 1 from public.finkoin_knowledge where title = 'Baby fund: delivery, first year, and insurance timing');

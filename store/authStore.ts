@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { getSupabase } from "@/lib/supabase";
 import { useGamificationStore } from "@/store/gamificationStore";
 import { create } from "zustand";
@@ -208,7 +209,7 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         console.log("Logout: starting");
         try {
-          await fetch("/api/auth/sign-out", {
+          await apiFetch("/api/auth/sign-out", {
             method: "POST",
             credentials: "include",
             headers: { Accept: "application/json" },

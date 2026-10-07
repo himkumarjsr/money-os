@@ -44,27 +44,35 @@ const buckets = new Map<string, Bucket>();
  * @param limit max requests per window
  * @param windowMs window length in ms
  */
+/**
+ * `cost` lets one request spend more than one unit (e.g. an AI report that
+ * fans out to several model calls). A request that would overshoot is refused
+ * without spending anything.
+ */
 export function rateLimit(
   key: string,
   limit: number,
   windowMs: number,
+  cost = 1,
 ): { ok: boolean; retryAfter: number } {
   const now = Date.now();
+  const units = Math.max(1, Math.ceil(cost));
   const existing = buckets.get(key);
 
   if (!existing || now >= existing.resetAt) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    if (units > limit) return { ok: false, retryAfter: Math.ceil(windowMs / 1000) };
+    buckets.set(key, { count: units, resetAt: now + windowMs });
     return { ok: true, retryAfter: 0 };
   }
 
-  if (existing.count >= limit) {
+  if (existing.count + units > limit) {
     return {
       ok: false,
       retryAfter: Math.ceil((existing.resetAt - now) / 1000),
     };
   }
 
-  existing.count += 1;
+  existing.count += units;
   return { ok: true, retryAfter: 0 };
 }
 

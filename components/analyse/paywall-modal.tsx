@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { supabase } from "@/lib/supabase";
 import { paywallConfirmLabel } from "@/lib/paywallCopy";
 import { Analytics } from "@/lib/analytics";
@@ -141,7 +142,7 @@ export function PaywallModal({
     setRzpLoading(true);
     Analytics.paymentStarted(99);
     try {
-      const cfgRes = await fetch("/api/razorpay/checkout-config");
+      const cfgRes = await apiFetch("/api/razorpay/checkout-config");
       const cfgJson = (await cfgRes.json()) as { keyId?: string; error?: string };
       if (!cfgRes.ok || !cfgJson.keyId) {
         throw new Error(cfgJson.error || "Payments are not configured.");
@@ -156,7 +157,7 @@ export function PaywallModal({
         throw new Error("Session expired. Please sign in again.");
       }
 
-      const orderRes = await fetch("/api/razorpay/create-order", {
+      const orderRes = await apiFetch("/api/razorpay/create-order", {
         method: "POST",
       });
       const orderJson = (await orderRes.json()) as {
@@ -206,7 +207,7 @@ export function PaywallModal({
         },
         handler: async (response: RazorpaySuccessPayload) => {
           try {
-            const verifyRes = await fetch("/api/razorpay/verify-payment", {
+            const verifyRes = await apiFetch("/api/razorpay/verify-payment", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",

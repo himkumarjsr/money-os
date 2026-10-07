@@ -36,9 +36,10 @@ import {
   TRACKER_CATEGORIES,
   countsTowardTrackerTotals,
   findSubcategory,
+  normalizeTrackerBucket,
   type BucketType,
 } from "@/lib/tracker-categories";
-import { localISODate } from "@/lib/localDate";
+import { formatExpenseDate, localISODate } from "@/lib/localDate";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
   computeMonthSafetyPulse,
@@ -82,6 +83,7 @@ const BUCKETS: BucketType[] = [
   "needs",
   "wants",
   "habits",
+  "security",
   "loans",
   "investment",
 ];
@@ -172,6 +174,7 @@ export default function TrackerScreen() {
     "needs",
     "wants",
     "habits",
+    "security",
     "loans",
     "investment",
   ] as const;
@@ -282,9 +285,15 @@ export default function TrackerScreen() {
             .order("date", { ascending: false }),
         ]);
         if (fetchReqId.current !== myId) return;
-        const prevRows = (prevRes.data as TrackerTxn[]) || [];
-        const prev2Rows = (prev2Res.data as TrackerTxn[]) || [];
-        setTransactions((currentRes.data as TrackerTxn[]) || []);
+        const prevRows = ((prevRes.data as TrackerTxn[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        const prev2Rows = ((prev2Res.data as TrackerTxn[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        setTransactions(
+          ((currentRes.data as TrackerTxn[]) || []).map(normalizeTrackerBucket),
+        );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
       } catch (e) {
@@ -1201,11 +1210,12 @@ export default function TrackerScreen() {
                         </Text>
                         <Text style={styles.txnMeta} numberOfLines={1}>
                           {sub?.label ?? txn.category} ·{" "}
-                          {txn.description?.trim() ||
-                            new Date(txn.date).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                            })}
+                          {[
+                            txn.description?.trim(),
+                            formatExpenseDate(txn.date),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </Text>
                       </View>
                       <View style={{ flexDirection: "row", gap: 4 }}>
@@ -1438,16 +1448,14 @@ export default function TrackerScreen() {
                                     style={styles.txnMeta}
                                     numberOfLines={1}
                                   >
-                                    {displayExpenseDescription(
-                                      txn.description,
-                                    ) ||
-                                      new Date(txn.date).toLocaleDateString(
-                                        "en-IN",
-                                        {
-                                          day: "numeric",
-                                          month: "short",
-                                        },
-                                      )}
+                                    {[
+                                      displayExpenseDescription(
+                                        txn.description,
+                                      ),
+                                      formatExpenseDate(txn.date),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
                                   </Text>
                                 </View>
                                 <View style={{ flexDirection: "row", gap: 4 }}>

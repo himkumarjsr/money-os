@@ -4,6 +4,7 @@ import AddObligationForm, {
   type ObligationFormPayload,
 } from "@/components/tracker/AddObligationForm";
 import CollapsiblePanel from "@/components/tracker/CollapsiblePanel";
+import PlannedInvestmentsSection from "@/components/tracker/PlannedInvestmentsSection";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
@@ -489,6 +490,7 @@ export default function ObligationsChecklist({
             </div>
           </div>
         )}
+        <PlannedInvestmentsSection userId={userId} />
       </CollapsiblePanel>
 
       {confirmReset ? (
