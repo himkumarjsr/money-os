@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 export default function NotificationBell() {
   const { user, isLoggedIn } = useAuthStore();
@@ -29,7 +30,7 @@ export default function NotificationBell() {
 
     const supabase = getSupabase();
     const sub = supabase
-      .channel(`notifications:${user.id}`)
+      .channel(uniqueChannelName(`notifications:${user.id}`))
       .on(
         "postgres_changes",
         {

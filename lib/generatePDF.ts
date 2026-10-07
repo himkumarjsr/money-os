@@ -7,6 +7,7 @@ import {
 import { humaniseEnum } from "@/lib/analyseResultModel";
 import { localISODate } from "@/lib/localDate";
 import { scoreBand } from "@/lib/financialEngine";
+import { COMPLETE_WHY, isPriorityComplete } from "@/lib/fixPlanMerge";
 import { debtPayoffNumbers } from "@/lib/priorityEngine";
 import { getUniversalBucketRows } from "@/lib/universal-buckets";
 
@@ -83,6 +84,37 @@ function labelOrDash(
 ): string {
   if (!value) return "—";
   return labels[value] ?? humaniseEnum(value);
+}
+
+/** Bucket caps are stored as fractions (0.3); older rows may hold whole percents (30). */
+export function formatCapPercent(value: unknown): string {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "0%";
+  const pct = n <= 1 ? n * 100 : n;
+  return `${Number(pct.toFixed(1))}%`;
+}
+
+const BUCKET_STATUS_LABELS: Record<string, string> = {
+  good: "On track",
+  ok: "On track",
+  warning: "Near cap",
+  critical: "Over cap",
+  na: "—",
+};
+
+function bucketStatusLabel(status: unknown): string {
+  if (typeof status !== "string" || !status) return "—";
+  return BUCKET_STATUS_LABELS[status] ?? humaniseEnum(status);
+}
+
+/** Shrink `text` until it fits `maxWidth`, ending with "…". */
+function fitSingleLine(doc: jsPDF, text: string, maxWidth: number): string {
+  if (doc.getTextWidth(text) <= maxWidth) return text;
+  let cut = text;
+  while (cut.length > 1 && doc.getTextWidth(`${cut}…`) > maxWidth) {
+    cut = cut.slice(0, -1);
+  }
+  return `${cut.trimEnd()}…`;
 }
 
 const UNICODE_FONT = "NotoSans";
@@ -247,27 +279,38 @@ export function buildFixPlanPdf(
     });
     y += 8;
 
+    const lineH = 4.2;
     rows.forEach((row, ri) => {
-      if (y > H - 20) newPage();
-      if (ri % 2 === 0) {
-        doc.setFillColor(250, 250, 250);
-        doc.rect(M, y - 4, UW, 7, "F");
-      }
-
       doc.setFontSize(9);
       doc.setFont(FONT, "normal");
+      const cellLines = row.map((cell, ci) =>
+        cell === CHECKBOX_CELL
+          ? [cell]
+          : (doc.splitTextToSize(
+              String(cell ?? ""),
+              Math.max(4, colWidths[ci] - 4),
+            ) as string[]),
+      );
+      const lineCount = Math.max(1, ...cellLines.map((l) => l.length));
+      const rowH = 7 + (lineCount - 1) * lineH;
+      if (y + rowH > H - 14) newPage();
+      if (ri % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(M, y - 4, UW, rowH, "F");
+      }
+
       doc.setTextColor(...DARK);
       x = M;
-      row.forEach((cell, ci) => {
-        if (cell === CHECKBOX_CELL) {
+      cellLines.forEach((lines, ci) => {
+        if (lines[0] === CHECKBOX_CELL) {
           doc.setDrawColor(...DARK);
           doc.rect(x + 3, y - 3, 3.5, 3.5, "S");
         } else {
-          doc.text(String(cell).slice(0, 30), x + 2, y);
+          lines.forEach((line, li) => doc.text(line, x + 2, y + li * lineH));
         }
         x += colWidths[ci];
       });
-      y += 7;
+      y += rowH;
     });
     y += 4;
   };
@@ -356,7 +399,7 @@ export function buildFixPlanPdf(
         tasks: [
           criticals[0]?.actionThisWeek || "Open liquid mutual fund account",
           debts[0]
-            ? `Get quotes to close ${debts[0].type}`
+            ? `Get quotes to close ${debts[0].displayName || humaniseEnum(debts[0].type)}`
             : "Review monthly spending buckets",
           "Set up Parag Parikh or HDFC liquid fund",
         ],
@@ -383,7 +426,7 @@ export function buildFixPlanPdf(
           `Increase SIP to ₹${Math.round(surplus * 0.2).toLocaleString("en-IN")}/month`,
           "Emergency fund — top up to target",
           debts.length > 0
-            ? `Pay extra ₹${(debts[0].extraEMIRecommended || 0).toLocaleString("en-IN")} on ${debts[0].type}`
+            ? `Pay extra ₹${(debts[0].extraEMIRecommended || 0).toLocaleString("en-IN")} on ${debts[0].displayName || humaniseEnum(debts[0].type)}`
             : "Max PPF contribution ₹1.5L/year",
           "Month 6: review spending drift",
         ],
@@ -465,7 +508,9 @@ export function buildFixPlanPdf(
   ]);
   doc.setFontSize(9);
   doc.setTextColor(...DARK);
+  doc.setFont(FONT, "bold");
   doc.text("Income split", M + 45, y + 8);
+  doc.setFont(FONT, "normal");
   doc.text(`Needs: ${fmt(needsPie)}`, M + 45, y + 14);
   doc.text(`Loans: ${fmt(loansPie)}`, M + 45, y + 20);
   doc.text(`Wants: ${fmt(wantsPie)}`, M + 45, y + 26);
@@ -536,10 +581,10 @@ export function buildFixPlanPdf(
   if (buckets && Object.keys(buckets).length > 0) {
     const bucketRows = Object.entries(buckets).map(([key, bucket]: any) => [
       key.charAt(0).toUpperCase() + key.slice(1),
-      `${bucket.capPercent ?? bucket.capPct ?? 0}%`,
+      formatCapPercent(bucket.capPercent ?? bucket.capPct),
       fmt(bucket.capAmount ?? bucket.cap ?? 0),
       fmt(bucket.actual ?? bucket.actualAmount ?? 0),
-      bucket.status || "—",
+      bucketStatusLabel(bucket.status),
     ]);
     addSmallTable(
       ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
@@ -549,10 +594,10 @@ export function buildFixPlanPdf(
   } else {
     const fallbackBuckets = getUniversalBucketRows(profile).map((row) => [
       row.label,
-      `${Math.round(row.capPercent * 100)}%`,
+      formatCapPercent(row.capPercent),
       fmt(row.capAmount),
       fmt(row.actual),
-      row.status,
+      bucketStatusLabel(row.status),
     ]);
     addSmallTable(
       ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
@@ -673,9 +718,9 @@ export function buildFixPlanPdf(
     const urgencyColor: readonly [number, number, number] =
       p.urgency === "critical" ? RED : p.urgency === "high" ? AMBER : GREEN;
     doc.setFillColor(urgencyColor[0], urgencyColor[1], urgencyColor[2]);
-    doc.rect(M, y - 3, 3, 20, "F");
+    doc.rect(M, y - 3, 3, 24, "F");
     doc.setFillColor(245, 244, 253);
-    doc.rect(M + 3, y - 3, UW - 3, 20, "F");
+    doc.rect(M + 3, y - 3, UW - 3, 24, "F");
     doc.setFontSize(12);
     doc.setFont(FONT, "bold");
     doc.setTextColor(...PURPLE);
@@ -695,42 +740,52 @@ export function buildFixPlanPdf(
       M + 6,
       y + 18,
     );
-    y += 24;
+    y += 26;
     if (p.instrument) {
       doc.setFontSize(9);
       doc.setFont(FONT, "bold");
       doc.setTextColor(...DARK);
       doc.text("Where: ", M + 6, y);
       doc.setFont(FONT, "normal");
-      doc.text(p.instrument, M + 22, y);
-      y += 6;
+      const whereLines = doc.splitTextToSize(
+        String(p.instrument),
+        UW - 22,
+      ) as string[];
+      whereLines.forEach((line, li) => doc.text(line, M + 22, y + li * 5));
+      y += whereLines.length * 5 + 1;
     }
-    const explanation = explanations?.priorityExplanations?.[p.id];
+    const explanation = isPriorityComplete(p)
+      ? COMPLETE_WHY
+      : explanations?.priorityExplanations?.[p.id];
     if (explanation) {
       doc.setFontSize(9);
       doc.setFont(FONT, "italic");
       doc.setTextColor(...GREY);
-      const lines = doc.splitTextToSize(explanation, UW - 6);
-      lines.slice(0, 3).forEach((line: string) => {
+      const lines = doc.splitTextToSize(explanation, UW - 6) as string[];
+      lines.forEach((line) => {
+        if (y > H - 16) newPage();
         doc.text(line, M + 6, y);
         y += 5;
       });
     }
     if (p.actionThisWeek) {
-      doc.setFillColor(235, 248, 243);
-      doc.rect(M, y, UW, 10, "F");
       doc.setFontSize(9);
+      doc.setFont(FONT, "normal");
+      const weekLines = doc.splitTextToSize(
+        String(p.actionThisWeek),
+        UW - 28,
+      ) as string[];
+      const boxH = 10 + (weekLines.length - 1) * 4.5;
+      if (y + boxH > H - 14) newPage();
+      doc.setFillColor(235, 248, 243);
+      doc.rect(M, y, UW, boxH, "F");
       doc.setFont(FONT, "bold");
       doc.setTextColor(...GREEN);
       doc.text("This week: ", M + 3, y + 6);
       doc.setFont(FONT, "normal");
       doc.setTextColor(8, 80, 65);
-      doc.text(
-        doc.splitTextToSize(p.actionThisWeek, UW - 30)[0],
-        M + 25,
-        y + 6,
-      );
-      y += 14;
+      weekLines.forEach((line, li) => doc.text(line, M + 25, y + 6 + li * 4.5));
+      y += boxH + 4;
     }
     y += 4;
   });
@@ -748,7 +803,7 @@ export function buildFixPlanPdf(
       debts.map((d: any) => {
         const { monthsNow } = debtPayoffNumbers(d);
         return [
-          d.displayName || d.type,
+          d.displayName || humaniseEnum(d.type),
           `${d.rate}%`,
           fmt(d.emi),
           fmt(d.extraEMIRecommended),
@@ -765,7 +820,7 @@ export function buildFixPlanPdf(
           String(d.priorityRank),
         ];
       }),
-      [35, 15, 25, 25, 20, 15],
+      [44, 18, 30, 30, 34, 16],
     );
     const totalInterestSaved = debts.reduce(
       (sum: number, d: any) => sum + debtPayoffNumbers(d).interestSaved,
@@ -815,14 +870,21 @@ export function buildFixPlanPdf(
     doc.setFontSize(12);
     doc.setFont(FONT, "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text(`PHASE ${phase.phase}: ${phase.title}`, M + 4, y + 9);
+    const phaseTitle = /^phase\s/i.test(String(phase.title || ""))
+      ? String(phase.title)
+      : `PHASE ${phase.phase}: ${phase.title}`;
+    doc.text(fitSingleLine(doc, phaseTitle, UW - 8), M + 4, y + 9);
     y += 19;
     if (phase.subtitle) {
       doc.setFontSize(9);
       doc.setFont(FONT, "italic");
       doc.setTextColor(...GREY);
-      doc.text(phase.subtitle, M + 2, y);
-      y += 8;
+      const subLines = doc.splitTextToSize(
+        String(phase.subtitle),
+        UW - 4,
+      ) as string[];
+      subLines.forEach((line, li) => doc.text(line, M + 2, y + li * 4.5));
+      y += subLines.length * 4.5 + 3.5;
     }
     phase.tasks?.forEach((task: string) => {
       if (y > H - 20) newPage();
@@ -835,17 +897,25 @@ export function buildFixPlanPdf(
     });
     y += 4;
     if (phase.outcomes?.length > 0) {
-      doc.setFillColor(245, 250, 247);
-      const outH = phase.outcomes.length * 6 + 8;
-      doc.rect(M, y, UW, outH, "F");
       doc.setFontSize(8);
+      doc.setFont(FONT, "normal");
+      const outcomeLines = (phase.outcomes as string[]).map(
+        (o) => doc.splitTextToSize(String(o), UW - 11) as string[],
+      );
+      const totalLines = outcomeLines.reduce((n, l) => n + l.length, 0);
+      const outH = totalLines * 4 + phase.outcomes.length * 2 + 8;
+      if (y + outH > H - 14) newPage();
+      doc.setFillColor(245, 250, 247);
+      doc.rect(M, y, UW, outH, "F");
       doc.setFont(FONT, "bold");
       doc.setTextColor(...GREEN);
       doc.text("BY END OF THIS PHASE:", M + 3, y + 6);
-      phase.outcomes.forEach((outcome: string, i: number) => {
-        doc.setFont(FONT, "normal");
-        drawCheckMark(doc, M + 3, y + 12 + i * 6, GREEN);
-        doc.text(outcome, M + 7.5, y + 12 + i * 6);
+      doc.setFont(FONT, "normal");
+      let oy = y + 12;
+      outcomeLines.forEach((lines) => {
+        drawCheckMark(doc, M + 3, oy, GREEN);
+        lines.forEach((line, li) => doc.text(line, M + 7.5, oy + li * 4));
+        oy += lines.length * 4 + 2;
       });
       y += outH + 8;
     }
@@ -859,7 +929,7 @@ export function buildFixPlanPdf(
       ["Goal", "Target", "Saved", "Monthly needed", "Timeline"],
       [
         [
-          firstGoal.goalType,
+          labelOrDash(PRIMARY_GOAL_LABELS, firstGoal.goalType),
           fmt(firstGoal.targetAmount),
           fmt(firstGoal.currentSaved),
           fmt(firstGoal.monthlyRequired),
@@ -913,7 +983,7 @@ export function buildFixPlanPdf(
         ?.filter((p: any) => p.monthlyContribution > 0)
         .slice(0, 4)
         .map((p: any, i: number) => ({
-          label: p.title.slice(0, 20),
+          label: String(p.title || ""),
           value: p.monthlyContribution,
           color: ["#534AB7", "#1D9E75", "#BA7517", "#6366F1"][i % 4],
         })) || []),
@@ -928,8 +998,9 @@ export function buildFixPlanPdf(
         const g = parseInt(item.color.slice(3, 5), 16);
         const b = parseInt(item.color.slice(5, 7), 16);
         doc.setFontSize(9);
+        doc.setFont(FONT, "normal");
         doc.setTextColor(...DARK);
-        doc.text(item.label, M, y + 1);
+        doc.text(fitSingleLine(doc, item.label, 54), M, y + 1);
         const barW = (item.value / maxVal) * 95;
         doc.setFillColor(r, g, b);
         doc.rect(M + 58, y - 4, barW, 7, "F");
@@ -947,8 +1018,8 @@ export function buildFixPlanPdf(
         String(i + 1),
         a.category,
         fmt(a.amount),
-        a.where?.slice(0, 20) || "—",
-        a.why?.slice(0, 25) || "—",
+        a.where || "—",
+        a.why || "—",
       ]),
       [8, 45, 25, 45, 55],
     );
@@ -977,7 +1048,7 @@ export function buildFixPlanPdf(
   );
   y += 8;
   addText(
-    `Generated on ${new Date().toLocaleDateString("en-IN", { timeZone })} · finkoin.com`,
+    `Generated on ${new Date().toLocaleDateString("en-IN", { timeZone, day: "numeric", month: "long", year: "numeric" })} · finkoin.com`,
     9,
     GREY,
   );

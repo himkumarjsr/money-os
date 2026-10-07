@@ -2,7 +2,7 @@
  * Notification bell — same UI/behavior as web NotificationBell.
  * Finance tips panel from user_notifications.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import Svg, { Path } from "react-native-svg";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Colors } from "@/constants/theme";
-import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -52,32 +51,6 @@ export function NotificationBell() {
     markAllRead,
   } = useNotificationStore();
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!isLoggedIn || !user?.id) return;
-    const uid = user.id;
-    void fetchNotifications(uid);
-
-    const sub = supabase
-      .channel(`notifications:${uid}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "user_notifications",
-          filter: `user_id=eq.${uid}`,
-        },
-        () => {
-          void fetchNotifications(uid);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(sub);
-    };
-  }, [isLoggedIn, user?.id, fetchNotifications]);
 
   const openInbox = (id?: string) => {
     setOpen(false);

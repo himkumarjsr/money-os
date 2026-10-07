@@ -1,10 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import * as WebBrowser from "expo-web-browser";
 import type { PriorityItem } from "@/lib/priorityEngine";
 import { monthsForPriority } from "@/lib/fixPlanMerge";
-import { siteBase } from "@/lib/splitApi";
 import { Colors, Radius, Spacing } from "@/constants/theme";
 import { inr, loc, shared, urgencyColor } from "./shared";
+import { openContentHref } from "@/lib/contentLinks";
 
 type Props = {
   priority: PriorityItem;
@@ -94,9 +93,7 @@ export function PriorityCard({
 
       {isInsurance ? (
         <Pressable
-          onPress={() =>
-            void WebBrowser.openBrowserAsync(`${siteBase()}${learnPath}`)
-          }
+          onPress={() => openContentHref(learnPath)}
           style={styles.learn}
           accessibilityRole="link"
         >

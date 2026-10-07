@@ -5,6 +5,7 @@ import {
   isCreditCardObligationExpense,
   obligationCategoryFromExpense,
   obligationMatchScore,
+  obligationNameMatches,
   planObligationExpenseSync,
 } from "./trackerObligationSync";
 
@@ -461,12 +462,74 @@ describe("expenseCoversChecklistItem", () => {
     ).toBe(true);
   });
 
-  it("is false when amounts differ", () => {
+  it("is true when amounts differ but the note names the obligation", () => {
     expect(
       expenseCoversChecklistItem(66172, "Home loan", "loan_emi", {
         expected_amount: 28760,
         obligation: { title: "Home loan", category: "loan_emi" },
       }),
+    ).toBe(true);
+  });
+
+  it("is false when neither amount nor name match", () => {
+    expect(
+      expenseCoversChecklistItem(66172, "Car service", "loan_emi", {
+        expected_amount: 28760,
+        obligation: { title: "Home loan", category: "loan_emi" },
+      }),
     ).toBe(false);
+  });
+});
+
+describe("name matching after an amount change", () => {
+  const niva = {
+    id: "niva",
+    status: "pending",
+    expected_amount: 19000,
+    obligation: {
+      title: "Niva Bupa",
+      category: "insurance_health",
+      amount: 19000,
+      is_active: true,
+    },
+  };
+
+  it("matches whole names only", () => {
+    expect(obligationNameMatches("Niva Bupa premium", "Niva Bupa")).toBe(true);
+    expect(obligationNameMatches("niva-bupa", "Niva Bupa")).toBe(true);
+    expect(obligationNameMatches("Rent", "Rent")).toBe(true);
+    expect(obligationNameMatches("Parental support", "Rent")).toBe(false);
+    expect(obligationNameMatches("", "Niva Bupa")).toBe(false);
+  });
+
+  it("ticks a renewed premium paid at the new amount", () => {
+    const expense = {
+      id: "e1",
+      amount: 21607,
+      bucket: "needs",
+      subcategory: "health_insurance",
+      description: "Niva Bupa",
+    };
+    expect(findPendingChecklistForExpense([niva], expense)?.id).toBe("niva");
+    expect(
+      planObligationExpenseSync({ checklist: [niva], expenses: [expense] })
+        .markPaid,
+    ).toEqual([{ id: "niva", amount: 21607 }]);
+  });
+
+  it("prefers an amount match over a name-only match", () => {
+    const rent = {
+      id: "rent",
+      status: "pending",
+      expected_amount: 21607,
+      obligation: { title: "Rent", category: "rent", amount: 21607 },
+    };
+    const hit = findPendingChecklistForExpense([niva, rent], {
+      id: "e2",
+      amount: 21607,
+      bucket: "needs",
+      description: "Niva Bupa",
+    });
+    expect(hit?.id).toBe("rent");
   });
 });

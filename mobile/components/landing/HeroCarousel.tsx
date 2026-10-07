@@ -46,7 +46,7 @@ const SLIDES: Slide[] = [
     subtitle:
       "Compare regimes with HRA, 80C, NPS — built for FY 2025-26 planning.",
     cta: "Open calculator",
-    route: "/(tabs)/calculators",
+    route: "/calculators/tax-regime",
   },
   {
     key: "portfolio",

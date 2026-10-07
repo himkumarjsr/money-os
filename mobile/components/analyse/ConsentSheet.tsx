@@ -1,16 +1,10 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Linking,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
 import Button from "@/components/ui/Button";
 import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import { openContentHref } from "@/lib/contentLinks";
 
 const COLLECT = [
   "Income and salary numbers",
@@ -89,9 +83,7 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
             financial data.
           </Text>
           <Pressable
-            onPress={() =>
-              void Linking.openURL("https://www.finkoin.com/legal/privacy")
-            }
+            onPress={() => openContentHref("/legal/privacy")}
             hitSlop={8}
             style={{ marginTop: 8 }}
           >

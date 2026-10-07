@@ -40,10 +40,21 @@ export const monthsForPriority = (id: string, gap: number, monthly: number) => {
   return monthsFromGap(gap, monthly);
 };
 
-const COMPLETE_ACTION =
+export const COMPLETE_ACTION =
   "Maintain this completed bucket and continue monitoring monthly.";
-const COMPLETE_WHY =
+export const COMPLETE_WHY =
   "This bucket is already on track. Keep it funded and shift new surplus to the next gap.";
+
+/** A priority with nothing left to fund — its gap-based copy no longer applies. */
+export function isPriorityComplete(p: {
+  gap?: unknown;
+  monthlyContribution?: unknown;
+  status?: unknown;
+}): boolean {
+  const monthly = Math.max(0, Number(p.monthlyContribution || 0));
+  const gap = Math.max(0, Number(p.gap || 0));
+  return gap <= 0 || monthly <= 0 || p.status === "complete";
+}
 
 /** Engine numbers always win — AI/cache must not resurrect closed medical/emergency gaps. */
 export function mergeEnginePriorityPlan(
@@ -63,7 +74,7 @@ export function mergeEnginePriorityPlan(
         (overlay?.priorities || []).find((o: any) => o?.id === p.id) || {};
       const monthly = Math.max(0, Number(p.monthlyContribution || 0));
       const gap = Math.max(0, Number(p.gap || 0));
-      const isComplete = gap <= 0 || monthly <= 0 || p.status === "complete";
+      const isComplete = isPriorityComplete(p);
       return {
         ...p,
         rank: p.rank,
