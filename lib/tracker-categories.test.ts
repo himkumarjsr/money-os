@@ -3,6 +3,7 @@ import {
   TRACKER_CATEGORIES,
   countsTowardTrackerTotals,
   findSubcategory,
+  normalizeTrackerBucket,
   pickerSubcategories,
   type BucketType,
 } from "./tracker-categories";
@@ -88,5 +89,29 @@ describe("TRACKER_CATEGORIES", () => {
         payment_method: "upi",
       }),
     ).toBe(true);
+  });
+
+  it("spend caps add up to 100%, matching Analyse's five buckets", () => {
+    const total = BUCKETS.reduce((sum, b) => sum + TRACKER_CATEGORIES[b].cap, 0);
+    expect(total).toBe(100);
+    expect(TRACKER_CATEGORIES.security.cap).toBe(5);
+  });
+
+  it("files insurance under Security, not Investments", () => {
+    expect(findSubcategory("security", "health_insurance")).not.toBeNull();
+    expect(findSubcategory("investment", "insurance_premium")).toBeNull();
+  });
+
+  it("reads legacy investment-bucket insurance rows as Security", () => {
+    expect(
+      normalizeTrackerBucket({
+        bucket: "investment",
+        subcategory: "insurance_premium",
+      }).bucket,
+    ).toBe("security");
+    expect(
+      normalizeTrackerBucket({ bucket: "investment", subcategory: "sip" })
+        .bucket,
+    ).toBe("investment");
   });
 });

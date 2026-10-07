@@ -13,6 +13,15 @@ export const LOADING_MESSAGES = [
   "Almost ready...",
 ];
 
+/** Per-goal narrative from the goal advisor (engine numbers stay in priorityPlan.goals). */
+export type GoalAdvice = {
+  why: string;
+  instrumentRationale: string;
+  watchOut: string;
+  /** "ai" = model call grounded in goal notes; "engine" = deterministic fallback. */
+  source: "ai" | "engine";
+};
+
 export type FixPlanExplanations = {
   greeting?: string;
   overallSummary?: string;
@@ -23,6 +32,8 @@ export type FixPlanExplanations = {
   encouragement?: string;
   disclaimer?: string;
   priorityExplanations?: Record<string, string>;
+  /** Keyed by GoalItem.goalId. */
+  goalPlans?: Record<string, GoalAdvice>;
 };
 
 /** Shape the Fix Plan screen renders and caches (`{ priorityPlan, explanations }` after merge). */
@@ -99,6 +110,7 @@ export function mergeEnginePriorityPlan(
     // Deterministic allocation — never take AI/cache monthlyPlan
     debts: engine.debts,
     goals: engine.goals,
+    goalFunding: engine.goalFunding,
     monthlyIncome: engine.monthlyIncome,
     monthlySurplus: engine.monthlySurplus,
     surplusBreakdown: engine.surplusBreakdown,
@@ -141,10 +153,16 @@ export function reconcileExplanations(
         `${p.title}${Number(p.gap || 0) > 0 ? ` gap of ₹${Number(p.gap || 0).toLocaleString("en-IN")}` : ""}`,
     )
     .join(" and ");
-  const goal = plan?.goals?.[0];
-  const goalBit = goal
-    ? ` Primary goal (${goal.goalType}): target ₹${Number(goal.targetAmount || 0).toLocaleString("en-IN")}, ~₹${Number(goal.monthlyRequired || 0).toLocaleString("en-IN")}/mo.`
-    : "";
+  const goals: any[] = plan?.goals ?? [];
+  const goal = goals[0];
+  const goalMonthly = (g: any) =>
+    Number(g.monthlyAllocated ?? g.monthlyRequired ?? 0);
+  const goalBit =
+    goals.length > 1
+      ? ` ${goals.length} goals funded in parallel with ₹${goals.reduce((s2, g) => s2 + goalMonthly(g), 0).toLocaleString("en-IN")}/mo.`
+      : goal
+        ? ` Goal (${goal.label ?? goal.goalType}): target ₹${Number(goal.targetAmount || 0).toLocaleString("en-IN")}, ~₹${goalMonthly(goal).toLocaleString("en-IN")}/mo.`
+        : "";
 
   const base =
     explanations && typeof explanations === "object" ? explanations : {};
@@ -164,12 +182,17 @@ export function reconcileExplanations(
         ? `You have a monthly surplus of ₹${surplus.toLocaleString("en-IN")} and a health score of ${score}/100.${
             issueLine
               ? ` Focus next on ${issueLine}.`
-              : " Keep allocating surplus to your primary goal."
+              : " Keep allocating surplus to your goals."
           }${goalBit}`
         : base.overallSummary,
     goalAdvice:
       goal && (!base.goalAdvice || summaryMentionsClosedMedical)
-        ? `${goal.goalType}: aim for ₹${Number(goal.targetAmount || 0).toLocaleString("en-IN")} via ${goal.instrument} (~₹${Number(goal.monthlyRequired || 0).toLocaleString("en-IN")}/mo over ~${goal.yearsToGoal}y).`
+        ? goals
+            .map(
+              (g) =>
+                `${g.label ?? g.goalType}: ₹${goalMonthly(g).toLocaleString("en-IN")}/mo toward ₹${Number(g.targetAmount || 0).toLocaleString("en-IN")} via ${g.instrument} (~${g.yearsToGoal}y).`,
+            )
+            .join(" ")
         : base.goalAdvice,
   };
 }

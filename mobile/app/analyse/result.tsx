@@ -15,6 +15,7 @@ import { router, type Href } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import { useObligationStore } from "@/store/obligationStore";
 import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
@@ -40,6 +41,7 @@ import {
   ResultHero,
   SafetyNetSection,
 } from "@/components/analyse/result/ResultSections";
+import { GoalsSection } from "@/components/analyse/result/GoalsSection";
 import { openContentHref } from "@/lib/contentLinks";
 
 
@@ -62,6 +64,9 @@ function Header() {
 
 function AnalyseResultContent() {
   const user = useAuthStore((s) => s.user);
+  useEffect(() => {
+    if (user?.id) void useObligationStore.getState().syncLoansToAnalyse(user.id);
+  }, [user?.id]);
   const result = useFinancialStore((s) => s.result);
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const hasHydrated = useFinancialStore((s) => s.hasHydrated);
@@ -190,6 +195,8 @@ function AnalyseResultContent() {
             )
           }
         />
+
+        <GoalsSection profile={lastSubmission} userId={user?.id} />
 
         {issues.length > 0 ? (
           <View>

@@ -1,3 +1,5 @@
+import { formatLakhCrore, projectNetWorth } from "@/lib/netWorthTrajectory";
+import { NO_CONFLICT_BODY, NO_CONFLICT_TITLE } from "@/lib/reportTrust";
 import jsPDF from "jspdf";
 import {
   CITY_TIER_LABELS,
@@ -577,34 +579,27 @@ export function buildFixPlanPdf(
   y += 4;
   addText("Monthly Budget Allocation", 11, DARK, true);
   y += 2;
-  const buckets = analysis?.universalBuckets || analysis?.buckets || null;
-  if (buckets && Object.keys(buckets).length > 0) {
-    const bucketRows = Object.entries(buckets).map(([key, bucket]: any) => [
-      key.charAt(0).toUpperCase() + key.slice(1),
-      formatCapPercent(bucket.capPercent ?? bucket.capPct),
-      fmt(bucket.capAmount ?? bucket.cap ?? 0),
-      fmt(bucket.actual ?? bucket.actualAmount ?? 0),
-      bucketStatusLabel(bucket.status),
-    ]);
-    addSmallTable(
-      ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
-      bucketRows,
-      [35, 20, 35, 35, 25],
-    );
-  } else {
-    const fallbackBuckets = getUniversalBucketRows(profile).map((row) => [
-      row.label,
-      formatCapPercent(row.capPercent),
-      fmt(row.capAmount),
-      fmt(row.actual),
-      bucketStatusLabel(row.status),
-    ]);
-    addSmallTable(
-      ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
-      fallbackBuckets,
-      [35, 20, 35, 35, 25],
-    );
-  }
+  // Always the engine's five rows: stored analysis buckets can predate the
+  // Security bucket and would print caps that total 95%.
+  const shortBucketLabel: Record<string, string> = {
+    needs: "Needs",
+    wants: "Wants",
+    security: "Insurance",
+    loans: "Loans",
+    investment: "Investment",
+  };
+  const bucketRows = getUniversalBucketRows(profile).map((row) => [
+    shortBucketLabel[row.key] ?? row.label,
+    formatCapPercent(row.capPercent),
+    fmt(row.capAmount),
+    fmt(row.actual),
+    bucketStatusLabel(row.status),
+  ]);
+  addSmallTable(
+    ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
+    bucketRows,
+    [35, 20, 35, 35, 25],
+  );
 
   if (priorityPlan?.surplusBreakdown) {
     y += 2;
@@ -923,24 +918,70 @@ export function buildFixPlanPdf(
 
   newPage();
   addHeading("GOALS & SCORE PROJECTION");
-  const firstGoal = priorityPlan?.goals?.[0];
-  if (firstGoal) {
+  const pdfGoals: any[] = priorityPlan?.goals ?? [];
+  if (pdfGoals.length > 0) {
     addSmallTable(
-      ["Goal", "Target", "Saved", "Monthly needed", "Timeline"],
-      [
-        [
-          labelOrDash(PRIMARY_GOAL_LABELS, firstGoal.goalType),
-          fmt(firstGoal.targetAmount),
-          fmt(firstGoal.currentSaved),
-          fmt(firstGoal.monthlyRequired),
-          `${firstGoal.yearsToGoal}y`,
-        ],
-      ],
-      [35, 35, 35, 40, 30],
+      ["Goal", "Target", "Monthly", "Needed", "Timeline"],
+      pdfGoals.map((g) => [
+        g.label ?? labelOrDash(PRIMARY_GOAL_LABELS, g.goalType),
+        fmt(g.targetAmount),
+        fmt(g.monthlyAllocated ?? g.monthlyRequired),
+        fmt(g.monthlyRequired),
+        `${g.yearsToGoal}y`,
+      ]),
+      [45, 35, 30, 30, 35],
     );
-    addText(`Instrument: ${firstGoal.instrument || "—"}`, 10, DARK);
+    for (const g of pdfGoals) {
+      const slices: any[] = g.allocation?.slices ?? [];
+      addText(
+        `${g.label ?? g.goalType}: ${
+          slices.length
+            ? slices
+                .map((s) => `${s.label} ${fmt(s.monthly)}/mo (${s.pct}%)`)
+                .join(", ")
+            : g.instrument || "—"
+        }`,
+        9,
+        DARK,
+      );
+    }
+    if (pdfGoals.some((g) => g.allocation?.riskAssumed)) {
+      addText(
+        "Splits assume a moderate risk profile where the risk questions were skipped.",
+        8,
+        GREY,
+      );
+    }
   } else {
     addText("No goal data available.", 10, GREY);
+  }
+
+  if (profile && priorityPlan) {
+    const trajectory = projectNetWorth(profile, priorityPlan);
+    y += 4;
+    addText("Net worth projection (today's rupees)", 11, DARK, true);
+    addSmallTable(
+      ["When", "Age", "Assets", "Loans", "Net worth"],
+      trajectory.points.map((p) => [
+        p.year === 0 ? "Today" : `In ${p.year} years`,
+        p.age != null ? String(p.age) : "—",
+        formatLakhCrore(p.assets),
+        formatLakhCrore(p.liabilities),
+        formatLakhCrore(p.netWorth),
+      ]),
+      [35, 20, 40, 40, 40],
+    );
+    addText(
+      `Includes EPF/PPF/NPS compounding, current SIPs, this plan's goal SIPs and loans paying down.${
+        trajectory.spentGoals.length
+          ? ` Goal money is used when due: ${trajectory.spentGoals
+              .map((g) => `${g.label} (year ${g.year})`)
+              .join(", ")}.`
+          : ""
+      } Assumes 12% equity, 6% FDs/cash, 8% gold, 6% inflation. Projections, not guarantees.`,
+      8,
+      GREY,
+    );
   }
 
   newPage();
@@ -1033,6 +1074,9 @@ export function buildFixPlanPdf(
   doc.setTextColor(255, 255, 255);
   doc.text("Finkoin", M, 13);
   y = 35;
+  addHeading(NO_CONFLICT_TITLE, 13, DARK);
+  addText(NO_CONFLICT_BODY, 10, DARK);
+  y += 6;
   addHeading("Important Disclaimer", 13, RED);
   addText(
     explanations?.disclaimer ||

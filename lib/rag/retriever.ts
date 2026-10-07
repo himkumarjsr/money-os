@@ -1,3 +1,5 @@
+import type { GoalType } from "@/lib/goalDetection";
+import { goalKnowledgeFor } from "@/lib/rag/goalKnowledge";
 import { supabaseAdmin } from "@/lib/supabaseServer";
 
 export interface KnowledgeChunk {
@@ -77,4 +79,29 @@ ${c.content}
   )
   .join("\n---\n")}
 `.trim();
+}
+
+/**
+ * Reference content for one goal type: `finkoin_knowledge` rows tagged
+ * `goal:<type>` / `goal:any`, falling back to the bundled copy when the table
+ * is missing or has no goal rows yet.
+ */
+export async function retrieveGoalKnowledge(
+  type: GoalType,
+  limit = 4,
+): Promise<Array<{ title: string; content: string }>> {
+  try {
+    const { data, error } = await supabaseAdmin.rpc("search_by_keywords", {
+      search_keywords: [`goal:${type}`, "goal:any"],
+      match_count: limit,
+    });
+    if (!error && Array.isArray(data) && data.length > 0) {
+      return data.map((row: any) => ({ title: row.title, content: row.content }));
+    }
+  } catch {
+    // fall through to bundled content
+  }
+  return goalKnowledgeFor(type)
+    .slice(0, limit)
+    .map(({ title, content }) => ({ title, content }));
 }

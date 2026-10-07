@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import {
   getCachedPlan,
   hashProfile,
@@ -21,17 +22,30 @@ import {
 import { Analytics } from "@/lib/analytics";
 import { scoreBand } from "@/lib/financialEngine";
 import { buildPriorityPlan, debtPayoffNumbers } from "@/lib/priorityEngine";
+import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { resolveAuthenticated } from "@/lib/authSession";
 import { supabase } from "@/lib/supabase";
+import {
+  fetchPlannedInvestments,
+  formatStartMonth,
+  plannedProgressBySource,
+  type GoalPlanProgress,
+} from "@/lib/plannedInvestments";
+import StartPlanSheet from "@/components/analyse/StartPlanSheet";
+import LifeMapCard from "@/components/analyse/LifeMapCard";
+import NetWorthTrajectoryCard from "@/components/analyse/NetWorthTrajectoryCard";
+import NoConflictNote from "@/components/analyse/NoConflictNote";
+import { projectNetWorth } from "@/lib/netWorthTrajectory";
 import { useAuthStore } from "@/store/authStore";
+import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const fixPlanInFlight = new Map<string, Promise<void>>();
 
@@ -48,9 +62,33 @@ export default function FixPlanPage() {
   const user = useAuthStore((s) => s.user);
   const profile = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
+  useRestoreAnalyseSnapshot(user?.id);
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState("");
   const [aiPlan, setAiPlan] = useState<any>(null);
+  const [plannedProgress, setPlannedProgress] = useState<
+    Record<string, GoalPlanProgress>
+  >({});
+  const [startPlanOpen, setStartPlanOpen] = useState(false);
+  const loadPlannedProgress = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const rows = await fetchPlannedInvestments(supabase, user.id);
+      setPlannedProgress(plannedProgressBySource(rows));
+    } catch {
+      setPlannedProgress({});
+    }
+  }, [user?.id]);
+  useEffect(() => {
+    void loadPlannedProgress();
+  }, [loadPlannedProgress]);
+  const trajectory = useMemo(
+    () =>
+      profile && aiPlan?.priorityPlan
+        ? projectNetWorth(profile, aiPlan.priorityPlan)
+        : null,
+    [profile, aiPlan?.priorityPlan],
+  );
   const [downloading, setDownloading] = useState(false);
   const [pdfError, setPdfError] = useState("");
   const [refreshNotice, setRefreshNotice] = useState("");
@@ -117,11 +155,17 @@ export default function FixPlanPage() {
         // Keep existing plan visible on silent retries; only show loader on first load.
         if (!hasPlanRef.current) setAiLoading(true);
         try {
-          const response = await fetch("/api/ai/analyse", {
+          const response = await apiFetch("/api/ai/analyse", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ profile, analysis: result }),
           });
+          if (response.status === 401) {
+            router.replace(
+              loginHrefPreserveRef("/login?redirect=/analyse/fixplan"),
+            );
+            return;
+          }
           if (response.status === 429) {
             if (hasPlanRef.current) {
               setRefreshNotice(FIX_PLAN_RATE_LIMIT_MESSAGE);
@@ -276,7 +320,7 @@ export default function FixPlanPage() {
       } catch {
         timeZone = undefined;
       }
-      const res = await fetch("/api/analyse/pdf", {
+      const res = await apiFetch("/api/analyse/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -846,38 +890,34 @@ export default function FixPlanPage() {
           </section>
         ) : null}
 
-        {aiPlan.priorityPlan?.goals?.[0] ? (
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold">Goal plan</h3>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#ECEAF5]">
-              <div
-                className="h-full bg-[#534AB7]"
-                style={{
-                  width: `${Math.min(100, (aiPlan.priorityPlan.goals[0].currentSaved / Math.max(aiPlan.priorityPlan.goals[0].targetAmount, 1)) * 100)}%`,
-                }}
-              />
-            </div>
-            <p className="mt-2 text-sm">
-              Target ₹
-              {aiPlan.priorityPlan.goals[0].targetAmount?.toLocaleString(
-                "en-IN",
-              )}{" "}
-              · Saved ₹
-              {aiPlan.priorityPlan.goals[0].currentSaved?.toLocaleString(
-                "en-IN",
-              )}
-            </p>
-            <p className="text-sm text-[#534AB7]">
-              Monthly required ₹
-              {aiPlan.priorityPlan.goals[0].monthlyRequired?.toLocaleString(
-                "en-IN",
-              )}{" "}
-              · Timeline {aiPlan.priorityPlan.goals[0].yearsToGoal} years
-            </p>
-            <p className="text-sm text-[#7A7871]">
-              Instrument: {aiPlan.priorityPlan.goals[0].instrument}
-            </p>
-          </section>
+        {aiPlan.priorityPlan?.goals?.length ? (
+          <LifeMapCard
+            goals={aiPlan.priorityPlan.goals}
+            selfAge={profile?.selfAge}
+          />
+        ) : null}
+
+        {aiPlan.priorityPlan?.goals?.length ? (
+          <GoalSplitCard
+            goals={aiPlan.priorityPlan.goals}
+            plans={aiPlan.explanations?.goalPlans}
+            progress={plannedProgress}
+            onStart={user?.id ? () => setStartPlanOpen(true) : undefined}
+          />
+        ) : null}
+        {trajectory ? <NetWorthTrajectoryCard trajectory={trajectory} /> : null}
+
+        <NoConflictNote />
+
+        {user?.id && aiPlan.priorityPlan?.goals?.length ? (
+          <StartPlanSheet
+            isOpen={startPlanOpen}
+            onClose={() => setStartPlanOpen(false)}
+            userId={user.id}
+            goals={aiPlan.priorityPlan.goals}
+            hasExisting={Object.keys(plannedProgress).length > 0}
+            onSaved={() => void loadPlannedProgress()}
+          />
         ) : null}
 
         {profile
@@ -1139,5 +1179,170 @@ export default function FixPlanPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+type GoalSplitRow = {
+  goalType: string;
+  goalId?: string;
+  label?: string;
+  targetAmount: number;
+  currentSaved: number;
+  monthlyRequired: number;
+  monthlyAllocated?: number;
+  sharePct?: number;
+  yearsToGoal: number;
+  instrument: string;
+  allocation?: PortfolioAllocation;
+};
+
+function GoalSplitCard({
+  goals,
+  plans,
+  progress,
+  onStart,
+}: {
+  goals: GoalSplitRow[];
+  progress?: Record<string, GoalPlanProgress>;
+  onStart?: () => void;
+  plans?: Record<
+    string,
+    { why: string; instrumentRationale: string; watchOut: string }
+  >;
+}) {
+  const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+  const parallel = goals.some((g) => g.monthlyAllocated != null);
+  const budget = goals.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
+  const shortfall = goals.reduce(
+    (s, g) =>
+      s + Math.max(0, g.monthlyRequired - (g.monthlyAllocated ?? g.monthlyRequired)),
+    0,
+  );
+  return (
+    <section className="rounded-2xl bg-white p-4 shadow-sm">
+      <h3 className="text-lg font-semibold">Goal plan</h3>
+      {parallel ? (
+        <p className="mt-1 text-sm font-medium text-[#454442]">
+          {inr(budget)}/month, split across {goals.length}{" "}
+          {goals.length === 1 ? "goal" : "goals"} at the same time — nearer
+          deadlines get more, long-horizon goals are never left at zero.
+        </p>
+      ) : null}
+      <div className="mt-3 space-y-3">
+        {goals.map((g) => {
+          const monthly = g.monthlyAllocated ?? g.monthlyRequired;
+          const funded =
+            g.monthlyRequired > 0
+              ? Math.min(100, Math.round((monthly / g.monthlyRequired) * 100))
+              : 100;
+          return (
+            <div
+              key={g.goalId ?? g.goalType}
+              className="rounded-xl border border-[#ECEAF5] p-3"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-semibold text-[#111110]">
+                  {g.label ?? g.goalType}
+                </p>
+                <p className="shrink-0 text-sm font-bold tabular-nums text-[#534AB7]">
+                  {inr(monthly)}/mo
+                  {g.sharePct != null ? (
+                    <span className="ml-1 text-xs font-semibold text-[#7A7871]">
+                      {g.sharePct}%
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ECEAF5]">
+                <div
+                  className="h-full bg-[#534AB7]"
+                  style={{ width: `${funded}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs font-medium text-[#454442]">
+                Target {inr(g.targetAmount)} in {g.yearsToGoal}{" "}
+                {g.yearsToGoal === 1 ? "year" : "years"} ·{" "}
+                {funded >= 100
+                  ? "fully funded"
+                  : `${funded}% of the ${inr(g.monthlyRequired)}/mo needed`}
+              </p>
+              {g.allocation?.slices.length ? (
+                <div className="mt-2">
+                  <p className="text-xs font-semibold text-[#454442]">
+                    Where it goes
+                    {g.allocation.riskAssumed ? (
+                      <span className="font-normal text-[#7A7871]">
+                        {" "}
+                        · assumes a moderate risk profile
+                      </span>
+                    ) : null}
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {g.allocation.slices.map((s) => (
+                      <li
+                        key={s.key}
+                        className="flex items-baseline justify-between gap-3 text-xs text-[#454442]"
+                      >
+                        <span>{s.label}</span>
+                        <span className="shrink-0 tabular-nums">
+                          {inr(s.monthly)}/mo · {s.pct}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {g.allocation.realEstateNote ? (
+                    <p className="mt-1 text-xs text-[#7A7871]">
+                      {g.allocation.realEstateNote}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-xs text-[#7A7871]">Instrument: {g.instrument}</p>
+              )}
+              {g.goalId && progress?.[g.goalId] ? (
+                <p className="mt-2 text-xs font-semibold text-[#1D9E75]">
+                  {progress[g.goalId].started >= progress[g.goalId].total
+                    ? "✓ Started"
+                    : progress[g.goalId].started > 0
+                      ? `${progress[g.goalId].started} of ${progress[g.goalId].total} started`
+                      : `Reminder set · starts ${formatStartMonth(progress[g.goalId].nextStart ?? "")}`}
+                </p>
+              ) : null}
+              {g.goalId && plans?.[g.goalId] ? (
+                <div className="mt-2 space-y-1 border-t border-[#ECEAF5] pt-2 text-[13px] leading-snug text-[#454442]">
+                  <p>{plans[g.goalId].why}</p>
+                  <p>{plans[g.goalId].instrumentRationale}</p>
+                  <p className="text-[#8C5A0A]">
+                    Watch out: {plans[g.goalId].watchOut}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      {shortfall > 0 ? (
+        <p className="mt-3 text-xs font-medium leading-relaxed text-[#5F5E5A]">
+          Another {inr(shortfall)}/month would fund every goal on time.
+        </p>
+      ) : null}
+      {onStart && goals.some((g) => g.allocation?.slices.length) ? (
+        <>
+          <button
+            type="button"
+            onClick={onStart}
+            className="mt-4 min-h-[48px] w-full rounded-xl bg-[#534AB7] text-[15px] font-bold text-white"
+          >
+            {progress && Object.keys(progress).length > 0
+              ? "Update reminders"
+              : "Start this plan"}
+          </button>
+          <p className="mt-1.5 text-center text-[11px] text-[#7A7871]">
+            Creates reminders and Tracker items only. Nothing is invested
+            automatically.
+          </p>
+        </>
+      ) : null}
+    </section>
   );
 }

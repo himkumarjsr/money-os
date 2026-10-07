@@ -101,11 +101,20 @@ export async function shareFixPlanPdf(
     file.create({ overwrite: true });
     file.write(bytes);
 
-    await Sharing.shareAsync(file.uri, {
-      mimeType: "application/pdf",
-      UTI: "com.adobe.pdf",
-      dialogTitle: "Your Finkoin Fix Plan",
-    });
+    // The PDF holds every number in the user's profile — don't leave it on disk.
+    try {
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "application/pdf",
+        UTI: "com.adobe.pdf",
+        dialogTitle: "Your Finkoin Fix Plan",
+      });
+    } finally {
+      try {
+        if (file.exists) file.delete();
+      } catch {
+        /* cache dir is OS-managed; best effort */
+      }
+    }
     return {};
   } catch {
     return { error: "Couldn't save or share your PDF. Please try again." };

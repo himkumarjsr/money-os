@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { cn } from "@/lib/cn";
 import { trackEvent } from "@/lib/gtag";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
@@ -120,7 +121,7 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
       const message = messageParts.filter(Boolean).join("\n\n");
       const page_context = `wizard_${source}_${area}`;
 
-      const res = await fetch("/api/feedback", {
+      const res = await apiFetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

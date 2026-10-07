@@ -106,9 +106,10 @@ describe("enginePlanFingerprint / isCachedAiStale", () => {
   });
 });
 
-describe("localStorage cache helpers", () => {
+describe("session cache helpers", () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.useRealTimers();
   });
 
@@ -150,8 +151,15 @@ describe("localStorage cache helpers", () => {
   });
 
   it("returns null on corrupt JSON", () => {
-    localStorage.setItem("finkoin_ai_cache", "{not-json");
+    sessionStorage.setItem("finkoin_ai_cache", "{not-json");
     expect(getCachedPlan("x")).toBeNull();
+  });
+
+  it("keeps plans out of localStorage and purges old plaintext copies", () => {
+    localStorage.setItem("finkoin_ai_cache", "legacy");
+    setCachedPlan("h1", { plan: 1 }, null);
+    expect(localStorage.getItem("finkoin_ai_cache")).toBeNull();
+    expect(sessionStorage.getItem("finkoin_ai_cache")).toContain("h1");
   });
 });
 

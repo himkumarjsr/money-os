@@ -178,6 +178,37 @@ export const TRACKER_CATEGORIES = {
       { id: "others", label: "Others", icon: "other" as const },
     ],
   },
+  security: {
+    /** Insurance premiums — mirrors Analyse's 5% Security bucket. */
+    label: "Security / insurance",
+    color: "#6359BF",
+    icon: "shield" as const,
+    cap: 5,
+    subcategories: [
+      {
+        id: "health_insurance",
+        label: "Health insurance",
+        icon: "hospital" as const,
+      },
+      {
+        id: "life_insurance",
+        label: "Term / life insurance",
+        icon: "shield" as const,
+      },
+      {
+        id: "vehicle_insurance",
+        label: "Car / bike insurance",
+        icon: "car" as const,
+      },
+      /** Legacy id from when premiums lived under Investments. */
+      {
+        id: "insurance_premium",
+        label: "Insurance premium",
+        icon: "shield" as const,
+      },
+      { id: "others", label: "Others", icon: "other" as const },
+    ],
+  },
   loans: {
     label: "Loans & Credit",
     color: "#5B54B0",
@@ -229,11 +260,6 @@ export const TRACKER_CATEGORIES = {
       { id: "stocks", label: "Stocks / equity", icon: "chart" as const },
       { id: "fd", label: "Fixed deposit", icon: "bank" as const },
       { id: "gold", label: "Gold / SGB", icon: "coin" as const },
-      {
-        id: "insurance_premium",
-        label: "Insurance premium",
-        icon: "shield" as const,
-      },
       { id: "rd", label: "Recurring deposit", icon: "calendar" as const },
       { id: "crypto", label: "Crypto", icon: "coin" as const },
       {
@@ -261,6 +287,30 @@ export const TRACKER_CATEGORIES = {
 } as const satisfies Record<string, TrackerBucket>;
 
 export type BucketType = keyof typeof TRACKER_CATEGORIES;
+
+const SECURITY_SUBCATEGORIES = new Set<string>([
+  "insurance_premium",
+  "health_insurance",
+  "life_insurance",
+  "vehicle_insurance",
+]);
+
+/**
+ * Rows saved before the Security bucket existed sit under `investment` with an
+ * insurance subcategory. Read them as `security` so totals match Analyse.
+ */
+export function normalizeTrackerBucket<
+  T extends { bucket: string; subcategory?: string | null },
+>(txn: T): T {
+  if (
+    txn.bucket === "investment" &&
+    txn.subcategory &&
+    SECURITY_SUBCATEGORIES.has(txn.subcategory)
+  ) {
+    return { ...txn, bucket: "security" };
+  }
+  return txn;
+}
 
 /**
  * Subcategories that must never affect tracker maths (spent, caps, Safety Pulse, MoM).

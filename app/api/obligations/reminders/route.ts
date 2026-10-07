@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { sendExpoPushToUser } from "@/lib/expoPush";
 import {
   SETTLED_CHECKLIST_STATUSES,
   buildObligationReminderCopy,
@@ -9,6 +10,83 @@ import {
   shouldSendObligationReminder,
 } from "@/lib/obligationReminders";
 import { hasNamedPaymentForCycle } from "@/lib/obligationReminderPopup";
+import {
+  PLANNED_INVESTMENTS_TABLE,
+  PLANNED_REMINDER_CATEGORY,
+  isPlannedReminderDue,
+  monthStart,
+  plannedReminderCopy,
+} from "@/lib/plannedInvestments";
+import { sendWebPushToUser } from "@/lib/webPush";
+
+/** One reminder per user per start month for consented planned investments. */
+async function sendPlannedInvestmentReminders(
+  admin: SupabaseClient,
+  today: Date,
+): Promise<number> {
+  const { data: rows, error } = await admin
+    .from(PLANNED_INVESTMENTS_TABLE)
+    .select("id, user_id, start_month, status, reminded_at")
+    .eq("status", "pending")
+    .is("reminded_at", null)
+    .lte("start_month", monthStart(today, 1));
+  if (error) {
+    console.error("planned reminders: read failed", error.message);
+    return 0;
+  }
+
+  const groups = new Map<string, { userId: string; startMonth: string; ids: string[] }>();
+  for (const r of (rows ?? []) as Array<{
+    id: string;
+    user_id: string;
+    start_month: string;
+    status: "pending";
+    reminded_at: string | null;
+  }>) {
+    const startMonth = String(r.start_month).slice(0, 10);
+    if (!isPlannedReminderDue({ ...r, start_month: startMonth }, today)) continue;
+    const key = `${r.user_id}|${startMonth}`;
+    const g = groups.get(key) ?? { userId: r.user_id, startMonth, ids: [] };
+    g.ids.push(r.id);
+    groups.set(key, g);
+  }
+
+  let sent = 0;
+  for (const g of Array.from(groups.values())) {
+    // Claim first so an overlapping run can't double-send.
+    const { data: claimed, error: claimErr } = await admin
+      .from(PLANNED_INVESTMENTS_TABLE)
+      .update({ reminded_at: new Date().toISOString() })
+      .in("id", g.ids)
+      .is("reminded_at", null)
+      .select("id");
+    if (claimErr || !claimed?.length) continue;
+
+    const copy = plannedReminderCopy(claimed.length, g.startMonth);
+    const { error: insertErr } = await admin.from("user_notifications").insert({
+      user_id: g.userId,
+      title: copy.title,
+      content: copy.body,
+      emoji: "📈",
+      category: PLANNED_REMINDER_CATEGORY,
+      is_read: false,
+      shown_as_popup: false,
+    });
+    if (insertErr) continue;
+    const payload = {
+      title: copy.title,
+      body: copy.body,
+      url: "/tracker",
+      tag: `planned-${g.startMonth}`,
+    };
+    await Promise.all([
+      sendWebPushToUser(admin, g.userId, payload),
+      sendExpoPushToUser(admin, g.userId, payload),
+    ]);
+    sent += 1;
+  }
+  return sent;
+}
 
 function authorizeRequest(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
@@ -38,6 +116,10 @@ async function handleReminders(req: NextRequest) {
 
   try {
     const today = new Date();
+    const plannedReminded = await sendPlannedInvestmentReminders(
+      supabaseAdmin,
+      today,
+    );
 
     const { data: obligations, error } = await supabaseAdmin
       .from("financial_obligations")
@@ -49,7 +131,7 @@ async function handleReminders(req: NextRequest) {
     }
 
     if (!obligations?.length) {
-      return NextResponse.json({ success: true, reminded: 0 });
+      return NextResponse.json({ success: true, reminded: 0, plannedReminded });
     }
 
     // Reminders target a due date this month or next; skip cycles already settled.
@@ -118,7 +200,7 @@ async function handleReminders(req: NextRequest) {
       if (!insertErr) reminded += 1;
     }
 
-    return NextResponse.json({ success: true, reminded });
+    return NextResponse.json({ success: true, reminded, plannedReminded });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
@@ -276,7 +277,7 @@ function SettingsInner() {
     if (typed !== "DELETE") return;
     setDeleteBusy(true);
     try {
-      const res = await fetch("/api/account/delete", { method: "POST" });
+      const res = await apiFetch("/api/account/delete", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         window.alert(

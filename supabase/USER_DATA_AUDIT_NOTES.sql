@@ -66,6 +66,8 @@ union all select 'financial_obligations', count(*)
 from public.financial_obligations where user_id = '36a2c461-9574-43bd-a44d-844b01dd2462'
 union all select 'obligation_checklist', count(*)
 from public.obligation_checklist where user_id = '36a2c461-9574-43bd-a44d-844b01dd2462'
+union all select 'user_planned_investments', count(*)
+from public.user_planned_investments where user_id = '36a2c461-9574-43bd-a44d-844b01dd2462'
 union all select 'user_policies', count(*)
 from public.user_policies where user_id = '36a2c461-9574-43bd-a44d-844b01dd2462'
 union all select 'notification_preferences', count(*)
@@ -218,6 +220,7 @@ where user_id = '36a2c461-9574-43bd-a44d-844b01dd2462';
 -- user_credit_cards       card nicknames + optional last4
 -- financial_obligations   bills calendar
 -- obligation_checklist    monthly checklist instances
+-- user_planned_investments  consented Fix Plan SIP reminders (intended moves — sensitive)
 -- user_policies           insurance policy vault
 -- split_*                 groups / expenses / shares / invites / settlements
 -- referrals               referrer_id / referred_id

@@ -1,7 +1,4 @@
-import type {
-  AnalyseFormValues,
-  FinancialProfile,
-} from "@/lib/analyse-form-schema";
+import type { AnalyseFormValues, FinancialProfile } from "@/lib/analyse-form-schema";
 import { monthlyTotalIncome } from "@/lib/financialEngine";
 import {
   type BucketProfileInput,
@@ -14,6 +11,7 @@ import {
 export type SpeedoMeterCaps = {
   needs: number;
   wants: number;
+  security?: number;
   loans: number;
   investment: number;
 };
@@ -22,6 +20,8 @@ export interface SpeedoMeterProps {
   income: number;
   needs: number;
   wants: number;
+  /** Monthly insurance premiums (Security bucket). */
+  security?: number;
   loans: number;
   investment: number;
   hasHomeLoan?: boolean;
@@ -45,12 +45,14 @@ export function buildSpeedoMeterProps(
     income: monthlyTotalIncome(data as FinancialProfile),
     needs: actuals.needs,
     wants: actuals.wants,
+    security: actuals.security,
     loans: actuals.loans,
     investment: actuals.investment,
     hasHomeLoan: hl,
     caps: {
       needs: capRow.needs,
       wants: capRow.wants,
+      security: capRow.security,
       loans: capRow.loans,
       investment: capRow.investment,
     },

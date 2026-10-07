@@ -66,6 +66,7 @@ const SPEND_BUCKETS = [
   "needs",
   "wants",
   "habits",
+  "security",
   "loans",
   "investment",
 ] as const satisfies readonly BucketType[];

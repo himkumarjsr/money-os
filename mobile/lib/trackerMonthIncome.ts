@@ -323,5 +323,6 @@ export const EXPENSE_SUBCATEGORY_TO_OBLIGATION: Record<string, string> = {
   rent: "rent",
   life_insurance: "insurance_life",
   health_insurance: "insurance_health",
+  vehicle_insurance: "insurance_vehicle",
   insurance_premium: "insurance_life",
 };

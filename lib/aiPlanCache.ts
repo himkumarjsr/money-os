@@ -94,14 +94,22 @@ export function enginePlanFingerprint(plan: any): string {
     }),
   );
   const goals = (plan?.goals || []).map(
-    (g: { goalType?: string; targetAmount?: number }) => ({
-      goalType: g.goalType,
+    (g: {
+      goalType?: string;
+      goalId?: string;
+      targetAmount?: number;
+      monthlyAllocated?: number;
+      allocation?: { slices?: Array<{ key?: string; pct?: number }> };
+    }) => ({
+      goalType: g.goalId ?? g.goalType,
       target: Math.round(Number(g.targetAmount || 0)),
+      monthly: Math.round(Number(g.monthlyAllocated || 0)),
+      split: (g.allocation?.slices || []).map((s) => `${s.key}:${s.pct}`),
     }),
   );
   return djb2Hash(
     stableStringify({
-      v: 1,
+      v: 3,
       surplus: Math.round(Number(plan?.monthlySurplus || 0)),
       rows,
       goals,

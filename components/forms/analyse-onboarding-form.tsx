@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { Button } from "@/components/ui/button";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
@@ -68,10 +69,13 @@ import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { formatCurrency } from "@/lib/finance";
 import { formatIndian, formatInWords } from "@/lib/formatters";
 import { cn } from "@/lib/cn";
+import RiskQuiz from "@/components/analyse/RiskQuiz";
 import { getAIFixPlan } from "@/lib/aiService";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
 import {
+  ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
+  saveUserAnalyseSnapshotAiPlan,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
 import { supabase } from "@/lib/supabaseClient";
@@ -104,6 +108,8 @@ function wipeAnalyseLocalCaches() {
     localStorage.removeItem("finkoin-financial");
     localStorage.removeItem("finkoin_ai_cache");
     localStorage.removeItem(LOANS_CLEARED_KEY);
+    sessionStorage.removeItem(`finkoin-financial:${uid}`);
+    sessionStorage.removeItem("finkoin_ai_cache");
   } catch {
     /* ignore */
   }
@@ -1489,6 +1495,7 @@ export function AnalyseOnboardingForm() {
     setIsSubmitting(true);
 
     try {
+      const previousProfile = useFinancialStore.getState().lastSubmission;
       const mergedValues = coalesceInsuranceToggles({
         ...values,
         primaryGoal: values.primaryGoal || "grow_wealth",
@@ -1511,34 +1518,45 @@ export function AnalyseOnboardingForm() {
         return;
       }
 
+      const uid = useAuthStore.getState().user?.id;
+      // Queued before navigating so the result page's snapshot reads wait for it.
+      const snapshotSaved =
+        uid && supabase
+          ? upsertUserAnalyseSnapshot(uid, {
+              profile: savedProfile,
+              result: nextResult,
+              submittedAt: new Date().toISOString(),
+              version: ANALYSE_SNAPSHOT_VERSION,
+              aiPlan: null,
+              analysis: mergedValues,
+            })
+          : null;
+
       // Navigate immediately — AI + cloud save must not block the report.
       router.push("/analyse/result");
 
       void (async () => {
         try {
+          if (snapshotSaved && uid) {
+            const { error } = await snapshotSaved;
+            if (error) console.warn("Snapshot save failed:", error.message);
+            else invalidateProfileMonthlySalaryCache(uid);
+          }
+
           const { plan: aiPlan } = await getAIFixPlan(savedProfile, nextResult);
           useFinancialStore.getState().setAiPlan(aiPlan);
 
-          const uid = useAuthStore.getState().user?.id;
           if (!uid || !supabase) return;
-
-          const { error } = await upsertUserAnalyseSnapshot(uid, {
-            profile: savedProfile,
-            result: nextResult,
-            submittedAt: new Date().toISOString(),
-            version: "1.0",
-            aiPlan,
-            analysis: mergedValues,
+          void saveUserAnalyseSnapshotAiPlan(uid, aiPlan).then(({ error }) => {
+            if (error) console.warn("AI plan save failed:", error.message);
           });
-          if (error) console.warn("Snapshot save failed:", error.message);
-          else invalidateProfileMonthlySalaryCache(uid);
 
           void useObligationStore
             .getState()
-            .syncFromHealthCheck(uid, savedProfile)
+            .syncFromHealthCheck(uid, savedProfile, previousProfile)
             .catch((err) => console.warn("Obligation sync failed:", err));
 
-          void fetch("/api/financial-data", {
+          void apiFetch("/api/financial-data", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ submission: savedProfile }),
@@ -4318,6 +4336,19 @@ export function AnalyseOnboardingForm() {
                           </p>
                         ) : null}
                       </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <SectionTitle>How you handle risk</SectionTitle>
+                      <RiskQuiz
+                        answers={watch("riskAnswers")}
+                        onAnswer={(qi, score) => {
+                          const next = [...(getValues("riskAnswers") ?? [])];
+                          while (next.length < 3) next.push(null);
+                          next[qi] = score;
+                          setValue("riskAnswers", next, { shouldDirty: true });
+                        }}
+                      />
                     </div>
                   </div>
                 ) : null}

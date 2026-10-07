@@ -47,6 +47,7 @@ import {
   type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
 import {
+  ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
@@ -589,6 +590,7 @@ export default function AnalyseFormScreen() {
     setIsSubmitting(true);
 
     try {
+      const previousProfile = useFinancialStore.getState().lastSubmission;
       const mergedValues = coalesceInsuranceToggles({
         ...formValues,
         primaryGoal: formValues.primaryGoal || "grow_wealth",
@@ -623,7 +625,7 @@ export default function AnalyseFormScreen() {
             profile: savedProfile,
             result: nextResult,
             submittedAt: new Date().toISOString(),
-            version: "1.0",
+            version: ANALYSE_SNAPSHOT_VERSION,
             analysis: mergedValues,
           });
           if (error) console.warn("Snapshot save failed:", error.message);
@@ -648,7 +650,7 @@ export default function AnalyseFormScreen() {
 
           void useObligationStore
             .getState()
-            .syncFromHealthCheck(uid, savedProfile)
+            .syncFromHealthCheck(uid, savedProfile, previousProfile)
             .catch((err) => console.warn("Obligation sync failed:", err));
         } catch (err) {
           console.warn("Post-submit snapshot failed:", err);

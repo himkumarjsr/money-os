@@ -505,7 +505,7 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       monthlyPremiumEstimate:
         age < 30 ? 800 : age < 35 ? 1_200 : age < 40 ? 1_800 : 2_500,
       productSuggestion:
-        "Compare pure-term plans (e.g. HDFC Click 2 Protect, Max Life Smart Secure) on cover, riders, and claim experience.",
+        "Compare pure-term plans from 2–3 insurers on cover, riders, and claim-settlement record.",
       urgency: termHave === 0 ? "Buy this week" : "Top up within 30 days",
       buyFromFinkoin: true,
       policyHint: "term",
@@ -530,7 +530,7 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       gap: healthNeeded - healthHave,
       monthlyPremiumEstimate: numberOfKids > 0 ? 1_800 : 1_200,
       productSuggestion:
-        "Compare floater plans (e.g. HDFC Ergo Optima, Niva Bupa ReAssure) on room rent, co-pay, and exclusions.",
+        "Compare floater plans from 2–3 insurers on room rent, co-pay, and exclusions.",
       urgency: healthHave === 0 ? "Buy this week" : "Increase cover this month",
       buyFromFinkoin: true,
       policyHint: "health",
@@ -567,7 +567,7 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       gap: Math.max(0, pTarget - pCover),
       monthlyPremiumEstimate: 2_500,
       productSuggestion:
-        "Senior-focused plans (e.g. Star Senior Citizens Red Carpet, Niva Bupa Senior First) — watch co-pay and disease caps.",
+        "Senior-focused health plans — watch co-pay, disease-wise caps and waiting periods.",
       urgency:
         pCover < pTarget
           ? "High — elder hospital bills are lumpy"

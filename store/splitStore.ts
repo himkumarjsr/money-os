@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/apiFetch";
 import { create } from "zustand";
 import { getSupabase } from "@/lib/supabase";
 import type { NetBalance, SimplifiedEdge } from "@/lib/splitBalances";
@@ -373,7 +374,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       }
 
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `/api/split/balances?groupId=${encodeURIComponent(groupId)}`,
           { credentials: "include" },
         );
@@ -413,7 +414,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   createGroup: async (input) => {
     try {
-      const res = await fetch("/api/split/groups", {
+      const res = await apiFetch("/api/split/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -443,7 +444,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   inviteMember: async (input) => {
     try {
-      const res = await fetch("/api/split/invite", {
+      const res = await apiFetch("/api/split/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -481,7 +482,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       const timeoutId = setTimeout(() => controller.abort(), 20_000);
       let res: Response;
       try {
-        res = await fetch("/api/split/expenses", {
+        res = await apiFetch("/api/split/expenses", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -545,7 +546,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   editExpense: async (input) => {
     try {
-      const res = await fetch(`/api/split/expenses/${input.expenseId}`, {
+      const res = await apiFetch(`/api/split/expenses/${input.expenseId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -593,7 +594,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   settleUp: async (input) => {
     try {
-      const res = await fetch("/api/split/settle", {
+      const res = await apiFetch("/api/split/settle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -621,7 +622,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   deleteGroup: async (groupId) => {
     try {
-      const res = await fetch(`/api/split/groups?groupId=${groupId}`, {
+      const res = await apiFetch(`/api/split/groups?groupId=${groupId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -650,7 +651,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
 
   deleteExpense: async (groupId, expenseId) => {
     try {
-      const res = await fetch(`/api/split/expenses/${expenseId}`, {
+      const res = await apiFetch(`/api/split/expenses/${expenseId}`, {
         method: "DELETE",
         credentials: "include",
       });

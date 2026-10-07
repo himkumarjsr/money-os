@@ -7,6 +7,11 @@ import {
 } from "@/lib/analyse-form-schema";
 import { Colors } from "@/constants/theme";
 import {
+  RISK_QUESTIONS,
+  RISK_TOLERANCE_LABELS,
+  scoreRiskTolerance,
+} from "@/lib/riskProfile";
+import {
   ClampNumberField,
   ErrorText,
   MoneyField,
@@ -19,8 +24,17 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
   const {
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useFormContext<AnalyseFormValues>();
+  const riskAnswers = watch("riskAnswers");
+  const riskTolerance = scoreRiskTolerance(riskAnswers);
+  const answerRisk = (qi: number, score: number) => {
+    const next = [...(getValues("riskAnswers") ?? [])];
+    while (next.length < RISK_QUESTIONS.length) next.push(null);
+    next[qi] = score;
+    setValue("riskAnswers", next, { shouldDirty: true });
+  };
   const primaryGoal = watch("primaryGoal");
   const hasKids = watch("lifeStage") === "kids";
 
@@ -160,6 +174,34 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
           </Text>
         ) : null}
       </View>
+
+      <View style={formStyles.group}>
+        <SectionTitle>How you handle risk</SectionTitle>
+        {RISK_QUESTIONS.map((q, qi) => (
+          <View key={q.id} style={{ gap: 8 }}>
+            <Text style={styles.riskQuestion}>{q.question}</Text>
+            {q.options.map((label, score) => {
+              const selected = riskAnswers?.[qi] === score;
+              return (
+                <Pressable
+                  key={label}
+                  onPress={() => answerRisk(qi, score)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  style={[styles.riskOption, selected && styles.goalCardOn]}
+                >
+                  <Text style={styles.riskOptionText}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+        <Text style={styles.greyNote}>
+          {riskTolerance
+            ? `Your risk profile: ${RISK_TOLERANCE_LABELS[riskTolerance]}. We use it to pick instruments for each goal.`
+            : "Optional — answer all three and we'll match instruments to how you handle ups and downs."}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -183,4 +225,16 @@ const styles = StyleSheet.create({
   goalText: { fontSize: 15, fontWeight: "500", color: "#1E293B" },
   purpleNote: { fontSize: 12, color: Colors.primary },
   greyNote: { fontSize: 14, lineHeight: 20, color: "#7A7871" },
+  riskQuestion: { fontSize: 14, fontWeight: "600", color: "#5F5E5A" },
+  riskOption: {
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    backgroundColor: Colors.card,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  riskOptionText: { fontSize: 15, fontWeight: "500", color: "#1E293B" },
 });

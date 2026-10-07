@@ -9,7 +9,7 @@ import * as SecureStore from "expo-secure-store";
 const memory = new Map<string, string>();
 const CHUNK = 1800;
 
-/** Prefer SecureStore; fall back to AsyncStorage; always succeed via memory. */
+/** SecureStore only (AsyncStorage is read once for migration); always succeed via memory. */
 async function secureGet(key: string): Promise<string | null> {
   try {
     const partsRaw = await SecureStore.getItemAsync(`${key}__parts`);
@@ -86,15 +86,6 @@ async function asyncGet(key: string): Promise<string | null> {
   }
 }
 
-async function asyncSet(key: string, value: string): Promise<boolean> {
-  try {
-    await AsyncStorage.setItem(key, value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function asyncRemove(key: string): Promise<void> {
   try {
     await AsyncStorage.removeItem(key);
@@ -111,21 +102,22 @@ export const appStorage = {
       memory.set(key, fromSecure);
       return fromSecure;
     }
+    // Legacy plaintext copy from older builds: move it into SecureStore.
     const fromAsync = await asyncGet(key);
     if (fromAsync != null) {
       memory.set(key, fromAsync);
+      if (await secureSet(key, fromAsync)) await asyncRemove(key);
       return fromAsync;
     }
     return null;
   },
 
   setItem: async (key: string, value: string): Promise<void> => {
-    // Always update RAM first so session survives storage failures during sign-in
+    // Always update RAM first so session survives storage failures during sign-in.
+    // If SecureStore fails the value stays memory-only; tokens and financial
+    // data must never be written to plaintext AsyncStorage.
     memory.set(key, value);
-    const ok = await secureSet(key, value);
-    if (!ok) {
-      await asyncSet(key, value);
-    }
+    await secureSet(key, value);
   },
 
   removeItem: async (key: string): Promise<void> => {
