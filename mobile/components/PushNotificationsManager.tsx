@@ -13,6 +13,8 @@ import {
   registerPushToken,
   routeForPushUrl,
 } from "@/lib/pushNotifications";
+import { supabase } from "@/lib/supabase";
+import { uniqueChannelName } from "@/lib/realtimeChannel";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -46,6 +48,30 @@ export function PushNotificationsManager() {
   useEffect(() => {
     if (!userId || !permissionChecked.current) return;
     void registerPushToken(userId);
+  }, [userId]);
+
+  // One inbox subscription for the whole app; every header bell reads the store.
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = () =>
+      void useNotificationStore.getState().fetchNotifications(userId);
+    refresh();
+    const channel = supabase
+      .channel(uniqueChannelName(`notifications:${userId}`))
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        refresh,
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   useEffect(() => {
