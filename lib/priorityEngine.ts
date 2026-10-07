@@ -557,7 +557,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       monthsToComplete: 1,
       instrument:
         termHave === 0
-          ? "HDFC Click2Protect or Max Life Smart Secure — pure term only"
+          ? "Pure term plan from an insurer with a strong claim-settlement record — no ULIP or endowment"
           : "Separate top-up / additional term from another insurer — do not cancel your ₹" +
             termHaveCr +
             "Cr policy",
@@ -619,7 +619,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusBefore: runningSurplus,
       surplusAfterThis: Math.max(0, runningSurplus - healthPremiumEst),
       monthsToComplete: 1,
-      instrument: "HDFC ERGO Optima or Niva Bupa ReAssure — family floater",
+      instrument: "Family floater health policy — compare room-rent limits, co-pay and waiting periods across 2–3 insurers",
       actionThisWeek: `Get ₹${(healthNeeded / 100000).toFixed(0)} lakh health cover. Compare quotes on IRDAI-registered insurer or aggregator sites, or through a licensed advisor.`,
       whyThisMatters:
         "One hospitalisation in metro costs ₹2-5 lakh. Without cover your savings get wiped.",
@@ -906,7 +906,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         runningSurplus - Math.max(0, Math.min(12500, runningSurplus)),
       ),
       monthsToComplete: (21 - girl.age) * 12,
-      instrument: "Sukanya Samriddhi Yojana at Post Office or SBI/HDFC Bank",
+      instrument: "Sukanya Samriddhi Yojana at any Post Office or authorised bank",
       actionThisWeek: isUrgent
         ? `OPEN THIS WEEK. Only ${monthsLeft} months left before window closes forever. Visit post office with daughter Aadhaar.`
         : "Open SSY account at post office. Start ₹12,500/month. 8.2% guaranteed tax-free.",

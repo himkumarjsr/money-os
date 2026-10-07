@@ -2,7 +2,7 @@
  * Fix Plan — port of web app/analyse/fixplan/page.tsx.
  * Engine plan merged with the /api/ai/analyse overlay (engine numbers win).
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -29,6 +29,10 @@ import { MonthlyPlanTable } from "@/components/analyse/fixplan/MonthlyPlanTable"
 import { DebtStrategy } from "@/components/analyse/fixplan/DebtStrategy";
 import { GoalPlanCard } from "@/components/analyse/fixplan/GoalPlanCard";
 import { StartPlanSheet } from "@/components/analyse/fixplan/StartPlanSheet";
+import { LifeMapCard } from "@/components/analyse/fixplan/LifeMapCard";
+import { NetWorthTrajectoryCard } from "@/components/analyse/fixplan/NetWorthTrajectoryCard";
+import { NoConflictNote } from "@/components/analyse/fixplan/NoConflictNote";
+import { projectNetWorth } from "@/lib/netWorthTrajectory";
 import {
   fetchPlannedInvestments,
   plannedProgressBySource,
@@ -97,6 +101,13 @@ function FixPlanScreen() {
       userId: user?.id,
       enabled: allowed && storeHydrated && !!profile && !!result,
     });
+  const trajectory = useMemo(
+    () =>
+      profile && aiPlan?.priorityPlan
+        ? projectNetWorth(profile, aiPlan.priorityPlan)
+        : null,
+    [profile, aiPlan?.priorityPlan],
+  );
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace("/analyse/result");
@@ -236,6 +247,10 @@ function FixPlanScreen() {
         ) : null}
 
         {goals.length > 0 ? (
+          <LifeMapCard goals={goals} selfAge={profile.selfAge} />
+        ) : null}
+
+        {goals.length > 0 ? (
           <GoalPlanCard
             goals={goals}
             plans={expl?.goalPlans}
@@ -243,6 +258,10 @@ function FixPlanScreen() {
             onStart={user?.id ? () => setStartPlanOpen(true) : undefined}
           />
         ) : null}
+        {trajectory ? <NetWorthTrajectoryCard trajectory={trajectory} /> : null}
+
+        <NoConflictNote />
+
         {user?.id && goals.length > 0 ? (
           <StartPlanSheet
             visible={startPlanOpen}

@@ -1,3 +1,5 @@
+import { formatLakhCrore, projectNetWorth } from "@/lib/netWorthTrajectory";
+import { NO_CONFLICT_BODY, NO_CONFLICT_TITLE } from "@/lib/reportTrust";
 import jsPDF from "jspdf";
 import {
   CITY_TIER_LABELS,
@@ -954,6 +956,34 @@ export function buildFixPlanPdf(
     addText("No goal data available.", 10, GREY);
   }
 
+  if (profile && priorityPlan) {
+    const trajectory = projectNetWorth(profile, priorityPlan);
+    y += 4;
+    addText("Net worth projection (today's rupees)", 11, DARK, true);
+    addSmallTable(
+      ["When", "Age", "Assets", "Loans", "Net worth"],
+      trajectory.points.map((p) => [
+        p.year === 0 ? "Today" : `In ${p.year} years`,
+        p.age != null ? String(p.age) : "—",
+        formatLakhCrore(p.assets),
+        formatLakhCrore(p.liabilities),
+        formatLakhCrore(p.netWorth),
+      ]),
+      [35, 20, 40, 40, 40],
+    );
+    addText(
+      `Includes EPF/PPF/NPS compounding, current SIPs, this plan's goal SIPs and loans paying down.${
+        trajectory.spentGoals.length
+          ? ` Goal money is used when due: ${trajectory.spentGoals
+              .map((g) => `${g.label} (year ${g.year})`)
+              .join(", ")}.`
+          : ""
+      } Assumes 12% equity, 6% FDs/cash, 8% gold, 6% inflation. Projections, not guarantees.`,
+      8,
+      GREY,
+    );
+  }
+
   newPage();
   addHeading("YOUR 12-MONTH CHECKLIST");
   const checklistRows: string[][] = [];
@@ -1044,6 +1074,9 @@ export function buildFixPlanPdf(
   doc.setTextColor(255, 255, 255);
   doc.text("Finkoin", M, 13);
   y = 35;
+  addHeading(NO_CONFLICT_TITLE, 13, DARK);
+  addText(NO_CONFLICT_BODY, 10, DARK);
+  y += 6;
   addHeading("Important Disclaimer", 13, RED);
   addText(
     explanations?.disclaimer ||

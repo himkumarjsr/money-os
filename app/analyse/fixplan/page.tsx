@@ -36,12 +36,16 @@ import {
   type GoalPlanProgress,
 } from "@/lib/plannedInvestments";
 import StartPlanSheet from "@/components/analyse/StartPlanSheet";
+import LifeMapCard from "@/components/analyse/LifeMapCard";
+import NetWorthTrajectoryCard from "@/components/analyse/NetWorthTrajectoryCard";
+import NoConflictNote from "@/components/analyse/NoConflictNote";
+import { projectNetWorth } from "@/lib/netWorthTrajectory";
 import { useAuthStore } from "@/store/authStore";
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const fixPlanInFlight = new Map<string, Promise<void>>();
 
@@ -78,6 +82,13 @@ export default function FixPlanPage() {
   useEffect(() => {
     void loadPlannedProgress();
   }, [loadPlannedProgress]);
+  const trajectory = useMemo(
+    () =>
+      profile && aiPlan?.priorityPlan
+        ? projectNetWorth(profile, aiPlan.priorityPlan)
+        : null,
+    [profile, aiPlan?.priorityPlan],
+  );
   const [downloading, setDownloading] = useState(false);
   const [pdfError, setPdfError] = useState("");
   const [refreshNotice, setRefreshNotice] = useState("");
@@ -880,6 +891,13 @@ export default function FixPlanPage() {
         ) : null}
 
         {aiPlan.priorityPlan?.goals?.length ? (
+          <LifeMapCard
+            goals={aiPlan.priorityPlan.goals}
+            selfAge={profile?.selfAge}
+          />
+        ) : null}
+
+        {aiPlan.priorityPlan?.goals?.length ? (
           <GoalSplitCard
             goals={aiPlan.priorityPlan.goals}
             plans={aiPlan.explanations?.goalPlans}
@@ -887,6 +905,10 @@ export default function FixPlanPage() {
             onStart={user?.id ? () => setStartPlanOpen(true) : undefined}
           />
         ) : null}
+        {trajectory ? <NetWorthTrajectoryCard trajectory={trajectory} /> : null}
+
+        <NoConflictNote />
+
         {user?.id && aiPlan.priorityPlan?.goals?.length ? (
           <StartPlanSheet
             isOpen={startPlanOpen}
