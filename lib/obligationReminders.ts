@@ -109,6 +109,23 @@ export function checklistMonthFor(due: Date): string {
   return `${due.getFullYear()}-${m}-01`;
 }
 
+function isoDate(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/** Expense dates that count as paying a cycle: ~5 weeks early through month end. */
+export function obligationPaymentWindow(due: Date): {
+  from: string;
+  to: string;
+} {
+  return {
+    from: isoDate(addDays(due, -35)),
+    to: isoDate(new Date(due.getFullYear(), due.getMonth() + 1, 0)),
+  };
+}
+
 /** Recover the obligation title from a reminder notification title. */
 export function obligationTitleFromReminder(title: string): string | null {
   const match = /^(.+) due in \d+ days?$/.exec(title.trim());

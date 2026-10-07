@@ -57,6 +57,30 @@ function titleOverlap(
   return desc.includes(t.slice(0, n)) || t.includes(desc.slice(0, n));
 }
 
+function normaliseName(value: string | null | undefined): string {
+  return (value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Expense note names the obligation (e.g. "Niva Bupa premium" ↔ "Niva Bupa").
+ * Lets a payment tick its obligation after the premium / EMI amount changed.
+ */
+export function obligationNameMatches(
+  description: string | null | undefined,
+  title: string | null | undefined,
+): boolean {
+  const desc = normaliseName(description);
+  const t = normaliseName(title);
+  if (t.length < 3 || desc.length < 3) return false;
+  return ` ${desc} `.includes(` ${t} `) || ` ${t} `.includes(` ${desc} `);
+}
+
+/** Amount-matched pairs always outrank name-only ones. */
+const AMOUNT_MATCH_BONUS = 100;
+
 type ExpenseLike = {
   id?: string;
   amount: number | string;
@@ -104,6 +128,18 @@ function itemAmountMatches(amount: number, item: ChecklistLike): boolean {
   return false;
 }
 
+function matchScore(expense: ExpenseLike, item: ChecklistLike): number | null {
+  const byAmount = itemAmountMatches(Number(expense.amount), item);
+  const byName = obligationNameMatches(
+    expense.description,
+    item.obligation?.title,
+  );
+  if (!byAmount && !byName) return null;
+  return (
+    (byAmount ? AMOUNT_MATCH_BONUS : 0) + obligationMatchScore(expense, item)
+  );
+}
+
 /** Credit card bill pays live in CC dues UI — never touch obligations. */
 export function isCreditCardObligationExpense(e: {
   bucket?: string | null;
@@ -148,12 +184,12 @@ export function obligationMatchScore(
 }
 
 /**
- * Amount-first: same ₹ → covers. Category/title only used by sync ranking.
+ * Same ₹, or the expense note names the obligation.
  * `obligationCategory` kept for call-site compat; ignored for the gate.
  */
 export function expenseCoversChecklistItem(
   amount: number,
-  _description: string | null | undefined,
+  description: string | null | undefined,
   _obligationCategory: string | null,
   item: {
     expected_amount?: number | null;
@@ -165,34 +201,32 @@ export function expenseCoversChecklistItem(
     } | null;
   },
 ): boolean {
-  return itemAmountMatches(amount, item as ChecklistLike);
+  return (
+    itemAmountMatches(amount, item as ChecklistLike) ||
+    obligationNameMatches(description, item.obligation?.title)
+  );
 }
 
-/** Best pending row for a new expense — amount first, then soft score. */
+/** Best pending row for a new expense — amount match first, then name, then soft score. */
 export function findPendingChecklistForExpense(
   checklist: ChecklistLike[],
   expense: ExpenseLike,
 ): ChecklistLike | undefined {
   if (!isEligibleExpense(expense)) return undefined;
-  const amount = Number(expense.amount);
-  const candidates = checklist.filter(
-    (c) =>
-      c.status === "pending" &&
-      c.obligation?.is_active !== false &&
-      itemAmountMatches(amount, c),
-  );
-  if (candidates.length === 0) return undefined;
-  if (candidates.length === 1) return candidates[0];
-  return [...candidates].sort(
-    (a, b) =>
-      obligationMatchScore(expense, b) - obligationMatchScore(expense, a),
-  )[0];
+  let best: { item: ChecklistLike; score: number } | undefined;
+  for (const c of checklist) {
+    if (c.status !== "pending" || c.obligation?.is_active === false) continue;
+    const score = matchScore(expense, c);
+    if (score == null) continue;
+    if (!best || score > best.score) best = { item: c, score };
+  }
+  return best?.item;
 }
 
 /**
  * Sync ✓ from expenses.
- * 1) Match by amount (required)
- * 2) If several rows share that amount, pick best soft score (category/title)
+ * 1) Match by amount, or by the expense note naming the obligation
+ * 2) Amount matches win; ties break on soft score (category/title)
  * 3) One expense → one obligation
  */
 export function planObligationExpenseSync(opts: {
@@ -218,13 +252,9 @@ export function planObligationExpenseSync(opts: {
   for (const e of expenses) {
     const amount = Number(e.amount);
     for (const c of items) {
-      if (!itemAmountMatches(amount, c)) continue;
-      pairs.push({
-        expenseId: e.id,
-        checklistId: c.id,
-        amount,
-        score: obligationMatchScore(e, c),
-      });
+      const score = matchScore(e, c);
+      if (score == null) continue;
+      pairs.push({ expenseId: e.id, checklistId: c.id, amount, score });
     }
   }
 

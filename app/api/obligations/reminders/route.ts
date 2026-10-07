@@ -8,6 +8,7 @@ import {
   obligationReminderEmoji,
   shouldSendObligationReminder,
 } from "@/lib/obligationReminders";
+import { hasNamedPaymentForCycle } from "@/lib/obligationReminderPopup";
 
 function authorizeRequest(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
@@ -57,7 +58,9 @@ async function handleReminders(req: NextRequest) {
       .select("obligation_id, checklist_month")
       .in("checklist_month", [
         checklistMonthFor(today),
-        checklistMonthFor(new Date(today.getFullYear(), today.getMonth() + 1, 1)),
+        checklistMonthFor(
+          new Date(today.getFullYear(), today.getMonth() + 1, 1),
+        ),
       ])
       .in("status", [...SETTLED_CHECKLIST_STATUSES]);
     if (settledErr) {
@@ -85,6 +88,17 @@ async function handleReminders(req: NextRequest) {
       if (!shouldSendObligationReminder(ob, today)) continue;
       const due = obligationReminderDueDate(ob, today);
       if (due && settled.has(`${ob.id}|${checklistMonthFor(due)}`)) continue;
+      if (
+        due &&
+        (await hasNamedPaymentForCycle(
+          supabaseAdmin,
+          ob.user_id,
+          ob.title,
+          due,
+        ))
+      ) {
+        continue;
+      }
 
       const remindBefore = ob.remind_days_before ?? 7;
       const { title, content } = buildObligationReminderCopy(ob, remindBefore);

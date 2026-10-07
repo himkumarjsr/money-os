@@ -3,13 +3,40 @@ import {
   SETTLED_CHECKLIST_STATUSES,
   checklistMonthFor,
   isObligationReminderRelevant,
+  obligationPaymentWindow,
   obligationReminderDueDate,
   obligationTitleFromReminder,
 } from "@/lib/obligationReminders";
+import { obligationNameMatches } from "@/lib/trackerObligationSync";
 
 export const OBLIGATION_REMINDER_CATEGORY = "obligation_reminder";
 
 type PopupCandidate = { title: string; category: string; created_at: string };
+
+/**
+ * A tracker expense around the due date whose note names the obligation —
+ * counts as paid even when the amount changed (e.g. renewed premium).
+ */
+export async function hasNamedPaymentForCycle(
+  supabase: SupabaseClient,
+  userId: string,
+  obligationTitle: string,
+  dueDate: Date,
+): Promise<boolean> {
+  const { from, to } = obligationPaymentWindow(dueDate);
+  const { data, error } = await supabase
+    .from("expense_transactions")
+    .select("description, bucket")
+    .eq("user_id", userId)
+    .gte("date", from)
+    .lte("date", to);
+  if (error || !data) return false;
+  return data.some(
+    (t) =>
+      t.bucket !== "income" &&
+      obligationNameMatches(t.description, obligationTitle),
+  );
+}
 
 /**
  * False when an obligation reminder is outdated (bill paid / skipped /
@@ -59,9 +86,18 @@ export async function isPopupNotificationRelevant(
           .in("status", [...SETTLED_CHECKLIST_STATUSES])
           .limit(1);
         if (checklistError) return true;
-        settled = (rows?.length ?? 0) > 0;
+        settled =
+          (rows?.length ?? 0) > 0 ||
+          (await hasNamedPaymentForCycle(
+            supabase,
+            userId,
+            obligationTitle,
+            dueDate,
+          ));
       }
-      if (isObligationReminderRelevant({ active: true, dueDate, settled, now })) {
+      if (
+        isObligationReminderRelevant({ active: true, dueDate, settled, now })
+      ) {
         return true;
       }
     }

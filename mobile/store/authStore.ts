@@ -37,6 +37,8 @@ interface AuthState {
   isLoading: boolean;
   hasInitialized: boolean;
   lastRedirectUri: string | null;
+  /** True while signInWithGoogle owns the OAuth code exchange. */
+  oauthInFlight: boolean;
   initAuth: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
@@ -158,6 +160,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
       hasInitialized: false,
       lastRedirectUri: null,
+      oauthInFlight: false,
 
       initAuth: async () => {
         set({ isLoading: true });
@@ -415,96 +418,103 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signInWithGoogle: async () => {
-        if (!isSupabaseConfigured()) {
-          return {
-            error:
-              "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
-          };
-        }
+        set({ oauthInFlight: true });
         try {
-          const nativeCallback = getNativeAppCallbackUri();
-          set({ lastRedirectUri: nativeCallback });
-          console.log("[oauth] nativeCallback =", nativeCallback);
-          console.log(
-            "[oauth] has Google web client id =",
-            Boolean(getGoogleWebClientId()),
-          );
+          if (!isSupabaseConfigured()) {
+            return {
+              error:
+                "Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env, then restart with: npx expo start --clear",
+            };
+          }
+          try {
+            const nativeCallback = getNativeAppCallbackUri();
+            set({ lastRedirectUri: nativeCallback });
+            console.log("[oauth] nativeCallback =", nativeCallback);
+            console.log(
+              "[oauth] has Google web client id =",
+              Boolean(getGoogleWebClientId()),
+            );
 
-          // 1) Preferred — Google ID token stays inside Expo (no finkoin.com)
-          const idTokenAttempt = await signInWithGoogleIdToken();
-          if (!idTokenAttempt.skipped) {
-            if (!idTokenAttempt.ok) {
-              return { error: idTokenAttempt.error || "Google sign-in failed" };
+            // 1) Preferred — Google ID token stays inside Expo (no finkoin.com)
+            const idTokenAttempt = await signInWithGoogleIdToken();
+            if (!idTokenAttempt.skipped) {
+              if (!idTokenAttempt.ok) {
+                return {
+                  error: idTokenAttempt.error || "Google sign-in failed",
+                };
+              }
+              await get().refreshUser();
+              if (!get().isLoggedIn) {
+                const {
+                  data: { session },
+                } = await supabase.auth.getSession();
+                if (session?.user) {
+                  set({
+                    user: mapAuthUser(session.user),
+                    isLoggedIn: true,
+                    isLoading: false,
+                    hasInitialized: true,
+                  });
+                }
+              }
+              if (!get().isLoggedIn) {
+                return { error: "Google ID token sign-in returned no session" };
+              }
+              return {};
+            }
+
+            // 2) Fallback — Supabase OAuth with forced exp:// / finkoin:// return
+            const deepLinkPromise = waitForAuthDeepLink(60_000);
+            const browser = await signInWithGoogleSupabaseBrowser();
+
+            if (!browser.ok) {
+              // Maybe deep link still arrived after dismiss
+              const late = await Promise.race([
+                deepLinkPromise,
+                new Promise<string | null>((r) =>
+                  setTimeout(() => r(null), 2500),
+                ),
+              ]);
+              if (late) {
+                await createSessionFromUrl(late);
+                await get().refreshUser();
+                if (get().isLoggedIn) return {};
+              }
+              return {
+                error:
+                  browser.error ||
+                  "Google could not return to the app. Add the exp:// redirect in Supabase.",
+              };
+            }
+
+            if (browser.authUrl) {
+              await createSessionFromUrl(browser.authUrl);
             }
             await get().refreshUser();
             if (!get().isLoggedIn) {
-              const {
-                data: { session },
-              } = await supabase.auth.getSession();
-              if (session?.user) {
-                set({
-                  user: mapAuthUser(session.user),
-                  isLoggedIn: true,
-                  isLoading: false,
-                  hasInitialized: true,
-                });
+              const late = await deepLinkPromise;
+              if (late) {
+                await createSessionFromUrl(late);
+                await get().refreshUser();
               }
             }
             if (!get().isLoggedIn) {
-              return { error: "Google ID token sign-in returned no session" };
+              return { error: "Signed in with Google but session was empty" };
             }
             return {};
-          }
-
-          // 2) Fallback — Supabase OAuth with forced exp:// / finkoin:// return
-          const deepLinkPromise = waitForAuthDeepLink(12_000);
-          const browser = await signInWithGoogleSupabaseBrowser();
-
-          if (!browser.ok) {
-            // Maybe deep link still arrived after dismiss
-            const late = await Promise.race([
-              deepLinkPromise,
-              new Promise<string | null>((r) =>
-                setTimeout(() => r(null), 2500),
-              ),
-            ]);
-            if (late) {
-              await createSessionFromUrl(late);
-              await get().refreshUser();
-              if (get().isLoggedIn) return {};
+          } catch (e) {
+            console.warn("[oauth] error", e);
+            try {
+              WebBrowser.dismissAuthSession();
+            } catch {
+              /* ignore */
             }
             return {
-              error:
-                browser.error ||
-                "Google could not return to the app. Add the exp:// redirect in Supabase.",
+              error: e instanceof Error ? e.message : "Google sign-in failed",
             };
           }
-
-          if (browser.authUrl) {
-            await createSessionFromUrl(browser.authUrl);
-          }
-          await get().refreshUser();
-          if (!get().isLoggedIn) {
-            const late = await deepLinkPromise;
-            if (late) {
-              await createSessionFromUrl(late);
-              await get().refreshUser();
-            }
-          }
-          if (!get().isLoggedIn) {
-            return { error: "Signed in with Google but session was empty" };
-          }
-          return {};
-        } catch (e) {
-          console.warn("[oauth] error", e);
-          try {
-            WebBrowser.dismissAuthSession();
-          } catch {
-            /* ignore */
-          }
-          return {
-            error: e instanceof Error ? e.message : "Google sign-in failed",
-          };
+        } finally {
+          set({ oauthInFlight: false });
         }
       },
 

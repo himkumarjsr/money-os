@@ -23,6 +23,14 @@ function fakeSupabase(tables: Record<string, Row[]>): SupabaseClient {
         out = out.filter((r) => r[col] === val);
         return builder;
       },
+      gte: (col: string, val: string) => {
+        out = out.filter((r) => String(r[col]) >= val);
+        return builder;
+      },
+      lte: (col: string, val: string) => {
+        out = out.filter((r) => String(r[col]) <= val);
+        return builder;
+      },
       in: (col: string, vals: unknown[]) => {
         out = out.filter((r) => vals.includes(r[col]));
         return builder;
@@ -163,6 +171,57 @@ describe("isPopupNotificationRelevant", () => {
     ).toBe(false);
   });
 
+  it("hides it when a tracker expense names the bill at a new amount", async () => {
+    const supabase = fakeSupabase({
+      financial_obligations: [nivaBupa],
+      expense_transactions: [
+        {
+          user_id: USER,
+          date: "2026-09-27",
+          amount: 21607,
+          bucket: "needs",
+          description: "Niva Bupa renewal",
+        },
+      ],
+    });
+    expect(
+      await isPopupNotificationRelevant(
+        supabase,
+        USER,
+        reminder,
+        new Date(2026, 8, 28),
+      ),
+    ).toBe(false);
+  });
+
+  it("ignores expenses with a different name or outside the cycle", async () => {
+    const supabase = fakeSupabase({
+      financial_obligations: [nivaBupa],
+      expense_transactions: [
+        {
+          user_id: USER,
+          date: "2026-09-27",
+          bucket: "needs",
+          description: "Groceries",
+        },
+        {
+          user_id: USER,
+          date: "2025-10-03",
+          bucket: "needs",
+          description: "Niva Bupa",
+        },
+      ],
+    });
+    expect(
+      await isPopupNotificationRelevant(
+        supabase,
+        USER,
+        reminder,
+        new Date(2026, 8, 28),
+      ),
+    ).toBe(true);
+  });
+
   it("hides a reminder whose due date has passed even if unpaid", async () => {
     const supabase = fakeSupabase({ financial_obligations: [nivaBupa] });
     expect(
@@ -224,13 +283,14 @@ describe("isPopupNotificationRelevant", () => {
 });
 
 describe("mobile keeps byte-identical reminder logic", () => {
-  it.each(["obligationReminders.ts", "obligationReminderPopup.ts"])(
-    "%s",
-    (file) => {
-      const root = path.resolve(__dirname, "..");
-      expect(readFileSync(path.join(root, "mobile/lib", file), "utf8")).toBe(
-        readFileSync(path.join(root, "lib", file), "utf8"),
-      );
-    },
-  );
+  it.each([
+    "obligationReminders.ts",
+    "obligationReminderPopup.ts",
+    "trackerObligationSync.ts",
+  ])("%s", (file) => {
+    const root = path.resolve(__dirname, "..");
+    expect(readFileSync(path.join(root, "mobile/lib", file), "utf8")).toBe(
+      readFileSync(path.join(root, "lib", file), "utf8"),
+    );
+  });
 });

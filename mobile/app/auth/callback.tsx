@@ -10,6 +10,22 @@ import * as WebBrowser from "expo-web-browser";
 import { useAuthStore, createSessionFromUrl } from "@/store/authStore";
 import { Colors, FontSize } from "@/constants/theme";
 
+const OAUTH_WAIT_MS = 30_000;
+
+function waitForOAuthToFinish(): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, OAUTH_WAIT_MS);
+    const unsubscribe = useAuthStore.subscribe((s) => {
+      if (!s.oauthInFlight) done();
+    });
+    function done() {
+      clearTimeout(timer);
+      unsubscribe();
+      resolve();
+    }
+  });
+}
+
 /**
  * Deep-link landing after Google OAuth and password-recovery emails
  * (`type=recovery` → update-password).
@@ -40,6 +56,13 @@ export default function AuthCallbackScreen() {
           } catch {
             /* ignore */
           }
+        }
+
+        // Google sign-in started in this session exchanges the code itself;
+        // a second exchange of the same one-time code always fails.
+        if (useAuthStore.getState().oauthInFlight) {
+          await waitForOAuthToFinish();
+          return;
         }
 
         const linkingUrl = await Linking.getInitialURL();
