@@ -178,6 +178,7 @@ export function obligationMatchScore(
   if (bucket === "loans" && obCat === "loan_emi") score += 4;
   if (bucket === "loans" && obCat === "credit_card") score += 2;
   if (bucket === "investment" && obCat.startsWith("investment")) score += 4;
+  if (bucket === "security" && obCat.startsWith("insurance")) score += 4;
   if (bucket === "needs" && (obCat === "rent" || obCat.startsWith("insurance")))
     score += 3;
   return score;

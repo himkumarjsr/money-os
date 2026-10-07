@@ -1,8 +1,14 @@
 import { calculateOutstanding } from "@/lib/amortisation";
 import {
+  LONG_RUN_INFLATION,
   emergencyFundMonthsNeeded,
   medicalEmergencyTarget,
+  projectRetirementAccounts,
 } from "@/lib/financialEngine";
+import { monthlySipForGoal } from "@/lib/sipGoal";
+
+/** Nominal equity-index assumption used to size the retirement top-up SIP. */
+const RETIREMENT_SIP_RETURN = 0.12;
 
 export interface PriorityItem {
   rank: number;
@@ -1183,18 +1189,35 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       (profile.epfBalance || 0) +
       (profile.ppfBalance || 0) +
       (profile.npsBalance || 0);
-    const fireGap = Math.max(0, fireTarget - currentCorpus);
     const retireAge =
       primaryGoal === "retire_early"
         ? profile.retirementAge || 50
         : profile.retirementAge || 60;
     const yearsToRetire = Math.max(1, retireAge - age);
+    // fireTarget is in today's rupees, so compare against PF/PPF/NPS grown
+    // in real terms (balance + ongoing contributions), not today's flat balance.
+    const projectedRetirementAccounts = projectRetirementAccounts(
+      profile,
+      yearsToRetire,
+      { real: true },
+    ).total;
+    const fireGap = Math.max(
+      0,
+      fireTarget -
+        (profile.mfValue || 0) -
+        (profile.totalEquityValue || 0) -
+        projectedRetirementAccounts,
+    );
+    const realSipReturnPct =
+      ((1 + RETIREMENT_SIP_RETURN) / (1 + LONG_RUN_INFLATION) - 1) * 100;
 
     goalList.push({
       goalType: primaryGoal === "retire_early" ? "retire_early" : "grow_wealth",
       targetAmount: Math.round(fireTarget),
       currentSaved: Math.round(currentCorpus),
-      monthlyRequired: Math.round(fireGap / (yearsToRetire * 12 * 1.1)),
+      monthlyRequired: Math.round(
+        monthlySipForGoal(fireGap, realSipReturnPct, yearsToRetire),
+      ),
       yearsToGoal: yearsToRetire,
       instrument:
         age < 40 ? "Nifty 50 Index Fund + NPS" : "Index Fund + PPF + NPS",

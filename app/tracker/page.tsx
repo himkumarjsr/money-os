@@ -12,6 +12,7 @@ import {
   TRACKER_CATEGORIES,
   countsTowardTrackerTotals,
   findSubcategory,
+  normalizeTrackerBucket,
 } from "@/lib/tracker-categories";
 import {
   TrackerIconBadge,
@@ -234,6 +235,7 @@ function TrackerContent() {
     "needs",
     "wants",
     "habits",
+    "security",
     "loans",
     "investment",
   ] as const;
@@ -418,9 +420,15 @@ function TrackerContent() {
           console.warn("tracker fetch:", currentRes.error.message);
         if (prevRes.error)
           console.warn("tracker prev fetch:", prevRes.error.message);
-        const prevRows = (prevRes.data as TrackerTransaction[]) || [];
-        const prev2Rows = (prev2Res.data as TrackerTransaction[]) || [];
-        setTransactions((currentRes.data as TrackerTransaction[]) || []);
+        const prevRows = ((prevRes.data as TrackerTransaction[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        const prev2Rows = ((prev2Res.data as TrackerTransaction[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        setTransactions(
+          ((currentRes.data as TrackerTransaction[]) || []).map(normalizeTrackerBucket),
+        );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
       } catch (e) {
@@ -1053,7 +1061,14 @@ function TrackerContent() {
       setSelectedMonth((m) => m + 1);
     }
   };
-  const buckets = ["needs", "wants", "habits", "loans", "investment"] as const;
+  const buckets = [
+    "needs",
+    "wants",
+    "habits",
+    "security",
+    "loans",
+    "investment",
+  ] as const;
   const incomeVisible = isSectionVisible("income");
 
   const summaryCardInner = (visible: boolean) => (

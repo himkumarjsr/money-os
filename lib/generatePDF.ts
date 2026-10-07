@@ -577,34 +577,27 @@ export function buildFixPlanPdf(
   y += 4;
   addText("Monthly Budget Allocation", 11, DARK, true);
   y += 2;
-  const buckets = analysis?.universalBuckets || analysis?.buckets || null;
-  if (buckets && Object.keys(buckets).length > 0) {
-    const bucketRows = Object.entries(buckets).map(([key, bucket]: any) => [
-      key.charAt(0).toUpperCase() + key.slice(1),
-      formatCapPercent(bucket.capPercent ?? bucket.capPct),
-      fmt(bucket.capAmount ?? bucket.cap ?? 0),
-      fmt(bucket.actual ?? bucket.actualAmount ?? 0),
-      bucketStatusLabel(bucket.status),
-    ]);
-    addSmallTable(
-      ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
-      bucketRows,
-      [35, 20, 35, 35, 25],
-    );
-  } else {
-    const fallbackBuckets = getUniversalBucketRows(profile).map((row) => [
-      row.label,
-      formatCapPercent(row.capPercent),
-      fmt(row.capAmount),
-      fmt(row.actual),
-      bucketStatusLabel(row.status),
-    ]);
-    addSmallTable(
-      ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
-      fallbackBuckets,
-      [35, 20, 35, 35, 25],
-    );
-  }
+  // Always the engine's five rows: stored analysis buckets can predate the
+  // Security bucket and would print caps that total 95%.
+  const shortBucketLabel: Record<string, string> = {
+    needs: "Needs",
+    wants: "Wants",
+    security: "Insurance",
+    loans: "Loans",
+    investment: "Investment",
+  };
+  const bucketRows = getUniversalBucketRows(profile).map((row) => [
+    shortBucketLabel[row.key] ?? row.label,
+    formatCapPercent(row.capPercent),
+    fmt(row.capAmount),
+    fmt(row.actual),
+    bucketStatusLabel(row.status),
+  ]);
+  addSmallTable(
+    ["Category", "Cap%", "Cap₹", "Actual₹", "Status"],
+    bucketRows,
+    [35, 20, 35, 35, 25],
+  );
 
   if (priorityPlan?.surplusBreakdown) {
     y += 2;

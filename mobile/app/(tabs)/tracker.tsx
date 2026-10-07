@@ -36,6 +36,7 @@ import {
   TRACKER_CATEGORIES,
   countsTowardTrackerTotals,
   findSubcategory,
+  normalizeTrackerBucket,
   type BucketType,
 } from "@/lib/tracker-categories";
 import { formatExpenseDate, localISODate } from "@/lib/localDate";
@@ -82,6 +83,7 @@ const BUCKETS: BucketType[] = [
   "needs",
   "wants",
   "habits",
+  "security",
   "loans",
   "investment",
 ];
@@ -172,6 +174,7 @@ export default function TrackerScreen() {
     "needs",
     "wants",
     "habits",
+    "security",
     "loans",
     "investment",
   ] as const;
@@ -282,9 +285,15 @@ export default function TrackerScreen() {
             .order("date", { ascending: false }),
         ]);
         if (fetchReqId.current !== myId) return;
-        const prevRows = (prevRes.data as TrackerTxn[]) || [];
-        const prev2Rows = (prev2Res.data as TrackerTxn[]) || [];
-        setTransactions((currentRes.data as TrackerTxn[]) || []);
+        const prevRows = ((prevRes.data as TrackerTxn[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        const prev2Rows = ((prev2Res.data as TrackerTxn[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        setTransactions(
+          ((currentRes.data as TrackerTxn[]) || []).map(normalizeTrackerBucket),
+        );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
       } catch (e) {

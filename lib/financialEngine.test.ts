@@ -8,6 +8,7 @@ import {
   monthlySavingsContributions,
   monthlyTotalExpenses,
   monthlyTotalIncome,
+  projectRetirementAccounts,
   type FinancialProfile,
 } from "@/lib/financialEngine";
 import { describe, expect, it } from "vitest";
@@ -268,6 +269,30 @@ describe("assessTermCover", () => {
     );
     expect(result.issues.some((i) => i.code === "term_cover_baseline_ok")).toBe(
       true,
+    );
+  });
+});
+
+describe("projectRetirementAccounts", () => {
+  it("compounds EPF at ~8.15% instead of keeping a flat balance", () => {
+    const p = projectRetirementAccounts({ epfBalance: 1_000_000 }, 10);
+    expect(p.epf).toBeCloseTo(1_000_000 * Math.pow(1.0815, 10), -2);
+    expect(p.total).toBe(p.epf);
+  });
+
+  it("adds ongoing monthly contributions for PPF and NPS", () => {
+    const p = projectRetirementAccounts(
+      { monthlyPPFContribution: 10_000, monthlyNPSContribution: 5_000 },
+      15,
+    );
+    expect(p.ppf).toBeGreaterThan(10_000 * 12 * 15);
+    expect(p.nps).toBeGreaterThan(5_000 * 12 * 15);
+  });
+
+  it("real projection is lower than nominal (today's rupees)", () => {
+    const data = { epfBalance: 500_000, monthlyEPFContribution: 5_000 };
+    expect(projectRetirementAccounts(data, 20, { real: true }).total).toBeLessThan(
+      projectRetirementAccounts(data, 20).total,
     );
   });
 });
