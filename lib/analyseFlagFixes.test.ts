@@ -396,6 +396,7 @@ describe("mobile keeps byte-identical copies of shared logic", () => {
     "financialEngine.ts",
     "fixPlanMerge.ts",
     "goalDetection.ts",
+    "goalFunding.ts",
     "paywallCopy.ts",
     "priorityEngine.ts",
     "saveAnalyseProfile.ts",

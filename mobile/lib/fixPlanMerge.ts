@@ -99,6 +99,7 @@ export function mergeEnginePriorityPlan(
     // Deterministic allocation — never take AI/cache monthlyPlan
     debts: engine.debts,
     goals: engine.goals,
+    goalFunding: engine.goalFunding,
     monthlyIncome: engine.monthlyIncome,
     monthlySurplus: engine.monthlySurplus,
     surplusBreakdown: engine.surplusBreakdown,

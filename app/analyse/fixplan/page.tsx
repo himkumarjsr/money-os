@@ -855,38 +855,8 @@ export default function FixPlanPage() {
           </section>
         ) : null}
 
-        {aiPlan.priorityPlan?.goals?.[0] ? (
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold">Goal plan</h3>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#ECEAF5]">
-              <div
-                className="h-full bg-[#534AB7]"
-                style={{
-                  width: `${Math.min(100, (aiPlan.priorityPlan.goals[0].currentSaved / Math.max(aiPlan.priorityPlan.goals[0].targetAmount, 1)) * 100)}%`,
-                }}
-              />
-            </div>
-            <p className="mt-2 text-sm">
-              Target ₹
-              {aiPlan.priorityPlan.goals[0].targetAmount?.toLocaleString(
-                "en-IN",
-              )}{" "}
-              · Saved ₹
-              {aiPlan.priorityPlan.goals[0].currentSaved?.toLocaleString(
-                "en-IN",
-              )}
-            </p>
-            <p className="text-sm text-[#534AB7]">
-              Monthly required ₹
-              {aiPlan.priorityPlan.goals[0].monthlyRequired?.toLocaleString(
-                "en-IN",
-              )}{" "}
-              · Timeline {aiPlan.priorityPlan.goals[0].yearsToGoal} years
-            </p>
-            <p className="text-sm text-[#7A7871]">
-              Instrument: {aiPlan.priorityPlan.goals[0].instrument}
-            </p>
-          </section>
+        {aiPlan.priorityPlan?.goals?.length ? (
+          <GoalSplitCard goals={aiPlan.priorityPlan.goals} />
         ) : null}
 
         {profile
@@ -1148,5 +1118,89 @@ export default function FixPlanPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+type GoalSplitRow = {
+  goalType: string;
+  goalId?: string;
+  label?: string;
+  targetAmount: number;
+  currentSaved: number;
+  monthlyRequired: number;
+  monthlyAllocated?: number;
+  sharePct?: number;
+  yearsToGoal: number;
+  instrument: string;
+};
+
+function GoalSplitCard({ goals }: { goals: GoalSplitRow[] }) {
+  const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+  const parallel = goals.some((g) => g.monthlyAllocated != null);
+  const budget = goals.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
+  const shortfall = goals.reduce(
+    (s, g) =>
+      s + Math.max(0, g.monthlyRequired - (g.monthlyAllocated ?? g.monthlyRequired)),
+    0,
+  );
+  return (
+    <section className="rounded-2xl bg-white p-4 shadow-sm">
+      <h3 className="text-lg font-semibold">Goal plan</h3>
+      {parallel ? (
+        <p className="mt-1 text-sm font-medium text-[#454442]">
+          {inr(budget)}/month, split across {goals.length}{" "}
+          {goals.length === 1 ? "goal" : "goals"} at the same time — nearer
+          deadlines get more, long-horizon goals are never left at zero.
+        </p>
+      ) : null}
+      <div className="mt-3 space-y-3">
+        {goals.map((g) => {
+          const monthly = g.monthlyAllocated ?? g.monthlyRequired;
+          const funded =
+            g.monthlyRequired > 0
+              ? Math.min(100, Math.round((monthly / g.monthlyRequired) * 100))
+              : 100;
+          return (
+            <div
+              key={g.goalId ?? g.goalType}
+              className="rounded-xl border border-[#ECEAF5] p-3"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-semibold text-[#111110]">
+                  {g.label ?? g.goalType}
+                </p>
+                <p className="shrink-0 text-sm font-bold tabular-nums text-[#534AB7]">
+                  {inr(monthly)}/mo
+                  {g.sharePct != null ? (
+                    <span className="ml-1 text-xs font-semibold text-[#7A7871]">
+                      {g.sharePct}%
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ECEAF5]">
+                <div
+                  className="h-full bg-[#534AB7]"
+                  style={{ width: `${funded}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs font-medium text-[#454442]">
+                Target {inr(g.targetAmount)} in {g.yearsToGoal}{" "}
+                {g.yearsToGoal === 1 ? "year" : "years"} ·{" "}
+                {funded >= 100
+                  ? "fully funded"
+                  : `${funded}% of the ${inr(g.monthlyRequired)}/mo needed`}
+              </p>
+              <p className="text-xs text-[#7A7871]">Instrument: {g.instrument}</p>
+            </div>
+          );
+        })}
+      </div>
+      {shortfall > 0 ? (
+        <p className="mt-3 text-xs font-medium leading-relaxed text-[#5F5E5A]">
+          Another {inr(shortfall)}/month would fund every goal on time.
+        </p>
+      ) : null}
+    </section>
   );
 }

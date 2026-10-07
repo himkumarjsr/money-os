@@ -22,7 +22,7 @@ CRITICAL RULES:
 8. overallSummary MUST mention the user's actual monthly surplus, actual score, and top 2 specific issues with rupee amounts. NEVER invent gaps for priorities whose status is "complete" or gap is 0 (especially medical_fund / emergency_fund).
 9. thisWeekAction MUST be one specific action with an exact rupee amount or exact step.
 10. in12Months MUST describe the user's specific financial state in 12 months using their actual numbers.
-11. goalAdvice MUST follow priorities[].goals[0] / profile primaryGoal — do not default everything to retirement SIP if the goal is clear_debt, buy_home, kids_education, etc.`;
+11. goalAdvice MUST cover every goal in priorityPlan.goals — they are funded in parallel, not one at a time. For each, use its exact label, monthlyAllocated, sharePct, targetAmount and yearsToGoal. Explain why near-deadline goals get a bigger share and why long-horizon goals (retirement, a young child's education) are still funded now. If goalFunding.shortfall > 0, say how much more per month would fund every goal on time. Do not default everything to retirement SIP.`;
 
 export async function POST(req: NextRequest) {
   const groqKey = process.env.GROQ_API_KEY;
@@ -192,8 +192,13 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
           ]),
         ),
         debtStrategy: debtLines,
-        goalAdvice: priorityPlan.goals?.[0]
-          ? `${priorityPlan.goals[0].goalType}: target ₹${Number(priorityPlan.goals[0].targetAmount || 0).toLocaleString("en-IN")}, saved ₹${Number(priorityPlan.goals[0].currentSaved || 0).toLocaleString("en-IN")}, allocate ~₹${Number(priorityPlan.goals[0].monthlyRequired || 0).toLocaleString("en-IN")}/mo over ~${priorityPlan.goals[0].yearsToGoal}y`
+        goalAdvice: priorityPlan.goals?.length
+          ? `Your goals are funded in parallel: ${priorityPlan.goals
+              .map(
+                (g: any) =>
+                  `${g.label || g.goalType} ₹${Number(g.monthlyAllocated ?? g.monthlyRequired ?? 0).toLocaleString("en-IN")}/mo${g.sharePct != null ? ` (${g.sharePct}%)` : ""} toward ₹${Number(g.targetAmount || 0).toLocaleString("en-IN")} in ~${g.yearsToGoal}y`,
+              )
+              .join("; ")}.`
           : "Work through the priority items above before focusing heavily on goals.",
         thisWeekAction: priorityPlan.topAction,
         in12Months: `Following this plan your score could improve from ${priorityPlan.scoreToday} to ${priorityPlan.scoreAfter12Months} (with ~₹${surplus.toLocaleString("en-IN")}/mo deployable surplus in the model).`,

@@ -116,7 +116,7 @@ function FixPlanScreen() {
   const expl = aiPlan.explanations;
   const visiblePriorities: PriorityItem[] = openPriorities(pp);
   const monthlyPlanRows = pp?.monthlyPlan || [];
-  const goal = pp?.goals?.[0];
+  const goals = pp?.goals ?? [];
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
@@ -212,7 +212,7 @@ function FixPlanScreen() {
           <DebtStrategy debts={pp.debts} debtStrategy={expl?.debtStrategy} />
         ) : null}
 
-        {goal ? <GoalPlanCard goal={goal} /> : null}
+        {goals.length > 0 ? <GoalPlanCard goals={goals} /> : null}
 
         <ScoreProjection plan={pp} />
 

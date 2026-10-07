@@ -3,43 +3,111 @@ import type { GoalItem } from "@/lib/priorityEngine";
 import { Colors, Spacing } from "@/constants/theme";
 import { loc, shared } from "./shared";
 
-export function GoalPlanCard({ goal }: { goal: GoalItem }) {
-  const pct = Math.min(
-    100,
-    (Number(goal.currentSaved || 0) /
-      Math.max(Number(goal.targetAmount || 0), 1)) *
-      100,
+/** Every goal funded in parallel (weighted split from goalFunding), largest share first. */
+export function GoalPlanCard({ goals }: { goals: GoalItem[] }) {
+  const parallel = goals.some((g) => g.monthlyAllocated != null);
+  const budget = goals.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
+  const shortfall = goals.reduce(
+    (s, g) =>
+      s +
+      Math.max(0, g.monthlyRequired - (g.monthlyAllocated ?? g.monthlyRequired)),
+    0,
   );
   return (
     <View style={shared.card}>
       <Text style={shared.cardTitle}>Goal plan</Text>
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.max(0, pct)}%` }]} />
+      {parallel ? (
+        <Text style={styles.intro}>
+          ₹{loc(budget)}/month, split across {goals.length}{" "}
+          {goals.length === 1 ? "goal" : "goals"} at the same time — nearer
+          deadlines get more, long-horizon goals are never left at zero.
+        </Text>
+      ) : null}
+      <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
+        {goals.map((g) => {
+          const monthly = g.monthlyAllocated ?? g.monthlyRequired;
+          const funded =
+            g.monthlyRequired > 0
+              ? Math.min(100, Math.round((monthly / g.monthlyRequired) * 100))
+              : 100;
+          return (
+            <View key={g.goalId ?? g.goalType} style={styles.row}>
+              <View style={styles.head}>
+                <Text style={styles.title}>{g.label ?? g.goalType}</Text>
+                <Text style={styles.amount}>
+                  ₹{loc(monthly)}/mo
+                  {g.sharePct != null ? (
+                    <Text style={styles.share}> {g.sharePct}%</Text>
+                  ) : null}
+                </Text>
+              </View>
+              <View style={styles.track}>
+                <View style={[styles.fill, { width: `${funded}%` }]} />
+              </View>
+              <Text style={styles.line}>
+                Target ₹{loc(g.targetAmount)} in {g.yearsToGoal}{" "}
+                {g.yearsToGoal === 1 ? "year" : "years"} ·{" "}
+                {funded >= 100
+                  ? "fully funded"
+                  : `${funded}% of the ₹${loc(g.monthlyRequired)}/mo needed`}
+              </Text>
+              <Text style={[styles.line, styles.muted]}>
+                Instrument: {g.instrument}
+              </Text>
+            </View>
+          );
+        })}
       </View>
-      <Text style={styles.line}>
-        Target ₹{loc(goal.targetAmount)} · Saved ₹{loc(goal.currentSaved)}
-      </Text>
-      <Text style={[styles.line, styles.primary]}>
-        Monthly required ₹{loc(goal.monthlyRequired)} · Timeline{" "}
-        {goal.yearsToGoal} years
-      </Text>
-      <Text style={[styles.line, styles.muted]}>
-        Instrument: {goal.instrument}
-      </Text>
+      {shortfall > 0 ? (
+        <Text style={[styles.line, styles.muted, { marginTop: Spacing.md }]}>
+          Another ₹{loc(shortfall)}/month would fund every goal on time.
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  intro: {
+    marginTop: Spacing.xs,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 19,
+    color: "#454442",
+  },
+  row: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ECEAF5",
+    padding: Spacing.md,
+  },
+  head: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: Spacing.md,
+  },
+  title: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  amount: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.primary,
+    fontVariant: ["tabular-nums"],
+  },
+  share: { fontSize: 12, fontWeight: "600", color: "#7A7871" },
   track: {
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
     height: 8,
     borderRadius: 4,
     overflow: "hidden",
     backgroundColor: "#ECEAF5",
   },
   fill: { height: "100%", backgroundColor: Colors.primary },
-  line: { marginTop: Spacing.sm, fontSize: 14, color: Colors.textPrimary },
-  primary: { marginTop: 2, color: Colors.primary },
+  line: { marginTop: 6, fontSize: 12, fontWeight: "500", color: "#454442" },
   muted: { marginTop: 2, color: "#7A7871" },
 });

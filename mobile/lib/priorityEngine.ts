@@ -1,14 +1,13 @@
 import { calculateOutstanding } from "@/lib/amortisation";
 import {
-  LONG_RUN_INFLATION,
   emergencyFundMonthsNeeded,
   medicalEmergencyTarget,
-  projectRetirementAccounts,
 } from "@/lib/financialEngine";
-import { monthlySipForGoal } from "@/lib/sipGoal";
-
-/** Nominal equity-index assumption used to size the retirement top-up SIP. */
-const RETIREMENT_SIP_RETURN = 0.12;
+import {
+  buildGoalFundingPlan,
+  type GoalFundingItem,
+  type GoalFundingPlan,
+} from "@/lib/goalFunding";
 
 export interface PriorityItem {
   rank: number;
@@ -57,6 +56,11 @@ export interface GoalItem {
   readyToStart: boolean;
   blockedBy: string | null;
   icon: string;
+  /** Set for goals funded by the weighted-parallel split (see goalFunding). */
+  goalId?: string;
+  label?: string;
+  monthlyAllocated?: number;
+  sharePct?: number;
 }
 
 export interface PriorityPlan {
@@ -102,6 +106,8 @@ export interface PriorityPlan {
     remaining: number;
     note: string;
   }>;
+  /** Every active goal funded in parallel once safety steps are covered. */
+  goalFunding?: GoalFundingPlan;
 }
 
 function normalizeStage(
@@ -113,6 +119,34 @@ function normalizeStage(
   if (lifeStage === "kids") return "kids";
   if (lifeStage === "senior") return "senior";
   return "bachelor";
+}
+
+const GOAL_ICONS: Record<string, string> = {
+  kid_education: "🎓",
+  kid_marriage: "💍",
+  home_purchase: "🏠",
+  vehicle_purchase: "🚗",
+  parents_eldercare: "👵",
+  retirement: "🔥",
+  marriage: "💍",
+  baby: "👶",
+};
+
+const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
+function goalFundingAction(item: GoalFundingItem, startMonth: number): string {
+  const what = `${rupees(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()} (${item.sharePct}% of your goal budget)`;
+  return startMonth > 1 ? `From month ${startMonth}, put ${what}.` : `Put ${what}.`;
+}
+
+function goalFundingWhy(item: GoalFundingItem): string {
+  const base =
+    item.yearsToGoal <= 3
+      ? `Hard deadline in ${item.yearsToGoal} ${item.yearsToGoal === 1 ? "year" : "years"} — it can't benefit from waiting, so it gets a bigger share.`
+      : `${item.yearsToGoal} years away — funded now, not deferred, because every year skipped is compounding lost.`;
+  return item.fundedPct < 100
+    ? `${base} This covers ${item.fundedPct}% of the ${rupees(item.monthlyRequired)}/month needed to hit ${rupees(item.targetAmount)} by ${item.targetYear}.`
+    : `${base} Fully funded to reach ${rupees(item.targetAmount)} by ${item.targetYear}.`;
 }
 
 const MAX_PAYOFF_MONTHS = 600;
@@ -729,16 +763,25 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     primaryGoal === "clear_debt"
       ? Math.max(0, Math.round(monthlySurplus * 0.8))
       : Math.max(0, Math.round(monthlySurplus * 0.5));
-  const minSipByIncome = Math.max(0, Math.round(monthlyIncome * 0.2));
-  const sipBySurplus = Math.max(0, Math.round(monthlySurplus * 0.5));
-  const targetSip =
-    primaryGoal === "clear_debt"
-      ? Math.max(0, Math.round(monthlySurplus * 0.2))
-      : Math.max(minSipByIncome, sipBySurplus);
-  const goalDeployAfterSafety =
-    primaryGoal === "buy_home" ||
-    primaryGoal === "buy_car" ||
-    primaryGoal === "kids_education";
+
+  // Steady-state goal budget once safety is covered: surplus minus new
+  // premiums and SSY. "Clear debt" keeps most of it for prepayment.
+  const ssyReserve =
+    (Array.isArray(profile.kidsAges) ? (profile.kidsAges as number[]) : []).filter(
+      (kidAge, i) =>
+        ((profile.kidsGenders as string[] | undefined)?.[i] || "boy") ===
+          "girl" && kidAge < 10,
+    ).length * 12500;
+  const postSafetyBudget = Math.max(
+    0,
+    monthlySurplus - termPremiumEst - healthPremiumEst - ssyReserve,
+  );
+  const debtDeployMonthly =
+    primaryGoal === "clear_debt" ? Math.round(postSafetyBudget * 0.8) : 0;
+  const goalFunding = buildGoalFundingPlan(
+    profile,
+    postSafetyBudget - debtDeployMonthly,
+  );
 
   for (let month = 1; month <= 12; month += 1) {
     let left = Math.max(0, Math.round(monthlySurplus));
@@ -776,21 +819,26 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       if (primaryGoal === "clear_debt") {
         extraDebt = Math.min(left, debtExtraBudgetBase);
         left -= extraDebt;
-        sip = Math.min(left, targetSip);
-        left -= sip;
-        note = wealthDeploy.noteSafe(month);
-      } else if (goalDeployAfterSafety) {
-        extraDebt = Math.min(left, debtExtraBudgetBase);
-        left -= extraDebt;
-        sip = Math.min(left, targetSip);
+        sip = Math.min(
+          left,
+          goalFunding.totalAllocated + goalFunding.unallocated,
+        );
         left -= sip;
         note = wealthDeploy.noteSafe(month);
       } else {
-        sip = Math.min(left, targetSip);
+        sip = Math.min(left, goalFunding.totalAllocated);
         left -= sip;
-        extraDebt = Math.min(left, debtExtraBudgetBase);
-        left -= extraDebt;
-        note = wealthDeploy.noteSafe(month);
+        if (loansActual > 0) {
+          extraDebt = Math.min(left, debtExtraBudgetBase);
+          left -= extraDebt;
+        }
+        const generalSip = Math.min(left, goalFunding.unallocated);
+        sip += generalSip;
+        left -= generalSip;
+        note =
+          goalFunding.items.length > 1
+            ? `Safety complete. Fund your ${goalFunding.items.length} goals in parallel from month ${month}.`
+            : wealthDeploy.noteSafe(month);
       }
     } else if (emRemaining > 0) {
       note = "Emergency fund focus month.";
@@ -863,36 +911,93 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     );
   });
 
-  const goalDeployBudgetCap = Math.max(
-    0,
-    monthlySurplus - termPremiumEst - healthPremiumEst,
-  );
-  const goalDeployMonthly = Math.max(0, runningSurplus);
-  if (goalDeployBudgetCap > 0) {
-    const goalDeploySurplusBefore = runningSurplus;
-    runningSurplus = Math.max(0, runningSurplus - goalDeployMonthly);
+  if (debtDeployMonthly > 0) {
+    const before = runningSurplus;
+    const amount = Math.min(runningSurplus, debtDeployMonthly);
+    runningSurplus = Math.max(0, runningSurplus - amount);
     priorities.push({
       rank: rank++,
       id: wealthDeploy.id,
       title: wealthDeploy.title,
-      category: primaryGoal === "clear_debt" ? "debt" : "investment",
+      category: "debt",
       urgency: "medium",
       status: "missing",
-      currentAmount: investmentActual,
-      targetAmount: goalDeployBudgetCap,
-      gap: Math.max(0, goalDeployBudgetCap - investmentActual),
-      monthlyRequired: goalDeployBudgetCap,
-      monthlyContribution: goalDeployMonthly,
-      surplusBefore: goalDeploySurplusBefore,
+      currentAmount: 0,
+      targetAmount: debtDeployMonthly,
+      gap: debtDeployMonthly,
+      monthlyRequired: debtDeployMonthly,
+      monthlyContribution: amount,
+      surplusBefore: before,
       surplusAfterThis: runningSurplus,
       monthsToComplete: 1,
       instrument: wealthDeploy.instrument,
       actionThisWeek: wealthDeploy.action(
-        goalDeployMonthly > 0 ? goalDeployMonthly : goalDeployBudgetCap,
+        amount > 0 ? amount : debtDeployMonthly,
         sipStartMonth,
       ),
       whyThisMatters: wealthDeploy.why,
       icon: wealthDeploy.icon,
+      canBuyFromFinkoin: false,
+      startMonth: sipStartMonth,
+    });
+  }
+
+  for (const item of goalFunding.items) {
+    if (item.monthlyAllocated <= 0) continue;
+    const before = runningSurplus;
+    const amount = Math.min(runningSurplus, item.monthlyAllocated);
+    runningSurplus = Math.max(0, runningSurplus - amount);
+    priorities.push({
+      rank: rank++,
+      id: `goal_${item.goalId.replace(":", "_")}`,
+      title: item.label,
+      category: "goal",
+      urgency: "medium",
+      status: item.fundedPct >= 100 ? "partial" : "missing",
+      currentAmount: item.currentSaved,
+      targetAmount: item.targetAmount,
+      gap: Math.max(0, item.targetAmount - item.currentSaved),
+      monthlyRequired: item.monthlyRequired,
+      monthlyContribution: amount,
+      surplusBefore: before,
+      surplusAfterThis: runningSurplus,
+      monthsToComplete: item.yearsToGoal * 12,
+      instrument: item.instrument,
+      actionThisWeek: goalFundingAction(item, sipStartMonth),
+      whyThisMatters: goalFundingWhy(item),
+      icon: GOAL_ICONS[item.type] ?? "🎯",
+      canBuyFromFinkoin: false,
+      startMonth: sipStartMonth,
+    });
+  }
+
+  if (goalFunding.unallocated > 0) {
+    const before = runningSurplus;
+    const amount = Math.min(runningSurplus, goalFunding.unallocated);
+    runningSurplus = Math.max(0, runningSurplus - amount);
+    priorities.push({
+      rank: rank++,
+      id: "start_sip",
+      title: "Start SIP wealth building",
+      category: "investment",
+      urgency: "medium",
+      status: "missing",
+      currentAmount: investmentActual,
+      targetAmount: goalFunding.unallocated,
+      gap: goalFunding.unallocated,
+      monthlyRequired: goalFunding.unallocated,
+      monthlyContribution: amount,
+      surplusBefore: before,
+      surplusAfterThis: runningSurplus,
+      monthsToComplete: 1,
+      instrument: "Nifty 50 index fund / flexi-cap fund SIP",
+      actionThisWeek:
+        sipStartMonth > 1
+          ? `From month ${sipStartMonth}, invest the remaining ₹${Math.round(amount).toLocaleString("en-IN")}/month in an index fund SIP.`
+          : `Invest the remaining ₹${Math.round(amount).toLocaleString("en-IN")}/month in an index fund SIP.`,
+      whyThisMatters:
+        "Every goal is already funded on time — this extra builds long-run wealth.",
+      icon: "📈",
       canBuyFromFinkoin: false,
       startMonth: sipStartMonth,
     });
@@ -1069,50 +1174,6 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
 
   const goalList: GoalItem[] = [];
 
-  if (primaryGoal === "buy_home" || profile.homePurchaseTarget) {
-    const target = (profile.homePurchaseTarget || 5000000) * 0.6;
-    const saved = profile.savingsAccountBalance || 0;
-    const gap = Math.max(0, target - saved);
-    const yearsToGoal =
-      monthlySurplus > 0 ? Math.ceil(gap / (monthlySurplus * 0.3) / 12) : 7;
-
-    goalList.push({
-      goalType: "buy_home",
-      targetAmount: Math.round(target),
-      currentSaved: Math.round(saved),
-      monthlyRequired: Math.round(gap / Math.max(1, yearsToGoal * 12)),
-      yearsToGoal,
-      instrument:
-        yearsToGoal > 5
-          ? "Nifty 50 Index Fund SIP"
-          : "Recurring Deposit + Debt MF",
-      readyToStart:
-        priorities.filter(
-          (p) => p.urgency === "critical" && p.status !== "complete",
-        ).length === 0,
-      blockedBy:
-        priorities.find(
-          (p) => p.urgency === "critical" && p.status !== "complete",
-        )?.title || null,
-      icon: "🏠",
-    });
-  }
-
-  if (primaryGoal === "buy_car" && !profile.ownsCar) {
-    const carTarget = profile.carPurchaseTarget || 800000;
-    goalList.push({
-      goalType: "buy_car",
-      targetAmount: carTarget,
-      currentSaved: 0,
-      monthlyRequired: Math.round(carTarget / 24),
-      yearsToGoal: 2,
-      instrument: "Post Office RD or Liquid MF",
-      readyToStart: true,
-      blockedBy: null,
-      icon: "🚗",
-    });
-  }
-
   if (primaryGoal === "clear_debt") {
     const totalDebt = debtList.reduce((s, d) => s + (d.outstanding || 0), 0);
     const totalEmi = debtList.reduce((s, d) => s + (d.emi || 0), 0);
@@ -1129,21 +1190,6 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       readyToStart: debtList.length > 0,
       blockedBy: debtList.length === 0 ? "No loans on file" : null,
       icon: "💳",
-    });
-  }
-
-  if (primaryGoal === "kids_education") {
-    const eduTarget = profile.kidsEducationTarget || 2_000_000;
-    goalList.push({
-      goalType: "kids_education",
-      targetAmount: eduTarget,
-      currentSaved: Math.round(profile.ssyBalance || 0),
-      monthlyRequired: Math.round(eduTarget / (10 * 12)),
-      yearsToGoal: 10,
-      instrument: "SSY (if eligible) + equity education SIP",
-      readyToStart: true,
-      blockedBy: null,
-      icon: "🎓",
     });
   }
 
@@ -1176,57 +1222,24 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     });
   }
 
-  if (
-    primaryGoal === "retire_early" ||
-    primaryGoal === "grow_wealth" ||
-    primaryGoal === "retire_fire"
-  ) {
-    const annualExpenses = (analysis.needsActual || 0) * 12;
-    const fireTarget = annualExpenses * 25;
-    const currentCorpus =
-      (profile.mfValue || 0) +
-      (profile.totalEquityValue || 0) +
-      (profile.epfBalance || 0) +
-      (profile.ppfBalance || 0) +
-      (profile.npsBalance || 0);
-    const retireAge =
-      primaryGoal === "retire_early"
-        ? profile.retirementAge || 50
-        : profile.retirementAge || 60;
-    const yearsToRetire = Math.max(1, retireAge - age);
-    // fireTarget is in today's rupees, so compare against PF/PPF/NPS grown
-    // in real terms (balance + ongoing contributions), not today's flat balance.
-    const projectedRetirementAccounts = projectRetirementAccounts(
-      profile,
-      yearsToRetire,
-      { real: true },
-    ).total;
-    const fireGap = Math.max(
-      0,
-      fireTarget -
-        (profile.mfValue || 0) -
-        (profile.totalEquityValue || 0) -
-        projectedRetirementAccounts,
-    );
-    const realSipReturnPct =
-      ((1 + RETIREMENT_SIP_RETURN) / (1 + LONG_RUN_INFLATION) - 1) * 100;
-
+  const blockingCritical = priorities.find(
+    (p) => p.urgency === "critical" && p.status !== "complete",
+  );
+  for (const item of goalFunding.items) {
     goalList.push({
-      goalType: primaryGoal === "retire_early" ? "retire_early" : "grow_wealth",
-      targetAmount: Math.round(fireTarget),
-      currentSaved: Math.round(currentCorpus),
-      monthlyRequired: Math.round(
-        monthlySipForGoal(fireGap, realSipReturnPct, yearsToRetire),
-      ),
-      yearsToGoal: yearsToRetire,
-      instrument:
-        age < 40 ? "Nifty 50 Index Fund + NPS" : "Index Fund + PPF + NPS",
-      readyToStart:
-        priorities.filter(
-          (p) => p.urgency === "critical" && p.status !== "complete",
-        ).length < 2,
-      blockedBy: null,
-      icon: "🔥",
+      goalType: item.type,
+      goalId: item.goalId,
+      label: item.label,
+      targetAmount: Math.round(item.targetAmount),
+      currentSaved: Math.round(item.currentSaved),
+      monthlyRequired: item.monthlyRequired,
+      monthlyAllocated: item.monthlyAllocated,
+      sharePct: item.sharePct,
+      yearsToGoal: item.yearsToGoal,
+      instrument: item.instrument,
+      readyToStart: !blockingCritical,
+      blockedBy: blockingCritical?.title || null,
+      icon: GOAL_ICONS[item.type] ?? "🎯",
     });
   }
 
@@ -1298,5 +1311,6 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       "All priorities complete!",
     fdSuggestion,
     monthlyPlan,
+    goalFunding,
   };
 }
