@@ -14,6 +14,12 @@ import {
   findSubcategory,
   normalizeTrackerBucket,
 } from "@/lib/tracker-categories";
+import {
+  learnCapsFromSpending,
+  monthSpendFromRows,
+  type LearnedAdjustment,
+  type MonthSpend,
+} from "@/lib/learned-caps";
 import { getUniversalCaps } from "@/lib/universal-buckets";
 import {
   TrackerIconBadge,
@@ -86,6 +92,73 @@ export type TrackerTransaction = {
 
 function formatMaskedAmount(n: number, visible: boolean) {
   return visible ? `₹${Math.abs(n).toLocaleString("en-IN")}` : "₹••••••";
+}
+
+const SMART_BUDGET_OFF_KEY = "finkoin:smart-budget-off";
+
+function SmartBudgetNote({
+  adjustments,
+  on,
+  onToggle,
+}: {
+  adjustments: LearnedAdjustment[];
+  on: boolean;
+  onToggle: (on: boolean) => void;
+}) {
+  const moved = adjustments.reduce((a, x) => a + x.movedToInvestment, 0);
+  const label = (k: LearnedAdjustment["key"]) =>
+    k === "needs" ? "Needs" : "Wants";
+  return (
+    <div
+      style={{
+        background: "#E1F5EE",
+        border: "1px solid #BFE6D6",
+        borderRadius: 14,
+        padding: "12px 14px",
+        marginBottom: 12,
+        fontSize: 13,
+        color: "#085041",
+        lineHeight: 1.45,
+      }}
+    >
+      {on ? (
+        <>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>
+            Smart budget: ₹{Math.round(moved).toLocaleString("en-IN")}/mo moved
+            to Investments
+          </div>
+          {adjustments.map((a) => (
+            <div key={a.key}>
+              {label(a.key)} stayed under budget for 3 months (avg ₹
+              {Math.round(a.averageSpend).toLocaleString("en-IN")}), so its
+              budget is now {a.toPercent}% instead of {a.fromPercent}%.
+            </div>
+          ))}
+        </>
+      ) : (
+        <div>
+          Smart budget is off. Your spending has stayed under budget for 3
+          months.
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => onToggle(!on)}
+        style={{
+          marginTop: 8,
+          background: "none",
+          border: "none",
+          padding: 0,
+          color: "#534AB7",
+          fontWeight: 700,
+          fontSize: 13,
+          cursor: "pointer",
+        }}
+      >
+        {on ? "Undo" : "Turn smart budget on"}
+      </button>
+    </div>
+  );
 }
 
 function SectionPrivacyEye({
@@ -186,6 +259,15 @@ function TrackerContent() {
   >([]);
   /** Extra prior months for CC unpaid carry-forward (not used by Safety Pulse). */
   const [ccBillHistory, setCcBillHistory] = useState<TrackerTransaction[]>([]);
+  /** Needs / Wants spend for the 3 months before the selected one (newest first). */
+  const [learnHistory, setLearnHistory] = useState<MonthSpend[]>([]);
+  const [smartBudgetOff, setSmartBudgetOff] = useState(() => {
+    try {
+      return localStorage.getItem(SMART_BUDGET_OFF_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
   /** Prefer showing the UI shell immediately; soft fetches never blank it. */
   const [loading, setLoading] = useState(false);
@@ -399,8 +481,9 @@ function TrackerContent() {
         const supabase = getSupabase();
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
         const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
+        const prev3 = previousCalendarMonth(prev2.monthIndex, prev2.year);
 
-        const [currentRes, prevRes, prev2Res] = await Promise.all([
+        const [currentRes, prevRes, prev2Res, prev3Res] = await Promise.all([
           supabase
             .from("expense_transactions")
             .select("*")
@@ -422,6 +505,12 @@ function TrackerContent() {
             .eq("month", prev2.monthName)
             .eq("year", prev2.year)
             .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", prev3.monthName)
+            .eq("year", prev3.year),
         ]);
 
         if (fetchReqId.current !== myId) return;
@@ -442,12 +531,21 @@ function TrackerContent() {
         );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
+        const prev3Rows = ((prev3Res.data as TrackerTransaction[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        setLearnHistory(
+          [prevRows, prev2Rows, prev3Rows].map((rows) =>
+            monthSpendFromRows(rows),
+          ),
+        );
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker fetch failed", e);
         setTransactions([]);
         setPreviousTransactions([]);
         setCcBillHistory([]);
+        setLearnHistory([]);
       } finally {
         if (!soft) {
           hardInFlight.current = Math.max(0, hardInFlight.current - 1);
@@ -982,6 +1080,24 @@ function TrackerContent() {
     incomePlan.displayTotal > 0
       ? incomePlan.displayTotal
       : monthlyIncome || profileMonthlyFromDb;
+
+  // Lower Needs / Wants when the last 3 months stayed under them; the freed
+  // share goes to Investment. Users can undo it from the note above the buckets.
+  const learnedCaps = learnCapsFromSpending(
+    bucketCaps,
+    displayIncome,
+    learnHistory,
+  );
+  const effectiveCaps = smartBudgetOff ? bucketCaps : learnedCaps.caps;
+  const setSmartBudget = (on: boolean) => {
+    setSmartBudgetOff(!on);
+    try {
+      if (on) localStorage.removeItem(SMART_BUDGET_OFF_KEY);
+      else localStorage.setItem(SMART_BUDGET_OFF_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  };
 
   /**
    * Edit the main salary row (purple INCOME tap).
@@ -1818,6 +1934,14 @@ function TrackerContent() {
         ) : null}
       </div>
 
+      {learnedCaps.adjustments.length > 0 ? (
+        <SmartBudgetNote
+          adjustments={learnedCaps.adjustments}
+          on={!smartBudgetOff}
+          onToggle={setSmartBudget}
+        />
+      ) : null}
+
       {buckets.map((bucketKey) => {
         const cat = TRACKER_CATEGORIES[bucketKey];
         const bucketTxns = transactions.filter((t) => t.bucket === bucketKey);
@@ -1826,8 +1950,10 @@ function TrackerContent() {
           .reduce((a, t) => a + Number(t.amount), 0);
         const isExpanded = expandedBucket === bucketKey;
         const capPct =
-          bucketKey in bucketCaps
-            ? Math.round(bucketCaps[bucketKey as keyof typeof bucketCaps] * 100)
+          bucketKey in effectiveCaps
+            ? Math.round(
+                effectiveCaps[bucketKey as keyof typeof effectiveCaps] * 100,
+              )
             : cat.cap;
         const budgetAmount =
           displayIncome > 0 ? displayIncome * (capPct / 100) : 0;
