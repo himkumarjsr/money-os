@@ -481,7 +481,11 @@ export function Step3Obligations({
           value={ui.hasCreditCardOutstanding}
           onChange={(next) => {
             patchUi({ hasCreditCardOutstanding: next });
-            if (!next) setValue("creditCardBillMonthly", 0);
+            if (!next) {
+              setValue("creditCardBillMonthly", 0);
+              setValue("creditCardEmiMonthly", 0);
+              setValue("creditCardCarriedBalance", 0);
+            }
           }}
         />
         {ui.hasCreditCardOutstanding ? (
@@ -499,6 +503,16 @@ export function Step3Obligations({
                 dayName="creditCardBillDay"
               />
             ) : null}
+            <MoneyField
+              name="creditCardEmiMonthly"
+              label="Credit card EMIs (monthly)"
+              helper="Card purchases you turned into EMIs. Counts under Loans."
+            />
+            <MoneyField
+              name="creditCardCarriedBalance"
+              label="Card balance carried forward"
+              helper="Bill amount you didn't pay in full and carried to next month. Counts as a debt — cards charge about 36–45% a year on it."
+            />
           </Card>
         ) : null}
       </View>

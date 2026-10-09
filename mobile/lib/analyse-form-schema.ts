@@ -184,6 +184,10 @@ export interface FinancialProfile {
   bikeOutstanding?: number;
   /** Typical monthly payment toward credit cards (full pay-off or rolling balance). */
   creditCardBillMonthly?: number;
+  /** Monthly EMIs on card purchases converted to EMI (counts under Loans). */
+  creditCardEmiMonthly?: number;
+  /** Card balance not paid in full and carried to next month (a debt). */
+  creditCardCarriedBalance?: number;
   /** Optional EMI / bill debit day of month (1–31) for calendar reminders. */
   homeLoanEMIDay?: number;
   homeLoanEMIMonth?: number;
@@ -310,7 +314,11 @@ export interface FinancialProfile {
     maturityYear?: number;
     renewalMonth?: number;
     renewalDay?: number;
+    /** LIC / endowment with a maturity value: the premium counts as Investment. */
+    countAsInvestment?: boolean;
   }>;
+  /** Monthly premiums of policies marked `countAsInvestment` (Investment bucket). */
+  licEndowmentPremiumMonthly?: number;
 
   savingsAccountBalance: number;
   fdValue?: number;
@@ -551,6 +559,8 @@ const otherInsurancePremiumSchema = z.object({
   maturityYear: optionalWholeNumber,
   renewalMonth: optionalWholeNumber,
   renewalDay: optionalWholeNumber,
+  /** Optional so older payloads parse unchanged (missing = insurance). */
+  countAsInvestment: z.boolean().optional(),
 });
 
 const postOfficeSchemeSchema = z.object({
@@ -624,6 +634,8 @@ const formShape = {
   bikeLoanRemainingMonths: optionalWholeNumber,
   bikeOutstanding: optionalMoney,
   creditCardBillMonthly: optionalMoney,
+  creditCardEmiMonthly: optionalMoney,
+  creditCardCarriedBalance: optionalMoney,
   homeLoanEMIDay: optionalWholeNumber,
   homeLoanEMIMonth: optionalWholeNumber,
   carLoanEMIDay: optionalWholeNumber,
@@ -993,6 +1005,8 @@ export const step3Schema = baseFormSchema.pick({
   bikeLoanRemainingMonths: true,
   bikeOutstanding: true,
   creditCardBillMonthly: true,
+  creditCardEmiMonthly: true,
+  creditCardCarriedBalance: true,
   additionalObligations: true,
   unifiedLoans: true,
   odLimit: true,
@@ -1242,6 +1256,26 @@ export function findFirstInvalidAnalyseStep(
   };
 }
 
+/**
+ * Monthly total of "other insurance" rows: the LIC / endowment ones marked
+ * `countAsInvestment` (asInvestment = true) or the rest.
+ */
+export function otherPremiumRowsMonthly(
+  rows: ReadonlyArray<{
+    premiumAmount?: number;
+    premiumInput?: number;
+    frequency?: PremiumFrequency;
+    countAsInvestment?: boolean;
+  }>,
+  asInvestment: boolean,
+): number {
+  return rows.reduce((total, r) => {
+    if (Boolean(r.countAsInvestment) !== asInvestment) return total;
+    const amount = r.premiumAmount ?? r.premiumInput;
+    return total + (toMonthlyEquivalent(amount, r.frequency) ?? 0);
+  }, 0);
+}
+
 export function toMonthlyEquivalent(
   amount: number | undefined,
   frequency: PremiumFrequency | undefined,
@@ -1358,6 +1392,7 @@ export function fillDraftGapsFromProfile(
       premiumAmount:
         p.premiumAmount ?? (p as { premiumInput?: number }).premiumInput,
       frequency: p.frequency ?? "monthly",
+      ...(p.countAsInvestment ? { countAsInvestment: true } : {}),
     }));
   }
   return next;
@@ -1443,6 +1478,7 @@ function migrateLegacyAnalysePartial(
       renewalMonth:
         row.renewalMonth == null ? undefined : Number(row.renewalMonth),
       renewalDay: row.renewalDay == null ? undefined : Number(row.renewalDay),
+      ...(row.countAsInvestment === true ? { countAsInvestment: true } : {}),
     }));
     delete out.otherInsurancePolicies;
   }
@@ -1507,6 +1543,9 @@ export function mergeAnalyseDraftWithProfile(
         })(),
         renewalMonth: d?.renewalMonth ?? p?.renewalMonth,
         renewalDay: d?.renewalDay ?? p?.renewalDay,
+        ...((d?.countAsInvestment ?? p?.countAsInvestment)
+          ? { countAsInvestment: true }
+          : {}),
       };
     });
   }
@@ -1819,6 +1858,8 @@ export function financialProfileToFormValues(
     bikeLoanRemainingMonths: p.bikeLoanRemainingMonths ?? 0,
     bikeOutstanding: p.bikeOutstanding ?? 0,
     creditCardBillMonthly: p.creditCardBillMonthly ?? 0,
+    creditCardEmiMonthly: p.creditCardEmiMonthly ?? 0,
+    creditCardCarriedBalance: p.creditCardCarriedBalance ?? 0,
     additionalObligations,
     unifiedLoans,
     odLimit: p.odLimit ?? 0,
@@ -1890,6 +1931,7 @@ export function financialProfileToFormValues(
         maturityYear?: number;
         renewalMonth?: number;
         renewalDay?: number;
+        countAsInvestment?: boolean;
       };
       return {
         id: r.id ?? newAnalyseRowId(),
@@ -1900,6 +1942,7 @@ export function financialProfileToFormValues(
         maturityYear: r.maturityYear ?? 0,
         renewalMonth: r.renewalMonth,
         renewalDay: r.renewalDay,
+        ...(r.countAsInvestment ? { countAsInvestment: true } : {}),
       };
     }),
     otherInsurancePremiumInput:
@@ -2322,6 +2365,8 @@ export function normalizeAnalyseFormValues(
       : (firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths),
     bikeOutstanding: clearStaleLegacyLoans ? 0 : form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
+    creditCardEmiMonthly: form.creditCardEmiMonthly ?? 0,
+    creditCardCarriedBalance: form.creditCardCarriedBalance ?? 0,
     homeLoanEMIDay: form.homeLoanEMIDay,
     homeLoanEMIMonth: form.homeLoanEMIMonth,
     carLoanEMIDay: form.carLoanEMIDay,
@@ -2446,6 +2491,7 @@ export function normalizeAnalyseFormValues(
             maturityYear?: number;
             renewalMonth?: number;
             renewalDay?: number;
+            countAsInvestment?: boolean;
           };
           const amount = r.premiumAmount ?? r.premiumInput;
           const freq = r.frequency ?? "monthly";
@@ -2459,22 +2505,18 @@ export function normalizeAnalyseFormValues(
             maturityYear: r.maturityYear ?? 0,
             renewalMonth: r.renewalMonth,
             renewalDay: r.renewalDay,
+            ...(r.countAsInvestment ? { countAsInvestment: true } : {}),
           };
         })
       : [],
     otherInsurancePremiumMonthly: form.hasOtherInsurance
       ? (() => {
           const rows = form.otherInsurancePremiums ?? [];
-          const fromPolicies = rows.reduce((total, row) => {
-            const r = row as {
-              premiumAmount?: number;
-              premiumInput?: number;
-              frequency?: PremiumFrequency;
-            };
-            const amount = r.premiumAmount ?? r.premiumInput;
-            return total + (toMonthlyEquivalent(amount, r.frequency) ?? 0);
-          }, 0);
-          if (fromPolicies > 0) return fromPolicies;
+          // LIC / endowment rows count under Investment, not insurance.
+          const fromPolicies = otherPremiumRowsMonthly(rows, false);
+          if (fromPolicies > 0 || otherPremiumRowsMonthly(rows, true) > 0) {
+            return fromPolicies;
+          }
           return (
             toMonthlyEquivalent(
               form.otherInsurancePremiumInput,
@@ -2483,6 +2525,9 @@ export function normalizeAnalyseFormValues(
           );
         })()
       : undefined,
+    licEndowmentPremiumMonthly: form.hasOtherInsurance
+      ? otherPremiumRowsMonthly(form.otherInsurancePremiums ?? [], true)
+      : 0,
     otherInsurancePremiumInput: form.hasOtherInsurance
       ? form.otherInsurancePremiumInput
       : undefined,
@@ -2648,6 +2693,8 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   bikeLoanRemainingMonths: 0,
   bikeOutstanding: 0,
   creditCardBillMonthly: 0,
+  creditCardEmiMonthly: 0,
+  creditCardCarriedBalance: 0,
   homeLoanEMIDay: undefined,
   homeLoanEMIMonth: undefined,
   carLoanEMIDay: undefined,

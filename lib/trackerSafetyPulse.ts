@@ -1,7 +1,7 @@
 import {
   TRACKER_CATEGORIES,
-  countsTowardTrackerTotals,
   findSubcategory,
+  trackerTotalAmount,
   type BucketType,
 } from "@/lib/tracker-categories";
 
@@ -11,6 +11,7 @@ export type TrackerTxnLike = {
   category: string;
   subcategory: string | null;
   payment_method?: string | null;
+  description?: string | null;
 };
 
 export type SafetyStatus = "safe" | "tight" | "over" | "unknown";
@@ -84,8 +85,9 @@ function aggregateMonth(
   let totalSpent = 0;
 
   for (const t of txns) {
-    if (!countsTowardTrackerTotals(t)) continue;
-    const amt = Number(t.amount) || 0;
+    // Refunds / cashback are negative; bill payments and EMI purchases are 0.
+    const amt = trackerTotalAmount(t);
+    if (amt === 0) continue;
     bucketTotals[t.bucket] = (bucketTotals[t.bucket] || 0) + amt;
     if (t.bucket === "income") incomeFromTxns += amt;
     else totalSpent += amt;
@@ -111,10 +113,10 @@ function subcategoryRollup(txns: TrackerTxnLike[]) {
 
   for (const t of txns) {
     if (t.bucket === "income") continue;
-    if (!countsTowardTrackerTotals(t)) continue;
+    const amt = trackerTotalAmount(t);
+    if (amt === 0) continue;
     const subId = t.subcategory || t.category || "other";
     const key = `${t.bucket}:${subId}`;
-    const amt = Number(t.amount) || 0;
     const prev = map.get(key);
     if (prev) prev.amount += amt;
     else map.set(key, { amount: amt, bucket: t.bucket, subId });

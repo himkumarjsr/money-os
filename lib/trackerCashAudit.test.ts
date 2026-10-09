@@ -7,14 +7,16 @@ describe("reasonLabel", () => {
     expect(reasonLabel("included")).toMatch(/purple SPENT/);
     expect(reasonLabel("included_loan_emi")).toMatch(/loan EMI/);
     expect(reasonLabel("included_loan_repayment")).toMatch(/loan repayment/);
-    expect(reasonLabel("included_cc_bill_pay")).toMatch(/credit card bill/);
-    expect(reasonLabel("cc_purchase")).toMatch(/Excluded/);
+    expect(reasonLabel("included_card")).toMatch(/credit card/);
+    expect(reasonLabel("card_refund")).toMatch(/refund/);
+    expect(reasonLabel("cc_bill_pay")).toMatch(/Excluded — credit card bill/);
+    expect(reasonLabel("cc_emi_purchase")).toMatch(/EMI/);
     expect(reasonLabel("invalid_amount")).toMatch(/invalid/);
   });
 });
 
 describe("buildCashAudit", () => {
-  it("includes loan EMI + CC bill pay + loan repayment; excludes only CC purchases", () => {
+  it("includes card purchases, loan EMI + loan repayment; excludes CC bill pays", () => {
     const audit = buildCashAudit({
       profileMonthlyIncome: 100000,
       transactions: [
@@ -66,11 +68,12 @@ describe("buildCashAudit", () => {
 
     expect(audit.incomeUsed).toBe(100000);
     expect(audit.incomeSource).toBe("profile");
-    expect(audit.purpleSpent).toBe(24000);
+    // Card spend counts when made; the bill payment only settles it.
+    expect(audit.purpleSpent).toBe(21000);
     expect(audit.onCards).toBe(2000);
-    expect(audit.left).toBe(76000);
+    expect(audit.left).toBe(79000);
     expect(audit.included).toHaveLength(4);
-    expect(audit.excluded.map((e) => e.reason)).toEqual(["cc_purchase"]);
+    expect(audit.excluded.map((e) => e.reason)).toEqual(["cc_bill_pay"]);
   });
 
   it("prefers logged income and classifies edge rows", () => {
@@ -163,6 +166,13 @@ describe("logCashAudit", () => {
           bucket: "wants",
           payment_method: "credit_card::x::Y",
           description: "Card",
+        },
+        {
+          amount: 200,
+          bucket: "loans",
+          subcategory: "credit_card",
+          payment_method: "upi",
+          description: "Pay bill · Y",
         },
       ],
     });

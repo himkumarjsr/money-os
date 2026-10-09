@@ -195,9 +195,19 @@ export default function AnalyseFormScreen() {
 
   useEffect(() => {
     if ((values.rentAmount ?? 0) > 0) patchUi({ isRenting: true });
-    if ((values.creditCardBillMonthly ?? 0) > 0)
+    if (
+      (values.creditCardBillMonthly ?? 0) > 0 ||
+      (values.creditCardEmiMonthly ?? 0) > 0 ||
+      (values.creditCardCarriedBalance ?? 0) > 0
+    )
       patchUi({ hasCreditCardOutstanding: true });
-  }, [values.rentAmount, values.creditCardBillMonthly, patchUi]);
+  }, [
+    values.rentAmount,
+    values.creditCardBillMonthly,
+    values.creditCardEmiMonthly,
+    values.creditCardCarriedBalance,
+    patchUi,
+  ]);
 
   // Mobile store may hydrate after mount, so form + loan UI are restored here, not at mount.
   useLayoutEffect(() => {

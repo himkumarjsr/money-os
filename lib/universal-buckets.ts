@@ -2,7 +2,10 @@ import type {
   FinancialProfile,
   PremiumFrequency,
 } from "@/lib/analyse-form-schema";
-import { toMonthlyEquivalent } from "@/lib/analyse-form-schema";
+import {
+  otherPremiumRowsMonthly,
+  toMonthlyEquivalent,
+} from "@/lib/analyse-form-schema";
 
 /** Form fields used before `normalizeAnalyseFormValues` runs */
 export type FormPremiumOverlay = {
@@ -20,6 +23,7 @@ export type FormPremiumOverlay = {
     premiumAmount?: number;
     premiumInput?: number;
     frequency?: PremiumFrequency;
+    countAsInvestment?: boolean;
   }>;
 };
 
@@ -91,23 +95,24 @@ function otherInsurancePremiumMonthly(data: BucketProfileInput): number {
     data.hasOtherInsurance &&
     (data.otherInsurancePremiums?.length ?? 0) > 0
   ) {
-    return (data.otherInsurancePremiums ?? []).reduce(
-      (total, row) =>
-        total +
-        n(
-          toMonthlyEquivalent(
-            row.premiumAmount ??
-              (row as { premiumInput?: number }).premiumInput,
-            row.frequency,
-          ),
-        ),
-      0,
-    );
+    return otherPremiumRowsMonthly(data.otherInsurancePremiums ?? [], false);
   }
   return 0;
 }
 
-/** Monthly insurance premiums only (health, term, motor, other) — for speedometer “investment” split. */
+/**
+ * LIC / endowment premiums with a maturity value, marked in Analyse to count
+ * under Investment instead of Security.
+ */
+export function licEndowmentPremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.licEndowmentPremiumMonthly === "number") {
+    return n(data.licEndowmentPremiumMonthly);
+  }
+  if (!data.hasOtherInsurance) return 0;
+  return otherPremiumRowsMonthly(data.otherInsurancePremiums ?? [], true);
+}
+
+/** Monthly insurance premiums only (health, term, motor, other; not LIC / endowment marked as investment). */
 export function getInsurancePremiumsMonthly(data: BucketProfileInput): number {
   return (
     healthPremiumMonthly(data) +
@@ -160,12 +165,16 @@ type CapPercents = Record<UniversalBucketKey, number>;
 
 /** One change the tracker made to a budget, for the explanation note. */
 export type SmartBudgetAdjustment = {
-  key: "needs" | "wants";
+  /** Needs / Wants go down; Loans goes up to fit fixed EMIs. */
+  key: "needs" | "wants" | "loans";
   fromPercent: number;
   toPercent: number;
+  /** Average monthly spend (fixed EMIs for Loans). */
   averageSpend: number;
-  /** Rupees a month moved from this bucket into Investment. */
+  /** Rupees a month moved from this bucket into Investment (0 for Loans). */
   movedToInvestment: number;
+  /** Rupees a month moved from this bucket into Loans (Needs / Wants only). */
+  movedToLoans?: number;
 };
 
 /** Budget split learned from tracked spending (see `lib/learned-caps.ts`). */
@@ -203,13 +212,23 @@ export function smartBudgetSummary(
 ): string | null {
   const sb = getActiveSmartBudget(data);
   if (!sb) return null;
+  const label = (k: SmartBudgetAdjustment["key"]) =>
+    k === "needs" ? "Needs" : k === "wants" ? "Wants" : "Loans";
   const changes = sb.adjustments
-    .map(
-      (a) =>
-        `${a.key === "needs" ? "Needs" : "Wants"} ${a.fromPercent}% to ${a.toPercent}%`,
-    )
+    .filter((a) => a.key !== "loans")
+    .map((a) => `${label(a.key)} ${a.fromPercent}% to ${a.toPercent}%`)
     .join(" and ");
-  return `Smart budget from your last 3 months of tracked spending: ${changes}, with the difference added to Investment. You can undo it in Tracker.`;
+  const loans = sb.adjustments.find((a) => a.key === "loans");
+  const toInvestment = sb.adjustments.some((a) => a.movedToInvestment > 0);
+  const loansPart = loans
+    ? `Loans ${loans.fromPercent}% to ${loans.toPercent}% to cover your fixed EMIs`
+    : "";
+  const rest = loans
+    ? toInvestment
+      ? `${loansPart}, and the rest added to Investment`
+      : loansPart
+    : "with the difference added to Investment";
+  return `Smart budget from your last 3 months of tracked spending: ${changes}, ${rest}. You can undo it in Tracker.`;
 }
 
 /**
@@ -392,9 +411,11 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.bikeEMI) +
     n(data.personalLoanEMI) +
     n(data.creditCardBillMonthly) +
+    n(data.creditCardEmiMonthly) +
     additionalEmiTotal;
 
-  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY + custom.
+  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY,
+  // LIC / endowment premiums marked as investment + custom.
   const customMonthly = (data.customInvestments ?? []).reduce(
     (sum, row) => sum + n(row.monthlyContribution),
     0,
@@ -406,6 +427,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.monthlyPPFContribution) +
     n(data.monthlyEPFContribution) +
     n(data.ssy) +
+    licEndowmentPremiumMonthly(data) +
     customMonthly;
 
   return {

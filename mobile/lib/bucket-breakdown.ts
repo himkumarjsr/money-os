@@ -1,6 +1,7 @@
-import type {
-  BucketProfileInput,
-  UniversalBucketKey,
+import {
+  licEndowmentPremiumMonthly,
+  type BucketProfileInput,
+  type UniversalBucketKey,
 } from "@/lib/universal-buckets";
 import { toMonthlyEquivalent } from "@/lib/analyse-form-schema";
 
@@ -195,6 +196,7 @@ export function getBucketBreakdown(
       (profile.otherInsurancePremiums?.length ?? 0) > 0
     ) {
       (profile.otherInsurancePremiums ?? []).forEach((p, i) => {
+        if (p.countAsInvestment) return; // listed under Investment
         const amt =
           p.premiumAmount ?? (p as { premiumInput?: number }).premiumInput;
         const v = n(toMonthlyEquivalent(amt, p.frequency));
@@ -245,6 +247,12 @@ export function getBucketBreakdown(
       items.push({
         label: "Credit card payment",
         value: n(profile.creditCardBillMonthly),
+      });
+    }
+    if (n(profile.creditCardEmiMonthly) > 0) {
+      items.push({
+        label: "Credit card EMIs",
+        value: n(profile.creditCardEmiMonthly),
       });
     }
     const deduped = Array.from(
@@ -301,6 +309,10 @@ export function getBucketBreakdown(
     }
     if (n(profile.ssy) > 0) {
       items.push({ label: "SSY contribution", value: n(profile.ssy) });
+    }
+    const lic = licEndowmentPremiumMonthly(profile);
+    if (lic > 0) {
+      items.push({ label: "LIC / endowment premium", value: lic });
     }
     for (const row of profile.customInvestments ?? []) {
       const v = n(row.monthlyContribution);

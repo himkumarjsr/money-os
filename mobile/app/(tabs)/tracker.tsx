@@ -34,11 +34,17 @@ import { MonthSafetyPulse } from "@/components/tracker/MonthSafetyPulse";
 import { ObligationsChecklist } from "@/components/tracker/ObligationsChecklist";
 import {
   TRACKER_CATEGORIES,
-  countsTowardTrackerTotals,
   findSubcategory,
   normalizeTrackerBucket,
+  sumTrackerTotals,
+  trackerTotalAmount,
   type BucketType,
 } from "@/lib/tracker-categories";
+import {
+  buildCardMonthRows,
+  cardOverdueRows,
+  monthStartIso,
+} from "@/lib/trackerCardLedger";
 import {
   buildSmartBudget,
   learnCapsFromSpending,
@@ -66,15 +72,18 @@ import {
   shouldLearnObligationFromExpense,
 } from "@/lib/obligationLearn";
 import {
+  buildCreditCardOverdue,
   creditCardBillPaymentDescription,
   displayExpenseDescription,
   hasTrackerConsentLocal,
+  isCardEmiPurchase,
   isCreditCardBillPayment,
   isCreditCardPaymentMethod,
+  isCreditCardRefund,
+  isVirtualTxnId,
   loadCreditCardsMerged,
   parsePayBillLabel,
   sumCashSpend,
-  sumOnCardsSpend,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
 import { CreditCardDues } from "@/components/tracker/CreditCardDues";
@@ -110,6 +119,8 @@ function formatMasked(n: number, visible: boolean) {
 }
 
 const SMART_BUDGET_OFF_KEY = "finkoin_smart_budget_off";
+/** One-time note about the new card counting rules. */
+const CARD_RULES_NOTE_KEY = "finkoin_card_rules_note_v1";
 
 function SmartBudgetNote({
   adjustments,
@@ -121,16 +132,22 @@ function SmartBudgetNote({
   onToggle: (on: boolean) => void;
 }) {
   const moved = adjustments.reduce((a, x) => a + x.movedToInvestment, 0);
+  const toLoans = adjustments.reduce((a, x) => a + (x.movedToLoans ?? 0), 0);
+  const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
   return (
     <View style={styles.smartNote}>
       {on ? (
         <>
           <Text style={styles.smartNoteTitle}>
-            {`Smart budget: ₹${Math.round(moved).toLocaleString("en-IN")}/mo moved to Investments`}
+            {moved > 0
+              ? `Smart budget: ${inr(moved)}/mo moved to Investments`
+              : "Smart budget: Loans budget fits your EMIs"}
           </Text>
           {adjustments.map((a) => (
             <Text key={a.key} style={styles.smartNoteText}>
-              {`${a.key === "needs" ? "Needs" : "Wants"} stayed under budget for 3 months (avg ₹${Math.round(a.averageSpend).toLocaleString("en-IN")}), so its budget is now ${a.toPercent}% instead of ${a.fromPercent}%.`}
+              {a.key === "loans"
+                ? `Loans set to ${a.toPercent}% to match your fixed EMIs. Bringing them down to ${a.fromPercent}% frees ${inr(toLoans)} a month for investing.`
+                : `${a.key === "needs" ? "Needs" : "Wants"} stayed under budget for 3 months (avg ${inr(a.averageSpend)}), so its budget is now ${a.toPercent}% instead of ${a.fromPercent}%.${(a.movedToLoans ?? 0) > 0 ? ` ${inr(a.movedToLoans ?? 0)} of it went to Loans.` : ""}`}
             </Text>
           ))}
         </>
@@ -179,6 +196,14 @@ export default function TrackerScreen() {
   >([]);
   /** prev-2 + prev months — CC carry-forward + obligation learning only (never Safety Pulse). */
   const [ccBillHistory, setCcBillHistory] = useState<TrackerTxn[]>([]);
+  /** Two and three months back — card ledger history for the previous month. */
+  const [prev2Transactions, setPrev2Transactions] = useState<TrackerTxn[]>([]);
+  const [prev3Transactions, setPrev3Transactions] = useState<TrackerTxn[]>([]);
+  /** Card purchases on EMI from the last 5 years (their EMIs run past history). */
+  const [emiSources, setEmiSources] = useState<TrackerTxn[]>([]);
+  const [showCardRulesNote, setShowCardRulesNote] = useState(
+    () => syncKv.getItem(CARD_RULES_NOTE_KEY) !== "1",
+  );
   /** Needs / Wants spend for the 3 months before the selected one (newest first). */
   const [learnHistory, setLearnHistory] = useState<MonthSpend[]>([]);
   /** Month ("year-month") the learn history was fetched for, once it loaded cleanly. */
@@ -334,35 +359,50 @@ export default function TrackerScreen() {
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
         const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
         const prev3 = previousCalendarMonth(prev2.monthIndex, prev2.year);
-        const [currentRes, prevRes, prev2Res, prev3Res] = await Promise.all([
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", currentMonth)
-            .eq("year", currentYear)
-            .order("date", { ascending: false }),
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", prev.monthName)
-            .eq("year", prev.year)
-            .order("date", { ascending: false }),
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", prev2.monthName)
-            .eq("year", prev2.year)
-            .order("date", { ascending: false }),
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", prev3.monthName)
-            .eq("year", prev3.year),
-        ]);
+        const monthEnd = localISODate(
+          new Date(selectedYear, selectedMonth + 1, 0),
+        );
+        const [currentRes, prevRes, prev2Res, prev3Res, emiRes] =
+          await Promise.all([
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", currentMonth)
+              .eq("year", currentYear)
+              .order("date", { ascending: false }),
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", prev.monthName)
+              .eq("year", prev.year)
+              .order("date", { ascending: false }),
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", prev2.monthName)
+              .eq("year", prev2.year)
+              .order("date", { ascending: false }),
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", prev3.monthName)
+              .eq("year", prev3.year),
+            // EMI terms live in the note as a hidden [#emi:…] token.
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .ilike("description", "%[#emi:%")
+              .gte(
+                "date",
+                localISODate(new Date(selectedYear, selectedMonth - 60, 1)),
+              )
+              .lte("date", monthEnd),
+          ]);
         if (fetchReqId.current !== myId) return;
         const prevRows = ((prevRes.data as TrackerTxn[]) || []).map(
           normalizeTrackerBucket,
@@ -378,13 +418,36 @@ export default function TrackerScreen() {
         const prev3Rows = ((prev3Res.data as TrackerTxn[]) || []).map(
           normalizeTrackerBucket,
         );
-        setLearnHistory(
-          [prevRows, prev2Rows, prev3Rows].map((rows) =>
-            monthSpendFromRows(rows),
-          ),
+        const emiRows = ((emiRes.data as TrackerTxn[]) || []).map(
+          normalizeTrackerBucket,
         );
+        setPrev2Transactions(prev2Rows);
+        setPrev3Transactions(prev3Rows);
+        setEmiSources(emiRows);
+        // Learn from the same rows the tracker counts (card EMIs included).
+        const historyStart = monthStartIso(selectedYear, selectedMonth, 3);
+        const learnRows = (
+          meta: { monthIndex: number; year: number },
+          rows: TrackerTxn[],
+          priorRows: TrackerTxn[],
+        ) =>
+          buildCardMonthRows({
+            year: meta.year,
+            monthIndex: meta.monthIndex,
+            monthRows: rows,
+            priorRows,
+            emiSources: emiRows,
+            historyStart,
+          }).rows;
+        setLearnHistory([
+          monthSpendFromRows(
+            learnRows(prev, prevRows, [...prev3Rows, ...prev2Rows]),
+          ),
+          monthSpendFromRows(learnRows(prev2, prev2Rows, prev3Rows)),
+          monthSpendFromRows(learnRows(prev3, prev3Rows, [])),
+        ]);
         setLearnHistoryFor(
-          prevRes.error || prev2Res.error || prev3Res.error
+          prevRes.error || prev2Res.error || prev3Res.error || emiRes.error
             ? null
             : `${selectedYear}-${selectedMonth}`,
         );
@@ -394,6 +457,9 @@ export default function TrackerScreen() {
         setTransactions([]);
         setPreviousTransactions([]);
         setCcBillHistory([]);
+        setPrev2Transactions([]);
+        setPrev3Transactions([]);
+        setEmiSources([]);
         setLearnHistory([]);
         setLearnHistoryFor(null);
       } finally {
@@ -554,6 +620,71 @@ export default function TrackerScreen() {
     }
   }, [trackerStart, selectedMonth, selectedYear]);
 
+  // Card-aware rows: card EMIs for the month, and bill payments counted only
+  // above the card spends they settle (see lib/trackerCardLedger.ts).
+  const cardMonth = useMemo(
+    () =>
+      buildCardMonthRows({
+        year: selectedYear,
+        monthIndex: selectedMonth,
+        monthRows: transactions,
+        priorRows: [...prev3Transactions, ...ccBillHistory],
+        emiSources,
+        historyStart: monthStartIso(selectedYear, selectedMonth, 3),
+      }),
+    [
+      transactions,
+      prev3Transactions,
+      ccBillHistory,
+      emiSources,
+      selectedYear,
+      selectedMonth,
+    ],
+  );
+  const prevCountedRows = useMemo(() => {
+    const prev = previousCalendarMonth(selectedMonth, selectedYear);
+    return buildCardMonthRows({
+      year: prev.year,
+      monthIndex: prev.monthIndex,
+      monthRows: previousTransactions,
+      priorRows: [...prev3Transactions, ...prev2Transactions],
+      emiSources,
+      historyStart: monthStartIso(selectedYear, selectedMonth, 3),
+    }).rows;
+  }, [
+    previousTransactions,
+    prev2Transactions,
+    prev3Transactions,
+    emiSources,
+    selectedYear,
+    selectedMonth,
+  ]);
+  /** "Today" for card dues: now on this month, else the month's last day. */
+  const cardAsOf = useMemo(() => {
+    const now = new Date();
+    const monthEnd = new Date(selectedYear, selectedMonth + 1, 0);
+    return monthEnd < now ? monthEnd : now;
+  }, [selectedYear, selectedMonth]);
+  const ccPoolPrior = useMemo(() => {
+    const from = monthStartIso(selectedYear, selectedMonth, 2);
+    const to = monthStartIso(selectedYear, selectedMonth);
+    return [
+      ...ccBillHistory,
+      ...cardMonth.emiRows.filter((r) => r.date >= from && r.date < to),
+    ];
+  }, [ccBillHistory, cardMonth.emiRows, selectedYear, selectedMonth]);
+  // Statements due before today that were not paid in full: counted under
+  // Loans until cleared (display only — the spends already came off LEFT).
+  const cardOverdue = useMemo(
+    () =>
+      buildCreditCardOverdue({
+        cards: savedCards,
+        transactions: [...ccPoolPrior, ...cardMonth.rows],
+        asOf: cardAsOf,
+      }),
+    [savedCards, ccPoolPrior, cardMonth.rows, cardAsOf],
+  );
+
   // On/after the 1st: persist missing salary and/or "Saving from last month".
   const incomeSyncKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -566,7 +697,7 @@ export default function TrackerScreen() {
     }
 
     const plan = planMonthIncomeFromPrior({
-      previousTxns: previousTransactions,
+      previousTxns: prevCountedRows,
       currentTxns: transactions,
       profileSalary: profileMonthlyFromDb,
     });
@@ -611,7 +742,7 @@ export default function TrackerScreen() {
 
         const freshRows = (fresh || []) as TrackerTxn[];
         const freshPlan = planMonthIncomeFromPrior({
-          previousTxns: previousTransactions,
+          previousTxns: prevCountedRows,
           currentTxns: freshRows,
           profileSalary: profileMonthlyFromDb,
         });
@@ -640,7 +771,7 @@ export default function TrackerScreen() {
           (t) => !t.id || !cleanup.dropIds.includes(t.id),
         );
         const afterPlan = planMonthIncomeFromPrior({
-          previousTxns: previousTransactions,
+          previousTxns: prevCountedRows,
           currentTxns: afterCleanup.map((t) =>
             cleanup.updateCf && t.id === cleanup.updateCf.id
               ? { ...t, amount: cleanup.updateCf.amount }
@@ -702,7 +833,7 @@ export default function TrackerScreen() {
     user?.id,
     selectedMonth,
     selectedYear,
-    previousTransactions,
+    prevCountedRows,
     transactions,
     profileMonthlyFromDb,
     fetchTransactions,
@@ -761,15 +892,15 @@ export default function TrackerScreen() {
   const safetyPulse = useMemo(
     () =>
       computeMonthSafetyPulse({
-        currentTxns: transactions,
-        previousTxns: previousTransactions,
+        currentTxns: cardMonth.rows,
+        previousTxns: prevCountedRows,
         fallbackIncome: profileMonthlyFromDb,
         monthIndex: selectedMonth,
         year: selectedYear,
       }),
     [
-      transactions,
-      previousTransactions,
+      cardMonth.rows,
+      prevCountedRows,
       profileMonthlyFromDb,
       selectedMonth,
       selectedYear,
@@ -778,7 +909,7 @@ export default function TrackerScreen() {
 
   const deleteTransaction = useCallback(
     async (txn: TrackerTxn) => {
-      if (!user?.id) return;
+      if (!user?.id || isVirtualTxnId(txn.id)) return;
       try {
         await supabase
           .from("expense_transactions")
@@ -872,7 +1003,7 @@ export default function TrackerScreen() {
   const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
   const incomeCat = TRACKER_CATEGORIES.income;
   const incomePlan = planMonthIncomeFromPrior({
-    previousTxns: previousTransactions,
+    previousTxns: prevCountedRows,
     currentTxns: transactions,
     profileSalary: profileMonthlyFromDb,
   });
@@ -928,9 +1059,27 @@ export default function TrackerScreen() {
     }
   };
 
-  const totalSpent = sumCashSpend(transactions);
-  const onCardsSpend = sumOnCardsSpend(transactions);
+  // Purple SPENT/LEFT: every spend the day it is made, cash or card (card
+  // money is kept aside for the bill), card EMIs monthly, loan repayment.
+  // Card bill payments settle spends already counted, so only the part above
+  // them (interest, fees, older balance) comes off.
+  const totalSpent = sumCashSpend(cardMonth.rows);
+  const keptAsideForCards = cardMonth.keptAside;
   const remaining = displayIncome - totalSpent;
+  // Rows shown in sections: logged + card EMIs + bill-pay extras + unpaid bills.
+  const displayRows: TrackerTxn[] = [
+    ...cardMonth.rows,
+    ...cardOverdueRows(cardOverdue, localISODate(cardAsOf)),
+  ];
+  const hasCardActivity =
+    savedCards.length > 0 ||
+    [...transactions, ...ccBillHistory].some((t) =>
+      isCreditCardPaymentMethod(t.payment_method),
+    );
+  const dismissCardRulesNote = () => {
+    setShowCardRulesNote(false);
+    syncKv.setItem(CARD_RULES_NOTE_KEY, "1");
+  };
   const spentPercent =
     displayIncome > 0 ? Math.min((totalSpent / displayIncome) * 100, 100) : 0;
 
@@ -1039,7 +1188,13 @@ export default function TrackerScreen() {
       ]);
     }
     setPendingCcPayCardId(null);
-    if (!saved.isEdit && user?.id && saved.bucket !== "income") {
+    if (
+      !saved.isEdit &&
+      user?.id &&
+      saved.bucket !== "income" &&
+      // Card EMIs and refunds never create or tick obligations.
+      (saved.cardMode ?? "purchase") === "purchase"
+    ) {
       const subKey = (saved.subcategory || saved.category || "").trim();
       const obligationCategory = obligationCategoryFromExpense(saved);
       const isCcBillPay =
@@ -1178,17 +1333,17 @@ export default function TrackerScreen() {
         </View>
       </View>
 
-      {onCardsSpend > 0 ? (
+      {keptAsideForCards > 0 ? (
         <Text style={styles.onCardsText} numberOfLines={1}>
-          On cards this month:{" "}
           {revealed
-            ? `₹${Math.round(onCardsSpend).toLocaleString("en-IN")}`
-            : "₹••••"}
+            ? `₹${Math.round(keptAsideForCards).toLocaleString("en-IN")}`
+            : "₹••••"}{" "}
+          kept aside for card bills
         </Text>
       ) : null}
 
       <View style={styles.progressRow}>
-        <Text style={styles.progressLabel}>Cash budget used</Text>
+        <Text style={styles.progressLabel}>Budget used</Text>
         <Text style={styles.progressLabel}>
           {revealed ? `${spentPercent.toFixed(0)}%` : "••%"}
         </Text>
@@ -1407,6 +1562,19 @@ export default function TrackerScreen() {
           ) : null}
         </View>
 
+        {showCardRulesNote && hasCardActivity ? (
+          <View style={styles.cardRulesNote}>
+            <Text style={styles.cardRulesNoteText}>
+              Card spends now count in Needs and Wants in the month you spend,
+              and card bill payments no longer count as loans. Past months were
+              updated too.
+            </Text>
+            <Pressable onPress={dismissCardRulesNote} hitSlop={8}>
+              <Text style={styles.smartNoteAction}>Got it</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {/* Bucket sections */}
         {learnedCaps.adjustments.length > 0 ? (
           <SmartBudgetNote
@@ -1418,10 +1586,8 @@ export default function TrackerScreen() {
 
         {BUCKETS.map((bucketKey) => {
           const cat = TRACKER_CATEGORIES[bucketKey];
-          const bucketTxns = transactions.filter((t) => t.bucket === bucketKey);
-          const bucketTotal = bucketTxns
-            .filter((t) => countsTowardTrackerTotals(t))
-            .reduce((a, t) => a + Number(t.amount), 0);
+          const bucketTxns = displayRows.filter((t) => t.bucket === bucketKey);
+          const bucketTotal = sumTrackerTotals(bucketTxns);
           const isExpanded = expandedBucket === bucketKey;
           const capPct =
             bucketKey in effectiveCaps
@@ -1560,9 +1726,7 @@ export default function TrackerScreen() {
 
                   {Object.keys(bySubcategory).length > 0 ? (
                     Object.entries(bySubcategory).map(([subId, txns]) => {
-                      const subTotal = txns
-                        .filter((t) => countsTowardTrackerTotals(t))
-                        .reduce((a, t) => a + Number(t.amount), 0);
+                      const subTotal = sumTrackerTotals(txns);
                       const sub = findSubcategory(bucketKey, subId);
                       return (
                         <View key={subId} style={styles.subGroup}>
@@ -1591,6 +1755,19 @@ export default function TrackerScreen() {
                             const onCard = isCreditCardPaymentMethod(
                               txn.payment_method,
                             );
+                            const generated = isVirtualTxnId(txn.id);
+                            const onEmi = isCardEmiPurchase(txn);
+                            const refund = isCreditCardRefund(txn);
+                            const notCounted =
+                              trackerTotalAmount(txn) === 0 &&
+                              txn.bucket !== "income";
+                            const tag = onEmi
+                              ? "On EMI"
+                              : refund
+                                ? "Refund"
+                                : onCard
+                                  ? "Card"
+                                  : null;
                             return (
                               <View key={txn.id} style={styles.txnRow}>
                                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -1601,16 +1778,24 @@ export default function TrackerScreen() {
                                       gap: 6,
                                     }}
                                   >
-                                    <Text style={styles.txnAmount}>
+                                    <Text
+                                      style={[
+                                        styles.txnAmount,
+                                        notCounted
+                                          ? styles.txnAmountNotCounted
+                                          : null,
+                                      ]}
+                                    >
+                                      {refund ? "−" : ""}
                                       {formatMasked(
                                         Number(txn.amount),
                                         visible,
                                       )}
                                     </Text>
-                                    {onCard ? (
+                                    {tag ? (
                                       <View style={styles.cardChip}>
                                         <Text style={styles.cardChipText}>
-                                          Card
+                                          {tag}
                                         </Text>
                                       </View>
                                     ) : null}
@@ -1629,7 +1814,13 @@ export default function TrackerScreen() {
                                       .join(" · ")}
                                   </Text>
                                 </View>
-                                <View style={{ flexDirection: "row", gap: 4 }}>
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    gap: 4,
+                                    display: generated ? "none" : "flex",
+                                  }}
+                                >
                                   <Pressable
                                     onPress={() => {
                                       setSheetDefaults({});
@@ -1685,9 +1876,11 @@ export default function TrackerScreen() {
                 isCreditCardPaymentMethod(t.payment_method),
             )) ? (
             <CreditCardDues
-              previousTransactions={ccBillHistory}
-              currentTransactions={transactions}
+              previousTransactions={ccPoolPrior}
+              currentTransactions={cardMonth.rows}
               cards={savedCards}
+              overdue={cardOverdue}
+              today={cardAsOf}
               monthlySalary={displayIncome}
               optimisticPayments={ccOptimisticPayments}
               asOf={obligationChecklistMonth}
@@ -1992,6 +2185,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
   },
   cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primary },
+  txnAmountNotCounted: { textDecorationLine: "line-through", opacity: 0.6 },
+  cardRulesNote: {
+    backgroundColor: "#EEEDFE",
+    borderColor: "#D8D6F5",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+  },
+  cardRulesNoteText: { fontSize: 13, color: "#3C3489", lineHeight: 19 },
   fab: {
     position: "absolute",
     bottom: 100,

@@ -4,11 +4,15 @@ import CollapsiblePanel from "@/components/tracker/CollapsiblePanel";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
   buildCreditCardBillStatuses,
+  buildCreditCardUsage,
   deactivateAllCreditCardObligations,
   deleteSavedCreditCard,
+  formatCreditCardLabel,
   hideCreditCardDueLine,
   isCreditCardDueLineHidden,
+  suggestDueDayFromBilling,
   upsertSavedCreditCard,
+  type CreditCardOverdue,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
@@ -56,6 +60,55 @@ function formatDueLabel(
   return "Due from salary this month";
 }
 
+function inr(n: number): string {
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+
+function shortDate(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+type CardDraft = {
+  nickname: string;
+  last4: string;
+  billingDay: string;
+  dueDay: string;
+  creditLimit: string;
+};
+
+function draftFromCard(card: SavedCreditCard): CardDraft {
+  return {
+    nickname: card.nickname,
+    last4: card.last4 ?? "",
+    billingDay: card.billingDay ? String(card.billingDay) : "",
+    dueDay: card.dueDay ? String(card.dueDay) : "",
+    creditLimit: card.creditLimit ? String(card.creditLimit) : "",
+  };
+}
+
+const EDIT_INPUT_STYLE = {
+  width: "100%",
+  minHeight: 38,
+  borderRadius: 10,
+  border: "1px solid #D8D6E8",
+  padding: "0 10px",
+  fontSize: 14,
+  fontWeight: 600,
+  color: "#111110",
+  background: "white",
+  boxSizing: "border-box" as const,
+};
+
+const EDIT_LABEL_STYLE = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: "#5F5E5A",
+  display: "block",
+  marginBottom: 4,
+} as const;
+
 export default function CreditCardBillReminder({
   previousTransactions,
   currentTransactions = [],
@@ -66,6 +119,8 @@ export default function CreditCardBillReminder({
   defaultOpen = false,
   optimisticPayments = [],
   asOf,
+  overdue = [],
+  today,
 }: {
   previousTransactions: Txn[];
   currentTransactions?: Txn[];
@@ -82,6 +137,10 @@ export default function CreditCardBillReminder({
   optimisticPayments?: Array<{ cardId: string; amount: number }>;
   /** Anchor month for “last month’s charges” (usually 1st of selected tracker month). */
   asOf?: Date;
+  /** Statements not paid in full by their due date (counted under Loans). */
+  overdue?: CreditCardOverdue[];
+  /** Today (or the month's last day) for limit usage. */
+  today?: Date;
 }) {
   const userId = useAuthStore((s) => s.user?.id);
   const [open, setOpen] = useState(defaultOpen);
@@ -89,6 +148,18 @@ export default function CreditCardBillReminder({
   const [editingDueId, setEditingDueId] = useState<string | null>(null);
   const [dueDayDraft, setDueDayDraft] = useState("");
   const [dueEditError, setDueEditError] = useState("");
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [cardDraft, setCardDraft] = useState<CardDraft | null>(null);
+  const [cardEditError, setCardEditError] = useState("");
+
+  const usageById = useMemo(() => {
+    const usage = buildCreditCardUsage({
+      cards,
+      transactions: [...previousTransactions, ...currentTransactions],
+      asOf: today,
+    });
+    return new Map(usage.map((u) => [u.cardId, u]));
+  }, [cards, previousTransactions, currentTransactions, today]);
 
   const statuses = useMemo(() => {
     const pool = [...previousTransactions, ...currentTransactions];
@@ -213,10 +284,64 @@ export default function CreditCardBillReminder({
     onCardsChange?.();
   };
 
+  const startEditCard = (card: SavedCreditCard) => {
+    setEditingCardId(card.id);
+    setCardDraft(draftFromCard(card));
+    setCardEditError("");
+  };
+
+  const saveCard = (card: SavedCreditCard) => {
+    if (!userId || !cardDraft) return;
+    const nickname = cardDraft.nickname.trim();
+    if (!nickname) {
+      setCardEditError("Enter a card name");
+      return;
+    }
+    const day = (raw: string, label: string): number | undefined | null => {
+      if (!raw.trim()) return undefined;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 1 || n > 31) {
+        setCardEditError(`${label} must be between 1 and 31`);
+        return null;
+      }
+      return Math.round(n);
+    };
+    const billingDay = day(cardDraft.billingDay, "Billing day");
+    if (billingDay === null) return;
+    const dueDay = day(cardDraft.dueDay, "Due day");
+    if (dueDay === null) return;
+    const digits = cardDraft.last4.replace(/\D/g, "");
+    if (digits && digits.length !== 4) {
+      setCardEditError("Last 4 digits must be 4 numbers");
+      return;
+    }
+    const limitRaw = cardDraft.creditLimit.replace(/[,\s₹]/g, "");
+    const limit = limitRaw ? Number(limitRaw) : null;
+    if (limit !== null && (!Number.isFinite(limit) || limit <= 0)) {
+      setCardEditError("Credit limit must be more than 0");
+      return;
+    }
+    upsertSavedCreditCard(userId, {
+      id: card.id,
+      nickname,
+      last4: digits || undefined,
+      billingDay,
+      dueDay:
+        dueDay ??
+        (billingDay ? suggestDueDayFromBilling(billingDay) : undefined),
+      creditLimit: limit,
+    });
+    setEditingCardId(null);
+    setCardDraft(null);
+    setCardEditError("");
+    onCardsChange?.();
+  };
+
   if (
     cards.length === 0 &&
     dueStatuses.length === 0 &&
-    paidStatuses.length === 0
+    paidStatuses.length === 0 &&
+    overdue.length === 0
   ) {
     return null;
   }
@@ -232,11 +357,13 @@ export default function CreditCardBillReminder({
         : "";
 
   const subtitle =
-    dueTotal > 0
-      ? `₹${Math.round(dueTotal).toLocaleString("en-IN")} still to pay`
-      : paidCount > 0
-        ? "All tracked bills paid"
-        : "No balance due yet";
+    overdue.length > 0
+      ? `${inr(overdue.reduce((s, o) => s + o.remaining, 0))} unpaid after due date`
+      : dueTotal > 0
+        ? `₹${Math.round(dueTotal).toLocaleString("en-IN")} still to pay`
+        : paidCount > 0
+          ? "All tracked bills paid"
+          : "No balance due yet";
 
   return (
     <CollapsiblePanel
@@ -258,8 +385,8 @@ export default function CreditCardBillReminder({
         {dueTotal > 0 ? (
           <>
             Unpaid balances stay here until you mark them paid.
-            {salaryHint} Paying via UPI / net banking reduces purple LEFT (cash
-            out). Purchases on the card do not.
+            {salaryHint} Card spends already came off LEFT when you made them,
+            so paying the bill doesn&apos;t reduce it again.
           </>
         ) : paidCount > 0 ? (
           <>All tracked card bills are paid for now. Nice work.</>
@@ -267,6 +394,30 @@ export default function CreditCardBillReminder({
           <>Card spends show up here; paying logs a cash expense under Loans.</>
         )}
       </p>
+
+      {overdue.map((o) => (
+        <div
+          key={`overdue-${o.cardId}`}
+          role="alert"
+          style={{
+            margin: "0 0 10px",
+            padding: "10px 12px",
+            borderRadius: 12,
+            background: "#FCEBEB",
+            border: "1px solid #F5C9C9",
+            fontSize: 12,
+            lineHeight: 1.5,
+            color: "#791F1F",
+          }}
+        >
+          <strong>
+            {o.label}: {inr(o.remaining)} unpaid from the bill due{" "}
+            {shortDate(o.dueDate)}.
+          </strong>{" "}
+          Cards charge about 36–45% a year interest on what you don&apos;t pay
+          in full. This counts under Loans until you clear it.
+        </div>
+      ))}
 
       {dueStatuses.length === 0 && paidCount > 0 ? (
         <p
@@ -587,6 +738,322 @@ export default function CreditCardBillReminder({
           );
         })}
       </ul>
+
+      {cards.length > 0 ? (
+        <div style={{ marginTop: 12 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#5F5E5A",
+              margin: "0 0 6px",
+            }}
+          >
+            Your cards
+          </div>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {cards.map((card) => {
+              const usage = usageById.get(card.id);
+              const editing = editingCardId === card.id && cardDraft;
+              const pct = usage ? Math.round(usage.ratio * 100) : 0;
+              return (
+                <li
+                  key={`card-${card.id}`}
+                  style={{
+                    padding: "10px 0",
+                    borderTop: "1px solid #E8E6F0",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#111110",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatCreditCardLabel(card)}
+                      </div>
+                      <div
+                        style={{ fontSize: 12, color: "#9B9A94", marginTop: 2 }}
+                      >
+                        {card.billingDay
+                          ? `Bill on day ${card.billingDay}`
+                          : "No billing day"}
+                        {card.dueDay ? ` · Due day ${card.dueDay}` : ""}
+                        {card.creditLimit
+                          ? ` · Limit ${inr(card.creditLimit)}`
+                          : ""}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Edit ${formatCreditCardLabel(card)}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (editing) {
+                          setEditingCardId(null);
+                          setCardDraft(null);
+                        } else {
+                          startEditCard(card);
+                        }
+                      }}
+                      style={{
+                        minHeight: 36,
+                        padding: "0 12px",
+                        borderRadius: 10,
+                        border: "1px solid #E8E6F0",
+                        background: "#F7F7F4",
+                        color: "#534AB7",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {editing ? "Close" : "Edit"}
+                    </button>
+                  </div>
+
+                  {usage ? (
+                    <div style={{ marginTop: 8 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: 11,
+                          color: "#5F5E5A",
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span>
+                          This statement: {inr(usage.used)} of{" "}
+                          {inr(usage.limit)}
+                        </span>
+                        <span style={{ fontWeight: 700 }}>{pct}%</span>
+                      </div>
+                      <div
+                        style={{
+                          height: 6,
+                          background: "#F0EFF8",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${Math.min(100, pct)}%`,
+                            background: usage.overWarn ? "#E24B4A" : "#534AB7",
+                          }}
+                        />
+                      </div>
+                      {usage.overWarn ? (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#E24B4A",
+                            fontWeight: 600,
+                            marginTop: 4,
+                          }}
+                        >
+                          Using over 30% of your limit can lower your credit
+                          score.
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {editing && cardDraft ? (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        padding: "10px 12px",
+                        borderRadius: 12,
+                        background: "#F7F7F4",
+                        border: "1px solid #E8E6F0",
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "2fr 1fr",
+                          gap: 8,
+                        }}
+                      >
+                        <label>
+                          <span style={EDIT_LABEL_STYLE}>Card name</span>
+                          <input
+                            type="text"
+                            value={cardDraft.nickname}
+                            onChange={(e) =>
+                              setCardDraft({
+                                ...cardDraft,
+                                nickname: e.target.value,
+                              })
+                            }
+                            style={EDIT_INPUT_STYLE}
+                          />
+                        </label>
+                        <label>
+                          <span style={EDIT_LABEL_STYLE}>Last 4 digits</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={cardDraft.last4}
+                            onChange={(e) =>
+                              setCardDraft({
+                                ...cardDraft,
+                                last4: e.target.value.replace(/\D/g, ""),
+                              })
+                            }
+                            placeholder="1234"
+                            style={EDIT_INPUT_STYLE}
+                          />
+                        </label>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr 1.4fr",
+                          gap: 8,
+                        }}
+                      >
+                        <label>
+                          <span style={EDIT_LABEL_STYLE}>Billing day</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={31}
+                            inputMode="numeric"
+                            value={cardDraft.billingDay}
+                            onChange={(e) =>
+                              setCardDraft({
+                                ...cardDraft,
+                                billingDay: e.target.value,
+                              })
+                            }
+                            placeholder="15"
+                            style={EDIT_INPUT_STYLE}
+                          />
+                        </label>
+                        <label>
+                          <span style={EDIT_LABEL_STYLE}>Due day</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={31}
+                            inputMode="numeric"
+                            value={cardDraft.dueDay}
+                            onChange={(e) =>
+                              setCardDraft({
+                                ...cardDraft,
+                                dueDay: e.target.value,
+                              })
+                            }
+                            placeholder="5"
+                            style={EDIT_INPUT_STYLE}
+                          />
+                        </label>
+                        <label>
+                          <span style={EDIT_LABEL_STYLE}>Credit limit (₹)</span>
+                          <input
+                            type="number"
+                            min={0}
+                            inputMode="numeric"
+                            value={cardDraft.creditLimit}
+                            onChange={(e) =>
+                              setCardDraft({
+                                ...cardDraft,
+                                creditLimit: e.target.value,
+                              })
+                            }
+                            placeholder="Optional"
+                            style={EDIT_INPUT_STYLE}
+                          />
+                        </label>
+                      </div>
+                      {cardEditError ? (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#E24B4A",
+                          }}
+                        >
+                          {cardEditError}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "#9B9A94" }}>
+                          Bills are worked out again from the new dates.
+                        </span>
+                      )}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            saveCard(card);
+                          }}
+                          style={{
+                            minHeight: 36,
+                            padding: "0 14px",
+                            borderRadius: 10,
+                            border: "none",
+                            background: "#534AB7",
+                            color: "white",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCardId(null);
+                            setCardDraft(null);
+                            setCardEditError("");
+                          }}
+                          style={{
+                            minHeight: 36,
+                            padding: "0 12px",
+                            borderRadius: 10,
+                            border: "none",
+                            background: "transparent",
+                            color: "#5F5E5A",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
     </CollapsiblePanel>
   );
 }
