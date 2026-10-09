@@ -202,6 +202,9 @@ export function BucketCapsSection({ model }: { model: ResultModel }) {
   return (
     <View style={[styles.card, { borderWidth: 0 }]}>
       <Text style={styles.eyebrow}>Category caps vs actual</Text>
+      {model.smartNote ? (
+        <Text style={styles.smartNote}>{model.smartNote}</Text>
+      ) : null}
       <View style={{ gap: 12 }}>
         {model.buckets.map((b) => (
           <BucketRow key={b.key} b={b} />
@@ -569,6 +572,17 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     backgroundColor: "#FFFFFF",
     padding: 16,
+  },
+  smartNote: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#E1F5EE",
+    color: "#085041",
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 18,
   },
   eyebrow: {
     marginBottom: 12,

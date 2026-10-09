@@ -40,13 +40,20 @@ import {
   type BucketType,
 } from "@/lib/tracker-categories";
 import {
+  buildSmartBudget,
   learnCapsFromSpending,
   monthSpendFromRows,
+  sameSmartBudget,
   type LearnedAdjustment,
   type MonthSpend,
 } from "@/lib/learned-caps";
 import { syncKv } from "@/lib/syncKv";
-import { getUniversalCaps } from "@/lib/universal-buckets";
+import {
+  getProfileCaps,
+  getUniversalBucketActuals,
+  type SmartBudget,
+} from "@/lib/universal-buckets";
+import { saveUserAnalyseSnapshotSmartBudget } from "@/lib/userAnalyseSnapshot";
 import { formatExpenseDate, localISODate } from "@/lib/localDate";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
@@ -148,13 +155,15 @@ export default function TrackerScreen() {
   const analyseResult = useFinancialStore((s) => s.result);
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
   // Budget caps follow the Analyse answers once they exist; otherwise the generic split.
+  // The smart budget is learned on top of these, never on top of itself.
   const bucketCaps = useMemo(
     () =>
-      getUniversalCaps(
-        analyseCompleted && lastSubmission ? lastSubmission : {},
-      ),
+      getProfileCaps(analyseCompleted && lastSubmission ? lastSubmission : {}),
     [analyseCompleted, lastSubmission],
   );
+  const setStoreSmartBudget = useFinancialStore((s) => s.setSmartBudget);
+  /** Set during render once spending history is known; saved by the effect below. */
+  const smartSyncRef = useRef<SmartBudget | null | undefined>(undefined);
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
       if (hasTrackerConsentLocal()) return true;
@@ -172,6 +181,8 @@ export default function TrackerScreen() {
   const [ccBillHistory, setCcBillHistory] = useState<TrackerTxn[]>([]);
   /** Needs / Wants spend for the 3 months before the selected one (newest first). */
   const [learnHistory, setLearnHistory] = useState<MonthSpend[]>([]);
+  /** Month ("year-month") the learn history was fetched for, once it loaded cleanly. */
+  const [learnHistoryFor, setLearnHistoryFor] = useState<string | null>(null);
   const [smartBudgetOff, setSmartBudgetOff] = useState(
     () => syncKv.getItem(SMART_BUDGET_OFF_KEY) === "1",
   );
@@ -372,6 +383,11 @@ export default function TrackerScreen() {
             monthSpendFromRows(rows),
           ),
         );
+        setLearnHistoryFor(
+          prevRes.error || prev2Res.error || prev3Res.error
+            ? null
+            : `${selectedYear}-${selectedMonth}`,
+        );
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker fetch failed", e);
@@ -379,6 +395,7 @@ export default function TrackerScreen() {
         setPreviousTransactions([]);
         setCcBillHistory([]);
         setLearnHistory([]);
+        setLearnHistoryFor(null);
       } finally {
         if (fetchReqId.current === myId) setLoading(false);
       }
@@ -827,6 +844,18 @@ export default function TrackerScreen() {
     setRefreshing(false);
   };
 
+  // Save a changed smart budget to the account, so Analyse, the Fix Plan and
+  // the PDF use the same split on every device. Runs after every render but
+  // only writes when the learned split actually differs from the stored one.
+  smartSyncRef.current = undefined;
+  useEffect(() => {
+    const next = smartSyncRef.current;
+    if (next === undefined || !user?.id || !lastSubmission) return;
+    if (sameSmartBudget(next, lastSubmission.smartBudget)) return;
+    const result = setStoreSmartBudget(next);
+    void saveUserAnalyseSnapshotSmartBudget(user.id, next, result);
+  });
+
   if (hasConsent === null) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -853,17 +882,50 @@ export default function TrackerScreen() {
       : monthlyIncome || profileMonthlyFromDb;
 
   // Lower Needs / Wants when the last 3 months stayed under them; the freed
-  // share goes to Investment. Users can undo it from the note above the buckets.
+  // share goes to Investment. A budget never drops below the monthly amount
+  // from the Analyse form, which spreads yearly bills like school fees, so
+  // the report never flags the user's own answers as over budget.
+  const formActuals =
+    analyseCompleted && lastSubmission
+      ? getUniversalBucketActuals(lastSubmission)
+      : null;
   const learnedCaps = learnCapsFromSpending(
     bucketCaps,
     displayIncome,
     learnHistory,
+    formActuals ? { needs: formActuals.needs, wants: formActuals.wants } : {},
   );
-  const effectiveCaps = smartBudgetOff ? bucketCaps : learnedCaps.caps;
+  const storedSmartBudget =
+    analyseCompleted && lastSubmission ? lastSubmission.smartBudget : null;
+  // With Analyse done the choice lives on the account; otherwise on this device.
+  const smartBudgetOn = storedSmartBudget
+    ? storedSmartBudget.enabled
+    : !smartBudgetOff;
+  const effectiveCaps = smartBudgetOn ? learnedCaps.caps : bucketCaps;
+  const isCurrentMonth =
+    selectedMonth === new Date().getMonth() &&
+    selectedYear === new Date().getFullYear();
+  if (
+    analyseCompleted &&
+    isCurrentMonth &&
+    learnHistoryFor === `${selectedYear}-${selectedMonth}`
+  ) {
+    smartSyncRef.current = buildSmartBudget(
+      bucketCaps,
+      learnedCaps,
+      storedSmartBudget,
+      !smartBudgetOff,
+    );
+  }
   const setSmartBudget = (on: boolean) => {
     setSmartBudgetOff(!on);
     if (on) syncKv.removeItem(SMART_BUDGET_OFF_KEY);
     else syncKv.setItem(SMART_BUDGET_OFF_KEY, "1");
+    if (storedSmartBudget && user?.id) {
+      const next = { ...storedSmartBudget, enabled: on };
+      const result = setStoreSmartBudget(next);
+      void saveUserAnalyseSnapshotSmartBudget(user.id, next, result);
+    }
   };
 
   const totalSpent = sumCashSpend(transactions);
@@ -1349,7 +1411,7 @@ export default function TrackerScreen() {
         {learnedCaps.adjustments.length > 0 ? (
           <SmartBudgetNote
             adjustments={learnedCaps.adjustments}
-            on={!smartBudgetOff}
+            on={smartBudgetOn}
             onToggle={setSmartBudget}
           />
         ) : null}
