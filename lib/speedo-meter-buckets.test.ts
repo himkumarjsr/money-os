@@ -14,9 +14,9 @@ describe("buildSpeedoMeterProps", () => {
     expect(props.caps).toEqual({
       needs: 0.3,
       wants: 0.05,
-      security: 0.05,
-      loans: 0.4,
-      investment: 0.2,
+      security: 0.1,
+      loans: 0.3,
+      investment: 0.25,
     });
   });
 

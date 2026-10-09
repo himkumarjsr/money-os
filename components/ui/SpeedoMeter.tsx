@@ -20,9 +20,9 @@ function resolveCaps(
   return {
     needs: caps?.needs ?? (hasHomeLoan ? 0.3 : 0.2),
     wants: caps?.wants ?? 0.05,
-    security: caps?.security ?? 0.05,
-    loans: caps?.loans ?? 0.4,
-    investment: caps?.investment ?? (hasHomeLoan ? 0.2 : 0.3),
+    security: caps?.security ?? 0.1,
+    loans: caps?.loans ?? 0.3,
+    investment: caps?.investment ?? (hasHomeLoan ? 0.25 : 0.35),
   };
 }
 

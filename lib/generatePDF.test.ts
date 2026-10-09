@@ -5,6 +5,7 @@ import { COMPLETE_WHY, mergeEnginePriorityPlan } from "./fixPlanMerge";
 import { buildFixPlanPdfData } from "./fixPlanPdfData";
 import { buildFixPlanPdf, formatCapPercent } from "./generatePDF";
 import { buildPriorityPlan } from "./priorityEngine";
+import { getUniversalCaps } from "./universal-buckets";
 
 const LONG_ACTION =
   "From month 7, add a top-up for ~4.0 crore only (you already have 1.0Cr). Keep the old policy - income proof limits often block a second full policy at today's salary.";
@@ -62,18 +63,21 @@ describe("formatCapPercent", () => {
 
 describe("Fix Plan PDF text", () => {
   const { text, plan } = renderText();
+  const capLabels = Object.values(
+    getUniversalCaps(buildUserAnalyseScenarioProfile()),
+  ).map((c) => `${Math.round(c * 100)}%`);
 
   it("prints bucket caps as percents, not fractions", () => {
-    expect(text).toContain("30%");
+    expect(text).toContain(capLabels[0]);
     expect(text).not.toMatch(/^0\.\d+%$/m);
   });
 
-  it("prints all five budget buckets, including the 5% insurance row", () => {
+  it("prints all five budget buckets with their profile caps", () => {
     const table = text.slice(text.indexOf("Monthly Budget Allocation"));
     const labels = table.split("\n").slice(6, 36);
     for (const label of ["Needs", "Wants", "Insurance", "Loans", "Investment"])
       expect(labels).toContain(label);
-    for (const cap of ["30%", "5%", "40%", "20%"]) expect(labels).toContain(cap);
+    for (const cap of capLabels) expect(labels).toContain(cap);
   });
 
   it("labels the goal instead of printing the enum", () => {
@@ -89,9 +93,16 @@ describe("Fix Plan PDF text", () => {
     const profile = buildUserAnalyseScenarioProfile() as any;
     const result = analyseFinances(profile);
     const engine = buildPriorityPlan(profile, result);
-    const { doc } = buildFixPlanPdf(profile, result, engine, {}, {}, {
-      userName: "Asha Rao",
-    });
+    const { doc } = buildFixPlanPdf(
+      profile,
+      result,
+      engine,
+      {},
+      {},
+      {
+        userName: "Asha Rao",
+      },
+    );
     const raw = Buffer.from(doc.output("arraybuffer")).toString("latin1");
     expect(raw).toContain("Prepared for: Asha Rao");
     expect(raw).not.toContain("Prepared for: User");
@@ -125,9 +136,8 @@ describe("Fix Plan PDF text", () => {
       },
     );
     const raw = Buffer.from(doc.output("arraybuffer")).toString("latin1");
-    const text = Array.from(
-      raw.matchAll(/\((.*?)(?<!\\)\) Tj/g),
-      (m) => m[1].replace(/\\([()])/g, "$1"),
+    const text = Array.from(raw.matchAll(/\((.*?)(?<!\\)\) Tj/g), (m) =>
+      m[1].replace(/\\([()])/g, "$1"),
     ).join(" ");
     expect(text).toContain("Data as of 14 September 2026");
     expect(text).toContain("Loans out of date");

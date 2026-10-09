@@ -14,6 +14,7 @@ import {
   findSubcategory,
   normalizeTrackerBucket,
 } from "@/lib/tracker-categories";
+import { getUniversalCaps } from "@/lib/universal-buckets";
 import {
   TrackerIconBadge,
   TrackerIcon,
@@ -158,6 +159,14 @@ function TrackerContent() {
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analyseResult = useFinancialStore((s) => s.result);
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
+  // Budget caps follow the Analyse answers once they exist; otherwise the generic split.
+  const bucketCaps = useMemo(
+    () =>
+      getUniversalCaps(
+        analyseCompleted && lastSubmission ? lastSubmission : {},
+      ),
+    [analyseCompleted, lastSubmission],
+  );
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
       if (typeof window !== "undefined" && hasTrackerConsentLocal()) {
@@ -427,7 +436,9 @@ function TrackerContent() {
           normalizeTrackerBucket,
         );
         setTransactions(
-          ((currentRes.data as TrackerTransaction[]) || []).map(normalizeTrackerBucket),
+          ((currentRes.data as TrackerTransaction[]) || []).map(
+            normalizeTrackerBucket,
+          ),
         );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
@@ -1814,9 +1825,16 @@ function TrackerContent() {
           .filter((t) => countsTowardTrackerTotals(t))
           .reduce((a, t) => a + Number(t.amount), 0);
         const isExpanded = expandedBucket === bucketKey;
+        const capPct =
+          bucketKey in bucketCaps
+            ? Math.round(bucketCaps[bucketKey as keyof typeof bucketCaps] * 100)
+            : cat.cap;
         const budgetAmount =
-          displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
-        const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
+          displayIncome > 0 ? displayIncome * (capPct / 100) : 0;
+        // Investment is a target to reach, not a limit — going over is good.
+        const isTargetBucket = bucketKey === "investment";
+        const overBudget =
+          !isTargetBucket && budgetAmount > 0 && bucketTotal > budgetAmount;
         const progressPercent =
           budgetAmount > 0
             ? Math.min((bucketTotal / budgetAmount) * 100, 100)
@@ -1888,7 +1906,7 @@ function TrackerContent() {
                       }}
                     >
                       {bucketTxns.length} items
-                      {cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
+                      {capPct > 0 ? ` · ${capPct}% budget` : ""}
                     </div>
                   </div>
                 </div>
@@ -1949,8 +1967,9 @@ function TrackerContent() {
                       style={{
                         height: "100%",
                         width: sectionVisible ? `${progressPercent}%` : "0%",
-                        background:
-                          progressPercent >= 100
+                        background: isTargetBucket
+                          ? cat.color
+                          : progressPercent >= 100
                             ? "#E24B4A"
                             : progressPercent >= 80
                               ? "#BA7517"
