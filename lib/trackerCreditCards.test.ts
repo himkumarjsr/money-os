@@ -128,13 +128,13 @@ describe("credit card payment method encoding", () => {
 });
 
 describe("cash vs card spend", () => {
-  it("counts card purchases when made; leaves out bill pays (they settle them)", () => {
+  it("bank SPENT: leaves out card purchases; counts bill pays from the bank", () => {
     expect(
       countsTowardCashSpend({
         bucket: "wants",
         payment_method: "credit_card::c1::HDFC",
       }),
-    ).toBe(true);
+    ).toBe(false);
     for (const rail of ["upi", "netbanking", "wallet", "cash"]) {
       expect(
         countsTowardCashSpend({
@@ -142,8 +142,42 @@ describe("cash vs card spend", () => {
           subcategory: "credit_card",
           payment_method: rail,
         }),
+      ).toBe(true);
+    }
+    // "Pay bill · …" note logged elsewhere is a bill pay from the bank too.
+    expect(
+      countsTowardCashSpend({
+        bucket: "wants",
+        payment_method: "upi",
+        description: "Pay bill · HDFC",
+      }),
+    ).toBe(true);
+    // Card EMI instalments are paid through the card bill.
+    expect(
+      countsTowardCashSpend({
+        bucket: "loans",
+        subcategory: "card_emi",
+        payment_method: "credit_card::c1::HDFC",
+      }),
+    ).toBe(false);
+    // Legacy generated rows never touch the bank.
+    for (const sub of ["card_extra", "card_overdue"]) {
+      expect(
+        countsTowardCashSpend({
+          bucket: "loans",
+          subcategory: sub,
+          payment_method: sub === "card_extra" ? "upi" : null,
+        }),
       ).toBe(false);
     }
+    // RD-paid premium was counted monthly.
+    expect(
+      countsTowardCashSpend({
+        bucket: "security",
+        subcategory: "insurance_premium",
+        payment_method: "rd_savings",
+      }),
+    ).toBe(false);
     expect(
       countsTowardCashSpend({
         bucket: "loans",
@@ -192,12 +226,12 @@ describe("cash vs card spend", () => {
         payment_method: "credit_card::c1::HDFC",
       },
     ];
-    // Card spends come off LEFT when made; the 800 bill pay only settles them.
-    expect(sumCashSpend(txns)).toBe(1700);
+    // Bank only: the UPI spend and the 800 bill pay; card spends wait for it.
+    expect(sumCashSpend(txns)).toBe(1800);
     expect(sumOnCardsSpend(txns)).toBe(700);
   });
 
-  it("subtracts card refunds / cashback from spend and the card bill", () => {
+  it("card refunds / cashback lower the card bill, not the bank spend", () => {
     const card = "credit_card::c1::HDFC";
     const refund = {
       amount: 300,
@@ -208,7 +242,7 @@ describe("cash vs card spend", () => {
     expect(isCreditCardRefund(refund)).toBe(true);
     expect(isCreditCardCharge(refund)).toBe(false);
     expect(cardBillAmount(refund)).toBe(-300);
-    expect(cashSpendAmount(refund)).toBe(-300);
+    expect(cashSpendAmount(refund)).toBe(0);
     // Income is never a refund, and a refund needs a card.
     expect(isCreditCardRefund({ ...refund, bucket: "income" })).toBe(false);
     expect(isCreditCardRefund({ ...refund, payment_method: "upi" })).toBe(
@@ -218,7 +252,7 @@ describe("cash vs card spend", () => {
       { amount: 1000, bucket: "wants", payment_method: card },
       refund,
     ];
-    expect(sumCashSpend(txns)).toBe(700);
+    expect(sumCashSpend(txns)).toBe(0);
     expect(sumOnCardsSpend(txns)).toBe(700);
   });
 

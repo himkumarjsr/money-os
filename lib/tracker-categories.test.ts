@@ -100,6 +100,18 @@ describe("TRACKER_CATEGORIES", () => {
     ).toBe(true);
   });
 
+  it("never counts generated card_extra / card_overdue rows in Loans", () => {
+    for (const sub of ["card_extra", "card_overdue"]) {
+      expect(
+        countsTowardTrackerTotals({
+          bucket: "loans",
+          subcategory: sub,
+          payment_method: "upi",
+        }),
+      ).toBe(false);
+    }
+  });
+
   it("spend caps add up to 100%, matching Analyse's five buckets", () => {
     const total = BUCKETS.reduce(
       (sum, b) => sum + TRACKER_CATEGORIES[b].cap,

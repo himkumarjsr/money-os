@@ -35,6 +35,7 @@ import { useAuthStore } from "@/store/authStore";
 import {
   CARD_REFUND_SUBCATEGORY,
   DEFAULT_DUE_OFFSET_DAYS,
+  billPaymentNoteForCard,
   deleteSavedCreditCard,
   displayExpenseDescription,
   encodeCardEmiToken,
@@ -143,6 +144,8 @@ export function AddExpenseSheet({
   const [paymentMethod, setPaymentMethod] = useState("upi");
   const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState("");
+  /** Card a Loans → Credit card payment was for (matches it to that bill). */
+  const [billCardId, setBillCardId] = useState("");
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCardNickname, setNewCardNickname] = useState("");
   const [newCardBillingDay, setNewCardBillingDay] = useState("");
@@ -170,6 +173,7 @@ export function AddExpenseSheet({
     );
     setPaymentMethod(initialPaymentKind(seedPayment));
     setSelectedCardId(parseCreditCardPaymentMethod(seedPayment).cardId || "");
+    setBillCardId("");
     setShowAddCard(false);
     setNewCardNickname("");
     setNewCardBillingDay("");
@@ -445,6 +449,13 @@ export function AddExpenseSheet({
         descriptionToStore = fallback;
       }
     }
+    const billCard =
+      isCcBillPay && billCardId
+        ? savedCards.find((c) => c.id === billCardId)
+        : undefined;
+    if (billCard) {
+      descriptionToStore = billPaymentNoteForCard(descriptionToStore, billCard);
+    }
 
     const subToStore =
       entryMode === "refund"
@@ -676,13 +687,45 @@ export function AddExpenseSheet({
                   <Text style={styles.fieldLabelTight}>Paid via</Text>
                   {isCcBillPay ? (
                     <Text style={styles.ccHint}>
-                      Card spends already came off Money Left when you made
-                      them, so paying the bill{" "}
+                      Paying the bill takes money from your bank, so it counts
+                      in Spent today. It{" "}
                       <Text style={styles.ccHintStrong}>
-                        doesn&apos;t reduce it again
+                        doesn&apos;t add to Loans
                       </Text>{" "}
-                      — only interest or fees above them do.
+                      — the card spends already counted in their sections.
                     </Text>
+                  ) : null}
+                  {isCcBillPay &&
+                  savedCards.length > 1 &&
+                  !/^pay bill/i.test(description.trim()) ? (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={styles.cardPanelLabel}>
+                        Which card are you paying?
+                      </Text>
+                      <View style={styles.wrapChips}>
+                        {savedCards.map((c) => {
+                          const on = billCardId === c.id;
+                          return (
+                            <Pressable
+                              key={c.id}
+                              onPress={() => setBillCardId(on ? "" : c.id)}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: on }}
+                              style={[styles.chip, on && styles.payChipOn]}
+                            >
+                              <Text
+                                style={[
+                                  styles.payChipText,
+                                  on && styles.payTextOn,
+                                ]}
+                              >
+                                {formatCreditCardLabel(c)}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
                   ) : null}
                   <View style={styles.wrapChips}>
                     {PAYMENT_OPTIONS.filter((pm) =>

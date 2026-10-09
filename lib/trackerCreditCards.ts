@@ -20,6 +20,11 @@ export type SavedCreditCard = {
   dueDay?: number;
   /** Optional credit limit in rupees (for usage warnings). */
   creditLimit?: number;
+  /**
+   * Statement close dates (yyyy-mm-dd) the user marked as paid when no logged
+   * payment could be matched. Kept in the local card cache only.
+   */
+  paidStatements?: string[];
   createdAt: string;
 };
 
@@ -27,9 +32,11 @@ export type SavedCreditCard = {
 export const CARD_REFUND_SUBCATEGORY = "card_refund";
 /** Monthly instalment of a card purchase converted to EMI (generated, Loans). */
 export const CARD_EMI_SUBCATEGORY = "card_emi";
-/** Part of a bill payment above the card spends already counted (Loans). */
+/**
+ * Legacy generated rows (bill paid above tracked spends / unpaid bill). No
+ * longer generated; ignored by every total if an old cache still has them.
+ */
 export const CARD_EXTRA_SUBCATEGORY = "card_extra";
-/** Statement balance left unpaid after its due date (Loans, display only). */
 export const CARD_OVERDUE_SUBCATEGORY = "card_overdue";
 /** Id prefix for rows the tracker generates (never stored, no edit / delete). */
 export const VIRTUAL_TXN_PREFIX = "virtual:";
@@ -141,6 +148,28 @@ export function creditCardBillPaymentDescription(
   // Strip any leftover [#…] if label was polluted.
   const clean = name.replace(/\s*\[#[^\]]*\]\s*/g, "").trim() || "Credit card";
   return `Pay bill · ${clean}`;
+}
+
+/**
+ * Note for a bill payment logged with a card chosen, so it can be matched to
+ * that card's bill: "Pay bill · <card>", or the user's note plus the card.
+ */
+export function billPaymentNoteForCard(
+  note: string | null | undefined,
+  card: { nickname: string; last4?: string | null },
+): string {
+  const label = formatCreditCardLabel(card);
+  const clean = (note || "").replace(/\s*\[#[^\]]*\]/g, "").trim();
+  if (
+    !clean ||
+    /^pay bill/i.test(clean) ||
+    /^credit card( bill)?( payment)?$/i.test(clean)
+  ) {
+    return creditCardBillPaymentDescription(label);
+  }
+  const nick = card.nickname.trim().toLowerCase();
+  if (nick && clean.toLowerCase().includes(nick)) return clean;
+  return `${clean} · ${label}`;
 }
 
 /** Hide internal [#cardId] tokens from notes shown in the UI. */
@@ -355,15 +384,21 @@ export function cardBillAmount(
 }
 
 /**
- * Signed amount for purple SPENT / LEFT (money gone or set aside this month).
+ * Amount for purple SPENT / LEFT: money that left the bank / savings account.
  *
- * - Every spend counts in the month it is made, cash or card.
- * - Card refunds / cashback give money back (negative).
- * - Card bill payments are 0 here: they settle spends already counted. The
- *   part above those spends (interest, fees, older balance) arrives as a
- *   separate `card_extra` row from `buildCardMonthRows`.
- * - A purchase converted to EMI is 0; its monthly EMI rows count instead.
- * - Income and the display-only overdue line are 0.
+ * INCLUDE:
+ * - needs / wants / habits / loan EMIs / investments / loan repayment paid by
+ *   UPI, cash, net banking, wallet, cheque
+ * - credit card bill payments (Loans → Credit card payment, or a "Pay bill · …"
+ *   note) on the day they are paid from the bank
+ *
+ * EXCLUDE (0):
+ * - income
+ * - anything paid with a credit card: purchases, card EMI instalments (paid
+ *   through the card bill), purchases converted to EMI, card refunds /
+ *   cashback — those move the card bill, not the bank balance
+ * - premiums paid from RD savings (the monthly RD already counted)
+ * - generated `card_extra` / `card_overdue` rows from older builds
  */
 export function cashSpendAmount(
   txn: CardRowLike & { amount: number | string },
@@ -373,10 +408,12 @@ export function cashSpendAmount(
   if (!Number.isFinite(n) || n <= 0) return 0;
   if (isPaidFromSavings(txn)) return 0;
   const sub = txn.subcategory || txn.category;
-  if (sub === CARD_OVERDUE_SUBCATEGORY) return 0;
-  if (isCreditCardRefund(txn)) return -n;
-  if (isCreditCardBillPayment(txn)) return 0;
-  if (isCardEmiPurchase(txn)) return 0;
+  if (sub === CARD_OVERDUE_SUBCATEGORY || sub === CARD_EXTRA_SUBCATEGORY) {
+    return 0;
+  }
+  // Bill pay from the bank (never true for a row paid with a card).
+  if (isCreditCardBillPayment(txn)) return n;
+  if (isCreditCardPaymentMethod(txn.payment_method)) return 0;
   return n;
 }
 
@@ -1023,16 +1060,236 @@ export type CreditCardOverdue = {
   dueDate: string;
   /** Net spends on that statement. */
   statementAmount: number;
-  /** Paid between statement close and due date. */
+  /** Paid (or matched to an unlinked bill payment) by the due date. */
   paidByDue: number;
-  /** Still unpaid today. Counts under Loans until cleared. */
+  /** Still unpaid today. */
   remaining: number;
+  /**
+   * False when a bill payment without a card (or naming a card we can't
+   * match) was logged in this bill's window: it may have paid this bill, so
+   * ask the user instead of warning about interest.
+   */
+  clearlyUnpaid: boolean;
 };
+
+type PaymentLink =
+  | { kind: "card"; cardId: string }
+  /** No card named (or several match): could have paid any card's bill. */
+  | { kind: "unlinked" }
+  /** Names a card that isn't saved: never allocated, but makes bills unsure. */
+  | { kind: "foreign" };
+
+function cardMatchLabels(card: SavedCreditCard): string[] {
+  return [
+    formatCreditCardLabel(card).toLowerCase(),
+    card.nickname.trim().toLowerCase(),
+  ].filter((s) => s.length >= 2);
+}
+
+/** Which saved card a bill payment was for, as far as its note tells. */
+function linkBillPayment(
+  txn: { description?: string | null; payment_method?: string | null },
+  cards: SavedCreditCard[],
+): PaymentLink {
+  const rawLabel = (parsePayBillLabel(txn.description) || "").toLowerCase();
+  // "Pay bill · Credit card" (generic Pay button) names no card.
+  const payLabel = rawLabel === "credit card" ? "" : rawLabel;
+  const exact = cards.filter((c) => billPaymentMatchesCard(txn, c));
+  if (exact.length === 1) return { kind: "card", cardId: exact[0].id };
+  if (exact.length > 1) {
+    // "ICICI" and "ICICI Amazon pay" both match "Pay bill · ICICI Amazon pay".
+    const same = exact.filter((c) => cardMatchLabels(c).includes(payLabel));
+    if (payLabel && same.length === 1) {
+      return { kind: "card", cardId: same[0].id };
+    }
+    return { kind: "unlinked" };
+  }
+  const hasToken = /\[#(?!emi:)[^\]]+\]/i.test(txn.description || "");
+  if (payLabel) {
+    const near = cards.filter((c) =>
+      cardMatchLabels(c).some(
+        (l) => payLabel === l || payLabel.includes(l) || l.includes(payLabel),
+      ),
+    );
+    if (near.length === 1) return { kind: "card", cardId: near[0].id };
+    if (near.length > 1) return { kind: "unlinked" };
+    return { kind: "foreign" };
+  }
+  if (hasToken) return { kind: "foreign" };
+  if (cards.length === 1) return { kind: "card", cardId: cards[0].id };
+  return { kind: "unlinked" };
+}
+
+type StatementCalc = {
+  card: SavedCreditCard;
+  start: Date;
+  end: Date;
+  due: Date;
+  /** First day a payment counts toward this bill (day after the last due). */
+  payFrom: Date;
+  amount: number;
+  paid: number;
+  paidByDue: number;
+  /** An unlinked / unmatched bill payment was logged in the window. */
+  unsure: boolean;
+};
+
+type PaymentCalc = {
+  iso: string;
+  amount: number;
+  left: number;
+  link: PaymentLink;
+};
+
+function statementFor(
+  card: SavedCreditCard,
+  win: { start: Date; end: Date },
+  dueDay: number,
+  transactions: BillTxn[],
+  soleCard: boolean,
+): StatementCalc {
+  const due = getStatementDueDate(win.end, dueDay);
+  const prevEnd = new Date(
+    win.start.getFullYear(),
+    win.start.getMonth(),
+    win.start.getDate() - 1,
+  );
+  // Payments after the previous bill's due date go to this bill — including
+  // ones made before this statement closed.
+  const afterPrevDue = dayAfter(getStatementDueDate(prevEnd, dueDay));
+  const afterClose = dayAfter(win.end);
+  const payFrom = afterPrevDue < afterClose ? afterPrevDue : afterClose;
+  const amount =
+    Math.round(
+      sumChargesForCard(transactions, card, soleCard, {
+        start: win.start,
+        end: endOfDay(win.end),
+      }) * 100,
+    ) / 100;
+  return {
+    card,
+    start: win.start,
+    end: win.end,
+    due,
+    payFrom,
+    amount,
+    paid: 0,
+    paidByDue: 0,
+    unsure: false,
+  };
+}
+
+function remainingOf(s: StatementCalc): number {
+  return Math.max(0, Math.round((s.amount - s.paid) * 100) / 100);
+}
+
+function inPayWindow(
+  p: PaymentCalc,
+  s: StatementCalc,
+  asOfIso: string,
+): boolean {
+  return p.iso >= toIsoDate(s.payFrom) && p.iso <= asOfIso;
+}
+
+function applyPayment(s: StatementCalc, p: PaymentCalc, take: number): void {
+  if (take <= 0) return;
+  s.paid = Math.round((s.paid + take) * 100) / 100;
+  if (p.iso <= toIsoDate(s.due)) {
+    s.paidByDue = Math.round((s.paidByDue + take) * 100) / 100;
+  }
+  p.left = Math.round((p.left - take) * 100) / 100;
+}
+
+/**
+ * Match logged bill payments (up to `asOf`) to statements, at most one
+ * statement per card.
+ *
+ * 1. Payments that name a card pay that card's bill.
+ * 2. Payments without a card go first to a bill of (about) the same amount,
+ *    then to the oldest due date first — so "Credit card payment" rows
+ *    logged without choosing a card still clear the right bills.
+ *
+ * Returns what is left of each named payment, per card, so an early payment
+ * can lower that card's open cycle.
+ */
+function allocateBillPayments(
+  statements: StatementCalc[],
+  transactions: BillTxn[],
+  cards: SavedCreditCard[],
+  asOf: Date,
+): { leftoverByCard: Map<string, PaymentCalc[]> } {
+  const asOfIso = toIsoDate(asOf);
+  const payments: PaymentCalc[] = [];
+  for (const t of transactions) {
+    if (!isCreditCardBillPayment(t)) continue;
+    const iso = txnDateIso(t);
+    const n = Number(t.amount);
+    if (!iso || iso > asOfIso || !Number.isFinite(n) || n <= 0) continue;
+    payments.push({ iso, amount: n, left: n, link: linkBillPayment(t, cards) });
+  }
+  payments.sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+
+  const byCard = new Map(statements.map((s) => [s.card.id, s]));
+  const leftoverByCard = new Map<string, PaymentCalc[]>();
+  for (const p of payments) {
+    if (p.link.kind !== "card") continue;
+    const cardId = p.link.cardId;
+    const s = byCard.get(cardId);
+    if (s && inPayWindow(p, s, asOfIso)) {
+      applyPayment(s, p, Math.min(p.left, remainingOf(s)));
+    }
+    if (p.left >= 1) {
+      const list = leftoverByCard.get(cardId) ?? [];
+      list.push(p);
+      leftoverByCard.set(cardId, list);
+    }
+  }
+
+  const unlinked = payments.filter((p) => p.link.kind === "unlinked");
+  for (const s of statements) {
+    s.unsure = payments.some(
+      (p) => p.link.kind !== "card" && inPayWindow(p, s, asOfIso),
+    );
+  }
+  const open = () =>
+    statements
+      .filter((s) => remainingOf(s) >= 1)
+      .sort((a, b) => a.due.getTime() - b.due.getTime());
+  // Same amount first (one payment per bill).
+  for (const p of unlinked) {
+    const match = open().find(
+      (s) =>
+        inPayWindow(p, s, asOfIso) && Math.abs(remainingOf(s) - p.left) <= 1,
+    );
+    if (match) applyPayment(match, p, Math.min(p.left, remainingOf(match)));
+  }
+  // Then oldest due date first.
+  for (const s of open()) {
+    for (const p of unlinked) {
+      if (p.left <= 0 || !inPayWindow(p, s, asOfIso)) continue;
+      applyPayment(s, p, Math.min(p.left, remainingOf(s)));
+      if (remainingOf(s) < 1) break;
+    }
+  }
+  return { leftoverByCard };
+}
+
+function dueDayFor(card: SavedCreditCard, billingDay: number): number {
+  return clampDay(card.dueDay) ?? suggestDueDayFromBilling(billingDay);
+}
+
+/** True when the user marked the statement closing on `statementEnd` paid. */
+export function isCardStatementMarkedPaid(
+  card: Pick<SavedCreditCard, "paidStatements">,
+  statementEnd: string,
+): boolean {
+  return (card.paidStatements ?? []).includes(statementEnd);
+}
 
 /**
  * Latest statement whose due date has passed, when it was not paid in full by
- * then. Needs a billing day; payments are those made after the statement
- * closed. Older statements are not tracked here.
+ * then. Needs a billing day. Bill payments are matched as in
+ * `allocateBillPayments`; statements the user marked paid are skipped.
  */
 export function buildCreditCardOverdue(opts: {
   cards: SavedCreditCard[];
@@ -1042,12 +1299,11 @@ export function buildCreditCardOverdue(opts: {
   const asOf = opts.asOf ?? new Date();
   const asOfDay = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
   const soleCard = opts.cards.length === 1;
-  const out: CreditCardOverdue[] = [];
+  const statements: StatementCalc[] = [];
   for (const card of opts.cards) {
     const billingDay = clampDay(card.billingDay);
     if (!billingDay) continue;
-    const dueDay =
-      clampDay(card.dueDay) ?? suggestDueDayFromBilling(billingDay);
+    const dueDay = dueDayFor(card, billingDay);
     let win = getLastStatementWindow(billingDay, asOf);
     let due = win ? getStatementDueDate(win.end, dueDay) : null;
     // The latest closed statement may not be due yet — use the one before.
@@ -1058,36 +1314,291 @@ export function buildCreditCardOverdue(opts: {
       due = win ? getStatementDueDate(win.end, dueDay) : null;
     }
     if (!win || !due || due >= asOfDay) continue;
-    const statementAmount = sumChargesForCard(
-      opts.transactions,
-      card,
-      soleCard,
-      { start: win.start, end: endOfDay(win.end) },
+    statements.push(
+      statementFor(card, win, dueDay, opts.transactions, soleCard),
     );
-    if (statementAmount <= 0) continue;
-    const afterClose = dayAfter(win.end);
-    const paidByDue = sumPaymentsForCard(opts.transactions, card, soleCard, {
-      start: afterClose,
-      end: endOfDay(due),
-    });
-    const paidSince = sumPaymentsForCard(opts.transactions, card, soleCard, {
-      start: afterClose,
-      end: endOfDay(asOf),
-    });
-    const unpaidAtDue = Math.round((statementAmount - paidByDue) * 100) / 100;
-    const remaining = Math.round((statementAmount - paidSince) * 100) / 100;
+  }
+  allocateBillPayments(statements, opts.transactions, opts.cards, asOf);
+
+  const out: CreditCardOverdue[] = [];
+  for (const s of statements) {
+    if (s.amount <= 0) continue;
+    const statementEnd = toIsoDate(s.end);
+    if (isCardStatementMarkedPaid(s.card, statementEnd)) continue;
+    const unpaidAtDue = Math.round((s.amount - s.paidByDue) * 100) / 100;
+    const remaining = remainingOf(s);
     if (unpaidAtDue < 1 || remaining < 1) continue;
     out.push({
-      cardId: card.id,
-      label: formatCreditCardLabel(card),
-      statementEnd: toIsoDate(win.end),
-      dueDate: toIsoDate(due),
-      statementAmount,
-      paidByDue,
+      cardId: s.card.id,
+      label: formatCreditCardLabel(s.card),
+      statementEnd,
+      dueDate: toIsoDate(s.due),
+      statementAmount: s.amount,
+      paidByDue: s.paidByDue,
       remaining,
+      clearlyUnpaid: !s.unsure,
     });
   }
   return out;
+}
+
+export type CardLastBillStatus =
+  /** Logged payments cover it. */
+  | "paid"
+  /** The user tapped "Mark paid". */
+  | "marked_paid"
+  | "partial"
+  | "unpaid";
+
+export type CardLastBill = {
+  statementStart: string;
+  statementEnd: string;
+  dueDate: string;
+  /** Net charges on the statement (spends + EMIs + fees − refunds). */
+  amount: number;
+  paid: number;
+  remaining: number;
+  status: CardLastBillStatus;
+  /** Due date has passed and something is still unpaid. */
+  overdue: boolean;
+  /**
+   * A bill payment without a card (or for a card we can't match) was logged
+   * in this bill's window — ask "mark as paid?" rather than warn.
+   */
+  unsure: boolean;
+  /** Overdue with no logged payment that could cover it: interest warning. */
+  clearlyUnpaid: boolean;
+};
+
+export type CardBillSummary = {
+  cardId: string;
+  label: string;
+  billingDay?: number;
+  dueDay?: number;
+  hasBillingDay: boolean;
+  /** Open statement (or this calendar month without a billing day). */
+  cycle: {
+    start: string;
+    /** Statement close date; null without a billing day. */
+    closesOn: string | null;
+    dueDate: string | null;
+    /** Net charges so far (refunds lower it; EMIs and fees included). */
+    spent: number;
+    /** Spent minus early payments already made on this card. */
+    toPay: number;
+  };
+  /** Latest closed statement, only when it had charges. */
+  lastBill: CardLastBill | null;
+  usage: CreditCardUsage | null;
+  /** This cycle still to pay plus anything unpaid on the last bill. */
+  upcoming: number;
+};
+
+export type CardBillsResult = {
+  cards: CardBillSummary[];
+  /** Card spends this month not linked to a saved card, per label. */
+  otherCards: Array<{ key: string; label: string; spent: number }>;
+  /** Every card's `upcoming` plus other card spends. */
+  totalUpcoming: number;
+};
+
+/**
+ * Data for the Card bills section: per saved card, the open cycle, the last
+ * bill and whether it was paid, credit limit usage, and the total still to
+ * leave the bank for card bills.
+ */
+export function buildCardBills(opts: {
+  cards: SavedCreditCard[];
+  transactions: Array<BillTxn & { description?: string | null }>;
+  asOf?: Date;
+}): CardBillsResult {
+  const asOf = opts.asOf ?? new Date();
+  const asOfDay = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  const soleCard = opts.cards.length === 1;
+  const usageById = new Map(
+    buildCreditCardUsage({
+      cards: opts.cards,
+      transactions: opts.transactions,
+      asOf,
+    }).map((u) => [u.cardId, u]),
+  );
+
+  const statements: StatementCalc[] = [];
+  const cycles = new Map<
+    string,
+    { start: Date; closesOn: Date | null; due: Date | null }
+  >();
+  for (const card of opts.cards) {
+    const billingDay = clampDay(card.billingDay);
+    if (!billingDay) {
+      const dueDay = clampDay(card.dueDay);
+      cycles.set(card.id, {
+        start: new Date(asOf.getFullYear(), asOf.getMonth(), 1),
+        closesOn: null,
+        due: dueDay ? getNextDueDate(dueDay, asOf) : null,
+      });
+      continue;
+    }
+    const dueDay = dueDayFor(card, billingDay);
+    const last = getLastStatementWindow(billingDay, asOf);
+    if (!last) continue;
+    const start = dayAfter(last.end);
+    const closesOn =
+      getStatementWindowForDate(billingDay, start)?.end ?? last.end;
+    cycles.set(card.id, {
+      start,
+      closesOn,
+      due: getStatementDueDate(closesOn, dueDay),
+    });
+    statements.push(
+      statementFor(card, last, dueDay, opts.transactions, soleCard),
+    );
+  }
+  const { leftoverByCard } = allocateBillPayments(
+    statements,
+    opts.transactions,
+    opts.cards,
+    asOf,
+  );
+  const stmtByCard = new Map(statements.map((s) => [s.card.id, s]));
+
+  const summaries: CardBillSummary[] = [];
+  for (const card of opts.cards) {
+    const cyc = cycles.get(card.id);
+    if (!cyc) continue;
+    const spent = Math.max(
+      0,
+      Math.round(
+        sumChargesForCard(opts.transactions, card, soleCard, {
+          start: cyc.start,
+          end: endOfDay(asOf),
+        }) * 100,
+      ) / 100,
+    );
+    const startIso = toIsoDate(cyc.start);
+    const earlyPaid = (leftoverByCard.get(card.id) ?? [])
+      .filter((p) => p.iso >= startIso)
+      .reduce((sum, p) => sum + p.left, 0);
+    const toPay = Math.max(0, Math.round((spent - earlyPaid) * 100) / 100);
+
+    let lastBill: CardLastBill | null = null;
+    const s = stmtByCard.get(card.id);
+    if (s && s.amount >= 1) {
+      const statementEnd = toIsoDate(s.end);
+      const marked = isCardStatementMarkedPaid(card, statementEnd);
+      const left = marked ? 0 : remainingOf(s);
+      const remaining = left < 1 ? 0 : left;
+      const status: CardLastBillStatus = marked
+        ? "marked_paid"
+        : remaining === 0
+          ? "paid"
+          : s.paid >= 1
+            ? "partial"
+            : "unpaid";
+      const overdue = remaining > 0 && s.due < asOfDay;
+      lastBill = {
+        statementStart: toIsoDate(s.start),
+        statementEnd,
+        dueDate: toIsoDate(s.due),
+        amount: s.amount,
+        paid: s.paid,
+        remaining,
+        status,
+        overdue,
+        unsure: remaining > 0 && s.unsure,
+        clearlyUnpaid: overdue && !s.unsure,
+      };
+    }
+
+    const billingDay = clampDay(card.billingDay);
+    summaries.push({
+      cardId: card.id,
+      label: formatCreditCardLabel(card),
+      billingDay,
+      dueDay:
+        clampDay(card.dueDay) ??
+        (billingDay ? suggestDueDayFromBilling(billingDay) : undefined),
+      hasBillingDay: !!billingDay,
+      cycle: {
+        start: startIso,
+        closesOn: cyc.closesOn ? toIsoDate(cyc.closesOn) : null,
+        dueDate: cyc.due ? toIsoDate(cyc.due) : null,
+        spent,
+        toPay,
+      },
+      lastBill,
+      usage: usageById.get(card.id) ?? null,
+      upcoming:
+        Math.round((toPay + (lastBill ? lastBill.remaining : 0)) * 100) / 100,
+    });
+  }
+
+  // Card spends this month on cards that aren't saved (or no card chosen).
+  const monthStart = new Date(asOf.getFullYear(), asOf.getMonth(), 1);
+  const savedIds = new Set(opts.cards.map((c) => c.id));
+  const savedLabels = new Set(
+    opts.cards.map((c) => formatCreditCardLabel(c).toLowerCase()),
+  );
+  const other = new Map<
+    string,
+    { key: string; label: string; spent: number }
+  >();
+  for (const t of opts.transactions) {
+    const n = cardBillAmount(t);
+    if (n === 0) continue;
+    if (!txnDateInRange(t, monthStart, endOfDay(asOf))) continue;
+    const { cardId, label } = parseCreditCardPaymentMethod(t.payment_method);
+    if (cardId && savedIds.has(cardId)) continue;
+    if (label && savedLabels.has(label.toLowerCase())) continue;
+    if (soleCard && !cardId) continue;
+    const key = cardId || label || "Credit card";
+    const prev = other.get(key);
+    if (prev) prev.spent = Math.round((prev.spent + n) * 100) / 100;
+    else other.set(key, { key, label: label || "Credit card", spent: n });
+  }
+  const otherCards = Array.from(other.values()).filter((o) => o.spent >= 1);
+
+  const totalUpcoming =
+    Math.round(
+      (summaries.reduce((sum, c) => sum + c.upcoming, 0) +
+        otherCards.reduce((sum, o) => sum + o.spent, 0)) *
+        100,
+    ) / 100;
+  return { cards: summaries, otherCards, totalUpcoming };
+}
+
+function billInr(n: number): string {
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+
+function billShortDate(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+/** "₹X spent so far · bill on 15 Oct · due 1 Nov" for the Card bills list. */
+export function cardBillCycleText(c: CardBillSummary): string {
+  if (!c.hasBillingDay) return `${billInr(c.cycle.spent)} spent this month`;
+  const parts = [`${billInr(c.cycle.spent)} spent so far`];
+  if (c.cycle.closesOn)
+    parts.push(`bill on ${billShortDate(c.cycle.closesOn)}`);
+  if (c.cycle.dueDate) parts.push(`due ${billShortDate(c.cycle.dueDate)}`);
+  return parts.join(" · ");
+}
+
+/** "₹Y due 1 Oct — Paid ✓" / "— ₹Z of ₹Y paid" / "— Not paid yet". */
+export function cardLastBillText(c: CardBillSummary): string | null {
+  const b = c.lastBill;
+  if (!b) return null;
+  const head = `${billInr(b.amount)} due ${billShortDate(b.dueDate)}`;
+  if (b.status === "paid" || b.status === "marked_paid") {
+    return `${head} — Paid ✓`;
+  }
+  if (b.status === "partial") {
+    return `${head} — ${billInr(b.paid)} of ${billInr(b.amount)} paid`;
+  }
+  return `${head} — Not paid yet`;
 }
 
 export function normalizeCreditLimit(raw: unknown): number | undefined {
@@ -1095,6 +1606,22 @@ export function normalizeCreditLimit(raw: unknown): number | undefined {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return undefined;
   return Math.round(n);
+}
+
+const PAID_STATEMENTS_KEEP = 12;
+
+function normalizePaidStatements(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const list = Array.from(
+    new Set(
+      raw
+        .map((x) => String(x || "").slice(0, 10))
+        .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)),
+    ),
+  )
+    .sort()
+    .slice(-PAID_STATEMENTS_KEEP);
+  return list.length ? list : undefined;
 }
 
 function parseStoredCard(raw: unknown): SavedCreditCard | null {
@@ -1122,6 +1649,7 @@ function parseStoredCard(raw: unknown): SavedCreditCard | null {
           : undefined,
     ),
     creditLimit: normalizeCreditLimit(o.creditLimit ?? o.credit_limit),
+    paidStatements: normalizePaidStatements(o.paidStatements),
     createdAt:
       typeof o.createdAt === "string"
         ? o.createdAt
@@ -1234,6 +1762,53 @@ export function upsertSavedCreditCard(
   return created;
 }
 
+/**
+ * "Mark paid" on a bill no logged payment could be matched to. Stored on the
+ * card in the local card cache (keyed by card + statement close date), so the
+ * bill stops showing as unpaid. Returns the updated card, or null.
+ */
+export function markCardStatementPaid(
+  userId: string,
+  cardId: string,
+  statementEnd: string,
+): SavedCreditCard | null {
+  const iso = String(statementEnd || "").slice(0, 10);
+  if (!userId || !cardId || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const existing = loadSavedCreditCards(userId);
+  const idx = existing.findIndex((c) => c.id === cardId);
+  if (idx < 0) return null;
+  const updated: SavedCreditCard = {
+    ...existing[idx],
+    paidStatements: normalizePaidStatements([
+      ...(existing[idx].paidStatements ?? []),
+      iso,
+    ]),
+  };
+  existing[idx] = updated;
+  saveCreditCards(userId, existing);
+  return updated;
+}
+
+/** Undo `markCardStatementPaid`. */
+export function unmarkCardStatementPaid(
+  userId: string,
+  cardId: string,
+  statementEnd: string,
+): SavedCreditCard | null {
+  const existing = loadSavedCreditCards(userId);
+  const idx = existing.findIndex((c) => c.id === cardId);
+  if (idx < 0) return null;
+  const updated: SavedCreditCard = {
+    ...existing[idx],
+    paidStatements: normalizePaidStatements(
+      (existing[idx].paidStatements ?? []).filter((d) => d !== statementEnd),
+    ),
+  };
+  existing[idx] = updated;
+  saveCreditCards(userId, existing);
+  return updated;
+}
+
 export function deleteSavedCreditCard(userId: string, cardId: string): boolean {
   const existing = loadSavedCreditCards(userId);
   const removed = existing.find((c) => c.id === cardId);
@@ -1290,9 +1865,12 @@ export async function loadCreditCardsMerged(
     const localById = new Map(local.map((c) => [c.id, c]));
     const byId = new Map<string, SavedCreditCard>();
     for (const c of fromDb) {
+      const localCard = localById.get(c.id);
       byId.set(c.id, {
         ...c,
-        creditLimit: c.creditLimit ?? localById.get(c.id)?.creditLimit,
+        creditLimit: c.creditLimit ?? localCard?.creditLimit,
+        // Bills marked paid live in the local cache only.
+        paidStatements: localCard?.paidStatements,
       });
     }
 

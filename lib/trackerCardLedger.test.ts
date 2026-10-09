@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildCardMonthRows,
   cardEmiRows,
-  cardOverdueRows,
   runCardLedger,
   type CardLedgerTxn,
 } from "./trackerCardLedger";
@@ -76,8 +75,8 @@ describe("card EMI schedule", () => {
     expect(sep.rows).toContain(purchase);
     expect(sumTrackerTotals(sep.rows, "wants")).toBe(0);
     expect(sumTrackerTotals(sep.rows, "loans")).toBe(2699);
-    expect(sumCashSpend(sep.rows)).toBe(2699);
-    expect(sep.keptAside).toBe(2699);
+    // Card EMIs are paid through the card bill, not from the bank.
+    expect(sumCashSpend(sep.rows)).toBe(0);
 
     const nov = month(10, []);
     expect(sumTrackerTotals(nov.rows, "loans")).toBe(2500);
@@ -96,13 +95,18 @@ describe("card EMI schedule", () => {
       historyStart: "2026-07-01",
     });
     expect(oct.rows.map((r) => r.description)).toEqual(["EMI 10/12 · Phone"]);
-    // Only EMIs inside the loaded history are owed (older ones were billed before).
-    expect(oct.keptAside).toBe(4000);
+    // EMIs inside the loaded history (Jul–Oct) are on the card bills.
+    expect(oct.emiRows.map((r) => r.date)).toEqual([
+      "2026-07-10",
+      "2026-08-10",
+      "2026-09-10",
+      "2026-10-10",
+    ]);
   });
 });
 
-describe("bill payments vs card spends counted earlier", () => {
-  it("a bill paid next month does not come off LEFT again", () => {
+describe("bill payments vs card spends", () => {
+  it("card spends count in their bucket when bought; the bank only when the bill is paid", () => {
     const sept = [cardSpend("2026-09-05", 6000), cardSpend("2026-09-25", 4000)];
     const pay = billPay("2026-10-05", 10000);
     const oct = buildCardMonthRows({
@@ -112,20 +116,21 @@ describe("bill payments vs card spends counted earlier", () => {
       priorRows: sept,
     });
     expect(oct.rows).toEqual([pay]);
-    expect(sumCashSpend(oct.rows)).toBe(0);
+    // Money left the bank in October…
+    expect(sumCashSpend(oct.rows)).toBe(10000);
+    // …but it settles spends already counted in Wants, so not in Loans.
     expect(sumTrackerTotals(oct.rows, "loans")).toBe(0);
-    expect(oct.keptAside).toBe(0);
 
     const sep = buildCardMonthRows({
       year: 2026,
       monthIndex: 8,
       monthRows: sept,
     });
-    expect(sumCashSpend(sep.rows)).toBe(10000);
-    expect(sep.keptAside).toBe(10000);
+    expect(sumTrackerTotals(sep.rows, "wants")).toBe(10000);
+    expect(sumCashSpend(sep.rows)).toBe(0);
   });
 
-  it("only the part above counted spends (interest, fees) counts, under Loans", () => {
+  it("a bill paid above tracked spends adds nothing to Loans (no card_extra row)", () => {
     const pay = billPay("2026-10-05", 10750);
     const oct = buildCardMonthRows({
       year: 2026,
@@ -133,14 +138,12 @@ describe("bill payments vs card spends counted earlier", () => {
       monthRows: [pay],
       priorRows: [cardSpend("2026-09-05", 10000)],
     });
-    const extra = oct.rows.find((r) => r.subcategory === "card_extra")!;
-    expect(extra.amount).toBe(750);
-    expect(extra.id).toBe(`virtual:card-extra:${pay.id}`);
-    expect(sumCashSpend(oct.rows)).toBe(750);
-    expect(sumTrackerTotals(oct.rows, "loans")).toBe(750);
+    expect(oct.rows.some((r) => r.subcategory === "card_extra")).toBe(false);
+    expect(sumCashSpend(oct.rows)).toBe(10750);
+    expect(sumTrackerTotals(oct.rows, "loans")).toBe(0);
   });
 
-  it("a balance from before tracking counts in full", () => {
+  it("a balance from before tracking: full payment out of the bank, not in Loans", () => {
     const pay = billPay("2026-10-05", 5000);
     const oct = buildCardMonthRows({
       year: 2026,
@@ -148,10 +151,10 @@ describe("bill payments vs card spends counted earlier", () => {
       monthRows: [pay],
     });
     expect(sumCashSpend(oct.rows)).toBe(5000);
-    expect(sumTrackerTotals(oct.rows, "loans")).toBe(5000);
+    expect(sumTrackerTotals(oct.rows, "loans")).toBe(0);
   });
 
-  it("part-payments leave the rest kept aside; same-day spends are settled first", () => {
+  it("ledger: part-payments leave the rest owed; same-day spends are settled first", () => {
     const res = runCardLedger([
       billPay("2026-10-03", 3000),
       cardSpend("2026-10-03", 2000),
@@ -161,7 +164,7 @@ describe("bill payments vs card spends counted earlier", () => {
     expect(res.owed).toBe(4000);
   });
 
-  it("refunds lower what is kept aside and the bucket", () => {
+  it("refunds lower the bucket and never touch the bank spend", () => {
     const refund = txn({
       date: "2026-10-08",
       amount: 1500,
@@ -175,13 +178,12 @@ describe("bill payments vs card spends counted earlier", () => {
       monthRows: [cardSpend("2026-10-02", 4000), refund],
     });
     expect(sumTrackerTotals(oct.rows, "wants")).toBe(2500);
-    expect(sumCashSpend(oct.rows)).toBe(2500);
-    expect(oct.keptAside).toBe(2500);
+    expect(sumCashSpend(oct.rows)).toBe(0);
     // Not income.
     expect(sumTrackerTotals(oct.rows, "income")).toBe(0);
   });
 
-  it("EMIs are on the card bill and settled by the bill payment", () => {
+  it("card EMIs count in Loans monthly; only the bill payment hits the bank", () => {
     const purchase = emiPurchase("2026-09-10", 6, 2000);
     const oct = buildCardMonthRows({
       year: 2026,
@@ -189,31 +191,42 @@ describe("bill payments vs card spends counted earlier", () => {
       monthRows: [billPay("2026-10-05", 2000)],
       priorRows: [purchase],
     });
-    // Sep EMI paid in Oct (no extra); Oct EMI is this month's spend.
     expect(oct.rows.some((r) => r.subcategory === "card_extra")).toBe(false);
+    expect(sumTrackerTotals(oct.rows, "loans")).toBe(2000);
     expect(sumCashSpend(oct.rows)).toBe(2000);
-    expect(oct.keptAside).toBe(2000);
   });
 });
 
-describe("unpaid card bill under Loans", () => {
-  it("adds to the Loans total without touching SPENT / LEFT", () => {
-    const rows = cardOverdueRows(
-      [
-        {
-          cardId: "c1",
-          label: "HDFC",
-          statementEnd: "2026-09-15",
-          dueDate: "2026-10-05",
-          statementAmount: 30000,
-          paidByDue: 12000,
-          remaining: 18000,
-        },
-      ],
-      "2026-10-09",
-    );
-    expect(rows[0].id).toBe("virtual:card-overdue:c1");
-    expect(sumTrackerTotals(rows, "loans")).toBe(18000);
-    expect(sumCashSpend(rows)).toBe(0);
+describe("unpaid card bills stay out of Loans", () => {
+  it("legacy card_extra / card_overdue rows never add to bucket totals or SPENT", () => {
+    const rows = [
+      txn({
+        id: "virtual:card-overdue:c1",
+        date: "2026-10-09",
+        amount: 18000,
+        bucket: "loans",
+        category: "card_overdue",
+        subcategory: "card_overdue",
+        payment_method: null,
+      }),
+      txn({
+        id: "virtual:card-extra:p1",
+        date: "2026-10-05",
+        amount: 7707,
+        bucket: "loans",
+        category: "card_extra",
+        subcategory: "card_extra",
+        payment_method: "upi",
+      }),
+      txn({
+        date: "2026-10-05",
+        amount: 118439,
+        bucket: "loans",
+        category: "home_loan_emi",
+        subcategory: "home_loan_emi",
+      }),
+    ];
+    expect(sumTrackerTotals(rows, "loans")).toBe(118439);
+    expect(sumCashSpend(rows)).toBe(118439);
   });
 });
