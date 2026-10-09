@@ -39,9 +39,9 @@ describe("getExpenseBucketRows", () => {
     } as never);
     expect(rows.find((r) => r.id === "needs")?.recommended).toBe(30000);
     expect(rows.find((r) => r.id === "wants")?.recommended).toBe(5000);
-    expect(rows.find((r) => r.id === "loans")?.recommended).toBe(40000);
-    expect(rows.find((r) => r.id === "investment")?.recommended).toBe(20000);
-    expect(rows.find((r) => r.id === "security")?.recommended).toBe(5000);
+    expect(rows.find((r) => r.id === "loans")?.recommended).toBe(30000);
+    expect(rows.find((r) => r.id === "investment")?.recommended).toBe(25000);
+    expect(rows.find((r) => r.id === "security")?.recommended).toBe(10000);
   });
 
   it("marks overLimit when actual exceeds cap", () => {

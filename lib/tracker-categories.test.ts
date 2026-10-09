@@ -92,9 +92,12 @@ describe("TRACKER_CATEGORIES", () => {
   });
 
   it("spend caps add up to 100%, matching Analyse's five buckets", () => {
-    const total = BUCKETS.reduce((sum, b) => sum + TRACKER_CATEGORIES[b].cap, 0);
+    const total = BUCKETS.reduce(
+      (sum, b) => sum + TRACKER_CATEGORIES[b].cap,
+      0,
+    );
     expect(total).toBe(100);
-    expect(TRACKER_CATEGORIES.security.cap).toBe(5);
+    expect(TRACKER_CATEGORIES.security.cap).toBe(10);
   });
 
   it("files insurance under Security, not Investments", () => {

@@ -121,9 +121,9 @@ export function getInsurancePremiumsMonthly(data: BucketProfileInput): number {
 export const BUCKET_CAPS = {
   needs: 0.3,
   wants: 0.05,
-  security: 0.05,
-  loans: 0.4,
-  investment: 0.2,
+  security: 0.1,
+  loans: 0.3,
+  investment: 0.25,
 } as const;
 
 export const BASE_UNIVERSAL_CAPS = {
@@ -156,14 +156,92 @@ export function hasHomeLoan(data: Partial<FinancialProfile>) {
   return n(data.homeLoanEMI) > 0 || n(data.secondPropertyEMI) > 0;
 }
 
-export function getUniversalCaps(data: Partial<FinancialProfile>) {
+type CapPercents = Record<UniversalBucketKey, number>;
+
+/**
+ * Whole-number splits (Needs / Wants / Security / Loans / Investment) per life stage.
+ * Each row adds up to 100.
+ */
+export const LIFE_STAGE_SPLITS = {
+  bachelorUnder30: {
+    needs: 30,
+    wants: 5,
+    security: 7,
+    loans: 30,
+    investment: 28,
+  },
+  bachelor: { needs: 30, wants: 5, security: 10, loans: 30, investment: 25 },
+  married: { needs: 30, wants: 5, security: 10, loans: 30, investment: 25 },
+  kids: { needs: 33, wants: 5, security: 12, loans: 28, investment: 22 },
+  senior: { needs: 40, wants: 7, security: 15, loans: 10, investment: 28 },
+} as const satisfies Record<string, CapPercents>;
+
+/**
+ * Monthly household income bands per city tier (today's rupees).
+ * Below `low`, fixed costs eat a bigger share; above `high`, a smaller one.
+ * Review these each year for inflation.
+ */
+export const INCOME_BANDS = {
+  metro: { low: 40_000, high: 3_00_000 },
+  tier2: { low: 30_000, high: 2_00_000 },
+  tier3: { low: 20_000, high: 1_50_000 },
+} as const;
+
+/** Floors that adjustments never break. Shortfalls come out of Needs. */
+export const CAP_FLOORS = { wants: 5, security: 7, investment: 15 } as const;
+
+function shift(caps: CapPercents, delta: Partial<CapPercents>) {
+  for (const [k, v] of Object.entries(delta))
+    caps[k as UniversalBucketKey] += v;
+}
+
+/**
+ * Budget caps as fractions of monthly income.
+ * Without Analyse answers (no life stage) this is the generic `BUCKET_CAPS`;
+ * otherwise the split is tailored to life stage, age, income for the city,
+ * parent support and home loan.
+ */
+export function getUniversalCaps(
+  data: Partial<FinancialProfile>,
+): Record<UniversalBucketKey, number> {
+  if (!data.lifeStage) return { ...BUCKET_CAPS };
+
+  const age = n(data.selfAge);
+  const base =
+    data.lifeStage === "bachelor" && age > 0 && age < 30
+      ? LIFE_STAGE_SPLITS.bachelorUnder30
+      : LIFE_STAGE_SPLITS[data.lifeStage];
+  const caps: CapPercents = { ...base };
+
+  const income = totalIncome(data);
+  const band = INCOME_BANDS[data.cityTier ?? "tier2"];
+  if (income > 0 && income < band.low) {
+    shift(caps, { needs: 10, loans: -5, investment: -5 });
+  } else if (income > band.high) {
+    shift(caps, { needs: -5, investment: 5 });
+  }
+
+  if (n(data.parentsSupport) > 0) shift(caps, { security: 3, investment: -3 });
+  if (hasHomeLoan(data)) shift(caps, { loans: 5, investment: -5 });
+  if (data.lifeStage !== "senior" && age >= 45 && age < 60) {
+    shift(caps, { loans: -5, investment: 5 });
+  }
+
+  for (const [k, floor] of Object.entries(CAP_FLOORS)) {
+    const key = k as UniversalBucketKey;
+    if (caps[key] < floor) {
+      caps.needs -= floor - caps[key];
+      caps[key] = floor;
+    }
+  }
+
   return {
-    needs: BUCKET_CAPS.needs,
-    wants: BUCKET_CAPS.wants,
-    security: BUCKET_CAPS.security,
-    loans: BUCKET_CAPS.loans,
-    investment: BUCKET_CAPS.investment,
-  } as const;
+    needs: caps.needs / 100,
+    wants: caps.wants / 100,
+    security: caps.security / 100,
+    loans: caps.loans / 100,
+    investment: caps.investment / 100,
+  };
 }
 
 export function getUniversalBucketStatus(
@@ -299,23 +377,16 @@ export function getUniversalBucketRows(
       key,
       label,
       capPercent,
-      capLabel:
-        key === "needs"
-          ? "30%"
-          : key === "wants"
-            ? "5%"
-            : key === "security"
-              ? "5%"
-              : key === "loans"
-                ? "40%"
-                : key === "investment"
-                  ? "20%"
-                  : `${Math.round(capPercent * 100)}%`,
+      capLabel: `${Math.round(capPercent * 100)}%`,
       capHelper:
         key === "loans" ? "(includes home EMI obligations)" : undefined,
       capAmount,
       actual,
-      status: getUniversalBucketStatus(actual, capAmount),
+      // Investment is a target, not a limit: investing more than the cap is never a problem.
+      status:
+        key === "investment"
+          ? "good"
+          : getUniversalBucketStatus(actual, capAmount),
     };
   });
 }
@@ -347,7 +418,7 @@ export function getUnallocatedIncome(data: BucketProfileInput): number {
 }
 
 export function getInsuranceGuideline(totalIncome: number) {
-  return totalIncome * 0.05;
+  return totalIncome * BUCKET_CAPS.security;
 }
 
 export function getInsuranceCriticalFloor(totalIncome: number) {
