@@ -3,6 +3,7 @@ import type {
   FinancialProfile,
 } from "@/lib/analyse-form-schema";
 import type { AnalysisResult } from "@/lib/financialEngine";
+import type { SmartBudget } from "@/lib/universal-buckets";
 import type { FinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { isValidFinkoinAIPlan } from "@/lib/finkoinAiPlan";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -22,6 +23,8 @@ export type UserAnalyseSnapshotPayload = {
   version: string;
   aiPlan?: FinkoinAIPlan | null;
   analysis?: Partial<AnalyseFormValues>;
+  /** Learned by the tracker; cleared by a new Analyse submit. */
+  smartBudget?: SmartBudget | null;
 };
 
 export type FetchedUserAnalyseSnapshot = {
@@ -113,6 +116,26 @@ export function saveUserAnalyseSnapshotAiPlan(
   });
 }
 
+/**
+ * Store the tracker's smart budget with the engine result it produces, so
+ * Analyse, the Fix Plan and the PDF show the same split on every device.
+ */
+export function saveUserAnalyseSnapshotSmartBudget(
+  userId: string,
+  smartBudget: SmartBudget | null,
+  result: AnalysisResult | null,
+): Promise<{ error: Error | null }> {
+  return enqueueWrite(userId, async () => {
+    const raw = await readPayload(userId);
+    if (!raw) return { error: null };
+    return writePayload(userId, {
+      ...raw,
+      smartBudget,
+      ...(result ? { result } : {}),
+    });
+  });
+}
+
 /** Supports legacy payloads that used `lastSubmission` instead of `profile`. */
 export async function fetchUserAnalyseSnapshot(
   userId: string,
@@ -125,6 +148,10 @@ export async function fetchUserAnalyseSnapshot(
     | FinancialProfile
     | undefined;
   if (!lastSubmission) return null;
+  // Profile-only re-saves (asset sync, loan sync) carry it inside `profile`.
+  const smartBudget = (
+    "smartBudget" in raw ? raw.smartBudget : lastSubmission.smartBudget
+  ) as SmartBudget | null | undefined;
 
   const result = (raw.result ?? null) as AnalysisResult | null;
   const analysis = (raw.analysis ?? null) as Partial<AnalyseFormValues> | null;
@@ -133,5 +160,11 @@ export async function fetchUserAnalyseSnapshot(
   const submittedAt =
     typeof raw.submittedAt === "string" ? raw.submittedAt : null;
 
-  return { lastSubmission, result, analysis, aiPlan, submittedAt };
+  return {
+    lastSubmission: { ...lastSubmission, smartBudget: smartBudget ?? null },
+    result,
+    analysis,
+    aiPlan,
+    submittedAt,
+  };
 }

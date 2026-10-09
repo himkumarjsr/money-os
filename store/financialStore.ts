@@ -4,6 +4,7 @@ import {
   type AnalyseFormValues,
   type FinancialProfile,
 } from "@/lib/analyse-form-schema";
+import type { SmartBudget } from "@/lib/universal-buckets";
 import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
 import { clearCache } from "@/lib/cache";
 import type { FinkoinAIPlan } from "@/lib/finkoinAiPlan";
@@ -79,6 +80,8 @@ type FinancialState = {
   setFullAnalysis: (data: FinancialProfile) => void;
   updateProfile: (patch: Partial<AnalyseFormValues>) => void;
   setResult: (result: AnalysisResult | null) => void;
+  /** Apply the tracker's learned split and re-run the engine; returns the new result. */
+  setSmartBudget: (smartBudget: SmartBudget | null) => AnalysisResult | null;
   setAiPlan: (plan: FinkoinAIPlan | null) => void;
   setCurrentStep: (value: number | ((prev: number) => number)) => void;
   hydrateFromSnapshot: (
@@ -171,6 +174,20 @@ export const useFinancialStore = create<FinancialState>()(
           },
         })),
       setResult: (result) => set({ result }),
+      setSmartBudget: (smartBudget) => {
+        const current = get().lastSubmission;
+        if (!current) return null;
+        const lastSubmission = { ...current, smartBudget };
+        try {
+          const result = analyseFinances(lastSubmission);
+          set({ lastSubmission, result });
+          return result;
+        } catch (e) {
+          console.error("[financialStore] setSmartBudget failed:", e);
+          set({ lastSubmission });
+          return null;
+        }
+      },
       setAiPlan: (plan) => set({ aiPlan: plan }),
       setCurrentStep: (value) =>
         set((state) => {

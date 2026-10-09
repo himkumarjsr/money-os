@@ -158,6 +158,60 @@ export function hasHomeLoan(data: Partial<FinancialProfile>) {
 
 type CapPercents = Record<UniversalBucketKey, number>;
 
+/** One change the tracker made to a budget, for the explanation note. */
+export type SmartBudgetAdjustment = {
+  key: "needs" | "wants";
+  fromPercent: number;
+  toPercent: number;
+  averageSpend: number;
+  /** Rupees a month moved from this bucket into Investment. */
+  movedToInvestment: number;
+};
+
+/** Budget split learned from tracked spending (see `lib/learned-caps.ts`). */
+export type SmartBudget = {
+  /** Profile caps the adjustment was made from; a new Analyse answer set voids it. */
+  baseCaps: Record<UniversalBucketKey, number>;
+  caps: Record<UniversalBucketKey, number>;
+  adjustments: SmartBudgetAdjustment[];
+  /** False when the user pressed Undo. */
+  enabled: boolean;
+  computedAt: string;
+};
+
+function sameCaps(
+  a: Record<UniversalBucketKey, number>,
+  b: Record<UniversalBucketKey, number>,
+) {
+  return (Object.keys(a) as UniversalBucketKey[]).every(
+    (k) => Math.abs(a[k] - (b[k] ?? NaN)) < 1e-9,
+  );
+}
+
+/** The smart budget, when it is on and still matches the profile's own caps. */
+export function getActiveSmartBudget(
+  data: Partial<FinancialProfile>,
+): SmartBudget | null {
+  const sb = data.smartBudget;
+  if (!sb?.enabled || sb.adjustments.length === 0) return null;
+  return sameCaps(sb.baseCaps, getProfileCaps(data)) ? sb : null;
+}
+
+/** One line explaining an active smart budget on the report, or null. */
+export function smartBudgetSummary(
+  data: Partial<FinancialProfile>,
+): string | null {
+  const sb = getActiveSmartBudget(data);
+  if (!sb) return null;
+  const changes = sb.adjustments
+    .map(
+      (a) =>
+        `${a.key === "needs" ? "Needs" : "Wants"} ${a.fromPercent}% to ${a.toPercent}%`,
+    )
+    .join(" and ");
+  return `Smart budget from your last 3 months of tracked spending: ${changes}, with the difference added to Investment. You can undo it in Tracker.`;
+}
+
 /**
  * Whole-number splits (Needs / Wants / Security / Loans / Investment) per life stage.
  * Each row adds up to 100.
@@ -202,6 +256,14 @@ function shift(caps: CapPercents, delta: Partial<CapPercents>) {
  * parent support and home loan.
  */
 export function getUniversalCaps(
+  data: Partial<FinancialProfile>,
+): Record<UniversalBucketKey, number> {
+  const smart = getActiveSmartBudget(data);
+  return smart ? { ...smart.caps } : getProfileCaps(data);
+}
+
+/** Caps from the Analyse answers alone, ignoring any smart-budget adjustment. */
+export function getProfileCaps(
   data: Partial<FinancialProfile>,
 ): Record<UniversalBucketKey, number> {
   if (!data.lifeStage) return { ...BUCKET_CAPS };
