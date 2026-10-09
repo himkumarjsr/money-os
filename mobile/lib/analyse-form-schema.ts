@@ -1,3 +1,4 @@
+import type { SmartBudget } from "@/lib/universal-buckets";
 import { z } from "zod";
 import {
   RISK_TOLERANCE_VALUES,
@@ -400,6 +401,11 @@ export interface FinancialProfile {
   riskAnswers?: (number | null)[];
   /** Derived from riskAnswers once all are answered. */
   riskTolerance?: RiskTolerance;
+  /**
+   * Budget split the tracker learned from the last 3 months of spending.
+   * Stored next to the profile in the Analyse snapshot, never in the form.
+   */
+  smartBudget?: SmartBudget | null;
 }
 
 export type AdditionalObligation =
@@ -2602,7 +2608,6 @@ export function normalizeAnalyseFormValues(
     riskAnswers: form.riskAnswers,
     riskTolerance: scoreRiskTolerance(form.riskAnswers) ?? form.riskTolerance,
   };
-
 
   return normalized;
 }
