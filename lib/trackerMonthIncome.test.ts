@@ -285,7 +285,7 @@ describe("planMonthIncomeFromPrior", () => {
 });
 
 describe("computeMonthLeftover", () => {
-  it("counts credit-card purchases in the month they are made", () => {
+  it("ignores credit-card purchases (bank leftover only)", () => {
     const leftover = computeMonthLeftover(50000, [
       {
         bucket: "wants",
@@ -298,7 +298,7 @@ describe("computeMonthLeftover", () => {
         payment_method: "upi",
       },
     ]);
-    expect(leftover).toBe(35000);
+    expect(leftover).toBe(45000);
   });
 });
 

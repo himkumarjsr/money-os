@@ -4,6 +4,7 @@ import {
   trackerTotalAmount,
   type BucketType,
 } from "@/lib/tracker-categories";
+import { sumCashSpend } from "@/lib/trackerCreditCards";
 
 export type TrackerTxnLike = {
   amount: number;
@@ -76,9 +77,13 @@ function formatInr(n: number): string {
   return `₹${Math.round(Math.abs(n)).toLocaleString("en-IN")}`;
 }
 
+/** Budget split as shares of income (0.38 = 38%), e.g. the smart budget. */
+export type SafetyPulseCaps = Partial<Record<string, number>>;
+
 function aggregateMonth(
   txns: TrackerTxnLike[],
   fallbackIncome: number,
+  opts: { bankSpend?: boolean; income?: number } = {},
 ): MonthSnapshot {
   const bucketTotals: Record<string, number> = {};
   let incomeFromTxns = 0;
@@ -93,7 +98,17 @@ function aggregateMonth(
     else totalSpent += amt;
   }
 
-  const income = incomeFromTxns > 0 ? incomeFromTxns : fallbackIncome;
+  // Same SPENT as the top card: money that left the bank (card purchases
+  // wait for the bill payment).
+  if (opts.bankSpend) {
+    totalSpent = sumCashSpend(txns.filter((t) => t.bucket !== "income"));
+  }
+  const income =
+    opts.income != null && opts.income > 0
+      ? opts.income
+      : incomeFromTxns > 0
+        ? incomeFromTxns
+        : fallbackIncome;
   const remaining = income - totalSpent;
 
   return {
@@ -133,13 +148,22 @@ function subLabel(bucket: string, subId: string): string {
   return subId.replace(/_/g, " ");
 }
 
-function buildBucketHealth(snapshot: MonthSnapshot): BucketHealth[] {
+function buildBucketHealth(
+  snapshot: MonthSnapshot,
+  caps?: SafetyPulseCaps,
+): BucketHealth[] {
   const income = snapshot.income;
   return SPEND_BUCKETS.map((bucket) => {
     const meta = TRACKER_CATEGORIES[bucket];
     const spent = snapshot.bucketTotals[bucket] || 0;
-    const capPct = meta.cap;
-    if (capPct <= 0) {
+    const custom = caps?.[bucket];
+    // Same caps as the bucket cards (smart budget when on, else profile caps).
+    const capPct =
+      custom != null && Number.isFinite(custom)
+        ? Math.round(custom * 100)
+        : meta.cap;
+    // Investment is a target to reach, not a limit.
+    if (capPct <= 0 || (caps && bucket === "investment")) {
       return {
         bucket,
         label: meta.label,
@@ -226,13 +250,27 @@ export function computeMonthSafetyPulse(input: {
   monthIndex: number;
   year: number;
   asOf?: Date;
+  /**
+   * Budget split as income shares (the tracker's effective caps). Missing
+   * buckets use the default caps; with caps given, Investment is a target.
+   */
+  caps?: SafetyPulseCaps;
+  /** Total spend = money out of the bank (top card SPENT), not bucket sums. */
+  bankSpend?: boolean;
+  /** This month's income as shown on the top card. */
+  income?: number;
 }): SafetyPulseResult {
   const fallbackIncome = Math.max(0, Number(input.fallbackIncome) || 0);
   const asOf = input.asOf ?? new Date();
-  const current = aggregateMonth(input.currentTxns, fallbackIncome);
+  const current = aggregateMonth(input.currentTxns, fallbackIncome, {
+    bankSpend: input.bankSpend,
+    income: input.income,
+  });
   const previous =
     input.previousTxns != null
-      ? aggregateMonth(input.previousTxns, fallbackIncome)
+      ? aggregateMonth(input.previousTxns, fallbackIncome, {
+          bankSpend: input.bankSpend,
+        })
       : null;
 
   const isCurrentCalendarMonth =
@@ -261,7 +299,7 @@ export function computeMonthSafetyPulse(input: {
       ? Math.max(0, current.remaining) / daysLeftInMonth
       : null;
 
-  const bucketHealth = buildBucketHealth(current);
+  const bucketHealth = buildBucketHealth(current, input.caps);
   const overCaps = bucketHealth.filter((b) => b.status === "over");
   const movers = buildMovers(input.currentTxns, input.previousTxns ?? null);
 
@@ -368,8 +406,9 @@ export function computeMonthSafetyPulse(input: {
         current.bucketTotals.investment === 0) &&
       current.income > 0
     ) {
-      const target = Math.round(current.income * 0.2);
-      action = `No investment logged — aim ~${formatInr(target)} (20% cap) via SIP this month.`;
+      const share = input.caps?.investment ?? 0.2;
+      const target = Math.round(current.income * share);
+      action = `No investment logged — aim ~${formatInr(target)} (${Math.round(share * 100)}% cap) via SIP this month.`;
     } else if ((current.bucketTotals.habits || 0) > 0 && status !== "safe") {
       action = `Habits took ${formatInr(current.bucketTotals.habits || 0)} — redirect the next habit spend to emergency fund or SIP.`;
     } else if (

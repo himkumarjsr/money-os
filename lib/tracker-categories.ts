@@ -353,9 +353,11 @@ type TotalsTxn = {
  * True when a row counts at face value in its bucket total.
  *
  * - Card purchases count in their own bucket in the month they are made.
- * - Card bill payments do not: they settle spends already counted. (The part
- *   above those spends arrives as a generated `card_extra` Loans row.)
+ * - Card bill payments do not: they settle spends already counted (they do
+ *   count in the bank SPENT on the top card the day they are paid).
  * - A card purchase converted to EMI does not; its monthly EMI rows do.
+ * - Legacy generated `card_extra` / `card_overdue` rows never count: unpaid
+ *   bills live only in the Card bills section.
  * - Refunds / cashback return false here because they *subtract* — sum with
  *   `trackerTotalAmount`, which handles them.
  */
@@ -363,6 +365,9 @@ export function countsTowardTrackerTotals(txn: TotalsTxn): boolean {
   if (isPaidFromSavings(txn)) return false;
   const sub = txn.subcategory || txn.category;
   if (sub && TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES.has(sub)) return false;
+  if (sub === CARD_EXTRA_SUBCATEGORY || sub === CARD_OVERDUE_SUBCATEGORY) {
+    return false;
+  }
   if (isCreditCardRefund(txn)) return false;
   if (isCreditCardBillPayment(txn)) return false;
   if (isCardEmiPurchase(txn)) return false;

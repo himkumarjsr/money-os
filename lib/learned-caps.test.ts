@@ -162,6 +162,14 @@ describe("monthSpendFromRows", () => {
         subcategory: "card_extra",
         payment_method: "upi",
       },
+      {
+        id: "virtual:card-overdue:c1",
+        bucket: "loans",
+        amount: 7707,
+        category: "card_overdue",
+        subcategory: "card_overdue",
+        payment_method: null,
+      },
     ];
     expect(monthSpendFromRows(rows)).toEqual({
       needs: 3000,

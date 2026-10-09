@@ -7,16 +7,15 @@ describe("reasonLabel", () => {
     expect(reasonLabel("included")).toMatch(/purple SPENT/);
     expect(reasonLabel("included_loan_emi")).toMatch(/loan EMI/);
     expect(reasonLabel("included_loan_repayment")).toMatch(/loan repayment/);
-    expect(reasonLabel("included_card")).toMatch(/credit card/);
-    expect(reasonLabel("card_refund")).toMatch(/refund/);
-    expect(reasonLabel("cc_bill_pay")).toMatch(/Excluded — credit card bill/);
-    expect(reasonLabel("cc_emi_purchase")).toMatch(/EMI/);
+    expect(reasonLabel("included_cc_bill_pay")).toMatch(/credit card bill/);
+    expect(reasonLabel("cc_purchase")).toMatch(/Excluded/);
+    expect(reasonLabel("paid_from_savings")).toMatch(/RD savings/);
     expect(reasonLabel("invalid_amount")).toMatch(/invalid/);
   });
 });
 
 describe("buildCashAudit", () => {
-  it("includes card purchases, loan EMI + loan repayment; excludes CC bill pays", () => {
+  it("includes loan EMI + CC bill pay + loan repayment; excludes card rows", () => {
     const audit = buildCashAudit({
       profileMonthlyIncome: 100000,
       transactions: [
@@ -68,12 +67,12 @@ describe("buildCashAudit", () => {
 
     expect(audit.incomeUsed).toBe(100000);
     expect(audit.incomeSource).toBe("profile");
-    // Card spend counts when made; the bill payment only settles it.
-    expect(audit.purpleSpent).toBe(21000);
+    // Bank only: the card spend waits for the bill payment (counted here).
+    expect(audit.purpleSpent).toBe(24000);
     expect(audit.onCards).toBe(2000);
-    expect(audit.left).toBe(79000);
+    expect(audit.left).toBe(76000);
     expect(audit.included).toHaveLength(4);
-    expect(audit.excluded.map((e) => e.reason)).toEqual(["cc_bill_pay"]);
+    expect(audit.excluded.map((e) => e.reason)).toEqual(["cc_purchase"]);
   });
 
   it("prefers logged income and classifies edge rows", () => {

@@ -1,26 +1,22 @@
 /**
- * Card money over time: card EMI instalments, how much of each bill payment
- * was already counted as card spends, and what is kept aside for card bills.
+ * Card money over time: card EMI instalments, and how bill payments line up
+ * with the card spends they settle.
  *
- * Card spends count (in their bucket and in purple SPENT / LEFT) the day they
- * are made. A bill payment then only settles them, so it counts nowhere —
- * except the part above every card spend still unpaid at that point
- * (interest, fees, a balance from before tracking), which is new money out
- * and is added as a `card_extra` Loans row.
+ * Card spends count in their bucket (Needs, Wants, …) the day they are made.
+ * The bank SPENT / LEFT on the top card only moves when money leaves the
+ * bank — a card bill payment the day it is paid. Card bill payments never
+ * count in Loans, and nothing is generated for interest or unpaid bills:
+ * those live in the Card bills section.
  */
 
 import {
   CARD_EMI_SUBCATEGORY,
-  CARD_EXTRA_SUBCATEGORY,
-  CARD_OVERDUE_SUBCATEGORY,
   VIRTUAL_TXN_PREFIX,
   cardBillAmount,
   displayExpenseDescription,
   isCardEmiPurchase,
   isCreditCardBillPayment,
   parseCardEmiPlan,
-  parsePayBillLabel,
-  type CreditCardOverdue,
 } from "@/lib/trackerCreditCards";
 
 export type CardLedgerTxn = {
@@ -139,8 +135,10 @@ export type CardLedgerResult = {
 
 /**
  * Walk card rows in date order, all cards pooled. Spends add to what is owed;
- * a bill payment first settles that (no new money out), and anything above it
- * is `excess`. Same-day spends are settled before the payment.
+ * a bill payment first settles that, and anything above it is `excess`
+ * (interest, fees, a balance from before tracking). Same-day spends are
+ * settled before the payment. Informational only — nothing here is counted
+ * in bucket totals or the bank SPENT.
  */
 export function runCardLedger(
   rows: CardLedgerTxn[],
@@ -174,22 +172,18 @@ export function runCardLedger(
 }
 
 export type CardMonthRows = {
-  /** Month rows + this month's EMI rows + `card_extra` rows. */
+  /** Month rows + this month's card EMI rows. */
   rows: CardLedgerTxn[];
   /** Generated EMI rows (any month in the history window, up to month end). */
   emiRows: CardLedgerTxn[];
-  /** Card spends not yet paid at month end — money to keep for card bills. */
-  keptAside: number;
 };
 
 /**
- * Rows to count for one month, with card EMIs and bill-payment extras added.
+ * Rows to count for one month, with card EMI instalments added.
  *
- * `priorRows` are earlier months already loaded (the more, the better a bill
- * payment can be matched to the spends it settles). `emiSources` are EMI
+ * `priorRows` are earlier months already loaded. `emiSources` are EMI
  * purchases from any month, so long EMIs keep showing after the purchase
- * month leaves the history window. A payment for spends from before
- * `historyStart` counts as older balance.
+ * month leaves the history window.
  */
 export function buildCardMonthRows(opts: {
   year: number;
@@ -212,67 +206,19 @@ export function buildCardMonthRows(opts: {
     historyStart = `${oldest.slice(0, 7)}-01`;
   }
 
-  const raw = dedupeById([...prior, ...opts.monthRows]).filter((r) => {
-    const d = rowDate(r);
-    return d >= historyStart! && d <= monthEnd;
-  });
   const emiRows = cardEmiRowsInRange(
     [...(opts.emiSources ?? []), ...prior, ...opts.monthRows],
     historyStart,
     monthEnd,
   );
-  const ledger = runCardLedger([...raw, ...emiRows], monthEnd);
-
   const emiInMonth = emiRows.filter(
     (r) => r.date >= monthStart && r.date <= monthEnd,
   );
-  const extraRows: CardLedgerTxn[] = [];
-  for (const p of opts.monthRows) {
-    if (!isCreditCardBillPayment(p)) continue;
-    const excess = ledger.excessById.get(p.id) ?? 0;
-    if (excess < 1) continue;
-    const card =
-      parsePayBillLabel(p.description) ||
-      displayExpenseDescription(p.description) ||
-      "credit card";
-    extraRows.push({
-      id: `${VIRTUAL_TXN_PREFIX}card-extra:${p.id}`,
-      date: rowDate(p),
-      amount: excess,
-      bucket: "loans",
-      category: CARD_EXTRA_SUBCATEGORY,
-      subcategory: CARD_EXTRA_SUBCATEGORY,
-      // Same rail as the payment, so it counts as cash out.
-      payment_method: p.payment_method,
-      description: `Above tracked card spends · ${card}`,
-    });
-  }
 
   return {
-    rows: [...opts.monthRows, ...emiInMonth, ...extraRows],
+    rows: [...opts.monthRows, ...emiInMonth],
     emiRows,
-    keptAside: Math.max(0, Math.round(ledger.owed)),
   };
-}
-
-/**
- * Loans rows for statements left unpaid after their due date. Display only:
- * the spends already counted when made, so these never touch SPENT / LEFT.
- */
-export function cardOverdueRows(
-  overdue: CreditCardOverdue[],
-  dateIso: string,
-): CardLedgerTxn[] {
-  return overdue.map((o) => ({
-    id: `${VIRTUAL_TXN_PREFIX}card-overdue:${o.cardId}`,
-    date: dateIso,
-    amount: o.remaining,
-    bucket: "loans",
-    category: CARD_OVERDUE_SUBCATEGORY,
-    subcategory: CARD_OVERDUE_SUBCATEGORY,
-    payment_method: null,
-    description: `Unpaid card bill · ${o.label}`,
-  }));
 }
 
 /** First day (ISO) of the month `back` months before (year, monthIndex). */
