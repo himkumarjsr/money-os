@@ -12,6 +12,7 @@ import {
 import {
   CARD_REFUND_SUBCATEGORY,
   DEFAULT_DUE_OFFSET_DAYS,
+  billPaymentNoteForCard,
   deleteSavedCreditCard,
   displayExpenseDescription,
   encodeCardEmiToken,
@@ -158,6 +159,8 @@ export default function AddExpenseModal({
     seedParsed.cardId || "",
   );
   const [showAddCard, setShowAddCard] = useState(false);
+  /** Card a Loans → Credit card payment was for (matches it to that bill). */
+  const [billCardId, setBillCardId] = useState("");
   const [newCardNickname, setNewCardNickname] = useState("");
   const [newCardBillingDay, setNewCardBillingDay] = useState("");
   const [newCardDueDay, setNewCardDueDay] = useState("");
@@ -430,6 +433,13 @@ export default function AddExpenseModal({
       ) {
         descriptionToStore = fallback;
       }
+    }
+    const billCard =
+      bucket === "loans" && subcategory === "credit_card" && billCardId
+        ? savedCards.find((c) => c.id === billCardId)
+        : undefined;
+    if (billCard) {
+      descriptionToStore = billPaymentNoteForCard(descriptionToStore, billCard);
     }
 
     const subToStore =
@@ -765,13 +775,58 @@ export default function AddExpenseModal({
                   color: "#5F5E5A",
                 }}
               >
-                Card spends already came off Money Left when you made them, so
-                paying the bill{" "}
+                Paying the bill takes money from your bank, so it counts in
+                Spent today. It{" "}
                 <strong style={{ color: "#534AB7" }}>
-                  doesn&apos;t reduce it again
+                  doesn&apos;t add to Loans
                 </strong>{" "}
-                — only interest or fees above them do.
+                — the card spends already counted in their sections.
               </p>
+            ) : null}
+            {bucket === "loans" &&
+            subcategory === "credit_card" &&
+            savedCards.length > 1 &&
+            !/^pay bill/i.test(description.trim()) ? (
+              <div style={{ margin: "0 0 10px" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#5F5E5A",
+                    marginBottom: 6,
+                  }}
+                >
+                  Which card are you paying?
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {savedCards.map((c) => {
+                    const selected = billCardId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setBillCardId(selected ? "" : c.id)}
+                        style={{
+                          minHeight: 36,
+                          padding: "0 12px",
+                          borderRadius: 10,
+                          border: selected
+                            ? "1.5px solid #534AB7"
+                            : "1.5px solid #E8E6F0",
+                          background: selected ? "#EEEDFE" : "white",
+                          color: "#111110",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {formatCreditCardLabel(c)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {(

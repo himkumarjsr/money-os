@@ -458,4 +458,110 @@ describe("trackerSafetyPulse", () => {
     expect(pulse.spentDelta).toBe(7000);
     expect(pulse.reasons.some((r) => /vs last month/i.test(r))).toBe(true);
   });
+
+  it("uses the caps it is given (smart budget) instead of the default 30%", () => {
+    const base = {
+      monthIndex: 9,
+      year: 2026,
+      asOf: new Date(2026, 9, 9),
+      fallbackIncome: 0,
+      currentTxns: [
+        {
+          amount: 300000,
+          bucket: "income",
+          category: "salary",
+          subcategory: "salary",
+        },
+        {
+          amount: 110000,
+          bucket: "loans",
+          category: "home_loan_emi",
+          subcategory: "home_loan_emi",
+          payment_method: "upi",
+        },
+      ],
+      previousTxns: [],
+    };
+    // 36.7% of income: over the default 30% Loans cap…
+    const fixed = computeMonthSafetyPulse(base);
+    const fixedLoans = fixed.bucketHealth.find((b) => b.bucket === "loans")!;
+    expect(fixedLoans.capPct).toBe(30);
+    expect(fixedLoans.status).toBe("over");
+    expect(fixed.action).toMatch(/under the 30% cap/);
+
+    // …but within the smart budget's 38%.
+    const smart = computeMonthSafetyPulse({
+      ...base,
+      caps: {
+        needs: 0.25,
+        wants: 0.05,
+        security: 0.1,
+        loans: 0.38,
+        investment: 0.22,
+      },
+    });
+    const loans = smart.bucketHealth.find((b) => b.bucket === "loans")!;
+    expect(loans.capPct).toBe(38);
+    expect(loans.status).toBe("ok");
+    expect(smart.action ?? "").not.toMatch(/Loans/);
+    // Investment is a target, never "over".
+    expect(
+      smart.bucketHealth.find((b) => b.bucket === "investment")!.status,
+    ).toBe("skip");
+  });
+
+  it("bank spend: card purchases wait for the bill payment; income can be given", () => {
+    const card = "credit_card::c1::HDFC";
+    const pulse = computeMonthSafetyPulse({
+      monthIndex: 9,
+      year: 2026,
+      asOf: new Date(2026, 9, 9),
+      bankSpend: true,
+      income: 120000,
+      currentTxns: [
+        {
+          amount: 100000,
+          bucket: "income",
+          category: "salary",
+          subcategory: "salary",
+        },
+        {
+          amount: 8000,
+          bucket: "needs",
+          category: "grocery",
+          subcategory: "grocery",
+          payment_method: "upi",
+        },
+        {
+          amount: 15000,
+          bucket: "wants",
+          category: "shopping",
+          subcategory: "shopping",
+          payment_method: card,
+        },
+        {
+          amount: 2500,
+          bucket: "loans",
+          category: "card_emi",
+          subcategory: "card_emi",
+          payment_method: card,
+        },
+        {
+          amount: 12000,
+          bucket: "loans",
+          category: "credit_card",
+          subcategory: "credit_card",
+          payment_method: "upi",
+          description: "Pay bill · HDFC",
+        },
+      ],
+      previousTxns: [],
+    });
+    expect(pulse.current.totalSpent).toBe(20000);
+    expect(pulse.current.income).toBe(120000);
+    expect(pulse.current.remaining).toBe(100000);
+    // Buckets still count card spends when bought (bill pay not in Loans).
+    expect(pulse.current.bucketTotals.wants).toBe(15000);
+    expect(pulse.current.bucketTotals.loans).toBe(2500);
+  });
 });
