@@ -261,6 +261,11 @@ export const TRACKER_CATEGORIES = {
       { id: "fd", label: "Fixed deposit", icon: "bank" as const },
       { id: "gold", label: "Gold / SGB", icon: "coin" as const },
       { id: "rd", label: "Recurring deposit", icon: "calendar" as const },
+      {
+        id: "lic_endowment",
+        label: "LIC / endowment (with maturity)",
+        icon: "shield" as const,
+      },
       { id: "crypto", label: "Crypto", icon: "coin" as const },
       {
         id: "loan_prepayment",
