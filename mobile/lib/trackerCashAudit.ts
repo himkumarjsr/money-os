@@ -3,10 +3,12 @@
  */
 
 import {
-  countsTowardCashSpend,
+  cashSpendAmount,
   displayPaymentMethod,
+  isCardEmiPurchase,
   isCreditCardBillPayment,
   isCreditCardCharge,
+  isCreditCardRefund,
   sumCashSpend,
   sumOnCardsSpend,
 } from "@/lib/trackerCreditCards";
@@ -16,8 +18,10 @@ export type CashAuditReason =
   | "included"
   | "included_loan_emi"
   | "included_loan_repayment"
-  | "included_cc_bill_pay"
-  | "cc_purchase"
+  | "included_card"
+  | "card_refund"
+  | "cc_bill_pay"
+  | "cc_emi_purchase"
   | "invalid_amount";
 
 export type CashAuditLine = {
@@ -66,14 +70,17 @@ function classify(txn: {
   subcategory?: string | null;
   category?: string | null;
   payment_method?: string | null;
+  description?: string | null;
   amount: number;
 }): CashAuditReason {
   if (txn.bucket === "income") return "income";
   const n = Number(txn.amount);
   if (!Number.isFinite(n) || n <= 0) return "invalid_amount";
-  if (isCreditCardCharge(txn)) return "cc_purchase";
-  if (!countsTowardCashSpend(txn)) return "invalid_amount";
-  if (isCreditCardBillPayment(txn)) return "included_cc_bill_pay";
+  if (isCreditCardBillPayment(txn)) return "cc_bill_pay";
+  if (isCardEmiPurchase(txn)) return "cc_emi_purchase";
+  if (isCreditCardRefund(txn)) return "card_refund";
+  if (isCreditCardCharge(txn)) return "included_card";
+  if (cashSpendAmount(txn) <= 0) return "invalid_amount";
   const sub = txn.subcategory || txn.category;
   if (isLoanRepaymentSub(sub)) return "included_loan_repayment";
   if (txn.bucket === "loans" || isLoanEmiSub(sub)) return "included_loan_emi";
@@ -90,10 +97,14 @@ export function reasonLabel(reason: CashAuditReason): string {
       return "In purple SPENT — loan EMI";
     case "included_loan_repayment":
       return "In purple SPENT — loan repayment";
-    case "included_cc_bill_pay":
-      return "In purple SPENT — credit card bill pay (cash out)";
-    case "cc_purchase":
-      return "Excluded — paid with credit card";
+    case "included_card":
+      return "In purple SPENT — paid by credit card (kept aside for the bill)";
+    case "card_refund":
+      return "In purple SPENT — card refund / cashback (lowers it)";
+    case "cc_bill_pay":
+      return "Excluded — credit card bill pay (settles spends already counted)";
+    case "cc_emi_purchase":
+      return "Excluded — card purchase on EMI (monthly EMI counts instead)";
     case "invalid_amount":
       return "Excluded — invalid amount";
   }
@@ -129,6 +140,7 @@ export function buildCashAudit(opts: {
       subcategory: t.subcategory,
       category: t.category,
       payment_method: t.payment_method,
+      description: t.description,
       amount,
     });
     return {
@@ -144,13 +156,16 @@ export function buildCashAudit(opts: {
         reason === "included" ||
         reason === "included_loan_emi" ||
         reason === "included_loan_repayment" ||
-        reason === "included_cc_bill_pay",
+        reason === "included_card" ||
+        reason === "card_refund",
     };
   });
 
   const included = lines.filter((l) => l.countsInPurpleSpent);
-  // Only purchases paid *with* a credit card are excluded from purple.
-  const excluded = lines.filter((l) => l.reason === "cc_purchase");
+  // Bill pays settle card spends already counted; EMI purchases count monthly.
+  const excluded = lines.filter(
+    (l) => l.reason === "cc_bill_pay" || l.reason === "cc_emi_purchase",
+  );
   const purpleSpent = sumCashSpend(opts.transactions);
   const onCards = sumOnCardsSpend(opts.transactions);
 

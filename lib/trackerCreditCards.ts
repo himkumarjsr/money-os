@@ -4,6 +4,7 @@
  */
 
 import { getSupabase } from "@/lib/supabase";
+import { isPaidFromSavings } from "@/lib/trackerSavingsPayment";
 
 export const TRACKER_CONSENT_VERSION = "v2";
 export const TRACKER_CONSENT_STORAGE_KEY = "finkoin_tracker_consent";
@@ -17,8 +18,95 @@ export type SavedCreditCard = {
   billingDay?: number;
   /** Payment due day of month (1–31). */
   dueDay?: number;
+  /** Optional credit limit in rupees (for usage warnings). */
+  creditLimit?: number;
   createdAt: string;
 };
+
+/** Refund / cashback logged against a card, in the bucket of the original spend. */
+export const CARD_REFUND_SUBCATEGORY = "card_refund";
+/** Monthly instalment of a card purchase converted to EMI (generated, Loans). */
+export const CARD_EMI_SUBCATEGORY = "card_emi";
+/** Part of a bill payment above the card spends already counted (Loans). */
+export const CARD_EXTRA_SUBCATEGORY = "card_extra";
+/** Statement balance left unpaid after its due date (Loans, display only). */
+export const CARD_OVERDUE_SUBCATEGORY = "card_overdue";
+/** Id prefix for rows the tracker generates (never stored, no edit / delete). */
+export const VIRTUAL_TXN_PREFIX = "virtual:";
+
+export function isVirtualTxnId(id: string | null | undefined): boolean {
+  return !!id && id.startsWith(VIRTUAL_TXN_PREFIX);
+}
+
+/** Card EMI terms saved on the original purchase row. */
+export type CardEmiPlan = {
+  months: number;
+  /** Monthly EMI in rupees. */
+  monthly: number;
+  /** One-time processing fee, charged with the first EMI. */
+  fee: number;
+};
+
+const EMI_TOKEN_RE =
+  /\[#emi:(\d{1,3})x(\d+(?:\.\d+)?)(?:\+(\d+(?:\.\d+)?))?\]/i;
+
+/**
+ * Card EMI terms live in the purchase note as a hidden `[#emi:6x2500+199]`
+ * token (hidden by `displayExpenseDescription`), so no new columns are needed
+ * and the plan is removed with the row.
+ */
+export function encodeCardEmiToken(plan: CardEmiPlan): string {
+  const months = Math.round(plan.months);
+  const monthly = Math.round(plan.monthly * 100) / 100;
+  const fee = Math.round((plan.fee || 0) * 100) / 100;
+  return `[#emi:${months}x${monthly}${fee > 0 ? `+${fee}` : ""}]`;
+}
+
+export function parseCardEmiPlan(
+  description: string | null | undefined,
+): CardEmiPlan | null {
+  if (!description) return null;
+  const m = description.match(EMI_TOKEN_RE);
+  if (!m) return null;
+  const months = Number(m[1]);
+  const monthly = Number(m[2]);
+  const fee = m[3] ? Number(m[3]) : 0;
+  if (!(months >= 1) || !(monthly > 0)) return null;
+  return { months, monthly, fee: Number.isFinite(fee) ? fee : 0 };
+}
+
+/** Card refund / cashback row (lowers its bucket and the card bill). */
+export function isCreditCardRefund(txn: {
+  bucket?: string | null;
+  subcategory?: string | null;
+  category?: string | null;
+  payment_method?: string | null;
+}): boolean {
+  if (txn.bucket === "income") return false;
+  const sub = txn.subcategory || txn.category;
+  return (
+    sub === CARD_REFUND_SUBCATEGORY &&
+    isCreditCardPaymentMethod(txn.payment_method)
+  );
+}
+
+/** Card purchase converted to EMI: shown in lists, never counted at full price. */
+export function isCardEmiPurchase(txn: {
+  bucket?: string | null;
+  subcategory?: string | null;
+  category?: string | null;
+  payment_method?: string | null;
+  description?: string | null;
+}): boolean {
+  if (txn.bucket === "income") return false;
+  const sub = txn.subcategory || txn.category;
+  if (sub === CARD_EMI_SUBCATEGORY || sub === CARD_REFUND_SUBCATEGORY) {
+    return false;
+  }
+  if (txn.bucket === "loans" && sub === "credit_card") return false;
+  if (!isCreditCardPaymentMethod(txn.payment_method)) return false;
+  return parseCardEmiPlan(txn.description) != null;
+}
 
 export type CreditCardBillLine = {
   cardId: string;
@@ -204,6 +292,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   netbanking: "Net banking",
   wallet: "Wallet",
   cheque: "Cheque",
+  rd_savings: "RD savings",
   card: "Credit card",
   credit_card: "Credit card",
   creditcard: "Credit card",
@@ -230,81 +319,87 @@ export function isCashRailPaymentMethod(
   return true;
 }
 
-/** CC purchase charge (not a cash bill payment under loans → credit_card). */
-export function isCreditCardCharge(txn: {
+type CardRowLike = {
   bucket?: string | null;
   subcategory?: string | null;
   category?: string | null;
   payment_method?: string | null;
-}): boolean {
+  description?: string | null;
+};
+
+/**
+ * CC purchase charge that lands on the card bill at face value.
+ * Not a bill payment, not a refund, and not a purchase converted to EMI (its
+ * monthly instalments are the charges instead).
+ */
+export function isCreditCardCharge(txn: CardRowLike): boolean {
   if (txn.bucket === "income") return false;
   const sub = txn.subcategory || txn.category;
   // Loans → Credit card *payment* is a bill settle, never a purchase charge.
   if (txn.bucket === "loans" && sub === "credit_card") return false;
-  return isCreditCardPaymentMethod(txn.payment_method);
+  if (sub === CARD_REFUND_SUBCATEGORY || sub === CARD_OVERDUE_SUBCATEGORY) {
+    return false;
+  }
+  if (!isCreditCardPaymentMethod(txn.payment_method)) return false;
+  return !isCardEmiPurchase(txn);
+}
+
+/** Signed effect on the card bill: charges add, refunds / cashback subtract. */
+export function cardBillAmount(
+  txn: CardRowLike & { amount: number | string },
+): number {
+  const n = Number(txn.amount);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  if (isCreditCardRefund(txn)) return -n;
+  return isCreditCardCharge(txn) ? n : 0;
 }
 
 /**
- * Purple-card cash out (SPENT / LEFT).
+ * Signed amount for purple SPENT / LEFT (money gone or set aside this month).
  *
- * INCLUDE:
- * - needs / wants / habits / loan EMIs / investments / loan repayment
- * - Loans & Credit → Credit card payment when paid via UPI / cash / netbanking /
- *   wallet (cash left the salary pocket)
- *
- * EXCLUDE:
- * - income
- * - any expense where Paid via = credit card (debt, not this month’s cash)
+ * - Every spend counts in the month it is made, cash or card.
+ * - Card refunds / cashback give money back (negative).
+ * - Card bill payments are 0 here: they settle spends already counted. The
+ *   part above those spends (interest, fees, older balance) arrives as a
+ *   separate `card_extra` row from `buildCardMonthRows`.
+ * - A purchase converted to EMI is 0; its monthly EMI rows count instead.
+ * - Income and the display-only overdue line are 0.
  */
-export function countsTowardCashSpend(txn: {
-  bucket?: string | null;
-  subcategory?: string | null;
-  category?: string | null;
-  payment_method?: string | null;
-}): boolean {
-  if (txn.bucket === "income") return false;
-
+export function cashSpendAmount(
+  txn: CardRowLike & { amount: number | string },
+): number {
+  if (txn.bucket === "income") return 0;
+  const n = Number(txn.amount);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  if (isPaidFromSavings(txn)) return 0;
   const sub = txn.subcategory || txn.category;
-  // Explicit: Loans & Credit → Credit card payment (bill pay).
-  if (txn.bucket === "loans" && sub === "credit_card") {
-    return isCashRailPaymentMethod(txn.payment_method);
-  }
+  if (sub === CARD_OVERDUE_SUBCATEGORY) return 0;
+  if (isCreditCardRefund(txn)) return -n;
+  if (isCreditCardBillPayment(txn)) return 0;
+  if (isCardEmiPurchase(txn)) return 0;
+  return n;
+}
 
-  // Any other row paid with a credit card stays out of LEFT.
-  if (isCreditCardPaymentMethod(txn.payment_method)) return false;
-  return true;
+/** True when the row adds to purple SPENT (see `cashSpendAmount`). */
+export function countsTowardCashSpend(
+  txn: CardRowLike & { amount?: number | string },
+): boolean {
+  return cashSpendAmount({ ...txn, amount: txn.amount ?? 1 }) > 0;
 }
 
 export function sumCashSpend(
-  transactions: Array<{
-    amount: number | string;
-    bucket?: string | null;
-    subcategory?: string | null;
-    category?: string | null;
-    payment_method?: string | null;
-  }>,
+  transactions: Array<CardRowLike & { amount: number | string }>,
 ): number {
-  return transactions.reduce((sum, t) => {
-    if (!countsTowardCashSpend(t)) return sum;
-    const n = Number(t.amount);
-    return Number.isFinite(n) && n > 0 ? sum + n : sum;
-  }, 0);
+  const total = transactions.reduce((sum, t) => sum + cashSpendAmount(t), 0);
+  return Math.round(total * 100) / 100;
 }
 
+/** Net card spend (charges − refunds) in the rows given. */
 export function sumOnCardsSpend(
-  transactions: Array<{
-    amount: number | string;
-    bucket?: string | null;
-    subcategory?: string | null;
-    category?: string | null;
-    payment_method?: string | null;
-  }>,
+  transactions: Array<CardRowLike & { amount: number | string }>,
 ): number {
-  return transactions.reduce((sum, t) => {
-    if (!isCreditCardCharge(t)) return sum;
-    const n = Number(t.amount);
-    return Number.isFinite(n) && n > 0 ? sum + n : sum;
-  }, 0);
+  const total = transactions.reduce((sum, t) => sum + cardBillAmount(t), 0);
+  return Math.max(0, Math.round(total * 100) / 100);
 }
 
 function daysInMonth(year: number, monthIndex: number): number {
@@ -417,6 +512,53 @@ export function getMostRecentDueDate(
   return due;
 }
 
+/**
+ * Statement a spend on `date` lands on: spends up to and including the billing
+ * day go on that month's statement, later ones on the next.
+ */
+export function getStatementWindowForDate(
+  billingDay: number,
+  date: Date,
+): { start: Date; end: Date } | null {
+  const day = clampDay(billingDay);
+  if (!day) return null;
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  let end = clampToMonthDay(d.getFullYear(), d.getMonth(), day);
+  if (end < d) {
+    end = clampToMonthDay(d.getFullYear(), d.getMonth() + 1, day);
+  }
+  const prev = clampToMonthDay(end.getFullYear(), end.getMonth() - 1, day);
+  const start = new Date(prev);
+  start.setDate(start.getDate() + 1);
+  return { start, end };
+}
+
+/** Due date for a statement closing on `statementEnd` (first `dueDay` after it). */
+export function getStatementDueDate(statementEnd: Date, dueDay: number): Date {
+  const day = clampDay(dueDay) ?? DEFAULT_DUE_OFFSET_DAYS;
+  let due = clampToMonthDay(
+    statementEnd.getFullYear(),
+    statementEnd.getMonth(),
+    day,
+  );
+  if (due <= statementEnd) {
+    due = clampToMonthDay(
+      statementEnd.getFullYear(),
+      statementEnd.getMonth() + 1,
+      day,
+    );
+  }
+  return due;
+}
+
+function endOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
+function dayAfter(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+}
+
 function txnDateIso(txn: {
   date?: string | null;
   created_at?: string | null;
@@ -438,6 +580,7 @@ type BillTxn = {
   subcategory?: string | null;
   category?: string | null;
   payment_method?: string | null;
+  description?: string | null;
   date?: string | null;
   created_at?: string | null;
 };
@@ -454,9 +597,8 @@ export function summarizeCreditCardBills(
   const win = opts?.window ?? null;
 
   for (const t of transactions) {
-    if (!isCreditCardCharge(t)) continue;
-    const n = Number(t.amount);
-    if (!Number.isFinite(n) || n <= 0) continue;
+    const n = cardBillAmount(t);
+    if (n === 0) continue;
 
     if (win) {
       const iso = txnDateIso(t);
@@ -480,7 +622,9 @@ export function summarizeCreditCardBills(
     }
   }
 
-  return Array.from(map.values()).sort((a, b) => b.amount - a.amount);
+  return Array.from(map.values())
+    .filter((b) => b.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
 }
 
 /**
@@ -559,6 +703,7 @@ export function isCreditCardBillPayment(txn: {
   description?: string | null;
   payment_method?: string | null;
 }): boolean {
+  if (txn.bucket === "income") return false;
   // Paid *with* a card → purchase charge, not a cash bill payment.
   if (isCreditCardPaymentMethod(txn.payment_method)) return false;
   if (txn.bucket === "loans") {
@@ -635,7 +780,8 @@ function sumChargesForCard(
 ): number {
   const cardLabel = formatCreditCardLabel(card).toLowerCase();
   return transactions.reduce((sum, t) => {
-    if (!isCreditCardCharge(t)) return sum;
+    const n = cardBillAmount(t);
+    if (n === 0) return sum;
     if (
       chargeWindow &&
       !txnDateInRange(t, chargeWindow.start, chargeWindow.end)
@@ -650,8 +796,7 @@ function sumChargesForCard(
       (!!label && label.toLowerCase() === cardLabel) ||
       (soleCardFallback && !tid);
     if (!matched) return sum;
-    const n = Number(t.amount);
-    return Number.isFinite(n) && n > 0 ? sum + n : sum;
+    return sum + n;
   }, 0);
 }
 
@@ -659,6 +804,7 @@ function sumPaymentsForCard(
   transactions: Array<BillTxn & { description?: string | null }>,
   card: SavedCreditCard,
   soleCardFallback: boolean,
+  paymentWindow?: { start: Date; end: Date } | null,
 ): number {
   const ourLabels = [
     formatCreditCardLabel(card).toLowerCase(),
@@ -667,6 +813,12 @@ function sumPaymentsForCard(
 
   return transactions.reduce((sum, t) => {
     if (!isCreditCardBillPayment(t)) return sum;
+    if (
+      paymentWindow &&
+      !txnDateInRange(t, paymentWindow.start, paymentWindow.end)
+    ) {
+      return sum;
+    }
     const matched = billPaymentMatchesCard(t, card);
     const hasOtherCardToken = /\[#[^\]]+\]/.test(t.description || "");
     const payLabel = (parsePayBillLabel(t.description) || "").toLowerCase();
@@ -812,6 +964,139 @@ export function buildCreditCardBillStatuses(opts: {
   });
 }
 
+/** Credit-score guideline: keep card usage under this share of the limit. */
+export const CREDIT_USAGE_WARN_RATIO = 0.3;
+
+export type CreditCardUsage = {
+  cardId: string;
+  label: string;
+  limit: number;
+  /** Net spends on the open (not yet billed) statement. */
+  used: number;
+  ratio: number;
+  statementStart: string;
+  overWarn: boolean;
+};
+
+/** Open-statement spend vs credit limit, for cards with a limit saved. */
+export function buildCreditCardUsage(opts: {
+  cards: SavedCreditCard[];
+  transactions: Array<BillTxn & { description?: string | null }>;
+  asOf?: Date;
+}): CreditCardUsage[] {
+  const asOf = opts.asOf ?? new Date();
+  const soleCard = opts.cards.length === 1;
+  const out: CreditCardUsage[] = [];
+  for (const card of opts.cards) {
+    const limit = Number(card.creditLimit);
+    if (!Number.isFinite(limit) || limit <= 0) continue;
+    const billingDay = clampDay(card.billingDay);
+    const last = billingDay ? getLastStatementWindow(billingDay, asOf) : null;
+    const start = last
+      ? dayAfter(last.end)
+      : new Date(asOf.getFullYear(), asOf.getMonth(), 1);
+    const used = Math.max(
+      0,
+      sumChargesForCard(opts.transactions, card, soleCard, {
+        start,
+        end: endOfDay(asOf),
+      }),
+    );
+    const ratio = used / limit;
+    out.push({
+      cardId: card.id,
+      label: formatCreditCardLabel(card),
+      limit,
+      used,
+      ratio,
+      statementStart: toIsoDate(start),
+      overWarn: ratio > CREDIT_USAGE_WARN_RATIO,
+    });
+  }
+  return out;
+}
+
+export type CreditCardOverdue = {
+  cardId: string;
+  label: string;
+  statementEnd: string;
+  dueDate: string;
+  /** Net spends on that statement. */
+  statementAmount: number;
+  /** Paid between statement close and due date. */
+  paidByDue: number;
+  /** Still unpaid today. Counts under Loans until cleared. */
+  remaining: number;
+};
+
+/**
+ * Latest statement whose due date has passed, when it was not paid in full by
+ * then. Needs a billing day; payments are those made after the statement
+ * closed. Older statements are not tracked here.
+ */
+export function buildCreditCardOverdue(opts: {
+  cards: SavedCreditCard[];
+  transactions: Array<BillTxn & { description?: string | null }>;
+  asOf?: Date;
+}): CreditCardOverdue[] {
+  const asOf = opts.asOf ?? new Date();
+  const asOfDay = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  const soleCard = opts.cards.length === 1;
+  const out: CreditCardOverdue[] = [];
+  for (const card of opts.cards) {
+    const billingDay = clampDay(card.billingDay);
+    if (!billingDay) continue;
+    const dueDay =
+      clampDay(card.dueDay) ?? suggestDueDayFromBilling(billingDay);
+    let win = getLastStatementWindow(billingDay, asOf);
+    let due = win ? getStatementDueDate(win.end, dueDay) : null;
+    // The latest closed statement may not be due yet — use the one before.
+    if (win && due && due >= asOfDay) {
+      const before = new Date(win.start);
+      before.setDate(before.getDate() - 1);
+      win = getLastStatementWindow(billingDay, before);
+      due = win ? getStatementDueDate(win.end, dueDay) : null;
+    }
+    if (!win || !due || due >= asOfDay) continue;
+    const statementAmount = sumChargesForCard(
+      opts.transactions,
+      card,
+      soleCard,
+      { start: win.start, end: endOfDay(win.end) },
+    );
+    if (statementAmount <= 0) continue;
+    const afterClose = dayAfter(win.end);
+    const paidByDue = sumPaymentsForCard(opts.transactions, card, soleCard, {
+      start: afterClose,
+      end: endOfDay(due),
+    });
+    const paidSince = sumPaymentsForCard(opts.transactions, card, soleCard, {
+      start: afterClose,
+      end: endOfDay(asOf),
+    });
+    const unpaidAtDue = Math.round((statementAmount - paidByDue) * 100) / 100;
+    const remaining = Math.round((statementAmount - paidSince) * 100) / 100;
+    if (unpaidAtDue < 1 || remaining < 1) continue;
+    out.push({
+      cardId: card.id,
+      label: formatCreditCardLabel(card),
+      statementEnd: toIsoDate(win.end),
+      dueDate: toIsoDate(due),
+      statementAmount,
+      paidByDue,
+      remaining,
+    });
+  }
+  return out;
+}
+
+export function normalizeCreditLimit(raw: unknown): number | undefined {
+  if (raw == null || raw === "") return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.round(n);
+}
+
 function parseStoredCard(raw: unknown): SavedCreditCard | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -836,6 +1121,7 @@ function parseStoredCard(raw: unknown): SavedCreditCard | null {
           ? o.due_day
           : undefined,
     ),
+    creditLimit: normalizeCreditLimit(o.creditLimit ?? o.credit_limit),
     createdAt:
       typeof o.createdAt === "string"
         ? o.createdAt
@@ -880,10 +1166,13 @@ export function upsertSavedCreditCard(
     last4?: string;
     billingDay?: number;
     dueDay?: number;
+    /** Omit to keep the saved limit; pass null to clear it. */
+    creditLimit?: number | null;
   },
 ): SavedCreditCard {
   const nickname = input.nickname.trim();
   const last4 = normalizeLast4(input.last4);
+  const creditLimit = normalizeCreditLimit(input.creditLimit);
   const billingDay = clampDay(input.billingDay);
   const dueDay =
     clampDay(input.dueDay) ??
@@ -899,6 +1188,10 @@ export function upsertSavedCreditCard(
         last4,
         billingDay,
         dueDay,
+        creditLimit:
+          input.creditLimit === undefined
+            ? existing[idx].creditLimit
+            : creditLimit,
       };
       existing[idx] = updated;
       saveCreditCards(userId, existing);
@@ -918,6 +1211,7 @@ export function upsertSavedCreditCard(
       last4: last4 ?? existing[dupIdx].last4,
       billingDay: billingDay ?? existing[dupIdx].billingDay,
       dueDay: dueDay ?? existing[dupIdx].dueDay,
+      creditLimit: creditLimit ?? existing[dupIdx].creditLimit,
     };
     existing[dupIdx] = updated;
     saveCreditCards(userId, existing);
@@ -931,6 +1225,7 @@ export function upsertSavedCreditCard(
     last4,
     billingDay,
     dueDay,
+    creditLimit,
     createdAt: new Date().toISOString(),
   };
   existing.push(created);
@@ -959,6 +1254,8 @@ function rowToCard(row: Record<string, unknown>): SavedCreditCard | null {
     last4: row.last4,
     billing_day: row.billing_day,
     due_day: row.due_day,
+    // Missing until migration 041 runs — the local cache keeps it meanwhile.
+    credit_limit: row.credit_limit,
     created_at: row.created_at,
   });
 }
@@ -973,7 +1270,8 @@ export async function loadCreditCardsMerged(
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from("user_credit_cards")
-      .select("id, nickname, last4, billing_day, due_day, created_at")
+      // `*` so the load works before and after migration 041 (credit_limit).
+      .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
@@ -989,8 +1287,14 @@ export async function loadCreditCardsMerged(
       .map((r) => rowToCard(r as Record<string, unknown>))
       .filter((c): c is SavedCreditCard => c != null);
 
+    const localById = new Map(local.map((c) => [c.id, c]));
     const byId = new Map<string, SavedCreditCard>();
-    for (const c of fromDb) byId.set(c.id, c);
+    for (const c of fromDb) {
+      byId.set(c.id, {
+        ...c,
+        creditLimit: c.creditLimit ?? localById.get(c.id)?.creditLimit,
+      });
+    }
 
     // Local-only cards (not yet migrated)
     for (const c of local) {
@@ -1015,19 +1319,27 @@ export async function persistCreditCardToDb(
   if (!userId) return;
   try {
     const supabase = getSupabase();
-    await supabase.from("user_credit_cards").upsert(
-      {
-        id: card.id,
-        user_id: userId,
-        nickname: card.nickname,
-        last4: card.last4 ?? null,
-        billing_day: card.billingDay ?? null,
-        due_day: card.dueDay ?? null,
-        created_at: card.createdAt,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" },
-    );
+    const row: Record<string, unknown> = {
+      id: card.id,
+      user_id: userId,
+      nickname: card.nickname,
+      last4: card.last4 ?? null,
+      billing_day: card.billingDay ?? null,
+      due_day: card.dueDay ?? null,
+      credit_limit: card.creditLimit ?? null,
+      created_at: card.createdAt,
+      updated_at: new Date().toISOString(),
+    };
+    const res = await supabase
+      .from("user_credit_cards")
+      .upsert(row, { onConflict: "id" });
+    if (res?.error && /credit_limit/i.test(res.error.message || "")) {
+      // Migration 041 not applied yet: save the rest; the limit stays local.
+      delete row.credit_limit;
+      await supabase
+        .from("user_credit_cards")
+        .upsert(row, { onConflict: "id" });
+    }
   } catch {
     /* offline / table missing */
   }

@@ -14,6 +14,7 @@ const CATEGORY_ICON: Record<string, string> = {
   insurance_life: "🛡️",
   insurance_health: "🏥",
   insurance_vehicle: "🚗",
+  insurance_rd: "🗓️",
   loan_emi: "🏦",
   investment_sip: "📈",
   investment_ppf: "💰",

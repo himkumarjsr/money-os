@@ -7,6 +7,7 @@ const CATEGORIES = [
   { value: "insurance_life", label: "Life Insurance", emoji: "🛡️" },
   { value: "insurance_health", label: "Health Insurance", emoji: "🏥" },
   { value: "insurance_vehicle", label: "Vehicle Insurance", emoji: "🚗" },
+  { value: "insurance_rd", label: "RD for premiums", emoji: "🗓️" },
   { value: "investment_sip", label: "SIP", emoji: "📈" },
   { value: "investment_ppf", label: "PPF", emoji: "💰" },
   { value: "subscription", label: "Subscription", emoji: "📱" },

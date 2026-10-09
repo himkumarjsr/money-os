@@ -443,8 +443,90 @@ describe("smart budget", () => {
     expect(smartBudgetSummary(data)).toBeNull();
   });
 
+  it("describes a Loans raise for fixed EMIs", () => {
+    const withLoans = {
+      ...smartBudget,
+      caps: { ...baseCaps, needs: 0.2, loans: 0.35, investment: 0.3 },
+      adjustments: [
+        { ...smartBudget.adjustments[0], movedToInvestment: 5000 },
+        {
+          key: "loans" as const,
+          fromPercent: 30,
+          toPercent: 35,
+          averageSpend: 35000,
+          movedToInvestment: 0,
+        },
+      ],
+    };
+    const data = { ...profile, smartBudget: withLoans };
+    expect(getUniversalCaps(data).loans).toBeCloseTo(0.35);
+    const note = smartBudgetSummary(data)!;
+    expect(note).toContain("Needs 30% to 20%");
+    expect(note).toContain("Loans 30% to 35% to cover your fixed EMIs");
+    expect(note).toContain("the rest added to Investment");
+  });
+
+  it("counts card EMIs in the Loans actual", () => {
+    const actuals = getUniversalBucketActuals({
+      ...profile,
+      personalLoanEMI: 5000,
+      creditCardEmiMonthly: 3000,
+    });
+    expect(actuals.loans).toBe(8000);
+  });
+
   it("ignores a smart budget learned from older Analyse answers", () => {
     const data = { ...profile, lifeStage: "kids" as const, smartBudget };
     expect(getUniversalCaps(data)).toEqual(getProfileCaps(data));
+  });
+});
+
+describe("LIC / endowment premiums marked as investment", () => {
+  const rows = [
+    {
+      policyName: "LIC",
+      premiumAmount: 24000,
+      frequency: "yearly" as const,
+      countAsInvestment: true,
+    },
+    {
+      policyName: "Accident",
+      premiumAmount: 300,
+      frequency: "monthly" as const,
+    },
+  ];
+
+  it("count under Investment, not Security (form values)", () => {
+    const data = {
+      monthlySalary: 100000,
+      hasOtherInsurance: true,
+      otherInsurancePremiums: rows,
+    };
+    const actuals = getUniversalBucketActuals(data);
+    expect(actuals.security).toBe(300);
+    expect(actuals.investment).toBe(2000);
+    expect(getInsurancePremiumsMonthly(data)).toBe(300);
+  });
+
+  it("use the stored monthly totals on a saved profile", () => {
+    const actuals = getUniversalBucketActuals({
+      hasOtherInsurance: true,
+      otherInsurancePremiums: rows,
+      otherInsurancePremiumMonthly: 300,
+      licEndowmentPremiumMonthly: 2000,
+    });
+    expect(actuals.security).toBe(300);
+    expect(actuals.investment).toBe(2000);
+  });
+
+  it("leave old rows without the flag in Security", () => {
+    const actuals = getUniversalBucketActuals({
+      hasOtherInsurance: true,
+      otherInsurancePremiums: [
+        { policyName: "LIC", premiumAmount: 1200, frequency: "monthly" },
+      ],
+    });
+    expect(actuals.security).toBe(1200);
+    expect(actuals.investment).toBe(0);
   });
 });

@@ -8,13 +8,15 @@ import ExpenseTable, {
 import MonthSummary from "@/components/tracker/MonthSummary";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
-import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
+import { trackerTotalAmount } from "@/lib/tracker-categories";
+import { monthSummaryCaps } from "@/lib/trackerMonthSummary";
 import {
   hasTrackerConsentLocal,
   setTrackerConsentLocal,
 } from "@/lib/trackerCreditCards";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -23,6 +25,14 @@ function TrackerMonthContent() {
   const params = useParams<{ month: string }>();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const lastSubmission = useFinancialStore((s) => s.lastSubmission);
+  const analyseResult = useFinancialStore((s) => s.result);
+  // Same caps as the main tracker: the user's split once Analyse is done.
+  const caps = useMemo(
+    () =>
+      monthSummaryCaps(lastSubmission && analyseResult ? lastSubmission : null),
+    [lastSubmission, analyseResult],
+  );
   const monthParam = params?.month ?? "";
 
   const parsed = useMemo(() => {
@@ -178,14 +188,17 @@ function TrackerMonthContent() {
   const bucketTotals = transactions.reduce(
     (acc, t) => {
       if (t.bucket === "income") return acc;
-      if (!countsTowardTrackerTotals(t)) return acc;
-      acc[t.bucket] = (acc[t.bucket] || 0) + Number(t.amount);
+      // Signed: card refunds lower the bucket, EMI purchases and bill pays add 0.
+      acc[t.bucket] = (acc[t.bucket] || 0) + trackerTotalAmount(t);
       return acc;
     },
     {} as Record<string, number>,
   );
 
   const totalSpent = Object.values(bucketTotals).reduce((a, b) => a + b, 0);
+  const monthIncome = transactions
+    .filter((t) => t.bucket === "income")
+    .reduce((a, t) => a + Number(t.amount), 0);
 
   return (
     <div
@@ -313,6 +326,8 @@ function TrackerMonthContent() {
         title="BY CATEGORY"
         bucketTotals={bucketTotals}
         totalSpent={totalSpent}
+        income={monthIncome}
+        caps={caps}
       />
 
       <div

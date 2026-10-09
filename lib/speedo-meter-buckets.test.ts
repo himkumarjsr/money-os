@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildSpeedoMeterProps } from "./speedo-meter-buckets";
+import {
+  buildSpeedoMeterProps,
+  investStatus,
+  investmentTargetPct,
+} from "./speedo-meter-buckets";
 
 describe("buildSpeedoMeterProps", () => {
   it("returns zeros and default caps for empty profile", () => {
@@ -83,5 +87,36 @@ describe("buildSpeedoMeterProps", () => {
       lifeStage: "married",
     } as never);
     expect(props.income).toBe(95000);
+  });
+});
+
+describe("investment target", () => {
+  it("uses the user's investment cap, never below the 15% floor", () => {
+    expect(investmentTargetPct(0.25)).toBe(25);
+    expect(investmentTargetPct(0.28)).toBe(28);
+    expect(investmentTargetPct(0.1)).toBe(15);
+  });
+
+  it("follows the profile split from getUniversalCaps", () => {
+    const props = buildSpeedoMeterProps({
+      monthlySalary: 100000,
+      lifeStage: "bachelor",
+      selfAge: 25,
+    } as never);
+    expect(investmentTargetPct(props.caps!.investment)).toBe(28);
+  });
+
+  it("is good at or above the target, not at a fixed 20%", () => {
+    expect(investStatus(15, 15)).toBe("good");
+    expect(investStatus(18, 15)).toBe("good");
+    expect(investStatus(20, 25)).toBe("warning");
+    expect(investStatus(25, 25)).toBe("good");
+  });
+
+  it("is low only below the 15% floor", () => {
+    expect(investStatus(15, 25)).toBe("warning");
+    expect(investStatus(14, 25)).toBe("critical");
+    expect(investStatus(13, 15)).toBe("warning");
+    expect(investStatus(12, 15)).toBe("critical");
   });
 });

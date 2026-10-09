@@ -156,6 +156,8 @@ export function isCreditCardObligationExpense(e: {
 function isEligibleExpense(e: ExpenseLike): boolean {
   if ((e.bucket || "").trim() === "income") return false;
   if (isCreditCardObligationExpense(e)) return false;
+  // Card refunds / cashback give money back — they never pay an obligation.
+  if ((e.subcategory || e.category) === "card_refund") return false;
   const n = Number(e.amount);
   return Number.isFinite(n) && n > 0;
 }

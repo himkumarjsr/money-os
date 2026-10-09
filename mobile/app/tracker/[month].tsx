@@ -20,17 +20,27 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors, Spacing } from "@/constants/theme";
 import { localISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
-import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
+import { trackerTotalAmount } from "@/lib/tracker-categories";
+import { monthSummaryCaps } from "@/lib/trackerMonthSummary";
 import {
   hasTrackerConsentLocal,
   setTrackerConsentLocal,
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
+import { useFinancialStore } from "@/store/financialStore";
 
 /** All transactions for one month (`/tracker/2026-03`) — port of web app/tracker/[month]. */
 export default function TrackerMonthScreen() {
   const { month: monthParam = "" } = useLocalSearchParams<{ month: string }>();
   const user = useAuthStore((s) => s.user);
+  const lastSubmission = useFinancialStore((s) => s.lastSubmission);
+  const analyseResult = useFinancialStore((s) => s.result);
+  // Same caps as the main tracker: the user's split once Analyse is done.
+  const caps = useMemo(
+    () =>
+      monthSummaryCaps(lastSubmission && analyseResult ? lastSubmission : null),
+    [lastSubmission, analyseResult],
+  );
 
   const parsed = useMemo(() => {
     if (!/^\d{4}-\d{2}$/.test(monthParam)) return null;
@@ -132,13 +142,17 @@ export default function TrackerMonthScreen() {
 
   const bucketTotals = transactions.reduce(
     (acc, t) => {
-      if (t.bucket === "income" || !countsTowardTrackerTotals(t)) return acc;
-      acc[t.bucket] = (acc[t.bucket] || 0) + Number(t.amount);
+      if (t.bucket === "income") return acc;
+      // Signed: card refunds lower the bucket, EMI purchases and bill pays add 0.
+      acc[t.bucket] = (acc[t.bucket] || 0) + trackerTotalAmount(t);
       return acc;
     },
     {} as Record<string, number>,
   );
   const totalSpent = Object.values(bucketTotals).reduce((a, b) => a + b, 0);
+  const monthIncome = transactions
+    .filter((t) => t.bucket === "income")
+    .reduce((a, t) => a + Number(t.amount), 0);
   const pad = String(parsed.monthIndex + 1).padStart(2, "0");
 
   return (
@@ -211,6 +225,8 @@ export default function TrackerMonthScreen() {
           title="BY CATEGORY"
           bucketTotals={bucketTotals}
           totalSpent={totalSpent}
+          income={monthIncome}
+          caps={caps}
         />
 
         <View style={styles.listCard}>

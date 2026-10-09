@@ -29,27 +29,38 @@ vi.mock("@/lib/supabase", () => ({
 import {
   TRACKER_CONSENT_VERSION,
   buildCreditCardBillStatuses,
+  buildCreditCardOverdue,
   buildCreditCardPaySuggestions,
+  buildCreditCardUsage,
+  cardBillAmount,
+  cashSpendAmount,
   countsTowardCashSpend,
   creditCardBillPaymentDescription,
   creditCardObligationTitle,
   deleteSavedCreditCard,
   dismissCreditCardBillReminder,
+  displayExpenseDescription,
   displayPaymentMethod,
+  encodeCardEmiToken,
   encodeCreditCardPaymentMethod,
   formatCreditCardLabel,
   getLastStatementWindow,
   getMostRecentDueDate,
   getNextDueDate,
+  getStatementDueDate,
+  getStatementWindowForDate,
   hasTrackerConsentLocal,
   hideCreditCardDueLine,
   isCreditCardBillDismissed,
+  isCardEmiPurchase,
   isCreditCardBillPayment,
   isCreditCardCharge,
+  isCreditCardRefund,
   isCreditCardDueLineHidden,
   isCreditCardPaymentMethod,
   loadHiddenCreditCardDueIds,
   loadSavedCreditCards,
+  parseCardEmiPlan,
   parseCreditCardPaymentMethod,
   saveCreditCards,
   setTrackerConsentLocal,
@@ -117,41 +128,22 @@ describe("credit card payment method encoding", () => {
 });
 
 describe("cash vs card spend", () => {
-  it("excludes CC payment-method purchases; includes UPI bill pays + EMIs", () => {
+  it("counts card purchases when made; leaves out bill pays (they settle them)", () => {
     expect(
       countsTowardCashSpend({
         bucket: "wants",
         payment_method: "credit_card::c1::HDFC",
       }),
-    ).toBe(false);
-    expect(
-      countsTowardCashSpend({
-        bucket: "loans",
-        subcategory: "credit_card",
-        payment_method: "upi",
-      }),
     ).toBe(true);
-    expect(
-      countsTowardCashSpend({
-        bucket: "loans",
-        subcategory: "credit_card",
-        payment_method: "netbanking",
-      }),
-    ).toBe(true);
-    expect(
-      countsTowardCashSpend({
-        bucket: "loans",
-        subcategory: "credit_card",
-        payment_method: "wallet",
-      }),
-    ).toBe(true);
-    expect(
-      countsTowardCashSpend({
-        bucket: "loans",
-        subcategory: "credit_card",
-        payment_method: "cash",
-      }),
-    ).toBe(true);
+    for (const rail of ["upi", "netbanking", "wallet", "cash"]) {
+      expect(
+        countsTowardCashSpend({
+          bucket: "loans",
+          subcategory: "credit_card",
+          payment_method: rail,
+        }),
+      ).toBe(false);
+    }
     expect(
       countsTowardCashSpend({
         bucket: "loans",
@@ -173,6 +165,7 @@ describe("cash vs card spend", () => {
         payment_method: "upi",
       }),
     ).toBe(true);
+    expect(countsTowardCashSpend({ bucket: "income" })).toBe(false);
   });
 
   it("sums cash and on-cards totals", () => {
@@ -199,9 +192,254 @@ describe("cash vs card spend", () => {
         payment_method: "credit_card::c1::HDFC",
       },
     ];
-    // Bill payment (800) is cash out → in purple; card purchases excluded
-    expect(sumCashSpend(txns)).toBe(1800);
+    // Card spends come off LEFT when made; the 800 bill pay only settles them.
+    expect(sumCashSpend(txns)).toBe(1700);
     expect(sumOnCardsSpend(txns)).toBe(700);
+  });
+
+  it("subtracts card refunds / cashback from spend and the card bill", () => {
+    const card = "credit_card::c1::HDFC";
+    const refund = {
+      amount: 300,
+      bucket: "wants",
+      subcategory: "card_refund",
+      payment_method: card,
+    };
+    expect(isCreditCardRefund(refund)).toBe(true);
+    expect(isCreditCardCharge(refund)).toBe(false);
+    expect(cardBillAmount(refund)).toBe(-300);
+    expect(cashSpendAmount(refund)).toBe(-300);
+    // Income is never a refund, and a refund needs a card.
+    expect(isCreditCardRefund({ ...refund, bucket: "income" })).toBe(false);
+    expect(isCreditCardRefund({ ...refund, payment_method: "upi" })).toBe(
+      false,
+    );
+    const txns = [
+      { amount: 1000, bucket: "wants", payment_method: card },
+      refund,
+    ];
+    expect(sumCashSpend(txns)).toBe(700);
+    expect(sumOnCardsSpend(txns)).toBe(700);
+  });
+
+  it("does not count a purchase converted to EMI at full price", () => {
+    const token = encodeCardEmiToken({ months: 6, monthly: 2500, fee: 199 });
+    expect(token).toBe("[#emi:6x2500+199]");
+    expect(parseCardEmiPlan(`Phone ${token}`)).toEqual({
+      months: 6,
+      monthly: 2500,
+      fee: 199,
+    });
+    expect(parseCardEmiPlan("[#emi:3x1000]")).toEqual({
+      months: 3,
+      monthly: 1000,
+      fee: 0,
+    });
+    expect(parseCardEmiPlan("Phone")).toBeNull();
+    expect(displayExpenseDescription(`Phone ${token}`)).toBe("Phone");
+
+    const purchase = {
+      amount: 15000,
+      bucket: "wants",
+      subcategory: "gadgets",
+      payment_method: "credit_card::c1::HDFC",
+      description: `Phone ${token}`,
+    };
+    expect(isCardEmiPurchase(purchase)).toBe(true);
+    expect(isCreditCardCharge(purchase)).toBe(false);
+    expect(cashSpendAmount(purchase)).toBe(0);
+    // Without a card it's just a note.
+    expect(isCardEmiPurchase({ ...purchase, payment_method: "upi" })).toBe(
+      false,
+    );
+  });
+});
+
+describe("statement for a spend date (billing day 15)", () => {
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  it("puts spends up to the 15th on this statement, later ones on the next", () => {
+    const on15 = getStatementWindowForDate(15, new Date(2026, 8, 15))!;
+    expect(iso(on15.start)).toBe("2026-08-16");
+    expect(iso(on15.end)).toBe("2026-09-15");
+    const on16 = getStatementWindowForDate(15, new Date(2026, 8, 16))!;
+    expect(iso(on16.start)).toBe("2026-09-16");
+    expect(iso(on16.end)).toBe("2026-10-15");
+  });
+
+  it("clamps billing day 31 to short months", () => {
+    const feb = getStatementWindowForDate(31, new Date(2026, 1, 20))!;
+    expect(iso(feb.end)).toBe("2026-02-28");
+    expect(iso(feb.start)).toBe("2026-02-01");
+  });
+
+  it("due date is the first due day after the statement closes", () => {
+    expect(iso(getStatementDueDate(new Date(2026, 8, 15), 5))).toBe(
+      "2026-10-05",
+    );
+    expect(iso(getStatementDueDate(new Date(2026, 8, 5), 25))).toBe(
+      "2026-09-25",
+    );
+  });
+});
+
+describe("credit limit usage", () => {
+  const card = {
+    id: "c1",
+    nickname: "HDFC",
+    billingDay: 15,
+    dueDay: 5,
+    creditLimit: 100000,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const method = "credit_card::c1::HDFC";
+
+  it("measures the open statement against the limit and warns over 30%", () => {
+    const usage = buildCreditCardUsage({
+      cards: [card],
+      asOf: new Date(2026, 9, 9),
+      transactions: [
+        // Previous statement (Aug 16 – Sep 15): not in the open one.
+        {
+          amount: 50000,
+          bucket: "wants",
+          payment_method: method,
+          date: "2026-09-10",
+        },
+        {
+          amount: 25000,
+          bucket: "wants",
+          payment_method: method,
+          date: "2026-09-16",
+        },
+        {
+          amount: 8000,
+          bucket: "needs",
+          payment_method: method,
+          date: "2026-10-02",
+        },
+        {
+          amount: 1000,
+          bucket: "wants",
+          subcategory: "card_refund",
+          payment_method: method,
+          date: "2026-10-03",
+        },
+      ],
+    });
+    expect(usage).toHaveLength(1);
+    expect(usage[0].used).toBe(32000);
+    expect(usage[0].statementStart).toBe("2026-09-16");
+    expect(usage[0].ratio).toBeCloseTo(0.32);
+    expect(usage[0].overWarn).toBe(true);
+  });
+
+  it("skips cards without a limit", () => {
+    expect(
+      buildCreditCardUsage({
+        cards: [{ ...card, creditLimit: undefined }],
+        transactions: [],
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("unpaid statement after the due date", () => {
+  const card = {
+    id: "c1",
+    nickname: "HDFC",
+    billingDay: 15,
+    dueDay: 5,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const method = "credit_card::c1::HDFC";
+  const spends = [
+    {
+      amount: 20000,
+      bucket: "needs",
+      payment_method: method,
+      date: "2026-08-20",
+    },
+    {
+      amount: 10000,
+      bucket: "wants",
+      payment_method: method,
+      date: "2026-09-15",
+    },
+    // Next statement — not part of the Sep 15 bill.
+    {
+      amount: 4000,
+      bucket: "wants",
+      payment_method: method,
+      date: "2026-09-16",
+    },
+  ];
+  const pay = (amount: number, date: string) => ({
+    amount,
+    bucket: "loans",
+    subcategory: "credit_card",
+    payment_method: "upi",
+    description: "Pay bill · HDFC",
+    date,
+  });
+
+  it("flags the remaining balance when the bill was part-paid by the due date", () => {
+    const overdue = buildCreditCardOverdue({
+      cards: [card],
+      asOf: new Date(2026, 9, 9),
+      transactions: [...spends, pay(12000, "2026-10-04")],
+    });
+    expect(overdue).toHaveLength(1);
+    expect(overdue[0]).toMatchObject({
+      statementEnd: "2026-09-15",
+      dueDate: "2026-10-05",
+      statementAmount: 30000,
+      paidByDue: 12000,
+      remaining: 18000,
+    });
+  });
+
+  it("shrinks as late payments come in and clears when paid", () => {
+    const later = buildCreditCardOverdue({
+      cards: [card],
+      asOf: new Date(2026, 9, 12),
+      transactions: [
+        ...spends,
+        pay(12000, "2026-10-04"),
+        pay(8000, "2026-10-10"),
+      ],
+    });
+    expect(later[0].remaining).toBe(10000);
+    expect(
+      buildCreditCardOverdue({
+        cards: [card],
+        asOf: new Date(2026, 9, 12),
+        transactions: [
+          ...spends,
+          pay(12000, "2026-10-04"),
+          pay(18000, "2026-10-10"),
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("is quiet when paid in full, or before the due date", () => {
+    expect(
+      buildCreditCardOverdue({
+        cards: [card],
+        asOf: new Date(2026, 9, 9),
+        transactions: [...spends, pay(30000, "2026-10-01")],
+      }),
+    ).toEqual([]);
+    // Oct 3: the Sep 15 bill is not due yet; the Aug 15 bill had nothing.
+    expect(
+      buildCreditCardOverdue({
+        cards: [card],
+        asOf: new Date(2026, 9, 3),
+        transactions: spends,
+      }),
+    ).toEqual([]);
   });
 });
 

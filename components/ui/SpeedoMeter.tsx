@@ -2,16 +2,15 @@
 
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/finance";
-import type {
-  SpeedoMeterCaps,
-  SpeedoMeterProps,
+import {
+  investStatus,
+  investmentTargetPct,
+  type SpeedoMeterCaps,
+  type SpeedoMeterProps,
 } from "@/lib/speedo-meter-buckets";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type { SpeedoMeterProps } from "@/lib/speedo-meter-buckets";
-
-const INVEST_FLOOR_PCT = 20;
-const INVEST_WARN_PCT = 17;
 
 function resolveCaps(
   hasHomeLoan: boolean,
@@ -137,12 +136,6 @@ function spendStatus(actualPct: number, capPct: number): Status {
   return "critical";
 }
 
-function investStatus(actualPct: number): Status {
-  if (actualPct >= INVEST_FLOOR_PCT - 1e-6) return "good";
-  if (actualPct >= INVEST_WARN_PCT - 1e-6) return "warning";
-  return "critical";
-}
-
 function statusColor(st: Status): string {
   if (st === "good") return COLORS.green;
   if (st === "warning") return COLORS.amber;
@@ -255,7 +248,7 @@ function GaugeSvg({
   const status: Status =
     kind === "spend"
       ? spendStatus(actualPct, capFraction * 100)
-      : investStatus(actualPct);
+      : investStatus(actualPct, investmentTargetPct(capFraction));
   const needleCol = statusColor(status);
 
   const progStroke = compact ? 6 : 7;
@@ -442,9 +435,10 @@ function GaugesBlock({
   const stW = spendStatus(pct.wants, wantsCap * 100);
   const stS = spendStatus(pct.security, securityCap * 100);
   const stL = spendStatus(pct.loans, loansCap * 100);
-  const stI = investStatus(pct.investment);
+  const investTarget = investmentTargetPct(investCap);
+  const stI = investStatus(pct.investment, investTarget);
 
-  const investCapLabel = `min ${INVEST_FLOOR_PCT}% · cap ${Math.round(investCap * 100)}%`;
+  const investCapLabel = `target ${investTarget}%`;
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
@@ -563,6 +557,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
     wants: wantsCap,
     security: securityCap,
     loans: loansCap,
+    investment: investCap,
   } = resolveCaps(hasHomeLoan, caps);
   const pct = {
     n: income > 0 ? (needs / income) * 100 : 0,
@@ -575,7 +570,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
   const stW = spendStatus(pct.w, wantsCap * 100);
   const stS = spendStatus(pct.s, securityCap * 100);
   const stL = spendStatus(pct.l, loansCap * 100);
-  const stI = investStatus(pct.i);
+  const stI = investStatus(pct.i, investmentTargetPct(investCap));
 
   return (
     <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -644,7 +639,9 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
     wants: wantsCap,
     security: securityCap,
     loans: loansCap,
+    investment: investCap,
   } = resolveCaps(hasHomeLoan, caps);
+  const investTarget = investmentTargetPct(investCap);
   const needsCapPct = Math.round(needsCap * 100);
   const wantsCapPct = Math.round(wantsCap * 100);
   const securityCapPct = Math.round(securityCap * 100);
@@ -681,11 +678,12 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
   if (spendStatus(pct.l, loansCapPct) !== "good") {
     issues.push(`Loan outflows exceed the ${loansCapPct}% safety guide.`);
   }
-  if (investStatus(pct.i) !== "good") {
+  const investSt = investStatus(pct.i, investTarget);
+  if (investSt !== "good") {
     issues.push(
-      investStatus(pct.i) === "critical"
-        ? `Investment flow is below ${INVEST_FLOOR_PCT}% of income — increase long-term contributions when possible.`
-        : `Investment flow is under ${INVEST_FLOOR_PCT}% — try to step up toward ${INVEST_FLOOR_PCT}% of income.`,
+      investSt === "critical"
+        ? `Investment flow is below 15% of income — increase long-term contributions when possible.`
+        : `Investment flow is under your ${investTarget}% target — try to step up toward it.`,
     );
   }
   const t = needs + wants + security + loans + investment;
