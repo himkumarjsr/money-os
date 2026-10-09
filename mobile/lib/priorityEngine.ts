@@ -295,6 +295,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.bikeEMI || 0) +
     (profile.personalLoanEMI || 0) +
     (profile.creditCardBillMonthly || 0) +
+    (profile.creditCardEmiMonthly || 0) +
     additionalLoanObligations;
   const wantsActual = lifestyleActual;
   const investmentActual =

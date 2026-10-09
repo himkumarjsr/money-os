@@ -390,7 +390,8 @@ export function buildFixPlanPdf(
     (profile.carLoanOutstanding || (profile.carLoanEMI || 0) * 36) +
     (profile.personalLoanOutstanding || (profile.personalLoanEMI || 0) * 24) +
     (profile.bikeEMI || 0) * 24 +
-    (profile.creditCardBillMonthly || 0) * 3;
+    (profile.creditCardBillMonthly || 0) * 3 +
+    (profile.creditCardCarriedBalance || 0);
   const calcNetWorth = calcAssets - calcLiabilities;
   const monthlyIncome =
     (profile?.monthlySalary || 0) +
@@ -505,7 +506,9 @@ export function buildFixPlanPdf(
     const lines = doc.splitTextToSize(
       `Your loans changed in Tracker since this report: ${loanDrift
         .map((d) => `${d.label} (${LOAN_DRIFT_LABELS[d.kind]})`)
-        .join(", ")}. EMI totals, surplus and the debt plan below may be out of date. Update your Loans step and re-run the report.`,
+        .join(
+          ", ",
+        )}. EMI totals, surplus and the debt plan below may be out of date. Update your Loans step and re-run the report.`,
       UW - 8,
     ) as string[];
     const boxH = lines.length * 4.5 + 10;

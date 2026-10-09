@@ -67,21 +67,30 @@ describe("TRACKER_CATEGORIES", () => {
     expect(countsTowardTrackerTotals({ subcategory: "sip" })).toBe(true);
   });
 
-  it("excludes credit-card purchases from tracker totals; keeps bill pays", () => {
+  it("counts credit-card purchases in their bucket; leaves out bill pays", () => {
     expect(
       countsTowardTrackerTotals({
         bucket: "needs",
         subcategory: "rent",
         payment_method: "credit_card::c1::HDFC",
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       countsTowardTrackerTotals({
         bucket: "loans",
         subcategory: "credit_card",
         payment_method: "upi",
       }),
-    ).toBe(true);
+    ).toBe(false);
+    // "Pay bill · …" notes logged elsewhere are bill pays too.
+    expect(
+      countsTowardTrackerTotals({
+        bucket: "others",
+        subcategory: "others",
+        payment_method: "upi",
+        description: "Pay bill · HDFC",
+      }),
+    ).toBe(false);
     expect(
       countsTowardTrackerTotals({
         bucket: "needs",

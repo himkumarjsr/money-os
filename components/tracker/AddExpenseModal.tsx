@@ -10,14 +10,17 @@ import {
   pickerSubcategories,
 } from "@/lib/tracker-categories";
 import {
+  CARD_REFUND_SUBCATEGORY,
   DEFAULT_DUE_OFFSET_DAYS,
   deleteSavedCreditCard,
   displayExpenseDescription,
+  encodeCardEmiToken,
   encodeCreditCardPaymentMethod,
   formatCreditCardLabel,
   isCreditCardPaymentMethod,
   loadCreditCardsMerged,
   loadSavedCreditCards,
+  parseCardEmiPlan,
   parseCreditCardPaymentMethod,
   suggestDueDayFromBilling,
   upsertSavedCreditCard,
@@ -41,6 +44,8 @@ interface AddExpenseModalProps {
     description: string;
     date: string;
     isEdit: boolean;
+    /** Card purchase, card purchase on EMI, or card refund / cashback. */
+    cardMode?: CardEntryMode;
   }) => void;
   defaultDate?: string;
   /** Inclusive max selectable date (YYYY-MM-DD). Defaults to today. */
@@ -60,6 +65,14 @@ interface AddExpenseModalProps {
     payment_method: string | null;
   };
 }
+
+export type CardEntryMode = "purchase" | "emi" | "refund";
+
+const CARD_ENTRY_MODES: Array<{ id: CardEntryMode; label: string }> = [
+  { id: "purchase", label: "Purchase" },
+  { id: "emi", label: "Converted to EMI" },
+  { id: "refund", label: "Refund / cashback" },
+];
 
 function initialPaymentKind(method: string | null | undefined) {
   if (isCreditCardPaymentMethod(method)) return "credit_card";
@@ -114,8 +127,25 @@ export default function AddExpenseModal({
     editExpense?.subcategory || defaultSubcategory || "",
   );
   const [description, setDescription] = useState(
-    editExpense?.description || defaultDescription || "",
+    displayExpenseDescription(
+      editExpense?.description || defaultDescription || "",
+    ),
   );
+  const seedEmi = parseCardEmiPlan(editExpense?.description);
+  const [cardMode, setCardMode] = useState<CardEntryMode>(
+    editExpense?.subcategory === CARD_REFUND_SUBCATEGORY
+      ? "refund"
+      : seedEmi
+        ? "emi"
+        : "purchase",
+  );
+  const [emiMonths, setEmiMonths] = useState(
+    seedEmi ? String(seedEmi.months) : "6",
+  );
+  const [emiMonthly, setEmiMonthly] = useState(
+    seedEmi ? String(seedEmi.monthly) : "",
+  );
+  const [emiFee, setEmiFee] = useState(seedEmi?.fee ? String(seedEmi.fee) : "");
   const [paymentMethod, setPaymentMethod] = useState(
     initialPaymentKind(seedPayment),
   );
@@ -216,6 +246,18 @@ export default function AddExpenseModal({
   const selectedBucket = bucket
     ? TRACKER_CATEGORIES[bucket as keyof typeof TRACKER_CATEGORIES]
     : null;
+  // EMI / refund only for card spends (not income or Loans rows).
+  const cardModesAllowed =
+    paymentMethod === "credit_card" &&
+    !!bucket &&
+    bucket !== "income" &&
+    bucket !== "loans";
+  const entryMode: CardEntryMode = cardModesAllowed ? cardMode : "purchase";
+  const emiMonthsNum = Number(emiMonths);
+  const suggestedMonthly =
+    amount > 0 && emiMonthsNum >= 1
+      ? Math.round((amount / emiMonthsNum) * 100) / 100
+      : 0;
   const isIncome = bucket === "income";
   const isSavings = bucket === "investment";
   const modalTitle = editExpense
@@ -304,9 +346,28 @@ export default function AddExpenseModal({
   };
 
   const handleSave = async () => {
-    if (!amount || !bucket || !subcategory) {
+    if (!amount || !bucket || (!subcategory && entryMode !== "refund")) {
       setError("Please fill amount, category and type");
       return;
+    }
+    let emiToken = "";
+    if (entryMode === "emi") {
+      const months = Math.round(emiMonthsNum);
+      const monthly = emiMonthly ? Number(emiMonthly) : suggestedMonthly;
+      const fee = emiFee ? Number(emiFee) : 0;
+      if (!Number.isFinite(months) || months < 2 || months > 60) {
+        setError("EMI months must be between 2 and 60");
+        return;
+      }
+      if (!Number.isFinite(monthly) || monthly <= 0) {
+        setError("Enter the monthly EMI amount");
+        return;
+      }
+      if (!Number.isFinite(fee) || fee < 0) {
+        setError("Processing fee can't be negative");
+        return;
+      }
+      emiToken = encodeCardEmiToken({ months, monthly, fee });
     }
     if (!user?.id) {
       setError("You must be signed in");
@@ -356,13 +417,22 @@ export default function AddExpenseModal({
       }
     }
 
+    const subToStore =
+      entryMode === "refund"
+        ? CARD_REFUND_SUBCATEGORY
+        : subcategory === CARD_REFUND_SUBCATEGORY
+          ? "others"
+          : subcategory;
     const payload = {
       user_id: user.id,
       date,
       amount,
-      category: subcategory,
-      subcategory,
-      description: descriptionToStore,
+      category: subToStore,
+      subcategory: subToStore,
+      // EMI terms ride along as a hidden token (no extra columns needed).
+      description: emiToken
+        ? `${descriptionToStore} ${emiToken}`.trim()
+        : descriptionToStore,
       bucket,
       payment_method: paymentToStore,
       // Must match tracker fetch locale (`en-IN`) or the row won't load in-month.
@@ -403,9 +473,10 @@ export default function AddExpenseModal({
         category: String(payload.category ?? ""),
         subcategory: String(payload.subcategory ?? ""),
         bucket: String(payload.bucket ?? ""),
-        description: String(payload.description ?? ""),
+        description: String(descriptionToStore ?? ""),
         date: String(payload.date ?? ""),
         isEdit: Boolean(editExpense?.id),
+        cardMode: entryMode,
       });
     } catch (e) {
       setError(
@@ -581,7 +652,7 @@ export default function AddExpenseModal({
           </div>
         ) : null}
 
-        {selectedBucket ? (
+        {selectedBucket && entryMode !== "refund" ? (
           <div style={{ marginBottom: 16 }}>
             <label
               style={{
@@ -679,9 +750,12 @@ export default function AddExpenseModal({
                   color: "#5F5E5A",
                 }}
               >
-                Paying the card bill with UPI, cash, net banking or wallet{" "}
-                <strong style={{ color: "#534AB7" }}>reduces Money Left</strong>{" "}
-                on the purple card.
+                Card spends already came off Money Left when you made them, so
+                paying the bill{" "}
+                <strong style={{ color: "#534AB7" }}>
+                  doesn&apos;t reduce it again
+                </strong>{" "}
+                — only interest or fees above them do.
               </p>
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -988,6 +1062,160 @@ export default function AddExpenseModal({
                       {DEFAULT_DUE_OFFSET_DAYS} days after statement (not the
                       ~45-day interest-free period).
                     </p>
+                  </div>
+                ) : null}
+
+                {cardModesAllowed ? (
+                  <div style={{ marginTop: 12 }}>
+                    <label
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#5F5E5A",
+                        display: "block",
+                        marginBottom: 6,
+                      }}
+                    >
+                      This card entry is a
+                    </label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {CARD_ENTRY_MODES.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          aria-pressed={cardMode === m.id}
+                          onClick={() => {
+                            setCardMode(m.id);
+                            if (
+                              m.id !== "refund" &&
+                              subcategory === CARD_REFUND_SUBCATEGORY
+                            ) {
+                              setSubcategory("");
+                            }
+                          }}
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 8,
+                            border: `1.5px solid ${cardMode === m.id ? "#534AB7" : "#E8E6F0"}`,
+                            background: cardMode === m.id ? "#EEEDFE" : "white",
+                            color: cardMode === m.id ? "#534AB7" : "#111110",
+                            fontWeight: cardMode === m.id ? 700 : 400,
+                            fontSize: 12,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {entryMode === "emi" ? (
+                      <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: 10,
+                          }}
+                        >
+                          <div>
+                            <label
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: FIELD_LABEL_COLOR,
+                                display: "block",
+                                marginBottom: 4,
+                              }}
+                            >
+                              Months
+                            </label>
+                            <input
+                              type="number"
+                              min={2}
+                              max={60}
+                              inputMode="numeric"
+                              value={emiMonths}
+                              onChange={(e) => setEmiMonths(e.target.value)}
+                              placeholder="e.g. 6"
+                              style={IOS_DATE_INPUT_STYLE}
+                            />
+                          </div>
+                          <div>
+                            <label
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: FIELD_LABEL_COLOR,
+                                display: "block",
+                                marginBottom: 4,
+                              }}
+                            >
+                              Monthly EMI (₹)
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              inputMode="decimal"
+                              value={emiMonthly}
+                              onChange={(e) => setEmiMonthly(e.target.value)}
+                              placeholder={
+                                suggestedMonthly > 0
+                                  ? String(Math.round(suggestedMonthly))
+                                  : "e.g. 2500"
+                              }
+                              style={IOS_DATE_INPUT_STYLE}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: FIELD_LABEL_COLOR,
+                              display: "block",
+                              marginBottom: 4,
+                            }}
+                          >
+                            Processing fee (₹, optional)
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            inputMode="decimal"
+                            value={emiFee}
+                            onChange={(e) => setEmiFee(e.target.value)}
+                            placeholder="0"
+                            style={IOS_DATE_INPUT_STYLE}
+                          />
+                        </div>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 11,
+                            color: "#5F5E5A",
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          Only the monthly EMI counts each month, under Loans,
+                          until the last month. The fee counts once, in the
+                          first month.
+                        </p>
+                      </div>
+                    ) : entryMode === "refund" ? (
+                      <p
+                        style={{
+                          margin: "10px 0 0",
+                          fontSize: 11,
+                          color: "#5F5E5A",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        Lowers this section and your card bill. It is not
+                        counted as income.
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

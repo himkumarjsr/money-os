@@ -16,11 +16,15 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Colors } from "@/constants/theme";
 import {
   buildCreditCardBillStatuses,
+  buildCreditCardUsage,
   deactivateAllCreditCardObligations,
   deleteSavedCreditCard,
+  formatCreditCardLabel,
   hideCreditCardDueLine,
   isCreditCardDueLineHidden,
+  suggestDueDayFromBilling,
   upsertSavedCreditCard,
+  type CreditCardOverdue,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
@@ -38,6 +42,30 @@ type Txn = {
 };
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
+function shortDate(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+type CardDraft = {
+  nickname: string;
+  last4: string;
+  billingDay: string;
+  dueDay: string;
+  creditLimit: string;
+};
+
+function draftFromCard(card: SavedCreditCard): CardDraft {
+  return {
+    nickname: card.nickname,
+    last4: card.last4 ?? "",
+    billingDay: card.billingDay ? String(card.billingDay) : "",
+    dueDay: card.dueDay ? String(card.dueDay) : "",
+    creditLimit: card.creditLimit ? String(card.creditLimit) : "",
+  };
+}
 
 function formatDueLabel(
   iso?: string,
@@ -73,6 +101,8 @@ export function CreditCardDues({
   defaultOpen = false,
   optimisticPayments = [],
   asOf,
+  overdue = [],
+  today,
 }: {
   previousTransactions: Txn[];
   currentTransactions?: Txn[];
@@ -87,6 +117,10 @@ export function CreditCardDues({
   optimisticPayments?: Array<{ cardId: string; amount: number }>;
   /** Anchor month (1st of the selected tracker month). */
   asOf?: Date;
+  /** Statements not paid in full by their due date (counted under Loans). */
+  overdue?: CreditCardOverdue[];
+  /** Today (or the month's last day) for limit usage. */
+  today?: Date;
 }) {
   const userId = useAuthStore((s) => s.user?.id);
   const [open, setOpen] = useState(defaultOpen);
@@ -97,6 +131,18 @@ export function CreditCardDues({
   } | null>(null);
   const [dueDayDraft, setDueDayDraft] = useState("");
   const [dueEditError, setDueEditError] = useState("");
+  const [editingCard, setEditingCard] = useState<SavedCreditCard | null>(null);
+  const [cardDraft, setCardDraft] = useState<CardDraft | null>(null);
+  const [cardEditError, setCardEditError] = useState("");
+
+  const usageById = useMemo(() => {
+    const usage = buildCreditCardUsage({
+      cards,
+      transactions: [...previousTransactions, ...currentTransactions],
+      asOf: today,
+    });
+    return new Map(usage.map((u) => [u.cardId, u]));
+  }, [cards, previousTransactions, currentTransactions, today]);
 
   const statuses = useMemo(() => {
     const pool = [...previousTransactions, ...currentTransactions];
@@ -232,7 +278,69 @@ export function CreditCardDues({
     onCardsChange?.();
   };
 
-  if (cards.length === 0 && dueStatuses.length === 0 && paidCount === 0) {
+  const startEditCard = (card: SavedCreditCard) => {
+    setEditingCard(card);
+    setCardDraft(draftFromCard(card));
+    setCardEditError("");
+  };
+
+  const closeCardEdit = () => {
+    setEditingCard(null);
+    setCardDraft(null);
+    setCardEditError("");
+  };
+
+  const saveCard = () => {
+    if (!userId || !editingCard || !cardDraft) return;
+    const nickname = cardDraft.nickname.trim();
+    if (!nickname) {
+      setCardEditError("Enter a card name");
+      return;
+    }
+    const day = (raw: string, label: string): number | undefined | null => {
+      if (!raw.trim()) return undefined;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 1 || n > 31) {
+        setCardEditError(`${label} must be between 1 and 31`);
+        return null;
+      }
+      return Math.round(n);
+    };
+    const billingDay = day(cardDraft.billingDay, "Billing day");
+    if (billingDay === null) return;
+    const dueDay = day(cardDraft.dueDay, "Due day");
+    if (dueDay === null) return;
+    const digits = cardDraft.last4.replace(/\D/g, "");
+    if (digits && digits.length !== 4) {
+      setCardEditError("Last 4 digits must be 4 numbers");
+      return;
+    }
+    const limitRaw = cardDraft.creditLimit.replace(/[,\s₹]/g, "");
+    const limit = limitRaw ? Number(limitRaw) : null;
+    if (limit !== null && (!Number.isFinite(limit) || limit <= 0)) {
+      setCardEditError("Credit limit must be more than 0");
+      return;
+    }
+    upsertSavedCreditCard(userId, {
+      id: editingCard.id,
+      nickname,
+      last4: digits || undefined,
+      billingDay,
+      dueDay:
+        dueDay ??
+        (billingDay ? suggestDueDayFromBilling(billingDay) : undefined),
+      creditLimit: limit,
+    });
+    closeCardEdit();
+    onCardsChange?.();
+  };
+
+  if (
+    cards.length === 0 &&
+    dueStatuses.length === 0 &&
+    paidCount === 0 &&
+    overdue.length === 0
+  ) {
     return null;
   }
 
@@ -244,11 +352,13 @@ export function CreditCardDues({
         ? " Pay from your account (UPI / net banking) so interest doesn’t pile up."
         : "";
   const subtitle =
-    dueTotal > 0
-      ? `${inr(dueTotal)} still to pay`
-      : paidCount > 0
-        ? "All tracked bills paid"
-        : "No balance due yet";
+    overdue.length > 0
+      ? `${inr(overdue.reduce((s, o) => s + o.remaining, 0))} unpaid after due date`
+      : dueTotal > 0
+        ? `${inr(dueTotal)} still to pay`
+        : paidCount > 0
+          ? "All tracked bills paid"
+          : "No balance due yet";
 
   return (
     <>
@@ -262,11 +372,27 @@ export function CreditCardDues({
       >
         <Text style={styles.helper}>
           {dueTotal > 0
-            ? `Unpaid balances stay here until you mark them paid.${salaryHint} Paying via UPI / net banking reduces purple LEFT (cash out). Purchases on the card do not.`
+            ? `Unpaid balances stay here until you mark them paid.${salaryHint} Card spends already came off LEFT when you made them, so paying the bill doesn't reduce it again.`
             : paidCount > 0
               ? "All tracked card bills are paid for now. Nice work."
               : "Card spends show up here; paying logs a cash expense under Loans."}
         </Text>
+
+        {overdue.map((o) => (
+          <View
+            key={`overdue-${o.cardId}`}
+            style={styles.overdueBox}
+            accessibilityRole="alert"
+          >
+            <Text style={styles.overdueText}>
+              <Text style={{ fontWeight: "700" }}>
+                {`${o.label}: ${inr(o.remaining)} unpaid from the bill due ${shortDate(o.dueDate)}.`}
+              </Text>{" "}
+              Cards charge about 36–45% a year interest on what you don&apos;t
+              pay in full. This counts under Loans until you clear it.
+            </Text>
+          </View>
+        ))}
 
         {dueStatuses.length === 0 && paidCount > 0 ? (
           <Text style={styles.settled}>
@@ -325,7 +451,173 @@ export function CreditCardDues({
             </Pressable>
           </View>
         ))}
+
+        {cards.length > 0 ? (
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.cardsTitle}>Your cards</Text>
+            {cards.map((card) => {
+              const usage = usageById.get(card.id);
+              const pct = usage ? Math.round(usage.ratio * 100) : 0;
+              return (
+                <View key={`card-${card.id}`} style={styles.cardItem}>
+                  <View style={styles.cardHead}>
+                    <View style={styles.rowText}>
+                      <Text style={styles.label} numberOfLines={1}>
+                        {formatCreditCardLabel(card)}
+                      </Text>
+                      <Text style={styles.meta}>
+                        {card.billingDay
+                          ? `Bill on day ${card.billingDay}`
+                          : "No billing day"}
+                        {card.dueDay ? ` · Due day ${card.dueDay}` : ""}
+                        {card.creditLimit
+                          ? ` · Limit ${inr(card.creditLimit)}`
+                          : ""}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => startEditCard(card)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${formatCreditCardLabel(card)}`}
+                      style={styles.editBtn}
+                    >
+                      <Text style={styles.editText}>Edit</Text>
+                    </Pressable>
+                  </View>
+                  {usage ? (
+                    <View style={{ marginTop: 8 }}>
+                      <View style={styles.usageRow}>
+                        <Text style={styles.usageText}>
+                          {`This statement: ${inr(usage.used)} of ${inr(usage.limit)}`}
+                        </Text>
+                        <Text style={[styles.usageText, { fontWeight: "700" }]}>
+                          {pct}%
+                        </Text>
+                      </View>
+                      <View style={styles.usageTrack}>
+                        <View
+                          style={[
+                            styles.usageFill,
+                            {
+                              width: `${Math.min(100, pct)}%`,
+                              backgroundColor: usage.overWarn
+                                ? Colors.error
+                                : Colors.primary,
+                            },
+                          ]}
+                        />
+                      </View>
+                      {usage.overWarn ? (
+                        <Text style={styles.usageWarn}>
+                          Using over 30% of your limit can lower your credit
+                          score.
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
       </CollapsiblePanel>
+
+      <BottomSheet visible={editingCard != null} onClose={closeCardEdit}>
+        <Text style={styles.sheetTitle}>Edit card</Text>
+        {cardDraft ? (
+          <View style={{ gap: 10 }}>
+            <View>
+              <Text style={styles.sheetLabel}>Card name</Text>
+              <TextInput
+                value={cardDraft.nickname}
+                onChangeText={(v) =>
+                  setCardDraft({ ...cardDraft, nickname: v })
+                }
+                style={styles.dueInput}
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetLabel}>Last 4</Text>
+                <TextInput
+                  value={cardDraft.last4}
+                  onChangeText={(v) =>
+                    setCardDraft({
+                      ...cardDraft,
+                      last4: v.replace(/[^\d]/g, "").slice(0, 4),
+                    })
+                  }
+                  keyboardType="number-pad"
+                  placeholder="1234"
+                  style={styles.dueInput}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetLabel}>Limit (₹)</Text>
+                <TextInput
+                  value={cardDraft.creditLimit}
+                  onChangeText={(v) =>
+                    setCardDraft({
+                      ...cardDraft,
+                      creditLimit: v.replace(/[^\d]/g, ""),
+                    })
+                  }
+                  keyboardType="number-pad"
+                  placeholder="Optional"
+                  style={styles.dueInput}
+                />
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetLabel}>Billing day</Text>
+                <TextInput
+                  value={cardDraft.billingDay}
+                  onChangeText={(v) =>
+                    setCardDraft({
+                      ...cardDraft,
+                      billingDay: v.replace(/[^\d]/g, "").slice(0, 2),
+                    })
+                  }
+                  keyboardType="number-pad"
+                  placeholder="15"
+                  style={styles.dueInput}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetLabel}>Due day</Text>
+                <TextInput
+                  value={cardDraft.dueDay}
+                  onChangeText={(v) =>
+                    setCardDraft({
+                      ...cardDraft,
+                      dueDay: v.replace(/[^\d]/g, "").slice(0, 2),
+                    })
+                  }
+                  keyboardType="number-pad"
+                  placeholder="5"
+                  style={styles.dueInput}
+                />
+              </View>
+            </View>
+            {cardEditError ? (
+              <Text style={styles.dueError}>{cardEditError}</Text>
+            ) : (
+              <Text style={styles.dueHint}>
+                Bills are worked out again from the new dates.
+              </Text>
+            )}
+          </View>
+        ) : null}
+        <View style={styles.sheetActions}>
+          <Pressable onPress={closeCardEdit} style={styles.cancelBtn}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </Pressable>
+          <Pressable onPress={saveCard} style={styles.saveBtn}>
+            <Text style={styles.saveText}>Save</Text>
+          </Pressable>
+        </View>
+      </BottomSheet>
 
       <BottomSheet visible={editing != null} onClose={() => setEditing(null)}>
         <Text style={styles.sheetTitle}>Due day · {editing?.label}</Text>
@@ -466,4 +758,55 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  overdueBox: {
+    marginBottom: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.errorLight,
+    borderWidth: 1,
+    borderColor: "#F5C9C9",
+  },
+  overdueText: { fontSize: 12, lineHeight: 18, color: "#791F1F" },
+  cardsTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    marginBottom: 6,
+  },
+  cardItem: {
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  editBtn: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  usageRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  usageText: { fontSize: 11, color: Colors.textSecondary },
+  usageTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.borderLight,
+    overflow: "hidden",
+  },
+  usageFill: { height: "100%", borderRadius: 3 },
+  usageWarn: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.error,
+    marginTop: 4,
+  },
 });

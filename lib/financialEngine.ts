@@ -181,7 +181,9 @@ export function existingEquityValue(data: Partial<FinancialProfile>): number {
 
 /** Outstanding loan principal used for net worth. Prefer unified loan rows; assets-step home/car are additive when absent from unified list. */
 export function totalLoanLiabilities(data: FinancialProfile): number {
-  const credit = n(data.creditCardBillMonthly) * 3;
+  // Typical bill as a revolving proxy, plus any balance carried forward.
+  const credit =
+    n(data.creditCardBillMonthly) * 3 + n(data.creditCardCarriedBalance);
   const unified = (data.unifiedLoans ?? []).filter(
     (loan) => n(loan.monthlyEMI) > 0 || n(loan.outstandingAmount) > 0,
   );
@@ -757,6 +759,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       (data.personalLoanEMI || 0) +
       (data.carLoanEMI || 0) +
       (data.bikeEMI || 0) +
+      (data.creditCardEmiMonthly || 0) +
       (data.additionalObligations || []).reduce(
         (s: number, o: any) => s + (o.monthlyAmount || 0),
         0,
