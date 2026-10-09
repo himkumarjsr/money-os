@@ -40,11 +40,7 @@ import {
   trackerTotalAmount,
   type BucketType,
 } from "@/lib/tracker-categories";
-import {
-  buildCardMonthRows,
-  cardOverdueRows,
-  monthStartIso,
-} from "@/lib/trackerCardLedger";
+import { buildCardMonthRows, monthStartIso } from "@/lib/trackerCardLedger";
 import {
   buildSmartBudget,
   learnCapsFromSpending,
@@ -72,7 +68,6 @@ import {
   shouldLearnObligationFromExpense,
 } from "@/lib/obligationLearn";
 import {
-  buildCreditCardOverdue,
   creditCardBillPaymentDescription,
   displayExpenseDescription,
   hasTrackerConsentLocal,
@@ -120,7 +115,7 @@ function formatMasked(n: number, visible: boolean) {
 
 const SMART_BUDGET_OFF_KEY = "finkoin_smart_budget_off";
 /** One-time note about the new card counting rules. */
-const CARD_RULES_NOTE_KEY = "finkoin_card_rules_note_v1";
+const CARD_RULES_NOTE_KEY = "finkoin_card_rules_note_v2";
 
 function SmartBudgetNote({
   adjustments,
@@ -673,17 +668,6 @@ export default function TrackerScreen() {
       ...cardMonth.emiRows.filter((r) => r.date >= from && r.date < to),
     ];
   }, [ccBillHistory, cardMonth.emiRows, selectedYear, selectedMonth]);
-  // Statements due before today that were not paid in full: counted under
-  // Loans until cleared (display only — the spends already came off LEFT).
-  const cardOverdue = useMemo(
-    () =>
-      buildCreditCardOverdue({
-        cards: savedCards,
-        transactions: [...ccPoolPrior, ...cardMonth.rows],
-        asOf: cardAsOf,
-      }),
-    [savedCards, ccPoolPrior, cardMonth.rows, cardAsOf],
-  );
 
   // On/after the 1st: persist missing salary and/or "Saving from last month".
   const incomeSyncKeyRef = useRef<string | null>(null);
@@ -889,24 +873,6 @@ export default function TrackerScreen() {
     transactions,
   ]);
 
-  const safetyPulse = useMemo(
-    () =>
-      computeMonthSafetyPulse({
-        currentTxns: cardMonth.rows,
-        previousTxns: prevCountedRows,
-        fallbackIncome: profileMonthlyFromDb,
-        monthIndex: selectedMonth,
-        year: selectedYear,
-      }),
-    [
-      cardMonth.rows,
-      prevCountedRows,
-      profileMonthlyFromDb,
-      selectedMonth,
-      selectedYear,
-    ],
-  );
-
   const deleteTransaction = useCallback(
     async (txn: TrackerTxn) => {
       if (!user?.id || isVirtualTxnId(txn.id)) return;
@@ -1059,18 +1025,26 @@ export default function TrackerScreen() {
     }
   };
 
-  // Purple SPENT/LEFT: every spend the day it is made, cash or card (card
-  // money is kept aside for the bill), card EMIs monthly, loan repayment.
-  // Card bill payments settle spends already counted, so only the part above
-  // them (interest, fees, older balance) comes off.
+  // Purple SPENT/LEFT: money in the bank only. Cash / UPI / net banking
+  // spends, bank-paid EMIs and loan repayment, and card bill payments on the
+  // day they are paid. Card purchases, card EMIs and card refunds move the
+  // card bill, not the bank.
   const totalSpent = sumCashSpend(cardMonth.rows);
-  const keptAsideForCards = cardMonth.keptAside;
   const remaining = displayIncome - totalSpent;
-  // Rows shown in sections: logged + card EMIs + bill-pay extras + unpaid bills.
-  const displayRows: TrackerTxn[] = [
-    ...cardMonth.rows,
-    ...cardOverdueRows(cardOverdue, localISODate(cardAsOf)),
-  ];
+  // Same caps as the bucket cards and the same bank SPENT as the top card.
+  const safetyPulse = computeMonthSafetyPulse({
+    currentTxns: cardMonth.rows,
+    previousTxns: prevCountedRows,
+    fallbackIncome: profileMonthlyFromDb,
+    monthIndex: selectedMonth,
+    year: selectedYear,
+    caps: effectiveCaps,
+    bankSpend: true,
+    income: displayIncome,
+  });
+  // Rows shown in sections: logged + card EMIs. Unpaid card bills are only
+  // in the Card bills section, never in a bucket total.
+  const displayRows: TrackerTxn[] = cardMonth.rows;
   const hasCardActivity =
     savedCards.length > 0 ||
     [...transactions, ...ccBillHistory].some((t) =>
@@ -1333,15 +1307,6 @@ export default function TrackerScreen() {
         </View>
       </View>
 
-      {keptAsideForCards > 0 ? (
-        <Text style={styles.onCardsText} numberOfLines={1}>
-          {revealed
-            ? `₹${Math.round(keptAsideForCards).toLocaleString("en-IN")}`
-            : "₹••••"}{" "}
-          kept aside for card bills
-        </Text>
-      ) : null}
-
       <View style={styles.progressRow}>
         <Text style={styles.progressLabel}>Budget used</Text>
         <Text style={styles.progressLabel}>
@@ -1565,9 +1530,9 @@ export default function TrackerScreen() {
         {showCardRulesNote && hasCardActivity ? (
           <View style={styles.cardRulesNote}>
             <Text style={styles.cardRulesNoteText}>
-              Card spends now count in Needs and Wants in the month you spend,
-              and card bill payments no longer count as loans. Past months were
-              updated too.
+              Card purchases now count in Needs and Wants in the month you buy.
+              Your top card shows only money in your bank; card bills are listed
+              under Card bills.
             </Text>
             <Pressable onPress={dismissCardRulesNote} hitSlop={8}>
               <Text style={styles.smartNoteAction}>Got it</Text>
@@ -1879,7 +1844,6 @@ export default function TrackerScreen() {
               previousTransactions={ccPoolPrior}
               currentTransactions={cardMonth.rows}
               cards={savedCards}
-              overdue={cardOverdue}
               today={cardAsOf}
               monthlySalary={displayIncome}
               optimisticPayments={ccOptimisticPayments}
@@ -2003,11 +1967,6 @@ const styles = StyleSheet.create({
   },
   summaryValue: { fontSize: FontSize.lg, fontWeight: "800", color: "#fff" },
   underline: { textDecorationLine: "underline" },
-  onCardsText: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.85)",
-    marginBottom: Spacing.md,
-  },
   progressRow: {
     flexDirection: "row",
     justifyContent: "space-between",
