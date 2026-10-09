@@ -3861,7 +3861,7 @@ export function TaxRegimeCalculator() {
 
       {personalCAOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-slate-900/60 p-4 py-8 sm:p-6"
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-slate-900/60 p-4 py-8 sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby="personal-ca-title"

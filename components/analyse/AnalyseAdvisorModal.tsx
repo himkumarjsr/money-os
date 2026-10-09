@@ -27,7 +27,10 @@ export default function AnalyseAdvisorModal({
   useEffect(() => {
     if (!open) return;
     const unlock = lockBodyScroll();
+    // Hide the fixed mobile bottom nav so it can't cover Next / the scroll area.
+    document.body.dataset.analyseModalOpen = "true";
     return () => {
+      delete document.body.dataset.analyseModalOpen;
       unlock();
       clearBodyScrollLocks();
     };
@@ -41,7 +44,11 @@ export default function AnalyseAdvisorModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-slate-900/60 p-3 py-6 sm:p-6"
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-slate-900/60 p-3 py-6 sm:p-6"
+      style={{
+        paddingTop: "max(1.5rem, env(safe-area-inset-top))",
+        paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="analyse-advisor-title"
