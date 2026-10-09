@@ -36,7 +36,115 @@ describe("hasHomeLoan", () => {
 });
 
 describe("getUniversalCaps", () => {
-  it("returns fixed caps regardless of profile", () => {
+  const pct = (caps: Record<string, number>) =>
+    Object.fromEntries(
+      Object.entries(caps).map(([k, v]) => [k, Math.round(v * 100)]),
+    );
+  const total = (caps: Record<string, number>) =>
+    Math.round(Object.values(caps).reduce((a, b) => a + b, 0) * 100);
+
+  it("uses life-stage splits once Analyse answers exist", () => {
+    const base = { cityTier: "tier2", monthlySalary: 100000 } as const;
+    expect(
+      pct(getUniversalCaps({ ...base, lifeStage: "bachelor", selfAge: 25 })),
+    ).toEqual({ needs: 30, wants: 5, security: 7, loans: 30, investment: 28 });
+    expect(
+      pct(getUniversalCaps({ ...base, lifeStage: "bachelor", selfAge: 32 })),
+    ).toEqual({ needs: 30, wants: 5, security: 10, loans: 30, investment: 25 });
+    expect(
+      pct(getUniversalCaps({ ...base, lifeStage: "kids", selfAge: 35 })),
+    ).toEqual({ needs: 33, wants: 5, security: 12, loans: 28, investment: 22 });
+    expect(
+      pct(getUniversalCaps({ ...base, lifeStage: "senior", selfAge: 65 })),
+    ).toEqual({ needs: 40, wants: 7, security: 15, loans: 10, investment: 28 });
+  });
+
+  it("shifts Needs by income band for the city", () => {
+    const married = { lifeStage: "married", selfAge: 35 } as const;
+    expect(
+      pct(
+        getUniversalCaps({
+          ...married,
+          cityTier: "metro",
+          monthlySalary: 35000,
+        }),
+      ),
+    ).toEqual({ needs: 40, wants: 5, security: 10, loans: 25, investment: 20 });
+    expect(
+      pct(
+        getUniversalCaps({
+          ...married,
+          cityTier: "tier3",
+          monthlySalary: 35000,
+        }),
+      ),
+    ).toEqual({ needs: 30, wants: 5, security: 10, loans: 30, investment: 25 });
+    expect(
+      pct(
+        getUniversalCaps({
+          ...married,
+          cityTier: "metro",
+          monthlySalary: 350000,
+        }),
+      ),
+    ).toEqual({ needs: 25, wants: 5, security: 10, loans: 30, investment: 30 });
+  });
+
+  it("keeps floors and takes any shortfall from Needs", () => {
+    const caps = getUniversalCaps({
+      lifeStage: "kids",
+      selfAge: 38,
+      cityTier: "metro",
+      monthlySalary: 30000,
+      parentsSupport: 5000,
+      homeLoanEMI: 8000,
+    });
+    expect(pct(caps)).toEqual({
+      needs: 37,
+      wants: 5,
+      security: 15,
+      loans: 28,
+      investment: 15,
+    });
+    expect(total(caps)).toBe(100);
+  });
+
+  it("lowers Loans for ages 45 to 59", () => {
+    expect(
+      pct(
+        getUniversalCaps({
+          lifeStage: "married",
+          selfAge: 50,
+          cityTier: "tier2",
+          monthlySalary: 100000,
+        }),
+      ),
+    ).toEqual({ needs: 30, wants: 5, security: 10, loans: 25, investment: 30 });
+  });
+
+  it("every combination adds up to 100 and respects floors", () => {
+    for (const lifeStage of ["bachelor", "married", "kids", "senior"] as const)
+      for (const selfAge of [24, 35, 50, 65])
+        for (const cityTier of ["metro", "tier2", "tier3"] as const)
+          for (const monthlySalary of [15000, 80000, 400000])
+            for (const parentsSupport of [0, 5000])
+              for (const homeLoanEMI of [0, 20000]) {
+                const caps = getUniversalCaps({
+                  lifeStage,
+                  selfAge,
+                  cityTier,
+                  monthlySalary,
+                  parentsSupport,
+                  homeLoanEMI,
+                });
+                expect(total(caps)).toBe(100);
+                expect(caps.wants).toBeGreaterThanOrEqual(0.05 - 1e-9);
+                expect(caps.security).toBeGreaterThanOrEqual(0.07 - 1e-9);
+                expect(caps.investment).toBeGreaterThanOrEqual(0.15 - 1e-9);
+              }
+  });
+
+  it("returns the generic caps without Analyse answers", () => {
     expect(getUniversalCaps({})).toEqual(BUCKET_CAPS);
     expect(getUniversalCaps({ homeLoanEMI: 50000 } as never)).toEqual(
       BUCKET_CAPS,

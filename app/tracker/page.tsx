@@ -14,6 +14,7 @@ import {
   findSubcategory,
   normalizeTrackerBucket,
 } from "@/lib/tracker-categories";
+import { getUniversalCaps } from "@/lib/universal-buckets";
 import {
   TrackerIconBadge,
   TrackerIcon,
@@ -158,6 +159,14 @@ function TrackerContent() {
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analyseResult = useFinancialStore((s) => s.result);
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
+  // Budget caps follow the Analyse answers once they exist; otherwise the generic split.
+  const bucketCaps = useMemo(
+    () =>
+      getUniversalCaps(
+        analyseCompleted && lastSubmission ? lastSubmission : {},
+      ),
+    [analyseCompleted, lastSubmission],
+  );
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
       if (typeof window !== "undefined" && hasTrackerConsentLocal()) {
@@ -1816,8 +1825,12 @@ function TrackerContent() {
           .filter((t) => countsTowardTrackerTotals(t))
           .reduce((a, t) => a + Number(t.amount), 0);
         const isExpanded = expandedBucket === bucketKey;
+        const capPct =
+          bucketKey in bucketCaps
+            ? Math.round(bucketCaps[bucketKey as keyof typeof bucketCaps] * 100)
+            : cat.cap;
         const budgetAmount =
-          displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
+          displayIncome > 0 ? displayIncome * (capPct / 100) : 0;
         // Investment is a target to reach, not a limit — going over is good.
         const isTargetBucket = bucketKey === "investment";
         const overBudget =
@@ -1893,7 +1906,7 @@ function TrackerContent() {
                       }}
                     >
                       {bucketTxns.length} items
-                      {cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
+                      {capPct > 0 ? ` · ${capPct}% budget` : ""}
                     </div>
                   </div>
                 </div>

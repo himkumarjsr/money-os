@@ -445,6 +445,13 @@ function goalLabel(goal: FinancialProfile["primaryGoal"]): string {
   return goal.replaceAll("_", " ");
 }
 
+function loansCapPercent(
+  bucketRows: ReturnType<typeof getUniversalBucketRows>,
+): number {
+  const cap = bucketRows.find((r) => r.key === "loans")?.capPercent;
+  return Math.round((cap ?? BUCKET_CAPS.loans) * 100);
+}
+
 function buildIssues(params: {
   totalIncome: number;
   savingsRate: number;
@@ -632,12 +639,12 @@ function buildIssues(params: {
     });
   }
 
-  if (debtRatio <= getDebtSafeLimitPercent() + 1e-6) {
+  if (debtRatio <= loansCapPercent(bucketRows) + 1e-6) {
     issues.push({
       severityScore: 18,
       severity: "good",
       code: "loans_on_track",
-      message: `Loan bucket is ${debtRatio.toFixed(1)}% of income, within the ${getDebtSafeLimitPercent()}% ceiling.`,
+      message: `Loan bucket is ${debtRatio.toFixed(1)}% of income, within the ${loansCapPercent(bucketRows)}% ceiling.`,
     });
   }
 
@@ -701,7 +708,7 @@ function buildPlanSteps(
   switch (profile.primaryGoal) {
     case "clear_debt":
       push(
-        `Make debt payoff your default surplus use until the loan bucket falls well below the ${getDebtSafeLimitPercent()}% cap.`,
+        `Make debt payoff your default surplus use until the loan bucket falls well below the ${loansCapPercent(bucketRows)}% cap.`,
       );
       break;
     case "build_emergency_fund":

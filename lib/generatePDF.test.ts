@@ -5,6 +5,7 @@ import { COMPLETE_WHY, mergeEnginePriorityPlan } from "./fixPlanMerge";
 import { buildFixPlanPdfData } from "./fixPlanPdfData";
 import { buildFixPlanPdf, formatCapPercent } from "./generatePDF";
 import { buildPriorityPlan } from "./priorityEngine";
+import { getUniversalCaps } from "./universal-buckets";
 
 const LONG_ACTION =
   "From month 7, add a top-up for ~4.0 crore only (you already have 1.0Cr). Keep the old policy - income proof limits often block a second full policy at today's salary.";
@@ -62,19 +63,21 @@ describe("formatCapPercent", () => {
 
 describe("Fix Plan PDF text", () => {
   const { text, plan } = renderText();
+  const capLabels = Object.values(
+    getUniversalCaps(buildUserAnalyseScenarioProfile()),
+  ).map((c) => `${Math.round(c * 100)}%`);
 
   it("prints bucket caps as percents, not fractions", () => {
-    expect(text).toContain("30%");
+    expect(text).toContain(capLabels[0]);
     expect(text).not.toMatch(/^0\.\d+%$/m);
   });
 
-  it("prints all five budget buckets, including the 10% insurance row", () => {
+  it("prints all five budget buckets with their profile caps", () => {
     const table = text.slice(text.indexOf("Monthly Budget Allocation"));
     const labels = table.split("\n").slice(6, 36);
     for (const label of ["Needs", "Wants", "Insurance", "Loans", "Investment"])
       expect(labels).toContain(label);
-    for (const cap of ["30%", "5%", "10%", "25%"])
-      expect(labels).toContain(cap);
+    for (const cap of capLabels) expect(labels).toContain(cap);
   });
 
   it("labels the goal instead of printing the enum", () => {
