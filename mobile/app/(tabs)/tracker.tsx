@@ -39,6 +39,13 @@ import {
   normalizeTrackerBucket,
   type BucketType,
 } from "@/lib/tracker-categories";
+import {
+  learnCapsFromSpending,
+  monthSpendFromRows,
+  type LearnedAdjustment,
+  type MonthSpend,
+} from "@/lib/learned-caps";
+import { syncKv } from "@/lib/syncKv";
 import { getUniversalCaps } from "@/lib/universal-buckets";
 import { formatExpenseDate, localISODate } from "@/lib/localDate";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
@@ -95,6 +102,46 @@ function formatMasked(n: number, visible: boolean) {
     : "₹••••••";
 }
 
+const SMART_BUDGET_OFF_KEY = "finkoin_smart_budget_off";
+
+function SmartBudgetNote({
+  adjustments,
+  on,
+  onToggle,
+}: {
+  adjustments: LearnedAdjustment[];
+  on: boolean;
+  onToggle: (on: boolean) => void;
+}) {
+  const moved = adjustments.reduce((a, x) => a + x.movedToInvestment, 0);
+  return (
+    <View style={styles.smartNote}>
+      {on ? (
+        <>
+          <Text style={styles.smartNoteTitle}>
+            {`Smart budget: ₹${Math.round(moved).toLocaleString("en-IN")}/mo moved to Investments`}
+          </Text>
+          {adjustments.map((a) => (
+            <Text key={a.key} style={styles.smartNoteText}>
+              {`${a.key === "needs" ? "Needs" : "Wants"} stayed under budget for 3 months (avg ₹${Math.round(a.averageSpend).toLocaleString("en-IN")}), so its budget is now ${a.toPercent}% instead of ${a.fromPercent}%.`}
+            </Text>
+          ))}
+        </>
+      ) : (
+        <Text style={styles.smartNoteText}>
+          Smart budget is off. Your spending has stayed under budget for 3
+          months.
+        </Text>
+      )}
+      <Pressable onPress={() => onToggle(!on)} hitSlop={8}>
+        <Text style={styles.smartNoteAction}>
+          {on ? "Undo" : "Turn smart budget on"}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function TrackerScreen() {
   const user = useAuthStore((s) => s.user);
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
@@ -123,6 +170,11 @@ export default function TrackerScreen() {
   >([]);
   /** prev-2 + prev months — CC carry-forward + obligation learning only (never Safety Pulse). */
   const [ccBillHistory, setCcBillHistory] = useState<TrackerTxn[]>([]);
+  /** Needs / Wants spend for the 3 months before the selected one (newest first). */
+  const [learnHistory, setLearnHistory] = useState<MonthSpend[]>([]);
+  const [smartBudgetOff, setSmartBudgetOff] = useState(
+    () => syncKv.getItem(SMART_BUDGET_OFF_KEY) === "1",
+  );
   const [savedCards, setSavedCards] = useState<SavedCreditCard[]>([]);
   const [pendingCcPayCardId, setPendingCcPayCardId] = useState<string | null>(
     null,
@@ -270,7 +322,8 @@ export default function TrackerScreen() {
       try {
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
         const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
-        const [currentRes, prevRes, prev2Res] = await Promise.all([
+        const prev3 = previousCalendarMonth(prev2.monthIndex, prev2.year);
+        const [currentRes, prevRes, prev2Res, prev3Res] = await Promise.all([
           supabase
             .from("expense_transactions")
             .select("*")
@@ -292,6 +345,12 @@ export default function TrackerScreen() {
             .eq("month", prev2.monthName)
             .eq("year", prev2.year)
             .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", prev3.monthName)
+            .eq("year", prev3.year),
         ]);
         if (fetchReqId.current !== myId) return;
         const prevRows = ((prevRes.data as TrackerTxn[]) || []).map(
@@ -305,12 +364,21 @@ export default function TrackerScreen() {
         );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
+        const prev3Rows = ((prev3Res.data as TrackerTxn[]) || []).map(
+          normalizeTrackerBucket,
+        );
+        setLearnHistory(
+          [prevRows, prev2Rows, prev3Rows].map((rows) =>
+            monthSpendFromRows(rows),
+          ),
+        );
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker fetch failed", e);
         setTransactions([]);
         setPreviousTransactions([]);
         setCcBillHistory([]);
+        setLearnHistory([]);
       } finally {
         if (fetchReqId.current === myId) setLoading(false);
       }
@@ -783,6 +851,20 @@ export default function TrackerScreen() {
     incomePlan.displayTotal > 0
       ? incomePlan.displayTotal
       : monthlyIncome || profileMonthlyFromDb;
+
+  // Lower Needs / Wants when the last 3 months stayed under them; the freed
+  // share goes to Investment. Users can undo it from the note above the buckets.
+  const learnedCaps = learnCapsFromSpending(
+    bucketCaps,
+    displayIncome,
+    learnHistory,
+  );
+  const effectiveCaps = smartBudgetOff ? bucketCaps : learnedCaps.caps;
+  const setSmartBudget = (on: boolean) => {
+    setSmartBudgetOff(!on);
+    if (on) syncKv.removeItem(SMART_BUDGET_OFF_KEY);
+    else syncKv.setItem(SMART_BUDGET_OFF_KEY, "1");
+  };
 
   const totalSpent = sumCashSpend(transactions);
   const onCardsSpend = sumOnCardsSpend(transactions);
@@ -1264,6 +1346,14 @@ export default function TrackerScreen() {
         </View>
 
         {/* Bucket sections */}
+        {learnedCaps.adjustments.length > 0 ? (
+          <SmartBudgetNote
+            adjustments={learnedCaps.adjustments}
+            on={!smartBudgetOff}
+            onToggle={setSmartBudget}
+          />
+        ) : null}
+
         {BUCKETS.map((bucketKey) => {
           const cat = TRACKER_CATEGORIES[bucketKey];
           const bucketTxns = transactions.filter((t) => t.bucket === bucketKey);
@@ -1272,9 +1362,9 @@ export default function TrackerScreen() {
             .reduce((a, t) => a + Number(t.amount), 0);
           const isExpanded = expandedBucket === bucketKey;
           const capPct =
-            bucketKey in bucketCaps
+            bucketKey in effectiveCaps
               ? Math.round(
-                  bucketCaps[bucketKey as keyof typeof bucketCaps] * 100,
+                  effectiveCaps[bucketKey as keyof typeof effectiveCaps] * 100,
                 )
               : cat.cap;
           const budgetAmount =
@@ -1744,6 +1834,27 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   bucketProgressFill: { height: "100%", borderRadius: 3 },
+  smartNote: {
+    backgroundColor: "#E1F5EE",
+    borderColor: "#BFE6D6",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+  },
+  smartNoteTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#085041",
+    marginBottom: 4,
+  },
+  smartNoteText: { fontSize: 13, color: "#085041", lineHeight: 19 },
+  smartNoteAction: {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#534AB7",
+  },
   overBudgetText: {
     fontSize: 11,
     color: Colors.error,
