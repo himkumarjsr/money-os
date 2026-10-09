@@ -24,6 +24,7 @@ import {
   getUnallocatedIncome,
   getUniversalBucketActuals,
   getUniversalCaps,
+  smartBudgetSummary,
 } from "@/lib/universal-buckets";
 import { getBucketBreakdown } from "@/lib/bucket-breakdown";
 import {
@@ -56,7 +57,8 @@ export default function AnalyseResultPage() {
 
   useRestoreAnalyseSnapshot(user?.id);
   useEffect(() => {
-    if (user?.id) void useObligationStore.getState().syncLoansToAnalyse(user.id);
+    if (user?.id)
+      void useObligationStore.getState().syncLoansToAnalyse(user.id);
   }, [user?.id]);
 
   const analysis = useMemo(() => {
@@ -184,6 +186,7 @@ export default function AnalyseResultPage() {
   const totalOutflow = getInHandOutflow(profile);
   const amountLeftInHand = getUnallocatedIncome(profile);
   const caps = getUniversalCaps(profile);
+  const smartNote = smartBudgetSummary(profile);
   const buckets = (
     [
       {
@@ -523,6 +526,11 @@ export default function AnalyseResultPage() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#534AB7]">
               Category caps vs actual
             </p>
+            {smartNote ? (
+              <p className="mb-3 rounded-xl bg-[#E1F5EE] px-3 py-2 text-xs font-medium leading-relaxed text-[#085041]">
+                {smartNote}
+              </p>
+            ) : null}
 
             <div className="space-y-3 md:hidden">
               {buckets.map((b) => {

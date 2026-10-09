@@ -5,12 +5,14 @@ import {
   getInsuranceCriticalFloor,
   getInsuranceGuideline,
   getInsurancePremiumsMonthly,
+  getProfileCaps,
   getUnallocatedIncome,
   getUniversalBucketActuals,
   getUniversalBucketRows,
   getUniversalBucketStatus,
   getUniversalCaps,
   hasHomeLoan,
+  smartBudgetSummary,
 } from "./universal-buckets";
 
 describe("constants", () => {
@@ -396,5 +398,53 @@ describe("insurance guidelines", () => {
     expect(getInsuranceCriticalFloor(100000)).toBe(2000);
     expect(getInsuranceGuideline(0)).toBe(0);
     expect(getInsuranceCriticalFloor(0)).toBe(0);
+  });
+});
+
+describe("smart budget", () => {
+  const profile = {
+    cityTier: "tier2",
+    monthlySalary: 100000,
+    lifeStage: "bachelor",
+    selfAge: 32,
+  } as const;
+  const baseCaps = getProfileCaps(profile);
+  const smartBudget = {
+    baseCaps,
+    caps: { ...baseCaps, needs: 0.2, investment: 0.35 },
+    adjustments: [
+      {
+        key: "needs" as const,
+        fromPercent: 30,
+        toPercent: 20,
+        averageSpend: 18000,
+        movedToInvestment: 10000,
+      },
+    ],
+    enabled: true,
+    computedAt: "2026-10-01T00:00:00.000Z",
+  };
+
+  it("uses the learned caps when it is on and matches the profile", () => {
+    const caps = getUniversalCaps({ ...profile, smartBudget });
+    expect(caps.needs).toBeCloseTo(0.2);
+    expect(caps.investment).toBeCloseTo(0.35);
+    expect(smartBudgetSummary({ ...profile, smartBudget })).toContain(
+      "Needs 30% to 20%",
+    );
+  });
+
+  it("falls back to the profile caps when turned off", () => {
+    const data = {
+      ...profile,
+      smartBudget: { ...smartBudget, enabled: false },
+    };
+    expect(getUniversalCaps(data)).toEqual(baseCaps);
+    expect(smartBudgetSummary(data)).toBeNull();
+  });
+
+  it("ignores a smart budget learned from older Analyse answers", () => {
+    const data = { ...profile, lifeStage: "kids" as const, smartBudget };
+    expect(getUniversalCaps(data)).toEqual(getProfileCaps(data));
   });
 });

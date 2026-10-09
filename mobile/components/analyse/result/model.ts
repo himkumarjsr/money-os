@@ -17,6 +17,7 @@ import {
   getEpfContributionMonthly,
   getInHandOutflow,
   getUnallocatedIncome,
+  smartBudgetSummary,
   getUniversalBucketActuals,
 } from "@/lib/universal-buckets";
 import { getBucketBreakdown } from "@/lib/bucket-breakdown";
@@ -199,6 +200,7 @@ export function buildResultModel(
     epfMonthly,
     totalOutflow,
     amountLeftInHand,
+    smartNote: smartBudgetSummary(profile),
     assets: analysis.totalAssets || 0,
     liabilities: analysis.totalLiabilities || 0,
     netWorth: analysis.netWorth || 0,
