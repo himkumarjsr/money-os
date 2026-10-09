@@ -55,12 +55,17 @@ type RazorpayFailedPayload = {
 
 type RazorpayCheckoutInstance = {
   open: () => void;
-  on?: (event: string, handler: (response: RazorpayFailedPayload) => void) => void;
+  on?: (
+    event: string,
+    handler: (response: RazorpayFailedPayload) => void,
+  ) => void;
 };
 
 declare global {
   interface Window {
-    Razorpay?: new (options: RazorpayConstructorOptions) => RazorpayCheckoutInstance;
+    Razorpay?: new (
+      options: RazorpayConstructorOptions,
+    ) => RazorpayCheckoutInstance;
   }
 }
 
@@ -81,7 +86,8 @@ function loadRazorpayScript(): Promise<void> {
       if (window.Razorpay) resolve();
       else reject(new Error("Razorpay failed to initialize."));
     };
-    script.onerror = () => reject(new Error("Failed to load Razorpay checkout script."));
+    script.onerror = () =>
+      reject(new Error("Failed to load Razorpay checkout script."));
     document.body.appendChild(script);
   });
 }
@@ -143,7 +149,10 @@ export function PaywallModal({
     Analytics.paymentStarted(99);
     try {
       const cfgRes = await apiFetch("/api/razorpay/checkout-config");
-      const cfgJson = (await cfgRes.json()) as { keyId?: string; error?: string };
+      const cfgJson = (await cfgRes.json()) as {
+        keyId?: string;
+        error?: string;
+      };
       if (!cfgRes.ok || !cfgJson.keyId) {
         throw new Error(cfgJson.error || "Payments are not configured.");
       }
@@ -172,7 +181,9 @@ export function PaywallModal({
         const detail = orderJson.detail?.trim();
         const headline = orderJson.error?.trim();
         const combined =
-          detail && headline && detail !== headline ? `${headline}: ${detail}` : detail || headline;
+          detail && headline && detail !== headline
+            ? `${headline}: ${detail}`
+            : detail || headline;
         throw new Error(combined || "Could not start checkout.");
       }
 
@@ -220,9 +231,14 @@ export function PaywallModal({
               }),
             });
 
-            const verifyJson = (await verifyRes.json()) as { ok?: boolean; error?: string };
+            const verifyJson = (await verifyRes.json()) as {
+              ok?: boolean;
+              error?: string;
+            };
             if (!verifyRes.ok || !verifyJson.ok) {
-              throw new Error(verifyJson.error || "Payment verification failed.");
+              throw new Error(
+                verifyJson.error || "Payment verification failed.",
+              );
             }
 
             setSubscription("pro");
@@ -259,7 +275,7 @@ export function PaywallModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="paywall-title"
@@ -273,7 +289,10 @@ export function PaywallModal({
             <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EEEDFE] text-lg font-semibold text-[#534AB7]">
               F
             </div>
-            <h2 id="paywall-title" className="text-xl font-semibold text-slate-900">
+            <h2
+              id="paywall-title"
+              className="text-xl font-semibold text-slate-900"
+            >
               {title}
             </h2>
             <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
@@ -289,16 +308,22 @@ export function PaywallModal({
         </div>
 
         <p className="mt-3 text-xs font-medium leading-relaxed text-[#454442]">
-          Finkoin Keys (FK) are rewards for activity on Finkoin. They do not reduce this unlock price and are not tied to buying any product here.
+          Finkoin Keys (FK) are rewards for activity on Finkoin. They do not
+          reduce this unlock price and are not tied to buying any product here.
         </p>
 
         <div className="mt-4 rounded-2xl border border-[#E8E6F0] bg-[#FAFAFE] p-4">
-          <p className="text-xs uppercase tracking-wide text-[#7A7871]">Price</p>
+          <p className="text-xs uppercase tracking-wide text-[#7A7871]">
+            Price
+          </p>
           <p className="text-2xl font-bold text-[#111110]">{priceLabel}</p>
         </div>
 
         {rzpError ? (
-          <p className="mt-3 rounded-xl bg-[#FDEDEC] px-3 py-2 text-sm text-[#791F1F]" role="alert">
+          <p
+            className="mt-3 rounded-xl bg-[#FDEDEC] px-3 py-2 text-sm text-[#791F1F]"
+            role="alert"
+          >
             {rzpError}
           </p>
         ) : null}
@@ -322,7 +347,9 @@ export function PaywallModal({
           })}
         </button>
 
-        <p className="mt-3 text-center text-xs text-[#9B9A94]">Educational only.</p>
+        <p className="mt-3 text-center text-xs text-[#9B9A94]">
+          Educational only.
+        </p>
       </div>
     </div>
   );
