@@ -40,6 +40,7 @@ export default function PremiumRdCard({
 }) {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "added" | "error">("idle");
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const plan = useMemo(() => buildPremiumRdPlan(profile), [profile]);
   const rows = useMemo(() => buildPremiumRdObligations(plan), [plan]);
 
@@ -55,11 +56,12 @@ export default function PremiumRdCard({
   const add = async () => {
     if (!userId || rows.length === 0) return;
     setSaving(true);
-    const ok = await useObligationStore
+    const error = await useObligationStore
       .getState()
       .saveAnalyseRdObligations(userId, rows);
     setSaving(false);
-    setStatus(ok ? "added" : "error");
+    setErrorDetail(error);
+    setStatus(error ? "error" : "added");
   };
 
   return (
@@ -154,6 +156,7 @@ export default function PremiumRdCard({
           {status === "error" ? (
             <p className="mt-1 text-xs text-[#E24B4A]">
               Couldn&apos;t add it. Please try again.
+              {errorDetail ? ` (${errorDetail})` : ""}
             </p>
           ) : null}
         </div>

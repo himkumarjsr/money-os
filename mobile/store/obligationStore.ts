@@ -15,7 +15,8 @@ import {
   type UnifiedLoan,
 } from "@/lib/loanObligationSync";
 import {
-  PREMIUM_RD_SOURCE,
+  PREMIUM_RD_TITLE,
+  PREMIUM_SAVINGS_TITLE,
   type PremiumRdObligation,
 } from "@/lib/premiumRdPlan";
 import { getSupabase } from "@/lib/supabase";
@@ -149,7 +150,7 @@ interface ObligationState {
   saveAnalyseRdObligations: (
     userId: string,
     rows: PremiumRdObligation[],
-  ) => Promise<boolean>;
+  ) => Promise<string | null>;
   /** Tracker → Analyse: fold Tracker loan EMIs into the saved report. */
   syncLoansToAnalyse: (userId: string) => Promise<void>;
   /** Syncs, then reports when the numbers were saved, loan drift, and imported loans missing details. */
@@ -863,42 +864,71 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
   saveAnalyseRdObligations: async (userId, rows) => {
     const supabase = getSupabase();
     const now = new Date().toISOString();
+    const rdTitles = [PREMIUM_RD_TITLE, PREMIUM_SAVINGS_TITLE];
+    const { data: existingRows } = await supabase
+      .from("financial_obligations")
+      .select("id,title")
+      .eq("user_id", userId)
+      .in("title", rdTitles);
+    const existing = (existingRows ?? []) as { id: string; title: string }[];
+
     for (const row of rows) {
-      // Same unique key as the health-check sync, but update: the amount
-      // follows the latest plan.
-      const { data, error } = await supabase
-        .from("financial_obligations")
-        .upsert(
-          { ...row, user_id: userId, updated_at: now },
-          { onConflict: "user_id,title,category" },
-        )
-        .select("id")
-        .single();
-      if (error || !data) {
-        console.error("saveAnalyseRdObligations upsert error:", error);
-        return false;
+      // Older databases may reject the newer category/source values with a
+      // check constraint, so fall back to values every database accepts.
+      const variants = [
+        row,
+        { ...row, source: "health_check" },
+        { ...row, category: "other", source: "health_check" },
+      ];
+      const match = existing.find((e) => e.title === row.title);
+      let savedId: string | null = null;
+      let lastError: { code?: string; message?: string } | null = null;
+      for (const variant of variants) {
+        const payload = { ...variant, user_id: userId, updated_at: now };
+        const res = match
+          ? await supabase
+              .from("financial_obligations")
+              .update(payload)
+              .eq("id", match.id)
+              .select("id")
+              .single()
+          : await supabase
+              .from("financial_obligations")
+              .insert(payload)
+              .select("id")
+              .single();
+        if (!res.error && res.data) {
+          savedId = (res.data as { id: string }).id;
+          break;
+        }
+        lastError = res.error;
+        if (res.error?.code !== "23514") break;
+      }
+      if (!savedId) {
+        console.error("saveAnalyseRdObligations save error:", lastError);
+        return lastError?.message || "Unknown error";
       }
       await supabase
         .from("obligation_checklist")
         .update({ expected_amount: row.amount })
-        .eq("obligation_id", (data as { id: string }).id)
+        .eq("obligation_id", savedId)
         .in("status", ["pending", "skipped"]);
     }
 
     const keep = new Set(rows.map((r) => r.title));
-    const { data: existing } = await supabase
+    const { data: active } = await supabase
       .from("financial_obligations")
       .select("id,title")
       .eq("user_id", userId)
-      .eq("source", PREMIUM_RD_SOURCE)
+      .in("title", rdTitles)
       .eq("is_active", true);
-    for (const ob of (existing ?? []) as { id: string; title: string }[]) {
+    for (const ob of (active ?? []) as { id: string; title: string }[]) {
       if (!keep.has(ob.title)) await get().closeObligation(ob.id);
     }
 
     await get().generateChecklist(userId);
     await get().fetchObligations(userId);
-    return true;
+    return null;
   },
 
   syncLoansToAnalyse: (userId) => {
