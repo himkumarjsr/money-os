@@ -1,4 +1,5 @@
 import { isCreditCardCharge } from "@/lib/trackerCreditCards";
+import { isPaidFromSavings } from "@/lib/trackerSavingsPayment";
 
 export type TrackerIconName =
   | "home"
@@ -206,6 +207,12 @@ export const TRACKER_CATEGORIES = {
         label: "Insurance premium",
         icon: "shield" as const,
       },
+      /** Monthly RD / savings for yearly premiums (Security, not Investment). */
+      {
+        id: "premium_rd",
+        label: "RD for insurance premiums",
+        icon: "calendar" as const,
+      },
       { id: "others", label: "Others", icon: "other" as const },
     ],
   },
@@ -332,6 +339,7 @@ export function countsTowardTrackerTotals(txn: {
   bucket?: string | null;
   payment_method?: string | null;
 }): boolean {
+  if (isPaidFromSavings(txn)) return false;
   const sub = txn.subcategory || txn.category;
   if (sub && TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES.has(sub)) return false;
   // Card-*as-payment* purchases stay visible in lists but never enter bucket

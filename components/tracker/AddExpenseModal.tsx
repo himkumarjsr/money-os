@@ -28,6 +28,10 @@ import {
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import {
+  isPaidFromSavings,
+  RD_SAVINGS_PAYMENT_METHOD,
+} from "@/lib/trackerSavingsPayment";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
@@ -207,6 +211,17 @@ export default function AddExpenseModal({
       setShowAddCard(false);
     }
   }, [bucket, subcategory, paymentMethod]);
+
+  // "Paid from RD savings" only applies to Security (insurance premiums).
+  useEffect(() => {
+    if (
+      bucket &&
+      bucket !== "security" &&
+      isPaidFromSavings({ payment_method: paymentMethod })
+    ) {
+      setPaymentMethod("upi");
+    }
+  }, [bucket, paymentMethod]);
 
   const selectedCard = useMemo(
     () => savedCards.find((c) => c.id === selectedCardId) ?? null,
@@ -991,6 +1006,41 @@ export default function AddExpenseModal({
                   </div>
                 ) : null}
               </div>
+            ) : null}
+
+            {bucket === "security" ? (
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  marginTop: 12,
+                  fontSize: 13,
+                  color: "#111110",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isPaidFromSavings({ payment_method: paymentMethod })}
+                  onChange={(e) => {
+                    setPaymentMethod(
+                      e.target.checked ? RD_SAVINGS_PAYMENT_METHOD : "upi",
+                    );
+                    setShowAddCard(false);
+                  }}
+                  style={{ marginTop: 2 }}
+                />
+                <span>
+                  Paid from my RD savings
+                  <span
+                    style={{ display: "block", fontSize: 12, color: "#5F5E5A" }}
+                  >
+                    Money you already set aside each month, so it won&apos;t
+                    count again.
+                  </span>
+                </span>
+              </label>
             ) : null}
           </div>
         ) : null}

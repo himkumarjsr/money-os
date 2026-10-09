@@ -1,28 +1,39 @@
 "use client";
 
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
-import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
+import { TRACKER_CATEGORIES, type BucketType } from "@/lib/tracker-categories";
+import { buildMonthSummaryRows } from "@/lib/trackerMonthSummary";
+import type { UniversalBucketKey } from "@/lib/universal-buckets";
 
 export default function MonthSummary({
   title,
   bucketTotals,
   totalSpent,
+  income,
+  caps,
 }: {
   title: string;
   bucketTotals: Record<string, number>;
   totalSpent: number;
+  /** Month income; budgets are a share of it (share of spend when 0). */
+  income: number;
+  /** Whole-percent caps from `monthSummaryCaps`. */
+  caps: Record<UniversalBucketKey, number>;
 }) {
+  const rows = buildMonthSummaryRows({
+    bucketTotals,
+    totalSpent,
+    income,
+    caps,
+  });
   return (
     <div className="mb-5 rounded-2xl border border-[#E8E6F0] bg-white p-4 sm:p-4">
       <div className="mb-3 text-[11px] font-bold uppercase tracking-wide text-[#534AB7] sm:mb-[14px] sm:text-xs">
         {title}
       </div>
-      {Object.entries(TRACKER_CATEGORIES)
-        .filter(([key]) => key !== "income")
-        .map(([key, cat]) => {
-          const amount = bucketTotals[key] || 0;
-          const percentage = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
-          const isOverBudget = cat.cap > 0 && percentage > cat.cap;
+      {rows.map(
+        ({ key, amount, capPct, isTarget, fillPct, over: isOverBudget }) => {
+          const cat = TRACKER_CATEGORIES[key as BucketType];
 
           return (
             <div key={key} className="mb-3 last:mb-0 sm:mb-[14px]">
@@ -34,9 +45,9 @@ export default function MonthSummary({
                   <span className="min-w-0 font-medium leading-snug text-[#111110]">
                     {cat.label}
                   </span>
-                  {cat.cap > 0 ? (
+                  {capPct > 0 ? (
                     <span className="shrink-0 text-[10px] font-semibold text-[#111110] opacity-90 sm:text-[11px]">
-                      ({cat.cap}% cap)
+                      ({capPct}% {isTarget ? "target" : "cap"})
                     </span>
                   ) : null}
                 </div>
@@ -57,14 +68,15 @@ export default function MonthSummary({
                 <div
                   className="h-full rounded-full transition-[width] duration-300"
                   style={{
-                    width: `${Math.min(percentage, 100)}%`,
+                    width: `${fillPct}%`,
                     background: isOverBudget ? "#E24B4A" : cat.color,
                   }}
                 />
               </div>
             </div>
           );
-        })}
+        },
+      )}
     </div>
   );
 }

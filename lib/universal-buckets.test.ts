@@ -448,3 +448,53 @@ describe("smart budget", () => {
     expect(getUniversalCaps(data)).toEqual(getProfileCaps(data));
   });
 });
+
+describe("LIC / endowment premiums marked as investment", () => {
+  const rows = [
+    {
+      policyName: "LIC",
+      premiumAmount: 24000,
+      frequency: "yearly" as const,
+      countAsInvestment: true,
+    },
+    {
+      policyName: "Accident",
+      premiumAmount: 300,
+      frequency: "monthly" as const,
+    },
+  ];
+
+  it("count under Investment, not Security (form values)", () => {
+    const data = {
+      monthlySalary: 100000,
+      hasOtherInsurance: true,
+      otherInsurancePremiums: rows,
+    };
+    const actuals = getUniversalBucketActuals(data);
+    expect(actuals.security).toBe(300);
+    expect(actuals.investment).toBe(2000);
+    expect(getInsurancePremiumsMonthly(data)).toBe(300);
+  });
+
+  it("use the stored monthly totals on a saved profile", () => {
+    const actuals = getUniversalBucketActuals({
+      hasOtherInsurance: true,
+      otherInsurancePremiums: rows,
+      otherInsurancePremiumMonthly: 300,
+      licEndowmentPremiumMonthly: 2000,
+    });
+    expect(actuals.security).toBe(300);
+    expect(actuals.investment).toBe(2000);
+  });
+
+  it("leave old rows without the flag in Security", () => {
+    const actuals = getUniversalBucketActuals({
+      hasOtherInsurance: true,
+      otherInsurancePremiums: [
+        { policyName: "LIC", premiumAmount: 1200, frequency: "monthly" },
+      ],
+    });
+    expect(actuals.security).toBe(1200);
+    expect(actuals.investment).toBe(0);
+  });
+});

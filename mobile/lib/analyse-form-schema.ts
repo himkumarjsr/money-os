@@ -310,7 +310,11 @@ export interface FinancialProfile {
     maturityYear?: number;
     renewalMonth?: number;
     renewalDay?: number;
+    /** LIC / endowment with a maturity value: the premium counts as Investment. */
+    countAsInvestment?: boolean;
   }>;
+  /** Monthly premiums of policies marked `countAsInvestment` (Investment bucket). */
+  licEndowmentPremiumMonthly?: number;
 
   savingsAccountBalance: number;
   fdValue?: number;
@@ -551,6 +555,8 @@ const otherInsurancePremiumSchema = z.object({
   maturityYear: optionalWholeNumber,
   renewalMonth: optionalWholeNumber,
   renewalDay: optionalWholeNumber,
+  /** Optional so older payloads parse unchanged (missing = insurance). */
+  countAsInvestment: z.boolean().optional(),
 });
 
 const postOfficeSchemeSchema = z.object({
@@ -1242,6 +1248,26 @@ export function findFirstInvalidAnalyseStep(
   };
 }
 
+/**
+ * Monthly total of "other insurance" rows: the LIC / endowment ones marked
+ * `countAsInvestment` (asInvestment = true) or the rest.
+ */
+export function otherPremiumRowsMonthly(
+  rows: ReadonlyArray<{
+    premiumAmount?: number;
+    premiumInput?: number;
+    frequency?: PremiumFrequency;
+    countAsInvestment?: boolean;
+  }>,
+  asInvestment: boolean,
+): number {
+  return rows.reduce((total, r) => {
+    if (Boolean(r.countAsInvestment) !== asInvestment) return total;
+    const amount = r.premiumAmount ?? r.premiumInput;
+    return total + (toMonthlyEquivalent(amount, r.frequency) ?? 0);
+  }, 0);
+}
+
 export function toMonthlyEquivalent(
   amount: number | undefined,
   frequency: PremiumFrequency | undefined,
@@ -1358,6 +1384,7 @@ export function fillDraftGapsFromProfile(
       premiumAmount:
         p.premiumAmount ?? (p as { premiumInput?: number }).premiumInput,
       frequency: p.frequency ?? "monthly",
+      ...(p.countAsInvestment ? { countAsInvestment: true } : {}),
     }));
   }
   return next;
@@ -1443,6 +1470,7 @@ function migrateLegacyAnalysePartial(
       renewalMonth:
         row.renewalMonth == null ? undefined : Number(row.renewalMonth),
       renewalDay: row.renewalDay == null ? undefined : Number(row.renewalDay),
+      ...(row.countAsInvestment === true ? { countAsInvestment: true } : {}),
     }));
     delete out.otherInsurancePolicies;
   }
@@ -1507,6 +1535,9 @@ export function mergeAnalyseDraftWithProfile(
         })(),
         renewalMonth: d?.renewalMonth ?? p?.renewalMonth,
         renewalDay: d?.renewalDay ?? p?.renewalDay,
+        ...((d?.countAsInvestment ?? p?.countAsInvestment)
+          ? { countAsInvestment: true }
+          : {}),
       };
     });
   }
@@ -1890,6 +1921,7 @@ export function financialProfileToFormValues(
         maturityYear?: number;
         renewalMonth?: number;
         renewalDay?: number;
+        countAsInvestment?: boolean;
       };
       return {
         id: r.id ?? newAnalyseRowId(),
@@ -1900,6 +1932,7 @@ export function financialProfileToFormValues(
         maturityYear: r.maturityYear ?? 0,
         renewalMonth: r.renewalMonth,
         renewalDay: r.renewalDay,
+        ...(r.countAsInvestment ? { countAsInvestment: true } : {}),
       };
     }),
     otherInsurancePremiumInput:
@@ -2446,6 +2479,7 @@ export function normalizeAnalyseFormValues(
             maturityYear?: number;
             renewalMonth?: number;
             renewalDay?: number;
+            countAsInvestment?: boolean;
           };
           const amount = r.premiumAmount ?? r.premiumInput;
           const freq = r.frequency ?? "monthly";
@@ -2459,22 +2493,18 @@ export function normalizeAnalyseFormValues(
             maturityYear: r.maturityYear ?? 0,
             renewalMonth: r.renewalMonth,
             renewalDay: r.renewalDay,
+            ...(r.countAsInvestment ? { countAsInvestment: true } : {}),
           };
         })
       : [],
     otherInsurancePremiumMonthly: form.hasOtherInsurance
       ? (() => {
           const rows = form.otherInsurancePremiums ?? [];
-          const fromPolicies = rows.reduce((total, row) => {
-            const r = row as {
-              premiumAmount?: number;
-              premiumInput?: number;
-              frequency?: PremiumFrequency;
-            };
-            const amount = r.premiumAmount ?? r.premiumInput;
-            return total + (toMonthlyEquivalent(amount, r.frequency) ?? 0);
-          }, 0);
-          if (fromPolicies > 0) return fromPolicies;
+          // LIC / endowment rows count under Investment, not insurance.
+          const fromPolicies = otherPremiumRowsMonthly(rows, false);
+          if (fromPolicies > 0 || otherPremiumRowsMonthly(rows, true) > 0) {
+            return fromPolicies;
+          }
           return (
             toMonthlyEquivalent(
               form.otherInsurancePremiumInput,
@@ -2483,6 +2513,9 @@ export function normalizeAnalyseFormValues(
           );
         })()
       : undefined,
+    licEndowmentPremiumMonthly: form.hasOtherInsurance
+      ? otherPremiumRowsMonthly(form.otherInsurancePremiums ?? [], true)
+      : 0,
     otherInsurancePremiumInput: form.hasOtherInsurance
       ? form.otherInsurancePremiumInput
       : undefined,

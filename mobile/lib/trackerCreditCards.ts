@@ -4,6 +4,7 @@
  */
 
 import { getSupabase } from "@/lib/supabase";
+import { isPaidFromSavings } from "@/lib/trackerSavingsPayment";
 import { syncKv } from "@/lib/syncKv";
 
 export const TRACKER_CONSENT_VERSION = "v2";
@@ -205,6 +206,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   netbanking: "Net banking",
   wallet: "Wallet",
   cheque: "Cheque",
+  rd_savings: "RD savings",
   card: "Credit card",
   credit_card: "Credit card",
   creditcard: "Credit card",
@@ -264,6 +266,7 @@ export function countsTowardCashSpend(txn: {
   payment_method?: string | null;
 }): boolean {
   if (txn.bucket === "income") return false;
+  if (isPaidFromSavings(txn)) return false;
 
   const sub = txn.subcategory || txn.category;
   // Explicit: Loans & Credit → Credit card payment (bill pay).

@@ -5,14 +5,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Path, Text as SvgText } from "react-native-svg";
-import type {
-  SpeedoMeterCaps,
-  SpeedoMeterProps,
+import {
+  investStatus,
+  investmentTargetPct,
+  type SpeedoMeterCaps,
+  type SpeedoMeterProps,
 } from "@/lib/speedo-meter-buckets";
 import { inr } from "./format";
-
-const INVEST_FLOOR_PCT = 20;
-const INVEST_WARN_PCT = 17;
 
 function resolveCaps(
   hasHomeLoan: boolean,
@@ -128,12 +127,6 @@ function spendStatus(actualPct: number, capPct: number): Status {
   return "critical";
 }
 
-function investStatus(actualPct: number): Status {
-  if (actualPct >= INVEST_FLOOR_PCT - 1e-6) return "good";
-  if (actualPct >= INVEST_WARN_PCT - 1e-6) return "warning";
-  return "critical";
-}
-
 function statusColor(st: Status): string {
   if (st === "good") return COLORS.green;
   if (st === "warning") return COLORS.amber;
@@ -239,7 +232,7 @@ function GaugeSvg({
   const status: Status =
     kind === "spend"
       ? spendStatus(actualPct, capFraction * 100)
-      : investStatus(actualPct);
+      : investStatus(actualPct, investmentTargetPct(capFraction));
   const needleCol = statusColor(status);
 
   const zonePaths =
@@ -494,7 +487,8 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
   const stW = spendStatus(pct.wants, c.wants * 100);
   const stS = spendStatus(pct.security, c.security * 100);
   const stL = spendStatus(pct.loans, c.loans * 100);
-  const stI = investStatus(pct.investment);
+  const investTarget = investmentTargetPct(c.investment);
+  const stI = investStatus(pct.investment, investTarget);
   const fmtPct = (v: number) => (income > 0 ? v.toFixed(0) : "—");
 
   const needsCapPct = Math.round(c.needs * 100);
@@ -526,11 +520,11 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
   if (spendStatus(pct.loans, loansCapPct) !== "good") {
     issues.push(`Loan outflows exceed the ${loansCapPct}% safety guide.`);
   }
-  if (investStatus(pct.investment) !== "good") {
+  if (stI !== "good") {
     issues.push(
-      investStatus(pct.investment) === "critical"
-        ? `Investment flow is below ${INVEST_FLOOR_PCT}% of income — increase long-term contributions when possible.`
-        : `Investment flow is under ${INVEST_FLOOR_PCT}% — try to step up toward ${INVEST_FLOOR_PCT}% of income.`,
+      stI === "critical"
+        ? `Investment flow is below 15% of income — increase long-term contributions when possible.`
+        : `Investment flow is under your ${investTarget}% target — try to step up toward it.`,
     );
   }
   const t = needs + wants + security + loans + investment;
@@ -622,7 +616,7 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
             income={income}
             capFraction={c.investment}
             rangeMultiplier={INVEST_RANGE_MULT}
-            capLabel={`min ${INVEST_FLOOR_PCT}% · cap ${Math.round(c.investment * 100)}%`}
+            capLabel={`target ${investTarget}%`}
             needleFrac={anim.investment}
           />
         </GaugeColumn>

@@ -14,6 +14,10 @@ import {
   type LoanObligationLike,
   type UnifiedLoan,
 } from "@/lib/loanObligationSync";
+import {
+  PREMIUM_RD_SOURCE,
+  type PremiumRdObligation,
+} from "@/lib/premiumRdPlan";
 import { getSupabase } from "@/lib/supabase";
 import {
   ANALYSE_SNAPSHOT_VERSION,
@@ -138,6 +142,14 @@ interface ObligationState {
     submission: ObligationSyncProfile,
     previous?: FinancialProfile | null,
   ) => Promise<void>;
+  /**
+   * Analyse result "add to my monthly obligations" for the insurance-premium
+   * RD: creates or updates the rows and closes ones the plan no longer needs.
+   */
+  saveAnalyseRdObligations: (
+    userId: string,
+    rows: PremiumRdObligation[],
+  ) => Promise<boolean>;
   /** Tracker → Analyse: fold Tracker loan EMIs into the saved report. */
   syncLoansToAnalyse: (userId: string) => Promise<void>;
   /** Syncs, then reports when the numbers were saved, loan drift, and imported loans missing details. */
@@ -156,7 +168,8 @@ export type LoanReportStatus = {
   needDetails: UnifiedLoan[];
 };
 
-const LOAN_COLUMNS = "id,title,category,amount,due_day,is_active,source,updated_at";
+const LOAN_COLUMNS =
+  "id,title,category,amount,due_day,is_active,source,updated_at";
 
 async function fetchLoanObligations(
   userId: string,
@@ -845,6 +858,47 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
     await get().generateChecklist(userId);
     await get().fetchObligations(userId);
+  },
+
+  saveAnalyseRdObligations: async (userId, rows) => {
+    const supabase = getSupabase();
+    const now = new Date().toISOString();
+    for (const row of rows) {
+      // Same unique key as the health-check sync, but update: the amount
+      // follows the latest plan.
+      const { data, error } = await supabase
+        .from("financial_obligations")
+        .upsert(
+          { ...row, user_id: userId, updated_at: now },
+          { onConflict: "user_id,title,category" },
+        )
+        .select("id")
+        .single();
+      if (error || !data) {
+        console.error("saveAnalyseRdObligations upsert error:", error);
+        return false;
+      }
+      await supabase
+        .from("obligation_checklist")
+        .update({ expected_amount: row.amount })
+        .eq("obligation_id", (data as { id: string }).id)
+        .in("status", ["pending", "skipped"]);
+    }
+
+    const keep = new Set(rows.map((r) => r.title));
+    const { data: existing } = await supabase
+      .from("financial_obligations")
+      .select("id,title")
+      .eq("user_id", userId)
+      .eq("source", PREMIUM_RD_SOURCE)
+      .eq("is_active", true);
+    for (const ob of (existing ?? []) as { id: string; title: string }[]) {
+      if (!keep.has(ob.title)) await get().closeObligation(ob.id);
+    }
+
+    await get().generateChecklist(userId);
+    await get().fetchObligations(userId);
+    return true;
   },
 
   syncLoansToAnalyse: (userId) => {

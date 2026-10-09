@@ -26,6 +26,10 @@ import {
   type BucketType,
 } from "@/lib/tracker-categories";
 import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
+import {
+  isPaidFromSavings,
+  RD_SAVINGS_PAYMENT_METHOD,
+} from "@/lib/trackerSavingsPayment";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -226,6 +230,17 @@ export function AddExpenseSheet({
       setShowAddCard(false);
     }
   }, [bucket, subcategory, paymentMethod]);
+
+  // "Paid from RD savings" only applies to Security (insurance premiums).
+  useEffect(() => {
+    if (
+      bucket &&
+      bucket !== "security" &&
+      isPaidFromSavings({ payment_method: paymentMethod })
+    ) {
+      setPaymentMethod("upi");
+    }
+  }, [bucket, paymentMethod]);
 
   const selectedCard = useMemo(
     () => savedCards.find((c) => c.id === selectedCardId) ?? null,
@@ -772,6 +787,50 @@ export function AddExpenseSheet({
                       ) : null}
                     </View>
                   ) : null}
+
+                  {bucket === "security" ? (
+                    <Pressable
+                      onPress={() => {
+                        setPaymentMethod(
+                          isPaidFromSavings({ payment_method: paymentMethod })
+                            ? "upi"
+                            : RD_SAVINGS_PAYMENT_METHOD,
+                        );
+                        setShowAddCard(false);
+                      }}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{
+                        checked: isPaidFromSavings({
+                          payment_method: paymentMethod,
+                        }),
+                      }}
+                      style={styles.rdRow}
+                    >
+                      <View
+                        style={[
+                          styles.rdBox,
+                          isPaidFromSavings({
+                            payment_method: paymentMethod,
+                          }) && styles.rdBoxOn,
+                        ]}
+                      >
+                        {isPaidFromSavings({
+                          payment_method: paymentMethod,
+                        }) ? (
+                          <Text style={styles.rdTick}>✓</Text>
+                        ) : null}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.payChipText}>
+                          Paid from my RD savings
+                        </Text>
+                        <Text style={styles.ccHint}>
+                          Money you already set aside each month, so it won't
+                          count again.
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ) : null}
                 </View>
               ) : null}
 
@@ -895,6 +954,24 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   ccHintStrong: { color: Colors.primary, fontWeight: "700" },
+  rdRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 12,
+  },
+  rdBox: {
+    width: 18,
+    height: 18,
+    marginTop: 1,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rdBoxOn: { borderColor: Colors.primary, backgroundColor: Colors.primary },
+  rdTick: { fontSize: 12, fontWeight: "800", color: "#FFFFFF" },
   cardPanel: {
     marginTop: 12,
     padding: 12,

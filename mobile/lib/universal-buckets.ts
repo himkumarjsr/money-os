@@ -2,7 +2,10 @@ import type {
   FinancialProfile,
   PremiumFrequency,
 } from "@/lib/analyse-form-schema";
-import { toMonthlyEquivalent } from "@/lib/analyse-form-schema";
+import {
+  otherPremiumRowsMonthly,
+  toMonthlyEquivalent,
+} from "@/lib/analyse-form-schema";
 
 /** Form fields used before `normalizeAnalyseFormValues` runs */
 export type FormPremiumOverlay = {
@@ -20,6 +23,7 @@ export type FormPremiumOverlay = {
     premiumAmount?: number;
     premiumInput?: number;
     frequency?: PremiumFrequency;
+    countAsInvestment?: boolean;
   }>;
 };
 
@@ -91,23 +95,24 @@ function otherInsurancePremiumMonthly(data: BucketProfileInput): number {
     data.hasOtherInsurance &&
     (data.otherInsurancePremiums?.length ?? 0) > 0
   ) {
-    return (data.otherInsurancePremiums ?? []).reduce(
-      (total, row) =>
-        total +
-        n(
-          toMonthlyEquivalent(
-            row.premiumAmount ??
-              (row as { premiumInput?: number }).premiumInput,
-            row.frequency,
-          ),
-        ),
-      0,
-    );
+    return otherPremiumRowsMonthly(data.otherInsurancePremiums ?? [], false);
   }
   return 0;
 }
 
-/** Monthly insurance premiums only (health, term, motor, other) — for speedometer “investment” split. */
+/**
+ * LIC / endowment premiums with a maturity value, marked in Analyse to count
+ * under Investment instead of Security.
+ */
+export function licEndowmentPremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.licEndowmentPremiumMonthly === "number") {
+    return n(data.licEndowmentPremiumMonthly);
+  }
+  if (!data.hasOtherInsurance) return 0;
+  return otherPremiumRowsMonthly(data.otherInsurancePremiums ?? [], true);
+}
+
+/** Monthly insurance premiums only (health, term, motor, other; not LIC / endowment marked as investment). */
 export function getInsurancePremiumsMonthly(data: BucketProfileInput): number {
   return (
     healthPremiumMonthly(data) +
@@ -394,7 +399,8 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.creditCardBillMonthly) +
     additionalEmiTotal;
 
-  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY + custom.
+  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY,
+  // LIC / endowment premiums marked as investment + custom.
   const customMonthly = (data.customInvestments ?? []).reduce(
     (sum, row) => sum + n(row.monthlyContribution),
     0,
@@ -406,6 +412,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.monthlyPPFContribution) +
     n(data.monthlyEPFContribution) +
     n(data.ssy) +
+    licEndowmentPremiumMonthly(data) +
     customMonthly;
 
   return {

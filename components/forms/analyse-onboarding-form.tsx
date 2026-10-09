@@ -3342,6 +3342,38 @@ export function AnalyseOnboardingForm() {
                                     minYear={new Date().getFullYear()}
                                     maxYear={2060}
                                   />
+                                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-slate-800">
+                                        LIC / endowment with a maturity value?
+                                      </p>
+                                      <p className="text-xs text-slate-500">
+                                        Yes counts this premium under
+                                        Investment, not insurance.
+                                      </p>
+                                    </div>
+                                    <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                                      <ToggleButtons
+                                        options={[
+                                          { label: "Yes", value: "yes" },
+                                          { label: "No", value: "no" },
+                                        ]}
+                                        value={
+                                          watch(
+                                            `otherInsurancePremiums.${index}.countAsInvestment` as const,
+                                          )
+                                            ? "yes"
+                                            : "no"
+                                        }
+                                        onChange={(value) =>
+                                          persistValue(
+                                            `otherInsurancePremiums.${index}.countAsInvestment` as const,
+                                            value === "yes",
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
                                   <div className="rounded-lg bg-[#FAEEDA] px-3 py-2 text-xs text-[#633806]">
                                     ⚠️ If this is a ULIP or endowment plan, the
                                     fix plan will suggest comparing with a pure

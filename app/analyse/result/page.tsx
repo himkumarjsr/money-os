@@ -8,6 +8,7 @@ import FeedbackWidget from "@/components/FeedbackWidget";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import GoalsSection from "@/components/analyse/GoalsSection";
+import PremiumRdCard from "@/components/analyse/PremiumRdCard";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
@@ -931,6 +932,8 @@ export default function AnalyseResultPage() {
               />
             </div>
           </section>
+
+          <PremiumRdCard profile={profile} userId={user?.id} />
 
           <GoalsSection profile={profile} userId={user?.id} />
 

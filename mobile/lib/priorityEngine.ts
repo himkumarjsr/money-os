@@ -9,6 +9,7 @@ import {
   type GoalFundingPlan,
 } from "@/lib/goalFunding";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
+import { licEndowmentPremiumMonthly } from "@/lib/universal-buckets";
 
 export interface PriorityItem {
   rank: number;
@@ -142,7 +143,9 @@ const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 function goalFundingAction(item: GoalFundingItem, startMonth: number): string {
   const what = `${rupees(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()} (${item.sharePct}% of your goal budget)`;
-  return startMonth > 1 ? `From month ${startMonth}, put ${what}.` : `Put ${what}.`;
+  return startMonth > 1
+    ? `From month ${startMonth}, put ${what}.`
+    : `Put ${what}.`;
 }
 
 function goalFundingWhy(item: GoalFundingItem): string {
@@ -205,7 +208,8 @@ export function debtPayoffNumbers(debt: any): DebtPayoffNumbers {
       ? simulateLoanPayoff(outstanding, rate, currentEMI + extraPayment)
       : base;
 
-  const monthsNow = withExtra && outstanding > 0 ? withExtra.months : fallbackMonths;
+  const monthsNow =
+    withExtra && outstanding > 0 ? withExtra.months : fallbackMonths;
   const monthsSaved =
     base && withExtra ? Math.max(0, base.months - withExtra.months) : 0;
   const interestSaved =
@@ -304,6 +308,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.monthlyNPSContribution || 0) +
     (profile.monthlyEPFContribution || 0) +
     (profile.ssy || 0) +
+    licEndowmentPremiumMonthly(profile) +
     (profile.customInvestments || []).reduce(
       (sum: number, row: any) => sum + (row?.monthlyContribution || 0),
       0,
@@ -314,6 +319,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.carInsurancePremiumMonthly || 0) +
     (profile.bikeInsurancePremiumMonthly || 0) +
     (profile.otherInsurancePremiums || []).reduce((sum: number, p: any) => {
+      if (p?.countAsInvestment) return sum; // counted as investment above
       const amount = p?.premiumAmount || p?.premiumInput || 0;
       const monthly = p?.frequency === "yearly" ? amount / 12 : amount;
       return sum + monthly;
@@ -623,7 +629,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusBefore: runningSurplus,
       surplusAfterThis: Math.max(0, runningSurplus - healthPremiumEst),
       monthsToComplete: 1,
-      instrument: "Family floater health policy — compare room-rent limits, co-pay and waiting periods across 2–3 insurers",
+      instrument:
+        "Family floater health policy — compare room-rent limits, co-pay and waiting periods across 2–3 insurers",
       actionThisWeek: `Get ₹${(healthNeeded / 100000).toFixed(0)} lakh health cover. Compare quotes on IRDAI-registered insurer or aggregator sites, or through a licensed advisor.`,
       whyThisMatters:
         "One hospitalisation in metro costs ₹2-5 lakh. Without cover your savings get wiped.",
@@ -773,7 +780,10 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   // Steady-state goal budget once safety is covered: surplus minus new
   // premiums and SSY. "Clear debt" keeps most of it for prepayment.
   const ssyReserve =
-    (Array.isArray(profile.kidsAges) ? (profile.kidsAges as number[]) : []).filter(
+    (Array.isArray(profile.kidsAges)
+      ? (profile.kidsAges as number[])
+      : []
+    ).filter(
       (kidAge, i) =>
         ((profile.kidsGenders as string[] | undefined)?.[i] || "boy") ===
           "girl" && kidAge < 10,
@@ -791,7 +801,12 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     primaryGoal === "clear_debt" ? Math.round(postSafetyBudget * 0.8) : 0;
   const safetyNetComplete = priorities
     .filter((p) =>
-      ["emergency_fund", "medical_fund", "term_insurance", "health_insurance"].includes(p.id),
+      [
+        "emergency_fund",
+        "medical_fund",
+        "term_insurance",
+        "health_insurance",
+      ].includes(p.id),
     )
     .every((p) => p.status === "complete");
   const goalFunding = buildGoalFundingPlan(
@@ -915,7 +930,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusBefore: ssyBefore,
       surplusAfterThis: steadyRunning,
       monthsToComplete: (21 - girl.age) * 12,
-      instrument: "Sukanya Samriddhi Yojana at any Post Office or authorised bank",
+      instrument:
+        "Sukanya Samriddhi Yojana at any Post Office or authorised bank",
       actionThisWeek: isUrgent
         ? `OPEN THIS WEEK. Only ${monthsLeft} months left before window closes forever. Visit post office with daughter Aadhaar.`
         : "Open SSY account at post office. Start ₹12,500/month. 8.2% guaranteed tax-free.",

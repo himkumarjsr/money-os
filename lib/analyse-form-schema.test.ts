@@ -389,6 +389,62 @@ describe("premium normalization", () => {
     expect(back.otherInsurancePremiums?.[0]?.renewalDay).toBe(10);
   });
 
+  it("moves LIC / endowment premiums marked as investment out of insurance", () => {
+    const normalized = normalizeAnalyseFormValues({
+      lifeStage: "married",
+      selfAge: 35,
+      cityTier: "metro",
+      monthlySalary: 1_00_000,
+      hasOtherInsurance: true,
+      otherInsurancePremiums: [
+        {
+          policyName: "LIC Jeevan Anand",
+          premiumAmount: 36_000,
+          frequency: "yearly",
+          maturityAmount: 10_00_000,
+          countAsInvestment: true,
+        },
+        {
+          policyName: "Accident cover",
+          premiumAmount: 500,
+          frequency: "monthly",
+        },
+      ],
+      additionalObligations: [],
+      primaryGoal: "grow_wealth",
+    });
+
+    expect(normalized.otherInsurancePremiumMonthly).toBe(500);
+    expect(normalized.licEndowmentPremiumMonthly).toBe(3_000);
+    expect(normalized.otherInsurancePremiums?.[0]?.countAsInvestment).toBe(
+      true,
+    );
+    expect(
+      normalized.otherInsurancePremiums?.[1]?.countAsInvestment,
+    ).toBeUndefined();
+
+    const back = financialProfileToFormValues(normalized);
+    expect(back.otherInsurancePremiums?.[0]?.countAsInvestment).toBe(true);
+    expect(back.otherInsurancePremiums?.[1]?.countAsInvestment).toBeUndefined();
+  });
+
+  it("keeps old other-insurance rows as insurance", () => {
+    const normalized = normalizeAnalyseFormValues({
+      lifeStage: "married",
+      selfAge: 35,
+      cityTier: "metro",
+      monthlySalary: 1_00_000,
+      hasOtherInsurance: true,
+      otherInsurancePremiums: [
+        { policyName: "LIC", premiumAmount: 12_000, frequency: "yearly" },
+      ],
+      additionalObligations: [],
+      primaryGoal: "grow_wealth",
+    });
+    expect(normalized.otherInsurancePremiumMonthly).toBe(1_000);
+    expect(normalized.licEndowmentPremiumMonthly).toBe(0);
+  });
+
   it("keeps girl-child investment fields and kid genders in the final profile", () => {
     const normalized = normalizeAnalyseFormValues({
       lifeStage: "kids",
