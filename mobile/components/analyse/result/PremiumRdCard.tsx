@@ -28,6 +28,7 @@ export function PremiumRdCard({
 }) {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "added" | "error">("idle");
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const plan = useMemo(() => buildPremiumRdPlan(profile), [profile]);
   const rows = useMemo(() => buildPremiumRdObligations(plan), [plan]);
 
@@ -52,11 +53,12 @@ export function PremiumRdCard({
   const add = async () => {
     if (!userId || rows.length === 0) return;
     setSaving(true);
-    const ok = await useObligationStore
+    const error = await useObligationStore
       .getState()
       .saveAnalyseRdObligations(userId, rows);
     setSaving(false);
-    setStatus(ok ? "added" : "error");
+    setErrorDetail(error);
+    setStatus(error ? "error" : "added");
   };
 
   const blocked = saving || plan.missing.length > 0;
@@ -139,6 +141,7 @@ export function PremiumRdCard({
           {status === "error" ? (
             <Text style={[styles.note, { color: Colors.error }]}>
               Couldn't add it. Please try again.
+              {errorDetail ? ` (${errorDetail})` : ""}
             </Text>
           ) : null}
         </View>
