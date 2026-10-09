@@ -249,6 +249,12 @@ export function getBucketBreakdown(
         value: n(profile.creditCardBillMonthly),
       });
     }
+    if (n(profile.creditCardEmiMonthly) > 0) {
+      items.push({
+        label: "Credit card EMIs",
+        value: n(profile.creditCardEmiMonthly),
+      });
+    }
     const deduped = Array.from(
       new Map(
         (profile.additionalObligations ?? [])

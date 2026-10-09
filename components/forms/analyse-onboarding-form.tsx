@@ -673,7 +673,9 @@ export function AnalyseOnboardingForm() {
       (lastSubmission?.carLoanEMI || 0) > 0,
   );
   const [hasCreditCardOutstanding, setHasCreditCardOutstanding] = useState(
-    (lastSubmission?.creditCardBillMonthly || 0) > 0,
+    (lastSubmission?.creditCardBillMonthly || 0) > 0 ||
+      (lastSubmission?.creditCardEmiMonthly || 0) > 0 ||
+      (lastSubmission?.creditCardCarriedBalance || 0) > 0,
   );
   /** Tapped "Yes" on vehicle before entering any number; ignored once values derive it. */
   const [vehicleOptIn, setVehicleOptIn] = useState(false);
@@ -927,9 +929,18 @@ export function AnalyseOnboardingForm() {
   const vehicleLockedOn = vehicleFromAssets(watchedValues);
   useEffect(() => {
     if ((watchedValues.rentAmount ?? 0) > 0) setIsRenting(true);
-    if ((watchedValues.creditCardBillMonthly ?? 0) > 0)
+    if (
+      (watchedValues.creditCardBillMonthly ?? 0) > 0 ||
+      (watchedValues.creditCardEmiMonthly ?? 0) > 0 ||
+      (watchedValues.creditCardCarriedBalance ?? 0) > 0
+    )
       setHasCreditCardOutstanding(true);
-  }, [watchedValues.rentAmount, watchedValues.creditCardBillMonthly]);
+  }, [
+    watchedValues.rentAmount,
+    watchedValues.creditCardBillMonthly,
+    watchedValues.creditCardEmiMonthly,
+    watchedValues.creditCardCarriedBalance,
+  ]);
 
   /** Hidden fields keep react-hook-form values from a prior run — only sum what the current step UI collects. */
   const totalIncome: number = sum([
@@ -953,6 +964,7 @@ export function AnalyseOnboardingForm() {
       : 0,
     watchedValues.secondPropertyEMI,
     watchedValues.creditCardBillMonthly,
+    watchedValues.creditCardEmiMonthly,
     ...(watchedValues.unifiedLoans ?? []).map((row) => row.monthlyEMI ?? 0),
   ]);
   const monthlyLivingExpenses: number = sum([
@@ -2608,7 +2620,11 @@ export function AnalyseOnboardingForm() {
                             onChange={(value) => {
                               const next = value === "yes";
                               setHasCreditCardOutstanding(next);
-                              if (!next) setValue("creditCardBillMonthly", 0);
+                              if (!next) {
+                                setValue("creditCardBillMonthly", 0);
+                                setValue("creditCardEmiMonthly", 0);
+                                setValue("creditCardCarriedBalance", 0);
+                              }
                             }}
                           />
                         </div>
@@ -2632,6 +2648,24 @@ export function AnalyseOnboardingForm() {
                               error={errors.creditCardBillDay?.message}
                             />
                           ) : null}
+                          <div className="mt-4">
+                            <MoneyInput
+                              id="creditCardEmiMonthly"
+                              label="Credit card EMIs (monthly)"
+                              helper="Card purchases you turned into EMIs. Counts under Loans."
+                              error={errors.creditCardEmiMonthly?.message}
+                              {...bindMoneyField("creditCardEmiMonthly")}
+                            />
+                          </div>
+                          <div className="mt-4">
+                            <MoneyInput
+                              id="creditCardCarriedBalance"
+                              label="Card balance carried forward"
+                              helper="Bill amount you didn't pay in full and carried to next month. Counts as a debt — cards charge about 36–45% a year on it."
+                              error={errors.creditCardCarriedBalance?.message}
+                              {...bindMoneyField("creditCardCarriedBalance")}
+                            />
+                          </div>
                         </div>
                       ) : null}
                     </div>

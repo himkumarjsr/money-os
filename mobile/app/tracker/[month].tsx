@@ -20,7 +20,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Colors, Spacing } from "@/constants/theme";
 import { localISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
-import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
+import { trackerTotalAmount } from "@/lib/tracker-categories";
 import { monthSummaryCaps } from "@/lib/trackerMonthSummary";
 import {
   hasTrackerConsentLocal,
@@ -142,8 +142,9 @@ export default function TrackerMonthScreen() {
 
   const bucketTotals = transactions.reduce(
     (acc, t) => {
-      if (t.bucket === "income" || !countsTowardTrackerTotals(t)) return acc;
-      acc[t.bucket] = (acc[t.bucket] || 0) + Number(t.amount);
+      if (t.bucket === "income") return acc;
+      // Signed: card refunds lower the bucket, EMI purchases and bill pays add 0.
+      acc[t.bucket] = (acc[t.bucket] || 0) + trackerTotalAmount(t);
       return acc;
     },
     {} as Record<string, number>,

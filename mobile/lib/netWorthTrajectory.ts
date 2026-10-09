@@ -91,7 +91,8 @@ type Loan = { outstanding: number; emi: number; ratePct: number };
 
 /** Mirrors totalLoanLiabilities so year 0 matches the report. */
 function loansOf(p: FinancialProfile): { loans: Loan[]; revolving: number } {
-  const revolving = num(p.creditCardBillMonthly) * 3;
+  const revolving =
+    num(p.creditCardBillMonthly) * 3 + num(p.creditCardCarriedBalance);
   const unified = (p.unifiedLoans ?? []).filter(
     (l) => num(l.monthlyEMI) > 0 || num(l.outstandingAmount) > 0,
   );

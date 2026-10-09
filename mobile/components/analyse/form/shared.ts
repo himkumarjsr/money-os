@@ -180,6 +180,7 @@ export function computeLiveTotals(v: Partial<AnalyseFormValues>) {
     (v.rentAmount ?? 0) > 0 ? v.rentMaintenanceMonthly : 0,
     v.secondPropertyEMI,
     v.creditCardBillMonthly,
+    v.creditCardEmiMonthly,
     ...(v.unifiedLoans ?? []).map((row) => row.monthlyEMI ?? 0),
   ]);
 

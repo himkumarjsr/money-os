@@ -8,7 +8,7 @@ import ExpenseTable, {
 import MonthSummary from "@/components/tracker/MonthSummary";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
-import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
+import { trackerTotalAmount } from "@/lib/tracker-categories";
 import { monthSummaryCaps } from "@/lib/trackerMonthSummary";
 import {
   hasTrackerConsentLocal,
@@ -188,8 +188,8 @@ function TrackerMonthContent() {
   const bucketTotals = transactions.reduce(
     (acc, t) => {
       if (t.bucket === "income") return acc;
-      if (!countsTowardTrackerTotals(t)) return acc;
-      acc[t.bucket] = (acc[t.bucket] || 0) + Number(t.amount);
+      // Signed: card refunds lower the bucket, EMI purchases and bill pays add 0.
+      acc[t.bucket] = (acc[t.bucket] || 0) + trackerTotalAmount(t);
       return acc;
     },
     {} as Record<string, number>,

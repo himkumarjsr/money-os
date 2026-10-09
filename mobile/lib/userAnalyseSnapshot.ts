@@ -14,6 +14,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
  * riskTolerance (all optional, so older payloads still read fine); 1.3 adds
  * `countAsInvestment` on other-insurance rows and `licEndowmentPremiumMonthly`
  * (LIC / endowment premiums counted as Investment). Also optional.
+ * Card fields: creditCardEmiMonthly / creditCardCarriedBalance (default 0).
  */
 export const ANALYSE_SNAPSHOT_VERSION = "1.3";
 

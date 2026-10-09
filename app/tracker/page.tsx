@@ -10,10 +10,16 @@ import ObligationsChecklist from "@/components/tracker/ObligationsChecklist";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import {
   TRACKER_CATEGORIES,
-  countsTowardTrackerTotals,
   findSubcategory,
   normalizeTrackerBucket,
+  sumTrackerTotals,
+  trackerTotalAmount,
 } from "@/lib/tracker-categories";
+import {
+  buildCardMonthRows,
+  cardOverdueRows,
+  monthStartIso,
+} from "@/lib/trackerCardLedger";
 import {
   buildSmartBudget,
   learnCapsFromSpending,
@@ -53,17 +59,20 @@ import {
 } from "@/lib/obligationLearn";
 import { buildCashAudit, logCashAudit } from "@/lib/trackerCashAudit";
 import {
+  buildCreditCardOverdue,
   countsTowardCashSpend,
   creditCardBillPaymentDescription,
   displayExpenseDescription,
   hasTrackerConsentLocal,
+  isCardEmiPurchase,
   isCreditCardBillPayment,
   isCreditCardPaymentMethod,
+  isCreditCardRefund,
+  isVirtualTxnId,
   loadCreditCardsMerged,
   parsePayBillLabel,
   setTrackerConsentLocal,
   sumCashSpend,
-  sumOnCardsSpend,
   type SavedCreditCard,
 } from "@/lib/trackerCreditCards";
 import {
@@ -102,6 +111,37 @@ function formatMaskedAmount(n: number, visible: boolean) {
 }
 
 const SMART_BUDGET_OFF_KEY = "finkoin:smart-budget-off";
+/** One-time note about the new card counting rules. */
+const CARD_RULES_NOTE_KEY = "finkoin:card-rules-note-v1";
+
+/** Small tag on a list row (Card / On EMI / Refund). */
+function RowTag({ label, title }: { label: string; title: string }) {
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "2px 6px",
+        borderRadius: 6,
+        background: "#EEEDFE",
+        color: "#534AB7",
+        fontSize: 10,
+        fontWeight: 700,
+      }}
+    >
+      <AppIcon name="card" size={12} color="#534AB7" />
+      {label}
+    </span>
+  );
+}
+
+/** Rupees a month the Loans raise took from Needs / Wants (0 when none). */
+function loansRaiseAmount(adjustments: LearnedAdjustment[]) {
+  return adjustments.reduce((a, x) => a + (x.movedToLoans ?? 0), 0);
+}
 
 function SmartBudgetNote({
   adjustments,
@@ -113,8 +153,9 @@ function SmartBudgetNote({
   onToggle: (on: boolean) => void;
 }) {
   const moved = adjustments.reduce((a, x) => a + x.movedToInvestment, 0);
+  const loans = adjustments.find((a) => a.key === "loans");
   const label = (k: LearnedAdjustment["key"]) =>
-    k === "needs" ? "Needs" : "Wants";
+    k === "needs" ? "Needs" : k === "wants" ? "Wants" : "Loans";
   return (
     <div
       style={{
@@ -131,16 +172,31 @@ function SmartBudgetNote({
       {on ? (
         <>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>
-            Smart budget: ₹{Math.round(moved).toLocaleString("en-IN")}/mo moved
-            to Investments
+            {moved > 0
+              ? `Smart budget: ₹${Math.round(moved).toLocaleString("en-IN")}/mo moved to Investments`
+              : "Smart budget: Loans budget fits your EMIs"}
           </div>
-          {adjustments.map((a) => (
-            <div key={a.key}>
-              {label(a.key)} stayed under budget for 3 months (avg ₹
-              {Math.round(a.averageSpend).toLocaleString("en-IN")}), so its
-              budget is now {a.toPercent}% instead of {a.fromPercent}%.
-            </div>
-          ))}
+          {adjustments.map((a) =>
+            a.key === "loans" ? (
+              <div key={a.key}>
+                Loans set to {a.toPercent}% to match your fixed EMIs. Bringing
+                them down to {a.fromPercent}% frees ₹
+                {Math.round(loansRaiseAmount(adjustments)).toLocaleString(
+                  "en-IN",
+                )}{" "}
+                a month for investing.
+              </div>
+            ) : (
+              <div key={a.key}>
+                {label(a.key)} stayed under budget for 3 months (avg ₹
+                {Math.round(a.averageSpend).toLocaleString("en-IN")}), so its
+                budget is now {a.toPercent}% instead of {a.fromPercent}%.
+                {loans && (a.movedToLoans ?? 0) > 0
+                  ? ` ₹${Math.round(a.movedToLoans ?? 0).toLocaleString("en-IN")} of it went to Loans.`
+                  : ""}
+              </div>
+            ),
+          )}
         </>
       ) : (
         <div>
@@ -268,6 +324,22 @@ function TrackerContent() {
   >([]);
   /** Extra prior months for CC unpaid carry-forward (not used by Safety Pulse). */
   const [ccBillHistory, setCcBillHistory] = useState<TrackerTransaction[]>([]);
+  /** Two and three months back — card ledger history for the previous month. */
+  const [prev2Transactions, setPrev2Transactions] = useState<
+    TrackerTransaction[]
+  >([]);
+  const [prev3Transactions, setPrev3Transactions] = useState<
+    TrackerTransaction[]
+  >([]);
+  /** Card purchases on EMI from the last 5 years (their EMIs run past history). */
+  const [emiSources, setEmiSources] = useState<TrackerTransaction[]>([]);
+  const [showCardRulesNote, setShowCardRulesNote] = useState(() => {
+    try {
+      return localStorage.getItem(CARD_RULES_NOTE_KEY) !== "1";
+    } catch {
+      return false;
+    }
+  });
   /** Needs / Wants spend for the 3 months before the selected one (newest first). */
   const [learnHistory, setLearnHistory] = useState<MonthSpend[]>([]);
   /** Month ("year-month") the learn history was fetched for, once it loaded cleanly. */
@@ -493,36 +565,51 @@ function TrackerContent() {
         const prev = previousCalendarMonth(selectedMonth, selectedYear);
         const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
         const prev3 = previousCalendarMonth(prev2.monthIndex, prev2.year);
+        const monthEnd = localISODate(
+          new Date(selectedYear, selectedMonth + 1, 0),
+        );
 
-        const [currentRes, prevRes, prev2Res, prev3Res] = await Promise.all([
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", currentMonth)
-            .eq("year", currentYear)
-            .order("date", { ascending: false }),
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", prev.monthName)
-            .eq("year", prev.year)
-            .order("date", { ascending: false }),
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", prev2.monthName)
-            .eq("year", prev2.year)
-            .order("date", { ascending: false }),
-          supabase
-            .from("expense_transactions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("month", prev3.monthName)
-            .eq("year", prev3.year),
-        ]);
+        const [currentRes, prevRes, prev2Res, prev3Res, emiRes] =
+          await Promise.all([
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", currentMonth)
+              .eq("year", currentYear)
+              .order("date", { ascending: false }),
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", prev.monthName)
+              .eq("year", prev.year)
+              .order("date", { ascending: false }),
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", prev2.monthName)
+              .eq("year", prev2.year)
+              .order("date", { ascending: false }),
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .eq("month", prev3.monthName)
+              .eq("year", prev3.year),
+            // EMI terms live in the note as a hidden [#emi:…] token.
+            supabase
+              .from("expense_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .ilike("description", "%[#emi:%")
+              .gte(
+                "date",
+                localISODate(new Date(selectedYear, selectedMonth - 60, 1)),
+              )
+              .lte("date", monthEnd),
+          ]);
 
         if (fetchReqId.current !== myId) return;
         if (currentRes.error)
@@ -545,13 +632,36 @@ function TrackerContent() {
         const prev3Rows = ((prev3Res.data as TrackerTransaction[]) || []).map(
           normalizeTrackerBucket,
         );
-        setLearnHistory(
-          [prevRows, prev2Rows, prev3Rows].map((rows) =>
-            monthSpendFromRows(rows),
-          ),
+        const emiRows = ((emiRes.data as TrackerTransaction[]) || []).map(
+          normalizeTrackerBucket,
         );
+        setPrev2Transactions(prev2Rows);
+        setPrev3Transactions(prev3Rows);
+        setEmiSources(emiRows);
+        // Learn from the same rows the tracker counts (card EMIs included).
+        const historyStart = monthStartIso(selectedYear, selectedMonth, 3);
+        const learnRows = (
+          meta: { monthIndex: number; year: number },
+          rows: TrackerTransaction[],
+          priorRows: TrackerTransaction[],
+        ) =>
+          buildCardMonthRows({
+            year: meta.year,
+            monthIndex: meta.monthIndex,
+            monthRows: rows,
+            priorRows,
+            emiSources: emiRows,
+            historyStart,
+          }).rows;
+        setLearnHistory([
+          monthSpendFromRows(
+            learnRows(prev, prevRows, [...prev3Rows, ...prev2Rows]),
+          ),
+          monthSpendFromRows(learnRows(prev2, prev2Rows, prev3Rows)),
+          monthSpendFromRows(learnRows(prev3, prev3Rows, [])),
+        ]);
         setLearnHistoryFor(
-          prevRes.error || prev2Res.error || prev3Res.error
+          prevRes.error || prev2Res.error || prev3Res.error || emiRes.error
             ? null
             : `${selectedYear}-${selectedMonth}`,
         );
@@ -561,6 +671,9 @@ function TrackerContent() {
         setTransactions([]);
         setPreviousTransactions([]);
         setCcBillHistory([]);
+        setPrev2Transactions([]);
+        setPrev3Transactions([]);
+        setEmiSources([]);
         setLearnHistory([]);
         setLearnHistoryFor(null);
       } finally {
@@ -769,6 +882,52 @@ function TrackerContent() {
     }
   }, [trackerStart, selectedMonth, selectedYear]);
 
+  // Card-aware rows: card EMIs for the month, and bill payments counted only
+  // above the card spends they settle (see lib/trackerCardLedger.ts).
+  const cardMonth = useMemo(
+    () =>
+      buildCardMonthRows({
+        year: selectedYear,
+        monthIndex: selectedMonth,
+        monthRows: transactions,
+        priorRows: [...prev3Transactions, ...ccBillHistory],
+        emiSources,
+        historyStart: monthStartIso(selectedYear, selectedMonth, 3),
+      }),
+    [
+      transactions,
+      prev3Transactions,
+      ccBillHistory,
+      emiSources,
+      selectedYear,
+      selectedMonth,
+    ],
+  );
+  const prevCountedRows = useMemo(() => {
+    const prev = previousCalendarMonth(selectedMonth, selectedYear);
+    return buildCardMonthRows({
+      year: prev.year,
+      monthIndex: prev.monthIndex,
+      monthRows: previousTransactions,
+      priorRows: [...prev3Transactions, ...prev2Transactions],
+      emiSources,
+      historyStart: monthStartIso(selectedYear, selectedMonth, 3),
+    }).rows;
+  }, [
+    previousTransactions,
+    prev2Transactions,
+    prev3Transactions,
+    emiSources,
+    selectedYear,
+    selectedMonth,
+  ]);
+  /** "Today" for card dues: now on this month, else the month's last day. */
+  const cardAsOf = useMemo(() => {
+    const now = new Date();
+    const monthEnd = new Date(selectedYear, selectedMonth + 1, 0);
+    return monthEnd < now ? monthEnd : now;
+  }, [selectedYear, selectedMonth]);
+
   // On/after the 1st: persist missing salary and/or "Saving from last month".
   // Re-fetches before insert to avoid duplicate rows from Strict Mode / races.
   const incomeSyncKeyRef = useRef<string | null>(null);
@@ -783,7 +942,7 @@ function TrackerContent() {
     }
 
     const plan = planMonthIncomeFromPrior({
-      previousTxns: previousTransactions,
+      previousTxns: prevCountedRows,
       currentTxns: transactions,
       profileSalary: profileMonthlyFromDb,
     });
@@ -831,7 +990,7 @@ function TrackerContent() {
 
         const freshRows = (fresh || []) as TrackerTransaction[];
         const freshPlan = planMonthIncomeFromPrior({
-          previousTxns: previousTransactions,
+          previousTxns: prevCountedRows,
           currentTxns: freshRows,
           profileSalary: profileMonthlyFromDb,
         });
@@ -862,7 +1021,7 @@ function TrackerContent() {
           (t) => !t.id || !cleanup.dropIds.includes(t.id),
         );
         const afterPlan = planMonthIncomeFromPrior({
-          previousTxns: previousTransactions,
+          previousTxns: prevCountedRows,
           currentTxns: afterCleanup.map((t) =>
             cleanup.updateCf && t.id === cleanup.updateCf.id
               ? { ...t, amount: cleanup.updateCf.amount }
@@ -927,7 +1086,7 @@ function TrackerContent() {
     user?.id,
     selectedMonth,
     selectedYear,
-    previousTransactions,
+    prevCountedRows,
     transactions,
     profileMonthlyFromDb,
     fetchTransactions,
@@ -936,7 +1095,7 @@ function TrackerContent() {
 
   const deleteTransaction = useCallback(
     async (id: string) => {
-      if (!user?.id) return;
+      if (!user?.id || isVirtualTxnId(id)) return;
       if (!window.confirm("Remove this entry?")) return;
       const txn = transactions.find((t) => t.id === id);
       try {
@@ -1052,19 +1211,38 @@ function TrackerContent() {
   const safetyPulse = useMemo(
     () =>
       computeMonthSafetyPulse({
-        currentTxns: transactions,
-        previousTxns: previousTransactions,
+        currentTxns: cardMonth.rows,
+        previousTxns: prevCountedRows,
         fallbackIncome: profileMonthlyFromDb,
         monthIndex: selectedMonth,
         year: selectedYear,
       }),
     [
-      transactions,
-      previousTransactions,
+      cardMonth.rows,
+      prevCountedRows,
       profileMonthlyFromDb,
       selectedMonth,
       selectedYear,
     ],
+  );
+  // Statements due before today that were not paid in full: counted under
+  // Loans until cleared (display only — the spends already came off LEFT).
+  const ccPoolPrior = useMemo(() => {
+    const from = monthStartIso(selectedYear, selectedMonth, 2);
+    const to = monthStartIso(selectedYear, selectedMonth);
+    return [
+      ...ccBillHistory,
+      ...cardMonth.emiRows.filter((r) => r.date >= from && r.date < to),
+    ];
+  }, [ccBillHistory, cardMonth.emiRows, selectedYear, selectedMonth]);
+  const cardOverdue = useMemo(
+    () =>
+      buildCreditCardOverdue({
+        cards: savedCards,
+        transactions: [...ccPoolPrior, ...cardMonth.rows],
+        asOf: cardAsOf,
+      }),
+    [savedCards, ccPoolPrior, cardMonth.rows, cardAsOf],
   );
 
   // Save a changed smart budget to the account, so Analyse, the Fix Plan and
@@ -1087,20 +1265,17 @@ function TrackerContent() {
     return <TrackerConsent onAccept={() => setHasConsent(true)} />;
   }
 
-  const bucketTotals = transactions.reduce(
-    (acc, t) => {
-      if (!countsTowardTrackerTotals(t)) return acc;
-      acc[t.bucket] = (acc[t.bucket] || 0) + Number(t.amount);
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  // Rows shown in sections: logged + card EMIs + bill-pay extras + unpaid bills.
+  const displayRows = [
+    ...cardMonth.rows,
+    ...cardOverdueRows(cardOverdue, localISODate(cardAsOf)),
+  ];
 
   const incomeTxns = transactions.filter((t) => t.bucket === "income");
   const monthlyIncome = incomeTxns.reduce((a, t) => a + Number(t.amount), 0);
   const incomeCat = TRACKER_CATEGORIES.income;
   const incomePlan = planMonthIncomeFromPrior({
-    previousTxns: previousTransactions,
+    previousTxns: prevCountedRows,
     currentTxns: transactions,
     profileSalary: profileMonthlyFromDb,
   });
@@ -1213,12 +1388,26 @@ function TrackerContent() {
     }
     setShowAddModal(true);
   };
-  // Purple SPENT/LEFT: cash leaving the account this month. Includes loan EMIs,
-  // investments, loan repayment, and CC bill pays (UPI/netbanking). Excludes
-  // only expenses paid *with* a credit card. Obligations are not expenses.
-  const totalSpent = sumCashSpend(transactions);
-  const onCardsSpend = sumOnCardsSpend(transactions);
+  // Purple SPENT/LEFT: every spend the day it is made, cash or card (card
+  // money is kept aside for the bill), card EMIs monthly, loan repayment.
+  // Card bill payments settle spends already counted, so only the part above
+  // them (interest, fees, older balance) comes off. Obligations are not expenses.
+  const totalSpent = sumCashSpend(cardMonth.rows);
+  const keptAsideForCards = cardMonth.keptAside;
   const remaining = displayIncome - totalSpent;
+  const hasCardActivity =
+    savedCards.length > 0 ||
+    [...transactions, ...ccBillHistory].some((t) =>
+      isCreditCardPaymentMethod(t.payment_method),
+    );
+  const dismissCardRulesNote = () => {
+    setShowCardRulesNote(false);
+    try {
+      localStorage.setItem(CARD_RULES_NOTE_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  };
   const spentPercent =
     displayIncome > 0 ? Math.min((totalSpent / displayIncome) * 100, 100) : 0;
   const now = new Date();
@@ -1480,7 +1669,7 @@ function TrackerContent() {
           </div>
         </div>
       </div>
-      {onCardsSpend > 0 ? (
+      {keptAsideForCards > 0 ? (
         <div
           style={{
             fontSize: 11,
@@ -1489,10 +1678,10 @@ function TrackerContent() {
             letterSpacing: visible ? "normal" : "0.06em",
           }}
         >
-          On cards this month:{" "}
           {visible
-            ? `₹${Math.round(onCardsSpend).toLocaleString("en-IN")}`
-            : "₹••••"}
+            ? `₹${Math.round(keptAsideForCards).toLocaleString("en-IN")}`
+            : "₹••••"}{" "}
+          kept aside for card bills
         </div>
       ) : null}
       <div>
@@ -1505,7 +1694,7 @@ function TrackerContent() {
             marginBottom: 6,
           }}
         >
-          <span>Cash budget used</span>
+          <span>Budget used</span>
           <span>{visible ? `${spentPercent.toFixed(0)}%` : "••%"}</span>
         </div>
         <div
@@ -1993,6 +2182,47 @@ function TrackerContent() {
         ) : null}
       </div>
 
+      {showCardRulesNote && hasCardActivity ? (
+        <div
+          style={{
+            background: "#EEEDFE",
+            border: "1px solid #D8D6F5",
+            borderRadius: 14,
+            padding: "12px 14px",
+            marginBottom: 12,
+            fontSize: 13,
+            color: "#3C3489",
+            lineHeight: 1.45,
+            display: "flex",
+            gap: 10,
+            alignItems: "flex-start",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            Card spends now count in Needs and Wants in the month you spend, and
+            card bill payments no longer count as loans. Past months were
+            updated too.
+          </div>
+          <button
+            type="button"
+            onClick={dismissCardRulesNote}
+            aria-label="Dismiss note"
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              color: "#534AB7",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Got it
+          </button>
+        </div>
+      ) : null}
+
       {learnedCaps.adjustments.length > 0 ? (
         <SmartBudgetNote
           adjustments={learnedCaps.adjustments}
@@ -2003,10 +2233,8 @@ function TrackerContent() {
 
       {buckets.map((bucketKey) => {
         const cat = TRACKER_CATEGORIES[bucketKey];
-        const bucketTxns = transactions.filter((t) => t.bucket === bucketKey);
-        const bucketTotal = bucketTxns
-          .filter((t) => countsTowardTrackerTotals(t))
-          .reduce((a, t) => a + Number(t.amount), 0);
+        const bucketTxns = displayRows.filter((t) => t.bucket === bucketKey);
+        const bucketTotal = sumTrackerTotals(bucketTxns);
         const isExpanded = expandedBucket === bucketKey;
         const capPct =
           bucketKey in effectiveCaps
@@ -2215,9 +2443,7 @@ function TrackerContent() {
                 </div>
                 {Object.keys(bySubcategory).length > 0 ? (
                   Object.entries(bySubcategory).map(([subId, txns]) => {
-                    const subTotal = txns
-                      .filter((t) => countsTowardTrackerTotals(t))
-                      .reduce((a, t) => a + Number(t.amount), 0);
+                    const subTotal = sumTrackerTotals(txns);
                     const sub = findSubcategory(bucketKey, subId);
                     return (
                       <div
@@ -2292,6 +2518,12 @@ function TrackerContent() {
                             const onCard = isCreditCardPaymentMethod(
                               txn.payment_method,
                             );
+                            const generated = isVirtualTxnId(txn.id);
+                            const onEmi = isCardEmiPurchase(txn);
+                            const refund = isCreditCardRefund(txn);
+                            const notCounted =
+                              trackerTotalAmount(txn) === 0 &&
+                              txn.bucket !== "income";
                             return (
                               <div
                                 key={txn.id}
@@ -2316,33 +2548,36 @@ function TrackerContent() {
                                       gap: 6,
                                     }}
                                   >
-                                    {formatMaskedAmount(
-                                      Number(txn.amount),
-                                      sectionVisible,
-                                    )}
-                                    {onCard ? (
-                                      <span
-                                        title="Paid by credit card — not counted in purple LEFT or bucket totals"
-                                        aria-label="Paid by credit card"
-                                        style={{
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: 4,
-                                          padding: "2px 6px",
-                                          borderRadius: 6,
-                                          background: "#EEEDFE",
-                                          color: "#534AB7",
-                                          fontSize: 10,
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        <AppIcon
-                                          name="card"
-                                          size={12}
-                                          color="#534AB7"
-                                        />
-                                        Card
-                                      </span>
+                                    <span
+                                      style={{
+                                        textDecoration:
+                                          onEmi || notCounted
+                                            ? "line-through"
+                                            : undefined,
+                                        opacity: notCounted ? 0.6 : 1,
+                                      }}
+                                    >
+                                      {refund ? "−" : ""}
+                                      {formatMaskedAmount(
+                                        Number(txn.amount),
+                                        sectionVisible,
+                                      )}
+                                    </span>
+                                    {onEmi ? (
+                                      <RowTag
+                                        label="On EMI"
+                                        title="Converted to EMI — only the monthly EMI counts, under Loans"
+                                      />
+                                    ) : refund ? (
+                                      <RowTag
+                                        label="Refund"
+                                        title="Card refund / cashback — lowers this section and the card bill"
+                                      />
+                                    ) : onCard ? (
+                                      <RowTag
+                                        label="Card"
+                                        title="Paid by credit card — counted now; the money is kept aside for the bill"
+                                      />
                                     ) : null}
                                   </div>
                                   <div
@@ -2369,7 +2604,7 @@ function TrackerContent() {
                                 </div>
                                 <div
                                   style={{
-                                    display: "flex",
+                                    display: generated ? "none" : "flex",
                                     alignItems: "center",
                                     gap: 2,
                                     flexShrink: 0,
@@ -2462,9 +2697,11 @@ function TrackerContent() {
               isCreditCardPaymentMethod(t.payment_method),
           )) ? (
           <CreditCardBillReminder
-            previousTransactions={ccBillHistory}
-            currentTransactions={transactions}
+            previousTransactions={ccPoolPrior}
+            currentTransactions={cardMonth.rows}
             cards={savedCards}
+            overdue={cardOverdue}
+            today={cardAsOf}
             monthName={currentMonth}
             year={currentYear}
             monthlySalary={displayIncome}
@@ -2576,7 +2813,9 @@ function TrackerContent() {
               saved &&
               !saved.isEdit &&
               user?.id &&
-              saved.bucket !== "income"
+              saved.bucket !== "income" &&
+              // Card EMIs and refunds never create or tick obligations.
+              (saved.cardMode ?? "purchase") === "purchase"
             ) {
               const subKey = (saved.subcategory || saved.category || "").trim();
               const obligationCategory = obligationCategoryFromExpense(saved);
