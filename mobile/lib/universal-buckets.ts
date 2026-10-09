@@ -121,9 +121,9 @@ export function getInsurancePremiumsMonthly(data: BucketProfileInput): number {
 export const BUCKET_CAPS = {
   needs: 0.3,
   wants: 0.05,
-  security: 0.05,
-  loans: 0.4,
-  investment: 0.2,
+  security: 0.1,
+  loans: 0.3,
+  investment: 0.25,
 } as const;
 
 export const BASE_UNIVERSAL_CAPS = {
@@ -299,23 +299,16 @@ export function getUniversalBucketRows(
       key,
       label,
       capPercent,
-      capLabel:
-        key === "needs"
-          ? "30%"
-          : key === "wants"
-            ? "5%"
-            : key === "security"
-              ? "5%"
-              : key === "loans"
-                ? "40%"
-                : key === "investment"
-                  ? "20%"
-                  : `${Math.round(capPercent * 100)}%`,
+      capLabel: `${Math.round(capPercent * 100)}%`,
       capHelper:
         key === "loans" ? "(includes home EMI obligations)" : undefined,
       capAmount,
       actual,
-      status: getUniversalBucketStatus(actual, capAmount),
+      // Investment is a target, not a limit: investing more than the cap is never a problem.
+      status:
+        key === "investment"
+          ? "good"
+          : getUniversalBucketStatus(actual, capAmount),
     };
   });
 }
@@ -347,7 +340,7 @@ export function getUnallocatedIncome(data: BucketProfileInput): number {
 }
 
 export function getInsuranceGuideline(totalIncome: number) {
-  return totalIncome * 0.05;
+  return totalIncome * BUCKET_CAPS.security;
 }
 
 export function getInsuranceCriticalFloor(totalIncome: number) {

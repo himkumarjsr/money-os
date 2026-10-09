@@ -1264,7 +1264,10 @@ export default function TrackerScreen() {
           const isExpanded = expandedBucket === bucketKey;
           const budgetAmount =
             displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
-          const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
+          // Investment is a target to reach, not a limit — going over is good.
+          const isTargetBucket = bucketKey === "investment";
+          const overBudget =
+            !isTargetBucket && budgetAmount > 0 && bucketTotal > budgetAmount;
           const progressPercent =
             budgetAmount > 0
               ? Math.min((bucketTotal / budgetAmount) * 100, 100)
@@ -1343,8 +1346,9 @@ export default function TrackerScreen() {
                         styles.bucketProgressFill,
                         {
                           width: visible ? `${progressPercent}%` : "0%",
-                          backgroundColor:
-                            progressPercent >= 100
+                          backgroundColor: isTargetBucket
+                            ? cat.color
+                            : progressPercent >= 100
                               ? "#E24B4A"
                               : progressPercent >= 80
                                 ? "#BA7517"

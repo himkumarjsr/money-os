@@ -21,9 +21,9 @@ function resolveCaps(
   return {
     needs: caps?.needs ?? (hasHomeLoan ? 0.3 : 0.2),
     wants: caps?.wants ?? 0.05,
-    security: caps?.security ?? 0.05,
-    loans: caps?.loans ?? 0.4,
-    investment: caps?.investment ?? (hasHomeLoan ? 0.2 : 0.3),
+    security: caps?.security ?? 0.1,
+    loans: caps?.loans ?? 0.3,
+    investment: caps?.investment ?? (hasHomeLoan ? 0.25 : 0.35),
   };
 }
 
@@ -259,9 +259,7 @@ function GaugeSvg({
   const capTickInner = polarToXY(capAngle, R_OUT - 8, CX, CY);
   const capLbl = polarToXY(capAngle, R_OUT + 18, CX, CY);
   const progressPath =
-    needleFrac > 0.001
-      ? describeArc(CX, CY, R_PROGRESS, 180, needleAngle)
-      : "";
+    needleFrac > 0.001 ? describeArc(CX, CY, R_PROGRESS, 180, needleAngle) : "";
 
   return (
     <Svg width={GAUGE_W} height={GAUGE_H} viewBox="0 -6 140 96">
@@ -372,7 +370,11 @@ export function SpeedoMeterSingle({
 }) {
   const score = Math.max(0, Math.min(100, Number(rawScore) || 0));
   const toneColor =
-    tone === "red" ? COLORS.red : tone === "amber" ? COLORS.amber : COLORS.green;
+    tone === "red"
+      ? COLORS.red
+      : tone === "amber"
+        ? COLORS.amber
+        : COLORS.green;
   const angle = -180 + (score / 100) * 180;
   const rad = (angle * Math.PI) / 180;
   const x2 = 70 + Math.cos(rad) * 43;

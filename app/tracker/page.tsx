@@ -427,7 +427,9 @@ function TrackerContent() {
           normalizeTrackerBucket,
         );
         setTransactions(
-          ((currentRes.data as TrackerTransaction[]) || []).map(normalizeTrackerBucket),
+          ((currentRes.data as TrackerTransaction[]) || []).map(
+            normalizeTrackerBucket,
+          ),
         );
         setPreviousTransactions(prevRows);
         setCcBillHistory([...prev2Rows, ...prevRows]);
@@ -1816,7 +1818,10 @@ function TrackerContent() {
         const isExpanded = expandedBucket === bucketKey;
         const budgetAmount =
           displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
-        const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
+        // Investment is a target to reach, not a limit — going over is good.
+        const isTargetBucket = bucketKey === "investment";
+        const overBudget =
+          !isTargetBucket && budgetAmount > 0 && bucketTotal > budgetAmount;
         const progressPercent =
           budgetAmount > 0
             ? Math.min((bucketTotal / budgetAmount) * 100, 100)
@@ -1949,8 +1954,9 @@ function TrackerContent() {
                       style={{
                         height: "100%",
                         width: sectionVisible ? `${progressPercent}%` : "0%",
-                        background:
-                          progressPercent >= 100
+                        background: isTargetBucket
+                          ? cat.color
+                          : progressPercent >= 100
                             ? "#E24B4A"
                             : progressPercent >= 80
                               ? "#BA7517"

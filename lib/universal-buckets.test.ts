@@ -18,11 +18,11 @@ describe("constants", () => {
     expect(BUCKET_CAPS).toEqual({
       needs: 0.3,
       wants: 0.05,
-      security: 0.05,
-      loans: 0.4,
-      investment: 0.2,
+      security: 0.1,
+      loans: 0.3,
+      investment: 0.25,
     });
-    expect(BASE_UNIVERSAL_CAPS.loans).toBe(0.4);
+    expect(BASE_UNIVERSAL_CAPS.loans).toBe(0.3);
   });
 });
 
@@ -283,8 +283,8 @@ describe("getUnallocatedIncome", () => {
 });
 
 describe("insurance guidelines", () => {
-  it("computes 5% guideline and 2% critical floor", () => {
-    expect(getInsuranceGuideline(100000)).toBe(5000);
+  it("computes 10% guideline and 2% critical floor", () => {
+    expect(getInsuranceGuideline(100000)).toBe(10000);
     expect(getInsuranceCriticalFloor(100000)).toBe(2000);
     expect(getInsuranceGuideline(0)).toBe(0);
     expect(getInsuranceCriticalFloor(0)).toBe(0);

@@ -1,6 +1,7 @@
 import type { CityTier, FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   BASE_UNIVERSAL_CAPS,
+  BUCKET_CAPS,
   getInsuranceCriticalFloor,
   getInsuranceGuideline,
   getUniversalCaps,
@@ -636,7 +637,7 @@ function buildIssues(params: {
       severityScore: 18,
       severity: "good",
       code: "loans_on_track",
-      message: `Loan bucket is ${debtRatio.toFixed(1)}% of income, within the 40% ceiling.`,
+      message: `Loan bucket is ${debtRatio.toFixed(1)}% of income, within the ${getDebtSafeLimitPercent()}% ceiling.`,
     });
   }
 
@@ -700,7 +701,7 @@ function buildPlanSteps(
   switch (profile.primaryGoal) {
     case "clear_debt":
       push(
-        "Make debt payoff your default surplus use until the loan bucket falls well below the 40% cap.",
+        `Make debt payoff your default surplus use until the loan bucket falls well below the ${getDebtSafeLimitPercent()}% cap.`,
       );
       break;
     case "build_emergency_fund":
@@ -1310,21 +1311,24 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       },
       security: {
         capPercent:
-          bucketRows.find((r) => r.key === "security")?.capPercent ?? 0.05,
+          bucketRows.find((r) => r.key === "security")?.capPercent ??
+          BUCKET_CAPS.security,
         capAmount: bucketRows.find((r) => r.key === "security")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "security")?.actual ?? 0,
         status: bucketRows.find((r) => r.key === "security")?.status ?? "good",
       },
       loans: {
         capPercent:
-          bucketRows.find((r) => r.key === "loans")?.capPercent ?? 0.4,
+          bucketRows.find((r) => r.key === "loans")?.capPercent ??
+          BUCKET_CAPS.loans,
         capAmount: bucketRows.find((r) => r.key === "loans")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "loans")?.actual ?? 0,
         status: bucketRows.find((r) => r.key === "loans")?.status ?? "good",
       },
       investment: {
         capPercent:
-          bucketRows.find((r) => r.key === "investment")?.capPercent ?? 0.2,
+          bucketRows.find((r) => r.key === "investment")?.capPercent ??
+          BUCKET_CAPS.investment,
         capAmount:
           bucketRows.find((r) => r.key === "investment")?.capAmount ?? 0,
         actual: bucketRows.find((r) => r.key === "investment")?.actual ?? 0,

@@ -183,7 +183,7 @@ export const TRACKER_CATEGORIES = {
     label: "Security / insurance",
     color: "#6359BF",
     icon: "shield" as const,
-    cap: 5,
+    cap: 10,
     subcategories: [
       {
         id: "health_insurance",
@@ -213,7 +213,7 @@ export const TRACKER_CATEGORIES = {
     label: "Loans & Credit",
     color: "#5B54B0",
     icon: "card" as const,
-    cap: 40,
+    cap: 30,
     subcategories: [
       { id: "home_loan_emi", label: "Home loan EMI", icon: "home" as const },
       { id: "car_loan_emi", label: "Car loan EMI", icon: "car" as const },
@@ -246,7 +246,7 @@ export const TRACKER_CATEGORIES = {
     label: "Investments",
     color: "#4F48A8",
     icon: "trending" as const,
-    cap: 20,
+    cap: 25,
     subcategories: [
       {
         id: "savings_account",
