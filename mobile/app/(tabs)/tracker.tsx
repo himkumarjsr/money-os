@@ -39,6 +39,7 @@ import {
   normalizeTrackerBucket,
   type BucketType,
 } from "@/lib/tracker-categories";
+import { getUniversalCaps } from "@/lib/universal-buckets";
 import { formatExpenseDate, localISODate } from "@/lib/localDate";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
@@ -99,6 +100,14 @@ export default function TrackerScreen() {
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analyseResult = useFinancialStore((s) => s.result);
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
+  // Budget caps follow the Analyse answers once they exist; otherwise the generic split.
+  const bucketCaps = useMemo(
+    () =>
+      getUniversalCaps(
+        analyseCompleted && lastSubmission ? lastSubmission : {},
+      ),
+    [analyseCompleted, lastSubmission],
+  );
   const [hasConsent, setHasConsent] = useState<boolean | null>(() => {
     try {
       if (hasTrackerConsentLocal()) return true;
@@ -1262,9 +1271,18 @@ export default function TrackerScreen() {
             .filter((t) => countsTowardTrackerTotals(t))
             .reduce((a, t) => a + Number(t.amount), 0);
           const isExpanded = expandedBucket === bucketKey;
+          const capPct =
+            bucketKey in bucketCaps
+              ? Math.round(
+                  bucketCaps[bucketKey as keyof typeof bucketCaps] * 100,
+                )
+              : cat.cap;
           const budgetAmount =
-            displayIncome > 0 ? displayIncome * (cat.cap / 100) : 0;
-          const overBudget = budgetAmount > 0 && bucketTotal > budgetAmount;
+            displayIncome > 0 ? displayIncome * (capPct / 100) : 0;
+          // Investment is a target to reach, not a limit — going over is good.
+          const isTargetBucket = bucketKey === "investment";
+          const overBudget =
+            !isTargetBucket && budgetAmount > 0 && bucketTotal > budgetAmount;
           const progressPercent =
             budgetAmount > 0
               ? Math.min((bucketTotal / budgetAmount) * 100, 100)
@@ -1309,7 +1327,7 @@ export default function TrackerScreen() {
                       <Text style={styles.sectionTitle}>{cat.label}</Text>
                       <Text style={styles.sectionSub}>
                         {bucketTxns.length} items
-                        {cat.cap > 0 ? ` · ${cat.cap}% budget` : ""}
+                        {capPct > 0 ? ` · ${capPct}% budget` : ""}
                       </Text>
                     </View>
                   </View>
@@ -1343,8 +1361,9 @@ export default function TrackerScreen() {
                         styles.bucketProgressFill,
                         {
                           width: visible ? `${progressPercent}%` : "0%",
-                          backgroundColor:
-                            progressPercent >= 100
+                          backgroundColor: isTargetBucket
+                            ? cat.color
+                            : progressPercent >= 100
                               ? "#E24B4A"
                               : progressPercent >= 80
                                 ? "#BA7517"
