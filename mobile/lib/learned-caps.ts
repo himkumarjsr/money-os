@@ -1,14 +1,28 @@
-import { countsTowardTrackerTotals } from "@/lib/tracker-categories";
-import type {
-  SmartBudget,
-  SmartBudgetAdjustment,
-  UniversalBucketKey,
+import {
+  countsTowardTrackerTotals,
+  trackerTotalAmount,
+} from "@/lib/tracker-categories";
+import {
+  CARD_EXTRA_SUBCATEGORY,
+  CARD_OVERDUE_SUBCATEGORY,
+  isVirtualTxnId,
+} from "@/lib/trackerCreditCards";
+import {
+  CAP_FLOORS,
+  type SmartBudget,
+  type SmartBudgetAdjustment,
+  type UniversalBucketKey,
 } from "@/lib/universal-buckets";
 
 /** Spending in one past calendar month, in rupees. */
 export type MonthSpend = {
   needs: number;
   wants: number;
+  /**
+   * Fixed loan EMIs (Loans bucket incl. card EMIs; card bill payments,
+   * card interest / older balance and unpaid bills left out).
+   */
+  loans: number;
   /** False for a month with too little tracked to show a habit. */
   hasData: boolean;
 };
@@ -26,11 +40,15 @@ export const LEARN_FLOORS = { needs: 10, wants: 5 } as const;
  * month looks like low spending and must not shrink a budget.
  */
 export const LEARN_MIN_ENTRIES = 5;
+/** Hard ceiling for the Loans budget when it is raised to fit fixed EMIs. */
+export const LEARN_LOANS_CEILING = 40;
 
 /**
  * Lowers Needs / Wants budgets when spending stayed under them in each of the
- * last `LEARN_MONTHS` full months, and moves the freed share into Investment.
- * Budgets never go up here: overspending simply means no adjustment applies.
+ * last `LEARN_MONTHS` full months. The freed share first goes to Loans when
+ * fixed EMIs were above the Loans budget in each of those months (up to
+ * `LEARN_LOANS_CEILING`% of income); the rest goes to Investment. Needs and
+ * Wants never go up, Investment never goes down, Security is never touched.
  *
  * `minMonthly` keeps a bucket at or above a known monthly cost — e.g. the
  * Needs total from the Analyse form, which spreads yearly bills such as
@@ -58,6 +76,7 @@ export function learnCapsFromSpending(
     Object.entries(caps).map(([k, v]) => [k, Math.round(v * 100)]),
   ) as Record<UniversalBucketKey, number>;
   const adjustments: LearnedAdjustment[] = [];
+  const freed: Array<{ adj: LearnedAdjustment; points: number }> = [];
 
   for (const key of ["needs", "wants"] as const) {
     const capAmount = (monthlyIncome * pct[key]) / 100;
@@ -75,17 +94,58 @@ export function learnCapsFromSpending(
     );
     if (toPercent >= pct[key]) continue;
 
-    const freed = pct[key] - toPercent;
-    adjustments.push({
+    const points = pct[key] - toPercent;
+    const adj: LearnedAdjustment = {
       key,
       fromPercent: pct[key],
       toPercent,
       averageSpend,
-      movedToInvestment: (monthlyIncome * freed) / 100,
-    });
+      movedToInvestment: (monthlyIncome * points) / 100,
+    };
+    adjustments.push(adj);
+    freed.push({ adj, points });
     pct[key] = toPercent;
-    pct.investment += freed;
   }
+
+  // Freed points cover fixed EMIs that sat above the Loans budget every month.
+  const freedTotal = freed.reduce((s, f) => s + f.points, 0);
+  const loansCap = (monthlyIncome * pct.loans) / 100;
+  if (freedTotal > 0 && months.every((m) => (m.loans ?? 0) > loansCap)) {
+    // Smallest month = the EMIs present in all three.
+    const fixedEmi = Math.min(...months.map((m) => m.loans ?? 0));
+    const needed = Math.min(
+      LEARN_LOANS_CEILING,
+      Math.ceil((fixedEmi / monthlyIncome) * 100),
+    );
+    // Investment keeps at least its floor; Security is never touched.
+    const investRoom = pct.investment + freedTotal - CAP_FLOORS.investment;
+    const raise = Math.max(
+      0,
+      Math.min(freedTotal, investRoom, needed - pct.loans),
+    );
+    if (raise > 0) {
+      adjustments.push({
+        key: "loans",
+        fromPercent: pct.loans,
+        toPercent: pct.loans + raise,
+        averageSpend:
+          months.reduce((s, m) => s + (m.loans ?? 0), 0) / months.length,
+        movedToInvestment: 0,
+      });
+      pct.loans += raise;
+      // Take the points from Needs first, then Wants.
+      let left = raise;
+      for (const f of freed) {
+        const take = Math.min(left, f.points);
+        if (take <= 0) continue;
+        f.points -= take;
+        f.adj.movedToLoans = (monthlyIncome * take) / 100;
+        f.adj.movedToInvestment = (monthlyIncome * f.points) / 100;
+        left -= take;
+      }
+    }
+  }
+  pct.investment += freed.reduce((s, f) => s + f.points, 0);
 
   if (adjustments.length === 0) return { caps, adjustments };
   return {
@@ -144,15 +204,24 @@ export function monthSpendFromRows(
   >,
 ): MonthSpend {
   const spendRows = rows.filter(
-    (t) => t.bucket !== "income" && countsTowardTrackerTotals(t),
+    (t) => t.bucket !== "income" && trackerTotalAmount(t) !== 0,
   );
-  const total = (bucket: string) =>
+  const total = (bucket: string, skip: string[] = []) =>
     spendRows
-      .filter((t) => t.bucket === bucket)
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+      .filter(
+        (t) =>
+          t.bucket === bucket &&
+          !skip.includes(String(t.subcategory || t.category || "")),
+      )
+      .reduce((sum, t) => sum + trackerTotalAmount(t), 0);
+  // Generated rows (card EMIs etc.) are not entries the user logged.
+  const entries = spendRows.filter(
+    (t) => !isVirtualTxnId((t as { id?: string }).id),
+  ).length;
   return {
     needs: total("needs"),
     wants: total("wants"),
-    hasData: spendRows.length >= LEARN_MIN_ENTRIES,
+    loans: total("loans", [CARD_EXTRA_SUBCATEGORY, CARD_OVERDUE_SUBCATEGORY]),
+    hasData: entries >= LEARN_MIN_ENTRIES,
   };
 }

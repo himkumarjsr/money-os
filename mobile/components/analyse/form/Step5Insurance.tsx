@@ -375,6 +375,21 @@ export function Step5Insurance() {
                     maxYear={2060}
                     name={`otherInsurancePremiums.${index}.maturityYear`}
                   />
+                  <YesNoQuestion
+                    question="LIC / endowment with a maturity value?"
+                    sub="Yes counts this premium under Investment, not insurance."
+                    value={
+                      !!watch(
+                        `otherInsurancePremiums.${index}.countAsInvestment` as const,
+                      )
+                    }
+                    onChange={(yes) =>
+                      persistValue(
+                        `otherInsurancePremiums.${index}.countAsInvestment` as const,
+                        yes,
+                      )
+                    }
+                  />
                   <Hint tone="warn">
                     ⚠️ If this is a ULIP or endowment plan, the fix plan will
                     suggest comparing with a pure term plan.

@@ -9,6 +9,7 @@ import {
   monthlyTotalExpenses,
   monthlyTotalIncome,
   projectRetirementAccounts,
+  totalLoanLiabilities,
   type FinancialProfile,
 } from "@/lib/financialEngine";
 import { describe, expect, it } from "vitest";
@@ -53,6 +54,20 @@ function baseProfile(overrides: Partial<FinancialProfile>): FinancialProfile {
 }
 
 describe("financialEngine", () => {
+  it("counts card EMIs as monthly EMIs and a carried card balance as debt", () => {
+    const plain = baseProfile({});
+    const withCards = baseProfile({
+      creditCardEmiMonthly: 3_000,
+      creditCardCarriedBalance: 40_000,
+    });
+    expect(housingAndEmiTotal(withCards)).toBe(
+      housingAndEmiTotal(plain) + 3_000,
+    );
+    expect(totalLoanLiabilities(withCards)).toBe(
+      totalLoanLiabilities(plain) + 40_000,
+    );
+  });
+
   it("does not count spouse income when life stage is bachelor (stale field from a prior profile)", () => {
     expect(monthlyTotalIncome(baseProfile({ spouseIncome: 50_000 }))).toBe(
       100_000,
@@ -291,8 +306,8 @@ describe("projectRetirementAccounts", () => {
 
   it("real projection is lower than nominal (today's rupees)", () => {
     const data = { epfBalance: 500_000, monthlyEPFContribution: 5_000 };
-    expect(projectRetirementAccounts(data, 20, { real: true }).total).toBeLessThan(
-      projectRetirementAccounts(data, 20).total,
-    );
+    expect(
+      projectRetirementAccounts(data, 20, { real: true }).total,
+    ).toBeLessThan(projectRetirementAccounts(data, 20).total);
   });
 });

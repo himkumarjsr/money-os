@@ -1,7 +1,11 @@
-import type { AnalyseFormValues, FinancialProfile } from "@/lib/analyse-form-schema";
+import type {
+  AnalyseFormValues,
+  FinancialProfile,
+} from "@/lib/analyse-form-schema";
 import { monthlyTotalIncome } from "@/lib/financialEngine";
 import {
   type BucketProfileInput,
+  CAP_FLOORS,
   getUniversalBucketActuals,
   getUniversalCaps,
   hasHomeLoan,
@@ -57,4 +61,30 @@ export function buildSpeedoMeterProps(
       investment: capRow.investment,
     },
   };
+}
+
+export type SpeedoStatus = "good" | "warning" | "critical";
+
+/**
+ * The user's investment target in whole percent of income: their Investment
+ * cap from `getUniversalCaps` (smart budget included), never below the 15%
+ * budget floor.
+ */
+export function investmentTargetPct(investCapFraction: number): number {
+  return Math.max(CAP_FLOORS.investment, Math.round(investCapFraction * 100));
+}
+
+/**
+ * Investment is a target, so more is never a problem.
+ * Good at or above the target; "Watch" down to the 15% floor (or 85% of a
+ * 15% target, so there is always a small warning band); low below that.
+ */
+export function investStatus(
+  actualPct: number,
+  targetPct: number,
+): SpeedoStatus {
+  if (actualPct >= targetPct - 1e-6) return "good";
+  const warnFrom = Math.min(CAP_FLOORS.investment, targetPct * 0.85);
+  if (actualPct >= warnFrom - 1e-6) return "warning";
+  return "critical";
 }

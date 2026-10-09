@@ -42,8 +42,8 @@ import {
   SafetyNetSection,
 } from "@/components/analyse/result/ResultSections";
 import { GoalsSection } from "@/components/analyse/result/GoalsSection";
+import { PremiumRdCard } from "@/components/analyse/result/PremiumRdCard";
 import { openContentHref } from "@/lib/contentLinks";
-
 
 function goBack() {
   if (router.canGoBack()) router.back();
@@ -65,7 +65,8 @@ function Header() {
 function AnalyseResultContent() {
   const user = useAuthStore((s) => s.user);
   useEffect(() => {
-    if (user?.id) void useObligationStore.getState().syncLoansToAnalyse(user.id);
+    if (user?.id)
+      void useObligationStore.getState().syncLoansToAnalyse(user.id);
   }, [user?.id]);
   const result = useFinancialStore((s) => s.result);
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
@@ -195,6 +196,8 @@ function AnalyseResultContent() {
             )
           }
         />
+
+        <PremiumRdCard profile={lastSubmission} userId={user?.id} />
 
         <GoalsSection profile={lastSubmission} userId={user?.id} />
 

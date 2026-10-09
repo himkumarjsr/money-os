@@ -26,17 +26,24 @@ import {
   type BucketType,
 } from "@/lib/tracker-categories";
 import { localISODate, msUntilNextLocalMidnight } from "@/lib/localDate";
+import {
+  isPaidFromSavings,
+  RD_SAVINGS_PAYMENT_METHOD,
+} from "@/lib/trackerSavingsPayment";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import {
+  CARD_REFUND_SUBCATEGORY,
   DEFAULT_DUE_OFFSET_DAYS,
   deleteSavedCreditCard,
   displayExpenseDescription,
+  encodeCardEmiToken,
   encodeCreditCardPaymentMethod,
   formatCreditCardLabel,
   isCreditCardPaymentMethod,
   loadCreditCardsMerged,
   loadSavedCreditCards,
+  parseCardEmiPlan,
   parseCreditCardPaymentMethod,
   suggestDueDayFromBilling,
   upsertSavedCreditCard,
@@ -63,7 +70,17 @@ export type SavedExpense = {
   description: string | null;
   date: string;
   isEdit: boolean;
+  /** Card purchase, card purchase on EMI, or card refund / cashback. */
+  cardMode?: CardEntryMode;
 };
+
+export type CardEntryMode = "purchase" | "emi" | "refund";
+
+const CARD_ENTRY_MODES: Array<{ id: CardEntryMode; label: string }> = [
+  { id: "purchase", label: "Purchase" },
+  { id: "emi", label: "Converted to EMI" },
+  { id: "refund", label: "Refund / cashback" },
+];
 
 type Props = {
   visible: boolean;
@@ -130,6 +147,10 @@ export function AddExpenseSheet({
   const [newCardNickname, setNewCardNickname] = useState("");
   const [newCardBillingDay, setNewCardBillingDay] = useState("");
   const [newCardDueDay, setNewCardDueDay] = useState("");
+  const [cardMode, setCardMode] = useState<CardEntryMode>("purchase");
+  const [emiMonths, setEmiMonths] = useState("6");
+  const [emiMonthly, setEmiMonthly] = useState("");
+  const [emiFee, setEmiFee] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -153,6 +174,17 @@ export function AddExpenseSheet({
     setNewCardNickname("");
     setNewCardBillingDay("");
     setNewCardDueDay("");
+    const seedEmi = parseCardEmiPlan(editExpense?.description);
+    setCardMode(
+      editExpense?.subcategory === CARD_REFUND_SUBCATEGORY
+        ? "refund"
+        : seedEmi
+          ? "emi"
+          : "purchase",
+    );
+    setEmiMonths(seedEmi ? String(seedEmi.months) : "6");
+    setEmiMonthly(seedEmi ? String(seedEmi.monthly) : "");
+    setEmiFee(seedEmi?.fee ? String(seedEmi.fee) : "");
     setError("");
   }, [
     visible,
@@ -227,6 +259,17 @@ export function AddExpenseSheet({
     }
   }, [bucket, subcategory, paymentMethod]);
 
+  // "Paid from RD savings" only applies to Security (insurance premiums).
+  useEffect(() => {
+    if (
+      bucket &&
+      bucket !== "security" &&
+      isPaidFromSavings({ payment_method: paymentMethod })
+    ) {
+      setPaymentMethod("upi");
+    }
+  }, [bucket, paymentMethod]);
+
   const selectedCard = useMemo(
     () => savedCards.find((c) => c.id === selectedCardId) ?? null,
     [savedCards, selectedCardId],
@@ -244,6 +287,18 @@ export function AddExpenseSheet({
   const isIncome = bucket === "income";
   const isSavings = bucket === "investment";
   const isCcBillPay = bucket === "loans" && subcategory === "credit_card";
+  // EMI / refund only for card spends (not income or Loans rows).
+  const cardModesAllowed =
+    paymentMethod === "credit_card" &&
+    !!bucket &&
+    bucket !== "income" &&
+    bucket !== "loans";
+  const entryMode: CardEntryMode = cardModesAllowed ? cardMode : "purchase";
+  const emiMonthsNum = Number(emiMonths);
+  const suggestedMonthly =
+    amount && amount > 0 && emiMonthsNum >= 1
+      ? Math.round((amount / emiMonthsNum) * 100) / 100
+      : 0;
 
   const title = isEdit
     ? isIncome
@@ -331,9 +386,28 @@ export function AddExpenseSheet({
   };
 
   async function handleSave() {
-    if (!amount || !bucket || !subcategory) {
+    if (!amount || !bucket || (!subcategory && entryMode !== "refund")) {
       setError("Please fill amount, category and type");
       return;
+    }
+    let emiToken = "";
+    if (entryMode === "emi") {
+      const months = Math.round(emiMonthsNum);
+      const monthly = emiMonthly ? Number(emiMonthly) : suggestedMonthly;
+      const fee = emiFee ? Number(emiFee) : 0;
+      if (!Number.isFinite(months) || months < 2 || months > 60) {
+        setError("EMI months must be between 2 and 60");
+        return;
+      }
+      if (!Number.isFinite(monthly) || monthly <= 0) {
+        setError("Enter the monthly EMI amount");
+        return;
+      }
+      if (!Number.isFinite(fee) || fee < 0) {
+        setError("Processing fee can't be negative");
+        return;
+      }
+      emiToken = encodeCardEmiToken({ months, monthly, fee });
     }
     if (!user?.id) {
       setError("You must be signed in");
@@ -372,13 +446,22 @@ export function AddExpenseSheet({
       }
     }
 
+    const subToStore =
+      entryMode === "refund"
+        ? CARD_REFUND_SUBCATEGORY
+        : subcategory === CARD_REFUND_SUBCATEGORY
+          ? "others"
+          : subcategory;
     const payload = {
       user_id: user.id,
       date,
       amount,
-      category: subcategory,
-      subcategory,
-      description: descriptionToStore,
+      category: subToStore,
+      subcategory: subToStore,
+      // EMI terms ride along as a hidden token (no extra columns needed).
+      description: emiToken
+        ? `${descriptionToStore} ${emiToken}`.trim()
+        : descriptionToStore,
       bucket,
       payment_method: paymentToStore,
       // Must match tracker fetch locale (`en-IN`) or the row won't load in-month.
@@ -425,11 +508,12 @@ export function AddExpenseSheet({
         ),
         amount,
         bucket,
-        category: subcategory,
-        subcategory,
-        description: payload.description,
+        category: subToStore,
+        subcategory: subToStore,
+        description: descriptionToStore,
         date,
         isEdit,
+        cardMode: entryMode,
       });
       onClose();
     } catch (e) {
@@ -535,7 +619,7 @@ export function AddExpenseSheet({
                 </View>
               ) : null}
 
-              {selectedBucket ? (
+              {selectedBucket && entryMode !== "refund" ? (
                 <View style={styles.block}>
                   <Text style={styles.fieldLabelTight}>Type</Text>
                   <View style={styles.wrapChips}>
@@ -592,11 +676,12 @@ export function AddExpenseSheet({
                   <Text style={styles.fieldLabelTight}>Paid via</Text>
                   {isCcBillPay ? (
                     <Text style={styles.ccHint}>
-                      Paying the card bill with UPI, cash, net banking or wallet{" "}
+                      Card spends already came off Money Left when you made
+                      them, so paying the bill{" "}
                       <Text style={styles.ccHintStrong}>
-                        reduces Money Left
+                        doesn&apos;t reduce it again
                       </Text>{" "}
-                      on the purple card.
+                      — only interest or fees above them do.
                     </Text>
                   ) : null}
                   <View style={styles.wrapChips}>
@@ -770,7 +855,158 @@ export function AddExpenseSheet({
                           </Text>
                         </View>
                       ) : null}
+
+                      {cardModesAllowed ? (
+                        <View style={{ marginTop: 12 }}>
+                          <Text style={styles.cardPanelLabel}>
+                            This card entry is a
+                          </Text>
+                          <View style={styles.wrapChips}>
+                            {CARD_ENTRY_MODES.map((m) => {
+                              const on = cardMode === m.id;
+                              return (
+                                <Pressable
+                                  key={m.id}
+                                  onPress={() => {
+                                    setCardMode(m.id);
+                                    if (
+                                      m.id !== "refund" &&
+                                      subcategory === CARD_REFUND_SUBCATEGORY
+                                    ) {
+                                      setSubcategory("");
+                                    }
+                                  }}
+                                  accessibilityRole="radio"
+                                  accessibilityState={{ selected: on }}
+                                  style={[styles.chip, on && styles.payChipOn]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.payChipText,
+                                      on && styles.payTextOn,
+                                    ]}
+                                  >
+                                    {m.label}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+
+                          {entryMode === "emi" ? (
+                            <View style={{ gap: 10, marginTop: 10 }}>
+                              <View style={{ flexDirection: "row", gap: 10 }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.smallLabel}>Months</Text>
+                                  <TextInput
+                                    value={emiMonths}
+                                    onChangeText={(v) =>
+                                      setEmiMonths(
+                                        v.replace(/[^\d]/g, "").slice(0, 2),
+                                      )
+                                    }
+                                    keyboardType="number-pad"
+                                    placeholder="e.g. 6"
+                                    placeholderTextColor={Colors.textMuted}
+                                    style={styles.textInput}
+                                  />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.smallLabel}>
+                                    Monthly EMI (₹)
+                                  </Text>
+                                  <TextInput
+                                    value={emiMonthly}
+                                    onChangeText={(v) =>
+                                      setEmiMonthly(v.replace(/[^\d.]/g, ""))
+                                    }
+                                    keyboardType="decimal-pad"
+                                    placeholder={
+                                      suggestedMonthly > 0
+                                        ? String(Math.round(suggestedMonthly))
+                                        : "e.g. 2500"
+                                    }
+                                    placeholderTextColor={Colors.textMuted}
+                                    style={styles.textInput}
+                                  />
+                                </View>
+                              </View>
+                              <View>
+                                <Text style={styles.smallLabel}>
+                                  Processing fee (₹, optional)
+                                </Text>
+                                <TextInput
+                                  value={emiFee}
+                                  onChangeText={(v) =>
+                                    setEmiFee(v.replace(/[^\d.]/g, ""))
+                                  }
+                                  keyboardType="decimal-pad"
+                                  placeholder="0"
+                                  placeholderTextColor={Colors.textMuted}
+                                  style={styles.textInput}
+                                />
+                              </View>
+                              <Text style={styles.cardFootnote}>
+                                Only the monthly EMI counts each month, under
+                                Loans, until the last month. The fee counts
+                                once, in the first month.
+                              </Text>
+                            </View>
+                          ) : entryMode === "refund" ? (
+                            <Text
+                              style={[styles.cardFootnote, { marginTop: 10 }]}
+                            >
+                              Lowers this section and your card bill. It is not
+                              counted as income.
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : null}
                     </View>
+                  ) : null}
+
+                  {bucket === "security" ? (
+                    <Pressable
+                      onPress={() => {
+                        setPaymentMethod(
+                          isPaidFromSavings({ payment_method: paymentMethod })
+                            ? "upi"
+                            : RD_SAVINGS_PAYMENT_METHOD,
+                        );
+                        setShowAddCard(false);
+                      }}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{
+                        checked: isPaidFromSavings({
+                          payment_method: paymentMethod,
+                        }),
+                      }}
+                      style={styles.rdRow}
+                    >
+                      <View
+                        style={[
+                          styles.rdBox,
+                          isPaidFromSavings({
+                            payment_method: paymentMethod,
+                          }) && styles.rdBoxOn,
+                        ]}
+                      >
+                        {isPaidFromSavings({
+                          payment_method: paymentMethod,
+                        }) ? (
+                          <Text style={styles.rdTick}>✓</Text>
+                        ) : null}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.payChipText}>
+                          Paid from my RD savings
+                        </Text>
+                        <Text style={styles.ccHint}>
+                          Money you already set aside each month, so it won't
+                          count again.
+                        </Text>
+                      </View>
+                    </Pressable>
                   ) : null}
                 </View>
               ) : null}
@@ -895,6 +1131,24 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   ccHintStrong: { color: Colors.primary, fontWeight: "700" },
+  rdRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 12,
+  },
+  rdBox: {
+    width: 18,
+    height: 18,
+    marginTop: 1,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rdBoxOn: { borderColor: Colors.primary, backgroundColor: Colors.primary },
+  rdTick: { fontSize: 12, fontWeight: "800", color: "#FFFFFF" },
   cardPanel: {
     marginTop: 12,
     padding: 12,

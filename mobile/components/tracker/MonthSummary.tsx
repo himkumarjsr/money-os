@@ -1,27 +1,42 @@
 import { StyleSheet, Text, View } from "react-native";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { Colors } from "@/constants/theme";
-import { TRACKER_CATEGORIES } from "@/lib/tracker-categories";
+import { TRACKER_CATEGORIES, type BucketType } from "@/lib/tracker-categories";
+import { buildMonthSummaryRows } from "@/lib/trackerMonthSummary";
+import type { UniversalBucketKey } from "@/lib/universal-buckets";
 
-/** Per-bucket share of the month's spend — port of web MonthSummary. */
+/** Per-bucket spend against the user's budget — port of web MonthSummary. */
 export function MonthSummary({
   title,
   bucketTotals,
   totalSpent,
+  income,
+  caps,
 }: {
   title: string;
   bucketTotals: Record<string, number>;
   totalSpent: number;
+  /** Month income; budgets are a share of it (share of spend when 0). */
+  income: number;
+  /** Whole-percent caps from `monthSummaryCaps`. */
+  caps: Record<UniversalBucketKey, number>;
 }) {
+  const rows = buildMonthSummaryRows({
+    bucketTotals,
+    totalSpent,
+    income,
+    caps,
+  });
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>
-      {Object.entries(TRACKER_CATEGORIES)
-        .filter(([key]) => key !== "income")
-        .map(([key, cat], i, arr) => {
-          const amount = bucketTotals[key] || 0;
-          const percentage = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
-          const isOverBudget = cat.cap > 0 && percentage > cat.cap;
+      {rows.map(
+        (
+          { key, amount, capPct, isTarget, fillPct, over: isOverBudget },
+          i,
+          arr,
+        ) => {
+          const cat = TRACKER_CATEGORIES[key as BucketType];
           return (
             <View
               key={key}
@@ -31,8 +46,10 @@ export function MonthSummary({
                 <View style={styles.labelWrap}>
                   <TrackerIcon name={cat.icon} size={18} color={cat.color} />
                   <Text style={styles.label}>{cat.label}</Text>
-                  {cat.cap > 0 ? (
-                    <Text style={styles.cap}>({cat.cap}% cap)</Text>
+                  {capPct > 0 ? (
+                    <Text style={styles.cap}>
+                      ({capPct}% {isTarget ? "target" : "cap"})
+                    </Text>
                   ) : null}
                 </View>
                 <View style={styles.amountWrap}>
@@ -56,7 +73,7 @@ export function MonthSummary({
                   style={[
                     styles.fill,
                     {
-                      width: `${Math.min(percentage, 100)}%`,
+                      width: `${fillPct}%`,
                       backgroundColor: isOverBudget ? Colors.error : cat.color,
                     },
                   ]}
@@ -64,7 +81,8 @@ export function MonthSummary({
               </View>
             </View>
           );
-        })}
+        },
+      )}
     </View>
   );
 }

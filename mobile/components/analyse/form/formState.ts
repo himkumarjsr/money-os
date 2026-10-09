@@ -32,7 +32,10 @@ export function initialUiState(
       (lastSubmission?.homeLoanEMI || 0) > 0 ||
       (lastSubmission?.personalLoanEMI || 0) > 0 ||
       (lastSubmission?.carLoanEMI || 0) > 0,
-    hasCreditCardOutstanding: (lastSubmission?.creditCardBillMonthly || 0) > 0,
+    hasCreditCardOutstanding:
+      (lastSubmission?.creditCardBillMonthly || 0) > 0 ||
+      (lastSubmission?.creditCardEmiMonthly || 0) > 0 ||
+      (lastSubmission?.creditCardCarriedBalance || 0) > 0,
     savedLoanIds: [],
   };
 }

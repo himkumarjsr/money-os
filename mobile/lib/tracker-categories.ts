@@ -1,4 +1,13 @@
-import { isCreditCardCharge } from "@/lib/trackerCreditCards";
+import { isPaidFromSavings } from "@/lib/trackerSavingsPayment";
+import {
+  CARD_EMI_SUBCATEGORY,
+  CARD_EXTRA_SUBCATEGORY,
+  CARD_OVERDUE_SUBCATEGORY,
+  CARD_REFUND_SUBCATEGORY,
+  isCardEmiPurchase,
+  isCreditCardBillPayment,
+  isCreditCardRefund,
+} from "@/lib/trackerCreditCards";
 
 export type TrackerIconName =
   | "home"
@@ -206,6 +215,12 @@ export const TRACKER_CATEGORIES = {
         label: "Insurance premium",
         icon: "shield" as const,
       },
+      /** Monthly RD / savings for yearly premiums (Security, not Investment). */
+      {
+        id: "premium_rd",
+        label: "RD for insurance premiums",
+        icon: "calendar" as const,
+      },
       { id: "others", label: "Others", icon: "other" as const },
     ],
   },
@@ -326,20 +341,80 @@ export const TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES = new Set<string>([
   "loan_prepayment",
 ]);
 
-export function countsTowardTrackerTotals(txn: {
+type TotalsTxn = {
   category?: string | null;
   subcategory?: string | null;
   bucket?: string | null;
   payment_method?: string | null;
-}): boolean {
+  description?: string | null;
+};
+
+/**
+ * True when a row counts at face value in its bucket total.
+ *
+ * - Card purchases count in their own bucket in the month they are made.
+ * - Card bill payments do not: they settle spends already counted. (The part
+ *   above those spends arrives as a generated `card_extra` Loans row.)
+ * - A card purchase converted to EMI does not; its monthly EMI rows do.
+ * - Refunds / cashback return false here because they *subtract* — sum with
+ *   `trackerTotalAmount`, which handles them.
+ */
+export function countsTowardTrackerTotals(txn: TotalsTxn): boolean {
+  if (isPaidFromSavings(txn)) return false;
   const sub = txn.subcategory || txn.category;
   if (sub && TRACKER_TOTAL_EXCLUDED_SUBCATEGORIES.has(sub)) return false;
-  // Card-*as-payment* purchases stay visible in lists but never enter bucket
-  // totals / Safety Pulse — same rule as purple SPENT/LEFT. Bill pays (UPI etc.)
-  // do count — cash left the salary pocket.
-  if (isCreditCardCharge(txn)) return false;
+  if (isCreditCardRefund(txn)) return false;
+  if (isCreditCardBillPayment(txn)) return false;
+  if (isCardEmiPurchase(txn)) return false;
   return true;
 }
+
+/** Signed amount a row adds to its bucket total (refunds are negative). */
+export function trackerTotalAmount(
+  txn: TotalsTxn & { amount: number | string },
+): number {
+  const n = Number(txn.amount);
+  if (!Number.isFinite(n)) return 0;
+  if (isCreditCardRefund(txn)) return -Math.abs(n);
+  return countsTowardTrackerTotals(txn) ? n : 0;
+}
+
+/** Sum of `trackerTotalAmount` over rows (optionally one bucket). */
+export function sumTrackerTotals(
+  rows: Array<TotalsTxn & { amount: number | string }>,
+  bucket?: string,
+): number {
+  const total = rows.reduce(
+    (sum, t) =>
+      bucket && t.bucket !== bucket ? sum : sum + trackerTotalAmount(t),
+    0,
+  );
+  return Math.round(total * 100) / 100;
+}
+
+/** Tracker-generated or card-only subcategories (not in the picker lists). */
+const SPECIAL_SUBCATEGORIES: Record<string, TrackerSubcategory> = {
+  [CARD_REFUND_SUBCATEGORY]: {
+    id: CARD_REFUND_SUBCATEGORY,
+    label: "Card refund / cashback",
+    icon: "card",
+  },
+  [CARD_EMI_SUBCATEGORY]: {
+    id: CARD_EMI_SUBCATEGORY,
+    label: "Credit card EMI",
+    icon: "calendar",
+  },
+  [CARD_EXTRA_SUBCATEGORY]: {
+    id: CARD_EXTRA_SUBCATEGORY,
+    label: "Card interest, fees or older balance",
+    icon: "card",
+  },
+  [CARD_OVERDUE_SUBCATEGORY]: {
+    id: CARD_OVERDUE_SUBCATEGORY,
+    label: "Unpaid card bill",
+    icon: "alert",
+  },
+};
 
 /** Subcategories shown in the add-expense picker (hides legacy combined transport). */
 export function pickerSubcategories(bucket: BucketType) {
@@ -353,5 +428,7 @@ export function findSubcategory(
   subId: string | null | undefined,
 ) {
   const list = TRACKER_CATEGORIES[bucket].subcategories;
-  return list.find((s) => s.id === subId) ?? null;
+  const found = list.find((s) => s.id === subId);
+  if (found) return found;
+  return subId ? (SPECIAL_SUBCATEGORIES[subId] ?? null) : null;
 }
