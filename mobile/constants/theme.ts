@@ -98,37 +98,46 @@ const darkPalette: Palette = {
   primaryTintBorder: "rgba(139,131,240,0.3)",
 };
 
-/** Black and gold, unlocked by long-term use or a top leaderboard rank. */
+/**
+ * "24K Mirror": near-black with polished gold, unlocked by long-term use or a
+ * top leaderboard rank. No blue or purple anywhere (see `brand()`).
+ */
 const premiumPalette: Palette = {
   ...darkPalette,
-  primary: "#9A7B2F",
-  primaryDark: "#F1D58A",
-  primaryLight: "#2A2312",
-  primaryMedium: "#7A6326",
-  accent: "#D4AF37",
-  background: "#0A0A0C",
-  backgroundDeep: "#14110A",
-  card: "#141418",
-  surfaceMuted: "#1C1A14",
-  inverseSurface: "#221D10",
-  border: "#2E2918",
-  borderIndigo: "#4A3F1F",
-  borderLight: "#1F1C14",
-  textPrimary: "#F5F1E6",
-  textSecondary: "#C2B9A3",
-  textMuted: "#8C8573",
+  primary: "#D4AF37",
+  primaryDark: "#FCF6BA",
+  primaryLight: "#1D1910",
+  primaryMedium: "#B38728",
+  accent: "#E8C766",
+  onPrimary: "#1A1405",
+  success: "#6FCF97",
+  successDark: "#6FCF97",
+  successText: "#6FCF97",
+  error: "#EB7A72",
+  errorText: "#EB7A72",
+  background: "#0A0A0A",
+  backgroundDeep: "#12100B",
+  card: "#151412",
+  surfaceMuted: "#1C1A15",
+  inverseSurface: "#221C0E",
+  border: "#2C2616",
+  borderIndigo: "#5A4A1E",
+  borderLight: "#201D14",
+  textPrimary: "#F5EFDC",
+  textSecondary: "#C9C1AE",
+  textMuted: "#9E978A",
   indigo600: "#D4AF37",
-  violet600: "#E0BE5A",
-  blue600: "#D4AF37",
-  glass: "rgba(20,20,24,0.94)",
-  glassSoft: "rgba(20,20,24,0.6)",
-  glassBorder: "rgba(212,175,55,0.18)",
+  violet600: "#E8C766",
+  blue600: "#B38728",
+  glass: "rgba(21,20,18,0.94)",
+  glassSoft: "rgba(21,20,18,0.6)",
+  glassBorder: "rgba(212,175,55,0.22)",
   glassCard: "rgba(255,255,255,0.05)",
-  heroWash: "rgba(42,35,18,0.6)",
-  heroBorder: "rgba(74,63,31,0.8)",
-  tabIdle: "#C2B9A3",
-  primaryTint: "rgba(212,175,55,0.16)",
-  primaryTintBorder: "rgba(212,175,55,0.3)",
+  heroWash: "rgba(34,28,14,0.7)",
+  heroBorder: "rgba(90,74,30,0.8)",
+  tabIdle: "#C9C1AE",
+  primaryTint: "rgba(212,175,55,0.14)",
+  primaryTintBorder: "rgba(212,175,55,0.32)",
 };
 
 export type ThemeName = "light" | "dark" | "premium";
@@ -268,13 +277,54 @@ function mixHex(a: string, b: string, t: number): string {
   return `#${ch(ar, br)}${ch(ag, bg)}${ch(ab, bb)}`;
 }
 
+/** Gold shades that stand in for brand blue/purple in the Premium theme. */
+export const GOLD = {
+  shine: "#FCF6BA",
+  light: "#E8C766",
+  base: "#D4AF37",
+  deep: "#B38728",
+  dark: "#8A6A1E",
+} as const;
+
+function isBluePurple(hex: string): boolean {
+  if (!/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(hex)) return false;
+  const [r, g, b] = hexToRgb(hex).map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const chroma = max - min;
+  if (chroma < 0.12) return false;
+  let h =
+    max === r
+      ? ((g - b) / chroma) % 6
+      : max === g
+        ? (b - r) / chroma + 2
+        : (r - g) / chroma + 4;
+  h = (h * 60 + 360) % 360;
+  return h >= 190 && h < 330;
+}
+
+/**
+ * A brand colour as written for the light theme. Premium swaps blue/purple
+ * for a gold of similar lightness; other themes keep it.
+ */
+export function brand(hex: string): string {
+  if (activeTheme !== "premium" || !isBluePurple(hex)) return hex;
+  const [r, g, b] = hexToRgb(hex);
+  const l = (Math.max(r, g, b) + Math.min(r, g, b)) / 510;
+  if (l >= 0.85) return GOLD.shine;
+  if (l >= 0.65) return GOLD.light;
+  if (l >= 0.4) return GOLD.base;
+  if (l >= 0.25) return GOLD.deep;
+  return GOLD.dark;
+}
+
 /**
  * A light tint (status pill, category chip, card wash) as written for the
  * light theme. In dark themes it becomes a deep version of the same hue.
  */
 export function tintBg(lightHex: string, strength = 0.22): string {
   if (activeTheme === "light") return lightHex;
-  const [r, g, b] = hexToRgb(lightHex);
+  const [r, g, b] = hexToRgb(brand(lightHex));
   // Push the pale tint back toward its full hue, then sink it into the card colour.
   const sat = (c: number) => Math.max(0, Math.min(255, 255 - (255 - c) * 5));
   const full = `#${[r, g, b].map((c) => sat(c).toString(16).padStart(2, "0")).join("")}`;
@@ -283,5 +333,7 @@ export function tintBg(lightHex: string, strength = 0.22): string {
 
 /** Dark text meant for a light tint; lightened so it stays readable on `tintBg()`. */
 export function tintFg(darkHex: string): string {
-  return activeTheme === "light" ? darkHex : mixHex(darkHex, "#FFFFFF", 0.62);
+  return activeTheme === "light"
+    ? darkHex
+    : mixHex(brand(darkHex), "#FFFFFF", 0.62);
 }

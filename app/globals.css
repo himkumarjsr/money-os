@@ -161,8 +161,8 @@ body[data-analyse-modal-open="true"] [data-track-nav-zone="bottom_nav"] {
 
 /* Settings → Appearance (web/PWA themes, see lib/theme.ts) */
 .fk-premium-option {
-  background-color: #141418;
-  border-color: #4a3f1f;
+  background-color: #151412;
+  border-color: #5a4a1e;
 }
 
 .fk-theme-selected {
@@ -190,4 +190,24 @@ body[data-analyse-modal-open="true"] [data-track-nav-zone="bottom_nav"] {
   box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Premium (24K Mirror): shiny gold logo and wordmark */
+:root[data-theme="premium"] .fk-logo-tile {
+  fill: url(#fk-gold-tile) !important;
+}
+
+:root[data-theme="premium"] .fk-logo-mark {
+  fill: var(--fk-on-gold) !important;
+}
+
+:root[data-theme="premium"] .fk-brand-name {
+  background: var(--fk-gold-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+
+:root[data-theme="premium"] .bg-primary {
+  background-image: var(--fk-gold-grad);
 }

@@ -24,7 +24,7 @@ export const PREMIUM_TOP_RANK = 10;
 export const THEME_COLOR: Record<ThemeName, string> = {
   light: "#534AB7",
   dark: "#0E0E12",
-  premium: "#0A0A0C",
+  premium: "#0A0A0A",
 };
 
 export type PremiumStatus = {

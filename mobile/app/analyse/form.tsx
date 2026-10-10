@@ -57,6 +57,7 @@ import {
   Radius,
   Spacing,
   themedStyles,
+  brand,
 } from "@/constants/theme";
 import {
   STEPS,
@@ -846,7 +847,9 @@ export default function AnalyseFormScreen() {
                 style={[
                   styles.primaryBtn,
                   {
-                    backgroundColor: isSubmitting ? "#AFA9EC" : Colors.primary,
+                    backgroundColor: isSubmitting
+                      ? brand("#AFA9EC")
+                      : Colors.primary,
                   },
                 ]}
               >
