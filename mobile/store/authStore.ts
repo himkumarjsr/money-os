@@ -12,6 +12,7 @@ import {
   signInWithGoogleIdToken,
   signInWithGoogleSupabaseBrowser,
 } from "@/lib/googleAuth";
+import { signInWithAppleIdToken } from "@/lib/appleAuth";
 
 // Re-export for login alerts / debug
 export { getNativeAppCallbackUri };
@@ -48,6 +49,7 @@ interface AuthState {
     password: string,
   ) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
+  signInWithApple: () => Promise<{ error?: string }>;
   handleIncomingAuthUrl: (url: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
@@ -415,6 +417,19 @@ export const useAuthStore = create<AuthState>()(
             error: e instanceof Error ? e.message : "Sign up failed",
           };
         }
+      },
+
+      signInWithApple: async () => {
+        if (!isSupabaseConfigured()) {
+          return { error: "Supabase is not configured." };
+        }
+        const result = await signInWithAppleIdToken();
+        if (!result.ok) return { error: result.error || "Apple sign-in failed" };
+        await get().refreshUser();
+        if (!get().isLoggedIn) {
+          return { error: "Apple sign-in returned no session" };
+        }
+        return {};
       },
 
       signInWithGoogle: async () => {

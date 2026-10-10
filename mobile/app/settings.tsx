@@ -41,6 +41,7 @@ import { SettingsToggle } from "@/components/settings/SettingsToggle";
 import { ChangePasswordSheet } from "@/components/settings/ChangePasswordSheet";
 import { DeleteAccountSheet } from "@/components/settings/DeleteAccountSheet";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
+import { openStoreRating } from "@/lib/storeReview";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
 
@@ -678,6 +679,14 @@ function SettingsInner() {
           >
             <AppIcon name="mail" size={16} color={Colors.primary} />
             <Text style={styles.feedbackText}>Share feedback</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void openStoreRating()}
+            style={styles.feedbackBtn}
+            accessibilityRole="button"
+          >
+            <AppIcon name="heart" size={16} color={Colors.primary} />
+            <Text style={styles.feedbackText}>Rate Finkoin</Text>
           </Pressable>
         </View>
       </ScrollView>

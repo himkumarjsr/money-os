@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, type Href } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
@@ -44,6 +44,7 @@ import {
 import { GoalsSection } from "@/components/analyse/result/GoalsSection";
 import { PremiumRdCard } from "@/components/analyse/result/PremiumRdCard";
 import { openContentHref } from "@/lib/contentLinks";
+import { maybeAskForReview } from "@/lib/storeReview";
 
 function goBack() {
   if (router.canGoBack()) router.back();
@@ -74,6 +75,15 @@ function AnalyseResultContent() {
   const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
   const [restoring, setRestoring] = useState(true);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const reviewCheckedRef = useRef(false);
+
+  // Store rating prompt after the report has been seen a few times.
+  useEffect(() => {
+    if (restoring || !result || reviewCheckedRef.current) return;
+    reviewCheckedRef.current = true;
+    const t = setTimeout(() => void maybeAskForReview(), 3000);
+    return () => clearTimeout(t);
+  }, [restoring, result]);
 
   useEffect(() => {
     if (!hasHydrated) return;

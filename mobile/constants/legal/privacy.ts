@@ -17,7 +17,7 @@ export const PRIVACY_POLICY: LegalDoc = {
       blocks: [
         {
           kind: "p",
-          text: "Finkoin (\"we\", \"us\", \"our\") is a personal finance analysis platform operated from India. Our website is located at finkoin.com.",
+          text: 'Finkoin ("we", "us", "our") is a personal finance analysis platform operated from India. Our website is located at finkoin.com.',
         },
         {
           kind: "p",
@@ -115,7 +115,10 @@ export const PRIVACY_POLICY: LegalDoc = {
     {
       title: "5. Data Storage and Security",
       blocks: [
-        { kind: "p", text: "Your data is stored securely using industry-standard practices:" },
+        {
+          kind: "p",
+          text: "Your data is stored securely using industry-standard practices:",
+        },
         {
           kind: "ul",
           items: [
@@ -171,7 +174,7 @@ export const PRIVACY_POLICY: LegalDoc = {
         },
         {
           kind: "p",
-          text: "To exercise any of these rights, email us at [privacy@finkoin.com](mailto:privacy@finkoin.com) with subject line \"Data Rights Request\".",
+          text: 'To exercise any of these rights, email us at [privacy@finkoin.com](mailto:privacy@finkoin.com) with subject line "Data Rights Request".',
         },
         { kind: "h3", text: "Grievance Officer" },
         {
@@ -197,7 +200,7 @@ export const PRIVACY_POLICY: LegalDoc = {
         },
         {
           kind: "p",
-          text: "We use Google Analytics to understand how users use Finkoin. This collects anonymous usage data including pages visited, time spent, and general location. No personal financial data is shared with Google Analytics.",
+          text: "The Finkoin mobile app does not use analytics or session-recording tools. On the website only, if you allow it, we use Google Analytics and Microsoft Clarity to understand usage (pages visited, time spent, clicks, general location). No personal financial data is shared with them.",
         },
       ],
     },
@@ -234,7 +237,7 @@ export const PRIVACY_POLICY: LegalDoc = {
         {
           kind: "ul",
           items: [
-            "We will update the \"Last updated\" date at the top of this page.",
+            'We will update the "Last updated" date at the top of this page.',
             "We will notify you by email if the changes materially affect your rights.",
             "For significant changes requiring re-consent, you will see a consent prompt on your next login.",
           ],
