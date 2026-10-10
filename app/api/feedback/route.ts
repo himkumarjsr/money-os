@@ -6,6 +6,7 @@ import {
   rateLimit,
   tooManyRequests,
 } from "@/lib/apiGuard";
+import { istDate } from "@/lib/istDate";
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -90,40 +91,19 @@ export async function POST(req: NextRequest) {
     let fkAwarded = 0;
     if (user_id && UUID_RE.test(user_id)) {
       try {
-        const ref = page_context || "app";
-        const { data: already } = await supabaseAdmin
-          .from("fk_transactions")
-          .select("id")
-          .eq("user_id", user_id)
-          .eq("reason", "feedback_submitted")
-          .eq("reference_id", ref)
-          .maybeSingle();
-
-        if (!already) {
-          const { data: gam } = await supabaseAdmin
-            .from("gamification")
-            .select("fk_balance, total_earned")
-            .eq("user_id", user_id)
-            .maybeSingle();
-
-          await supabaseAdmin.from("gamification").upsert(
-            {
-              user_id,
-              fk_balance: (Number(gam?.fk_balance) || 0) + 50,
-              total_earned: (Number(gam?.total_earned) || 0) + 50,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id" },
-          );
-
-          await supabaseAdmin.from("fk_transactions").insert({
-            user_id,
-            amount: 50,
-            reason: "feedback_submitted",
-            reference_id: ref,
-          });
-          fkAwarded = 50;
-        }
+        // One 50 FK reward per user per day; page_context is client-supplied,
+        // so it can't be the key (it let one user claim the reward repeatedly).
+        const { data: awarded, error: awardErr } = await supabaseAdmin.rpc(
+          "award_fk",
+          {
+            p_user_id: user_id,
+            p_amount: 50,
+            p_reason: "feedback_submitted",
+            p_reference_id: istDate(),
+          },
+        );
+        if (awardErr) throw awardErr;
+        if (awarded) fkAwarded = 50;
       } catch (fkErr) {
         console.error("FK award error:", fkErr);
       }

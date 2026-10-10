@@ -7,7 +7,7 @@ import { SITE_URL, socialImageTags } from "@/lib/seo";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
   return BLOG_ARTICLES.map((a) => ({ slug: a.slug }));
@@ -19,7 +19,8 @@ function blogOgPath(slug: string): string {
   return existsSync(abs) ? candidate : "/og/og-home.png";
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const article = getBlogArticle(params.slug);
   if (!article) {
     return { title: "Article not found | Finkoin" };
@@ -58,7 +59,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function BlogArticlePage({ params }: Props) {
+export default async function BlogArticlePage(props: Props) {
+  const params = await props.params;
   const article = getBlogArticle(params.slug);
   if (!article) notFound();
 

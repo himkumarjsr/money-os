@@ -16,3 +16,7 @@ node_modules/
 
 expo-env.d.ts
 # @end expo-cli
+# Play Console service account key (eas submit)
+play-service-account.json
+*.keystore
+*.jks

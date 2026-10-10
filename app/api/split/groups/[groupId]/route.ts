@@ -4,10 +4,8 @@ import {
   getSupabaseAdmin,
 } from "@/lib/supabaseServer";
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { groupId: string } },
-) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ groupId: string }> }) {
+  const params = await props.params;
   try {
     const groupId = params.groupId;
     if (!groupId) {

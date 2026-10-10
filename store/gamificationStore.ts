@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { localISODate, localYesterdayISODate } from "@/lib/localDate";
+import { apiFetch } from "@/lib/apiFetch";
 import { getSupabase } from "@/lib/supabase";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 
@@ -25,12 +25,6 @@ interface GamificationState {
   earnedActions: string[];
   toastMessage: string | null;
   fetchGamification: (userId: string) => Promise<void>;
-  addFK: (
-    userId: string,
-    amount: number,
-    reason: string,
-    referenceId?: string,
-  ) => Promise<boolean>;
   subscribeToRealtime: (userId: string) => () => void;
   updateLoginStreak: (userId: string) => Promise<void>;
   earnTokens: (amount: number, label: string) => void;
@@ -87,28 +81,8 @@ export const useGamificationStore = create<GamificationState>()(
                 : [],
               lastFetched: new Date().toISOString(),
             });
-            try {
-              await supabase
-                .from("users")
-                .update({ fk_balance: fk })
-                .eq("id", userId);
-            } catch {
-              /* ignore legacy users.fk_balance sync */
-            }
           } else {
-            const { error: insertError } = await supabase
-              .from("gamification")
-              .insert({
-                user_id: userId,
-                fk_balance: 0,
-                total_earned: 0,
-                streak_days: 0,
-                badges: [],
-              });
-            if (insertError) {
-              console.error("fetchGamification insert error:", insertError);
-              return;
-            }
+            // No row yet: updateLoginStreak's server call creates it.
             set({
               fkBalance: 0,
               totalEarned: 0,
@@ -117,14 +91,6 @@ export const useGamificationStore = create<GamificationState>()(
               badges: [],
               lastFetched: new Date().toISOString(),
             });
-            try {
-              await supabase
-                .from("users")
-                .update({ fk_balance: 0 })
-                .eq("id", userId);
-            } catch {
-              /* ignore */
-            }
           }
 
           const { data: rankData, error: rankError } = await supabase
@@ -142,76 +108,6 @@ export const useGamificationStore = create<GamificationState>()(
           }
         } catch (err) {
           console.error("fetchGamification error:", err);
-        }
-      },
-      addFK: async (userId, amount, reason, referenceId) => {
-        try {
-          const supabase = getSupabase();
-
-          set((state) => ({
-            fkBalance: state.fkBalance + amount,
-            totalEarned: state.totalEarned + amount,
-            toastMessage:
-              amount > 0 ? `+${amount} FK earned! 🎉` : state.toastMessage,
-          }));
-
-          const { data: current, error: currentError } = await supabase
-            .from("gamification")
-            .select("fk_balance, total_earned")
-            .eq("user_id", userId)
-            .maybeSingle();
-          if (currentError) {
-            throw currentError;
-          }
-
-          const newBalance = Number(current?.fk_balance ?? 0) + amount;
-          const newTotal = Number(current?.total_earned ?? 0) + amount;
-
-          const { error: upsertError } = await supabase
-            .from("gamification")
-            .upsert(
-              {
-                user_id: userId,
-                fk_balance: newBalance,
-                total_earned: newTotal,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "user_id" },
-            );
-          if (upsertError) {
-            throw upsertError;
-          }
-
-          try {
-            await supabase
-              .from("users")
-              .update({ fk_balance: newBalance })
-              .eq("id", userId);
-          } catch {
-            /* ignore legacy users.fk_balance sync */
-          }
-
-          const { error: txnError } = await supabase
-            .from("fk_transactions")
-            .insert({
-              user_id: userId,
-              amount,
-              reason,
-              reference_id: referenceId ?? null,
-            });
-          if (txnError) {
-            throw txnError;
-          }
-
-          set({ lastFetched: null });
-          return true;
-        } catch (err) {
-          console.error("addFK error:", err);
-          set((state) => ({
-            fkBalance: state.fkBalance - amount,
-            totalEarned: state.totalEarned - amount,
-          }));
-          return false;
         }
       },
       subscribeToRealtime: (userId) => {
@@ -252,72 +148,40 @@ export const useGamificationStore = create<GamificationState>()(
           void supabase.removeChannel(subscription);
         };
       },
-      updateLoginStreak: async (userId) => {
-        const today = localISODate();
-        const supabase = getSupabase();
-
-        const { data: gRow, error: readErr } = await supabase
-          .from("gamification")
-          .select("last_login, streak_days")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (readErr) {
-          console.error(
-            "updateLoginStreak read error:",
-            readErr.message ?? JSON.stringify(readErr),
-          );
-          return;
-        }
-
-        const lastLogin = asISODate(gRow?.last_login);
-        if (lastLogin === today) {
-          set({
-            streakDays: Number(gRow?.streak_days ?? 0),
-            lastLoginDate: today,
-            lastFetched: null,
+      // Streak and the daily 5 FK are recorded by the server (FK balances
+      // are server-only); the response carries the updated row.
+      updateLoginStreak: async () => {
+        try {
+          const res = await apiFetch("/api/gamification/daily-login", {
+            method: "POST",
           });
-          return;
+          if (!res.ok) {
+            console.error("updateLoginStreak error:", res.status);
+            return;
+          }
+          const data = (await res.json()) as {
+            fkBalance: number;
+            totalEarned: number;
+            streakDays: number;
+            lastLogin: string | null;
+            badges: string[];
+            awarded: number;
+          };
+          set((state) => ({
+            fkBalance: data.fkBalance,
+            totalEarned: data.totalEarned,
+            streakDays: data.streakDays,
+            lastLoginDate: asISODate(data.lastLogin),
+            badges: data.badges,
+            lastFetched: new Date().toISOString(),
+            toastMessage:
+              data.awarded > 0
+                ? `+${data.awarded} FK earned! 🎉`
+                : state.toastMessage,
+          }));
+        } catch (err) {
+          console.error("updateLoginStreak error:", err);
         }
-
-        const yesterday = localYesterdayISODate();
-        const isConsecutive = lastLogin === yesterday;
-        const newStreak = isConsecutive
-          ? Number(gRow?.streak_days ?? 0) + 1
-          : 1;
-
-        const { error } = await supabase.from("gamification").upsert(
-          {
-            user_id: userId,
-            streak_days: newStreak,
-            last_login: today,
-          },
-          { onConflict: "user_id" },
-        );
-        if (error) {
-          console.error(
-            "updateLoginStreak error:",
-            error.message ?? JSON.stringify(error),
-          );
-          return;
-        }
-
-        set({
-          streakDays: newStreak,
-          lastLoginDate: today,
-          lastFetched: null,
-        });
-
-        const { data: alreadyAwarded } = await supabase
-          .from("fk_transactions")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("reason", "daily_login")
-          .eq("reference_id", today)
-          .maybeSingle();
-
-        if (alreadyAwarded) return;
-
-        await get().addFK(userId, 5, "daily_login", today);
       },
       earnTokens: (amount) =>
         set((s) => ({

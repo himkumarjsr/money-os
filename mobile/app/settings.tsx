@@ -15,6 +15,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, type Href } from "expo-router";
@@ -207,13 +208,17 @@ function SettingsInner() {
 
   const handlePickPhoto = async () => {
     if (!user?.id || photoBusy) return;
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(
-        "Permission needed",
-        "Allow photo access to set a profile picture.",
-      );
-      return;
+    // Android uses the system photo picker, which needs no permission (Play
+    // blocks READ_MEDIA_IMAGES for one-off picks, see app.json).
+    if (Platform.OS !== "android") {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo access to set a profile picture.",
+        );
+        return;
+      }
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
