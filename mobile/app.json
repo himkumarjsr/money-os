@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.finkoin.app",
+      "usesAppleSignIn": true,
       "buildNumber": "1",
       "associatedDomains": [
         "applinks:www.finkoin.com",
@@ -25,6 +26,7 @@
         "backgroundColor": "#534AB7"
       },
       "package": "com.finkoin.app",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.finkoin.app",
       "versionCode": 1,
       "intentFilters": [
         {
@@ -99,7 +101,8 @@
           "microphonePermission": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

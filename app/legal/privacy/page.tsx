@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import AnalyticsChoicesButton from "@/components/legal/AnalyticsChoicesButton";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Finkoin",
@@ -343,11 +344,17 @@ export default function PrivacyPage() {
           <strong>We do not use:</strong> advertising cookies, cross-site
           tracking cookies, or social media tracking pixels.
         </p>
+        <p id="analytics">
+          <strong>Analytics (website only, opt-in):</strong> If you tap
+          &quot;Allow&quot; on the analytics prompt, we use Google Analytics and
+          Microsoft Clarity to understand how people use Finkoin. They collect
+          usage data such as pages visited, time spent, clicks and general
+          location. No personal financial data is shared with them. If you
+          don&apos;t allow it, neither is loaded. The Finkoin mobile app does
+          not use analytics.
+        </p>
         <p>
-          We use Google Analytics to understand how users use Finkoin. This
-          collects anonymous usage data including pages visited, time spent, and
-          general location. No personal financial data is shared with Google
-          Analytics.
+          <AnalyticsChoicesButton />
         </p>
       </LegalSection>
 
