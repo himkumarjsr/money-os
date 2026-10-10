@@ -9,7 +9,8 @@ import {
   type Notification,
 } from "@/store/notificationStore";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { splitGroupPathForTitle } from "@/lib/splitGroupLink";
 import { useEffect, useMemo, useState } from "react";
 
 function formatWhen(iso: string) {
@@ -24,6 +25,36 @@ function formatWhen(iso: string) {
   } catch {
     return "";
   }
+}
+
+function OpenSplitGroupButton({ title }: { title: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        const path = await splitGroupPathForTitle(getSupabase(), title);
+        router.push(path);
+      }}
+      style={{
+        marginTop: 16,
+        padding: "10px 16px",
+        borderRadius: 10,
+        border: "none",
+        background: "#534AB7",
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: 700,
+        cursor: busy ? "default" : "pointer",
+        opacity: busy ? 0.7 : 1,
+      }}
+    >
+      {busy ? "Opening…" : "Open group"}
+    </button>
+  );
 }
 
 export default function NotificationsClient() {
@@ -275,6 +306,9 @@ export default function NotificationsClient() {
               >
                 {formatWhen(focused.created_at)}
               </div>
+              {focused.category === "split_expense" ? (
+                <OpenSplitGroupButton title={focused.title} />
+              ) : null}
             </>
           ) : (
             <p style={{ margin: 0, color: "#5F5E5A" }}>

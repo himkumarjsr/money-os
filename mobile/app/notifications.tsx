@@ -16,6 +16,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Colors, themedStyles } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import { splitGroupRouteForTitle } from "@/lib/splitGroupLink";
 import { useAuthStore } from "@/store/authStore";
 import {
   mapNotificationRow,
@@ -43,6 +44,24 @@ function categoryLabel(category: string) {
   }
   if (category === "obligation_reminder") return "Reminder";
   return "Finance tip";
+}
+
+function OpenSplitGroupButton({ title }: { title: string }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Pressable
+      disabled={busy}
+      onPress={async () => {
+        setBusy(true);
+        router.push(await splitGroupRouteForTitle(title));
+        setBusy(false);
+      }}
+      style={({ pressed }) => [styles.openGroup, (pressed || busy) && { opacity: 0.8 }]}
+      accessibilityRole="button"
+    >
+      <Text style={styles.openGroupText}>{busy ? "Opening…" : "Open group"}</Text>
+    </Pressable>
+  );
 }
 
 export default function NotificationsScreen() {
@@ -220,6 +239,9 @@ export default function NotificationsScreen() {
                 <Text style={styles.spotWhen}>
                   {formatWhen(focused.created_at)}
                 </Text>
+                {focused.category === "split_expense" ? (
+                  <OpenSplitGroupButton title={focused.title} />
+                ) : null}
               </>
             ) : (
               <Text style={styles.notFound}>
@@ -362,6 +384,15 @@ const styles = themedStyles(() => ({
   },
   spotBody: { fontSize: 15, lineHeight: 25, color: Colors.textSecondary },
   spotWhen: { marginTop: 14, fontSize: 12, color: Colors.textMuted },
+  openGroup: {
+    marginTop: 16,
+    alignSelf: "flex-start",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+  },
+  openGroupText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
   notFound: { color: Colors.textSecondary, fontSize: 14 },
   h2: {
     fontSize: 14,

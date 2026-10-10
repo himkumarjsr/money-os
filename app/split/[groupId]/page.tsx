@@ -13,6 +13,7 @@ import { formatIndian } from "@/lib/formatters";
 import { getSupabase } from "@/lib/supabase";
 import type { TrackerIconName } from "@/lib/tracker-categories";
 import { useAuthStore } from "@/store/authStore";
+import { useNotificationStore } from "@/store/notificationStore";
 import { getMyNetBalance, useSplitStore } from "@/store/splitStore";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 
@@ -45,6 +46,13 @@ function SplitGroupInner() {
   const userId = useAuthStore((s) => s.userId);
   const myEmail = (user?.email ?? "").toLowerCase();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+
+  // Opened from a Split expense push (`?notif=`): mark that inbox message read.
+  useEffect(() => {
+    if (!isLoggedIn || typeof window === "undefined") return;
+    const notif = new URLSearchParams(window.location.search).get("notif");
+    if (notif) void useNotificationStore.getState().markRead(notif);
+  }, [isLoggedIn]);
 
   const loading = useSplitStore((s) => s.loading);
   const group = useSplitStore((s) => s.activeGroup);
