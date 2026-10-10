@@ -1,4 +1,10 @@
-import { Pressable, StyleSheet, Text, View, type TextStyle } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type TextStyle,
+} from "react-native";
 import { Colors } from "@/constants/theme";
 import { formatIndian } from "@/lib/formatters";
 import {
@@ -34,6 +40,9 @@ function policyBadge(t: PolicyType): Badge {
 const MUTED: TextStyle = { color: "#64748B" };
 
 function renewalUi(policy: UserPolicy): { line: string; style: TextStyle } {
+  if (!policy.renewalDate) {
+    return { line: "Renewal date not added", style: { color: "#B45309" } };
+  }
   if (policy.status === "transferred_to_finkoin") {
     return {
       line: `Renews on ${formatRenewalDayMonth(policy.renewalDate)}`,
@@ -68,6 +77,9 @@ function renewalUi(policy: UserPolicy): { line: string; style: TextStyle } {
 function statusBadge(policy: UserPolicy): Badge & { label: string } {
   if (policy.status === "transferred_to_finkoin") {
     return { label: "Transferred to Finkoin", bg: "#EDE9FE", fg: "#5B21B6" };
+  }
+  if (!policy.insurerName.trim() || !policy.renewalDate) {
+    return { label: "Details missing", bg: "#FEF3C7", fg: "#92400E" };
   }
   const today = startOfLocalDay(new Date());
   const rd = startOfLocalDay(parseLocalDate(policy.renewalDate));
