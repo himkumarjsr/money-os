@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
-import { Colors, themedStyles, tintBg } from "@/constants/theme";
+import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
 import { openContentHref } from "@/lib/contentLinks";
 import { InlineText } from "./InlineText";
 import type { ContentBlock, ContentSection, ContentTone } from "./types";
@@ -396,7 +396,7 @@ function Block({
           {block.items.map((t) => {
             const tone = (t.tone && tagTones()[t.tone]) || {
               bg: tintBg("#F1F5F9"),
-              fg: "#334155",
+              fg: tintFg("#334155"),
               border: tintBg("#E2E8F0"),
             };
             return (

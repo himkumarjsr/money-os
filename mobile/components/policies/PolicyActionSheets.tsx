@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors, themedStyles, tintBg } from "@/constants/theme";
+import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
 import { openWebPage } from "@/lib/openWebPage";
 import {
   FINKOIN_AGENT_CODE,
@@ -151,10 +151,10 @@ export function RenewOptionsSheet({
           </View>
 
           <View style={[styles.card, styles.cardTeal]}>
-            <Text style={[styles.cardTitle, { color: "#134E4A" }]}>
+            <Text style={[styles.cardTitle, { color: tintFg("#134E4A") }]}>
               Transfer to Finkoin first
             </Text>
-            <Text style={[styles.cardBody, { color: "#115E59" }]}>
+            <Text style={[styles.cardBody, { color: tintFg("#115E59") }]}>
               Transfer this policy to Finkoin. We will remind you every renewal.
               You get free annual policy review.
             </Text>

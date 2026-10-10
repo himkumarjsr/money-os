@@ -14,7 +14,7 @@ import {
   type InsightTone,
 } from "./calculator-ui";
 import { openContentHref } from "@/lib/contentLinks";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, tintFg } from "@/constants/theme";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -244,7 +244,7 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  emiText: { fontSize: 14, lineHeight: 20, color: "#2E1065" },
+  emiText: { fontSize: 14, lineHeight: 20, color: tintFg("#2E1065") },
   semibold: { fontWeight: "600" },
   emiBody: { marginTop: 4, lineHeight: 23 },
   tipBox: {

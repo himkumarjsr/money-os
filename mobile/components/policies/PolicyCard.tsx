@@ -23,9 +23,9 @@ function policyBadge(t: PolicyType): Badge {
     case "car":
       return { bg: tintBg("#E0F2FE"), fg: tintFg("#075985") };
     case "bike":
-      return { bg: tintBg("#FEF3C7"), fg: "#92400E" };
+      return { bg: tintBg("#FEF3C7"), fg: tintFg("#92400E") };
     case "travel":
-      return { bg: tintBg("#CFFAFE"), fg: "#155E75" };
+      return { bg: tintBg("#CFFAFE"), fg: tintFg("#155E75") };
     default:
       return { bg: tintBg("#F1F5F9"), fg: tintFg("#334155") };
   }
@@ -80,7 +80,7 @@ function statusBadge(policy: UserPolicy): Badge & { label: string } {
     };
   }
   if (!policy.insurerName.trim() || !policy.renewalDate) {
-    return { label: "Details missing", bg: tintBg("#FEF3C7"), fg: "#92400E" };
+    return { label: "Details missing", bg: tintBg("#FEF3C7"), fg: tintFg("#92400E") };
   }
   const today = startOfLocalDay(new Date());
   const rd = startOfLocalDay(parseLocalDate(policy.renewalDate));

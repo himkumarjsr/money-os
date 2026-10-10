@@ -12,7 +12,7 @@ import {
 } from "./primitives";
 import type { TaxCalcState } from "./useTaxCalculatorState";
 import { openContentHref } from "@/lib/contentLinks";
-import { themedStyles, Colors, tintBg } from "@/constants/theme";
+import { themedStyles, Colors, tintBg, tintFg } from "@/constants/theme";
 
 const LEARN_TAX_LINKS = [
   {
@@ -271,13 +271,13 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
 
       {winner === "new" ? (
         <View style={[styles.winner, styles.winnerNew]}>
-          <Text style={[styles.winnerText, { color: "#022C22" }]}>
+          <Text style={[styles.winnerText, { color: tintFg("#022C22") }]}>
             Winner: New regime — about {rupees(saveAmount)} / year
           </Text>
         </View>
       ) : winner === "old" ? (
         <View style={[styles.winner, styles.winnerOld]}>
-          <Text style={[styles.winnerText, { color: "#082F49" }]}>
+          <Text style={[styles.winnerText, { color: tintFg("#082F49") }]}>
             Winner: Old regime — about {rupees(saveAmount)} / year
           </Text>
         </View>

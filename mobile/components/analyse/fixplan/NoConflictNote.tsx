@@ -1,5 +1,5 @@
 import { Text, View } from "react-native";
-import { Radius, Spacing, themedStyles, tintBg } from "@/constants/theme";
+import { Radius, Spacing, themedStyles, tintBg, tintFg } from "@/constants/theme";
 import { NO_CONFLICT_BODY, NO_CONFLICT_TITLE } from "@/lib/reportTrust";
 
 /** Matches web NoConflictNote. */
@@ -20,6 +20,6 @@ const styles = themedStyles(() => ({
     backgroundColor: tintBg("#F1FBF7"),
     padding: Spacing.lg,
   },
-  title: { fontSize: 15, fontWeight: "600", color: "#0F6E56" },
-  body: { marginTop: 4, fontSize: 13, lineHeight: 19, color: "#2E5E50" },
+  title: { fontSize: 15, fontWeight: "600", color: tintFg("#0F6E56") },
+  body: { marginTop: 4, fontSize: 13, lineHeight: 19, color: tintFg("#2E5E50") },
 }));

@@ -3,7 +3,7 @@ import { View, Text } from "react-native";
 import type { SafetyPulseResult } from "@/lib/trackerSafetyPulse";
 import { SectionPrivacyEye } from "@/components/ui/PrivacyEye";
 import { formatIndian } from "@/lib/formatters";
-import { Colors, themedStyles, tintBg, themed } from "@/constants/theme";
+import { Colors, themedStyles, tintBg, themed, tintFg } from "@/constants/theme";
 
 const STATUS_STYLE = themed(
   () =>
@@ -12,25 +12,25 @@ const STATUS_STYLE = themed(
         bg: tintBg("#F3F1FC"),
         border: "#D4D2F5",
         badgeBg: tintBg("#E8E6F8"),
-        badgeText: "#3C3489",
+        badgeText: tintFg("#3C3489"),
       },
       tight: {
         bg: tintBg("#F7F4FF"),
         border: "#C9C2F0",
         badgeBg: tintBg("#EEE9FF"),
-        badgeText: "#534AB7",
+        badgeText: tintFg("#534AB7"),
       },
       over: {
         bg: tintBg("#FBF5F5"),
         border: tintBg("#F0D4D4"),
         badgeBg: tintBg("#FDEDED"),
-        badgeText: "#991B1B",
+        badgeText: tintFg("#991B1B"),
       },
       unknown: {
         bg: tintBg("#F7F7F4"),
         border: tintBg("#E8E6F0"),
         badgeBg: tintBg("#EEEDFE"),
-        badgeText: "#534AB7",
+        badgeText: tintFg("#534AB7"),
       },
     }) as const,
 );

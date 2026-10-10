@@ -42,10 +42,10 @@ const SCORE_TONES = themed(
       },
       warning: {
         bg: tintBg("#FFF4E5"),
-        fg: "#92400E",
+        fg: tintFg("#92400E"),
         label: "Needs attention",
       },
-      good: { bg: tintBg("#DCFCE7"), fg: "#166534", label: "Great shape" },
+      good: { bg: tintBg("#DCFCE7"), fg: tintFg("#166534"), label: "Great shape" },
     }) as const,
 );
 
