@@ -7,6 +7,8 @@ export type ThemePreference = "system" | ThemeName;
 
 const PREF_KEY = "finkoin_theme";
 const PREMIUM_KEY = "finkoin_premium_theme";
+/** User id that Premium was last switched on for automatically. */
+const PREMIUM_AUTO_KEY = "finkoin_premium_auto";
 
 type ThemeState = {
   preference: ThemePreference;
@@ -58,6 +60,13 @@ export const useThemeStore = create<ThemeState>((set) => ({
     if (!status) return;
     syncKv.setItem(PREMIUM_KEY, JSON.stringify({ userId, status }));
     set({ premium: status });
+    // Switch to Premium automatically the first time this account unlocks it;
+    // a later manual choice sticks.
+    if (status.unlocked && syncKv.getItem(PREMIUM_AUTO_KEY) !== userId) {
+      syncKv.setItem(PREMIUM_AUTO_KEY, userId);
+      syncKv.setItem(PREF_KEY, "premium");
+      set({ preference: "premium" });
+    }
   },
 
   clearReturnTo: () => set({ returnTo: null }),

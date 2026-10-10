@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import {
   THEME_PREF_KEY,
+  THEME_PREMIUM_AUTO_KEY,
   THEME_PREMIUM_KEY,
   fetchPremiumStatus,
   parseThemePreference,
@@ -78,5 +79,17 @@ export const useThemeStore = create<ThemeState>((set) => ({
       /* ignore */
     }
     set({ premium: status });
+    // Switch to Premium automatically the first time this account unlocks it;
+    // a later manual choice sticks.
+    if (status.unlocked) {
+      try {
+        if (localStorage.getItem(THEME_PREMIUM_AUTO_KEY) === userId) return;
+        localStorage.setItem(THEME_PREMIUM_AUTO_KEY, userId);
+        localStorage.setItem(THEME_PREF_KEY, "premium");
+      } catch {
+        /* storage blocked: still applies for this visit */
+      }
+      set({ preference: "premium" });
+    }
   },
 }));
