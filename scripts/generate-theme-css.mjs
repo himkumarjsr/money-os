@@ -118,6 +118,21 @@ const STYLE_RE = new RegExp(
   "g",
 );
 
+// Colours picked at runtime: `background: open ? "#F7F5FF" : "white"`, or
+// tone maps like `{ bg: "#FBF5F5", badgeText: "#991B1B" }` spread into styles.
+const STYLE_EXPR_RE =
+  /\b(background|backgroundColor|color|borderColor)\s*:\s*([^,\n{}]*\?[^,\n{}]*)/g;
+const TONE_RE =
+  /\b\w*?(bg|Bg|background|Background|text|Text|color|Color|border|Border)\s*:\s*["'](#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})["']/g;
+const QUOTED_HEX_RE = /["'](#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|white)["']/g;
+const TONE_KEYS = {
+  bg: ["background", "backgroundColor"],
+  background: ["background", "backgroundColor"],
+  text: ["color"],
+  color: ["color"],
+  border: ["borderColor"],
+};
+
 const GRADIENT_RE = /\b(background):\s*["'](linear-gradient\([^"']*\))["']/g;
 const WHITE_RE = /\b(background|backgroundColor):\s*["']white["']/g;
 
@@ -139,6 +154,33 @@ for (const dir of SCAN_DIRS) {
     for (const m of src.matchAll(WHITE_RE)) whites.add(m[1]);
     for (const m of src.matchAll(ARB_GRADIENT_RE)) arbGradients.add(m[0]);
     for (const m of src.matchAll(ANY_HEX_RE)) allHexes.add(m[0].toLowerCase());
+    const addPlain = (key, hex) => {
+      if (hex === "white") {
+        if (key !== "color") whites.add(key);
+        return;
+      }
+      inline.set(`${key}|${hex.toLowerCase()}`, {
+        key,
+        hex: hex.toLowerCase(),
+        before: "",
+        after: "",
+      });
+    };
+    for (const m of src.matchAll(STYLE_EXPR_RE)) {
+      for (const q of m[2].matchAll(QUOTED_HEX_RE)) addPlain(m[1], q[1]);
+    }
+    for (const m of src.matchAll(TONE_RE)) {
+      const kind = m[1].toLowerCase();
+      for (const key of TONE_KEYS[kind]) addPlain(key, m[2]);
+      // Tone borders render as `1px solid ${tone.border}`.
+      if (kind === "border")
+        inline.set(`border|1px solid ${m[2].toLowerCase()}`, {
+          key: "border",
+          hex: m[2].toLowerCase(),
+          before: "1px solid",
+          after: "",
+        });
+    }
     for (const m of src.matchAll(STYLE_RE)) {
       const [, key, before, hex, after] = m;
       // Only plain colours or "1px solid #hex" borders — skip gradients etc.
@@ -152,6 +194,12 @@ for (const dir of SCAN_DIRS) {
       });
     }
   }
+}
+
+// Category and chart colours live in lib/ constants; Premium recolours them by value.
+for (const file of walk(join(ROOT, "lib"))) {
+  const src = readFileSync(file, "utf8");
+  for (const m of src.matchAll(ANY_HEX_RE)) allHexes.add(m[0].toLowerCase());
 }
 
 // ── Colour maths ──────────────────────────────────────────────────────────
