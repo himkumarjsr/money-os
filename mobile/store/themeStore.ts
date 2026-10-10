@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { syncKv } from "@/lib/syncKv";
 import { fetchPremiumStatus, type PremiumStatus } from "@/lib/premiumTheme";
+import { syncPremiumAppIcon } from "@/lib/appIcon";
 import type { ThemeName } from "@/constants/theme";
 
 export type ThemePreference = "system" | ThemeName;
@@ -60,6 +61,7 @@ export const useThemeStore = create<ThemeState>((set) => ({
     if (!status) return;
     syncKv.setItem(PREMIUM_KEY, JSON.stringify({ userId, status }));
     set({ premium: status });
+    void syncPremiumAppIcon(status.unlocked);
     // Switch to Premium automatically the first time this account unlocks it;
     // a later manual choice sticks.
     if (status.unlocked && syncKv.getItem(PREMIUM_AUTO_KEY) !== userId) {
