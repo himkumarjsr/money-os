@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import {
   POST_OFFICE_SCHEME_LABELS,
@@ -8,7 +8,7 @@ import {
   type AnalyseFormValues,
   type PostOfficeSchemeId,
 } from "@/lib/analyse-form-schema";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import {
   Card,
   ClampNumberField,
@@ -179,7 +179,7 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
             Same as &quot;Fixed Deposit total value&quot; above — enter it once.
             We weight FD at 70% as emergency money (penalty + time to break).
           </Text>
-          <Text style={[formStyles.body, { color: "#1E293B" }]}>
+          <Text style={[formStyles.body, { color: Colors.textPrimary }]}>
             Your FD of {formatCurrencyINR(live.erFd)} counts as{" "}
             {formatCurrencyINR(live.erFdCounted)} (70% after premature break
             penalty).
@@ -573,39 +573,39 @@ function ErRow({ label, text }: { label: string; text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   cardHeading: {
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.4,
-    color: "#0F172A",
+    color: Colors.textPrimary,
   },
-  cardSub: { fontSize: 14, fontWeight: "700", color: "#1E293B" },
+  cardSub: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   teal: { fontSize: 12, lineHeight: 17, color: "#0D9488" },
   linkBtn: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   link: { fontSize: 14, fontWeight: "600", color: Colors.primary },
   infoBox: {
     gap: 8,
     borderRadius: 12,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Colors.background,
     padding: 12,
   },
-  infoText: { fontSize: 14, lineHeight: 21, color: "#334155" },
-  infoStrong: { fontWeight: "600", color: "#1E293B" },
+  infoText: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
+  infoStrong: { fontWeight: "600", color: Colors.textPrimary },
   fdBox: {
     gap: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.surfaceMuted,
+    backgroundColor: Colors.background,
     padding: 16,
   },
-  fdTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
+  fdTitle: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
   erPanel: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     padding: 16,
   },
   erRow: {
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
-  erRowText: { fontSize: 14, color: "#334155" },
+  erRowText: { fontSize: 14, color: Colors.textSecondary },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
@@ -635,5 +635,5 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     padding: 12,
   },
-  removeText: { fontSize: 14, fontWeight: "600", color: "#64748B" },
-});
+  removeText: { fontSize: 14, fontWeight: "600", color: Colors.textMuted },
+}));

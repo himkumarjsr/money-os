@@ -1,5 +1,5 @@
-import { View, Image, Text, StyleSheet, type ViewStyle } from "react-native";
-import { Colors } from "@/constants/theme";
+import { View, Image, Text, type ViewStyle } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 
 const logoSource = require("@/assets/logo.png");
 
@@ -30,7 +30,7 @@ export function BrandLogo({ size = 32, withWordmark = false, style }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: { alignItems: "center" },
   row: {
     flexDirection: "row",
@@ -44,4 +44,4 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     letterSpacing: -0.5,
   },
-});
+}));

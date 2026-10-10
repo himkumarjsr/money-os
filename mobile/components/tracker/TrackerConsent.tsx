@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import type { TrackerIconName } from "@/lib/tracker-categories";
 import {
@@ -121,7 +121,7 @@ export function TrackerConsent({ onAccept }: Props) {
                 <AppIcon
                   name="check"
                   size={12}
-                  color="#FFFFFF"
+                  color={Colors.onPrimary}
                   strokeWidth={2.5}
                 />
               ) : null}
@@ -165,7 +165,7 @@ export function TrackerConsent({ onAccept }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: {
     paddingHorizontal: 24,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 20,
     paddingVertical: 32,
     paddingHorizontal: 28,
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     borderColor: Colors.border,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   startOff: { backgroundColor: Colors.border },
-  startText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
+  startText: { color: Colors.onPrimary, fontSize: 15, fontWeight: "800" },
   startTextOff: { color: Colors.textMuted },
   later: {
     marginTop: 10,
@@ -286,4 +286,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   laterText: { color: Colors.textMuted, fontSize: 13, fontWeight: "600" },
-});
+}));

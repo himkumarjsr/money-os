@@ -156,9 +156,12 @@ export function routeForPushUrl(url: unknown): Href {
   }
   const split = /^\/split\/([^/]+)$/.exec(path);
   if (split) {
+    const notif = queryParam(query, "notif");
     return {
       pathname: "/split/[groupId]",
-      params: { groupId: split[1] },
+      params: notif
+        ? { groupId: split[1], notif }
+        : { groupId: split[1] },
     };
   }
   if (path.startsWith("/tracker")) return "/(tabs)/tracker";

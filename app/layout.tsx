@@ -28,7 +28,10 @@ import {
 
 import RenewalReminderBanner from "@/components/RenewalReminderBannerLazy";
 import { Toast } from "@/components/ui/Toast";
+import ThemeSync from "@/components/ThemeSync";
+import { themeBootScript } from "@/lib/theme";
 import "./globals.css";
+import "./theme.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -193,8 +196,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
+        {/* Applies the saved Appearance choice before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <link
           rel="apple-touch-icon"
@@ -354,6 +359,7 @@ export default function RootLayout({
             <ReferralCapture />
           </Suspense>
           <AppInitializer>
+            <ThemeSync />
             <ScrollToTopOnRouteChange />
             <RouteChangeLoader />
             <AuthSessionSync />

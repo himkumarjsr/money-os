@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FormError } from "@/components/ui/FormError";
-import { Colors, Spacing } from "@/constants/theme";
+import { Colors, Spacing, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 
 /** Set a new password for the signed-in session (no email round-trip). */
@@ -90,7 +90,7 @@ export function ChangePasswordSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   title: { fontSize: 18, fontWeight: "800", color: Colors.textPrimary },
   sub: {
     marginTop: 4,
@@ -99,4 +99,4 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   form: { gap: Spacing.lg, marginTop: Spacing.lg },
-});
+}));

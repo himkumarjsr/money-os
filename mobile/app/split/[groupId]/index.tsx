@@ -6,7 +6,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   RefreshControl,
   Alert,
@@ -33,16 +32,14 @@ import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
+import { themedStyles, Colors, tintBg } from "@/constants/theme";
+import { useNotificationStore } from "@/store/notificationStore";
 
 type Tab = "expenses" | "members" | "settlements";
 type PaymentMethod = "upi" | "cash" | "bank";
 
-const PRIMARY = "#534AB7";
-const INK = "#111110";
-const MUTED = "#9B9A94";
-const BODY = "#5F5E5A";
-const BORDER = "#E8E6F0";
-const SOFT = "#F7F7F4";
+const BORDER = () => tintBg("#E8E6F0");
+const SOFT = () => tintBg("#F7F7F4");
 const GREEN = "#1D9E75";
 const RED = "#E24B4A";
 
@@ -100,7 +97,15 @@ async function shareText(message: string) {
 }
 
 export default function GroupDetailScreen() {
-  const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const { groupId, notif } = useLocalSearchParams<{
+    groupId: string;
+    notif?: string;
+  }>();
+
+  // Opened from a Split expense push: mark that inbox message read.
+  useEffect(() => {
+    if (notif) void useNotificationStore.getState().markRead(String(notif));
+  }, [notif]);
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const myEmail = (user?.email ?? "").toLowerCase();
@@ -437,7 +442,8 @@ export default function GroupDetailScreen() {
       : tone === "owe"
         ? "You owe"
         : "All settled";
-  const netColor = tone === "owed" ? GREEN : tone === "owe" ? RED : MUTED;
+  const netColor =
+    tone === "owed" ? GREEN : tone === "owe" ? RED : Colors.textMuted;
 
   if (!groupId) {
     return (
@@ -459,7 +465,7 @@ export default function GroupDetailScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={PRIMARY}
+            tintColor={Colors.primary}
           />
         }
       >
@@ -482,7 +488,7 @@ export default function GroupDetailScreen() {
                   {group?.emoji ? (
                     <Text style={styles.emojiText}>{group.emoji}</Text>
                   ) : (
-                    <AppIcon name="users" size={22} color="#FFFFFF" />
+                    <AppIcon name="users" size={22} color={Colors.onPrimary} />
                   )}
                 </View>
                 <View style={styles.titleCol}>
@@ -581,13 +587,18 @@ export default function GroupDetailScreen() {
                 onPress={() => setActiveTab(t)}
                 style={[
                   styles.tab,
-                  { borderBottomColor: active ? PRIMARY : "transparent" },
+                  {
+                    borderBottomColor: active ? Colors.primary : "transparent",
+                  },
                 ]}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
               >
                 <Text
-                  style={[styles.tabText, { color: active ? PRIMARY : MUTED }]}
+                  style={[
+                    styles.tabText,
+                    { color: active ? Colors.primary : Colors.textMuted },
+                  ]}
                 >
                   {t}
                 </Text>
@@ -618,7 +629,7 @@ export default function GroupDetailScreen() {
               <View style={styles.stack}>
                 {loading ? (
                   <View style={[styles.card, styles.loaderCard]}>
-                    <ActivityIndicator color={PRIMARY} />
+                    <ActivityIndicator color={Colors.primary} />
                     <Text style={styles.loaderText}>Loading…</Text>
                   </View>
                 ) : null}
@@ -641,7 +652,7 @@ export default function GroupDetailScreen() {
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.edgeTitle} numberOfLines={1}>
                           {iPay ? "You" : b.from_name}{" "}
-                          <Text style={{ color: "#94A3B8" }}>→</Text>{" "}
+                          <Text style={{ color: Colors.textMuted }}>→</Text>{" "}
                           {b.to_name}
                         </Text>
                         <Text style={styles.edgeSub} numberOfLines={1}>
@@ -734,7 +745,7 @@ export default function GroupDetailScreen() {
                             "package"
                           }
                           size={16}
-                          color={BODY}
+                          color={Colors.textSecondary}
                         />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
@@ -764,7 +775,11 @@ export default function GroupDetailScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Edit expense"
                           >
-                            <AppIcon name="pencil" size={15} color={PRIMARY} />
+                            <AppIcon
+                              name="pencil"
+                              size={15}
+                              color={Colors.primary}
+                            />
                           </TouchableOpacity>
                           <TouchableOpacity
                             onPress={() => confirmDeleteExpense(e.id)}
@@ -907,7 +922,7 @@ export default function GroupDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Close"
           >
-            <AppIcon name="close" size={16} color={PRIMARY} />
+            <AppIcon name="close" size={16} color={Colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -933,7 +948,7 @@ export default function GroupDetailScreen() {
                   <AppIcon
                     name={copied ? "check" : "doc"}
                     size={16}
-                    color={PRIMARY}
+                    color={Colors.primary}
                   />
                   <Text style={styles.copyBtnText}>
                     {copied ? "Copied" : "Copy"}
@@ -944,7 +959,7 @@ export default function GroupDetailScreen() {
                   style={styles.waBtn}
                   accessibilityRole="button"
                 >
-                  <AppIcon name="phone" size={16} color="#FFFFFF" />
+                  <AppIcon name="phone" size={16} color={Colors.onPrimary} />
                   <Text style={styles.waBtnText}>WhatsApp</Text>
                 </TouchableOpacity>
               </View>
@@ -979,7 +994,7 @@ export default function GroupDetailScreen() {
               value={inviteEmail}
               onChangeText={setInviteEmail}
               placeholder="friend@example.com"
-              placeholderTextColor={MUTED}
+              placeholderTextColor={Colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -1025,7 +1040,7 @@ export default function GroupDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Close"
           >
-            <AppIcon name="close" size={16} color={PRIMARY} />
+            <AppIcon name="close" size={16} color={Colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -1071,7 +1086,7 @@ export default function GroupDetailScreen() {
             onChangeText={setSettleAmount}
             keyboardType="decimal-pad"
             placeholder="0"
-            placeholderTextColor={MUTED}
+            placeholderTextColor={Colors.textMuted}
             style={styles.input}
           />
         </View>
@@ -1090,8 +1105,10 @@ export default function GroupDetailScreen() {
                   style={[
                     styles.methodBtn,
                     {
-                      borderColor: active ? PRIMARY : BORDER,
-                      backgroundColor: active ? "#EEEDFE" : "#FFFFFF",
+                      borderColor: active ? Colors.primary : BORDER(),
+                      backgroundColor: active
+                        ? tintBg("#EEEDFE")
+                        : tintBg("#FFFFFF"),
                     },
                   ]}
                   accessibilityRole="radio"
@@ -1100,7 +1117,7 @@ export default function GroupDetailScreen() {
                   <Text
                     style={[
                       styles.methodText,
-                      { color: active ? PRIMARY : MUTED },
+                      { color: active ? Colors.primary : Colors.textMuted },
                     ]}
                   >
                     {method === "upi"
@@ -1118,7 +1135,7 @@ export default function GroupDetailScreen() {
               value={upiNote}
               onChangeText={setUpiNote}
               placeholder="UPI reference / note (optional)"
-              placeholderTextColor={MUTED}
+              placeholderTextColor={Colors.textMuted}
               style={[styles.input, { marginTop: 10 }]}
             />
           ) : null}
@@ -1147,16 +1164,16 @@ export default function GroupDetailScreen() {
 
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: SOFT },
+const styles = themedStyles(() => ({
+  container: { flex: 1, backgroundColor: SOFT() },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 120 },
 
   header: {
-    backgroundColor: PRIMARY,
+    backgroundColor: Colors.primary,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 24,
-    shadowColor: PRIMARY,
+    shadowColor: Colors.primary,
     shadowOpacity: 0.25,
     shadowRadius: 25,
     shadowOffset: { width: 0, height: 14 },
@@ -1184,7 +1201,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backArrow: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  backArrow: { color: Colors.onPrimary, fontSize: 16, fontWeight: "700" },
   backText: {
     color: "rgba(255,255,255,0.9)",
     fontSize: 14,
@@ -1208,7 +1225,7 @@ const styles = StyleSheet.create({
   },
   emojiText: { fontSize: 20 },
   titleCol: { flex: 1, minWidth: 0 },
-  groupName: { color: "#FFFFFF", fontSize: 20, fontWeight: "800" },
+  groupName: { color: Colors.onPrimary, fontSize: 20, fontWeight: "800" },
   groupMeta: {
     marginTop: 2,
     color: "rgba(255,255,255,0.8)",
@@ -1225,7 +1242,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  moreText: { color: "#FFFFFF", fontSize: 18, fontWeight: "700" },
+  moreText: { color: Colors.onPrimary, fontSize: 18, fontWeight: "700" },
   inviteBtn: {
     minHeight: 44,
     paddingHorizontal: 16,
@@ -1236,7 +1253,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  inviteBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  inviteBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
 
   statsRow: { marginTop: 20, flexDirection: "row", gap: 12 },
   statTile: {
@@ -1254,7 +1271,7 @@ const styles = StyleSheet.create({
   },
   statVal: {
     marginTop: 4,
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 18,
     fontWeight: "800",
   },
@@ -1270,12 +1287,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaSecondaryText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  ctaSecondaryText: {
+    color: Colors.onPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   ctaPrimary: {
     flex: 1,
     height: 48,
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000000",
@@ -1284,15 +1305,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 3,
   },
-  ctaPrimaryText: { color: PRIMARY, fontSize: 14, fontWeight: "800" },
+  ctaPrimaryText: { color: Colors.primary, fontSize: 14, fontWeight: "800" },
 
   tabs: {
     marginTop: 16,
     flexDirection: "row",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: "#FFFFFF",
+    borderColor: BORDER(),
+    backgroundColor: Colors.card,
     overflow: "hidden",
   },
   tab: {
@@ -1317,27 +1338,27 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    color: MUTED,
+    color: Colors.textMuted,
     fontSize: 14,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  sectionSub: { marginTop: 4, color: MUTED, fontSize: 12 },
+  sectionSub: { marginTop: 4, color: Colors.textMuted, fontSize: 12 },
   refreshBtn: {
     minHeight: 44,
     minWidth: 44,
     alignItems: "flex-end",
     justifyContent: "center",
   },
-  refreshText: { color: PRIMARY, fontSize: 12, fontWeight: "700" },
+  refreshText: { color: Colors.primary, fontSize: 12, fontWeight: "700" },
   stack: { marginTop: 12, gap: 8 },
 
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER(),
   },
   listCard: { overflow: "hidden" },
   loaderCard: {
@@ -1346,9 +1367,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  loaderText: { color: MUTED, fontSize: 12 },
-  bodyText: { color: BODY, fontSize: 14 },
-  emptyText: { color: MUTED, fontSize: 14, padding: 24 },
+  loaderText: { color: Colors.textMuted, fontSize: 12 },
+  bodyText: { color: Colors.textSecondary, fontSize: 14 },
+  emptyText: { color: Colors.textMuted, fontSize: 14, padding: 24 },
   listEmpty: { paddingHorizontal: 16, paddingVertical: 20 },
 
   edgeCard: {
@@ -1358,19 +1379,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  edgeTitle: { color: INK, fontSize: 14, fontWeight: "700" },
-  edgeSub: { marginTop: 4, color: MUTED, fontSize: 12 },
+  edgeTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: "700" },
+  edgeSub: { marginTop: 4, color: Colors.textMuted, fontSize: 12 },
   edgeRight: { flexDirection: "row", alignItems: "center", gap: 12 },
-  edgeAmt: { color: INK, fontSize: 14, fontWeight: "800" },
+  edgeAmt: { color: Colors.textPrimary, fontSize: 14, fontWeight: "800" },
   settleBtn: {
     minHeight: 44,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: PRIMARY,
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  settleBtnText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+  settleBtnText: { color: Colors.onPrimary, fontSize: 12, fontWeight: "800" },
 
   balanceCard: {
     flexDirection: "row",
@@ -1380,10 +1401,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  balanceName: { flex: 1, color: INK, fontSize: 14, fontWeight: "700" },
+  balanceName: {
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   balanceAmt: { fontSize: 14, fontWeight: "800" },
 
-  rowDivider: { borderBottomWidth: 1, borderBottomColor: SOFT },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: SOFT() },
   expRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1397,13 +1423,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F4F4F0",
+    backgroundColor: tintBg("#F4F4F0"),
     alignItems: "center",
     justifyContent: "center",
   },
-  expTitle: { color: INK, fontSize: 14, fontWeight: "700" },
-  expMeta: { marginTop: 2, color: MUTED, fontSize: 11 },
-  expAmt: { color: INK, fontSize: 14, fontWeight: "800", textAlign: "right" },
+  expTitle: { color: Colors.textPrimary, fontSize: 14, fontWeight: "700" },
+  expMeta: { marginTop: 2, color: Colors.textMuted, fontSize: 11 },
+  expAmt: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "right",
+  },
   expActions: { flexDirection: "row", alignItems: "center" },
   iconBtn: {
     width: 44,
@@ -1424,34 +1455,38 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: PRIMARY, fontSize: 13, fontWeight: "700" },
-  memberName: { color: INK, fontSize: 14, fontWeight: "600" },
-  memberMeta: { marginTop: 2, color: MUTED, fontSize: 11 },
+  avatarText: { color: Colors.primary, fontSize: 13, fontWeight: "700" },
+  memberName: { color: Colors.textPrimary, fontSize: 14, fontWeight: "600" },
+  memberMeta: { marginTop: 2, color: Colors.textMuted, fontSize: 11 },
   pillTarget: { minHeight: 44, justifyContent: "center" },
   dangerPill: {
     borderRadius: 6,
-    backgroundColor: "#FCEBEB",
+    backgroundColor: Colors.errorLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   dangerPillText: { color: RED, fontSize: 11, fontWeight: "700" },
 
   settleEmpty: { paddingHorizontal: 24, paddingVertical: 40 },
-  settleEmptyText: { color: MUTED, fontSize: 14, textAlign: "center" },
+  settleEmptyText: {
+    color: Colors.textMuted,
+    fontSize: 14,
+    textAlign: "center",
+  },
   checkCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#E1F5EE",
+    backgroundColor: Colors.successLight,
     alignItems: "center",
     justifyContent: "center",
   },
   checkText: { color: GREEN, fontSize: 18 },
-  settleTitle: { color: INK, fontSize: 13, fontWeight: "600" },
+  settleTitle: { color: Colors.textPrimary, fontSize: 13, fontWeight: "600" },
   settleAmt: { color: GREEN, fontSize: 14, fontWeight: "700" },
 
   sheetHead: {
@@ -1460,27 +1495,27 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 16,
   },
-  sheetTitle: { color: INK, fontSize: 16, fontWeight: "800" },
-  sheetSub: { marginTop: 4, color: MUTED, fontSize: 12 },
+  sheetTitle: { color: Colors.textPrimary, fontSize: 16, fontWeight: "800" },
+  sheetSub: { marginTop: 4, color: Colors.textMuted, fontSize: 12 },
   closeBtn: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: SOFT,
+    backgroundColor: SOFT(),
     alignItems: "center",
     justifyContent: "center",
   },
   sheetBody: { marginTop: 20, gap: 16 },
-  mutedSm: { color: MUTED, fontSize: 14 },
+  mutedSm: { color: Colors.textMuted, fontSize: 14 },
 
   linkBox: {
     borderRadius: 12,
-    backgroundColor: SOFT,
+    backgroundColor: SOFT(),
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   linkLabel: {
-    color: MUTED,
+    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -1488,7 +1523,7 @@ const styles = StyleSheet.create({
   },
   linkUrl: {
     marginTop: 4,
-    color: PRIMARY,
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: "500",
     fontFamily: MONO,
@@ -1503,10 +1538,10 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: "#FFFFFF",
+    borderColor: BORDER(),
+    backgroundColor: Colors.card,
   },
-  copyBtnText: { color: PRIMARY, fontSize: 14, fontWeight: "700" },
+  copyBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "700" },
   waBtn: {
     flex: 1,
     minHeight: 44,
@@ -1517,16 +1552,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#25D366",
   },
-  waBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  waBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
 
   groupLinkSection: {
     borderTopWidth: 1,
-    borderTopColor: SOFT,
+    borderTopColor: SOFT(),
     paddingTop: 16,
   },
   upperLabel: {
     marginBottom: 8,
-    color: MUTED,
+    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -1536,47 +1571,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 10,
-    backgroundColor: SOFT,
+    backgroundColor: SOFT(),
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   groupLinkUrl: {
     flex: 1,
-    color: PRIMARY,
+    color: Colors.primary,
     fontSize: 12,
     fontFamily: MONO,
   },
   groupCopyBtn: {
     borderRadius: 8,
-    backgroundColor: PRIMARY,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  groupCopyText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
-  hint: { marginTop: 6, color: MUTED, fontSize: 11 },
+  groupCopyText: { color: Colors.onPrimary, fontSize: 12, fontWeight: "700" },
+  hint: { marginTop: 6, color: Colors.textMuted, fontSize: 11 },
 
-  fieldLabel: { color: BODY, fontSize: 12, fontWeight: "600" },
+  fieldLabel: { color: Colors.textSecondary, fontSize: 12, fontWeight: "600" },
   input: {
     marginTop: 4,
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: BORDER(),
     paddingHorizontal: 12,
     fontSize: 16,
-    color: INK,
-    backgroundColor: "#FFFFFF",
+    color: Colors.textPrimary,
+    backgroundColor: Colors.card,
   },
-  inviteMsg: { color: BODY, fontSize: 14, fontWeight: "500" },
+  inviteMsg: { color: Colors.textSecondary, fontSize: 14, fontWeight: "500" },
   primaryBtn: {
     minHeight: 48,
     borderRadius: 12,
-    backgroundColor: PRIMARY,
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  primaryBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "800" },
   disabled: { opacity: 0.5 },
 
   chipWrap: { marginTop: 6, flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -1588,13 +1623,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: BORDER,
-    backgroundColor: "#FFFFFF",
+    borderColor: BORDER(),
+    backgroundColor: Colors.card,
   },
-  chipActive: { borderColor: PRIMARY, backgroundColor: "#EEEDFE" },
-  chipText: { color: INK, fontSize: 14, fontWeight: "600" },
-  chipTextActive: { color: PRIMARY, fontWeight: "800" },
-  chipSub: { color: MUTED, fontSize: 11 },
+  chipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  chipText: { color: Colors.textPrimary, fontSize: 14, fontWeight: "600" },
+  chipTextActive: { color: Colors.primary, fontWeight: "800" },
+  chipSub: { color: Colors.textMuted, fontSize: 11 },
 
   methodRow: { flexDirection: "row", gap: 8 },
   methodBtn: {
@@ -1612,8 +1650,8 @@ const styles = StyleSheet.create({
   },
   settleMsg: {
     marginTop: 12,
-    color: "#C0392B",
+    color: Colors.errorText,
     fontSize: 14,
     fontWeight: "500",
   },
-});
+}));

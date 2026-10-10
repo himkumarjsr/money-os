@@ -1,5 +1,8 @@
-import { StyleSheet, Text, View } from "react-native";
-import { rsuSaleGain, rsuVestingIncomeAnnual } from "@/lib/taxCalculatorHelpers";
+import { Text, View } from "react-native";
+import {
+  rsuSaleGain,
+  rsuVestingIncomeAnnual,
+} from "@/lib/taxCalculatorHelpers";
 import { TEACH } from "@/lib/taxTeachContent";
 import { ToggleSection } from "../ToggleSection";
 import { inr, rupees } from "./format";
@@ -13,6 +16,7 @@ import {
   tx,
 } from "./primitives";
 import type { TaxCalcState } from "./useTaxCalculatorState";
+import { themedStyles, Colors } from "@/constants/theme";
 
 export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
   const { i, update, derived } = s;
@@ -85,7 +89,9 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
         subtitle="I receive HRA and pay rent"
         oneLiner="Uses rent paid, metro vs non-metro, and salary base for the 10% test — opens old-regime exemption math."
         isOn={i.secHRA}
-        onToggle={(v) => update(v ? { secHRA: true, sec80GG: false } : { secHRA: false })}
+        onToggle={(v) =>
+          update(v ? { secHRA: true, sec80GG: false } : { secHRA: false })
+        }
       >
         <Mt
           id="tax-hra-m"
@@ -146,7 +152,9 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
         subtitle="I pay rent but don’t get HRA"
         oneLiner="Illustrative ₹60k / rent−10% income cap — only matters when old regime wins on deductions."
         isOn={i.sec80GG}
-        onToggle={(v) => update(v ? { sec80GG: true, secHRA: false } : { sec80GG: false })}
+        onToggle={(v) =>
+          update(v ? { sec80GG: true, secHRA: false } : { sec80GG: false })
+        }
       >
         <Mt
           id="tax-rent-nohra"
@@ -300,7 +308,10 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
             <Text style={tx.sm}>
               Gain ₹
               {inr(
-                Math.max(0, rsuSaleGain(i.rsuUnitsSold, i.rsuSalePrice, rsuCost)),
+                Math.max(
+                  0,
+                  rsuSaleGain(i.rsuUnitsSold, i.rsuSalePrice, rsuCost),
+                ),
               )}{" "}
               → {i.rsuShortTerm ? "STCG bucket" : "LTCG bucket"}
             </Text>
@@ -441,7 +452,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   mb8: { marginBottom: 8 },
   mt8: { marginTop: 8 },
   chipsBlock: { marginTop: 8, marginBottom: 12 },
@@ -449,9 +460,9 @@ const styles = StyleSheet.create({
   previewBox: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-});
+}));

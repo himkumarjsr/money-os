@@ -1,5 +1,12 @@
-import { View, Text, StyleSheet } from "react-native";
-import { Colors, FontSize, Radius, Spacing, Shadow } from "@/constants/theme";
+import { View, Text } from "react-native";
+import {
+  Colors,
+  FontSize,
+  Radius,
+  Spacing,
+  Shadow,
+  themedStyles,
+} from "@/constants/theme";
 
 type Props = {
   label: string;
@@ -18,7 +25,7 @@ export function ResultStat({ label, value, hint, accent }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   box: {
     flex: 1,
     minWidth: "45%",
@@ -52,4 +59,4 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textMuted,
   },
-});
+}));

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { router } from "expo-router";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { FormError } from "@/components/ui/FormError";
-import { Colors, Spacing } from "@/constants/theme";
+import { Colors, Spacing, themedStyles } from "@/constants/theme";
 import { deleteMyAccount } from "@/lib/accountDeletion";
 import { useAuthStore } from "@/store/authStore";
 
@@ -55,8 +55,8 @@ export function DeleteAccountSheet({
     <BottomSheet visible={visible} onClose={busy ? () => {} : onClose} scroll>
       <Text style={styles.title}>Delete account permanently?</Text>
       <Text style={styles.sub}>
-        This removes your profile, tracker history, analyse results, Split
-        data and all other Finkoin data. This cannot be undone.
+        This removes your profile, tracker history, analyse results, Split data
+        and all other Finkoin data. This cannot be undone.
       </Text>
       <View style={styles.form}>
         <Input
@@ -87,7 +87,7 @@ export function DeleteAccountSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   title: { fontSize: 18, fontWeight: "800", color: Colors.textPrimary },
   sub: {
     marginTop: 6,
@@ -96,4 +96,4 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   form: { gap: Spacing.lg, marginTop: Spacing.lg },
-});
+}));

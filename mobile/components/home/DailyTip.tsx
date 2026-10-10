@@ -1,5 +1,12 @@
-import { View, Text, StyleSheet } from "react-native";
-import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
+import { View, Text } from "react-native";
+import {
+  Colors,
+  Spacing,
+  Radius,
+  FontSize,
+  Shadow,
+  themedStyles,
+} from "@/constants/theme";
 
 type Props = {
   emoji?: string | null;
@@ -21,7 +28,7 @@ export function DailyTip({ emoji, title, content }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     marginHorizontal: Spacing.xl,
     backgroundColor: Colors.card,
@@ -46,4 +53,4 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 18,
   },
-});
+}));

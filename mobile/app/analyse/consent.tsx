@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { acceptAnalyseConsent } from "@/lib/analyseConsent";
 import { ConsentSheet } from "@/components/analyse/ConsentSheet";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 
 export default function AnalyseConsentScreen() {
   const user = useAuthStore((s) => s.user);
@@ -31,7 +31,7 @@ export default function AnalyseConsentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   root: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -47,4 +47,4 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     overflow: "hidden",
   },
-});
+}));

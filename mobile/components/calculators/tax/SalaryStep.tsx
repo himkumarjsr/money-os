@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { TEACH } from "@/lib/taxTeachContent";
 import { rupees } from "./format";
 import {
@@ -10,6 +10,7 @@ import {
   tx,
 } from "./primitives";
 import type { TaxCalcState } from "./useTaxCalculatorState";
+import { themedStyles } from "@/constants/theme";
 
 export function SalaryStep({ s }: { s: TaxCalcState }) {
   const { i, update } = s;
@@ -99,7 +100,7 @@ export function SalaryStep({ s }: { s: TaxCalcState }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   body: { marginTop: 16 },
   gapTop: { marginTop: 4 },
-});
+}));

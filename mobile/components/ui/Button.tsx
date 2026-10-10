@@ -1,12 +1,11 @@
 import {
   TouchableOpacity,
   Text,
-  StyleSheet,
   ActivityIndicator,
   type ViewStyle,
   type TextStyle,
 } from "react-native";
-import { Colors, Radius, FontSize } from "@/constants/theme";
+import { Colors, Radius, FontSize, themedStyles } from "@/constants/theme";
 
 type Props = {
   label: string;
@@ -67,7 +66,7 @@ function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   base: {
     height: 52,
     borderRadius: Radius.lg,
@@ -81,7 +80,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: "700",
   },
-});
+}));
 
 export { Button };
 export default Button;

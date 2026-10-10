@@ -5,7 +5,7 @@ import {
   getUniversalCaps,
   type UniversalBucketKey,
 } from "@/lib/universal-buckets";
-import type { BandLabel } from "./format";
+import type { BandLabel } from "./bandLabel";
 
 export * from "@/lib/analyseResultModel";
 

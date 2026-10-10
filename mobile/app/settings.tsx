@@ -10,7 +10,6 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  StyleSheet,
   Image,
   Alert,
   ActivityIndicator,
@@ -25,7 +24,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { syncKv } from "@/lib/syncKv";
 import { uploadAvatar } from "@/lib/avatarUpload";
@@ -41,6 +40,7 @@ import { SettingsToggle } from "@/components/settings/SettingsToggle";
 import { ChangePasswordSheet } from "@/components/settings/ChangePasswordSheet";
 import { DeleteAccountSheet } from "@/components/settings/DeleteAccountSheet";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
+import { AppearancePicker } from "@/components/settings/AppearancePicker";
 import { openStoreRating } from "@/lib/storeReview";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
@@ -428,9 +428,9 @@ function SettingsInner() {
                 accessibilityLabel="Change profile photo"
               >
                 {photoBusy ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={Colors.onPrimary} />
                 ) : (
-                  <AppIcon name="pencil" size={15} color="#FFFFFF" />
+                  <AppIcon name="pencil" size={15} color={Colors.onPrimary} />
                 )}
               </Pressable>
             </View>
@@ -522,6 +522,11 @@ function SettingsInner() {
           {resetError ? (
             <Text style={[styles.err, { marginTop: 10 }]}>{resetError}</Text>
           ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <AppearancePicker />
         </View>
 
         {/* Notifications */}
@@ -712,7 +717,7 @@ function SettingsInner() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 120 },
   back: {
@@ -732,7 +737,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
   },
-  gateBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
+  gateBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 15 },
 
   h1: { fontSize: 28, fontWeight: "800", color: Colors.textPrimary },
   sub: { marginTop: 6, fontSize: 14, color: Colors.textSecondary },
@@ -784,7 +789,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitials: { fontSize: 30, fontWeight: "800", color: "#FFFFFF" },
+  avatarInitials: { fontSize: 30, fontWeight: "800", color: Colors.onPrimary },
   avatarEdit: {
     position: "absolute",
     bottom: -2,
@@ -820,7 +825,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: "center",
   },
-  primaryBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  primaryBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
 
   divider: {
     height: 1,
@@ -918,12 +923,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: Colors.errorLight,
+    backgroundColor: Colors.errorLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  dangerBtnText: { fontSize: 14, fontWeight: "800", color: "#B91C1C" },
+  dangerBtnText: { fontSize: 14, fontWeight: "800", color: Colors.errorText },
 
   appSection: {
     backgroundColor: Colors.background,
@@ -948,4 +953,4 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   feedbackText: { fontSize: 13, fontWeight: "600", color: Colors.primary },
-});
+}));

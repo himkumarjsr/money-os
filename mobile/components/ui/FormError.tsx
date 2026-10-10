@@ -1,5 +1,11 @@
-import { View, Text, StyleSheet } from "react-native";
-import { FontSize, Radius, Spacing } from "@/constants/theme";
+import { View, Text } from "react-native";
+import {
+  FontSize,
+  Radius,
+  Spacing,
+  themedStyles,
+  Colors,
+} from "@/constants/theme";
 
 /** Inline form error box (#FCEBEB / #791F1F, as in the PWA). */
 function FormError({ message }: { message?: string | null }) {
@@ -11,15 +17,15 @@ function FormError({ message }: { message?: string | null }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   box: {
-    backgroundColor: "#FCEBEB",
+    backgroundColor: Colors.errorLight,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
-  text: { color: "#791F1F", fontSize: FontSize.md, fontWeight: "600" },
-});
+  text: { color: Colors.errorText, fontSize: FontSize.md, fontWeight: "600" },
+}));
 
 export { FormError };
 export default FormError;

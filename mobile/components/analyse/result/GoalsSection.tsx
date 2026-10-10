@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import MoneyInput from "@/components/ui/MoneyInput";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { formatIndian } from "@/lib/formatters";
 import {
@@ -52,7 +52,8 @@ export function GoalsSection({
     setError(null);
     const res = await saveAnalyseProfile(userId, next);
     setSaving(false);
-    if (res.error) setError("Couldn't save — your change is kept on this device.");
+    if (res.error)
+      setError("Couldn't save — your change is kept on this device.");
     return !res.error;
   };
 
@@ -98,7 +99,9 @@ export function GoalsSection({
           <View style={styles.row}>
             <Pressable
               disabled={saving}
-              onPress={() => void save(answerPromptedGoal(profile, offer, true))}
+              onPress={() =>
+                void save(answerPromptedGoal(profile, offer, true))
+              }
               style={[styles.primaryBtn, saving && styles.disabled]}
               accessibilityRole="button"
             >
@@ -138,8 +141,8 @@ export function GoalsSection({
                     styles.chip,
                     {
                       backgroundColor: g.isDefaultTarget
-                        ? "#FFF3E6"
-                        : "#E8F6F1",
+                        ? tintBg("#FFF3E6")
+                        : tintBg("#E8F6F1"),
                     },
                   ]}
                 >
@@ -171,7 +174,12 @@ export function GoalsSection({
                       style={[styles.textBtn, saving && styles.disabled]}
                       accessibilityRole="button"
                     >
-                      <Text style={[styles.textBtnLabel, { color: "#8C3A3A" }]}>
+                      <Text
+                        style={[
+                          styles.textBtnLabel,
+                          { color: Colors.errorText },
+                        ]}
+                      >
                         Not my goal
                       </Text>
                     </Pressable>
@@ -217,7 +225,9 @@ export function GoalsSection({
                 <Text style={styles.inputLabel}>Target year</Text>
                 <TextInput
                   value={yearRaw}
-                  onChangeText={(t) => setYearRaw(t.replace(/\D/g, "").slice(0, 4))}
+                  onChangeText={(t) =>
+                    setYearRaw(t.replace(/\D/g, "").slice(0, 4))
+                  }
                   keyboardType="number-pad"
                   style={[styles.yearInput, yearInvalid && styles.inputError]}
                   maxLength={4}
@@ -255,10 +265,10 @@ export function GoalsSection({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     padding: 16,
   },
   h2: { fontSize: 20, fontWeight: "600", color: Colors.textPrimary },
@@ -266,20 +276,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 20,
-    color: "#454442",
+    color: Colors.textSecondary,
   },
   offer: {
     marginTop: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#DCD8F4",
-    backgroundColor: "#F7F6FE",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.surfaceMuted,
     padding: 16,
   },
   goal: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ECEAF5",
+    borderColor: Colors.surfaceMuted,
     padding: 12,
   },
   goalHead: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
@@ -292,7 +302,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 13,
     fontWeight: "500",
-    color: "#454442",
+    color: Colors.textSecondary,
     fontVariant: ["tabular-nums"],
   },
   reason: {
@@ -319,14 +329,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+  primaryBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "600" },
   secondaryBtn: {
     minHeight: 44,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DCD8F4",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -359,4 +369,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-});
+}));

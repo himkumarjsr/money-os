@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { View, ActivityIndicator, Text } from "react-native";
 import {
   router,
   useLocalSearchParams,
@@ -8,7 +8,7 @@ import {
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useAuthStore, createSessionFromUrl } from "@/store/authStore";
-import { Colors, FontSize } from "@/constants/theme";
+import { Colors, FontSize, themedStyles } from "@/constants/theme";
 
 const OAUTH_WAIT_MS = 30_000;
 
@@ -136,7 +136,7 @@ export default function AuthCallbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   box: {
     flex: 1,
     alignItems: "center",
@@ -148,4 +148,4 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: Colors.textMuted,
   },
-});
+}));

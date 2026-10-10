@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { syncKv } from "@/lib/syncKv";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -140,7 +140,7 @@ export function MorningTipPopup() {
           accessibilityLabel="Close"
           accessibilityRole="button"
         >
-          <AppIcon name="close" size={14} color="#9B9A94" />
+          <AppIcon name="close" size={14} color={Colors.textMuted} />
         </Pressable>
 
         <View style={styles.head}>
@@ -181,7 +181,7 @@ export function MorningTipPopup() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   backdrop: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -192,13 +192,13 @@ const styles = StyleSheet.create({
     right: 16,
     maxWidth: 420,
     alignSelf: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 20,
     paddingTop: 22,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.2,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: "#F7F7F4",
+    backgroundColor: Colors.background,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 13,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -247,17 +247,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#111110",
+    color: Colors.textPrimary,
     lineHeight: 19,
     paddingRight: 32,
   },
   body: {
-    backgroundColor: "#F7F7F4",
+    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 14,
     marginBottom: 18,
   },
-  bodyText: { fontSize: 14, color: "#5F5E5A", lineHeight: 24 },
+  bodyText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 24 },
   actions: { flexDirection: "row", gap: 8 },
   btn: {
     flex: 1,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnPrimary: { backgroundColor: Colors.primary },
-  btnPrimaryText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
-  btnSecondary: { backgroundColor: "#EEEDFE" },
+  btnPrimaryText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
+  btnSecondary: { backgroundColor: Colors.primaryLight },
   btnSecondaryText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
-});
+}));

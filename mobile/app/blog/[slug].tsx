@@ -1,7 +1,7 @@
 /** Native Blog article — port of web app/blog/[slug]/page.tsx. */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { BlogBody } from "@/components/content/BlogBody";
 import { BLOG_ARTICLES, getBlogArticle } from "@/lib/blogContent";
@@ -33,7 +33,10 @@ export default function BlogArticleScreen() {
     );
   }
 
-  const others = BLOG_ARTICLES.filter((a) => a.slug !== article.slug).slice(0, 2);
+  const others = BLOG_ARTICLES.filter((a) => a.slug !== article.slug).slice(
+    0,
+    2,
+  );
 
   return (
     <ContentScreen
@@ -52,7 +55,9 @@ export default function BlogArticleScreen() {
       <Text style={styles.h1}>{article.title}</Text>
       <Text style={styles.byline}>
         By Himanshu Kumar · {article.publishedAt}
-        {article.readTimeMinutes ? ` · ${article.readTimeMinutes} min read` : ""}
+        {article.readTimeMinutes
+          ? ` · ${article.readTimeMinutes} min read`
+          : ""}
       </Text>
 
       <View style={styles.body}>
@@ -106,15 +111,24 @@ export default function BlogArticleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  inlineLink: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
-  linkText: { fontSize: 14, fontWeight: "700", color: Colors.primary, lineHeight: 20 },
+const styles = themedStyles(() => ({
+  inlineLink: {
+    minHeight: 44,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+  },
+  linkText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.primary,
+    lineHeight: 20,
+  },
   category: {
     marginTop: 4,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.6,
-    color: "#64748B",
+    color: Colors.textMuted,
   },
   h1: {
     marginTop: 8,
@@ -123,33 +137,48 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 34,
   },
-  byline: { marginTop: 8, fontSize: 14, color: "#64748B" },
+  byline: { marginTop: 8, fontSize: 14, color: Colors.textMuted },
   body: { marginTop: 16 },
   faq: {
     marginTop: 48,
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
+    borderTopColor: Colors.border,
     paddingTop: 32,
   },
   faqTitle: { fontSize: 20, fontWeight: "800", color: Colors.textPrimary },
-  faqQ: { fontSize: 16, fontWeight: "700", color: Colors.textPrimary, lineHeight: 22 },
-  faqA: { marginTop: 8, fontSize: 16, lineHeight: 25, color: "#334155" },
+  faqQ: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    lineHeight: 22,
+  },
+  faqA: {
+    marginTop: 8,
+    fontSize: 16,
+    lineHeight: 25,
+    color: Colors.textSecondary,
+  },
   nextSteps: {
     marginTop: 40,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     borderRadius: 18,
     padding: 18,
   },
-  nextTitle: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary, marginBottom: 4 },
+  nextTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
   nextLink: { minHeight: 44, justifyContent: "center" },
   related: { marginTop: 32 },
   relatedTitle: {
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.6,
-    color: "#64748B",
+    color: Colors.textMuted,
     marginBottom: 4,
   },
-});
+}));

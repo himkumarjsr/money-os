@@ -1,6 +1,14 @@
 import { StyleSheet } from "react-native";
 import { scoreBand } from "@/lib/financialEngine";
-import { Colors, Radius, Shadow, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  Radius,
+  Shadow,
+  Spacing,
+  themedStyles,
+  tintBg,
+  themed,
+} from "@/constants/theme";
 
 /** `Math.round(n).toLocaleString("en-IN")` — the web page's most common money format. */
 export const inr = (n: unknown) =>
@@ -22,17 +30,20 @@ const SCORE_COLOR = {
   good: "#1D9E75",
 } as const;
 
-const SCORE_BG = {
-  critical: "#FCEBEB",
-  warning: "#FAEEDA",
-  good: "#E1F5EE",
-} as const;
+const SCORE_BG = themed(
+  () =>
+    ({
+      critical: tintBg("#FCEBEB"),
+      warning: tintBg("#FAEEDA"),
+      good: tintBg("#E1F5EE"),
+    }) as const,
+);
 
 export const getScoreColor = (s: number) => SCORE_COLOR[scoreBand(s)];
 
 export const getScoreBg = (s: number) => SCORE_BG[scoreBand(s)];
 
-export const shared = StyleSheet.create({
+export const shared = themedStyles(() => ({
   card: {
     backgroundColor: Colors.card,
     borderRadius: Radius.xl,
@@ -52,8 +63,8 @@ export const shared = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: 2,
   },
-  rowLabel: { flex: 1, fontSize: 14, color: "#5F5E5A" },
-  rowValue: { fontSize: 14, color: "#5F5E5A" },
+  rowLabel: { flex: 1, fontSize: 14, color: Colors.textSecondary },
+  rowValue: { fontSize: 14, color: Colors.textSecondary },
   totalRow: {
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,
@@ -61,4 +72,4 @@ export const shared = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   totalText: { fontSize: 14, fontWeight: "700", color: Colors.success },
-});
+}));

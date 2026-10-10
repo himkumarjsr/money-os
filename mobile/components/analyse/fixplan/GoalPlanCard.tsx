@@ -1,8 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { GoalAdvice } from "@/lib/fixPlanMerge";
-import { formatStartMonth, type GoalPlanProgress } from "@/lib/plannedInvestments";
+import {
+  formatStartMonth,
+  type GoalPlanProgress,
+} from "@/lib/plannedInvestments";
 import type { GoalItem } from "@/lib/priorityEngine";
-import { Colors, Spacing } from "@/constants/theme";
+import { Colors, Spacing, themedStyles } from "@/constants/theme";
 import { loc, shared } from "./shared";
 
 /** Every goal funded in parallel (weighted split from goalFunding), largest share first. */
@@ -22,7 +25,10 @@ export function GoalPlanCard({
   const shortfall = goals.reduce(
     (s, g) =>
       s +
-      Math.max(0, g.monthlyRequired - (g.monthlyAllocated ?? g.monthlyRequired)),
+      Math.max(
+        0,
+        g.monthlyRequired - (g.monthlyAllocated ?? g.monthlyRequired),
+      ),
     0,
   );
   return (
@@ -145,18 +151,18 @@ export function GoalPlanCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   intro: {
     marginTop: Spacing.xs,
     fontSize: 13,
     fontWeight: "500",
     lineHeight: 19,
-    color: "#454442",
+    color: Colors.textSecondary,
   },
   row: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ECEAF5",
+    borderColor: Colors.surfaceMuted,
     padding: Spacing.md,
   },
   head: {
@@ -177,19 +183,29 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontVariant: ["tabular-nums"],
   },
-  share: { fontSize: 12, fontWeight: "600", color: "#7A7871" },
+  share: { fontSize: 12, fontWeight: "600", color: Colors.textMuted },
   track: {
     marginTop: Spacing.sm,
     height: 8,
     borderRadius: 4,
     overflow: "hidden",
-    backgroundColor: "#ECEAF5",
+    backgroundColor: Colors.surfaceMuted,
   },
   fill: { height: "100%", backgroundColor: Colors.primary },
-  line: { marginTop: 6, fontSize: 12, fontWeight: "500", color: "#454442" },
-  muted: { marginTop: 2, color: "#7A7871" },
+  line: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "500",
+    color: Colors.textSecondary,
+  },
+  muted: { marginTop: 2, color: Colors.textMuted },
   split: { marginTop: Spacing.sm, gap: 2 },
-  progress: { marginTop: Spacing.sm, fontSize: 12, fontWeight: "600", color: "#1D9E75" },
+  progress: {
+    marginTop: Spacing.sm,
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.success,
+  },
   startBtn: {
     marginTop: Spacing.lg,
     minHeight: 48,
@@ -198,23 +214,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  startText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  startHint: { marginTop: 6, fontSize: 11, color: "#7A7871", textAlign: "center" },
-  splitTitle: { fontSize: 12, fontWeight: "600", color: "#454442" },
+  startText: { color: Colors.onPrimary, fontSize: 15, fontWeight: "700" },
+  startHint: {
+    marginTop: 6,
+    fontSize: 11,
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  splitTitle: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
   splitRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: Spacing.md,
   },
-  splitLabel: { flex: 1, fontSize: 12, color: "#454442" },
-  splitAmount: { fontSize: 12, color: "#454442", fontVariant: ["tabular-nums"] },
+  splitLabel: { flex: 1, fontSize: 12, color: Colors.textSecondary },
+  splitAmount: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontVariant: ["tabular-nums"],
+  },
   advice: {
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: "#ECEAF5",
+    borderTopColor: Colors.surfaceMuted,
     gap: 4,
   },
-  adviceText: { fontSize: 13, lineHeight: 18, color: "#454442" },
-  watch: { color: "#8C5A0A" },
-});
+  adviceText: { fontSize: 13, lineHeight: 18, color: Colors.textSecondary },
+  watch: { color: Colors.warningText },
+}));

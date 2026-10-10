@@ -1,5 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Colors, Radius, FontSize } from "@/constants/theme";
+import { View, Text, TouchableOpacity } from "react-native";
+import { Colors, Radius, FontSize, themedStyles } from "@/constants/theme";
 
 type Option = {
   value: string;
@@ -32,7 +32,7 @@ export default function SegmentControl({ options, value, onChange }: Props) {
 
 export { SegmentControl };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: {
     flexDirection: "row",
     backgroundColor: Colors.card,
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   textActive: {
-    color: "#fff",
+    color: Colors.onPrimary,
     fontWeight: "700",
   },
-});
+}));

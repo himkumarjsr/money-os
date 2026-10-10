@@ -206,7 +206,7 @@ export function GlobalNavbar() {
         {/* Soft wash only — no border, shadow, or hard bottom edge */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[88px] transition-opacity duration-300"
+          className="fk-nav-wash pointer-events-none absolute inset-x-0 top-0 h-[88px] transition-opacity duration-300"
           style={{
             background: scrolled
               ? "linear-gradient(180deg, rgba(244,242,252,0.96) 0%, rgba(244,242,252,0.72) 48%, rgba(244,242,252,0) 100%)"
@@ -553,7 +553,7 @@ export function GlobalNavbar() {
           }`}
         >
           <div
-            className="relative rounded-[28px] border border-white/70"
+            className="fk-nav-pill relative rounded-[28px] border border-white/70"
             style={{
               background: [
                 "radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 55%)",

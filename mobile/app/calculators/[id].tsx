@@ -1,15 +1,8 @@
 import { useMemo } from "react";
-import {
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, Share, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { CATEGORIES, type CalcItem } from "@/constants/calculator-config";
 import { calculatorsById } from "@/components/calculators/registry";
@@ -126,8 +119,8 @@ export default function CalculatorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+const styles = themedStyles(() => ({
+  container: { flex: 1, backgroundColor: Colors.card },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -135,7 +128,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: Colors.border,
   },
   backRow: {
     flexDirection: "row",
@@ -165,14 +158,24 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     padding: 16,
   },
   headRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  title: { fontSize: 18, fontWeight: "600", color: "#0F172A", flexShrink: 1 },
-  blurb: { marginTop: 4, fontSize: 14, lineHeight: 20, color: "#475569" },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    flexShrink: 1,
+  },
+  blurb: {
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.textSecondary,
+  },
   shareBtn: {
     minHeight: 44,
     paddingHorizontal: 14,
@@ -183,4 +186,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   shareText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
-});
+}));

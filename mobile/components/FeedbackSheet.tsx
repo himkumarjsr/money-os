@@ -6,14 +6,13 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { router } from "expo-router";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { siteBase } from "@/lib/splitApi";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -211,7 +210,10 @@ export function FeedbackSheet({
                 accessibilityLabel={`${n} star${n > 1 ? "s" : ""}`}
               >
                 <Text
-                  style={[styles.starText, n <= rating && { color: "#FFFFFF" }]}
+                  style={[
+                    styles.starText,
+                    n <= rating && { color: Colors.onPrimary },
+                  ]}
                 >
                   ★
                 </Text>
@@ -238,7 +240,7 @@ export function FeedbackSheet({
                 ? "e.g. The tracker made my month clear"
                 : "e.g. I couldn't find…"
             }
-            placeholderTextColor="#9B9A94"
+            placeholderTextColor={Colors.textMuted}
             multiline
             maxLength={1500}
             style={styles.input}
@@ -318,7 +320,7 @@ export function FeedbackSheet({
               ]}
             >
               {submitting ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={Colors.onPrimary} />
               ) : (
                 <Text style={styles.btnPrimaryText}>
                   {last ? "Submit" : "Next"}
@@ -355,33 +357,38 @@ function Option({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   eyebrow: {
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.5,
     color: Colors.primary,
   },
-  title: { marginTop: 4, fontSize: 18, fontWeight: "700", color: "#0F172A" },
-  subtitle: { marginTop: 4, fontSize: 14, color: "#475569" },
+  title: {
+    marginTop: 4,
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  subtitle: { marginTop: 4, fontSize: 14, color: Colors.textSecondary },
   dots: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 6,
     marginTop: 12,
   },
-  dot: { height: 6, width: 6, borderRadius: 3, backgroundColor: "#E2E8F0" },
+  dot: { height: 6, width: 6, borderRadius: 3, backgroundColor: Colors.border },
   body: { paddingVertical: 16 },
-  text: { fontSize: 14, color: "#334155", lineHeight: 21 },
-  textStrong: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
-  success: { fontSize: 14, fontWeight: "600", color: "#065F46" },
+  text: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
+  textStrong: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
+  success: { fontSize: 14, fontWeight: "600", color: Colors.successText },
   stars: { flexDirection: "row", justifyContent: "center", gap: 8 },
   star: {
     width: 48,
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -391,33 +398,36 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     paddingHorizontal: 14,
     justifyContent: "center",
   },
-  optionOn: { borderColor: Colors.primary, backgroundColor: "#EEEDFE" },
-  optionText: { fontSize: 14, fontWeight: "500", color: "#334155" },
+  optionOn: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  optionText: { fontSize: 14, fontWeight: "500", color: Colors.textSecondary },
   input: {
     minHeight: 120,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    color: "#0F172A",
+    color: Colors.textPrimary,
     textAlignVertical: "top",
   },
   summary: {
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.surfaceMuted,
+    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 12,
     gap: 4,
   },
-  summaryText: { fontSize: 12, color: "#334155", lineHeight: 18 },
-  bold: { fontWeight: "600", color: "#0F172A" },
-  error: { marginTop: 12, fontSize: 14, color: "#DC2626" },
+  summaryText: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
+  bold: { fontWeight: "600", color: Colors.textPrimary },
+  error: { marginTop: 12, fontSize: 14, color: Colors.error },
   footer: { flexDirection: "row", gap: 8 },
   btn: {
     flex: 1,
@@ -427,7 +437,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnPrimary: { backgroundColor: Colors.primary },
-  btnPrimaryText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
-  btnGhost: { borderWidth: 1, borderColor: "#E2E8F0" },
-  btnGhostText: { color: "#334155", fontSize: 14, fontWeight: "600" },
-});
+  btnPrimaryText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "600" },
+  btnGhost: { borderWidth: 1, borderColor: Colors.border },
+  btnGhostText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+}));

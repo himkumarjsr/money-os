@@ -2,12 +2,17 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   type TextInputProps,
   type StyleProp,
   type TextStyle,
 } from "react-native";
-import { Colors, Radius, FontSize, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  Radius,
+  FontSize,
+  Spacing,
+  themedStyles,
+} from "@/constants/theme";
 
 type Props = TextInputProps & {
   label?: string;
@@ -35,7 +40,7 @@ function Input({ label, helper, error, prefix, style, ...props }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrapper: { gap: 6 },
   label: {
     fontSize: FontSize.md,
@@ -76,7 +81,7 @@ const styles = StyleSheet.create({
     color: Colors.error,
     fontWeight: "600",
   },
-});
+}));
 
 export { Input };
 export default Input;

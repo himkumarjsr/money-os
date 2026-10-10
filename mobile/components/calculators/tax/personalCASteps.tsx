@@ -1,16 +1,10 @@
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { formatIndian } from "@/lib/formatters";
 import { TEACH } from "@/lib/taxTeachContent";
-import {
-  Checkbox,
-  Chip,
-  ChipRow,
-  Mt,
-  TaxNumberInput,
-  tx,
-} from "./primitives";
+import { Checkbox, Chip, ChipRow, Mt, TaxNumberInput, tx } from "./primitives";
 import { EMPLOYMENT_OPTIONS, type TaxCalcState } from "./useTaxCalculatorState";
+import { themedStyles, Colors } from "@/constants/theme";
 
 export const PERSONAL_CA_TOTAL_STEPS = 19;
 
@@ -973,8 +967,9 @@ export function PersonalCAStepBody({
           </Text>
           <View style={styles.doneBox}>
             <Text style={styles.doneText}>
-              Next step: tap <Text style={{ fontWeight: "600" }}>Calculate</Text>{" "}
-              in Step 5 results to compare old vs new regime.
+              Next step: tap{" "}
+              <Text style={{ fontWeight: "600" }}>Calculate</Text> in Step 5
+              results to compare old vs new regime.
             </Text>
           </View>
         </View>
@@ -982,28 +977,28 @@ export function PersonalCAStepBody({
   }
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   q: { marginBottom: 12 },
-  qMuted: { color: "#7A7871", fontWeight: "400" },
+  qMuted: { color: Colors.textMuted, fontWeight: "400" },
   block: { marginBottom: 8 },
   blockLg: { marginBottom: 12 },
   gap12: { gap: 12 },
-  warn: { fontSize: 12, color: "#B45309" },
+  warn: { fontSize: 12, color: Colors.warningText },
   reviewBox: {
     gap: 2,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ECEAF8",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.background,
     padding: 12,
   },
   doneBox: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#A7F3D0",
-    backgroundColor: "#ECFDF5",
+    borderColor: Colors.successLight,
+    backgroundColor: Colors.successLight,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  doneText: { fontSize: 14, lineHeight: 20, color: "#064E3B" },
-});
+  doneText: { fontSize: 14, lineHeight: 20, color: Colors.successText },
+}));

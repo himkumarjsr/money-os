@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import { Alert, Pressable, Text, View } from "react-native";
+import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 import {
   deletePlannedInvestment,
   fetchPlannedInvestments,
@@ -127,7 +127,11 @@ export function PlannedInvestmentsSection({ userId }: { userId: string }) {
                           style: "destructive",
                           onPress: () =>
                             void run(r.id, () =>
-                              deletePlannedInvestment(getSupabase(), userId, r.id),
+                              deletePlannedInvestment(
+                                getSupabase(),
+                                userId,
+                                r.id,
+                              ),
                             ),
                         },
                       ],
@@ -153,11 +157,11 @@ export function PlannedInvestmentsSection({ userId }: { userId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     marginTop: Spacing.md,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     borderRadius: Radius.md,
     overflow: "hidden",
   },
@@ -173,11 +177,21 @@ const styles = StyleSheet.create({
   headTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   headMeta: { fontSize: 12, fontWeight: "600", color: Colors.primary },
   group: { paddingHorizontal: 14, paddingVertical: 10 },
-  divider: { borderBottomWidth: 1, borderBottomColor: "#F7F7F4" },
-  groupTitle: { fontSize: 13, fontWeight: "600", color: "#111110", marginBottom: 4 },
-  row: { flexDirection: "row", alignItems: "center", gap: Spacing.sm, paddingVertical: 4 },
-  instrument: { fontSize: 13, color: "#454442" },
-  meta: { fontSize: 11, color: "#7A7871", marginTop: 1 },
+  divider: { borderBottomWidth: 1, borderBottomColor: Colors.background },
+  groupTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: 4,
+  },
+  instrument: { fontSize: 13, color: Colors.textSecondary },
+  meta: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   btn: {
     minHeight: 44,
     paddingHorizontal: 10,
@@ -186,15 +200,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnPrimary: { backgroundColor: Colors.primary },
-  btnGhost: { backgroundColor: "#F1F0EC" },
+  btnGhost: { backgroundColor: Colors.surfaceMuted },
   btnText: { fontSize: 12, fontWeight: "700" },
   foot: {
     borderTopWidth: 1,
-    borderTopColor: "#F7F7F4",
+    borderTopColor: Colors.background,
     paddingHorizontal: 14,
     paddingVertical: 8,
     fontSize: 11,
-    color: "#9B9A94",
+    color: Colors.textMuted,
   },
-  error: { paddingHorizontal: 14, paddingBottom: 8, fontSize: 12, color: Colors.error },
-});
+  error: {
+    paddingHorizontal: 14,
+    paddingBottom: 8,
+    fontSize: 12,
+    color: Colors.error,
+  },
+}));

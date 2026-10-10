@@ -20,6 +20,7 @@ import {
   emi,
   useLoanSchedule,
 } from "./loanShared";
+import { Colors } from "@/constants/theme";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -130,7 +131,12 @@ export function HomeLoanCalculator() {
         data={yearlyBreakdown}
         showOutstanding
         footer={
-          <Text style={[calcStyles.muted, { marginTop: 12, color: "#475569" }]}>
+          <Text
+            style={[
+              calcStyles.muted,
+              { marginTop: 12, color: Colors.textSecondary },
+            ]}
+          >
             You pay {formatINR((interest / Math.max(loan, 1)) * 100)} in
             interest for every ₹100 you borrow at this rate.
           </Text>

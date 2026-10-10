@@ -29,6 +29,12 @@ export function buildSplitExpensePushCopy(input: {
   };
 }
 
+/** Deep link for a Split expense push: the group, plus the inbox id to mark read. */
+export function splitExpensePushUrl(groupId: string, notifId?: string): string {
+  const base = `/split/${encodeURIComponent(groupId)}`;
+  return notifId ? `${base}?notif=${encodeURIComponent(notifId)}` : base;
+}
+
 /** Active members in the split, excluding the person who added the expense. */
 export function recipientUserIdsForSplitExpense(input: {
   actorUserId: string;
@@ -108,7 +114,6 @@ export async function notifySplitExpenseAdded(
     title: input.title,
     amount: input.amount,
   });
-  const url = `/split/${input.groupId}`;
   const tag = `split-expense-${input.expenseId}`;
 
   let pushed = 0;
@@ -137,12 +142,10 @@ export async function notifySplitExpenseAdded(
         );
       }
 
-      // Prefer the message inbox deep-link so mobile push shows the copy;
-      // include group in path as fallback when insert failed.
+      // Tapping the push opens the group; `notif` lets the group screen mark
+      // the matching inbox message as read.
       const notifId = inserted?.id ? String(inserted.id) : "";
-      const pushUrl = notifId
-        ? `/notifications?id=${encodeURIComponent(notifId)}`
-        : url;
+      const pushUrl = splitExpensePushUrl(input.groupId, notifId);
 
       const pushPayload = {
         title: copy.title,

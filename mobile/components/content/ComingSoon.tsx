@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, Text, View } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 import { openContentHref } from "@/lib/contentLinks";
 import { ContentScreen } from "./ContentScreen";
 
@@ -42,7 +42,7 @@ export function ComingSoon({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: { alignItems: "center", paddingTop: 72 },
   eyebrow: {
     fontSize: 12,
@@ -50,16 +50,31 @@ const styles = StyleSheet.create({
     letterSpacing: 2.4,
     color: Colors.indigo600,
   },
-  h1: { marginTop: 12, fontSize: 30, fontWeight: "800", color: Colors.textPrimary },
+  h1: {
+    marginTop: 12,
+    fontSize: 30,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
   body: {
     marginTop: 16,
     fontSize: 16,
     lineHeight: 24,
-    color: "#475569",
+    color: Colors.textSecondary,
     textAlign: "center",
   },
-  primary: { marginTop: 28, minHeight: 44, justifyContent: "center", paddingHorizontal: 12 },
-  primaryText: { fontSize: 16, fontWeight: "700", color: "#4338CA" },
-  secondary: { marginTop: 12, minHeight: 44, justifyContent: "center", paddingHorizontal: 12 },
-  secondaryText: { fontSize: 14, color: "#64748B" },
-});
+  primary: {
+    marginTop: 28,
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  primaryText: { fontSize: 16, fontWeight: "700", color: Colors.indigo600 },
+  secondary: {
+    marginTop: 12,
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  secondaryText: { fontSize: 14, color: Colors.textMuted },
+}));

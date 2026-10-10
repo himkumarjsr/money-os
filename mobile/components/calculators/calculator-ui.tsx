@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -11,7 +10,13 @@ import {
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
-import { Colors } from "@/constants/theme";
+import {
+  Colors,
+  themed,
+  themedStyles,
+  tintBg,
+  tintFg,
+} from "@/constants/theme";
 import { DateField as CalendarDateField } from "@/components/tracker/DateField";
 import {
   CALCULATOR_MONEY_MAX,
@@ -46,11 +51,23 @@ export type InsightTone = "good" | "warn" | "bad";
 const INSIGHT_TONES: Record<
   InsightTone,
   { border: string; bg: string; text: string }
-> = {
-  good: { border: "#A7F3D0", bg: "#ECFDF5", text: "#064E3B" },
-  warn: { border: "#FDE68A", bg: "#FFFBEB", text: "#78350F" },
-  bad: { border: "#FECACA", bg: "#FEF2F2", text: "#7F1D1D" },
-};
+> = themed(() => ({
+  good: {
+    border: tintBg("#A7F3D0"),
+    bg: tintBg("#ECFDF5"),
+    text: tintFg("#064E3B"),
+  },
+  warn: {
+    border: tintBg("#FDE68A"),
+    bg: tintBg("#FFFBEB"),
+    text: tintFg("#78350F"),
+  },
+  bad: {
+    border: tintBg("#FECACA"),
+    bg: tintBg("#FEF2F2"),
+    text: tintFg("#7F1D1D"),
+  },
+}));
 
 /** Coloured verdict box (spacing comes from the parent stack). Use `<B>` for bold spans. */
 export function Insight({
@@ -135,7 +152,11 @@ export function SliderField({
 
   const [focused, setFocused] = useState(false);
   const [displayValue, setDisplayValue] = useState(() =>
-    formatFieldValue(Math.min(Math.max(value, min), inputMax), detectedType, step),
+    formatFieldValue(
+      Math.min(Math.max(value, min), inputMax),
+      detectedType,
+      step,
+    ),
   );
 
   useEffect(() => {
@@ -202,7 +223,9 @@ export function SliderField({
           onBlur={handleBlur}
           selectTextOnFocus
           keyboardType={
-            isPercent || detectedType === "number" ? "decimal-pad" : "number-pad"
+            isPercent || detectedType === "number"
+              ? "decimal-pad"
+              : "number-pad"
           }
           style={styles.input}
           accessibilityLabel={label}
@@ -371,20 +394,20 @@ export function SectionLabel({ children }: { children: ReactNode }) {
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
 
-export const calcStyles = StyleSheet.create({
+export const calcStyles = themedStyles(() => ({
   stack: { gap: 24 },
-  body: { fontSize: 14, lineHeight: 20, color: "#475569" },
-  muted: { fontSize: 12, lineHeight: 17, color: "#64748B" },
+  body: { fontSize: 14, lineHeight: 20, color: Colors.textSecondary },
+  muted: { fontSize: 12, lineHeight: 17, color: Colors.textMuted },
   card: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.card,
     padding: 16,
   },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   insight: {
     borderRadius: 12,
     borderWidth: 1,
@@ -393,7 +416,7 @@ const styles = StyleSheet.create({
   },
   insightText: { fontSize: 14, fontWeight: "500", lineHeight: 21 },
   field: { marginBottom: 16, gap: 6 },
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: "#5F5E5A" },
+  fieldLabel: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
   inputBox: {
     minHeight: 52,
     flexDirection: "row",
@@ -401,28 +424,28 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     paddingHorizontal: 16,
   },
   inputBoxFocused: { borderColor: Colors.primary },
-  leftUnit: { fontSize: 15, fontWeight: "600", color: "#9B9A94" },
+  leftUnit: { fontSize: 15, fontWeight: "600", color: Colors.textMuted },
   input: {
     flex: 1,
     minWidth: 0,
     paddingVertical: 12,
     fontSize: 16,
     fontWeight: "600",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
-  rightUnit: { fontSize: 13, fontWeight: "500", color: "#888780" },
+  rightUnit: { fontSize: 13, fontWeight: "500", color: Colors.textMuted },
   slider: { width: "100%", height: 36 },
-  words: { textAlign: "right", fontSize: 12, color: "#9B9A94" },
+  words: { textAlign: "right", fontSize: 12, color: Colors.textMuted },
   stat: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    backgroundColor: "rgba(248,250,252,0.8)",
+    borderColor: Colors.surfaceMuted,
+    backgroundColor: Colors.glassCard,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -431,25 +454,25 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#64748B",
+    color: Colors.textMuted,
   },
   statValue: {
     marginTop: 4,
     fontSize: 18,
     fontWeight: "600",
-    color: "#0F172A",
+    color: Colors.textPrimary,
     fontVariant: ["tabular-nums"],
   },
-  statWords: { marginTop: 4, fontSize: 12, color: "#9B9A94" },
+  statWords: { marginTop: 4, fontSize: 12, color: Colors.textMuted },
   resultGrid: { gap: 12 },
   chartCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.card,
     padding: 20,
   },
-  chartTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
+  chartTitle: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
   excelRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -458,21 +481,21 @@ const styles = StyleSheet.create({
     minHeight: 64,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.card,
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
   excelLeft: { flexDirection: "row", alignItems: "center", gap: 16, flex: 1 },
-  excelTitle: { fontSize: 14, fontWeight: "600", color: "#111110" },
-  excelSub: { marginTop: 2, fontSize: 12, color: "#9B9A94" },
-  excelArrow: { fontSize: 16, color: "#94A3B8" },
+  excelTitle: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
+  excelSub: { marginTop: 2, fontSize: 12, color: Colors.textMuted },
+  excelArrow: { fontSize: 16, color: Colors.textMuted },
   excelError: { marginTop: 8, fontSize: 12, color: Colors.error },
   sectionLabel: {
     fontSize: 12,
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#64748B",
+    color: Colors.textMuted,
   },
-});
+}));
