@@ -2,6 +2,7 @@
  * Tracker category/subcategory icons — ports web `components/tracker/TrackerIcons.tsx`
  * shapes 1:1 onto react-native-svg so bucket + subcategory rows match the PWA visually.
  */
+import { brand } from "@/constants/theme";
 import { View } from "react-native";
 import Svg, { Path, Circle, Rect, G } from "react-native-svg";
 import {
@@ -241,7 +242,7 @@ const shapes: Record<TrackerIconName, IconShape> = {
 export function TrackerIcon({
   name,
   size = 20,
-  color = TRACKER_ICON_COLOR,
+  color = brand(TRACKER_ICON_COLOR),
 }: {
   name: TrackerIconName;
   size?: number;
@@ -288,7 +289,7 @@ export function TrackerIconBadge({
   name,
   size = 40,
   iconSize = 20,
-  color = TRACKER_ICON_COLOR,
+  color = brand(TRACKER_ICON_COLOR),
 }: {
   name: TrackerIconName;
   size?: number;

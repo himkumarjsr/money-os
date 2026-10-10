@@ -14,7 +14,7 @@ import {
   calcStyles,
   type InsightTone,
 } from "./calculator-ui";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, brand } from "@/constants/theme";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -190,24 +190,24 @@ export function PPFCalculator() {
                 x2={x7}
                 y1={PAD.top}
                 y2={PAD.top + plotH}
-                stroke="#534AB7"
+                stroke={brand("#534AB7")}
                 strokeDasharray="6 6"
               />
               <SvgText
                 x={x7 + 5}
                 y={PAD.top + 5 + 11}
                 fontSize={12}
-                fill="#534AB7"
+                fill={brand("#534AB7")}
                 textAnchor="start"
               >
                 Year 7 (partial withdrawal)
               </SvgText>
-              <Circle cx={x15} cy={y15} r={4} fill="#534AB7" />
+              <Circle cx={x15} cy={y15} r={4} fill={brand("#534AB7")} />
               <SvgText
                 x={x15 - 9}
                 y={y15 + 4}
                 fontSize={12}
-                fill="#534AB7"
+                fill={brand("#534AB7")}
                 textAnchor="end"
               >
                 Year 15 (maturity)

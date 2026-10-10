@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
-import { Colors, Radius, themedStyles } from "@/constants/theme";
+import { Colors, Radius, themedStyles, brand } from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { useAuthStore } from "@/store/authStore";
 
@@ -166,7 +166,7 @@ const styles = themedStyles(() => ({
     borderRadius: 16,
     borderWidth: 1,
     padding: 20,
-    shadowColor: "#4F46E5",
+    shadowColor: brand("#4F46E5"),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,

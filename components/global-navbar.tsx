@@ -234,7 +234,21 @@ export function GlobalNavbar() {
               aria-label="Finkoin logo"
               className="shrink-0"
             >
-              <rect width="64" height="64" rx="18" fill="#534AB7" />
+              <defs>
+                <linearGradient id="fk-gold-tile" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#AA771C" />
+                  <stop offset="45%" stopColor="#FCF6BA" />
+                  <stop offset="70%" stopColor="#D4AF37" />
+                  <stop offset="100%" stopColor="#B38728" />
+                </linearGradient>
+              </defs>
+              <rect
+                className="fk-logo-tile"
+                width="64"
+                height="64"
+                rx="18"
+                fill="#534AB7"
+              />
               <circle
                 cx="32"
                 cy="32"
@@ -252,11 +266,12 @@ export function GlobalNavbar() {
                 fontWeight="800"
                 fontSize="20"
                 fill="#FFFFFF"
+                className="fk-logo-mark"
               >
                 FK
               </text>
             </svg>
-            <span className="truncate text-[18px] font-bold tracking-[-0.5px] text-[#534AB7] sm:text-[20px]">
+            <span className="fk-brand-name truncate text-[18px] font-bold tracking-[-0.5px] text-[#534AB7] sm:text-[20px]">
               Finkoin
             </span>
           </Link>
