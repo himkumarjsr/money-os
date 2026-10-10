@@ -33,6 +33,7 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 import { themedStyles, Colors, tintBg } from "@/constants/theme";
+import { useNotificationStore } from "@/store/notificationStore";
 
 type Tab = "expenses" | "members" | "settlements";
 type PaymentMethod = "upi" | "cash" | "bank";
@@ -96,7 +97,15 @@ async function shareText(message: string) {
 }
 
 export default function GroupDetailScreen() {
-  const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const { groupId, notif } = useLocalSearchParams<{
+    groupId: string;
+    notif?: string;
+  }>();
+
+  // Opened from a Split expense push: mark that inbox message read.
+  useEffect(() => {
+    if (notif) void useNotificationStore.getState().markRead(String(notif));
+  }, [notif]);
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const myEmail = (user?.email ?? "").toLowerCase();
