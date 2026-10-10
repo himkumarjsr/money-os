@@ -8,10 +8,11 @@ import { generatePageMeta } from "@/lib/seo";
 
 type LayoutProps = {
   children: React.ReactNode;
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export function generateMetadata({ params }: LayoutProps): Metadata {
+export async function generateMetadata(props: LayoutProps): Promise<Metadata> {
+  const params = await props.params;
   const calcId = resolveCalcIdFromPathSegment(params.id) ?? params.id;
   const calc = getItemById(calcId);
   return generatePageMeta(

@@ -85,16 +85,15 @@ function withLearnShareImages(
 }
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export function generateStaticParams() {
   return learnArticles.map((a) => ({ id: a.id }));
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   const article = learnArticleById[params.id];
   if (!article) {
     return {
@@ -324,7 +323,8 @@ export async function generateMetadata({
   );
 }
 
-export default function LearnArticlePage({ params }: PageProps) {
+export default async function LearnArticlePage(props: PageProps) {
+  const params = await props.params;
   const article = learnArticleById[params.id];
   if (!article) notFound();
 

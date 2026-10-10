@@ -17,16 +17,15 @@ import {
 } from "../calculator-seo";
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export function generateStaticParams() {
   return INDEXABLE_CALC_IDS.map((id) => ({ id }));
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   const calcId = resolveCalcIdFromPathSegment(params.id);
   if (!calcId) {
     return { title: "Calculator not found | Finkoin", robots: "noindex" };
@@ -65,7 +64,8 @@ export async function generateMetadata({
   };
 }
 
-export default function CalculatorByIdPage({ params }: PageProps) {
+export default async function CalculatorByIdPage(props: PageProps) {
+  const params = await props.params;
   const calcId = resolveCalcIdFromPathSegment(params.id);
   if (!calcId) notFound();
 
