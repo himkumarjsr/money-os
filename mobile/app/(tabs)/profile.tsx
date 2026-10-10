@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,21 @@ import {
   Image,
   ActivityIndicator,
   Platform,
+  Linking,
+  Share,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
+import { useFinancialStore } from "@/store/financialStore";
+import { analyseFinances } from "@/lib/financialEngine";
+import { financialProfileToFormValues } from "@/lib/analyse-form-schema";
+import { buildNetWorth } from "@/lib/netWorth";
+import { formatIndian } from "@/lib/formatters";
+import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import { useGamification } from "@/lib/useGamification";
+import { supabase } from "@/lib/supabase";
 import { uploadAvatar } from "@/lib/avatarUpload";
 import { deleteMyAccount } from "@/lib/accountDeletion";
 import {
@@ -27,6 +38,15 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AppHeader } from "@/components/AppHeader";
 import { AppIcon } from "@/components/ui/AppIcon";
 
+const SITE = (
+  process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
+).replace(/\/$/, "");
+
+function money(v: number): string {
+  const sign = v < 0 ? "-" : "";
+  return `${sign}₹${formatIndian(Math.round(Math.abs(v)))}`;
+}
+
 export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
@@ -34,6 +54,110 @@ export default function ProfileScreen() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [expiry, setExpiry] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const submission = useFinancialStore((s) => s.lastSubmission);
+  const result = useFinancialStore((s) => s.result);
+  const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
+  const { stats } = useGamification(user?.id);
+
+  // Same as the PWA: pull the latest analysis if this device has none yet.
+  useEffect(() => {
+    if (!user?.id || submission) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await fetchUserAnalyseSnapshot(user.id);
+        if (cancelled || !snap?.lastSubmission) return;
+        hydrateFromSnapshot(
+          snap.lastSubmission,
+          snap.result ?? analyseFinances(snap.lastSubmission),
+          { analysisPatch: snap.analysis ?? undefined, aiPlan: snap.aiPlan },
+        );
+      } catch {
+        /* profile still renders without it */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, submission, hydrateFromSnapshot]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("referral_code, subscription_expiry")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      if (typeof data.referral_code === "string")
+        setReferralCode(data.referral_code);
+      setExpiry(data.subscription_expiry ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const analysis = useMemo(
+    () => (submission ? (result ?? analyseFinances(submission)) : null),
+    [submission, result],
+  );
+  const healthScore = analysis
+    ? Math.max(
+        0,
+        100 -
+          analysis.issues.filter((i) => i.severity === "critical").length * 15 -
+          analysis.issues.filter((i) => i.severity === "warning").length * 7,
+      )
+    : null;
+  const netWorth = useMemo(
+    () =>
+      submission
+        ? buildNetWorth(financialProfileToFormValues(submission))
+        : null,
+    [submission],
+  );
+  const checklist = analysis?.securityChecklist ?? [];
+  const checklistDone = checklist.filter((i) => i.status === "ok").length;
+
+  const tier = user?.subscriptionTier || "free";
+  const paid = tier !== "free";
+  const planLabel =
+    tier === "promax"
+      ? "Pro Max Plan"
+      : tier === "pro"
+        ? "Pro Plan"
+        : "Free Plan";
+  const fk = stats?.fkBalance ?? user?.fkBalance ?? 0;
+
+  const referralUrl = referralCode
+    ? `${SITE}/?ref=${encodeURIComponent(referralCode)}`
+    : "";
+  const shareMessage = `I use Finkoin to manage my finances. Get your free AI financial health check: ${referralUrl}`;
+
+  const copyReferral = async () => {
+    if (!referralUrl) return;
+    await Clipboard.setStringAsync(referralUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const shareWhatsApp = async () => {
+    if (!referralUrl) return;
+    try {
+      await Linking.openURL(
+        `whatsapp://send?text=${encodeURIComponent(shareMessage)}`,
+      );
+    } catch {
+      await Share.share({ message: shareMessage });
+    }
+  };
 
   const initials = (user?.name?.trim()?.charAt(0) || "U").toUpperCase();
 
@@ -158,16 +282,187 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <Text style={styles.name}>{user?.name || "Finkoin user"}</Text>
+        <Text style={styles.sub}>{user?.email || "No email"}</Text>
+
+        <View style={[styles.plan, paid && styles.planPaid]}>
+          <Text style={[styles.planTitle, paid && styles.onPrimary]}>
+            {planLabel}
+          </Text>
+          <Text style={[styles.planSub, paid && styles.onPrimary]}>
+            Expiry:{" "}
+            {expiry
+              ? new Date(expiry).toLocaleDateString("en-IN")
+              : "No expiry"}
+          </Text>
+        </View>
+
         <Card style={styles.card}>
-          <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>{user?.name || "—"}</Text>
-          <Text style={[styles.label, { marginTop: 12 }]}>Email</Text>
-          <Text style={styles.value}>{user?.email || "—"}</Text>
-          <Text style={[styles.label, { marginTop: 12 }]}>Plan</Text>
-          <Text style={styles.value}>{user?.subscriptionTier || "free"}</Text>
-          <View style={styles.fk}>
-            <Text style={styles.fkText}>⚡ {user?.fkBalance ?? 0} FK</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>Health score</Text>
+              <Text style={styles.statValue}>{healthScore ?? "—"}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>FK tokens</Text>
+              <View style={styles.inline}>
+                <AppIcon name="coin" size={18} />
+                <Text style={styles.statValue}>{fk}</Text>
+              </View>
+            </View>
           </View>
+          <View style={[styles.statsRow, { marginTop: Spacing.md }]}>
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>Badges</Text>
+              <Text style={styles.statValue}>{stats?.badges.length ?? 0}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>Day streak</Text>
+              <View style={styles.inline}>
+                <AppIcon name="flame" size={18} />
+                <Text style={styles.statValue}>{stats?.streakDays ?? 0}</Text>
+              </View>
+            </View>
+          </View>
+        </Card>
+
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>Your assets</Text>
+          {netWorth ? (
+            <>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>Total assets</Text>
+                <Text style={styles.rowValue}>{money(netWorth.assets)}</Text>
+              </View>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>Loans & liabilities</Text>
+                <Text style={styles.rowValue}>
+                  {money(netWorth.liabilities)}
+                </Text>
+              </View>
+              <View style={[styles.rowBetween, styles.rowTotal]}>
+                <Text style={styles.rowStrong}>Net worth</Text>
+                <Text style={styles.rowStrong}>{money(netWorth.netWorth)}</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.muted}>
+              Complete your analysis to see your assets here.
+            </Text>
+          )}
+          <Pressable
+            style={styles.linkRow}
+            onPress={() => router.push("/(tabs)/analyse")}
+          >
+            <Text style={styles.linkText}>
+              {netWorth ? "Update assets & loans" : "Start analysis"}
+            </Text>
+            <AppIcon name="chevronRight" size={16} />
+          </Pressable>
+        </Card>
+
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>Your financial checklist</Text>
+          <Text style={styles.muted}>
+            {checklistDone} of {Math.max(1, checklist.length)} completed
+          </Text>
+          <View style={styles.track}>
+            <View
+              style={[
+                styles.fill,
+                {
+                  width: `${Math.min(100, (checklistDone / Math.max(1, checklist.length)) * 100)}%`,
+                },
+              ]}
+            />
+          </View>
+          {checklist.slice(0, 8).map((item) => (
+            <View key={item.label} style={styles.checkItem}>
+              <AppIcon
+                name={item.status === "ok" ? "check" : "close"}
+                size={16}
+                color={item.status === "ok" ? Colors.success : Colors.error}
+              />
+              <View style={{ flex: 1 }}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.checkLabel}>{item.label}</Text>
+                  <Text style={styles.checkStatus}>
+                    {item.status === "ok" ? "Done" : "Pending"}
+                  </Text>
+                </View>
+                {item.detail ? (
+                  <Text style={styles.checkDetail}>{item.detail}</Text>
+                ) : null}
+              </View>
+            </View>
+          ))}
+          {checklist.length === 0 ? (
+            <Text style={[styles.muted, { marginTop: Spacing.md }]}>
+              Complete analysis to unlock your checklist.
+            </Text>
+          ) : null}
+        </Card>
+
+        <Card style={styles.card}>
+          <View style={styles.inline}>
+            <Text style={styles.sectionTitle}>KYC verification</Text>
+            <View style={styles.soon}>
+              <Text style={styles.soonText}>Coming soon</Text>
+            </View>
+          </View>
+          <Text style={styles.muted}>
+            PAN, Aadhaar, and full identity checks are on the way. We&apos;ll
+            notify you when verification opens on Finkoin.
+          </Text>
+        </Card>
+
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>
+            Refer friends · Earn FK tokens
+          </Text>
+          <Text style={styles.refLink}>
+            {referralUrl || "Generating link…"}
+          </Text>
+          <View style={styles.inline}>
+            <Pressable
+              style={[styles.refBtn, !referralUrl && { opacity: 0.5 }]}
+              disabled={!referralUrl}
+              onPress={() => void copyReferral()}
+            >
+              <Text style={styles.refBtnText}>
+                {copied ? "Copied" : "Copy link"}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.waBtn, !referralUrl && { opacity: 0.5 }]}
+              disabled={!referralUrl}
+              onPress={() => void shareWhatsApp()}
+            >
+              <Text style={styles.waText}>Share on WhatsApp</Text>
+            </Pressable>
+          </View>
+        </Card>
+
+        <Card style={styles.card}>
+          {(
+            [
+              ["settings", "Settings & theme", "/settings"],
+              ["gift", "Rewards", "/rewards"],
+              ["trophy", "Leaderboard", "/leaderboard"],
+            ] as const
+          ).map(([icon, label, href]) => (
+            <Pressable
+              key={href}
+              style={styles.menuRow}
+              onPress={() => router.push(href as Href)}
+            >
+              <View style={styles.inline}>
+                <AppIcon name={icon} size={18} />
+                <Text style={styles.menuText}>{label}</Text>
+              </View>
+              <AppIcon name="chevronRight" size={16} />
+            </Pressable>
+          ))}
         </Card>
 
         <Button
@@ -205,7 +500,7 @@ const styles = themedStyles(() => ({
   pad: { flexGrow: 1, padding: Spacing.xl, paddingBottom: 120 },
   avatarRow: {
     alignItems: "center",
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
   },
   avatarWrap: {
     width: 88,
@@ -249,28 +544,164 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
     marginBottom: Spacing.xl,
   },
-  card: { marginBottom: Spacing.xl },
-  label: {
-    fontSize: FontSize.sm,
-    fontWeight: "700",
-    color: Colors.textMuted,
-    textTransform: "uppercase",
+  card: { marginBottom: Spacing.lg },
+  name: {
+    fontSize: FontSize.xl,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    textAlign: "center",
   },
-  value: {
-    marginTop: 4,
-    fontSize: FontSize.lg,
+  sub: {
+    marginTop: 2,
+    marginBottom: Spacing.xl,
+    fontSize: FontSize.md,
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  plan: {
+    marginBottom: Spacing.lg,
+    padding: Spacing.lg,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceMuted,
+  },
+  planPaid: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  planTitle: {
+    fontSize: FontSize.base,
     fontWeight: "700",
     color: Colors.textPrimary,
   },
-  fk: {
-    marginTop: Spacing.lg,
-    alignSelf: "flex-start",
+  planSub: { marginTop: 4, fontSize: FontSize.sm, color: Colors.textMuted },
+  onPrimary: { color: Colors.onPrimary },
+  statsRow: { flexDirection: "row", gap: Spacing.lg },
+  stat: { flex: 1 },
+  statLabel: { fontSize: FontSize.sm, color: Colors.textMuted },
+  statValue: {
+    marginTop: 2,
+    fontSize: FontSize.xl,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
+  inline: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  muted: { fontSize: FontSize.md, color: Colors.textMuted, lineHeight: 19 },
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+  },
+  rowLabel: {
+    marginTop: Spacing.sm,
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+  },
+  rowValue: {
+    marginTop: Spacing.sm,
+    fontSize: FontSize.md,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  rowTotal: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  rowStrong: {
+    marginTop: Spacing.sm,
+    fontSize: FontSize.base,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
+  linkRow: {
+    marginTop: Spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  track: {
+    marginTop: Spacing.md,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.surfaceMuted,
+    overflow: "hidden",
+  },
+  fill: { height: 8, borderRadius: 4, backgroundColor: Colors.primary },
+  checkItem: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  checkLabel: {
+    flex: 1,
+    fontSize: FontSize.md,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  checkStatus: {
+    fontSize: FontSize.xs,
+    fontWeight: "700",
+    color: Colors.textMuted,
+  },
+  checkDetail: {
+    marginTop: 2,
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    lineHeight: 16,
+  },
+  soon: {
     backgroundColor: Colors.primaryLight,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.round,
+    marginBottom: Spacing.xs,
+  },
+  soonText: { fontSize: FontSize.xs, fontWeight: "700", color: Colors.primary },
+  refLink: {
+    marginVertical: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.surfaceMuted,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+  },
+  refBtn: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.round,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  fkText: { fontWeight: "700", color: Colors.primary },
+  refBtnText: {
+    fontSize: FontSize.md,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  waBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    backgroundColor: "#25D366",
+  },
+  waText: { fontSize: FontSize.md, fontWeight: "700", color: "#FFFFFF" },
+  menuRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: Spacing.md,
+  },
+  menuText: {
+    fontSize: FontSize.base,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
   gateSub: {
     textAlign: "center",
     color: Colors.textMuted,
