@@ -7,7 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { FIX_PLAN_PRICE_INR } from "@/lib/analyseEntitlement";
+import { FIX_PLAN_PRICE_INR, PAYMENTS_ENABLED } from "@/lib/analyseEntitlement";
 import { Colors } from "@/constants/theme";
 import { ResultColors as C, badgeTone, inr } from "./format";
 import type { BucketView, ResultModel } from "./model";
@@ -412,13 +412,17 @@ export function PlanTeaserSection({
 
       <View style={styles.paywallCard}>
         <Text style={styles.paywallTitle}>Your complete financial roadmap</Text>
+        {/* No in-app price until a Play Billing flow exists: Play rejects
+            apps that advertise digital purchases they can't sell in-app. */}
         <Text style={styles.paywallPrice}>
-          ₹{FIX_PLAN_PRICE_INR} one-time · Yours forever
+          {PAYMENTS_ENABLED
+            ? `₹${FIX_PLAN_PRICE_INR} one-time · Yours forever`
+            : "Free during early access"}
         </Text>
         <Text style={styles.paywallFk}>
-          Pay ₹{FIX_PLAN_PRICE_INR} · Earn Finkoin Keys (FK) for activity on
-          Finkoin — use them on partner perks where available. FK do not reduce
-          this unlock price.
+          {PAYMENTS_ENABLED ? `Pay ₹${FIX_PLAN_PRICE_INR} · ` : ""}Earn Finkoin
+          Keys (FK) for activity on Finkoin — use them on partner perks where
+          available.{PAYMENTS_ENABLED ? " FK do not reduce this unlock price." : ""}
         </Text>
         {surplusBreakdown ? (
           <View style={styles.surplus}>
