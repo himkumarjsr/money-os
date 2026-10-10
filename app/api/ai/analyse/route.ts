@@ -12,6 +12,8 @@ import {
   tooManyRequests,
   unauthorized,
 } from "@/lib/apiGuard";
+import { aiPlanRequiresPro, hasProAccess } from "@/lib/subscriptionBypass";
+import { getSupabaseAdmin } from "@/lib/supabaseServer";
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -53,6 +55,22 @@ export async function POST(req: NextRequest) {
     return unauthorized();
   }
 
+  // The Fix Plan is a paid feature; the client paywall alone can be skipped
+  // by calling this route directly.
+  if (aiPlanRequiresPro()) {
+    const { data: row } = await getSupabaseAdmin()
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!hasProAccess(row, user.email)) {
+      return NextResponse.json(
+        { error: "Fix Plan needs Pro" },
+        { status: 402 },
+      );
+    }
+  }
+
   let profile: any = null;
   try {
     const body = await req.json();
@@ -69,7 +87,10 @@ export async function POST(req: NextRequest) {
     priorityPlan = buildPriorityPlan(profile, analysis);
   } catch (error: any) {
     console.error("AI route plan error:", error?.message);
-    return NextResponse.json({ error: "Could not build plan" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Could not build plan" },
+      { status: 400 },
+    );
   }
   const adviceGoals = fundedGoals(priorityPlan.goals);
   const limit = rateLimit(
