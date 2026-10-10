@@ -36,7 +36,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title: article.metaTitle ? { absolute: article.metaTitle } : pageTitle,
     description: article.description,
     keywords: article.keywords,
-    authors: [{ name: "Himanshu Kumar" }],
+    authors: [{ name: "Himanshu Kumar Gupta" }],
     alternates: {
       canonical: `/blog/${article.slug}`,
     },
@@ -45,7 +45,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       description: article.description,
       type: "article",
       publishedTime: article.publishedAt,
-      authors: ["Himanshu Kumar"],
+      authors: ["Himanshu Kumar Gupta"],
       url: `${SITE_URL}/blog/${article.slug}`,
       siteName: "Finkoin",
       images: openGraphImages,
@@ -74,7 +74,7 @@ export default async function BlogArticlePage(props: Props) {
     image: [ogUrl],
     author: {
       "@type": "Person",
-      name: "Himanshu Kumar",
+      name: "Himanshu Kumar Gupta",
       url: `${SITE_URL}/about`,
     },
     publisher: {
@@ -140,7 +140,7 @@ export default async function BlogArticlePage(props: Props) {
           {article.title}
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          By Himanshu Kumar · {article.publishedAt}
+          By Himanshu Kumar Gupta · {article.publishedAt}
           {article.readTimeMinutes
             ? ` · ${article.readTimeMinutes} min read`
             : null}
