@@ -1,3 +1,8 @@
+import {
+  analysePolicyCandidates,
+  planAnalysePolicyImport,
+} from "@/lib/analysePolicyImport";
+import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { supabase } from "@/lib/supabaseClient";
 
 /** Use this for RLS-backed tables — must match `auth.uid()`, not a client-generated id. */
@@ -42,10 +47,13 @@ export type UserPolicy = {
   coverAmount: number;
   premiumAmount: number;
   premiumFrequency: PremiumFrequency;
-  renewalDate: string; // YYYY-MM-DD
+  /** YYYY-MM-DD; null for a policy imported from Analyse without one. */
+  renewalDate: string | null;
   purchaseDate: string | null;
   nomineeName: string | null;
   status: PolicyStatus;
+  /** Analyse entry this policy came from or was linked to ("term", "other:<id>", ...). */
+  analyseSourceKey: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -60,10 +68,11 @@ type UserPolicyRow = {
   cover_amount: string | number | null;
   premium_amount: string | number | null;
   premium_frequency: string | null;
-  renewal_date: string;
+  renewal_date: string | null;
   purchase_date: string | null;
   nominee_name: string | null;
   status: string | null;
+  analyse_source_key?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -104,6 +113,7 @@ export function fromUserPolicyRow(row: UserPolicyRow): UserPolicy {
     purchaseDate: row.purchase_date,
     nomineeName: row.nominee_name,
     status: mapStatus(row.status),
+    analyseSourceKey: row.analyse_source_key ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -216,7 +226,7 @@ export function policyToForm(p: UserPolicy): PolicyFormInput {
     coverAmount: p.coverAmount,
     premiumAmount: p.premiumAmount,
     premiumFrequency: p.premiumFrequency,
-    renewalDate: p.renewalDate,
+    renewalDate: p.renewalDate ?? "",
     purchaseDate: p.purchaseDate ?? "",
     nomineeName: p.nomineeName ?? "",
     status: p.status,
@@ -253,6 +263,7 @@ export async function fetchUpcomingRenewals(
   const end = new Date(today);
   end.setDate(end.getDate() + withinDays);
   const upcoming = policies.filter((p) => {
+    if (!p.renewalDate) return false;
     const rd = parseLocalDate(p.renewalDate);
     return rd >= today && rd <= end;
   });
@@ -276,12 +287,21 @@ export function daysUntilRenewal(renewalDateYmd: string): number {
 
 export function formatRenewalDayMonth(renewalDateYmd: string): string {
   const d = parseLocalDate(renewalDateYmd);
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function looksLikeMissingStatusColumn(message: string): boolean {
   const m = message.toLowerCase();
-  return m.includes("status") && (m.includes("column") || m.includes("schema") || m.includes("could not find"));
+  return (
+    m.includes("status") &&
+    (m.includes("column") ||
+      m.includes("schema") ||
+      m.includes("could not find"))
+  );
 }
 
 export async function insertUserPolicy(
@@ -306,10 +326,18 @@ export async function insertUserPolicy(
     status: input.status,
     updated_at: new Date().toISOString(),
   };
-  let { data, error } = await supabase.from("user_policies").insert(row).select("*").single();
+  let { data, error } = await supabase
+    .from("user_policies")
+    .insert(row)
+    .select("*")
+    .single();
   if (error && looksLikeMissingStatusColumn(error.message)) {
     const { status: _omit, ...withoutStatus } = row;
-    const retry = await supabase.from("user_policies").insert(withoutStatus).select("*").single();
+    const retry = await supabase
+      .from("user_policies")
+      .insert(withoutStatus)
+      .select("*")
+      .single();
     data = retry.data;
     error = retry.error;
   }
@@ -329,14 +357,18 @@ export async function updateUserPolicy(
   };
   if (input.policyType != null) patch.policy_type = input.policyType;
   if (input.insurerName != null) patch.insurer_name = input.insurerName.trim();
-  if (input.policyNumber != null) patch.policy_number = input.policyNumber.trim() || null;
+  if (input.policyNumber != null)
+    patch.policy_number = input.policyNumber.trim() || null;
   if (input.planName != null) patch.plan_name = input.planName.trim() || null;
   if (input.coverAmount != null) patch.cover_amount = input.coverAmount;
   if (input.premiumAmount != null) patch.premium_amount = input.premiumAmount;
-  if (input.premiumFrequency != null) patch.premium_frequency = input.premiumFrequency;
+  if (input.premiumFrequency != null)
+    patch.premium_frequency = input.premiumFrequency;
   if (input.renewalDate != null) patch.renewal_date = input.renewalDate;
-  if (input.purchaseDate != null) patch.purchase_date = input.purchaseDate.trim() || null;
-  if (input.nomineeName != null) patch.nominee_name = input.nomineeName.trim() || null;
+  if (input.purchaseDate != null)
+    patch.purchase_date = input.purchaseDate.trim() || null;
+  if (input.nomineeName != null)
+    patch.nominee_name = input.nomineeName.trim() || null;
   if (input.status != null) patch.status = input.status;
 
   const { data, error } = await supabase
@@ -347,6 +379,96 @@ export async function updateUserPolicy(
     .single();
   if (error) return { policy: null, error: new Error(error.message) };
   return { policy: fromUserPolicyRow(data as UserPolicyRow), error: null };
+}
+
+/** Analyse profile saved for this user (latest report, else the last snapshot). */
+async function fetchAnalyseProfile(
+  userId: string,
+): Promise<FinancialProfile | null> {
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("user_analysis")
+    .select("profile")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (data?.profile && typeof data.profile === "object") {
+    return data.profile as FinancialProfile;
+  }
+  const snap = await supabase
+    .from("user_analyse_snapshots")
+    .select("payload")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const pl = snap.data?.payload as Record<string, unknown> | null | undefined;
+  const prof = pl?.profile ?? pl?.lastSubmission;
+  return prof && typeof prof === "object" ? (prof as FinancialProfile) : null;
+}
+
+/**
+ * Adds the policies the user entered in Analyse to My Policies, once each.
+ * Imported rows carry only what Analyse knows; the vault shows them as
+ * missing details until the user completes them. Best effort: returns
+ * `changed: false` (and does nothing) when the profile is missing or the
+ * import migration has not been applied yet.
+ */
+export async function importAnalysePolicies(
+  userId: string,
+  existing: UserPolicy[],
+): Promise<{ changed: boolean }> {
+  if (!supabase) return { changed: false };
+  try {
+    const profile = await fetchAnalyseProfile(userId);
+    if (!profile) return { changed: false };
+    const candidates = analysePolicyCandidates(profile);
+    if (candidates.length === 0) return { changed: false };
+
+    // Created by the same migration as `analyse_source_key`; an error here
+    // means it has not run, and importing without the key would duplicate.
+    const dismissed = await supabase
+      .from("user_policy_import_dismissals")
+      .select("analyse_source_key")
+      .eq("user_id", userId);
+    if (dismissed.error) return { changed: false };
+
+    const plan = planAnalysePolicyImport(
+      candidates,
+      existing,
+      (dismissed.data ?? []).map(
+        (r: { analyse_source_key: string }) => r.analyse_source_key,
+      ),
+    );
+    let changed = false;
+    for (const link of plan.links) {
+      const { error } = await supabase
+        .from("user_policies")
+        .update({ analyse_source_key: link.sourceKey })
+        .eq("id", link.policyId);
+      if (!error) changed = true;
+    }
+    if (plan.inserts.length > 0) {
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("user_policies").upsert(
+        plan.inserts.map((c) => ({
+          user_id: userId,
+          policy_type: c.policyType,
+          insurer_name: "",
+          plan_name: c.planName,
+          cover_amount: c.coverAmount,
+          premium_amount: c.premiumAmount,
+          premium_frequency: c.premiumFrequency,
+          renewal_date: c.renewalDate,
+          status: "active",
+          analyse_source_key: c.sourceKey,
+          updated_at: now,
+        })),
+        { onConflict: "user_id,analyse_source_key", ignoreDuplicates: true },
+      );
+      if (!error) changed = true;
+    }
+    return { changed };
+  } catch {
+    return { changed: false };
+  }
 }
 
 export const FINKOIN_AGENT_CODE =

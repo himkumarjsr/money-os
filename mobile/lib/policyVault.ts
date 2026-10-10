@@ -46,7 +46,8 @@ export type UserPolicy = {
   coverAmount: number;
   premiumAmount: number;
   premiumFrequency: PremiumFrequency;
-  renewalDate: string; // YYYY-MM-DD
+  /** YYYY-MM-DD; null for a policy imported from Analyse without one. */
+  renewalDate: string | null;
   purchaseDate: string | null;
   nomineeName: string | null;
   status: PolicyStatus;
@@ -64,7 +65,7 @@ type UserPolicyRow = {
   cover_amount: string | number | null;
   premium_amount: string | number | null;
   premium_frequency: string | null;
-  renewal_date: string;
+  renewal_date: string | null;
   purchase_date: string | null;
   nominee_name: string | null;
   status: string | null;
@@ -212,7 +213,7 @@ export function policyToForm(p: UserPolicy): PolicyFormInput {
     coverAmount: p.coverAmount,
     premiumAmount: p.premiumAmount,
     premiumFrequency: p.premiumFrequency,
-    renewalDate: p.renewalDate,
+    renewalDate: p.renewalDate ?? "",
     purchaseDate: p.purchaseDate ?? "",
     nomineeName: p.nomineeName ?? "",
     status: p.status,
@@ -263,7 +264,9 @@ function looksLikeMissingStatusColumn(message: string): boolean {
   const m = message.toLowerCase();
   return (
     m.includes("status") &&
-    (m.includes("column") || m.includes("schema") || m.includes("could not find"))
+    (m.includes("column") ||
+      m.includes("schema") ||
+      m.includes("could not find"))
   );
 }
 
@@ -341,6 +344,29 @@ export async function updateUserPolicy(
 export async function deleteUserPolicy(
   policyId: string,
 ): Promise<{ error: Error | null }> {
+  // A policy imported from Analyse (web) would be imported again on the next
+  // visit; remember the deletion so it stays gone. Best effort.
+  try {
+    const { data } = await supabase
+      .from("user_policies")
+      .select("*")
+      .eq("id", policyId)
+      .maybeSingle();
+    const row = data as {
+      user_id?: string;
+      analyse_source_key?: string | null;
+    } | null;
+    if (row?.user_id && row.analyse_source_key) {
+      await supabase
+        .from("user_policy_import_dismissals")
+        .upsert(
+          { user_id: row.user_id, analyse_source_key: row.analyse_source_key },
+          { onConflict: "user_id,analyse_source_key", ignoreDuplicates: true },
+        );
+    }
+  } catch {
+    /* ignore */
+  }
   const { error } = await supabase
     .from("user_policies")
     .delete()
