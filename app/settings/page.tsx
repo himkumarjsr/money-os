@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
+import { AppearancePicker } from "@/components/settings/AppearancePicker";
 import { authRecoveryRedirectUrl } from "@/lib/authRecovery";
 import { getSupabase } from "@/lib/supabase";
 import {
@@ -379,6 +380,13 @@ function SettingsInner() {
             </a>
           </p>
         </div>
+      </section>
+
+      <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[#9B9A94]">
+          Appearance
+        </h2>
+        <AppearancePicker />
       </section>
 
       <section className="mt-8 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">

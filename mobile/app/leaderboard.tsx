@@ -186,12 +186,20 @@ export default function LeaderboardScreen() {
   useEffect(() => {
     if (!hasInitialized || !isLoggedIn) return;
     void fetchLeaderboard();
+    if (!userId) return;
 
+    // RLS only delivers the viewer's own row; filter server-side so Realtime
+    // doesn't run a policy check per subscriber on every FK change.
     const sub = supabase
       .channel(uniqueChannelName("leaderboard-updates"))
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "gamification" },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "gamification",
+          filter: `user_id=eq.${userId}`,
+        },
         () => {
           void AsyncStorage.removeItem(CACHE_KEY).catch(() => undefined);
           void fetchLeaderboard(true);
@@ -202,7 +210,7 @@ export default function LeaderboardScreen() {
     return () => {
       void supabase.removeChannel(sub);
     };
-  }, [hasInitialized, isLoggedIn, fetchLeaderboard]);
+  }, [hasInitialized, isLoggedIn, userId, fetchLeaderboard]);
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace("/(tabs)");

@@ -95,6 +95,10 @@ function LeaderboardContent() {
   useEffect(() => {
     void fetchLeaderboard();
 
+    // RLS only ever delivers the viewer's own gamification row, so filter on
+    // it server-side; an unfiltered subscription costs a policy check per
+    // subscriber on every FK change (free-plan Realtime quota).
+    if (!user?.id) return;
     const supabase = getSupabase();
     const sub = supabase
       .channel(uniqueChannelName("leaderboard-updates"))
@@ -104,6 +108,7 @@ function LeaderboardContent() {
           event: "UPDATE",
           schema: "public",
           table: "gamification",
+          filter: `user_id=eq.${user.id}`,
         },
         () => {
           localStorage.removeItem(CACHE_KEY);
