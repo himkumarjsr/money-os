@@ -93,7 +93,6 @@ function TaxRegimeCalculatorBody({ onReset }: { onReset: () => void }) {
         <PaywallSheet
           visible
           onClose={() => setPaywallOpen(false)}
-          priceLabel="Pay ₹99"
           title="Unlock tax regime deep report"
           subtitle="Full narrative and printable layout."
           bulletPoints={[

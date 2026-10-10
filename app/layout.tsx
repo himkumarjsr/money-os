@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
@@ -28,13 +27,7 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 
-const RenewalReminderBanner = dynamic(
-  () =>
-    import("@/components/RenewalReminderBanner").then((m) => ({
-      default: m.RenewalReminderBanner,
-    })),
-  { ssr: false },
-);
+import RenewalReminderBanner from "@/components/RenewalReminderBannerLazy";
 import { Toast } from "@/components/ui/Toast";
 import "./globals.css";
 

@@ -12,12 +12,11 @@ import {
 import { SITE_URL, socialImageTags } from "@/lib/seo";
 
 type PageProps = {
-  searchParams?: { calc?: string | string[]; from?: string | string[] };
+  searchParams?: Promise<{ calc?: string | string[]; from?: string | string[] }>;
 };
 
-export async function generateMetadata({
-  searchParams,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const searchParams = await props.searchParams;
   const calcParam = Array.isArray(searchParams?.calc)
     ? searchParams?.calc[0]
     : searchParams?.calc;
@@ -79,7 +78,8 @@ export async function generateMetadata({
   };
 }
 
-export default async function CalculatorsPage({ searchParams }: PageProps) {
+export default async function CalculatorsPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const calc = Array.isArray(searchParams?.calc)
     ? searchParams?.calc[0]
     : searchParams?.calc;

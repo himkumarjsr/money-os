@@ -8,6 +8,7 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -60,13 +61,17 @@ export default function ProfileScreen() {
 
   const handlePickPhoto = async () => {
     if (!user?.id || photoBusy) return;
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(
-        "Permission needed",
-        "Allow photo access to set a profile picture.",
-      );
-      return;
+    // Android uses the system photo picker, which needs no permission (Play
+    // blocks READ_MEDIA_IMAGES for one-off picks, see app.json).
+    if (Platform.OS !== "android") {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo access to set a profile picture.",
+        );
+        return;
+      }
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
