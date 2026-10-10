@@ -29,6 +29,7 @@ import {
   tintBg,
   tintFg,
   themed,
+  brand,
 } from "@/constants/theme";
 import { formatIndian, formatInWords } from "@/lib/formatters";
 import {
@@ -151,7 +152,9 @@ export function Hint({
         { backgroundColor: info ? tintBg("#EEEDFE") : tintBg("#FAEEDA") },
       ]}
     >
-      <Text style={[s.hintText, { color: info ? "#3C3489" : "#633806" }]}>
+      <Text
+        style={[s.hintText, { color: info ? brand("#3C3489") : "#633806" }]}
+      >
         {children}
       </Text>
     </View>
@@ -992,16 +995,26 @@ export function TotalPanel({
         },
       ]}
     >
-      <Text style={[s.totalLabel, { color: purple ? "#3C3489" : "#334155" }]}>
+      <Text
+        style={[s.totalLabel, { color: purple ? brand("#3C3489") : "#334155" }]}
+      >
         {label}
       </Text>
       <View style={{ alignItems: "flex-end", flexShrink: 1 }}>
         <Text
-          style={[s.totalAmount, { color: purple ? "#534AB7" : "#0F172A" }]}
+          style={[
+            s.totalAmount,
+            { color: purple ? brand("#534AB7") : "#0F172A" },
+          ]}
         >
           ₹{formatIndian(amount)}
         </Text>
-        <Text style={[s.totalWords, { color: purple ? "#7F77DD" : "#64748B" }]}>
+        <Text
+          style={[
+            s.totalWords,
+            { color: purple ? brand("#7F77DD") : "#64748B" },
+          ]}
+        >
           {formatInWords(wordsAmount ?? amount)}
         </Text>
       </View>

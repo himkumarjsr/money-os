@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import Svg, { Path } from "react-native-svg";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, themedStyles, brand } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { AppIcon } from "@/components/ui/AppIcon";
 
@@ -282,7 +282,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: "#534AB7",
+    shadowColor: brand("#534AB7"),
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.28,
     shadowRadius: 10,

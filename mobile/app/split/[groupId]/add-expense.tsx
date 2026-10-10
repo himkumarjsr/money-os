@@ -28,7 +28,7 @@ import type { TrackerIconName } from "@/lib/tracker-categories";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { DateField } from "@/components/tracker/DateField";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
+import { Colors, themedStyles, tintBg, tintFg, brand } from "@/constants/theme";
 
 type SplitType = "equal" | "exact" | "percentage" | "shares";
 type FieldKey =
@@ -597,7 +597,7 @@ export default function AddExpenseScreen() {
                   }}
                   keyboardType="decimal-pad"
                   placeholder="0"
-                  placeholderTextColor="#AFA9EC"
+                  placeholderTextColor={brand("#AFA9EC")}
                   autoFocus={!editExpenseId}
                   accessibilityLabel="Total amount"
                   style={[

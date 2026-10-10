@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, themedStyles, brand } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 import { useAuthStore } from "@/store/authStore";
@@ -59,9 +59,9 @@ function getInitials(name: string) {
 }
 
 function getRankColor(r: number) {
-  if (r === 1) return "#534AB7";
-  if (r === 2) return "#7F77DD";
-  if (r === 3) return "#AFA9EC";
+  if (r === 1) return brand("#534AB7");
+  if (r === 2) return brand("#7F77DD");
+  if (r === 3) return brand("#AFA9EC");
   return "#9B9A94";
 }
 

@@ -18,6 +18,7 @@ import {
   tintBg,
   tintFg,
   themed,
+  brand,
 } from "@/constants/theme";
 
 function resolveCaps(
@@ -42,7 +43,7 @@ const R_PROGRESS = (R_OUT + R_IN) / 2;
 const COLORS = themed(
   () =>
     ({
-      needs: "#534AB7",
+      needs: brand("#534AB7"),
       wants: "#BA7517",
       security: "#2E7DB5",
       loans: "#E24B4A",

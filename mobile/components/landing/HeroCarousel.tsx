@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { View, Text, Pressable, type LayoutChangeEvent } from "react-native";
 import { router } from "expo-router";
-import { Colors, Radius, Shadow, themedStyles } from "@/constants/theme";
+import { Colors, Radius, Shadow, themedStyles, brand } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 
 const INTERVAL_MS = 3000;
@@ -224,7 +224,7 @@ const styles = themedStyles(() => ({
     borderRadius: 8,
     // PWA: indigo → violet → blue gradient approx
     backgroundColor: Colors.indigo600,
-    shadowColor: "#4F46E5",
+    shadowColor: brand("#4F46E5"),
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.28,
     shadowRadius: 6,

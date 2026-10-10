@@ -5,7 +5,7 @@ import { TEACH } from "@/lib/taxTeachContent";
 import { TaxTeachTooltip } from "../TaxTeachTooltip";
 import { Checkbox, Chip, ChipRow, StepCard, tx } from "./primitives";
 import { EMPLOYMENT_OPTIONS, type TaxCalcState } from "./useTaxCalculatorState";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, brand } from "@/constants/theme";
 
 export function ProfileStep({ s }: { s: TaxCalcState }) {
   const { i, update } = s;
@@ -71,9 +71,9 @@ export function ProfileStep({ s }: { s: TaxCalcState }) {
             step={1}
             value={i.age}
             onValueChange={(v) => update({ age: Math.round(v) })}
-            minimumTrackTintColor="#534AB7"
+            minimumTrackTintColor={brand("#534AB7")}
             maximumTrackTintColor={Colors.border}
-            thumbTintColor="#534AB7"
+            thumbTintColor={brand("#534AB7")}
             accessibilityLabel="Age"
           />
           <Text style={[tx.hint, styles.ageText]}>

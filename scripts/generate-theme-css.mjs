@@ -45,29 +45,37 @@ const PALETTES = {
     "danger-light": "#3A1A1A",
     "danger-border": "#6B2A2A",
   },
+  // "24K Mirror": near-black with polished, shiny gold. No blue or purple.
   premium: {
-    bg: "#0A0A0C",
-    card: "#141418",
-    surface: "#1C1A14",
-    border: "#2E2918",
-    "border-light": "#1F1C14",
+    bg: "#0A0A0A",
+    card: "#151412",
+    surface: "#1C1A15",
+    border: "#2C2616",
+    "border-light": "#201D14",
     "border-strong": "#4A3F1F",
-    text: "#F5F1E6",
-    "text-2": "#C2B9A3",
-    muted: "#8C8573",
-    primary: "#9A7B2F",
-    "primary-text": "#D4AF37",
-    "primary-light": "#2A2312",
-    "primary-border": "#4A3F1F",
-    "success-text": "#6EE7B7",
-    "success-light": "#0F2E24",
-    "success-border": "#1E5A45",
-    "warning-text": "#FCD34D",
-    "warning-light": "#33270F",
+    text: "#F5EFDC",
+    "text-2": "#C9C1AE",
+    muted: "#9E978A",
+    primary: "#D4AF37",
+    "primary-text": "#E8C766",
+    "primary-light": "#1D1910",
+    "primary-border": "#5A4A1E",
+    "success-text": "#6FCF97",
+    "success-light": "#0F2A1C",
+    "success-border": "#1E5A3A",
+    "warning-text": "#F3D27A",
+    "warning-light": "#2E2410",
     "warning-border": "#5C4718",
-    "danger-text": "#FCA5A5",
-    "danger-light": "#3A1A1A",
+    "danger-text": "#EB7A72",
+    "danger-light": "#341615",
     "danger-border": "#6B2A2A",
+    "gold-1": "#B38728",
+    "gold-2": "#FCF6BA",
+    "gold-3": "#D4AF37",
+    "on-gold": "#1A1405",
+    "gold-grad":
+      "linear-gradient(100deg, #AA771C 0%, #FCF6BA 30%, #D4AF37 50%, #FBF5B7 70%, #B38728 100%)",
+    hero: "linear-gradient(160deg, #221C0E 0%, #12100B 55%, #1C170C 100%)",
   },
 };
 
@@ -83,7 +91,7 @@ function walk(dir, out = []) {
 }
 
 const PROPS =
-  "bg|text|border(?:-[trblxy])?|divide|ring|outline|from|via|to|fill|stroke|placeholder|caret|accent|decoration";
+  "bg|text|border(?:-[trblxy])?|divide|ring|outline|from|via|to|fill|stroke|placeholder|caret|accent|decoration|shadow";
 const NAMED =
   "white|black|transparent|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|[1-9]00|950)";
 const TOKEN_RE = new RegExp(
@@ -113,7 +121,13 @@ const STYLE_RE = new RegExp(
 const GRADIENT_RE = /\b(background):\s*["'](linear-gradient\([^"']*\))["']/g;
 const WHITE_RE = /\b(background|backgroundColor):\s*["']white["']/g;
 
+const ARB_GRADIENT_RE =
+  /(?<![\w:-])bg-\[linear-gradient\([^\]\s]*\)\](?![\w\]-])/g;
+const ANY_HEX_RE = /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-fA-F])/g;
+
 const tokens = new Map();
+const arbGradients = new Set();
+const allHexes = new Set();
 const inline = new Map();
 const gradients = new Set();
 const whites = new Set();
@@ -123,6 +137,8 @@ for (const dir of SCAN_DIRS) {
     for (const m of src.matchAll(TOKEN_RE)) tokens.set(m[0], m);
     for (const m of src.matchAll(GRADIENT_RE)) gradients.add(m[2]);
     for (const m of src.matchAll(WHITE_RE)) whites.add(m[1]);
+    for (const m of src.matchAll(ARB_GRADIENT_RE)) arbGradients.add(m[0]);
+    for (const m of src.matchAll(ANY_HEX_RE)) allHexes.add(m[0].toLowerCase());
     for (const m of src.matchAll(STYLE_RE)) {
       const [, key, before, hex, after] = m;
       // Only plain colours or "1px solid #hex" borders — skip gradients etc.
@@ -190,7 +206,15 @@ function analyse(hex) {
     chroma < 0.08 ||
     GRAY_HEX.has(hex.toLowerCase()) ||
     (l < 0.18 && chroma < 0.2);
-  return { l, neutral, hue };
+  return { l, neutral, hue, chroma };
+}
+
+/** Blue/purple brand colours that Premium must never show. */
+function isBrandPurple(hex) {
+  const { hue, chroma, l } = analyse(hex);
+  if (hue !== "primary" || GRAY_HEX.has(hex.toLowerCase())) return false;
+  // Near-black navy and aubergine count too: they read as purple on black.
+  return chroma >= (l < 0.25 ? 0.06 : 0.12);
 }
 
 /** Palette role for a colour used as `kind`, or null to leave it alone. */
@@ -324,13 +348,87 @@ function kindOf(prop) {
   return "border";
 }
 
+const GOLD_STOP = { from: "gold-1", via: "gold-2", to: "gold-3" };
+
+/** Premium override for a blue/purple utility: gold, never purple. */
+function premiumDecl(prop, hex, alpha, important) {
+  const { l } = analyse(hex);
+  const kind = kindOf(prop);
+  if (prop === "shadow") {
+    return {
+      decl: `--tw-shadow-color:${colorValue("primary", alpha || "30")}`,
+    };
+  }
+  if (kind === "bg") {
+    if (l >= 0.85) return null; // pale washes: the shared rules handle these
+    if (alpha) {
+      // Soft glows: gold reads much stronger than purple on black.
+      const pct = alpha.startsWith("[")
+        ? Number(alpha.slice(1, -1)) * 100
+        : Number(alpha);
+      return {
+        decl: declarations(
+          prop,
+          colorValue("primary", String(Math.round(pct * 0.3))),
+          important,
+        ),
+      };
+    }
+    if (l >= 0.85) return null; // pale washes: the shared rules handle these
+    if (l < 0.25) {
+      return {
+        decl: declarations(
+          prop,
+          `var(--fk-${prop === "bg" ? "surface" : "bg"})`,
+          important,
+        ),
+      };
+    }
+    if (prop === "bg") {
+      return {
+        decl: "background:var(--fk-gold-grad)!important;color:var(--fk-on-gold)!important",
+        onGold: true,
+      };
+    }
+    return {
+      decl: declarations(prop, `var(--fk-${GOLD_STOP[prop]})`, important),
+      onGold: prop === "from",
+    };
+  }
+  if (kind === "text") {
+    return l < 0.85
+      ? {
+          decl: declarations(
+            prop,
+            colorValue("primary-text", alpha),
+            important,
+          ),
+        }
+      : null;
+  }
+  return {
+    decl: declarations(
+      prop,
+      colorValue(l >= 0.8 ? "primary-border" : "primary", alpha),
+      important,
+    ),
+  };
+}
+
 const rules = [];
-for (const [token, m] of [...tokens].sort(([a], [b]) => a.localeCompare(b))) {
+const STOP_ORDER = { from: 1, via: 2, to: 3 };
+const order = (m) => STOP_ORDER[m[3]] ?? 0;
+for (const [token, m] of [...tokens].sort(
+  ([a, ma], [b, mb]) => order(ma) - order(mb) || a.localeCompare(b),
+)) {
   const [, variantChain, bang, prop, rawColor, alpha] = m;
   const hex = resolveColor(rawColor);
   if (!hex) continue;
-  const r = role(kindOf(prop), hex);
-  if (!r) continue;
+  const r = prop === "shadow" ? null : role(kindOf(prop), hex);
+  const premium = isBrandPurple(hex)
+    ? premiumDecl(prop, hex, alpha, Boolean(bang))
+    : null;
+  if (!r && !premium) continue;
 
   const variants = variantChain.split(":").filter(Boolean);
   let media = null;
@@ -346,16 +444,29 @@ for (const [token, m] of [...tokens].sort(([a], [b]) => a.localeCompare(b))) {
   }
   if (!ok) continue;
 
-  const decl = declarations(prop, colorValue(r, alpha), Boolean(bang));
-  if (!decl) continue;
-  let sel = `:root[data-theme] ${prefix}.${escapeClass(token)}${pseudo}`;
-  if (prop === "divide") {
-    sel = `:root[data-theme] ${prefix}.${escapeClass(token)}${pseudo} > :not([hidden]) ~ :not([hidden])`;
+  const cls = `${prefix}.${escapeClass(token)}${pseudo}`;
+  const suffix = prop === "divide" ? " > :not([hidden]) ~ :not([hidden])" : "";
+  if (r) {
+    const decl = declarations(prop, colorValue(r, alpha), Boolean(bang));
+    const body =
+      prop === "divide" ? `border-color:${colorValue(r, alpha)}` : decl;
+    if (body)
+      rules.push({ media, rule: `:root[data-theme] ${cls}${suffix}{${body}}` });
   }
-  const body =
-    prop === "divide" ? `border-color:${colorValue(r, alpha)}` : decl;
-  const rule = `${sel}{${body}}`;
-  rules.push({ media, rule });
+  if (premium) {
+    const P = `:root[data-theme="premium"]`;
+    const body =
+      prop === "divide"
+        ? premium.decl.replace(/^[^:]+/, "border-color")
+        : premium.decl;
+    rules.push({ media, premium: true, rule: `${P} ${cls}${suffix}{${body}}` });
+    if (premium.onGold && !pseudo)
+      rules.push({
+        media,
+        premium: true,
+        rule: `${P} .${escapeClass(token)}[class*="text-white"],${P} .${escapeClass(token)} [class*="text-white"]{color:var(--fk-on-gold)!important}`,
+      });
+  }
 }
 
 // React writes `prop:#hex` when rendering on the server and
@@ -411,6 +522,56 @@ for (const g of [...gradients].sort()) {
   );
 }
 
+// ── Premium: catch every remaining blue/purple ────────────────────────────
+// Brand colours also arrive through constants, SVG attributes and gradients,
+// so Premium matches them by value wherever they render.
+const premiumRules = [];
+const P = `:root[data-theme="premium"]`;
+const rgbOf = (hex) =>
+  `rgb(${hexToRgb(hex)
+    .map((v) => Math.round(v * 255))
+    .join(", ")})`;
+for (const hex of [...allHexes].filter(isBrandPurple).sort()) {
+  const { l } = analyse(hex);
+  const rgb = rgbOf(hex);
+  const ink = l >= 0.85 ? "primary-light" : "primary";
+  premiumRules.push(
+    `${P} [fill="${hex}" i] {\n  fill: var(--fk-${ink});\n}`,
+    `${P} [stroke="${hex}" i] {\n  stroke: var(--fk-${l >= 0.85 ? "gold-2" : "primary"});\n}`,
+    `${P} [style*="color:${hex}" i],\n${P} [style*="color: ${rgb}"] {\n  color: var(--fk-${l >= 0.85 ? "gold-2" : "primary-text"}) !important;\n}`,
+    `${P} [style*="solid ${hex}" i],\n${P} [style*="solid ${rgb}"],\n${P} [style*="border-color:${hex}" i],\n${P} [style*="border-color: ${rgb}"] {\n  border-color: var(--fk-${l >= 0.8 ? "primary-border" : "primary"}) !important;\n}`,
+  );
+  const bgSel = ["background:", "background-color:"]
+    .flatMap((k) => [
+      `${P} [style*="${k}${hex}" i]`,
+      `${P} [style*="${k} ${rgb}"]`,
+    ])
+    .join(",\n");
+  if (l >= 0.85)
+    premiumRules.push(
+      `${bgSel} {\n  background: var(--fk-primary-light) !important;\n}`,
+    );
+  else if (l < 0.25)
+    premiumRules.push(
+      `${bgSel} {\n  background: var(--fk-surface) !important;\n}`,
+    );
+  else
+    premiumRules.push(
+      `${bgSel} {\n  background: var(--fk-gold-grad) !important;\n  color: var(--fk-on-gold) !important;\n}`,
+    );
+  // Any inline gradient using a brand colour becomes a dark gold-edged panel.
+  premiumRules.push(
+    `${P} [style*="gradient"][style*="${hex}" i],\n${P} [style*="gradient"][style*="${rgb}"] {\n  background: var(--fk-hero) !important;\n  border-color: var(--fk-primary-border) !important;\n  box-shadow: inset 0 0 0 1px var(--fk-primary-border);\n}`,
+  );
+}
+for (const cls of [...arbGradients].sort()) {
+  const hexes = cls.match(ANY_HEX_RE) ?? [];
+  if (!hexes.some(isBrandPurple)) continue;
+  premiumRules.push(
+    `${P} .${escapeClass(cls)} {\n  background: var(--fk-hero) !important;\n  box-shadow: inset 0 0 0 1px var(--fk-primary-border);\n}`,
+  );
+}
+
 const vars = Object.entries(PALETTES)
   .map(
     ([name, pal]) =>
@@ -418,10 +579,11 @@ const vars = Object.entries(PALETTES)
         .map(([k, v]) => `  --fk-${k}: ${v};`)
         .join(
           "\n",
-        )}\n  --color-primary: var(--fk-primary);\n  --color-surface: var(--fk-card);\n  --color-surface-alt: var(--fk-surface);\n  --color-muted: var(--fk-muted);\n  --color-border: var(--fk-border);\n  --color-text: var(--fk-text);\n}`,
+        )}\n  --color-primary: var(--fk-primary);\n  --color-surface: var(--fk-card);\n  --color-surface-alt: var(--fk-surface);\n  --color-muted: var(--fk-muted);\n  --color-border: var(--fk-border);\n  --color-text: var(--fk-text);${name === "premium" ? "\n  --color-primary-foreground: var(--fk-on-gold);" : ""}\n}`,
   )
   .join("\n\n");
 
+rules.sort((a, b) => Number(Boolean(a.premium)) - Number(Boolean(b.premium)));
 const plain = rules.filter((r) => !r.media).map((r) => r.rule);
 const byMedia = new Map();
 for (const r of rules.filter((x) => x.media)) {
@@ -458,6 +620,9 @@ ${plain.join("\n")}
 /* Inline style={{ … }} colours */
 ${inlineRules.join("\n")}
 
+/* Premium: no blue or purple anywhere */
+${premiumRules.join("\n")}
+
 ${[...byMedia.entries()]
   .sort(([a], [b]) => a - b)
   .map(
@@ -469,5 +634,5 @@ ${[...byMedia.entries()]
 
 writeFileSync(OUT, css);
 console.log(
-  `theme.css: ${rules.length} class overrides, ${inlineRules.length} inline-style overrides`,
+  `theme.css: ${rules.length} class overrides, ${inlineRules.length} inline-style overrides, ${premiumRules.length} premium overrides`,
 );
