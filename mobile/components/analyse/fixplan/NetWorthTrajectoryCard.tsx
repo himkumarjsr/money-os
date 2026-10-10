@@ -1,5 +1,5 @@
 import { Text, View } from "react-native";
-import { Spacing, themedStyles, Colors } from "@/constants/theme";
+import { Spacing, themedStyles, Colors, brand } from "@/constants/theme";
 import {
   formatLakhCrore,
   type NetWorthTrajectory,
@@ -50,7 +50,7 @@ export function NetWorthTrajectoryCard({
                   styles.bar,
                   {
                     height: h,
-                    backgroundColor: negative ? "#F4B9B8" : "#534AB7",
+                    backgroundColor: negative ? "#F4B9B8" : brand("#534AB7"),
                     opacity: p.year === 0 ? 0.55 : 1,
                   },
                 ]}

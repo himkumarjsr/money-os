@@ -1,6 +1,7 @@
 "use client";
 
 import { AppIcon } from "@/components/ui/AppIcon";
+import { timeGreeting } from "@/lib/greeting";
 import { useAuthStore } from "@/store/authStore";
 import type { Notification } from "@/store/notificationStore";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -92,6 +93,7 @@ export default function MorningTipPopup() {
   };
 
   if (!visible || !tip) return null;
+  const greeting = timeGreeting();
 
   return (
     <>
@@ -198,8 +200,10 @@ export default function MorningTipPopup() {
               <span
                 style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
               >
-                Good morning
-                <AppIcon name="sunrise" size={14} color="#534AB7" />
+                {greeting}
+                {greeting === "Good morning" ? (
+                  <AppIcon name="sunrise" size={14} color="#534AB7" />
+                ) : null}
               </span>
             </div>
             <div

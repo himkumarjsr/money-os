@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Colors, themedStyles } from "@/constants/theme";
+import { timeGreeting } from "@/lib/greeting";
 import { syncKv } from "@/lib/syncKv";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -106,6 +107,7 @@ export function MorningTipPopup() {
   };
 
   if (!visible || !tip) return null;
+  const greeting = timeGreeting();
 
   return (
     <Modal
@@ -149,8 +151,10 @@ export function MorningTipPopup() {
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.kickerRow}>
-              <Text style={styles.kicker}>Good morning</Text>
-              <AppIcon name="sunrise" size={14} color={Colors.primary} />
+              <Text style={styles.kicker}>{greeting}</Text>
+              {greeting === "Good morning" ? (
+                <AppIcon name="sunrise" size={14} color={Colors.primary} />
+              ) : null}
             </View>
             <Text style={styles.title}>{tip.title}</Text>
           </View>

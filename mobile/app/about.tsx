@@ -6,7 +6,14 @@ import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { openContentHref } from "@/lib/contentLinks";
 
-const LINKEDIN_URL = "https://www.linkedin.com/in/himanshu-k-81b484140/";
+/** Why Finkoin exists, in the founder's words. Same text as app/about/page.tsx. */
+const FOUNDER_NOTE = [
+  "Most people I know earn well and pay their EMIs on time, yet can't answer simple questions about their own money: Is my emergency fund enough? Am I under-insured? Am I investing enough to retire when I want to? The answers exist, but they are buried in jargon, spread across ten different apps, or come from someone trying to sell a policy or a fund.",
+  "I built Finkoin to be one honest place where any working Indian can see their whole money life in a few minutes: what is strong, what is at risk, and the next step to fix it. No PAN, no Aadhaar, no jargon. Every suggestion explains why, in plain language, so you can decide for yourself.",
+  "That is the idea behind Know it. Fix it. Grow it. Start with a free health check, track where your money goes, split shared costs with friends without the awkwardness, and come back each month to see your progress. If Finkoin helps one family build an emergency fund or get the right cover before they need it, it has done its job.",
+];
+
+const LINKEDIN_URL = "https://www.linkedin.com/in/himanshu-kr-gupta/";
 
 const PROBLEMS: { icon: AppIconName; title: string; desc: string }[] = [
   {
@@ -199,16 +206,16 @@ export default function AboutScreen() {
           <Image
             source={require("@/assets/founder-himanshu-kumar.png")}
             style={styles.avatar}
-            accessibilityLabel="Himanshu Kumar, Founder of Finkoin"
+            accessibilityLabel="Himanshu Kumar Gupta, Founder of Finkoin"
           />
           <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={styles.founderName}>Himanshu Kumar</Text>
+            <Text style={styles.founderName}>Himanshu Kumar Gupta</Text>
             <Text style={styles.founderRole}>Founder, Finkoin</Text>
             <Pressable
               onPress={() => void Linking.openURL(LINKEDIN_URL).catch(() => {})}
               style={styles.linkedIn}
               accessibilityRole="link"
-              accessibilityLabel="Himanshu Kumar on LinkedIn"
+              accessibilityLabel="Himanshu Kumar Gupta on LinkedIn"
             >
               <Svg
                 width={16}
@@ -222,13 +229,11 @@ export default function AboutScreen() {
             </Pressable>
           </View>
         </View>
-        <Text style={styles.founderBio}>
-          Finkoin was born from a simple frustration — why is good financial
-          advice so hard to get in India? I built Finkoin to give every working
-          Indian the same quality of financial analysis that was previously only
-          available to the privileged few. No jargon. No hidden agendas. Just
-          clear, honest, personalised guidance.
-        </Text>
+        {FOUNDER_NOTE.map((para) => (
+          <Text key={para.slice(0, 24)} style={styles.founderBio}>
+            {para}
+          </Text>
+        ))}
       </View>
 
       <View style={styles.disclaimer}>
