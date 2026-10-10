@@ -14,6 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Colors, Spacing, FontSize } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { AppleSignInButton } from "@/components/ui/AppleSignInButton";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FormError } from "@/components/ui/FormError";
@@ -41,6 +42,8 @@ export default function LoginScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const signIn = useAuthStore((s) => s.signIn);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const signInWithApple = useAuthStore((s) => s.signInWithApple);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const handleSubmit = async () => {
     setFormError(null);
@@ -83,6 +86,23 @@ export default function LoginScreen() {
       setGoogleLoading(false);
     }
   };
+
+  const handleApple = async () => {
+    setFormError(null);
+    setAppleLoading(true);
+    try {
+      const result = await signInWithApple();
+      if (result.error) {
+        if (!/cancelled/i.test(result.error)) setFormError(result.error);
+      } else {
+        router.replace(target);
+      }
+    } finally {
+      setAppleLoading(false);
+    }
+  };
+
+  const busy = loading || googleLoading || appleLoading;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -137,7 +157,7 @@ export default function LoginScreen() {
               label={loading ? "Please wait…" : "Log in"}
               onPress={() => void handleSubmit()}
               loading={loading}
-              disabled={loading || googleLoading}
+              disabled={busy}
             />
 
             <View style={styles.dividerRow}>
@@ -151,7 +171,11 @@ export default function LoginScreen() {
               variant="secondary"
               onPress={() => void handleGoogle()}
               loading={googleLoading}
-              disabled={loading || googleLoading}
+              disabled={busy}
+            />
+            <AppleSignInButton
+              onPress={() => void handleApple()}
+              disabled={busy}
             />
           </View>
 

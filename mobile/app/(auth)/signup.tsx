@@ -14,6 +14,7 @@ import { useAuthStore, getOAuthRedirectUri } from "@/store/authStore";
 import { Colors, Spacing, FontSize } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { AppleSignInButton } from "@/components/ui/AppleSignInButton";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { openContentHref } from "@/lib/contentLinks";
 
@@ -36,6 +37,8 @@ export default function SignupScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const signUp = useAuthStore((s) => s.signUp);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const signInWithApple = useAuthStore((s) => s.signInWithApple);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -82,6 +85,24 @@ export default function SignupScreen() {
     }
   };
 
+  const handleApple = async () => {
+    setAppleLoading(true);
+    try {
+      const result = await signInWithApple();
+      if (result.error) {
+        if (!/cancelled/i.test(result.error)) {
+          Alert.alert("Apple sign-in", result.error);
+        }
+      } else {
+        router.replace(target);
+      }
+    } finally {
+      setAppleLoading(false);
+    }
+  };
+
+  const busy = loading || googleLoading || appleLoading;
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -126,14 +147,19 @@ export default function SignupScreen() {
             label={loading ? "Please wait…" : "Create account"}
             onPress={() => void handleSubmit()}
             loading={loading}
-            disabled={loading || googleLoading}
+            disabled={busy}
           />
           <Button
             label={googleLoading ? "Opening Google…" : "Continue with Google"}
             variant="secondary"
             onPress={() => void handleGoogle()}
             loading={googleLoading}
-            disabled={loading || googleLoading}
+            disabled={busy}
+          />
+          <AppleSignInButton
+            mode="signUp"
+            onPress={() => void handleApple()}
+            disabled={busy}
           />
         </View>
 
