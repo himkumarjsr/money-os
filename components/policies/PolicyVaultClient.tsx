@@ -4,6 +4,7 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { missingPolicyFields } from "@/lib/analysePolicyImport";
 import { formatIndian, handleMoneyInput } from "@/lib/formatters";
 import {
   POLICY_TYPES,
@@ -16,6 +17,7 @@ import {
   fetchUserPolicies,
   getSupabaseAuthUserId,
   formatPolicyCover,
+  importAnalysePolicies,
   formatRenewalDayMonth,
   daysUntilRenewal,
   FINKOIN_AGENT_CODE,
@@ -88,6 +90,9 @@ function renewalUi(policy: UserPolicy): {
   line: string;
   lineClass: string;
 } {
+  if (!policy.renewalDate) {
+    return { line: "Renewal date not added", lineClass: "text-amber-700" };
+  }
   if (policy.status === "transferred_to_finkoin") {
     return {
       line: `Renews on ${formatRenewalDayMonth(policy.renewalDate)}`,
@@ -126,8 +131,14 @@ function statusBadge(policy: UserPolicy): { label: string; className: string } {
       className: "bg-violet-100 text-violet-800",
     };
   }
+  if (missingPolicyFields(policy).length > 0) {
+    return {
+      label: "Details missing",
+      className: "bg-amber-100 text-amber-800",
+    };
+  }
   const today = startOfLocalDay(new Date());
-  const rd = startOfLocalDay(parseLocalDate(policy.renewalDate));
+  const rd = startOfLocalDay(parseLocalDate(policy.renewalDate ?? ""));
   if (rd < today)
     return { label: "Expired", className: "bg-red-100 text-red-700" };
   return { label: "Active", className: "bg-emerald-100 text-emerald-800" };
@@ -198,13 +209,17 @@ export default function PolicyVaultClient() {
     setLoading(true);
     setLoadError(null);
     const { policies: list, error } = await fetchUserPolicies(uid);
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setLoadError(error.message);
       setPolicies([]);
       return;
     }
-    setPolicies(list);
+    // Policies entered in Analyse show up here without re-typing them.
+    const { changed } = await importAnalysePolicies(uid, list);
+    const next = changed ? await fetchUserPolicies(uid) : null;
+    setLoading(false);
+    setPolicies(next && !next.error ? next.policies : list);
   }, [canAccessVault, hasInitialized]);
 
   useEffect(() => {
@@ -359,6 +374,12 @@ export default function PolicyVaultClient() {
     }
   };
 
+  const editing = editId ? policies.find((p) => p.id === editId) : undefined;
+  const editingMissing = editing ? missingPolicyFields(editing) : [];
+  const incompleteCount = policies.filter(
+    (p) => missingPolicyFields(p).length > 0,
+  ).length;
+
   const premiumLabel = useMemo(() => {
     const sym = `₹${formatIndian(form.premiumAmount)}`;
     return form.premiumFrequency === "yearly" ? `${sym}/year` : `${sym}/month`;
@@ -459,81 +480,118 @@ export default function PolicyVaultClient() {
             </div>
           </div>
         ) : (
-          <ul className="space-y-4">
-            {policies.map((p) => {
-              const renew = renewalUi(p);
-              const st = statusBadge(p);
-              const prem = `₹${formatIndian(p.premiumAmount)}${p.premiumFrequency === "yearly" ? "/year" : "/month"}`;
-              return (
-                <li
-                  key={p.id}
-                  className="rounded-2xl border border-[#F0EFF8] bg-white p-5 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
+          <>
+            {incompleteCount > 0 ? (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {incompleteCount === 1
+                  ? "1 policy needs a few details."
+                  : `${incompleteCount} policies need a few details.`}{" "}
+                We added what you entered in your analysis; tap{" "}
+                <strong>Add missing details</strong> to finish.
+              </div>
+            ) : null}
+            <ul className="space-y-4">
+              {policies.map((p) => {
+                const renew = renewalUi(p);
+                const st = statusBadge(p);
+                const missing = missingPolicyFields(p);
+                const prem = `₹${formatIndian(p.premiumAmount)}${p.premiumFrequency === "yearly" ? "/year" : "/month"}`;
+                return (
+                  <li
+                    key={p.id}
+                    className="rounded-2xl border border-[#F0EFF8] bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${policyBadgeClass(p.policyType)}`}
+                        >
+                          {POLICY_TYPE_LABELS[p.policyType]}
+                        </span>
+                        <p className="mt-2 text-lg font-bold text-slate-900">
+                          {p.insurerName ||
+                            (p.analyseSourceKey ? "Insurer not added" : "—")}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {p.planName?.trim() || "Plan not specified"}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700">
+                          Cover:{" "}
+                          <span className="font-medium text-slate-900">
+                            {formatPolicyCover(p.coverAmount)}
+                          </span>
+                        </p>
+                        <p className="text-sm text-slate-700">
+                          Premium:{" "}
+                          <span className="font-medium text-slate-900">
+                            {prem}
+                          </span>
+                        </p>
+                        <p className={`mt-1 text-sm ${renew.lineClass}`}>
+                          {renew.line}
+                        </p>
+                        {p.analyseSourceKey ? (
+                          <p className="mt-1 text-xs text-slate-400">
+                            From your analysis
+                            {missing.length > 0
+                              ? ` · missing ${missing.join(", ")}`
+                              : ""}
+                          </p>
+                        ) : null}
+                      </div>
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${policyBadgeClass(p.policyType)}`}
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${st.className}`}
                       >
-                        {POLICY_TYPE_LABELS[p.policyType]}
+                        {st.label}
                       </span>
-                      <p className="mt-2 text-lg font-bold text-slate-900">
-                        {p.insurerName || "—"}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {p.planName?.trim() || "Plan not specified"}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-700">
-                        Cover:{" "}
-                        <span className="font-medium text-slate-900">
-                          {formatPolicyCover(p.coverAmount)}
-                        </span>
-                      </p>
-                      <p className="text-sm text-slate-700">
-                        Premium:{" "}
-                        <span className="font-medium text-slate-900">
-                          {prem}
-                        </span>
-                      </p>
-                      <p className={`mt-1 text-sm ${renew.lineClass}`}>
-                        {renew.line}
-                      </p>
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${st.className}`}
-                    >
-                      {st.label}
-                    </span>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setRenewFor(p)}
-                    >
-                      Renew
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setTransferFor(p)}
-                    >
-                      Transfer to Finkoin
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEdit(p)}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                      {missing.length > 0 ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="bg-[#534AB7] text-white"
+                          onClick={() => openEdit(p)}
+                        >
+                          Add missing details
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="order-last"
+                          onClick={() => openEdit(p)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {p.insurerName.trim() ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setRenewFor(p)}
+                          >
+                            Renew
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setTransferFor(p)}
+                          >
+                            Transfer to Finkoin
+                          </Button>
+                        </>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </div>
 
@@ -543,6 +601,12 @@ export default function PolicyVaultClient() {
         title={editId ? "Edit policy" : "Add policy"}
       >
         <div className="space-y-1 pb-4">
+          {editing?.analyseSourceKey && editingMissing.length > 0 ? (
+            <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+              We filled this in from your analysis. Add the{" "}
+              {editingMissing.join(", ")} to complete it.
+            </p>
+          ) : null}
           <label
             className="mb-1 block text-sm font-medium text-slate-700"
             htmlFor="policy-type"
