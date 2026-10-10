@@ -93,7 +93,20 @@
         }
       ],
       "expo-sharing",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "Premium",
+            "ios": "./assets/icon-premium.png",
+            "android": {
+              "foregroundImage": "./assets/adaptive-icon-premium.png",
+              "backgroundColor": "#0A0A0A"
+            }
+          }
+        ]
+      ]
     ],
     "experiments": {
       "typedRoutes": true
