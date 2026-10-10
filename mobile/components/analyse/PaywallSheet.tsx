@@ -33,7 +33,7 @@ type Props = {
 export function PaywallSheet({
   visible,
   onClose,
-  priceLabel = `Pay ₹${FIX_PLAN_PRICE_INR}`,
+  priceLabel = PAYMENTS_ENABLED ? `Pay ₹${FIX_PLAN_PRICE_INR}` : "Free",
   title = "Unlock your fix plan",
   subtitle = "Your complete AI roadmap is ready to unlock.",
   bulletPoints = DEFAULT_BULLETS,
@@ -68,8 +68,8 @@ export function PaywallSheet({
       </View>
 
       <Text style={styles.fk}>
-        Finkoin Keys (FK) are rewards for activity on Finkoin. They do not
-        reduce this unlock price and are not tied to buying any product here.
+        Finkoin Keys (FK) are rewards for activity on Finkoin and are not tied
+        to buying any product here.
       </Text>
 
       <View style={styles.priceCard}>
