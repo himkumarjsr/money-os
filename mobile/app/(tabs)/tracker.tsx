@@ -2,7 +2,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   Pressable,
   RefreshControl,
   Alert,
@@ -16,7 +15,15 @@ import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
 import { supabase, getSupabase } from "@/lib/supabase";
-import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
+import {
+  Colors,
+  Spacing,
+  Radius,
+  FontSize,
+  Shadow,
+  themedStyles,
+  tintBg,
+} from "@/constants/theme";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionPrivacyEye, EyeIcon } from "@/components/ui/PrivacyEye";
 import {
@@ -1587,7 +1594,7 @@ export default function TrackerScreen() {
                   borderColor: isExpanded
                     ? cat.color
                     : overBudget
-                      ? "#FCEBEB"
+                      ? tintBg("#FCEBEB")
                       : Colors.border,
                 },
               ]}
@@ -1921,7 +1928,7 @@ export default function TrackerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   flipFace: { backfaceVisibility: "hidden" },
   flipBack: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
@@ -1947,11 +1954,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  navBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  navBtnText: { color: Colors.onPrimary, fontSize: 16, fontWeight: "700" },
   monthTitle: {
     flex: 1,
     textAlign: "center",
-    color: "#fff",
+    color: Colors.onPrimary,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -1965,7 +1972,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     marginBottom: 4,
   },
-  summaryValue: { fontSize: FontSize.lg, fontWeight: "800", color: "#fff" },
+  summaryValue: {
+    fontSize: FontSize.lg,
+    fontWeight: "800",
+    color: Colors.onPrimary,
+  },
   underline: { textDecorationLine: "underline" },
   progressRow: {
     flexDirection: "row",
@@ -1997,7 +2008,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#F9F9FC",
+    backgroundColor: Colors.background,
   },
   showAllText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   sectionCard: {
@@ -2049,8 +2060,8 @@ const styles = StyleSheet.create({
   },
   bucketProgressFill: { height: "100%", borderRadius: 3 },
   smartNote: {
-    backgroundColor: "#E1F5EE",
-    borderColor: "#BFE6D6",
+    backgroundColor: Colors.successLight,
+    borderColor: tintBg("#BFE6D6"),
     borderWidth: 1,
     borderRadius: 14,
     padding: 12,
@@ -2059,15 +2070,15 @@ const styles = StyleSheet.create({
   smartNoteTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#085041",
+    color: Colors.successText,
     marginBottom: 4,
   },
-  smartNoteText: { fontSize: 13, color: "#085041", lineHeight: 19 },
+  smartNoteText: { fontSize: 13, color: Colors.successText, lineHeight: 19 },
   smartNoteAction: {
     marginTop: 8,
     fontSize: 13,
     fontWeight: "700",
-    color: "#534AB7",
+    color: Colors.primary,
   },
   overBudgetText: {
     fontSize: 11,
@@ -2103,7 +2114,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F9F9FC",
+    backgroundColor: Colors.background,
     borderRadius: 8,
     padding: Spacing.md,
     gap: Spacing.sm,
@@ -2146,14 +2157,18 @@ const styles = StyleSheet.create({
   cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primary },
   txnAmountNotCounted: { textDecorationLine: "line-through", opacity: 0.6 },
   cardRulesNote: {
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     borderColor: "#D8D6F5",
     borderWidth: 1,
     borderRadius: 14,
     padding: 12,
     marginBottom: 12,
   },
-  cardRulesNoteText: { fontSize: 13, color: "#3C3489", lineHeight: 19 },
+  cardRulesNoteText: {
+    fontSize: 13,
+    color: Colors.primaryDark,
+    lineHeight: 19,
+  },
   fab: {
     position: "absolute",
     bottom: 100,
@@ -2166,5 +2181,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...Shadow.strong,
   },
-  fabText: { fontSize: 28, color: "#fff", fontWeight: "300", lineHeight: 30 },
-});
+  fabText: {
+    fontSize: 28,
+    color: Colors.onPrimary,
+    fontWeight: "300",
+    lineHeight: 30,
+  },
+}));

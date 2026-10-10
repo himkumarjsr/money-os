@@ -3,14 +3,18 @@
  * Content lives in constants/legal/*.
  */
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";
-import { ContentBlocks, TONES } from "@/components/content/ContentBlocks";
+import { ContentBlocks, tones } from "@/components/content/ContentBlocks";
 import { InlineText } from "@/components/content/InlineText";
 import { DeleteAccountSheet } from "@/components/settings/DeleteAccountSheet";
-import { DELETE_ACCOUNT_WIDGET, getLegalDoc, type LegalDoc } from "@/constants/legal";
+import {
+  DELETE_ACCOUNT_WIDGET,
+  getLegalDoc,
+  type LegalDoc,
+} from "@/constants/legal";
 import { useAuthStore } from "@/store/authStore";
 
 function DeleteAccountAction() {
@@ -28,7 +32,10 @@ function DeleteAccountAction() {
       {isLoggedIn ? (
         <Pressable
           onPress={() => setOpen(true)}
-          style={({ pressed }) => [styles.dangerBtn, pressed && { opacity: 0.85 }]}
+          style={({ pressed }) => [
+            styles.dangerBtn,
+            pressed && { opacity: 0.85 },
+          ]}
           accessibilityRole="button"
         >
           <Text style={styles.dangerBtnText}>Delete account permanently</Text>
@@ -36,7 +43,10 @@ function DeleteAccountAction() {
       ) : (
         <Pressable
           onPress={() => router.push("/(auth)/login")}
-          style={({ pressed }) => [styles.loginBtn, pressed && { opacity: 0.85 }]}
+          style={({ pressed }) => [
+            styles.loginBtn,
+            pressed && { opacity: 0.85 },
+          ]}
           accessibilityRole="button"
         >
           <Text style={styles.loginBtnText}>Log in</Text>
@@ -53,7 +63,7 @@ function renderWidget(name: string) {
 }
 
 function LegalBody({ doc }: { doc: LegalDoc }) {
-  const summaryTone = doc.summary ? TONES[doc.summary.tone] : null;
+  const summaryTone = doc.summary ? tones()[doc.summary.tone] : null;
   const headingStyle =
     doc.headingStyle === "underlined"
       ? styles.h2Underlined
@@ -73,7 +83,10 @@ function LegalBody({ doc }: { doc: LegalDoc }) {
         <View
           style={[
             styles.summary,
-            { backgroundColor: summaryTone.bg, borderColor: summaryTone.border },
+            {
+              backgroundColor: summaryTone.bg,
+              borderColor: summaryTone.border,
+            },
           ]}
         >
           <InlineText
@@ -115,7 +128,11 @@ export default function LegalScreen() {
   return (
     <ContentScreen
       barTitle={doc?.title ?? "Legal"}
-      share={doc ? { title: `${doc.title} | Finkoin`, path: `/legal/${doc.slug}` } : undefined}
+      share={
+        doc
+          ? { title: `${doc.title} | Finkoin`, path: `/legal/${doc.slug}` }
+          : undefined
+      }
     >
       {doc ? (
         <LegalBody doc={doc} />
@@ -136,7 +153,7 @@ export default function LegalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   header: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
@@ -200,9 +217,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 14,
   },
-  footerText: { fontSize: 12, color: Colors.textMuted, textAlign: "center", lineHeight: 18 },
+  footerText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 18,
+  },
   actionCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 14,
@@ -219,7 +241,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
   },
-  dangerBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  dangerBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
   loginBtn: {
     minHeight: 44,
     borderRadius: 12,
@@ -229,6 +251,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 8,
   },
-  loginBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  loginBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
   missing: { paddingTop: 24, gap: 8 },
-});
+}));

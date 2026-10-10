@@ -3,10 +3,13 @@
  * the data-driven rich renderer (lib/learnRichArticles), and the plain fallback.
  */
 import { useCallback, useMemo, useRef } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
-import { Colors } from "@/constants/theme";
-import { ContentScreen, shareFinkoinPage } from "@/components/content/ContentScreen";
+import { Colors, themedStyles } from "@/constants/theme";
+import {
+  ContentScreen,
+  shareFinkoinPage,
+} from "@/components/content/ContentScreen";
 import { ContentSectionView } from "@/components/content/ContentBlocks";
 import { FaqAccordion } from "@/components/content/FaqAccordion";
 import { InlineText } from "@/components/content/InlineText";
@@ -27,7 +30,10 @@ export default function LearnArticleScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
   const id = typeof rawId === "string" ? rawId : "";
   const article = learnArticleById[id];
-  const page = useMemo(() => (article ? buildLearnPage(article) : null), [article]);
+  const page = useMemo(
+    () => (article ? buildLearnPage(article) : null),
+    [article],
+  );
 
   const scrollRef = useRef<ScrollView>(null);
   const offsets = useRef<Record<string, number>>({});
@@ -36,12 +42,16 @@ export default function LearnArticleScreen() {
   const jumpTo = useCallback((sectionId: string) => {
     const y = offsets.current[sectionId];
     if (y == null) return;
-    scrollRef.current?.scrollTo({ y: Math.max(0, bodyTop.current + y - 12), animated: true });
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, bodyTop.current + y - 12),
+      animated: true,
+    });
   }, []);
 
-  const track = (sectionId: string) => (e: { nativeEvent: { layout: { y: number } } }) => {
-    offsets.current[sectionId] = e.nativeEvent.layout.y;
-  };
+  const track =
+    (sectionId: string) => (e: { nativeEvent: { layout: { y: number } } }) => {
+      offsets.current[sectionId] = e.nativeEvent.layout.y;
+    };
 
   if (!article || !page) {
     return (
@@ -80,8 +90,15 @@ export default function LearnArticleScreen() {
           <Text style={styles.linkText}>← All articles</Text>
         </Pressable>
         <View style={styles.metaRow}>
-          <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-            <Text style={[styles.badgeText, { color: badge.fg }]}>{article.category}</Text>
+          <View
+            style={[
+              styles.badge,
+              { backgroundColor: badge.bg, borderColor: badge.border },
+            ]}
+          >
+            <Text style={[styles.badgeText, { color: badge.fg }]}>
+              {article.category}
+            </Text>
           </View>
           <Text style={styles.readTime}>{article.readTime} min read</Text>
         </View>
@@ -89,7 +106,10 @@ export default function LearnArticleScreen() {
         <Text style={styles.subtitle}>{article.subtitle}</Text>
         <Pressable
           onPress={() => void shareFinkoinPage(article.title, sharePath)}
-          style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.85 }]}
+          style={({ pressed }) => [
+            styles.shareBtn,
+            pressed && { opacity: 0.85 },
+          ]}
           accessibilityRole="button"
         >
           <Text style={styles.shareBtnText}>Share article</Text>
@@ -153,14 +173,18 @@ export default function LearnArticleScreen() {
           <View style={styles.related}>
             <Text style={styles.relatedTitle}>Related articles</Text>
             <Text style={styles.relatedSub}>
-              More in <Text style={{ fontWeight: "700" }}>{article.category}</Text>
+              More in{" "}
+              <Text style={{ fontWeight: "700" }}>{article.category}</Text>
             </Text>
             <View style={{ gap: 12, marginTop: 16 }}>
               {related.map((r) => (
                 <Pressable
                   key={r.id}
                   onPress={() => router.push(`/learn/${r.id}` as Href)}
-                  style={({ pressed }) => [styles.relCard, pressed && styles.relCardPressed]}
+                  style={({ pressed }) => [
+                    styles.relCard,
+                    pressed && styles.relCardPressed,
+                  ]}
                   accessibilityRole="link"
                 >
                   <Text style={styles.relRead}>{r.readTime} min read</Text>
@@ -176,21 +200,35 @@ export default function LearnArticleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   header: {
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: Colors.border,
     paddingBottom: 20,
     gap: 10,
   },
-  inlineLink: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
+  inlineLink: {
+    minHeight: 44,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+  },
   linkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  badge: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 2 },
+  badge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
   badgeText: { fontSize: 12, fontWeight: "700" },
-  readTime: { fontSize: 12, fontWeight: "600", color: "#64748B" },
-  h1: { fontSize: 26, fontWeight: "700", color: Colors.textPrimary, lineHeight: 32 },
-  subtitle: { fontSize: 17, lineHeight: 25, color: "#475569" },
+  readTime: { fontSize: 12, fontWeight: "600", color: Colors.textMuted },
+  h1: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    lineHeight: 32,
+  },
+  subtitle: { fontSize: 17, lineHeight: 25, color: Colors.textSecondary },
   shareBtn: {
     alignSelf: "flex-start",
     minHeight: 44,
@@ -198,15 +236,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     justifyContent: "center",
   },
   shareBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   toc: {
     marginTop: 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     borderRadius: 18,
     padding: 14,
   },
@@ -217,32 +255,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     justifyContent: "center",
   },
-  tocChipText: { fontSize: 13, fontWeight: "600", color: "#334155" },
+  tocChipText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
   aside: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     borderRadius: 12,
     padding: 10,
   },
-  asideText: { fontSize: 12, color: "#475569", lineHeight: 18 },
+  asideText: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
   body: { marginTop: 28, gap: 32 },
-  related: { borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 28 },
+  related: { borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: 28 },
   relatedTitle: { fontSize: 20, fontWeight: "700", color: Colors.textPrimary },
-  relatedSub: { marginTop: 4, fontSize: 14, color: "#475569" },
+  relatedSub: { marginTop: 4, fontSize: 14, color: Colors.textSecondary },
   relCard: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     borderRadius: 14,
     padding: 14,
   },
-  relCardPressed: { borderColor: "#B3ADE3" },
+  relCardPressed: { borderColor: Colors.borderIndigo },
   relRead: { fontSize: 12, fontWeight: "700", color: Colors.primary },
   relTitle: {
     marginTop: 4,
@@ -251,5 +289,10 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 21,
   },
-  relSub: { marginTop: 4, fontSize: 14, lineHeight: 20, color: "#475569" },
-});
+  relSub: {
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.textSecondary,
+  },
+}));

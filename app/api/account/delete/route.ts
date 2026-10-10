@@ -16,7 +16,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseServer";
  * history, tracker, obligations, gamification, notifications, feedback,
  * etc.) and the auth account itself. Shared multi-user data (Split groups/
  * expenses this user created or is a member of) is intentionally left
- * alone beyond removing this user's own membership/share rows — a group a
+ * alone beyond removing this user's own membership rows — a group a
  * user created may still have other members relying on its expense
  * history, so cascading a full delete there risks destroying other
  * people's records. That's a product decision, not an oversight; revisit
@@ -82,6 +82,25 @@ export async function POST(req: NextRequest) {
   const userId = user.id;
   const failedTables: string[] = [];
 
+  // Delete the auth user first. Most tables cascade from auth.users, and if
+  // this fails nothing has been removed yet, so the user is never left with a
+  // half-deleted account (data gone, login still working).
+  const { error: authErr } = await admin.auth.admin.deleteUser(userId);
+  if (authErr) {
+    const detail =
+      authErr.message && authErr.message !== "{}"
+        ? authErr.message
+        : `status ${authErr.status ?? "unknown"}`;
+    console.error("[account-delete] auth delete failed", userId, authErr);
+    return NextResponse.json(
+      {
+        error: `We couldn't delete your account right now (${detail}). Nothing was removed. Please try again or contact support.`,
+      },
+      { status: 500 },
+    );
+  }
+
+  // Clean up anything that does not cascade from auth.users.
   for (const table of OWNED_TABLES) {
     try {
       const { error } = await admin.from(table).delete().eq("user_id", userId);
@@ -91,16 +110,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Split: leave this user's own participation, not shared group history.
+  // Split: leave this user's own membership, not shared group history. Their
+  // expense, share and settlement rows keep the email / name and lose only the
+  // user link (ON DELETE SET NULL, migration 046).
   try {
     await admin.from("split_group_members").delete().eq("user_id", userId);
   } catch {
     failedTables.push("split_group_members");
-  }
-  try {
-    await admin.from("split_expense_shares").delete().eq("user_id", userId);
-  } catch {
-    failedTables.push("split_expense_shares");
   }
 
   try {
@@ -109,15 +125,8 @@ export async function POST(req: NextRequest) {
     failedTables.push("users");
   }
 
-  const { error: authErr } = await admin.auth.admin.deleteUser(userId);
-  if (authErr) {
-    return NextResponse.json(
-      {
-        error: `Account data cleared but auth record deletion failed: ${authErr.message}`,
-        failedTables,
-      },
-      { status: 500 },
-    );
+  if (failedTables.length) {
+    console.error("[account-delete] cleanup left rows", userId, failedTables);
   }
 
   return NextResponse.json({ ok: true, failedTables });

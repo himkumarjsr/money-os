@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
-import { Colors, Spacing, FontSize } from "@/constants/theme";
+import { Colors, Spacing, FontSize, themedStyles } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AppleSignInButton } from "@/components/ui/AppleSignInButton";
@@ -209,7 +208,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.xl, paddingTop: 56, minHeight: "100%" as any },
@@ -249,4 +248,4 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: Spacing.xl,
   },
-});
+}));

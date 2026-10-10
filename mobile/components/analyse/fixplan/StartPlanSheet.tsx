@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 import {
   buildPlannedDrafts,
   formatStartMonth,
@@ -51,7 +51,9 @@ export function StartPlanSheet({
       onSaved();
       onClose();
     } catch {
-      setError("Couldn't save your reminders. Check your connection and try again.");
+      setError(
+        "Couldn't save your reminders. Check your connection and try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -66,22 +68,23 @@ export function StartPlanSheet({
           What will happen
         </Text>
         <Text style={styles.body}>
-          {drafts.length} planned {drafts.length === 1 ? "investment" : "investments"}{" "}
-          across {goalCount} {goalCount === 1 ? "goal" : "goals"} (₹
+          {drafts.length} planned{" "}
+          {drafts.length === 1 ? "investment" : "investments"} across{" "}
+          {goalCount} {goalCount === 1 ? "goal" : "goals"} (₹
           {total.toLocaleString("en-IN")}/month) will be added to your Tracker,
-          and we&apos;ll remind you {PLANNED_REMIND_DAYS_BEFORE} days before they
-          start.
+          and we&apos;ll remind you {PLANNED_REMIND_DAYS_BEFORE} days before
+          they start.
         </Text>
       </View>
-      <View style={[styles.box, { backgroundColor: "#FFF3E0" }]}>
-        <Text style={[styles.boxTitle, { color: "#8C5A0A" }]}>
+      <View style={[styles.box, { backgroundColor: Colors.warningLight }]}>
+        <Text style={[styles.boxTitle, { color: Colors.warningText }]}>
           What won&apos;t happen
         </Text>
         <Text style={styles.body}>
           Nothing will ever be invested, debited or moved. Finkoin doesn&apos;t
           connect to your bank or broker and doesn&apos;t sell any of these
-          products. You start each SIP yourself wherever you choose, then mark it
-          started in Tracker.
+          products. You start each SIP yourself wherever you choose, then mark
+          it started in Tracker.
         </Text>
       </View>
 
@@ -95,7 +98,12 @@ export function StartPlanSheet({
             onPress={() => setOffset(o)}
             style={[styles.choice, offset === o && styles.choiceOn]}
           >
-            <Text style={[styles.choiceText, offset === o && { color: "#fff" }]}>
+            <Text
+              style={[
+                styles.choiceText,
+                offset === o && { color: Colors.onPrimary },
+              ]}
+            >
               {o === 0 ? "This month" : "Next month"} ·{" "}
               {formatStartMonth(monthStart(new Date(), o))}
             </Text>
@@ -105,9 +113,12 @@ export function StartPlanSheet({
 
       <View style={styles.preview}>
         {drafts.map((d) => (
-          <View key={`${d.source_id}|${d.instrument_key}`} style={styles.previewRow}>
+          <View
+            key={`${d.source_id}|${d.instrument_key}`}
+            style={styles.previewRow}
+          >
             <Text style={styles.previewLabel}>
-              <Text style={{ fontWeight: "600", color: "#111110" }}>
+              <Text style={{ fontWeight: "600", color: Colors.textPrimary }}>
                 {d.source_label}
               </Text>{" "}
               · {d.instrument_label}
@@ -152,25 +163,42 @@ export function StartPlanSheet({
         style={[styles.primary, !canSave && { opacity: 0.5 }]}
       >
         <Text style={styles.primaryText}>
-          {saving ? "Saving…" : hasExisting ? "Update reminders" : "Create reminders"}
+          {saving
+            ? "Saving…"
+            : hasExisting
+              ? "Update reminders"
+              : "Create reminders"}
         </Text>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={onClose} style={styles.secondary}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onClose}
+        style={styles.secondary}
+      >
         <Text style={styles.secondaryText}>Not now</Text>
       </Pressable>
     </BottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  title: { fontSize: 18, fontWeight: "700", color: "#111110", marginBottom: Spacing.md },
-  box: { borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm },
+const styles = themedStyles(() => ({
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  box: {
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
   boxTitle: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
-  body: { fontSize: 14, lineHeight: 20, color: "#454442" },
+  body: { fontSize: 14, lineHeight: 20, color: Colors.textSecondary },
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111110",
+    color: Colors.textPrimary,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
   },
@@ -180,25 +208,38 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: Spacing.sm,
   },
   choiceOn: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  choiceText: { fontSize: 14, fontWeight: "600", color: "#454442", textAlign: "center" },
+  choiceText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
   preview: {
     marginTop: Spacing.md,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     borderRadius: Radius.md,
     padding: Spacing.md,
     gap: 4,
   },
-  previewRow: { flexDirection: "row", justifyContent: "space-between", gap: Spacing.md },
-  previewLabel: { flex: 1, fontSize: 13, color: "#454442" },
-  previewAmount: { fontSize: 13, color: "#454442", fontVariant: ["tabular-nums"] },
-  note: { marginTop: Spacing.sm, fontSize: 12, color: "#7A7871" },
+  previewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+  previewLabel: { flex: 1, fontSize: 13, color: Colors.textSecondary },
+  previewAmount: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontVariant: ["tabular-nums"],
+  },
+  note: { marginTop: Spacing.sm, fontSize: 12, color: Colors.textMuted },
   agreeRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -217,8 +258,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxOn: { backgroundColor: Colors.primary },
-  tick: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  agreeText: { flex: 1, fontSize: 13, lineHeight: 19, color: "#454442" },
+  tick: { color: Colors.onPrimary, fontSize: 13, fontWeight: "700" },
+  agreeText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.textSecondary,
+  },
   error: { marginTop: Spacing.sm, fontSize: 13, color: Colors.error },
   primary: {
     marginTop: Spacing.lg,
@@ -228,7 +274,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  secondary: { minHeight: 44, alignItems: "center", justifyContent: "center", marginTop: 4 },
+  primaryText: { color: Colors.onPrimary, fontSize: 15, fontWeight: "700" },
+  secondary: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
   secondaryText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
-});
+}));

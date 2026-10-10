@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
 import Button from "@/components/ui/Button";
-import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  FontSize,
+  Radius,
+  Spacing,
+  themedStyles,
+} from "@/constants/theme";
 import { openContentHref } from "@/lib/contentLinks";
 
 const COLLECT = [
@@ -63,7 +69,7 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
         </View>
 
         <View style={[styles.block, styles.blockWarn]}>
-          <Text style={[styles.blockLabel, { color: "#BA7517" }]}>
+          <Text style={[styles.blockLabel, { color: Colors.warning }]}>
             We never ask for
           </Text>
           {NEVER.map((item) => (
@@ -127,7 +133,7 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   sheet: {
     flex: 1,
     backgroundColor: Colors.card,
@@ -177,9 +183,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   blockWarn: {
-    backgroundColor: "#FFF8F0",
+    backgroundColor: Colors.warningLight,
     borderWidth: 1,
-    borderColor: "#FAEEDA",
+    borderColor: Colors.warningLight,
   },
   blockLabel: {
     fontSize: 11,
@@ -215,7 +221,7 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     fontSize: 13,
-    color: "#3C3489",
+    color: Colors.primaryDark,
     lineHeight: 20,
   },
   link: {
@@ -245,7 +251,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  checkMark: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  checkMark: { color: Colors.onPrimary, fontSize: 12, fontWeight: "800" },
   checkLabel: {
     flex: 1,
     fontSize: 13,
@@ -260,4 +266,4 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 48,
   },
-});
+}));

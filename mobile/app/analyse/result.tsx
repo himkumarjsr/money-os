@@ -3,13 +3,7 @@
  * monthly summary, net worth, category caps, gauges, safety net, issues,
  * fix-plan teaser + paywall, cross-sell links.
  */
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, type Href } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,7 +14,7 @@ import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
 import { canOpenFixPlanDirectly } from "@/lib/analyseEntitlement";
-import { Colors, FontSize, Spacing } from "@/constants/theme";
+import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import Button from "@/components/ui/Button";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { IssueCard } from "@/components/analyse/IssueCard";
@@ -261,7 +255,7 @@ export default function AnalyseResultScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   center: {
     flex: 1,
@@ -314,4 +308,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 300,
   },
-});
+}));

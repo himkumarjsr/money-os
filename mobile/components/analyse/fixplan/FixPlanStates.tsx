@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { router } from "expo-router";
 import Button from "@/components/ui/Button";
 import { LOADING_MESSAGES } from "@/lib/fixPlanMerge";
-import { Colors, FontSize, Spacing } from "@/constants/theme";
+import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 
 export function FixPlanLoader({ label }: { label?: string }) {
   const [messageIndex, setMessageIndex] = useState(0);
@@ -57,7 +57,7 @@ export function FixPlanEmpty() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   center: {
     flex: 1,
     alignItems: "center",
@@ -84,4 +84,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   btn: { marginTop: Spacing.xl, minHeight: 52 },
-});
+}));

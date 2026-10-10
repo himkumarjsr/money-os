@@ -1,5 +1,11 @@
-import { View, Text, StyleSheet } from "react-native";
-import { Colors, Spacing, FontSize, Radius } from "@/constants/theme";
+import { View, Text } from "react-native";
+import {
+  Colors,
+  Spacing,
+  FontSize,
+  Radius,
+  themedStyles,
+} from "@/constants/theme";
 
 type Props = {
   current: number;
@@ -37,7 +43,7 @@ export function StepIndicator({ current, total, labels }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -83,4 +89,4 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   lineActive: { backgroundColor: Colors.primaryMedium },
-});
+}));

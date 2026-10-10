@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
+import { View, Text, TextInput, type TextInputProps } from "react-native";
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  type TextInputProps,
-} from "react-native";
-import { Colors, Radius, FontSize, Spacing } from "@/constants/theme";
+  Colors,
+  Radius,
+  FontSize,
+  Spacing,
+  themedStyles,
+} from "@/constants/theme";
 import { formatIndian, parseIndianInput } from "@/lib/formatters";
 
 type Props = {
@@ -80,7 +80,7 @@ function MoneyInput({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrapper: { gap: 6 },
   label: {
     fontSize: FontSize.md,
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     color: Colors.error,
     fontWeight: "600",
   },
-});
+}));
 
 export { MoneyInput };
 export default MoneyInput;

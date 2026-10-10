@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, Text, View } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 import { formatCurrency } from "@/lib/finance";
 import {
   PO_RATES,
@@ -559,22 +559,22 @@ export function PoSchemeCalculator({ scheme }: { scheme: PoSchemeId }) {
   }
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   badge: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#F7F6FC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  badgeText: { fontSize: 12, lineHeight: 16, color: "#475569" },
+  badgeText: { fontSize: 12, lineHeight: 16, color: Colors.textSecondary },
   badgeRate: { fontWeight: "600", color: Colors.primary },
   groupLabel: {
     marginBottom: 8,
     fontSize: 13,
     fontWeight: "600",
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
   },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
@@ -585,10 +585,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  chipSelected: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-  chipIdle: { borderColor: "#E8E6F0", backgroundColor: "#FFFFFF" },
+  chipSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  chipIdle: { borderColor: Colors.border, backgroundColor: Colors.card },
   chipPressed: { borderColor: "rgba(83,74,183,0.4)" },
   chipText: { fontSize: 14, lineHeight: 20, fontWeight: "600" },
-  chipTextSelected: { color: "#FFFFFF" },
-  chipTextIdle: { color: "#334155" },
-});
+  chipTextSelected: { color: Colors.onPrimary },
+  chipTextIdle: { color: Colors.textSecondary },
+}));

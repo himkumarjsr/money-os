@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { TRACKER_CATEGORIES, type BucketType } from "@/lib/tracker-categories";
 import { buildMonthSummaryRows } from "@/lib/trackerMonthSummary";
 import type { UniversalBucketKey } from "@/lib/universal-buckets";
@@ -61,7 +61,7 @@ export function MonthSummary({
                   <Text
                     style={[
                       styles.amount,
-                      isOverBudget && { color: "#B42323" },
+                      isOverBudget && { color: Colors.errorText },
                     ]}
                   >
                     ₹{amount.toLocaleString("en-IN")}
@@ -87,7 +87,7 @@ export function MonthSummary({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     marginBottom: 20,
     borderRadius: 16,
@@ -134,11 +134,11 @@ const styles = StyleSheet.create({
   amountWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
   overChip: {
     borderRadius: 4,
-    backgroundColor: "#FDEDED",
+    backgroundColor: Colors.errorLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  overText: { fontSize: 9, fontWeight: "700", color: "#991B1B" },
+  overText: { fontSize: 9, fontWeight: "700", color: Colors.errorText },
   amount: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   track: {
     height: 6,
@@ -147,4 +147,4 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   fill: { height: "100%", borderRadius: 999 },
-});
+}));

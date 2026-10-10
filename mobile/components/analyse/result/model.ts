@@ -21,7 +21,7 @@ import {
   getUniversalBucketActuals,
 } from "@/lib/universal-buckets";
 import { getBucketBreakdown } from "@/lib/bucket-breakdown";
-import type { BandLabel } from "./format";
+import type { BandLabel } from "./bandLabel";
 import {
   bucketCapRows,
   deriveCtaCopy,

@@ -3,7 +3,9 @@ import {
   buildSplitExpensePushCopy,
   notifySplitExpenseAdded,
   recipientUserIdsForSplitExpense,
+  splitExpensePushUrl,
 } from "./splitExpenseNotify";
+import { splitGroupNameFromTitle } from "./splitGroupLink";
 
 const sendWebPushToUser = vi.hoisted(() =>
   vi.fn(async () => ({ pushed: 1, cleaned: 0 })),
@@ -209,7 +211,7 @@ describe("notifySplitExpenseAdded", () => {
       expect.objectContaining({
         title: "New expense in Trip",
         body: "Actor added “Dinner” · ₹1,200",
-        url: "/notifications?id=notif-1",
+        url: "/split/g1?notif=notif-1",
         tag: "split-expense-e1",
       }),
     );
@@ -296,5 +298,18 @@ describe("notifySplitExpenseAdded", () => {
         shareUserIds: ["b2"],
       }),
     ).resolves.toEqual({ recipients: 0, pushed: 0 });
+  });
+});
+
+describe("split expense deep links", () => {
+  it("opens the group and carries the inbox id", () => {
+    expect(splitExpensePushUrl("g1", "n1")).toBe("/split/g1?notif=n1");
+    expect(splitExpensePushUrl("g1")).toBe("/split/g1");
+  });
+
+  it("reads the group name back from the inbox title", () => {
+    expect(splitGroupNameFromTitle("New expense in Goa Trip")).toBe("Goa Trip");
+    expect(splitGroupNameFromTitle("New expense in your group")).toBeNull();
+    expect(splitGroupNameFromTitle("Daily tip")).toBeNull();
   });
 });

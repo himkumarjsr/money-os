@@ -10,7 +10,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -23,7 +22,7 @@ import {
   RenewOptionsSheet,
   TransferGuideSheet,
 } from "@/components/policies/PolicyActionSheets";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import {
   emptyPolicyForm,
   fetchUserPolicies,
@@ -124,7 +123,14 @@ export default function PoliciesScreen() {
       premium: undefined,
       freq: undefined,
     });
-  }, [params.add, params.cover, params.premium, params.freq, hasInitialized, isLoggedIn]);
+  }, [
+    params.add,
+    params.cover,
+    params.premium,
+    params.freq,
+    hasInitialized,
+    isLoggedIn,
+  ]);
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace("/(tabs)");
@@ -197,7 +203,10 @@ export default function PoliciesScreen() {
           </View>
           <Pressable
             onPress={isLoggedIn ? openNew : goLogin}
-            style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.9 }]}
+            style={({ pressed }) => [
+              styles.addBtn,
+              pressed && { opacity: 0.9 },
+            ]}
             accessibilityRole="button"
           >
             <Text style={styles.addBtnText}>+ Add policy</Text>
@@ -317,7 +326,7 @@ export default function PoliciesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 120 },
   back: { minHeight: 44, justifyContent: "center", paddingHorizontal: 16 },
@@ -343,20 +352,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
   },
-  addBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  addBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
   errorBox: {
     marginBottom: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#FDE68A",
-    backgroundColor: "#FFFBEB",
+    borderColor: Colors.warningLight,
+    backgroundColor: Colors.warningLight,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  errorText: { fontSize: 14, color: "#78350F", lineHeight: 20 },
+  errorText: { fontSize: 14, color: Colors.warningText, lineHeight: 20 },
   code: {
     fontFamily: "Menlo",
-    backgroundColor: "rgba(255,255,255,0.8)",
+    backgroundColor: Colors.glassCard,
   },
   empty: {
     alignItems: "center",
@@ -397,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
+  primaryBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 15 },
   secondaryBtn: {
     minHeight: 48,
     paddingHorizontal: 28,
@@ -420,4 +429,4 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: { color: Colors.textMuted, fontSize: 13 },
-});
+}));

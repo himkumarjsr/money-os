@@ -5,7 +5,10 @@
 import Svg, { Path, Circle, Rect, G } from "react-native-svg";
 import { Colors } from "@/constants/theme";
 
-export const APP_ICON_COLOR = Colors.primary;
+/** Default icon colour; a getter so it follows the active theme. */
+export function appIconColor(): string {
+  return Colors.primary;
+}
 
 export type AppIconName =
   | "trending"
@@ -302,7 +305,7 @@ function IconPaths({ name }: { name: AppIconName }) {
 export function AppIcon({
   name,
   size = 20,
-  color = APP_ICON_COLOR,
+  color = appIconColor(),
   strokeWidth = 1.75,
 }: Props) {
   return (

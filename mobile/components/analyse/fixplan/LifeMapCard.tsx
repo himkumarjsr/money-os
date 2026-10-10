@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { GoalItem } from "@/lib/priorityEngine";
-import { Spacing } from "@/constants/theme";
+import { Spacing, themedStyles, Colors, tintBg } from "@/constants/theme";
 import { inr, shared } from "./shared";
 
 const MAX_YEARS = 35;
@@ -18,7 +18,10 @@ export function LifeMapCard({
     .sort((a, b) => a.yearsToGoal - b.yearsToGoal);
   if (rows.length === 0) return null;
 
-  const span = Math.min(MAX_YEARS, Math.max(5, ...rows.map((g) => g.yearsToGoal)));
+  const span = Math.min(
+    MAX_YEARS,
+    Math.max(5, ...rows.map((g) => g.yearsToGoal)),
+  );
   const thisYear = new Date().getFullYear();
   const total = rows.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
 
@@ -36,7 +39,10 @@ export function LifeMapCard({
             g.monthlyRequired > 0
               ? Math.min(100, Math.round((monthly / g.monthlyRequired) * 100))
               : 100;
-          const width = Math.max(4, (Math.min(g.yearsToGoal, span) / span) * 100);
+          const width = Math.max(
+            4,
+            (Math.min(g.yearsToGoal, span) / span) * 100,
+          );
           return (
             <View key={g.goalId}>
               <View style={styles.head}>
@@ -69,15 +75,43 @@ export function LifeMapCard({
   );
 }
 
-const styles = StyleSheet.create({
-  intro: { marginTop: Spacing.xs, fontSize: 13, lineHeight: 19, color: "#454442" },
-  head: { flexDirection: "row", justifyContent: "space-between", gap: Spacing.md },
-  label: { flex: 1, fontSize: 13, fontWeight: "600", color: "#111110" },
-  when: { fontSize: 13, color: "#7A7871" },
-  track: { marginTop: 4, height: 12, borderRadius: 6, backgroundColor: "#F1F0EC" },
-  span: { height: 12, borderRadius: 6, backgroundColor: "#DCD9F5", overflow: "hidden" },
-  fill: { height: 12, backgroundColor: "#534AB7" },
-  meta: { marginTop: 4, fontSize: 12, color: "#5F5E5A" },
-  axis: { marginTop: Spacing.md, flexDirection: "row", justifyContent: "space-between" },
-  axisText: { fontSize: 11, color: "#9B9A94" },
-});
+const styles = themedStyles(() => ({
+  intro: {
+    marginTop: Spacing.xs,
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.textSecondary,
+  },
+  head: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+  label: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  when: { fontSize: 13, color: Colors.textMuted },
+  track: {
+    marginTop: 4,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.surfaceMuted,
+  },
+  span: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: tintBg("#DCD9F5"),
+    overflow: "hidden",
+  },
+  fill: { height: 12, backgroundColor: Colors.primary },
+  meta: { marginTop: 4, fontSize: 12, color: Colors.textSecondary },
+  axis: {
+    marginTop: Spacing.md,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  axisText: { fontSize: 11, color: Colors.textMuted },
+}));

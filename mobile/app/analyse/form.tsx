@@ -3,7 +3,6 @@ import {
   BackHandler,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -52,7 +51,13 @@ import {
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
-import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  FontSize,
+  Radius,
+  Spacing,
+  themedStyles,
+} from "@/constants/theme";
 import {
   STEPS,
   STEP_SCHEMAS,
@@ -867,7 +872,7 @@ export default function AnalyseFormScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -927,7 +932,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
@@ -941,16 +946,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
   },
-  primaryText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
+  primaryText: { fontSize: 16, fontWeight: "700", color: Colors.onPrimary },
   errorBanner: {
     borderRadius: 8,
-    backgroundColor: "#FCEBEB",
+    backgroundColor: Colors.errorLight,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   errorBannerText: {
     fontSize: 13,
-    color: "#791F1F",
+    color: Colors.errorText,
     textAlign: "center",
   },
-});
+}));

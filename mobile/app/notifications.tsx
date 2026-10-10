@@ -8,15 +8,15 @@ import {
   Text,
   Pressable,
   ScrollView,
-  StyleSheet,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import { splitGroupRouteForTitle } from "@/lib/splitGroupLink";
 import { useAuthStore } from "@/store/authStore";
 import {
   mapNotificationRow,
@@ -44,6 +44,24 @@ function categoryLabel(category: string) {
   }
   if (category === "obligation_reminder") return "Reminder";
   return "Finance tip";
+}
+
+function OpenSplitGroupButton({ title }: { title: string }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Pressable
+      disabled={busy}
+      onPress={async () => {
+        setBusy(true);
+        router.push(await splitGroupRouteForTitle(title));
+        setBusy(false);
+      }}
+      style={({ pressed }) => [styles.openGroup, (pressed || busy) && { opacity: 0.8 }]}
+      accessibilityRole="button"
+    >
+      <Text style={styles.openGroupText}>{busy ? "Opening…" : "Open group"}</Text>
+    </Pressable>
+  );
 }
 
 export default function NotificationsScreen() {
@@ -221,6 +239,9 @@ export default function NotificationsScreen() {
                 <Text style={styles.spotWhen}>
                   {formatWhen(focused.created_at)}
                 </Text>
+                {focused.category === "split_expense" ? (
+                  <OpenSplitGroupButton title={focused.title} />
+                ) : null}
               </>
             ) : (
               <Text style={styles.notFound}>
@@ -284,13 +305,13 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 120 },
   back: { minHeight: 44, justifyContent: "center", paddingHorizontal: 16 },
   backText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
   gate: { padding: 24, alignItems: "center" },
-  gateText: { color: "#5F5E5A", marginBottom: 16, fontSize: 15 },
+  gateText: { color: Colors.textSecondary, marginBottom: 16, fontSize: 15 },
   gateBtn: {
     backgroundColor: Colors.primary,
     paddingVertical: 12,
@@ -299,7 +320,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
   },
-  gateBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
+  gateBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 15 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -307,10 +328,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 12,
   },
-  h1: { fontSize: 22, fontWeight: "800", color: "#111110" },
-  sub: { marginTop: 4, fontSize: 13, color: "#9B9A94" },
+  h1: { fontSize: 22, fontWeight: "800", color: Colors.textPrimary },
+  sub: { marginTop: 4, fontSize: 13, color: Colors.textMuted },
   markAll: {
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -319,7 +340,7 @@ const styles = StyleSheet.create({
   },
   markAllText: { color: Colors.primary, fontWeight: "700", fontSize: 12 },
   spotlight: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderWidth: 1.5,
     borderColor: Colors.primary,
     borderRadius: 16,
@@ -332,7 +353,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   opening: { alignItems: "center", gap: 8, paddingVertical: 12 },
-  openingText: { color: "#9B9A94", fontSize: 13 },
+  openingText: { color: Colors.textMuted, fontSize: 13 },
   spotHead: {
     flexDirection: "row",
     alignItems: "center",
@@ -343,7 +364,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -358,31 +379,40 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 18,
     fontWeight: "800",
-    color: "#111110",
+    color: Colors.textPrimary,
     lineHeight: 23,
   },
-  spotBody: { fontSize: 15, lineHeight: 25, color: "#5F5E5A" },
-  spotWhen: { marginTop: 14, fontSize: 12, color: "#9B9A94" },
-  notFound: { color: "#5F5E5A", fontSize: 14 },
+  spotBody: { fontSize: 15, lineHeight: 25, color: Colors.textSecondary },
+  spotWhen: { marginTop: 14, fontSize: 12, color: Colors.textMuted },
+  openGroup: {
+    marginTop: 16,
+    alignSelf: "flex-start",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+  },
+  openGroupText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
+  notFound: { color: Colors.textSecondary, fontSize: 14 },
   h2: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#111110",
+    color: Colors.textPrimary,
     marginBottom: 10,
   },
   empty: {
     alignItems: "center",
     paddingVertical: 48,
     paddingHorizontal: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
   },
-  emptyTitle: { marginTop: 12, fontWeight: "700", color: "#111110" },
+  emptyTitle: { marginTop: 12, fontWeight: "700", color: Colors.textPrimary },
   emptySub: {
     fontSize: 13,
-    color: "#9B9A94",
+    color: Colors.textMuted,
     marginTop: 6,
     textAlign: "center",
   },
@@ -392,27 +422,37 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
   },
   rowFocus: { borderWidth: 1.5, borderColor: Colors.primary },
-  rowUnread: { backgroundColor: "#FAFAFE" },
+  rowUnread: { backgroundColor: Colors.background },
   rowEmoji: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
   rowTitleWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
-  rowTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111110" },
+  rowTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: Colors.primary,
   },
-  rowBody: { marginTop: 4, fontSize: 13, color: "#5F5E5A", lineHeight: 19 },
-  rowWhen: { marginTop: 6, fontSize: 11, color: "#9B9A94" },
-});
+  rowBody: {
+    marginTop: 4,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 19,
+  },
+  rowWhen: { marginTop: 6, fontSize: 11, color: Colors.textMuted },
+}));

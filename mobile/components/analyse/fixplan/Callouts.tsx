@@ -1,6 +1,12 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { PriorityPlan } from "@/lib/priorityEngine";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  Radius,
+  Spacing,
+  themedStyles,
+  tintBg,
+} from "@/constants/theme";
 import { shared } from "./shared";
 
 type Fd = NonNullable<PriorityPlan["fdSuggestion"]>;
@@ -38,12 +44,12 @@ export function Encouragement({ text }: { text?: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   bordered: { borderWidth: 1, borderColor: Colors.border },
   fdMessage: {
     marginTop: Spacing.sm,
     fontSize: 14,
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
     lineHeight: 20,
   },
   fdCta: {
@@ -54,21 +60,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  fdCtaText: { fontSize: 14, fontWeight: "600", color: "#FFFFFF" },
+  fdCtaText: { fontSize: 14, fontWeight: "600", color: Colors.onPrimary },
   callout: {
     borderRadius: Radius.xl,
     borderWidth: 1,
     padding: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  amber: { borderColor: "#E7D7A7", backgroundColor: "#FFF4D8" },
-  amberLabel: { fontSize: 12, fontWeight: "600", color: "#BA7517" },
+  amber: { borderColor: "#E7D7A7", backgroundColor: tintBg("#FFF4D8") },
+  amberLabel: { fontSize: 12, fontWeight: "600", color: Colors.warning },
   amberText: {
     marginTop: 4,
     fontSize: 14,
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
     lineHeight: 20,
   },
-  green: { borderColor: "#CBEBDD", backgroundColor: "#E8F6F1" },
-  greenText: { fontSize: 14, color: "#1D9E75", lineHeight: 20 },
-});
+  green: { borderColor: tintBg("#CBEBDD"), backgroundColor: tintBg("#E8F6F1") },
+  greenText: { fontSize: 14, color: Colors.success, lineHeight: 20 },
+}));

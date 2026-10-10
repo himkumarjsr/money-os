@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   applyRenewalMonths,
@@ -150,12 +150,12 @@ export function PremiumRdCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#DCD8F4",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.card,
     padding: 16,
   },
   h2: { fontSize: 20, fontWeight: "600", color: Colors.textPrimary },
@@ -164,16 +164,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 20,
-    color: "#454442",
+    color: Colors.textSecondary,
   },
   breakdown: {
     marginTop: 12,
     gap: 4,
     borderRadius: 12,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     padding: 12,
   },
-  breakdownText: { fontSize: 13, fontWeight: "500", color: "#454442" },
+  breakdownText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: Colors.textSecondary,
+  },
   note: {
     marginTop: 6,
     fontSize: 12,
@@ -203,5 +207,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
   },
-  buttonText: { fontSize: 14, fontWeight: "600", color: "#FFFFFF" },
-});
+  buttonText: { fontSize: 14, fontWeight: "600", color: Colors.onPrimary },
+}));

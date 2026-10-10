@@ -4,17 +4,11 @@
  * https://www.finkoin.com/split/join?… (app links) and invite push taps.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 
@@ -183,10 +177,10 @@ export default function JoinSplitGroupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: {
     flex: 1,
-    backgroundColor: "#F7F7F4",
+    backgroundColor: Colors.background,
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
@@ -194,20 +188,25 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 448,
     alignSelf: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     padding: 32,
     alignItems: "center",
   },
-  loader: { minHeight: 160, alignItems: "center", justifyContent: "center", gap: 12 },
-  loaderText: { fontSize: 14, color: "#5F5E5A" },
+  loader: {
+    minHeight: 160,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  loaderText: { fontSize: 14, color: Colors.textSecondary },
   iconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
@@ -215,26 +214,26 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111110",
+    color: Colors.textPrimary,
     textAlign: "center",
   },
   titleSm: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111110",
+    color: Colors.textPrimary,
     textAlign: "center",
   },
   body: {
     marginTop: 8,
     fontSize: 14,
     lineHeight: 21,
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
     textAlign: "center",
   },
   muted: {
     marginTop: 8,
     fontSize: 14,
-    color: "#9B9A94",
+    color: Colors.textMuted,
     textAlign: "center",
   },
   primaryBtn: {
@@ -246,17 +245,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  primaryBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
   secondaryBtn: {
     marginTop: 12,
     width: "100%",
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
   secondaryBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "700" },
-});
+}));

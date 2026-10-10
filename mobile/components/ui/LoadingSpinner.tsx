@@ -1,5 +1,5 @@
-import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { Colors } from "@/constants/theme";
+import { View, ActivityIndicator } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 
 export function LoadingSpinner({ full }: { full?: boolean }) {
   return (
@@ -9,7 +9,7 @@ export function LoadingSpinner({ full }: { full?: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: { alignItems: "center", justifyContent: "center", padding: 24 },
   full: { flex: 1, backgroundColor: Colors.background },
-});
+}));

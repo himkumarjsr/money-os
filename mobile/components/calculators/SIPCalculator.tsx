@@ -13,6 +13,7 @@ import {
   calcStyles,
   type InsightTone,
 } from "./calculator-ui";
+import { Colors } from "@/constants/theme";
 
 function sipMaturity(monthly: number, annualPct: number, years: number) {
   const n = Math.max(1, Math.round(years * 12));
@@ -29,12 +30,12 @@ function useClamped(initial: number, min: number, max: number) {
 
 const SIP_MONTHLY_MAX = 1_00_00_000;
 
-const SERIES: ChartSeries[] = [
+const SERIES = (): ChartSeries[] => [
   {
     key: "invested",
     label: "Invested",
     type: "area",
-    color: "#EEEDFE",
+    color: Colors.primaryLight,
     fillOpacity: 1,
     stackId: "a",
     hideInLegend: true,
@@ -43,7 +44,7 @@ const SERIES: ChartSeries[] = [
     key: "gain",
     label: "Gain",
     type: "area",
-    color: "#EEEDFE",
+    color: Colors.primaryLight,
     fillOpacity: 0.4,
     stackId: "a",
     hideInLegend: true,
@@ -52,14 +53,14 @@ const SERIES: ChartSeries[] = [
     key: "investedLine",
     label: "Invested",
     type: "line",
-    color: "#AFA9EC",
+    color: Colors.primaryMedium,
     dashed: true,
   },
   {
     key: "portfolio",
     label: "Portfolio value",
     type: "line",
-    color: "#534AB7",
+    color: Colors.primary,
     strokeWidth: 2.5,
   },
 ];
@@ -155,7 +156,7 @@ export function SIPCalculator() {
         <CalcChart
           data={yearlyData}
           xKey="year"
-          series={SERIES}
+          series={SERIES()}
           height={200}
           yTickFormat={(v) => formatIndianCompact(v)}
           xTickFormat={(v, i) =>
@@ -179,8 +180,8 @@ export function SIPCalculator() {
       </ChartCard>
 
       <Insight tone={insightTone}>
-        Your money grows <B>{mult.toFixed(1)}×</B> — roughly ₹
-        {mult.toFixed(1)} for every ₹1 put in (at {rate}% p.a.).
+        Your money grows <B>{mult.toFixed(1)}×</B> — roughly ₹{mult.toFixed(1)}{" "}
+        for every ₹1 put in (at {rate}% p.a.).
       </Insight>
     </View>
   );

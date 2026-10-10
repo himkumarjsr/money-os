@@ -2,11 +2,12 @@
  * My Goals — port of web app/goals/page.tsx.
  */
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
+import { themedStyles, Colors } from "@/constants/theme";
 
 const THEME = "#534AB7";
 
@@ -66,9 +67,7 @@ export default function GoalsScreen() {
         style={[pageStyles.primaryBtn, { marginBottom: 20 }]}
         accessibilityRole="button"
       >
-        <Text style={pageStyles.primaryBtnText}>
-          Complete your analysis →
-        </Text>
+        <Text style={pageStyles.primaryBtnText}>Complete your analysis →</Text>
       </Pressable>
 
       <View style={{ gap: 12 }}>
@@ -97,12 +96,12 @@ export default function GoalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   soon: {
     position: "absolute",
     right: 16,
     top: 16,
-    backgroundColor: "#F7F7F4",
+    backgroundColor: Colors.background,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -110,9 +109,19 @@ const styles = StyleSheet.create({
   soonText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#9B9A94",
+    color: Colors.textMuted,
     letterSpacing: 0.5,
   },
-  title: { marginTop: 12, fontSize: 17, fontWeight: "700", color: "#111110" },
-  desc: { marginTop: 6, fontSize: 14, color: "#5F5E5A", lineHeight: 20 },
-});
+  title: {
+    marginTop: 12,
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  desc: {
+    marginTop: 6,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+}));

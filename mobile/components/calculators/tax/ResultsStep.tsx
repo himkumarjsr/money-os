@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { TEACH } from "@/lib/taxTeachContent";
 import type { RegimeBreakdown } from "@/lib/taxRegimeComparisonFY2026";
 import { Insight } from "../calculator-ui";
@@ -12,6 +12,7 @@ import {
 } from "./primitives";
 import type { TaxCalcState } from "./useTaxCalculatorState";
 import { openContentHref } from "@/lib/contentLinks";
+import { themedStyles, Colors, tintBg, tintFg } from "@/constants/theme";
 
 const LEARN_TAX_LINKS = [
   {
@@ -182,7 +183,7 @@ function ComparisonTable({
               style={[
                 styles.tCell,
                 styles.cLabel,
-                { color: "#5F5E5A" },
+                { color: Colors.textSecondary },
                 row.total && styles.tTotal,
               ]}
             >
@@ -270,19 +271,19 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
 
       {winner === "new" ? (
         <View style={[styles.winner, styles.winnerNew]}>
-          <Text style={[styles.winnerText, { color: "#022C22" }]}>
+          <Text style={[styles.winnerText, { color: tintFg("#022C22") }]}>
             Winner: New regime — about {rupees(saveAmount)} / year
           </Text>
         </View>
       ) : winner === "old" ? (
         <View style={[styles.winner, styles.winnerOld]}>
-          <Text style={[styles.winnerText, { color: "#082F49" }]}>
+          <Text style={[styles.winnerText, { color: tintFg("#082F49") }]}>
             Winner: Old regime — about {rupees(saveAmount)} / year
           </Text>
         </View>
       ) : (
         <View style={[styles.winner, styles.winnerTie]}>
-          <Text style={[styles.winnerText, { color: "#0F172A" }]}>
+          <Text style={[styles.winnerText, { color: Colors.textPrimary }]}>
             Rough tie between regimes
           </Text>
         </View>
@@ -431,18 +432,18 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   memo: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  memoText: { fontSize: 14, lineHeight: 20, color: "#5F5E5A" },
-  memoStrong: { fontWeight: "600", color: "#1E293B" },
-  table: { overflow: "hidden", borderRadius: 8, backgroundColor: "#FFFFFF" },
+  memoText: { fontSize: 14, lineHeight: 20, color: Colors.textSecondary },
+  memoStrong: { fontWeight: "600", color: Colors.textPrimary },
+  table: { overflow: "hidden", borderRadius: 8, backgroundColor: Colors.card },
   tRow: {
     flexDirection: "row",
     gap: 8,
@@ -451,59 +452,69 @@ const styles = StyleSheet.create({
   },
   tHead: {
     borderBottomWidth: 1,
-    borderBottomColor: "#F0EFF8",
-    backgroundColor: "#FCFCFF",
+    borderBottomColor: Colors.borderLight,
+    backgroundColor: Colors.background,
   },
-  tHeadText: { fontSize: 11, fontWeight: "600", color: "#534AB7" },
-  tDivider: { borderTopWidth: 1, borderTopColor: "#F4F3FA" },
-  tTotalRow: { backgroundColor: "#FCFCFF" },
+  tHeadText: { fontSize: 11, fontWeight: "600", color: Colors.primary },
+  tDivider: { borderTopWidth: 1, borderTopColor: tintBg("#F4F3FA") },
+  tTotalRow: { backgroundColor: Colors.background },
   cLabel: { flex: 1.2 },
   cVal: { flex: 1, textAlign: "right" },
   tCell: {
     fontSize: 12,
     lineHeight: 17,
-    color: "#111110",
+    color: Colors.textPrimary,
     fontVariant: ["tabular-nums"],
   },
-  tTotal: { fontWeight: "700", color: "#111110" },
+  tTotal: { fontWeight: "700", color: Colors.textPrimary },
   dedDetails: {
     marginTop: 8,
     borderRadius: 8,
-    backgroundColor: "#FCFCFF",
+    backgroundColor: Colors.background,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   dedBlock: {
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "#F2F1F8",
+    borderTopColor: tintBg("#F2F1F8"),
     paddingTop: 8,
   },
   dedTitle: {
     marginBottom: 4,
     fontSize: 12,
     fontWeight: "600",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
   dedRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  dedLabel: { flex: 1, fontSize: 12, color: "#7A7871" },
-  dedAmount: { fontSize: 12, color: "#111110", fontVariant: ["tabular-nums"] },
+  dedLabel: { flex: 1, fontSize: 12, color: Colors.textMuted },
+  dedAmount: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+    fontVariant: ["tabular-nums"],
+  },
   winner: {
     marginTop: 16,
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
   },
-  winnerNew: { borderColor: "#A7F3D0", backgroundColor: "#ECFDF5" },
-  winnerOld: { borderColor: "#BAE6FD", backgroundColor: "#F0F9FF" },
-  winnerTie: { borderColor: "#E2E8F0", backgroundColor: "#F8FAFC" },
+  winnerNew: {
+    borderColor: Colors.successLight,
+    backgroundColor: Colors.successLight,
+  },
+  winnerOld: {
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceMuted,
+  },
+  winnerTie: { borderColor: Colors.border, backgroundColor: Colors.background },
   winnerText: { fontSize: 18, lineHeight: 26, fontWeight: "700" },
   takeGrid: { marginTop: 16, gap: 12 },
   takeCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    backgroundColor: "rgba(248,250,252,0.8)",
+    borderColor: Colors.surfaceMuted,
+    backgroundColor: Colors.glassCard,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -512,32 +523,32 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#64748B",
+    color: Colors.textMuted,
   },
   takeValueText: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#0F172A",
+    color: Colors.textPrimary,
     fontVariant: ["tabular-nums"],
   },
   alerts: {
     marginTop: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#FDE68A",
-    backgroundColor: "#FFFBEB",
+    borderColor: Colors.warningLight,
+    backgroundColor: Colors.warningLight,
     padding: 16,
   },
-  alertsTitle: { fontSize: 14, fontWeight: "600", color: "#451A03" },
+  alertsTitle: { fontSize: 14, fontWeight: "600", color: Colors.warningText },
   alertList: { marginTop: 8, gap: 6, paddingLeft: 4 },
   bulletRow: { flexDirection: "row", gap: 8 },
-  alertText: { fontSize: 14, lineHeight: 20, color: "#451A03" },
+  alertText: { fontSize: 14, lineHeight: 20, color: Colors.warningText },
   itrCard: {
     marginTop: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -546,40 +557,65 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#534AB7",
+    color: Colors.primary,
   },
-  itrForm: { marginTop: 4, fontSize: 14, fontWeight: "600", color: "#111110" },
-  itrWhy: { marginTop: 4, fontSize: 14, lineHeight: 20, color: "#5F5E5A" },
-  itrNote: { marginTop: 4, fontSize: 12, lineHeight: 17, color: "#7A7871" },
+  itrForm: {
+    marginTop: 4,
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  itrWhy: {
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.textSecondary,
+  },
+  itrNote: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
+    color: Colors.textMuted,
+  },
   itrGuide: {
     marginTop: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#EEEDFE",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.card,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  guideText: { fontSize: 12, lineHeight: 19, color: "#5F5E5A" },
-  guideForm: { fontWeight: "600", color: "#111110" },
-  guideFoot: { marginTop: 8, fontSize: 11, lineHeight: 16, color: "#9B9A94" },
+  guideText: { fontSize: 12, lineHeight: 19, color: Colors.textSecondary },
+  guideForm: { fontWeight: "600", color: Colors.textPrimary },
+  guideFoot: {
+    marginTop: 8,
+    fontSize: 11,
+    lineHeight: 16,
+    color: Colors.textMuted,
+  },
   tdsBox: {
     marginTop: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#EEEDFE",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.card,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  tdsTitle: { fontSize: 12, fontWeight: "600", color: "#111110" },
-  tdsBody: { marginTop: 4, fontSize: 12, lineHeight: 18, color: "#5F5E5A" },
+  tdsTitle: { fontSize: 12, fontWeight: "600", color: Colors.textPrimary },
+  tdsBody: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    color: Colors.textSecondary,
+  },
   learned: {
     marginTop: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#EEEDFE",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.background,
     padding: 16,
   },
   learnedTitle: {
@@ -587,16 +623,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#534AB7",
+    color: Colors.primary,
   },
-  learnedRowTitle: { fontSize: 14, fontWeight: "600", color: "#111110" },
-  learnedBody: { marginTop: 2, fontSize: 14, lineHeight: 22, color: "#5F5E5A" },
+  learnedRowTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  learnedBody: {
+    marginTop: 2,
+    fontSize: 14,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+  },
   faq: {
     marginTop: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     padding: 16,
   },
   faqHead: {
@@ -608,13 +653,18 @@ const styles = StyleSheet.create({
   faqItem: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    backgroundColor: "rgba(248,250,252,0.5)",
+    borderColor: Colors.surfaceMuted,
+    backgroundColor: Colors.glassCard,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  faqQ: { fontSize: 14, fontWeight: "500", color: "#0F172A" },
-  faqA: { marginTop: 8, fontSize: 14, lineHeight: 22, color: "#5F5E5A" },
+  faqQ: { fontSize: 14, fontWeight: "500", color: Colors.textPrimary },
+  faqA: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+  },
   linkRow: { minHeight: 44, justifyContent: "center" },
-  linkText: { fontSize: 14, color: "#534AB7" },
-});
+  linkText: { fontSize: 14, color: Colors.primary },
+}));

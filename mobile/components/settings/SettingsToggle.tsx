@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, View } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 
 /** Pill switch matching the PWA Settings toggle (48×28 track, 22px knob). */
 export function SettingsToggle({
@@ -36,7 +36,7 @@ export function SettingsToggle({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   hit: { minHeight: 44, minWidth: 48, justifyContent: "center" },
   track: { width: 48, height: 28, borderRadius: 14 },
   knob: {
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -53,4 +53,4 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   disabled: { opacity: 0.5 },
-});
+}));

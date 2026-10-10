@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 
 const CATEGORIES = [
   { value: "loan_emi", label: "Loan EMI", emoji: "🏦" },
@@ -257,7 +257,7 @@ export function AddObligationForm({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   headRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -339,6 +339,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveBtnDisabled: { backgroundColor: Colors.border },
-  saveText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  saveText: { fontSize: 15, fontWeight: "700", color: Colors.onPrimary },
   saveTextDisabled: { color: Colors.textMuted },
-});
+}));

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { PriorityPlan } from "@/lib/priorityEngine";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 import { inr, shared } from "./shared";
 
 type Props = { breakdown: PriorityPlan["surplusBreakdown"] };
@@ -25,9 +25,7 @@ export function SurplusBreakdown({ breakdown }: Props) {
       >
         <Text style={styles.summaryText}>
           Your monthly surplus: ₹{inr(breakdown.netSurplus)}
-          <Text style={styles.hint}>
-            {"  "}(tap to see breakdown)
-          </Text>
+          <Text style={styles.hint}>{"  "}(tap to see breakdown)</Text>
         </Text>
       </Pressable>
       {open ? (
@@ -56,9 +54,9 @@ export function SurplusBreakdown({ breakdown }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
-    backgroundColor: "#EFEEE9",
+    backgroundColor: Colors.surfaceMuted,
     borderRadius: Radius.md,
     marginBottom: Spacing.lg,
   },
@@ -72,5 +70,5 @@ const styles = StyleSheet.create({
   hint: { fontWeight: "400", color: Colors.textMuted },
   body: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg },
   bold: { fontWeight: "500" },
-  neg: { color: "#8C3A3A" },
-});
+  neg: { color: Colors.errorText },
+}));

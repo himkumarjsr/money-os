@@ -2,12 +2,12 @@
  * Refer & earn — port of web app/refer/page.tsx.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, Share, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 
@@ -127,7 +127,7 @@ export default function ReferScreen() {
         >
           {copied ? (
             <>
-              <AppIcon name="check" size={16} color="#FFFFFF" />
+              <AppIcon name="check" size={16} color={Colors.onPrimary} />
               <Text style={styles.copyText}>Copied</Text>
             </>
           ) : (
@@ -142,7 +142,7 @@ export default function ReferScreen() {
         style={[styles.waBtn, !referralUrl && { opacity: 0.5 }]}
         accessibilityRole="button"
       >
-        <AppIcon name="phone" size={20} color="#FFFFFF" />
+        <AppIcon name="phone" size={20} color={Colors.onPrimary} />
         <Text style={styles.waText}>Share on WhatsApp</Text>
       </Pressable>
 
@@ -171,7 +171,7 @@ export default function ReferScreen() {
             <Text style={styles.statLabel}>Friends referred</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.statNum, { color: "#1D9E75" }]}>
+            <Text style={[styles.statNum, { color: Colors.success }]}>
               {(referralCount ?? 0) * 200}
             </Text>
             <Text style={styles.statLabel}>FK from referrals (est.)</Text>
@@ -205,9 +205,9 @@ export default function ReferScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   linkBox: {
-    backgroundColor: "#EFEEE9",
+    backgroundColor: Colors.surfaceMuted,
     borderRadius: 14,
     padding: 16,
     gap: 12,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
   },
-  copyText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  copyText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
   waBtn: {
     marginTop: 12,
     height: 52,
@@ -234,8 +234,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  waText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  h3: { fontSize: 18, fontWeight: "700", color: "#111110" },
+  waText: { color: Colors.onPrimary, fontSize: 16, fontWeight: "700" },
+  h3: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
   step: { flexDirection: "row", gap: 16 },
   stepNum: {
     width: 36,
@@ -245,31 +245,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  stepNumText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
-  stepTitle: { fontSize: 15, fontWeight: "700", color: "#111110" },
-  stepDesc: { fontSize: 13, color: "#9B9A94", marginTop: 2 },
+  stepNumText: { color: Colors.onPrimary, fontWeight: "800", fontSize: 14 },
+  stepTitle: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
+  stepDesc: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
   statsBox: {
     marginTop: 32,
-    backgroundColor: "#EFEEE9",
+    backgroundColor: Colors.surfaceMuted,
     borderRadius: 14,
     padding: 20,
   },
   statsHead: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#9B9A94",
+    color: Colors.textMuted,
     letterSpacing: 0.5,
   },
   statsRow: { flexDirection: "row", gap: 16, marginTop: 16 },
   statNum: { fontSize: 24, fontWeight: "800" },
-  statLabel: { fontSize: 12, color: "#9B9A94", marginTop: 2 },
+  statLabel: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
   refRow: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
+    borderColor: Colors.borderLight,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  refText: { fontSize: 14, color: "#5F5E5A" },
-});
+  refText: { fontSize: 14, color: Colors.textSecondary },
+}));

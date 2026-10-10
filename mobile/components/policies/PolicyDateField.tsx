@@ -1,13 +1,7 @@
 import { useMemo, useState } from "react";
-import {
-  LayoutAnimation,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { LayoutAnimation, Pressable, Text, View } from "react-native";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { localISODate } from "@/lib/localDate";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -188,15 +182,15 @@ export function PolicyDateField({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: { marginBottom: 16 },
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#334155",
+    color: Colors.textSecondary,
     marginBottom: 6,
   },
-  optional: { fontWeight: "400", color: "#94A3B8" },
+  optional: { fontWeight: "400", color: Colors.textMuted },
   field: {
     height: 52,
     borderRadius: 12,
@@ -216,7 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     padding: 8,
   },
   calHead: {
@@ -264,11 +258,11 @@ const styles = StyleSheet.create({
   dayToday: { borderWidth: 1, borderColor: Colors.primaryMedium },
   dayOn: { backgroundColor: Colors.primary },
   dayText: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
-  dayTextOn: { color: "#FFFFFF", fontWeight: "800" },
+  dayTextOn: { color: Colors.onPrimary, fontWeight: "800" },
   clearBtn: {
     minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
   },
   clearText: { color: Colors.error, fontWeight: "700", fontSize: 14 },
-});
+}));

@@ -1,19 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
 import {
   CollapsiblePanel,
   animateNextPanelToggle,
 } from "@/components/tracker/CollapsiblePanel";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import {
   buildCardBills,
   cardBillCycleText,
@@ -569,7 +562,7 @@ export function CreditCardDues({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   helper: {
     fontSize: 12,
     lineHeight: 18,
@@ -600,13 +593,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  payText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
+  payText: { color: Colors.onPrimary, fontSize: 12, fontWeight: "700" },
   markBtn: {
     minHeight: 34,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#CDEBDF",
+    borderColor: tintBg("#CDEBDF"),
     backgroundColor: Colors.successLight,
     flexDirection: "row",
     alignItems: "center",
@@ -623,7 +616,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconBtnDanger: { borderColor: "#F0DEDE", backgroundColor: "#FFF7F7" },
+  iconBtnDanger: {
+    borderColor: tintBg("#F0DEDE"),
+    backgroundColor: tintBg("#FFF7F7"),
+  },
   sheetTitle: {
     fontSize: 17,
     fontWeight: "800",
@@ -674,7 +670,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  saveText: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
   removeBtn: {
     marginTop: 12,
     minHeight: 44,
@@ -691,7 +687,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F5C9C9",
   },
-  overdueText: { fontSize: 12, lineHeight: 18, color: "#791F1F" },
+  overdueText: { fontSize: 12, lineHeight: 18, color: Colors.errorText },
   cardItem: {
     paddingVertical: 10,
     borderTopWidth: 1,
@@ -737,4 +733,4 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   footerText: { fontSize: 13, fontWeight: "700", color: Colors.textPrimary },
-});
+}));

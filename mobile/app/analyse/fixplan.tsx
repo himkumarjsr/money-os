@@ -8,7 +8,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -57,7 +56,13 @@ import {
 } from "@/components/analyse/fixplan/FixPlanStates";
 import { openPriorities } from "@/lib/fixPlanMerge";
 import type { PriorityItem } from "@/lib/priorityEngine";
-import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  FontSize,
+  Radius,
+  Spacing,
+  themedStyles,
+} from "@/constants/theme";
 
 function FixPlanScreen() {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
@@ -352,7 +357,7 @@ export default function FixPlanRoute() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -364,12 +369,16 @@ const styles = StyleSheet.create({
   notice: {
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: Colors.errorLight,
+    backgroundColor: Colors.errorLight,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
   },
-  noticeText: { fontSize: FontSize.md, color: "#B91C1C", lineHeight: 18 },
+  noticeText: {
+    fontSize: FontSize.md,
+    color: Colors.errorText,
+    lineHeight: 18,
+  },
   info: {
     borderRadius: Radius.md,
     borderWidth: 1,
@@ -391,7 +400,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.primary,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.lg,
@@ -405,4 +414,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textMuted,
   },
-});
+}));

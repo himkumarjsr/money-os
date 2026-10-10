@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import type { TrackerTxn } from "@/components/tracker/AddExpenseSheet";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { getSupabase } from "@/lib/supabase";
 import {
   TRACKER_CATEGORIES,
@@ -151,7 +151,7 @@ export function ExpenseList({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   empty: {
     padding: 24,
     textAlign: "center",
@@ -185,4 +185,4 @@ const styles = StyleSheet.create({
   },
   editText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   deleteText: { fontSize: 13, fontWeight: "700", color: Colors.error },
-});
+}));

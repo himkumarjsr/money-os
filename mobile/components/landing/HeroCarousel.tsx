@@ -1,13 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  type LayoutChangeEvent,
-} from "react-native";
+import { View, Text, Pressable, type LayoutChangeEvent } from "react-native";
 import { router } from "expo-router";
-import { Colors, Radius, Shadow } from "@/constants/theme";
+import { Colors, Radius, Shadow, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 
 const INTERVAL_MS = 3000;
@@ -162,7 +156,7 @@ export function HeroCarousel() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   region: {
     width: "100%",
     borderRadius: 12,
@@ -186,7 +180,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   badgeNewText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.6,
@@ -194,13 +188,13 @@ const styles = StyleSheet.create({
   },
   badgeSoon: {
     marginBottom: 2,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: Colors.border,
     borderRadius: Radius.round,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
   badgeSoonText: {
-    color: "#1E293B",
+    color: Colors.textPrimary,
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.6,
@@ -211,7 +205,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 17,
-    color: "#0F172A",
+    color: Colors.textPrimary,
     letterSpacing: -0.2,
   },
   subtitle: {
@@ -219,7 +213,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 11,
     lineHeight: 15,
-    color: "#475569",
+    color: Colors.textSecondary,
     paddingHorizontal: 8,
   },
   cta: {
@@ -229,7 +223,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     // PWA: indigo → violet → blue gradient approx
-    backgroundColor: "#4F46E5",
+    backgroundColor: Colors.indigo600,
     shadowColor: "#4F46E5",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.28,
@@ -239,7 +233,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ctaText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -249,15 +243,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: Colors.slate300,
+    backgroundColor: Colors.glassCard,
     alignItems: "center",
     justifyContent: "center",
   },
   ctaDisabledText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#64748B",
+    color: Colors.textMuted,
   },
   dots: {
     marginTop: 10,
@@ -277,6 +271,6 @@ const styles = StyleSheet.create({
   },
   dotIdle: {
     width: 6,
-    backgroundColor: "#CBD5E1",
+    backgroundColor: Colors.slate300,
   },
-});
+}));

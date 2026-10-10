@@ -8,13 +8,12 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 
 type Props = {
@@ -102,12 +101,12 @@ export function PageScaffold({
   );
 }
 
-export const pageStyles = StyleSheet.create({
+export const pageStyles = themedStyles(() => ({
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
+    borderColor: Colors.borderLight,
     padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -125,18 +124,18 @@ export const pageStyles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  primaryBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
+  primaryBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 15 },
   footnote: {
     marginTop: 32,
     textAlign: "center",
     fontSize: 12,
-    color: "#9B9A94",
+    color: Colors.textMuted,
     lineHeight: 18,
   },
   link: { color: Colors.primary, fontWeight: "600" },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 48 },
   back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
@@ -147,19 +146,24 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
   },
-  h1: { fontSize: 26, fontWeight: "800", color: "#111110" },
-  sub: { marginTop: 6, fontSize: 14, color: "#5F5E5A", lineHeight: 20 },
+  h1: { fontSize: 26, fontWeight: "800", color: Colors.textPrimary },
+  sub: {
+    marginTop: 6,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
   gate: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
+    borderColor: Colors.borderLight,
     padding: 24,
     alignItems: "center",
     gap: 8,
   },
-  gateTitle: { fontSize: 18, fontWeight: "700", color: "#111110" },
-  gateSub: { fontSize: 14, color: "#5F5E5A", textAlign: "center" },
+  gateTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
+  gateSub: { fontSize: 14, color: Colors.textSecondary, textAlign: "center" },
   gateBtn: {
     marginTop: 8,
     backgroundColor: Colors.primary,
@@ -169,5 +173,5 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
   },
-  gateBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
-});
+  gateBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 15 },
+}));

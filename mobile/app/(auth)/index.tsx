@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { router } from "expo-router";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { Colors } from "@/constants/theme";
+import { View, ActivityIndicator } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 
 /** Auth group root → public landing (PWA `/`). Forms live at login/signup. */
 export default function AuthIndexRedirect() {
@@ -16,11 +16,11 @@ export default function AuthIndexRedirect() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.background,
   },
-});
+}));
