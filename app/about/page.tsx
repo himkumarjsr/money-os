@@ -38,13 +38,20 @@ export const metadata: Metadata = {
   },
 };
 
+/** Why Finkoin exists, in the founder's words. Shared with mobile/app/about.tsx. */
+const FOUNDER_NOTE = [
+  "Most people I know earn well and pay their EMIs on time, yet can't answer simple questions about their own money: Is my emergency fund enough? Am I under-insured? Am I investing enough to retire when I want to? The answers exist, but they are buried in jargon, spread across ten different apps, or come from someone trying to sell a policy or a fund.",
+  "I built Finkoin to be one honest place where any working Indian can see their whole money life in a few minutes: what is strong, what is at risk, and the next step to fix it. No PAN, no Aadhaar, no jargon. Every suggestion explains why, in plain language, so you can decide for yourself.",
+  "That is the idea behind Know it. Fix it. Grow it. Start with a free health check, track where your money goes, split shared costs with friends without the awkwardness, and come back each month to see your progress. If Finkoin helps one family build an emergency fund or get the right cover before they need it, it has done its job.",
+];
+
 const founderJsonLd = {
   "@context": "https://schema.org",
   "@type": "ProfilePage",
   mainEntity: {
     "@type": "Person",
     "@id": `${SITE_URL}/about#founder`,
-    name: "Himanshu Kumar",
+    name: "Himanshu Kumar Gupta",
     jobTitle: "Founder",
     description:
       "Founder of Finkoin, a free personal finance health platform built for India.",
@@ -56,7 +63,7 @@ const founderJsonLd = {
       url: SITE_URL,
     },
     nationality: "Indian",
-    sameAs: ["https://www.linkedin.com/in/himanshu-k-81b484140/"],
+    sameAs: ["https://www.linkedin.com/in/himanshu-kr-gupta/"],
   },
 };
 
@@ -478,7 +485,7 @@ export default function AboutPage() {
         >
           <Image
             src="/assets/founder-himanshu-kumar.png"
-            alt="Himanshu Kumar, Founder of Finkoin"
+            alt="Himanshu Kumar Gupta, Founder of Finkoin"
             width={80}
             height={80}
             style={{
@@ -499,7 +506,7 @@ export default function AboutPage() {
                 marginBottom: 4,
               }}
             >
-              Himanshu Kumar
+              Himanshu Kumar Gupta
             </h3>
             <p
               style={{
@@ -512,7 +519,7 @@ export default function AboutPage() {
               Founder, Finkoin
             </p>
             <a
-              href="https://www.linkedin.com/in/himanshu-k-81b484140/"
+              href="https://www.linkedin.com/in/himanshu-kr-gupta/"
               target="_blank"
               rel="noopener noreferrer author"
               style={{
@@ -537,20 +544,22 @@ export default function AboutPage() {
               </svg>
               LinkedIn
             </a>
-            <p
+            <div
               style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
                 fontSize: 15,
                 color: "#5F5E5A",
                 lineHeight: 1.7,
-                margin: 0,
               }}
             >
-              Finkoin was born from a simple frustration — why is good financial
-              advice so hard to get in India? I built Finkoin to give every
-              working Indian the same quality of financial analysis that was
-              previously only available to the privileged few. No jargon. No
-              hidden agendas. Just clear, honest, personalised guidance.
-            </p>
+              {FOUNDER_NOTE.map((para) => (
+                <p key={para.slice(0, 24)} style={{ margin: 0 }}>
+                  {para}
+                </p>
+              ))}
+            </div>
           </div>
         </div>
       </div>
