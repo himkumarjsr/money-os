@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { GoogleAnalytics } from "@next/third-parties/google";
-import Script from "next/script";
 import { Suspense } from "react";
 import AppInitializer from "@/components/AppInitializer";
 import PwaBootSplash from "@/components/PwaBootSplash";
@@ -17,6 +15,7 @@ import FeedbackPopupManager from "@/components/FeedbackPopupManager";
 import MorningTipPopup from "@/components/MorningTipPopup";
 import PushPermissionPrompt from "@/components/PushPermissionPrompt";
 import Footer from "@/components/landing/Footer";
+import AnalyticsConsent from "@/components/AnalyticsConsent";
 import { GlobalNavbar } from "@/components/global-navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
 import RouteChangeLoader from "@/components/ui/RouteChangeLoader";
@@ -350,32 +349,6 @@ export default function RootLayout({
           <div className="finkoin-boot-ring" aria-hidden />
         </div>
         <PwaBootSplash />
-        <Script
-          id="microsoft-clarity"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){
-          (c[a].q=c[a].q||[])
-            .push(arguments)};
-        t=l.createElement(r);
-        t.async=1;
-        t.src=
-          "https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];
-        y.parentNode.insertBefore(t,y);
-        // Queue cookieless mode before Clarity boots (no 1P/3P cookies).
-        c[a]("consentv2", {
-          ad_Storage: "denied",
-          analytics_Storage: "denied"
-        });
-      })(window, document, 
-        "clarity", "script", 
-        "wy7rqfej1z");
-    `,
-          }}
-        />
         <MotionLazyProvider>
           <Suspense fallback={null}>
             <ReferralCapture />
@@ -407,10 +380,10 @@ export default function RootLayout({
             <Footer />
             <ReferralSuccessToast />
             <Toast />
+            <AnalyticsConsent />
           </AppInitializer>
         </MotionLazyProvider>
       </body>
-      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!} />
     </html>
   );
 }
