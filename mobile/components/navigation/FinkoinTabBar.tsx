@@ -153,17 +153,20 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                       <AppIcon name="calculator" size={22} color={color} />
                     ) : name === "profile" ? (
                       isLoggedIn ? (
-                        <View style={styles.avatar}>
-                          {user?.photoURL ? (
-                            <Image
-                              source={{ uri: user.photoURL }}
-                              style={styles.avatarImg}
-                            />
-                          ) : (
-                            <Text style={styles.avatarLetter}>{letter}</Text>
-                          )}
+                        <View style={styles.avatarWrap}>
+                          <View style={styles.avatar}>
+                            {user?.photoURL ? (
+                              <Image
+                                source={{ uri: user.photoURL }}
+                                style={styles.avatarImg}
+                              />
+                            ) : (
+                              <Text style={styles.avatarLetter}>{letter}</Text>
+                            )}
+                          </View>
+                          {/* Outside the clipped circle so the FK count is never cut off. */}
                           <View style={styles.fkBadge}>
-                            <Text style={styles.fkText}>
+                            <Text style={styles.fkText} numberOfLines={1}>
                               {fk > 999 ? "999+" : String(fk)}
                             </Text>
                           </View>
@@ -307,6 +310,10 @@ const styles = themedStyles(() => ({
     fontWeight: "300",
     marginTop: -2,
   },
+  avatarWrap: {
+    height: 28,
+    width: 28,
+  },
   avatar: {
     height: 28,
     width: 28,
@@ -340,13 +347,15 @@ const styles = themedStyles(() => ({
   },
   fkBadge: {
     position: "absolute",
-    right: -6,
-    top: -6,
-    minWidth: 16,
+    right: -8,
+    top: -5,
+    minWidth: 18,
     height: 16,
-    borderRadius: 4,
+    borderRadius: 5,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: Colors.card,
+    paddingHorizontal: 4,
     alignItems: "center",
     justifyContent: "center",
   },
