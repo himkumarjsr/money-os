@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { LOAN_DRIFT_LABELS } from "@/lib/fixPlanMerge";
 import { loanObligationTitle } from "@/lib/loanObligationSync";
 import type { LoanReportStatus } from "@/store/obligationStore";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  Radius,
+  Spacing,
+  themedStyles,
+  tintBg,
+} from "@/constants/theme";
 import { shared } from "./shared";
 
 type Details = { outstandingAmount?: number; interestRate?: number } | "skip";
@@ -158,25 +164,30 @@ export function LoanSyncNotices({ status, onSaveDetails }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   asOf: { fontSize: 12, color: Colors.textMuted, marginBottom: Spacing.sm },
   drift: {
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: "#F1D9A6",
-    backgroundColor: "#FFF8E6",
+    borderColor: tintBg("#F1D9A6"),
+    backgroundColor: Colors.warningLight,
     padding: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  driftTitle: { fontSize: 14, fontWeight: "700", color: "#7A5A12" },
-  driftText: { marginTop: 4, fontSize: 14, color: "#7A5A12", lineHeight: 20 },
-  driftNote: { marginTop: Spacing.sm, fontSize: 12, color: "#7A5A12" },
+  driftTitle: { fontSize: 14, fontWeight: "700", color: Colors.warningText },
+  driftText: {
+    marginTop: 4,
+    fontSize: 14,
+    color: Colors.warningText,
+    lineHeight: 20,
+  },
+  driftNote: { marginTop: Spacing.sm, fontSize: 12, color: Colors.warningText },
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   linkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
-  detailsCard: { backgroundColor: "#F7F6FE", gap: Spacing.sm },
+  detailsCard: { backgroundColor: Colors.surfaceMuted, gap: Spacing.sm },
   detailsTitle: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   loan: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -209,7 +220,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     justifyContent: "center",
   },
-  saveText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  saveText: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
   skipBtn: {
     minHeight: 44,
     paddingHorizontal: Spacing.md,
@@ -217,4 +228,4 @@ const styles = StyleSheet.create({
   },
   skipText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   disabled: { opacity: 0.6 },
-});
+}));

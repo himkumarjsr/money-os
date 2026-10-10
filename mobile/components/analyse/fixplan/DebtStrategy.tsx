@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { debtPayoffNumbers } from "@/lib/priorityEngine";
 import {
   DEBT_ESTIMATE_NOTE,
@@ -6,7 +6,7 @@ import {
   debtRateLabel,
   estSuffix,
 } from "@/lib/fixPlanMerge";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 import { shared } from "./shared";
 
 type Props = { debts: any[]; debtStrategy?: string };
@@ -94,9 +94,9 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   box: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -109,9 +109,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  boxHeaderText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  boxHeaderText: { color: Colors.onPrimary, fontSize: 13, fontWeight: "700" },
   debt: { paddingVertical: 14, paddingHorizontal: 16 },
-  debtDivider: { borderBottomWidth: 1, borderBottomColor: "#F7F7F4" },
+  debtDivider: { borderBottomWidth: 1, borderBottomColor: Colors.background },
   debtHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -126,16 +126,16 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   ratePill: {
-    backgroundColor: "#FCEBEB",
+    backgroundColor: Colors.errorLight,
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  rateText: { color: "#E24B4A", fontSize: 10, fontWeight: "700" },
+  rateText: { color: Colors.error, fontSize: 10, fontWeight: "700" },
   grid: { flexDirection: "row", gap: 8 },
   cell: {
     flex: 1,
-    backgroundColor: "#F7F7F4",
+    backgroundColor: Colors.background,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 6,
@@ -149,29 +149,29 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   saveBox: {
-    backgroundColor: "#E1F5EE",
+    backgroundColor: Colors.successLight,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
     marginTop: 10,
     gap: 4,
   },
-  saveText: { fontSize: 12, color: "#1D5C3A" },
-  saveAmount: { fontSize: 12, fontWeight: "700", color: "#1D9E75" },
+  saveText: { fontSize: 12, color: Colors.successText },
+  saveAmount: { fontSize: 12, fontWeight: "700", color: Colors.success },
   estimateNote: {
     marginBottom: Spacing.sm,
     borderRadius: Radius.sm,
-    backgroundColor: "#FFF8E6",
+    backgroundColor: Colors.warningLight,
     padding: Spacing.md,
     fontSize: 12,
     lineHeight: 18,
-    color: "#7A5A12",
+    color: Colors.warningText,
   },
   strategy: {
     marginTop: 4,
     fontSize: 14,
     fontStyle: "italic",
-    color: "#7A7871",
+    color: Colors.textMuted,
     lineHeight: 20,
   },
-});
+}));

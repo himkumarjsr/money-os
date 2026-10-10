@@ -3,15 +3,12 @@
  * Payments are not live on mobile: confirming never charges and never writes
  * subscriptionTier — it just closes and opens the Fix Plan.
  */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import {
-  FIX_PLAN_PRICE_INR,
-  PAYMENTS_ENABLED,
-} from "@/lib/analyseEntitlement";
+import { FIX_PLAN_PRICE_INR, PAYMENTS_ENABLED } from "@/lib/analyseEntitlement";
 import { paywallConfirmLabel, paywallPriceNote } from "@/lib/paywallCopy";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 
 const DEFAULT_BULLETS = [
   "Complete priority plan",
@@ -104,7 +101,7 @@ export function PaywallSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   headRow: { flexDirection: "row", alignItems: "flex-start", gap: 16 },
   avatar: {
     width: 40,
@@ -116,8 +113,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   avatarText: { fontSize: 18, fontWeight: "600", color: Colors.primary },
-  title: { fontSize: 20, fontWeight: "600", color: "#0F172A" },
-  subtitle: { marginTop: 4, fontSize: 14, color: "#475569" },
+  title: { fontSize: 20, fontWeight: "600", color: Colors.textPrimary },
+  subtitle: { marginTop: 4, fontSize: 14, color: Colors.textSecondary },
   close: {
     width: 44,
     height: 44,
@@ -125,32 +122,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  closeText: { fontSize: 18, fontWeight: "600", color: "#0F172A" },
+  closeText: { fontSize: 18, fontWeight: "600", color: Colors.textPrimary },
   fk: {
     marginTop: 12,
     fontSize: 12,
     fontWeight: "500",
     lineHeight: 18,
-    color: "#454442",
+    color: Colors.textSecondary,
   },
   priceCard: {
     marginTop: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     padding: 16,
   },
   priceEyebrow: {
     fontSize: 12,
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: "#7A7871",
+    color: Colors.textMuted,
   },
-  price: { fontSize: 24, fontWeight: "700", color: "#111110" },
-  priceNote: { marginTop: 4, fontSize: 13, color: "#5F5E5A" },
+  price: { fontSize: 24, fontWeight: "700", color: Colors.textPrimary },
+  priceNote: { marginTop: 4, fontSize: 13, color: Colors.textSecondary },
   bullets: { marginTop: 16, gap: 8 },
-  bullet: { fontSize: 14, color: "#334155" },
+  bullet: { fontSize: 14, color: Colors.textSecondary },
   cta: {
     marginTop: 20,
     height: 48,
@@ -159,6 +156,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaText: { fontSize: 15, fontWeight: "600", color: "#FFFFFF" },
-  foot: { marginTop: 12, textAlign: "center", fontSize: 12, color: "#9B9A94" },
-});
+  ctaText: { fontSize: 15, fontWeight: "600", color: Colors.onPrimary },
+  foot: {
+    marginTop: 12,
+    textAlign: "center",
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
+}));

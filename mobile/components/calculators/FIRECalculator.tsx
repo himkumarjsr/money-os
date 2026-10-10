@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { router } from "expo-router";
 import { computeFireNumbers } from "@/lib/fireCalculator";
 import { formatCurrency } from "@/lib/finance";
@@ -14,6 +14,7 @@ import {
   type InsightTone,
 } from "./calculator-ui";
 import { openContentHref } from "@/lib/contentLinks";
+import { themedStyles, Colors } from "@/constants/theme";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -231,14 +232,14 @@ export function FIRECalculator() {
   );
 }
 
-const styles = StyleSheet.create({
-  intro: { fontSize: 14, lineHeight: 23, color: "#475569" },
-  introStrong: { fontWeight: "600", color: "#1E293B" },
+const styles = themedStyles(() => ({
+  intro: { fontSize: 14, lineHeight: 23, color: Colors.textSecondary },
+  introStrong: { fontWeight: "600", color: Colors.textPrimary },
   em: { fontStyle: "italic" },
   emiBox: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#DDD6FE",
+    borderColor: Colors.borderIndigo,
     backgroundColor: "rgba(245,243,255,0.8)",
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -249,8 +250,8 @@ const styles = StyleSheet.create({
   tipBox: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(83,74,183,0.25)",
-    backgroundColor: "#F7F6FE",
+    borderColor: Colors.primaryTintBorder,
+    backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -258,9 +259,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
-    color: "#534AB7",
+    color: Colors.primary,
   },
-  tipBody: { marginTop: 8, fontSize: 14, lineHeight: 23, color: "#3C3489" },
+  tipBody: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 23,
+    color: Colors.primaryDark,
+  },
   link: { fontWeight: "600", textDecorationLine: "underline" },
-  disclaimer: { fontSize: 12, lineHeight: 19.5, color: "#64748B" },
-});
+  disclaimer: { fontSize: 12, lineHeight: 19.5, color: Colors.textMuted },
+}));

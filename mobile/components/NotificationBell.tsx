@@ -8,14 +8,13 @@ import {
   Text,
   Pressable,
   Modal,
-  StyleSheet,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -181,7 +180,7 @@ export function NotificationBell() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   bellBtn: {
     width: 38,
     height: 38,
@@ -202,13 +201,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: Colors.error,
     borderWidth: 2,
-    borderColor: "#FFFFFF",
+    borderColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,
   },
   badgeText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 9,
     fontWeight: "700",
   },
@@ -224,7 +223,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 320,
     maxHeight: "72%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -240,7 +239,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -255,7 +254,7 @@ const styles = StyleSheet.create({
   panelTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
   newPill: {
     backgroundColor: Colors.primary,
@@ -264,7 +263,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   newPillText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -281,7 +280,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     fontWeight: "600",
-    color: "#111110",
+    color: Colors.textPrimary,
     marginBottom: 6,
   },
   emptySub: {
@@ -295,14 +294,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     flexDirection: "row",
     gap: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: "#F7F7F4",
+    borderBottomColor: Colors.background,
   },
   rowUnread: {
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
   },
   iconBox: {
     width: 38,
@@ -322,7 +321,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "700",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
   dot: {
     width: 7,
@@ -332,7 +331,7 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     fontSize: 12,
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
     lineHeight: 18,
     marginBottom: 6,
   },
@@ -345,11 +344,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     alignItems: "center",
   },
   footerText: {
     fontSize: 11,
     color: Colors.textMuted,
   },
-});
+}));

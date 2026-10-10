@@ -1,11 +1,5 @@
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type TextStyle,
-} from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, Text, View, type TextStyle } from "react-native";
+import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
 import { formatIndian } from "@/lib/formatters";
 import {
   POLICY_TYPE_LABELS,
@@ -23,30 +17,33 @@ type Badge = { bg: string; fg: string };
 function policyBadge(t: PolicyType): Badge {
   switch (t) {
     case "term_life":
-      return { bg: "#EDE9FE", fg: "#5B21B6" };
+      return { bg: tintBg("#EDE9FE"), fg: tintFg("#5B21B6") };
     case "health":
-      return { bg: "#D1FAE5", fg: "#065F46" };
+      return { bg: tintBg("#D1FAE5"), fg: tintFg("#065F46") };
     case "car":
-      return { bg: "#E0F2FE", fg: "#075985" };
+      return { bg: tintBg("#E0F2FE"), fg: tintFg("#075985") };
     case "bike":
-      return { bg: "#FEF3C7", fg: "#92400E" };
+      return { bg: tintBg("#FEF3C7"), fg: "#92400E" };
     case "travel":
-      return { bg: "#CFFAFE", fg: "#155E75" };
+      return { bg: tintBg("#CFFAFE"), fg: "#155E75" };
     default:
-      return { bg: "#F1F5F9", fg: "#334155" };
+      return { bg: tintBg("#F1F5F9"), fg: tintFg("#334155") };
   }
 }
 
-const MUTED: TextStyle = { color: "#64748B" };
+const MUTED = themedStyles(() => ({ text: { color: Colors.textMuted } }));
 
 function renewalUi(policy: UserPolicy): { line: string; style: TextStyle } {
   if (!policy.renewalDate) {
-    return { line: "Renewal date not added", style: { color: "#B45309" } };
+    return {
+      line: "Renewal date not added",
+      style: { color: Colors.warningText },
+    };
   }
   if (policy.status === "transferred_to_finkoin") {
     return {
       line: `Renews on ${formatRenewalDayMonth(policy.renewalDate)}`,
-      style: MUTED,
+      style: MUTED.text,
     };
   }
   const today = startOfLocalDay(new Date());
@@ -54,37 +51,42 @@ function renewalUi(policy: UserPolicy): { line: string; style: TextStyle } {
   if (rd < today) {
     return {
       line: `Expired on ${formatRenewalDayMonth(policy.renewalDate)}`,
-      style: { color: "#DC2626", fontWeight: "500" },
+      style: { color: Colors.error, fontWeight: "500" },
     };
   }
   const d = daysUntilRenewal(policy.renewalDate);
   if (d <= 30)
     return {
       line: `Renews in ${d} day${d === 1 ? "" : "s"}`,
-      style: { color: "#DC2626", fontWeight: "600" },
+      style: { color: Colors.error, fontWeight: "600" },
     };
   if (d <= 90)
     return {
       line: `Renews in ${d} days`,
-      style: { color: "#B45309", fontWeight: "500" },
+      style: { color: Colors.warningText, fontWeight: "500" },
     };
   return {
     line: `Renews on ${formatRenewalDayMonth(policy.renewalDate)}`,
-    style: MUTED,
+    style: MUTED.text,
   };
 }
 
 function statusBadge(policy: UserPolicy): Badge & { label: string } {
   if (policy.status === "transferred_to_finkoin") {
-    return { label: "Transferred to Finkoin", bg: "#EDE9FE", fg: "#5B21B6" };
+    return {
+      label: "Transferred to Finkoin",
+      bg: tintBg("#EDE9FE"),
+      fg: tintFg("#5B21B6"),
+    };
   }
   if (!policy.insurerName.trim() || !policy.renewalDate) {
-    return { label: "Details missing", bg: "#FEF3C7", fg: "#92400E" };
+    return { label: "Details missing", bg: tintBg("#FEF3C7"), fg: "#92400E" };
   }
   const today = startOfLocalDay(new Date());
   const rd = startOfLocalDay(parseLocalDate(policy.renewalDate));
-  if (rd < today) return { label: "Expired", bg: "#FEE2E2", fg: "#B91C1C" };
-  return { label: "Active", bg: "#D1FAE5", fg: "#065F46" };
+  if (rd < today)
+    return { label: "Expired", bg: tintBg("#FEE2E2"), fg: tintFg("#B91C1C") };
+  return { label: "Active", bg: tintBg("#D1FAE5"), fg: tintFg("#065F46") };
 }
 
 function SmallButton({
@@ -164,7 +166,7 @@ export function PolicyCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -195,17 +197,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 18,
     fontWeight: "700",
-    color: "#0F172A",
+    color: Colors.textPrimary,
   },
-  plan: { fontSize: 14, color: "#64748B" },
-  row: { fontSize: 14, color: "#334155", lineHeight: 21 },
-  rowValue: { fontWeight: "600", color: "#0F172A" },
+  plan: { fontSize: 14, color: Colors.textMuted },
+  row: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
+  rowValue: { fontWeight: "600", color: Colors.textPrimary },
   renew: { marginTop: 4, fontSize: 14 },
   actions: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
+    borderTopColor: Colors.surfaceMuted,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
@@ -224,4 +226,4 @@ const styles = StyleSheet.create({
   },
   smallBtnGhost: { backgroundColor: "transparent" },
   smallBtnText: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
-});
+}));

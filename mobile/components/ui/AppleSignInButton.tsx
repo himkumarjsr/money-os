@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
-import { Radius } from "@/constants/theme";
+import { Radius, themedStyles } from "@/constants/theme";
 import { isAppleSignInAvailable } from "@/lib/appleAuth";
 
 type Props = {
@@ -11,7 +11,11 @@ type Props = {
 };
 
 /** Apple's own button (required by its design rules); renders nothing off iOS. */
-export function AppleSignInButton({ onPress, disabled, mode = "signIn" }: Props) {
+export function AppleSignInButton({
+  onPress,
+  disabled,
+  mode = "signIn",
+}: Props) {
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
@@ -46,7 +50,7 @@ export function AppleSignInButton({ onPress, disabled, mode = "signIn" }: Props)
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   button: { width: "100%", height: 52 },
   disabled: { opacity: 0.5 },
-});
+}));

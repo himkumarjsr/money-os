@@ -13,7 +13,10 @@ import {
   View,
   type LayoutChangeEvent,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore, type SplitGroupMember } from "@/store/splitStore";
@@ -25,7 +28,7 @@ import type { TrackerIconName } from "@/lib/tracker-categories";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { DateField } from "@/components/tracker/DateField";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
 
 type SplitType = "equal" | "exact" | "percentage" | "shares";
 type FieldKey =
@@ -50,9 +53,9 @@ const FIELD_ORDER: FieldKey[] = [
 ];
 
 const ERROR_RED = "#E24B4A";
-const ERROR_BG = "#FDEDED";
-const ERROR_TEXT = "#991B1B";
-const ERROR_BORDER = "#F5D0D0";
+const ERROR_BG = () => tintBg("#FDEDED");
+const ERROR_TEXT = () => tintFg("#991B1B");
+const ERROR_BORDER = () => tintBg("#F5D0D0");
 
 const CATEGORY_OPTIONS: {
   key: string;
@@ -761,9 +764,7 @@ export default function AddExpenseScreen() {
                       accessibilityState={{ selected: on }}
                       style={[styles.chip, on ? styles.chipOn : styles.chipOff]}
                     >
-                      <Text
-                        style={[styles.chipText, on && styles.chipTextOn]}
-                      >
+                      <Text style={[styles.chipText, on && styles.chipTextOn]}>
                         {m.display_name}
                       </Text>
                     </Pressable>
@@ -1022,7 +1023,7 @@ export default function AddExpenseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   page: { paddingHorizontal: 16, paddingTop: 16 },
   headerCard: {
@@ -1056,7 +1057,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backArrow: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  backArrow: { color: Colors.onPrimary, fontSize: 16, fontWeight: "700" },
   backText: {
     color: "rgba(255,255,255,0.9)",
     fontSize: 14,
@@ -1069,7 +1070,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     marginTop: 12,
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 18,
     fontWeight: "800",
   },
@@ -1097,12 +1098,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: ERROR_BORDER,
-    backgroundColor: ERROR_BG,
+    borderColor: ERROR_BORDER(),
+    backgroundColor: ERROR_BG(),
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: ERROR_TEXT,
+    color: ERROR_TEXT(),
     overflow: "hidden",
   },
   amountBox: {
@@ -1114,7 +1115,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "transparent",
   },
-  amountBoxError: { backgroundColor: ERROR_BG, borderColor: ERROR_RED },
+  amountBoxError: { backgroundColor: ERROR_BG(), borderColor: ERROR_RED },
   amountLabel: {
     marginBottom: 8,
     textAlign: "center",
@@ -1176,7 +1177,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   inputFocused: { borderColor: Colors.primary },
-  inputError: { borderColor: ERROR_RED, backgroundColor: ERROR_BG },
+  inputError: { borderColor: ERROR_RED, backgroundColor: ERROR_BG() },
   select: {
     flexDirection: "row",
     alignItems: "center",
@@ -1260,13 +1261,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   chipText: { fontSize: 12, fontWeight: "700", color: Colors.textPrimary },
-  chipTextOn: { color: "#FFFFFF" },
+  chipTextOn: { color: Colors.onPrimary },
   subCard: {
     marginTop: 20,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     padding: 16,
   },
   subCardError: { borderColor: ERROR_RED, borderWidth: 2 },
@@ -1327,9 +1328,9 @@ const styles = StyleSheet.create({
   },
   submitDisabled: { opacity: 0.5 },
   submitPressed: { opacity: 0.85 },
-  submitText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  submitText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "800" },
   mt8: { marginTop: 8 },
   mt12: { marginTop: 12 },
   mt16: { marginTop: 16 },
   mt20: { marginTop: 20 },
-});
+}));

@@ -1,12 +1,13 @@
 /**
  * My Investments — port of web app/investments/page.tsx.
  */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { formatIndian } from "@/lib/formatters";
 import { useFinancialStore } from "@/store/financialStore";
+import { themedStyles, Colors } from "@/constants/theme";
 
 function n(v: number | undefined | null) {
   return Math.max(0, Number(v ?? 0));
@@ -37,7 +38,7 @@ export default function InvestmentsScreen() {
     >
       {!submission ? (
         <View style={[pageStyles.card, styles.empty]}>
-          <AppIcon name="trending" size={40} color="#534AB7" />
+          <AppIcon name="trending" size={40} color={Colors.primary} />
           <Text style={styles.emptyTitle}>No analysis yet</Text>
           <Text style={styles.emptySub}>
             Complete your financial analysis to see your mutual funds, FDs, PPF,
@@ -94,18 +95,18 @@ function Row({ label, value }: { label: string; value: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   empty: { alignItems: "center", paddingVertical: 40 },
   emptyTitle: {
     marginTop: 16,
     fontSize: 20,
     fontWeight: "700",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
   emptySub: {
     marginTop: 8,
     fontSize: 14,
-    color: "#9B9A94",
+    color: Colors.textMuted,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -115,31 +116,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  rowLabel: { flex: 1, fontSize: 14, color: "#5F5E5A" },
-  rowValue: { fontSize: 14, fontWeight: "600", color: "#111110" },
+  rowLabel: { flex: 1, fontSize: 14, color: Colors.textSecondary },
+  rowValue: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#F0EFF8",
+    borderTopColor: Colors.borderLight,
     paddingTop: 14,
     gap: 12,
   },
-  totalText: { fontSize: 15, fontWeight: "700", color: "#111110" },
+  totalText: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
   soonCard: {
     marginTop: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#EEEDFE",
-    backgroundColor: "rgba(238,237,254,0.4)",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.primaryTint,
     padding: 20,
     alignItems: "center",
   },
-  soonTitle: { fontSize: 14, fontWeight: "700", color: "#3C3489" },
+  soonTitle: { fontSize: 14, fontWeight: "700", color: Colors.primaryDark },
   soonSub: {
     marginTop: 8,
     fontSize: 14,
-    color: "#5F5E5A",
+    color: Colors.textSecondary,
     textAlign: "center",
   },
   soonBtn: {
@@ -150,4 +151,4 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
   },
-});
+}));

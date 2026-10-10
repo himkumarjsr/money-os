@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 
 export type Faq = { q: string; a: string };
 
@@ -72,40 +72,56 @@ export function FaqAccordion({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   h2: { fontSize: 20, fontWeight: "700", color: Colors.textPrimary },
-  sub: { marginTop: 4, fontSize: 13, color: "#475569", lineHeight: 19 },
+  sub: {
+    marginTop: 4,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 19,
+  },
   search: {
     marginTop: 12,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     fontSize: 14,
     color: Colors.textPrimary,
   },
   item: {
     minHeight: 44,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     padding: 14,
   },
   qRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  q: { flex: 1, fontSize: 14, fontWeight: "700", color: Colors.textPrimary, lineHeight: 20 },
-  chev: { fontSize: 16, color: "#94A3B8", lineHeight: 20 },
+  q: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+  chev: { fontSize: 16, color: Colors.textMuted, lineHeight: 20 },
   chevOpen: { transform: [{ rotate: "180deg" }] },
-  a: { marginTop: 10, fontSize: 14, lineHeight: 21, color: "#334155" },
+  a: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Colors.textSecondary,
+  },
   empty: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 14,
     fontSize: 14,
-    color: "#334155",
+    color: Colors.textSecondary,
   },
-});
+}));

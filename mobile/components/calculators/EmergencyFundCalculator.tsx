@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, Text, View } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { LifeStage } from "@/lib/analyse-form-schema";
@@ -77,7 +77,7 @@ export function EmergencyFundCalculator() {
           <Text style={styles.selectText} numberOfLines={1}>
             {optionLabel(stage)}
           </Text>
-          <AppIcon name="chevronDown" size={18} color="#64748B" />
+          <AppIcon name="chevronDown" size={18} color={Colors.textMuted} />
         </Pressable>
       </View>
 
@@ -147,7 +147,10 @@ export function EmergencyFundCalculator() {
               ]}
             >
               <Text
-                style={[styles.optionText, selected && styles.optionTextSelected]}
+                style={[
+                  styles.optionText,
+                  selected && styles.optionTextSelected,
+                ]}
               >
                 {optionLabel(k)}
               </Text>
@@ -162,9 +165,9 @@ export function EmergencyFundCalculator() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   selectWrap: { gap: 8 },
-  selectLabel: { fontSize: 14, fontWeight: "500", color: "#334155" },
+  selectLabel: { fontSize: 14, fontWeight: "500", color: Colors.textSecondary },
   select: {
     minHeight: 44,
     flexDirection: "row",
@@ -173,15 +176,15 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     paddingHorizontal: 12,
   },
-  selectText: { flex: 1, fontSize: 14, color: "#0F172A" },
+  selectText: { flex: 1, fontSize: 14, color: Colors.textPrimary },
   sheetTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#0F172A",
+    color: Colors.textPrimary,
     marginBottom: 12,
   },
   option: {
@@ -194,7 +197,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 4,
   },
-  optionSelected: { backgroundColor: "#F7F6FE" },
-  optionText: { flex: 1, fontSize: 15, color: "#0F172A" },
+  optionSelected: { backgroundColor: Colors.surfaceMuted },
+  optionText: { flex: 1, fontSize: 15, color: Colors.textPrimary },
   optionTextSelected: { color: Colors.primary, fontWeight: "600" },
-});
+}));

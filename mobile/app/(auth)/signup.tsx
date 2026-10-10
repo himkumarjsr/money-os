@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,7 +10,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useAuthStore, getOAuthRedirectUri } from "@/store/authStore";
-import { Colors, Spacing, FontSize } from "@/constants/theme";
+import { Colors, Spacing, FontSize, themedStyles } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AppleSignInButton } from "@/components/ui/AppleSignInButton";
@@ -208,7 +207,7 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.xl, paddingTop: 80, minHeight: "100%" as any },
   logoContainer: {
@@ -235,4 +234,4 @@ const styles = StyleSheet.create({
   linkWrap: { marginTop: Spacing.xl, alignItems: "center" },
   link: { fontSize: FontSize.md, color: Colors.textMuted },
   linkStrong: { color: Colors.primary, fontWeight: "700" },
-});
+}));

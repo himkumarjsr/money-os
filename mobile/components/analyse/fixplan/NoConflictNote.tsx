@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
-import { Radius, Spacing } from "@/constants/theme";
+import { Text, View } from "react-native";
+import { Radius, Spacing, themedStyles, tintBg } from "@/constants/theme";
 import { NO_CONFLICT_BODY, NO_CONFLICT_TITLE } from "@/lib/reportTrust";
 
 /** Matches web NoConflictNote. */
@@ -12,14 +12,14 @@ export function NoConflictNote() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   box: {
     borderRadius: Radius.xl,
     borderWidth: 1,
-    borderColor: "#D5F0E6",
-    backgroundColor: "#F1FBF7",
+    borderColor: tintBg("#D5F0E6"),
+    backgroundColor: tintBg("#F1FBF7"),
     padding: Spacing.lg,
   },
   title: { fontSize: 15, fontWeight: "600", color: "#0F6E56" },
   body: { marginTop: 4, fontSize: 13, lineHeight: 19, color: "#2E5E50" },
-});
+}));

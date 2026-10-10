@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   Alert,
   Pressable,
   ScrollView,
@@ -15,7 +14,13 @@ import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { uploadAvatar } from "@/lib/avatarUpload";
 import { deleteMyAccount } from "@/lib/accountDeletion";
-import { Colors, FontSize, Spacing, Radius } from "@/constants/theme";
+import {
+  Colors,
+  FontSize,
+  Spacing,
+  Radius,
+  themedStyles,
+} from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -145,9 +150,9 @@ export default function ProfileScreen() {
               style={styles.avatarEditBadge}
             >
               {photoBusy ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={Colors.onPrimary} />
               ) : (
-                <AppIcon name="camera" size={15} color="#FFFFFF" />
+                <AppIcon name="camera" size={15} color={Colors.onPrimary} />
               )}
             </Pressable>
           </View>
@@ -195,7 +200,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   pad: { flexGrow: 1, padding: Spacing.xl, paddingBottom: 120 },
   avatarRow: {
@@ -223,7 +228,7 @@ const styles = StyleSheet.create({
   avatarInitials: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
   },
   avatarEditBadge: {
     position: "absolute",
@@ -274,4 +279,4 @@ const styles = StyleSheet.create({
   },
   link: { marginTop: 24, alignItems: "center" },
   linkText: { color: Colors.primary, fontWeight: "700" },
-});
+}));

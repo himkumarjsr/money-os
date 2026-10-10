@@ -2,12 +2,13 @@
  * Tracker category/subcategory icons — ports web `components/tracker/TrackerIcons.tsx`
  * shapes 1:1 onto react-native-svg so bucket + subcategory rows match the PWA visually.
  */
-import { View, StyleSheet } from "react-native";
+import { View } from "react-native";
 import Svg, { Path, Circle, Rect, G } from "react-native-svg";
 import {
   TRACKER_ICON_COLOR,
   type TrackerIconName,
 } from "@/lib/tracker-categories";
+import { themedStyles } from "@/constants/theme";
 
 type IconShape = {
   d?: string[];
@@ -16,7 +17,9 @@ type IconShape = {
 };
 
 const shapes: Record<TrackerIconName, IconShape> = {
-  home: { d: ["M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"] },
+  home: {
+    d: ["M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"],
+  },
   cart: {
     d: ["M6 6h2l1.2 9h9.3l1.5-6H8.2"],
     circles: [
@@ -29,7 +32,9 @@ const shapes: Record<TrackerIconName, IconShape> = {
   bolt: { d: ["M13 3L6 13h5l-1 8 8-12h-5l1-6z"] },
   droplet: { d: ["M12 3c0 0-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"] },
   flame: {
-    d: ["M12 3c-1 4 3 5 3 9a5 5 0 1 1-10 0c0-2 2-4 3-6 0 2 1 3 2 3.5C10 8 11 5 12 3z"],
+    d: [
+      "M12 3c-1 4 3 5 3 9a5 5 0 1 1-10 0c0-2 2-4 3-6 0 2 1 3 2 3.5C10 8 11 5 12 3z",
+    ],
   },
   wifi: {
     d: [
@@ -44,28 +49,44 @@ const shapes: Record<TrackerIconName, IconShape> = {
     d: ["M3 10l9-5 9 5-9 5-9-5z", "M7 12v4c2 1.5 8 1.5 10 0v-4", "M21 10v6"],
   },
   pill: {
-    d: ["M9.5 4.5a4 4 0 0 1 5.5 5.5L9.5 15.5A4 4 0 1 1 4 10l5.5-5.5z", "M9 10l5 5"],
+    d: [
+      "M9.5 4.5a4 4 0 0 1 5.5 5.5L9.5 15.5A4 4 0 1 1 4 10l5.5-5.5z",
+      "M9 10l5 5",
+    ],
   },
   hospital: {
     d: ["M12 8v8M8 12h8"],
     rects: [{ x: 5, y: 4, w: 14, h: 16, rx: 1.5 }],
   },
   broom: {
-    d: ["M8 14l6-6", "M12.5 9.5l3 3", "M5 19c2-1 4-2 6-1l-2 3H5v-2z", "M14 4l6 6"],
+    d: [
+      "M8 14l6-6",
+      "M12.5 9.5l3 3",
+      "M5 19c2-1 4-2 6-1l-2 3H5v-2z",
+      "M14 4l6 6",
+    ],
   },
   fuel: {
     d: ["M14 9h2.5a2 2 0 0 1 2 2v6a2 2 0 0 0 2 2", "M8 9h3"],
     rects: [{ x: 5, y: 5, w: 9, h: 15, rx: 1.5 }],
   },
   cab: {
-    d: ["M4 15l1.5-5a2 2 0 0 1 2-1.5h9a2 2 0 0 1 2 1.5L20 15", "M4 15h16v3H4z", "M9 11h6"],
+    d: [
+      "M4 15l1.5-5a2 2 0 0 1 2-1.5h9a2 2 0 0 1 2 1.5L20 15",
+      "M4 15h16v3H4z",
+      "M9 11h6",
+    ],
     circles: [
       { cx: 7.5, cy: 18.5, r: 1.5 },
       { cx: 16.5, cy: 18.5, r: 1.5 },
     ],
   },
   auto: {
-    d: ["M5 16l1.2-4.5A2 2 0 0 1 8.1 10h6.2a2 2 0 0 1 1.9 1.4L18 16", "M5 16h14v2.5H5z", "M10 8h3l1 2"],
+    d: [
+      "M5 16l1.2-4.5A2 2 0 0 1 8.1 10h6.2a2 2 0 0 1 1.9 1.4L18 16",
+      "M5 16h14v2.5H5z",
+      "M10 8h3l1 2",
+    ],
     circles: [
       { cx: 8, cy: 19, r: 1.4 },
       { cx: 16, cy: 19, r: 1.4 },
@@ -80,7 +101,11 @@ const shapes: Record<TrackerIconName, IconShape> = {
     ],
   },
   utensils: {
-    d: ["M8 4v7a2 2 0 0 0 2 2v7", "M8 4c0 2 .5 3.5 1.5 4", "M16 4v16M16 4c2 2 2 5 0 7"],
+    d: [
+      "M8 4v7a2 2 0 0 0 2 2v7",
+      "M8 4c0 2 .5 3.5 1.5 4",
+      "M16 4v16M16 4c2 2 2 5 0 7",
+    ],
   },
   coffee: {
     d: [
@@ -89,7 +114,9 @@ const shapes: Record<TrackerIconName, IconShape> = {
       "M8 5c.5 1 .5 2 0 3M11 5c.5 1 .5 2 0 3",
     ],
   },
-  snack: { d: ["M5 14c2-4 12-4 14 0-1 4-5 6-7 6s-6-2-7-6z", "M8 10c1-2 7-2 8 0"] },
+  snack: {
+    d: ["M5 14c2-4 12-4 14 0-1 4-5 6-7 6s-6-2-7-6z", "M8 10c1-2 7-2 8 0"],
+  },
   film: {
     d: ["M8 6v12M16 6v12M4 10h4M4 14h4M16 10h4M16 14h4"],
     rects: [{ x: 4, y: 6, w: 16, h: 12, rx: 2 }],
@@ -115,7 +142,9 @@ const shapes: Record<TrackerIconName, IconShape> = {
   dumbbell: { d: ["M6 10v4M8 9v6M16 9v6M18 10v4M8 12h8"] },
   plane: { d: ["M4 14l7-2 8-6 1 1-5 6 4 1-3 2-4-1-3 3-2-1 2-4-5-1z"] },
   gift: {
-    d: ["M5 13h14M12 10v10M9 7c0-1.5 1.2-2.5 3-1.5C13.8 4.5 15 5.5 15 7c0 1.5-3 3-3 3s-3-1.5-3-3z"],
+    d: [
+      "M5 13h14M12 10v10M9 7c0-1.5 1.2-2.5 3-1.5C13.8 4.5 15 5.5 15 7c0 1.5-3 3-3 3s-3-1.5-3-3z",
+    ],
     rects: [{ x: 5, y: 10, w: 14, h: 10, rx: 1 }],
   },
   music: {
@@ -127,10 +156,15 @@ const shapes: Record<TrackerIconName, IconShape> = {
   },
   package: { d: ["M4 8l8-4 8 4v10l-8 4-8-4V8z", "M4 8l8 4 8-4M12 12v10"] },
   cigarette: {
-    d: ["M3 14h12v3H3zM15 14h3v3h-3zM18 14h2l1-2", "M19 9c0 1 .5 2 .5 3M21 8c0 1.2.5 2.2.5 3.5"],
+    d: [
+      "M3 14h12v3H3zM15 14h3v3h-3zM18 14h2l1-2",
+      "M19 9c0 1 .5 2 .5 3M21 8c0 1.2.5 2.2.5 3.5",
+    ],
   },
   drink: { d: ["M8 4h8l-1 14H9L8 4z", "M7 4h10", "M10 10h4"] },
-  herb: { d: ["M12 20c0-8 6-10 6-16-6 2-8 8-8 16 0-8-2-14-8-16 0 6 6 8 6 16h4z"] },
+  herb: {
+    d: ["M12 20c0-8 6-10 6-16-6 2-8 8-8 16 0-8-2-14-8-16 0 6 6 8 6 16h4z"],
+  },
   dice: {
     rects: [{ x: 5, y: 5, w: 14, h: 14, rx: 2 }],
     circles: [
@@ -146,7 +180,10 @@ const shapes: Record<TrackerIconName, IconShape> = {
     rects: [{ x: 3, y: 6, w: 18, h: 12, rx: 2 }],
   },
   car: {
-    d: ["M4 14l1.5-4.5A2 2 0 0 1 7.4 8h9.2a2 2 0 0 1 1.9 1.5L20 14", "M4 14h16v3H4z"],
+    d: [
+      "M4 14l1.5-4.5A2 2 0 0 1 7.4 8h9.2a2 2 0 0 1 1.9 1.5L20 14",
+      "M4 14h16v3H4z",
+    ],
     circles: [
       { cx: 7.5, cy: 17.5, r: 1.5 },
       { cx: 16.5, cy: 17.5, r: 1.5 },
@@ -172,7 +209,9 @@ const shapes: Record<TrackerIconName, IconShape> = {
   bank: { d: ["M4 10l8-5 8 5", "M6 10v7M10 10v7M14 10v7M18 10v7M4 17h16"] },
   shield: { d: ["M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"] },
   coin: {
-    d: ["M12 8v8M10 10.5c.5-.8 1.2-1 2-1s1.5.4 1.5 1.2c0 1.6-3.5 1-3.5 3 0 .8.7 1.3 2 1.3s1.6-.3 2-1"],
+    d: [
+      "M12 8v8M10 10.5c.5-.8 1.2-1 2-1s1.5.4 1.5 1.2c0 1.6-3.5 1-3.5 3 0 .8.7 1.3 2 1.3s1.6-.3 2-1",
+    ],
     circles: [{ cx: 12, cy: 12, r: 8 }],
   },
   briefcase: {
@@ -268,10 +307,10 @@ export function TrackerIconBadge({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   badge: {
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-});
+}));

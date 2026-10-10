@@ -1,6 +1,6 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
-import { Colors, Radius } from "@/constants/theme";
+import { Colors, Radius, themedStyles } from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { useAuthStore } from "@/store/authStore";
 
@@ -18,7 +18,8 @@ type Card = {
   icon: AppIconName | "dot";
 };
 
-const CARDS: Card[] = [
+/** Built per render so card colours follow the active theme. */
+const cards = (): Card[] => [
   {
     key: "advisor",
     title: "Meet your finance advisor",
@@ -26,9 +27,9 @@ const CARDS: Card[] = [
     cta: "Start guided checkup →",
     route: "/(tabs)/analyse",
     needsAuth: true,
-    accent: "#EEF2FF",
-    border: "rgba(199,210,254,0.9)",
-    ctaColor: "#4338CA",
+    accent: Colors.backgroundDeep,
+    border: Colors.borderIndigo,
+    ctaColor: Colors.indigo600,
     icon: "dot",
   },
   {
@@ -37,9 +38,9 @@ const CARDS: Card[] = [
     body: "Compare regimes with HRA, 80C, NPS, and equity gains — built for FY 2025-26 planning.",
     cta: "Open calculator →",
     route: "/calculators/tax-regime",
-    accent: "#F5F3FF",
-    border: "rgba(221,214,254,0.9)",
-    ctaColor: "#6D28D9",
+    accent: Colors.primaryLight,
+    border: Colors.primaryTintBorder,
+    ctaColor: Colors.violet600,
     icon: "receipt",
   },
   {
@@ -48,9 +49,9 @@ const CARDS: Card[] = [
     body: "Review holdings and allocation in one workspace — built for Indian investors.",
     cta: "Coming soon",
     badge: "soon",
-    accent: "#F8FAFC",
-    border: "#CBD5E1",
-    ctaColor: "#64748B",
+    accent: Colors.surfaceMuted,
+    border: Colors.slate300,
+    ctaColor: Colors.textMuted,
     icon: "chart",
   },
   {
@@ -61,9 +62,9 @@ const CARDS: Card[] = [
     route: "/(tabs)/tracker",
     needsAuth: true,
     badge: "new",
-    accent: "#ECFDF5",
-    border: "rgba(167,243,208,0.85)",
-    ctaColor: "#047857",
+    accent: Colors.successLight,
+    border: Colors.successLight,
+    ctaColor: Colors.successDark,
     icon: "chart",
   },
   {
@@ -72,9 +73,9 @@ const CARDS: Card[] = [
     body: "Split bills, track shared expenses, and settle up — ₹ first. No ads.",
     cta: "Open Split →",
     route: "/(tabs)/split",
-    accent: "#F5F3FF",
-    border: "rgba(221,214,254,0.9)",
-    ctaColor: "#6D28D9",
+    accent: Colors.primaryLight,
+    border: Colors.primaryTintBorder,
+    ctaColor: Colors.violet600,
     icon: "users",
   },
 ];
@@ -98,7 +99,7 @@ export function TopPicks() {
         Top picks on Finkoin — advisor, tax, portfolio, and tracking
       </Text>
       <View style={styles.list}>
-        {CARDS.map((c) => (
+        {cards().map((c) => (
           <Pressable
             key={c.key}
             disabled={c.badge === "soon"}
@@ -138,7 +139,7 @@ export function TopPicks() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     paddingTop: 24,
     paddingBottom: 20,
@@ -149,14 +150,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 2.5,
     textTransform: "uppercase",
-    color: "rgba(79,70,229,0.85)",
+    color: Colors.accent,
   },
   head: {
     marginTop: 8,
     textAlign: "center",
     fontSize: 18,
     fontWeight: "600",
-    color: "#0F172A",
+    color: Colors.textPrimary,
     lineHeight: 24,
     paddingHorizontal: 8,
   },
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeNewText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,
@@ -190,13 +191,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 14,
     top: 14,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: Colors.border,
     borderRadius: Radius.round,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   badgeSoonText: {
-    color: "#1E293B",
+    color: Colors.textPrimary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,
@@ -206,13 +207,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 17,
     fontWeight: "700",
-    color: "#0F172A",
+    color: Colors.textPrimary,
   },
   body: {
     marginTop: 8,
     fontSize: 13,
     lineHeight: 19,
-    color: "#475569",
+    color: Colors.textSecondary,
     flexGrow: 1,
   },
   cta: {
@@ -220,4 +221,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-});
+}));

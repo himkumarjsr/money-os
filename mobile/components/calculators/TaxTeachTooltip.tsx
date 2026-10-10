@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { TaxTeachContent } from "@/lib/taxTeachContent";
+import { themedStyles, Colors } from "@/constants/theme";
 
 export type { TaxTeachContent } from "@/lib/taxTeachContent";
 
@@ -97,29 +98,47 @@ export function SectionTeachHeading({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   chip: {
     width: 28,
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#F4F2FC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
-  chipPressed: { borderColor: "rgba(83,74,183,0.4)", backgroundColor: "#EEEDFE" },
-  chipText: { fontSize: 12, fontWeight: "700", color: "#534AB7", lineHeight: 14 },
+  chipPressed: {
+    borderColor: "rgba(83,74,183,0.4)",
+    backgroundColor: Colors.primaryLight,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.primary,
+    lineHeight: 14,
+  },
   panel: { gap: 8, paddingBottom: 4 },
-  term: { fontSize: 12, fontWeight: "600", color: "#534AB7", lineHeight: 19 },
-  body: { marginTop: 2, fontSize: 12, lineHeight: 19, color: "#5F5E5A" },
+  term: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.primary,
+    lineHeight: 19,
+  },
+  body: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 19,
+    color: Colors.textSecondary,
+  },
   proTip: {
     borderRadius: 8,
-    backgroundColor: "#F7F6FE",
+    backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  proTipText: { color: "#3C3489" },
+  proTipText: { color: Colors.primaryDark },
   heading: {
     marginBottom: 12,
     flexDirection: "row",
@@ -132,6 +151,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#534AB7",
+    color: Colors.primary,
   },
-});
+}));

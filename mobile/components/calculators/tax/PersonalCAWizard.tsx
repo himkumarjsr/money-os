@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
   PERSONAL_CA_TOTAL_STEPS,
@@ -7,6 +7,7 @@ import {
   type CAChecklist,
 } from "./personalCASteps";
 import type { TaxCalcState } from "./useTaxCalculatorState";
+import { themedStyles, Colors } from "@/constants/theme";
 
 /**
  * Guided 19-step Q&A. On the PWA this is a fixed dialog over the page; here it
@@ -58,10 +59,10 @@ export function PersonalCAWizard({
           accessibilityLabel="Close"
           style={({ pressed }) => [
             styles.closeBtn,
-            pressed && { backgroundColor: "#F1F5F9" },
+            pressed && { backgroundColor: Colors.surfaceMuted },
           ]}
         >
-          <AppIcon name="close" size={16} color="#534AB7" />
+          <AppIcon name="close" size={16} color={Colors.primary} />
         </Pressable>
       </View>
 
@@ -130,12 +131,12 @@ export function PersonalCAWizard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     padding: 16,
   },
   head: { flexDirection: "row", alignItems: "flex-start", gap: 16 },
@@ -144,10 +145,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#534AB7",
+    color: Colors.primary,
   },
-  title: { fontSize: 18, fontWeight: "600", color: "#0F172A" },
-  stepLine: { marginTop: 4, fontSize: 12, color: "#475569" },
+  title: { fontSize: 18, fontWeight: "600", color: Colors.textPrimary },
+  stepLine: { marginTop: 4, fontSize: 12, color: Colors.textSecondary },
   closeBtn: {
     width: 44,
     height: 44,
@@ -163,10 +164,15 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "hidden",
     borderRadius: 999,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
   },
-  fill: { height: "100%", borderRadius: 999, backgroundColor: "#534AB7" },
-  pct: { marginTop: 4, textAlign: "right", fontSize: 11, color: "#7A7871" },
+  fill: { height: "100%", borderRadius: 999, backgroundColor: Colors.primary },
+  pct: {
+    marginTop: 4,
+    textAlign: "right",
+    fontSize: 11,
+    color: Colors.textMuted,
+  },
   body: { marginTop: 16 },
   footer: {
     marginTop: 16,
@@ -181,16 +187,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     paddingHorizontal: 12,
   },
-  ghostText: { fontSize: 14, color: "#5F5E5A" },
+  ghostText: { fontSize: 14, color: Colors.textSecondary },
   primaryBtn: {
     minHeight: 44,
     justifyContent: "center",
     borderRadius: 8,
-    backgroundColor: "#534AB7",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 16,
   },
-  primaryText: { fontSize: 14, fontWeight: "600", color: "#FFFFFF" },
-});
+  primaryText: { fontSize: 14, fontWeight: "600", color: Colors.onPrimary },
+}));

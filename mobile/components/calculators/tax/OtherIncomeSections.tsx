@@ -1,9 +1,10 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { TEACH } from "@/lib/taxTeachContent";
 import { ToggleSection } from "../ToggleSection";
 import { inr, rupees } from "./format";
 import { Checkbox, Chip, ChipRow, Mt, tx } from "./primitives";
 import type { TaxCalcState } from "./useTaxCalculatorState";
+import { themedStyles, Colors } from "@/constants/theme";
 
 export function OtherIncomeSections({ s }: { s: TaxCalcState }) {
   const { i, update, derived } = s;
@@ -440,8 +441,8 @@ export function OtherIncomeSections({ s }: { s: TaxCalcState }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   mb8: { marginBottom: 8 },
   gap4: { gap: 4 },
-  strong: { fontWeight: "600", color: "#111110" },
-});
+  strong: { fontWeight: "600", color: Colors.textPrimary },
+}));

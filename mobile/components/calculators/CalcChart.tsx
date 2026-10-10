@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import {
-  StyleSheet,
   Text,
   View,
   type GestureResponderEvent,
   type LayoutChangeEvent,
 } from "react-native";
 import Svg, { G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
+import { themedStyles, Colors, tintBg } from "@/constants/theme";
 
 export type ChartSeries = {
   key: string;
@@ -29,7 +29,7 @@ export type ChartTooltip = { title: string; lines: string[] };
 type Row = Record<string, number>;
 
 const PAD = { top: 8, right: 8, bottom: 24, left: 52 };
-const GRID = "#F4F2FC";
+const GRID = () => tintBg("#F4F2FC");
 const TICK = "#9B9A94";
 
 function niceStep(rough: number): number {
@@ -161,7 +161,8 @@ export function CalcChart({
   const band = hasBars && n > 0 ? plotW / n : 0;
   const barW = Math.max(2, band * 0.7);
 
-  const tip = active != null && data[active] ? tooltip(data[active], active) : null;
+  const tip =
+    active != null && data[active] ? tooltip(data[active], active) : null;
   const tipX = active != null ? xAt(active) : 0;
   const tipLeft = Math.min(Math.max(8, tipX - 90), Math.max(8, width - 188));
 
@@ -187,7 +188,7 @@ export function CalcChart({
                   x2={PAD.left + plotW}
                   y1={yAt(t)}
                   y2={yAt(t)}
-                  stroke={GRID}
+                  stroke={GRID()}
                 />
                 <SvgText
                   x={PAD.left - 6}
@@ -227,7 +228,7 @@ export function CalcChart({
                   y={PAD.top}
                   width={band}
                   height={plotH}
-                  fill="#F1F0FA"
+                  fill={tintBg("#F1F0FA")}
                 />
               ) : (
                 <Line
@@ -329,7 +330,7 @@ export function CalcChart({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   tip: {
     position: "absolute",
     top: 0,
@@ -340,12 +341,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tipTitle: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 12,
     fontWeight: "700",
     marginBottom: 4,
   },
-  tipLine: { color: "#FFFFFF", fontSize: 12, lineHeight: 17 },
+  tipLine: { color: Colors.onPrimary, fontSize: 12, lineHeight: 17 },
   legend: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -355,5 +356,5 @@ const styles = StyleSheet.create({
   },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   swatch: { width: 10, height: 10, borderRadius: 2 },
-  legendText: { fontSize: 12, color: "#5F5E5A" },
-});
+  legendText: { fontSize: 12, color: Colors.textSecondary },
+}));

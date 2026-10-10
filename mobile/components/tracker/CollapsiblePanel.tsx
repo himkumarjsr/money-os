@@ -1,13 +1,7 @@
 import type { ReactNode } from "react";
-import {
-  LayoutAnimation,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { LayoutAnimation, Pressable, Text, View } from "react-native";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 
 const TOGGLE_ANIMATION = LayoutAnimation.create(
   180,
@@ -78,7 +72,7 @@ export function CollapsiblePanel({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   panel: {
     marginBottom: 12,
     borderRadius: 14,
@@ -95,7 +89,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     backgroundColor: Colors.card,
   },
-  headerOpen: { backgroundColor: "#F7F5FF" },
+  headerOpen: { backgroundColor: tintBg("#F7F5FF") },
   iconBadge: {
     width: 32,
     height: 32,
@@ -108,4 +102,4 @@ const styles = StyleSheet.create({
   title: { fontSize: 14, fontWeight: "800", color: Colors.textPrimary },
   subtitle: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
   body: { paddingHorizontal: 12, paddingBottom: 12 },
-});
+}));

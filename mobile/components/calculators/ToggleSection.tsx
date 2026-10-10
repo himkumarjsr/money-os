@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, Text, View } from "react-native";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import { themedStyles, Colors, tintBg } from "@/constants/theme";
 
 /** Map legacy emoji props → purple AppIcon names (🇮🇳 is never mapped). */
 const EMOJI_TO_ICON: Record<string, AppIconName> = {
@@ -57,7 +58,7 @@ export function ToggleSwitch({
       <View
         style={[
           styles.track,
-          { backgroundColor: isOn ? "#534AB7" : "#E8E6F0" },
+          { backgroundColor: isOn ? "#534AB7" : tintBg("#E8E6F0") },
         ]}
       >
         <Animated.View
@@ -100,17 +101,20 @@ export function ToggleSection({
 
   return (
     <View
-      style={[styles.wrap, { borderColor: isOn ? "#534AB7" : "#E8E6F0" }]}
+      style={[
+        styles.wrap,
+        { borderColor: isOn ? "#534AB7" : tintBg("#E8E6F0") },
+      ]}
     >
       <View style={[styles.header, isOn && styles.headerOn]}>
         <View style={styles.headLeft}>
           <View
             style={[
               styles.iconBox,
-              { backgroundColor: isOn ? "#EEEDFE" : "#F7F7F4" },
+              { backgroundColor: isOn ? tintBg("#EEEDFE") : tintBg("#F7F7F4") },
             ]}
           >
-            <AppIcon name={resolvedIcon} size={20} color="#534AB7" />
+            <AppIcon name={resolvedIcon} size={20} color={Colors.primary} />
           </View>
           <View style={styles.textCol}>
             <Text style={styles.title}>{title}</Text>
@@ -139,13 +143,13 @@ export function ToggleSection({
               }
               style={({ pressed }) => [
                 styles.chevronBtn,
-                pressed && { backgroundColor: "#F1F5F9" },
+                pressed && { backgroundColor: Colors.surfaceMuted },
               ]}
             >
               <View
                 style={expanded ? { transform: [{ rotate: "180deg" }] } : null}
               >
-                <AppIcon name="chevronDown" size={18} color="#534AB7" />
+                <AppIcon name="chevronDown" size={18} color={Colors.primary} />
               </View>
             </Pressable>
           ) : null}
@@ -162,7 +166,7 @@ export function ToggleSection({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     marginBottom: 12,
     overflow: "hidden",
@@ -173,11 +177,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  headerOn: { backgroundColor: "#FAFAFE" },
+  headerOn: { backgroundColor: Colors.background },
   headLeft: {
     flex: 1,
     minWidth: 0,
@@ -194,9 +198,24 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   textCol: { flex: 1, minWidth: 0, paddingRight: 4 },
-  title: { fontSize: 14, fontWeight: "600", lineHeight: 19, color: "#111110" },
-  subtitle: { marginTop: 2, fontSize: 11, lineHeight: 15, color: "#9B9A94" },
-  oneLiner: { marginTop: 4, fontSize: 10, lineHeight: 14, color: "#B0AFA8" },
+  title: {
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 19,
+    color: Colors.textPrimary,
+  },
+  subtitle: {
+    marginTop: 2,
+    fontSize: 11,
+    lineHeight: 15,
+    color: Colors.textMuted,
+  },
+  oneLiner: {
+    marginTop: 4,
+    fontSize: 10,
+    lineHeight: 14,
+    color: Colors.textMuted,
+  },
   controls: {
     marginTop: 4,
     flexDirection: "row",
@@ -212,7 +231,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
@@ -228,8 +247,8 @@ const styles = StyleSheet.create({
   },
   body: {
     borderTopWidth: 1,
-    borderTopColor: "#F0EFF8",
+    borderTopColor: Colors.borderLight,
     paddingHorizontal: 12,
     paddingBottom: 16,
   },
-});
+}));

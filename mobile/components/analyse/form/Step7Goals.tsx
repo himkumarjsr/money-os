@@ -1,11 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useFormContext } from "react-hook-form";
 import {
   PRIMARY_GOAL_LABELS,
   PRIMARY_GOAL_VALUES,
   type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import {
   RISK_QUESTIONS,
   RISK_TOLERANCE_LABELS,
@@ -206,14 +206,14 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   grid: { gap: 10 },
   goalCard: {
     minHeight: 52,
     justifyContent: "center",
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     backgroundColor: Colors.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -222,19 +222,27 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: "rgba(83,74,183,0.1)",
   },
-  goalText: { fontSize: 15, fontWeight: "500", color: "#1E293B" },
+  goalText: { fontSize: 15, fontWeight: "500", color: Colors.textPrimary },
   purpleNote: { fontSize: 12, color: Colors.primary },
-  greyNote: { fontSize: 14, lineHeight: 20, color: "#7A7871" },
-  riskQuestion: { fontSize: 14, fontWeight: "600", color: "#5F5E5A" },
+  greyNote: { fontSize: 14, lineHeight: 20, color: Colors.textMuted },
+  riskQuestion: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
   riskOption: {
     minHeight: 44,
     justifyContent: "center",
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     backgroundColor: Colors.card,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  riskOptionText: { fontSize: 15, fontWeight: "500", color: "#1E293B" },
-});
+  riskOptionText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: Colors.textPrimary,
+  },
+}));

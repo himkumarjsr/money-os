@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
-import { Spacing } from "@/constants/theme";
+import { Text, View } from "react-native";
+import { Spacing, themedStyles, Colors } from "@/constants/theme";
 import {
   formatLakhCrore,
   type NetWorthTrajectory,
@@ -24,14 +24,17 @@ export function NetWorthTrajectoryCard({
       <Text style={shared.cardTitle}>Where your net worth is heading</Text>
       <Text style={styles.intro}>
         Following this plan: {formatLakhCrore(points[0].netWorth)} today →{" "}
-        <Text style={styles.highlight}>{formatLakhCrore(last.netWorth)}</Text> in{" "}
-        {last.year} years, in today&apos;s rupees.
+        <Text style={styles.highlight}>{formatLakhCrore(last.netWorth)}</Text>{" "}
+        in {last.year} years, in today&apos;s rupees.
       </Text>
       <View
         style={styles.chart}
         accessible
         accessibilityLabel={`Net worth projection: ${points
-          .map((p) => `${p.year === 0 ? "today" : `${p.year} years`} ${formatLakhCrore(p.netWorth)}`)
+          .map(
+            (p) =>
+              `${p.year === 0 ? "today" : `${p.year} years`} ${formatLakhCrore(p.netWorth)}`,
+          )
           .join(", ")}`}
       >
         {points.map((p) => {
@@ -39,7 +42,7 @@ export function NetWorthTrajectoryCard({
           const h = Math.max(4, (Math.abs(p.netWorth) / max) * CHART_HEIGHT);
           return (
             <View key={p.year} style={styles.col}>
-              <Text style={[styles.value, negative && { color: "#E24B4A" }]}>
+              <Text style={[styles.value, negative && { color: Colors.error }]}>
                 {formatLakhCrore(p.netWorth)}
               </Text>
               <View
@@ -52,15 +55,19 @@ export function NetWorthTrajectoryCard({
                   },
                 ]}
               />
-              <Text style={styles.year}>{p.year === 0 ? "Today" : `${p.year}y`}</Text>
-              {p.age != null ? <Text style={styles.age}>age {p.age}</Text> : null}
+              <Text style={styles.year}>
+                {p.year === 0 ? "Today" : `${p.year}y`}
+              </Text>
+              {p.age != null ? (
+                <Text style={styles.age}>age {p.age}</Text>
+              ) : null}
             </View>
           );
         })}
       </View>
       <Text style={styles.note}>
-        Includes EPF/PPF/NPS compounding, your current SIPs, this plan&apos;s goal
-        SIPs and loans paying down on their EMIs.
+        Includes EPF/PPF/NPS compounding, your current SIPs, this plan&apos;s
+        goal SIPs and loans paying down on their EMIs.
         {spentGoals.length > 0
           ? ` Goal money is used when due: ${spentGoals
               .map((g) => `${g.label} (year ${g.year})`)
@@ -73,9 +80,14 @@ export function NetWorthTrajectoryCard({
   );
 }
 
-const styles = StyleSheet.create({
-  intro: { marginTop: Spacing.xs, fontSize: 13, lineHeight: 19, color: "#454442" },
-  highlight: { fontWeight: "700", color: "#534AB7" },
+const styles = themedStyles(() => ({
+  intro: {
+    marginTop: Spacing.xs,
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.textSecondary,
+  },
+  highlight: { fontWeight: "700", color: Colors.primary },
   chart: {
     marginTop: Spacing.lg,
     flexDirection: "row",
@@ -83,9 +95,24 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   col: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
-  value: { marginBottom: 4, fontSize: 12, fontWeight: "700", color: "#111110" },
+  value: {
+    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
   bar: { width: "100%", borderTopLeftRadius: 8, borderTopRightRadius: 8 },
-  year: { marginTop: 6, fontSize: 12, fontWeight: "600", color: "#454442" },
-  age: { fontSize: 11, color: "#9B9A94" },
-  note: { marginTop: Spacing.md, fontSize: 12, lineHeight: 18, color: "#7A7871" },
-});
+  year: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+  age: { fontSize: 11, color: Colors.textMuted },
+  note: {
+    marginTop: Spacing.md,
+    fontSize: 12,
+    lineHeight: 18,
+    color: Colors.textMuted,
+  },
+}));

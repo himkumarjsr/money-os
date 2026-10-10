@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Modal,
-  StyleSheet,
   Pressable,
   ScrollView,
   TextInput,
@@ -19,7 +18,7 @@ import {
   TrackerIcon,
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import {
   TRACKER_CATEGORIES,
   pickerSubcategories,
@@ -1075,7 +1074,7 @@ export function AddExpenseSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   backdrop: {
     flex: 1,
     justifyContent: "flex-end",
@@ -1083,7 +1082,7 @@ const styles = StyleSheet.create({
   },
   backdropTap: { flex: 1 },
   sheet: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -1127,7 +1126,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     color: Colors.textPrimary,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
   },
   catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   catCell: {
@@ -1137,7 +1136,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     alignItems: "center",
     gap: 6,
   },
@@ -1158,7 +1157,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
   },
   chipText: { fontSize: 12, color: Colors.textPrimary },
   payChipOn: {
@@ -1191,14 +1190,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   rdBoxOn: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-  rdTick: { fontSize: 12, fontWeight: "800", color: "#FFFFFF" },
+  rdTick: { fontSize: 12, fontWeight: "800", color: Colors.onPrimary },
   cardPanel: {
     marginTop: 12,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
   },
   cardPanelLabel: {
     fontSize: 12,
@@ -1213,7 +1212,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
@@ -1239,7 +1238,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "#C9C4F2",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1255,7 +1254,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: Colors.primary,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1268,7 +1267,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginBottom: 16,
   },
-  errorText: { fontSize: 13, color: "#791F1F" },
+  errorText: { fontSize: 13, color: Colors.errorText },
   saveBtn: {
     height: 52,
     borderRadius: 14,
@@ -1277,5 +1276,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveBtnBusy: { backgroundColor: Colors.textMuted },
-  saveText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-});
+  saveText: { color: Colors.onPrimary, fontSize: 16, fontWeight: "700" },
+}));

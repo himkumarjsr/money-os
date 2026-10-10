@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
 import { formatCurrency } from "@/lib/finance";
 import { formatIndian, formatIndianCompact } from "@/lib/formatters";
@@ -14,6 +14,7 @@ import {
   calcStyles,
   type InsightTone,
 } from "./calculator-ui";
+import { themedStyles, Colors } from "@/constants/theme";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -50,12 +51,12 @@ function niceHi(max: number, count = 4) {
   return Math.ceil(max / step) * step;
 }
 
-const SERIES: ChartSeries[] = [
+const SERIES = (): ChartSeries[] => [
   {
     key: "invested",
     label: "invested",
     type: "area",
-    color: "#EEEDFE",
+    color: Colors.primaryLight,
     fillOpacity: 1,
     stackId: "a",
   },
@@ -63,7 +64,7 @@ const SERIES: ChartSeries[] = [
     key: "interest",
     label: "interest",
     type: "area",
-    color: "#534AB7",
+    color: Colors.primary,
     fillOpacity: 0.6,
     stackId: "a",
   },
@@ -152,12 +153,14 @@ export function PPFCalculator() {
 
       <ChartCard title="15-year growth">
         <View
-          onLayout={(e) => setChartWidth(Math.round(e.nativeEvent.layout.width))}
+          onLayout={(e) =>
+            setChartWidth(Math.round(e.nativeEvent.layout.width))
+          }
         >
           <CalcChart
             data={data}
             xKey="year"
-            series={SERIES}
+            series={SERIES()}
             height={CHART_HEIGHT}
             legend={false}
             yTickFormat={(v) => formatIndianCompact(v)}
@@ -215,13 +218,13 @@ export function PPFCalculator() {
       </ChartCard>
 
       <Insight tone={tone}>
-        PPF is EEE for qualifying contributions — extend beyond 15y in blocks
-        of 5y if you still need tax-free debt-free compounding.
+        PPF is EEE for qualifying contributions — extend beyond 15y in blocks of
+        5y if you still need tax-free debt-free compounding.
       </Insight>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   overlay: { position: "absolute", top: 0, left: 0 },
-});
+}));

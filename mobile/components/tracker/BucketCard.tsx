@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { Card } from "@/components/ui/Card";
-import { Colors, FontSize, Spacing } from "@/constants/theme";
+import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import { formatIndianCompact } from "@/lib/formatters";
 
 type Props = {
@@ -50,7 +50,7 @@ export function BucketCard({ name, spent, budget, emoji = "📂" }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: { marginBottom: Spacing.md },
   row: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
   emoji: { fontSize: 24 },
@@ -69,4 +69,4 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   barFill: { height: "100%", borderRadius: 3 },
-});
+}));

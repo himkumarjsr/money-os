@@ -12,7 +12,7 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { NavDrawer } from "@/components/NavDrawer";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileMenu } from "@/components/ProfileMenu";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 
 type Props = {
@@ -103,14 +103,14 @@ export function AppHeader({ homeOnLogo = true }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   safe: {
-    backgroundColor: "rgba(244,242,252,0.92)",
+    backgroundColor: Colors.glass,
     zIndex: 40,
   },
   wash: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(244,242,252,0.55)",
+    backgroundColor: Colors.glassSoft,
   },
   bar: {
     flexDirection: "row",
@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
     width: 36,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.8)",
-    backgroundColor: "rgba(255,255,255,0.75)",
+    borderColor: Colors.glassBorder,
+    backgroundColor: Colors.glassCard,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarLetter: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -176,4 +176,4 @@ const styles = StyleSheet.create({
     width: 36,
     borderRadius: 999,
   },
-});
+}));

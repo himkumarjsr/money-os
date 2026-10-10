@@ -5,14 +5,13 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 
 type Fund = {
@@ -117,14 +116,14 @@ export default function PortfolioScreen() {
           value={folio}
           onChangeText={setFolio}
           placeholder="CAMS Folio Number"
-          placeholderTextColor="#9B9A94"
+          placeholderTextColor={Colors.textMuted}
           style={styles.input}
         />
         <TextInput
           value={pan}
           onChangeText={(v) => setPan(v.toUpperCase())}
           placeholder="PAN Number"
-          placeholderTextColor="#9B9A94"
+          placeholderTextColor={Colors.textMuted}
           autoCapitalize="characters"
           style={styles.input}
         />
@@ -138,7 +137,7 @@ export default function PortfolioScreen() {
           accessibilityRole="button"
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={Colors.onPrimary} />
           ) : (
             <Text style={pageStyles.primaryBtnText}>
               Analyse my portfolio →
@@ -177,39 +176,49 @@ export default function PortfolioScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   lockTitle: {
     marginTop: 8,
     fontSize: 22,
     fontWeight: "600",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
-  lockSub: { marginTop: 8, fontSize: 15, color: "#475569" },
+  lockSub: { marginTop: 8, fontSize: 15, color: Colors.textSecondary },
   input: {
     minHeight: 48,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: "#111110",
-    backgroundColor: "#FFFFFF",
+    color: Colors.textPrimary,
+    backgroundColor: Colors.card,
   },
-  h2: { fontSize: 17, fontWeight: "600", color: "#111110", marginBottom: 6 },
-  line: { fontSize: 14, color: "#334155", marginTop: 2 },
+  h2: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    marginBottom: 6,
+  },
+  line: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   fundHead: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: 12,
   },
-  fundName: { flex: 1, fontSize: 15, fontWeight: "600", color: "#111110" },
+  fundName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
   verdict: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: Colors.surfaceMuted,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  verdictText: { fontSize: 12, fontWeight: "600", color: "#334155" },
-  reason: { marginTop: 8, fontSize: 14, color: "#475569" },
-});
+  verdictText: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
+  reason: { marginTop: 8, fontSize: 14, color: Colors.textSecondary },
+}));

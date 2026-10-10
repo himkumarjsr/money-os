@@ -1,10 +1,11 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import Slider from "@react-native-community/slider";
 import { formatIndian } from "@/lib/formatters";
 import { TEACH } from "@/lib/taxTeachContent";
 import { TaxTeachTooltip } from "../TaxTeachTooltip";
 import { Checkbox, Chip, ChipRow, StepCard, tx } from "./primitives";
 import { EMPLOYMENT_OPTIONS, type TaxCalcState } from "./useTaxCalculatorState";
+import { themedStyles, Colors } from "@/constants/theme";
 
 export function ProfileStep({ s }: { s: TaxCalcState }) {
   const { i, update } = s;
@@ -71,7 +72,7 @@ export function ProfileStep({ s }: { s: TaxCalcState }) {
             value={i.age}
             onValueChange={(v) => update({ age: Math.round(v) })}
             minimumTrackTintColor="#534AB7"
-            maximumTrackTintColor="#E8E6F0"
+            maximumTrackTintColor={Colors.border}
             thumbTintColor="#534AB7"
             accessibilityLabel="Age"
           />
@@ -89,7 +90,7 @@ export function ProfileStep({ s }: { s: TaxCalcState }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   body: { marginTop: 16, gap: 16 },
   flags: { gap: 0 },
   ageLabel: {
@@ -100,4 +101,4 @@ const styles = StyleSheet.create({
   },
   slider: { width: "100%", height: 36 },
   ageText: { marginTop: 4, textAlign: "right" },
-});
+}));

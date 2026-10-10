@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, Text, View } from "react-native";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import { STEPS } from "./shared";
 
 /** 7 clickable step pills — jumping is not validation-gated (web behaviour). */
@@ -27,7 +27,9 @@ export function ProgressPills({
             <View
               style={[
                 styles.pill,
-                { backgroundColor: filled ? Colors.primary : "#E2E8F0" },
+                {
+                  backgroundColor: filled ? Colors.primary : tintBg("#E2E8F0"),
+                },
               ]}
             />
             <Text
@@ -106,7 +108,7 @@ export function ResumeOptionRow({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   pillsRow: {
     flexDirection: "row",
     gap: 4,
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
   pillLabel: {
     fontSize: 10,
     fontWeight: "500",
-    color: "#64748B",
+    color: Colors.textMuted,
     textAlign: "center",
   },
   pillLabelOn: { color: Colors.primary, fontWeight: "700" },
@@ -153,7 +155,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  primaryText: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
   ghostBtn: {
     minHeight: 44,
     paddingHorizontal: 16,
@@ -164,4 +166,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ghostText: { fontSize: 14, color: Colors.textMuted },
-});
+}));

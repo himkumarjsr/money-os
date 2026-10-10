@@ -1,9 +1,9 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import {
   noGainProjectionMessage,
   scoreProjectionGain,
 } from "@/lib/fixPlanMerge";
-import { Colors, Radius } from "@/constants/theme";
+import { Colors, Radius, themedStyles } from "@/constants/theme";
 import { getScoreBg, getScoreColor } from "./shared";
 
 function ScoreCircle({ label, score }: { label: string; score: number }) {
@@ -76,7 +76,7 @@ export function ScoreProjection({ plan }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     backgroundColor: Colors.card,
     borderWidth: 1,
@@ -136,5 +136,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   steadyScore: { fontSize: 20, fontWeight: "800" },
-  steadyText: { flex: 1, fontSize: 14, lineHeight: 20, color: "#1D5C3A" },
-});
+  steadyText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.successText,
+  },
+}));

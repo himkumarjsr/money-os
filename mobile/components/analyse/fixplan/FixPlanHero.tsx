@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import { Text, View } from "react-native";
+import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 
 type Props = {
   attentionCount: number;
@@ -7,7 +7,11 @@ type Props = {
   isFallback?: boolean;
 };
 
-export function FixPlanHero({ attentionCount, overallSummary, isFallback }: Props) {
+export function FixPlanHero({
+  attentionCount,
+  overallSummary,
+  isFallback,
+}: Props) {
   return (
     <View style={styles.hero}>
       <Text style={styles.eyebrow}>FINKOIN AI</Text>
@@ -29,7 +33,7 @@ export function FixPlanHero({ attentionCount, overallSummary, isFallback }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   hero: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.xl,
@@ -45,7 +49,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     fontSize: 14,
     fontStyle: "italic",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     lineHeight: 20,
   },
   summary: {
@@ -59,4 +63,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(255,255,255,0.9)",
   },
-});
+}));

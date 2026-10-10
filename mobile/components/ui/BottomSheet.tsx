@@ -3,12 +3,11 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   View,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useKeyboardSheet } from "@/lib/useKeyboardSheet";
 
 /** Slide-up sheet (20px top radius, tap backdrop to close) — matches AddExpenseSheet chrome. */
@@ -74,7 +73,7 @@ export function BottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   backdrop: {
     flex: 1,
     justifyContent: "flex-end",
@@ -95,4 +94,4 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   body: { paddingHorizontal: 20, paddingTop: 16 },
-});
+}));

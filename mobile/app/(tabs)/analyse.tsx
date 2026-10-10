@@ -2,7 +2,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
@@ -17,18 +16,38 @@ import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { hasAnalyseConsent } from "@/lib/analyseConsent";
 import { scoreBand, type AnalysisResult } from "@/lib/financialEngine";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
-import { Colors, Spacing, Radius, FontSize } from "@/constants/theme";
+import {
+  Colors,
+  Spacing,
+  Radius,
+  FontSize,
+  themedStyles,
+  tintBg,
+  tintFg,
+  themed,
+} from "@/constants/theme";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ResultCard } from "@/components/analyse/ResultCard";
 import { IssueCard } from "@/components/analyse/IssueCard";
 
-const SCORE_TONES = {
-  critical: { bg: "#FDEDED", fg: "#991B1B", label: "Take action now" },
-  warning: { bg: "#FFF4E5", fg: "#92400E", label: "Needs attention" },
-  good: { bg: "#DCFCE7", fg: "#166534", label: "Great shape" },
-} as const;
+const SCORE_TONES = themed(
+  () =>
+    ({
+      critical: {
+        bg: tintBg("#FDEDED"),
+        fg: tintFg("#991B1B"),
+        label: "Take action now",
+      },
+      warning: {
+        bg: tintBg("#FFF4E5"),
+        fg: "#92400E",
+        label: "Needs attention",
+      },
+      good: { bg: tintBg("#DCFCE7"), fg: "#166534", label: "Great shape" },
+    }) as const,
+);
 
 function scoreTone(s: number) {
   return SCORE_TONES[scoreBand(s)];
@@ -346,7 +365,7 @@ export default function AnalyseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -382,7 +401,7 @@ const styles = StyleSheet.create({
   errorBox: {
     marginHorizontal: Spacing.xl,
     marginTop: Spacing.lg,
-    backgroundColor: "#FCEBEB",
+    backgroundColor: Colors.errorLight,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     flexDirection: "row",
@@ -393,7 +412,7 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontSize: FontSize.md,
-    color: "#791F1F",
+    color: Colors.errorText,
     lineHeight: 20,
   },
   retry: {
@@ -509,4 +528,4 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 2,
   },
-});
+}));

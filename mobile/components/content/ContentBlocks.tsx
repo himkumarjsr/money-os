@@ -1,30 +1,72 @@
 import type { ReactNode } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import { openContentHref } from "@/lib/contentLinks";
 import { InlineText } from "./InlineText";
 import type { ContentBlock, ContentSection, ContentTone } from "./types";
 
 type ToneStyle = { bg: string; border: string; fg: string; title: string };
 
-export const TONES: Record<ContentTone, ToneStyle> = {
-  violet: { bg: "#EEEDFE", border: "#EEEDFE", fg: "#3C3489", title: "#3C3489" },
-  emerald: { bg: "#ECFDF5", border: "#A7F3D0", fg: "#064E3B", title: "#022C22" },
-  amber: { bg: "#FFFBEB", border: "#FDE68A", fg: "#78350F", title: "#451A03" },
-  warn: { bg: "#FFF8F0", border: "#FAEEDA", fg: "#633806", title: "#633806" },
-  green: { bg: "#E1F5EE", border: "#E1F5EE", fg: "#1D5C3A", title: "#1D5C3A" },
-  red: { bg: "#FCEBEB", border: "#FCEBEB", fg: "#791F1F", title: "#791F1F" },
-  rose: { bg: "#FFF1F2", border: "#FECDD3", fg: "#881337", title: "#881337" },
-  sky: { bg: "#F0F9FF", border: "#BAE6FD", fg: "#082F49", title: "#082F49" },
-  grey: { bg: "#F7F7F4", border: "#F7F7F4", fg: "#5F5E5A", title: "#111110" },
-  brand: { bg: "#F7F6FE", border: "#C9C5EC", fg: "#3C3489", title: Colors.primary },
-};
+/** Tone colours, read per render so they follow the active theme. */
+export function tones(): Record<ContentTone, ToneStyle> {
+  const ok = { bg: Colors.successLight, fg: Colors.successText };
+  const warn = { bg: Colors.warningLight, fg: Colors.warningText };
+  const bad = { bg: Colors.errorLight, fg: Colors.errorText };
+  return {
+    violet: {
+      bg: Colors.primaryLight,
+      border: Colors.primaryLight,
+      fg: Colors.primaryDark,
+      title: Colors.primaryDark,
+    },
+    emerald: { ...ok, border: Colors.successLight, title: ok.fg },
+    amber: { ...warn, border: Colors.warningLight, title: warn.fg },
+    warn: { ...warn, border: Colors.warningLight, title: warn.fg },
+    green: { ...ok, border: Colors.successLight, title: ok.fg },
+    red: { ...bad, border: Colors.errorLight, title: bad.fg },
+    rose: { ...bad, border: Colors.errorLight, title: bad.fg },
+    sky: {
+      bg: Colors.surfaceMuted,
+      border: Colors.border,
+      fg: Colors.textSecondary,
+      title: Colors.textPrimary,
+    },
+    grey: {
+      bg: Colors.background,
+      border: Colors.background,
+      fg: Colors.textSecondary,
+      title: Colors.textPrimary,
+    },
+    brand: {
+      bg: Colors.surfaceMuted,
+      border: Colors.borderIndigo,
+      fg: Colors.primaryDark,
+      title: Colors.primary,
+    },
+  };
+}
 
-const TAG_TONES: Partial<Record<ContentTone, { bg: string; fg: string; border: string }>> = {
-  emerald: { bg: "#ECFDF5", fg: "#065F46", border: "#A7F3D0" },
-  violet: { bg: "#F5F3FF", fg: "#5B21B6", border: "#DDD6FE" },
-  amber: { bg: "#FFFBEB", fg: "#78350F", border: "#FDE68A" },
-};
+function tagTones(): Partial<
+  Record<ContentTone, { bg: string; fg: string; border: string }>
+> {
+  return {
+    emerald: {
+      bg: Colors.successLight,
+      fg: Colors.successText,
+      border: Colors.successLight,
+    },
+    violet: {
+      bg: Colors.primaryLight,
+      fg: Colors.primaryDark,
+      border: Colors.borderIndigo,
+    },
+    amber: {
+      bg: Colors.warningLight,
+      fg: Colors.warningText,
+      border: Colors.warningLight,
+    },
+  };
+}
 
 export type BlockTextStyle = {
   /** Body text colour. */
@@ -49,7 +91,9 @@ function Paragraph({
       style={{
         fontSize,
         lineHeight: block.small ? 19 : (base.lineHeight ?? 25),
-        color: block.muted ? Colors.textMuted : (base.color ?? Colors.textSecondary),
+        color: block.muted
+          ? Colors.textMuted
+          : (base.color ?? Colors.textSecondary),
       }}
       boldColor={base.color ? undefined : Colors.textPrimary}
     />
@@ -80,7 +124,12 @@ function List({
               <InlineText
                 key={li}
                 text={line}
-                style={{ color, fontSize, lineHeight, marginTop: li > 0 ? 4 : 0 }}
+                style={{
+                  color,
+                  fontSize,
+                  lineHeight,
+                  marginTop: li > 0 ? 4 : 0,
+                }}
                 boldColor={base.color ? undefined : Colors.textPrimary}
               />
             ))}
@@ -98,18 +147,30 @@ function Callout({
   block: Extract<ContentBlock, { kind: "callout" }>;
   renderWidget?: RenderWidget;
 }) {
-  const t = TONES[block.tone];
+  const t = tones()[block.tone];
   const base: BlockTextStyle = { color: t.fg, fontSize: 14, lineHeight: 22 };
   return (
-    <View style={[styles.callout, { backgroundColor: t.bg, borderColor: t.border }]}>
+    <View
+      style={[styles.callout, { backgroundColor: t.bg, borderColor: t.border }]}
+    >
       {block.title ? (
-        <Text style={[styles.calloutTitle, { color: t.title }]}>{block.title}</Text>
+        <Text style={[styles.calloutTitle, { color: t.title }]}>
+          {block.title}
+        </Text>
       ) : null}
       {block.text ? (
-        <InlineText text={block.text} style={{ color: t.fg, fontSize: 14, lineHeight: 22 }} />
+        <InlineText
+          text={block.text}
+          style={{ color: t.fg, fontSize: 14, lineHeight: 22 }}
+        />
       ) : null}
       {block.blocks ? (
-        <ContentBlocks blocks={block.blocks} base={base} renderWidget={renderWidget} gap={8} />
+        <ContentBlocks
+          blocks={block.blocks}
+          base={base}
+          renderWidget={renderWidget}
+          gap={8}
+        />
       ) : null}
     </View>
   );
@@ -134,7 +195,10 @@ function Table({ block }: { block: Extract<ContentBlock, { kind: "table" }> }) {
       {block.rows.map((row, ri) => {
         const isTotal = block.totalRow && ri === block.rows.length - 1;
         return (
-          <View key={ri} style={[styles.tr, styles.trBorder, isTotal && styles.totalRow]}>
+          <View
+            key={ri}
+            style={[styles.tr, styles.trBorder, isTotal && styles.totalRow]}
+          >
             {row.map((cell, ci) => (
               <View key={ci} style={[styles.cell, colStyle(ci)]}>
                 <InlineText
@@ -142,8 +206,11 @@ function Table({ block }: { block: Extract<ContentBlock, { kind: "table" }> }) {
                   italics={false}
                   style={[
                     styles.td,
-                    (isTotal || (block.boldFirstCol && ci === 0)) && styles.tdBold,
-                    block.accentLastCol && ci === row.length - 1 && styles.tdAccent,
+                    (isTotal || (block.boldFirstCol && ci === 0)) &&
+                      styles.tdBold,
+                    block.accentLastCol &&
+                      ci === row.length - 1 &&
+                      styles.tdAccent,
                   ]}
                   boldColor={Colors.textPrimary}
                 />
@@ -167,7 +234,15 @@ function Table({ block }: { block: Extract<ContentBlock, { kind: "table" }> }) {
   );
 }
 
-function ActionButton({ label, href, primary }: { label: string; href: string; primary?: boolean }) {
+function ActionButton({
+  label,
+  href,
+  primary,
+}: {
+  label: string;
+  href: string;
+  primary?: boolean;
+}) {
   return (
     <Pressable
       onPress={() => openContentHref(href)}
@@ -178,7 +253,9 @@ function ActionButton({ label, href, primary }: { label: string; href: string; p
       ]}
       accessibilityRole="button"
     >
-      <Text style={primary ? styles.btnPrimaryText : styles.btnSecondaryText}>{label}</Text>
+      <Text style={primary ? styles.btnPrimaryText : styles.btnSecondaryText}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -223,12 +300,18 @@ function Block({
                 />
               </>
             );
-            const boxStyle = [styles.miniCard, block.tone === "grey" && styles.miniCardGrey];
+            const boxStyle = [
+              styles.miniCard,
+              block.tone === "grey" && styles.miniCardGrey,
+            ];
             return c.href ? (
               <Pressable
                 key={i}
                 onPress={() => openContentHref(c.href!)}
-                style={({ pressed }) => [...boxStyle, pressed && { borderColor: Colors.primary }]}
+                style={({ pressed }) => [
+                  ...boxStyle,
+                  pressed && { borderColor: Colors.primary },
+                ]}
                 accessibilityRole="link"
               >
                 {inner}
@@ -243,8 +326,15 @@ function Block({
       );
     case "actions":
       return (
-        <View style={[styles.actionsBox, block.tone === "grey" && styles.actionsGrey]}>
-          {block.title ? <Text style={styles.actionsTitle}>{block.title}</Text> : null}
+        <View
+          style={[
+            styles.actionsBox,
+            block.tone === "grey" && styles.actionsGrey,
+          ]}
+        >
+          {block.title ? (
+            <Text style={styles.actionsTitle}>{block.title}</Text>
+          ) : null}
           {block.text ? (
             <InlineText text={block.text} style={styles.actionsText} />
           ) : null}
@@ -260,15 +350,20 @@ function Block({
         <View style={styles.tool}>
           <View style={styles.toolHead}>
             <Text style={styles.toolTitle}>{block.title}</Text>
-            {block.subtitle ? <Text style={styles.toolSub}>{block.subtitle}</Text> : null}
+            {block.subtitle ? (
+              <Text style={styles.toolSub}>{block.subtitle}</Text>
+            ) : null}
           </View>
           <View style={styles.toolBody}>
-            {block.text ? <InlineText text={block.text} style={styles.toolText} /> : null}
+            {block.text ? (
+              <InlineText text={block.text} style={styles.toolText} />
+            ) : null}
             <ActionButton label={block.label} href={block.href} primary />
           </View>
           <View style={styles.toolFoot}>
             <Text style={styles.toolFootText}>
-              Educational estimate — not investment advice. Know it. Fix it. Grow it.
+              Educational estimate — not investment advice. Know it. Fix it.
+              Grow it.
             </Text>
             <ActionButton label="Full health check →" href="/analyse" />
           </View>
@@ -277,12 +372,17 @@ function Block({
     case "links":
       return (
         <View style={{ gap: 10 }}>
-          {block.title ? <Text style={styles.linksTitle}>{block.title}</Text> : null}
+          {block.title ? (
+            <Text style={styles.linksTitle}>{block.title}</Text>
+          ) : null}
           {block.items.map((l) => (
             <Pressable
               key={l.href}
               onPress={() => openContentHref(l.href)}
-              style={({ pressed }) => [styles.linkCard, pressed && { borderColor: Colors.primary }]}
+              style={({ pressed }) => [
+                styles.linkCard,
+                pressed && { borderColor: Colors.primary },
+              ]}
               accessibilityRole="link"
             >
               <Text style={styles.linkCardText}>{l.label}</Text>
@@ -294,17 +394,22 @@ function Block({
       return (
         <View style={styles.tags}>
           {block.items.map((t) => {
-            const tone = (t.tone && TAG_TONES[t.tone]) || {
-              bg: "#F1F5F9",
+            const tone = (t.tone && tagTones()[t.tone]) || {
+              bg: tintBg("#F1F5F9"),
               fg: "#334155",
-              border: "#E2E8F0",
+              border: tintBg("#E2E8F0"),
             };
             return (
               <View
                 key={t.label}
-                style={[styles.tag, { backgroundColor: tone.bg, borderColor: tone.border }]}
+                style={[
+                  styles.tag,
+                  { backgroundColor: tone.bg, borderColor: tone.border },
+                ]}
               >
-                <Text style={[styles.tagText, { color: tone.fg }]}>{t.label}</Text>
+                <Text style={[styles.tagText, { color: tone.fg }]}>
+                  {t.label}
+                </Text>
               </View>
             );
           })}
@@ -350,11 +455,15 @@ export function ContentSectionView({
   const body = (
     <>
       {section.title ? (
-        <Text style={section.card ? styles.cardSectionTitle : styles.sectionTitle}>
+        <Text
+          style={section.card ? styles.cardSectionTitle : styles.sectionTitle}
+        >
           {section.title}
         </Text>
       ) : null}
-      {section.subtitle ? <Text style={styles.sectionSub}>{section.subtitle}</Text> : null}
+      {section.subtitle ? (
+        <Text style={styles.sectionSub}>{section.subtitle}</Text>
+      ) : null}
       <ContentBlocks
         blocks={section.blocks}
         base={section.card ? { fontSize: 14, lineHeight: 22, ...base } : base}
@@ -362,35 +471,49 @@ export function ContentSectionView({
       />
     </>
   );
-  return section.card ? <View style={styles.sectionCard}>{body}</View> : <View>{body}</View>;
+  return section.card ? (
+    <View style={styles.sectionCard}>{body}</View>
+  ) : (
+    <View>{body}</View>
+  );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   li: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
   bullet: { minWidth: 14, fontWeight: "700" },
   callout: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 8 },
   calloutTitle: { fontSize: 14, fontWeight: "800" },
   tableWrap: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
   },
   tr: { flexDirection: "row" },
-  thead: { backgroundColor: "#F8FAFC" },
-  trBorder: { borderTopWidth: 1, borderTopColor: "#E2E8F0" },
-  totalRow: { backgroundColor: "#F8FAFC" },
+  thead: { backgroundColor: Colors.background },
+  trBorder: { borderTopWidth: 1, borderTopColor: Colors.border },
+  totalRow: { backgroundColor: Colors.background },
   cell: { paddingHorizontal: 10, paddingVertical: 9 },
-  th: { fontSize: 13, fontWeight: "700", color: "#334155", lineHeight: 18 },
-  td: { fontSize: 13, color: "#1E293B", lineHeight: 19 },
+  th: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  td: { fontSize: 13, color: Colors.textPrimary, lineHeight: 19 },
   tdBold: { fontWeight: "700", color: Colors.textPrimary },
   tdAccent: { fontWeight: "700", color: Colors.primary },
-  h3: { fontSize: 16, fontWeight: "700", color: Colors.textPrimary, marginTop: 6 },
+  h3: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginTop: 6,
+  },
   formula: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -401,25 +524,28 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   miniCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 16,
     padding: 14,
     gap: 6,
   },
-  miniCardGrey: { backgroundColor: "#F8FAFC" },
+  miniCardGrey: { backgroundColor: Colors.background },
   cardTitle: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
-  cardText: { fontSize: 14, lineHeight: 21, color: "#334155" },
+  cardText: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
   actionsBox: {
     borderWidth: 1,
-    borderColor: "#C9C5EC",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.borderIndigo,
+    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 16,
     gap: 8,
   },
-  actionsGrey: { borderColor: "#E2E8F0", backgroundColor: "#F8FAFC" },
+  actionsGrey: {
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
   actionsTitle: { fontSize: 14, fontWeight: "800", color: Colors.textPrimary },
   actionsText: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
   actionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
@@ -431,25 +557,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   btnPrimary: { backgroundColor: Colors.primary },
-  btnSecondary: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: Colors.border },
-  btnPrimaryText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  btnSecondary: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  btnPrimaryText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
   btnSecondaryText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
   tool: {
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     overflow: "hidden",
   },
   toolHead: {
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEEDFE",
+    borderBottomColor: Colors.primaryLight,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   toolTitle: { fontSize: 14, fontWeight: "800", color: Colors.textPrimary },
-  toolSub: { marginTop: 4, fontSize: 12, lineHeight: 18, color: Colors.textSecondary },
+  toolSub: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    color: Colors.textSecondary,
+  },
   toolBody: { padding: 16, gap: 12 },
   toolText: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
   toolFoot: {
@@ -466,14 +601,19 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: 14,
   },
   linkCardText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  tag: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3 },
+  tag: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
   tagText: { fontSize: 12, fontWeight: "600" },
   sectionTitle: {
     fontSize: 20,
@@ -496,10 +636,10 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   sectionCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 16,
     padding: 16,
   },
-});
+}));
