@@ -5,10 +5,11 @@ import { sendExpoPushToUser } from "@/lib/expoPush";
 
 function authorizeRequest(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
-  const isValidCron =
-    !!process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`;
-  const isVercelCron = req.headers.get("x-vercel-cron") === "1";
-  return isValidCron || isVercelCron;
+  // Vercel Cron sends this header when CRON_SECRET is set. Don't trust
+  // x-vercel-cron: any client can send it.
+  return (
+    !!process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`
+  );
 }
 
 async function handleDeliverTip(req: NextRequest) {
