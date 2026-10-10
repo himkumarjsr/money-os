@@ -323,13 +323,7 @@ export const useAuthStore = create<AuthState>()(
             .maybeSingle();
 
           if (!gamData) {
-            await supabase.from("gamification").insert({
-              user_id: userId,
-              fk_balance: 50,
-              total_earned: 50,
-              badges: [],
-              streak_days: 0,
-            });
+            // The server creates the row on the first daily-login call.
             gamData = {
               fk_balance: 50,
               total_earned: 50,

@@ -35,10 +35,8 @@ type PutBody = {
   }>;
 };
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { expenseId: string } },
-) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ expenseId: string }> }) {
+  const params = await props.params;
   try {
     const expenseId = params.expenseId;
     if (!expenseId) {
@@ -229,10 +227,8 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { expenseId: string } },
-) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ expenseId: string }> }) {
+  const params = await props.params;
   try {
     const expenseId = params.expenseId;
     if (!expenseId) {

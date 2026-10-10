@@ -2,9 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 
-function bearerToken(): string | null {
+async function bearerToken(): Promise<string | null> {
   try {
-    const auth = headers().get("authorization") ?? "";
+    const auth = (await headers()).get("authorization") ?? "";
     if (!auth.startsWith("Bearer ")) return null;
     return auth.slice("Bearer ".length).trim() || null;
   } catch {
@@ -37,10 +37,10 @@ function createBearerClient(token: string) {
 
 /** Route Handlers / Server Components that must read the logged-in user (cookie session, or Bearer token from the app). */
 export async function createSupabaseServerClient() {
-  const token = bearerToken();
+  const token = await bearerToken();
   if (token) return createBearerClient(token);
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient(
     (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim(),
