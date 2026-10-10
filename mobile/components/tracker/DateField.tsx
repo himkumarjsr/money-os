@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  LayoutAnimation,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { LayoutAnimation, Pressable, Text, View } from "react-native";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { localISODate } from "@/lib/localDate";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -164,7 +158,7 @@ export function DateField({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   label: {
     fontSize: 13,
     fontWeight: "600",
@@ -189,7 +183,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     padding: 8,
   },
   calHead: {
@@ -230,6 +224,6 @@ const styles = StyleSheet.create({
   },
   dayOn: { backgroundColor: Colors.primary },
   dayText: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
-  dayTextOn: { color: "#FFFFFF", fontWeight: "800" },
+  dayTextOn: { color: Colors.onPrimary, fontWeight: "800" },
   dayTextOff: { color: Colors.slate300 },
-});
+}));

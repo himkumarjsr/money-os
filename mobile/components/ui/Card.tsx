@@ -1,5 +1,5 @@
-import { View, StyleSheet, type ViewStyle, type ViewProps } from "react-native";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import { View, type ViewStyle, type ViewProps } from "react-native";
+import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 
 type Props = ViewProps & {
   children: React.ReactNode;
@@ -24,7 +24,7 @@ function Card({ children, style, padding, elevated = true, ...rest }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     backgroundColor: Colors.card,
     borderRadius: Radius.lg,
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-});
+}));
 
 export { Card };
 export default Card;

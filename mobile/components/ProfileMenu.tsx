@@ -6,7 +6,6 @@ import {
   Text,
   Modal,
   Pressable,
-  StyleSheet,
   ScrollView,
   Alert,
   Image,
@@ -14,7 +13,7 @@ import {
 import { useState } from "react";
 import { router, type Href } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { useGamification } from "@/lib/useGamification";
@@ -102,7 +101,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                   <Text
                     style={[
                       styles.tierText,
-                      tier === "promax" && { color: "#FFFFFF" },
+                      tier === "promax" && { color: Colors.onPrimary },
                       tier === "pro" && { color: Colors.primary },
                     ]}
                   >
@@ -143,7 +142,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                     onPress={() => go(item)}
                     style={({ pressed }) => [
                       styles.menuRow,
-                      pressed && { backgroundColor: "#F8FAFC" },
+                      pressed && { backgroundColor: Colors.background },
                     ]}
                   >
                     <View style={styles.menuLeft}>
@@ -210,7 +209,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                 }}
                 style={styles.signOut}
               >
-                <AppIcon name="logout" size={16} color="#DC2626" />
+                <AppIcon name="logout" size={16} color={Colors.error} />
                 <Text style={styles.signOutText}>Sign out</Text>
               </Pressable>
               <Text style={styles.signedAs}>
@@ -228,7 +227,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -241,7 +240,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 320,
     maxHeight: "85%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -269,19 +268,19 @@ const styles = StyleSheet.create({
   },
   avatarLgImg: { width: 52, height: 52, borderRadius: 999 },
   avatarLgLetter: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 18,
     fontWeight: "700",
   },
   name: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#0F172A",
+    color: Colors.textPrimary,
   },
   contact: {
     marginTop: 2,
     fontSize: 12,
-    color: "#475569",
+    color: Colors.textSecondary,
   },
   tierPill: {
     marginTop: 8,
@@ -289,13 +288,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  tierFree: { backgroundColor: "#F1F5F9" },
+  tierFree: { backgroundColor: Colors.surfaceMuted },
   tierPro: { backgroundColor: Colors.primaryLight },
-  tierProMax: { backgroundColor: "#0F172A" },
+  tierProMax: { backgroundColor: Colors.inverseSurface },
   tierText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#334155",
+    color: Colors.textSecondary,
   },
   divider: {
     height: 1,
@@ -308,7 +307,7 @@ const styles = StyleSheet.create({
   },
   stat: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Colors.background,
     borderRadius: 8,
     padding: 8,
     alignItems: "center",
@@ -321,12 +320,12 @@ const styles = StyleSheet.create({
   statNum: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0F172A",
+    color: Colors.textPrimary,
   },
   statLabel: {
     marginTop: 2,
     fontSize: 10,
-    color: "#475569",
+    color: Colors.textSecondary,
   },
   nav: { gap: 2 },
   menuRow: {
@@ -344,12 +343,12 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: 14,
-    color: "#334155",
+    color: Colors.textSecondary,
     fontWeight: "500",
   },
   chev: {
     fontSize: 16,
-    color: "#94A3B8",
+    color: Colors.textMuted,
   },
   feedbackBtn: {
     paddingVertical: 8,
@@ -374,7 +373,7 @@ const styles = StyleSheet.create({
   },
   legalLink: {
     fontSize: 11,
-    color: "#475569",
+    color: Colors.textSecondary,
   },
   dot: {
     fontSize: 11,
@@ -391,12 +390,12 @@ const styles = StyleSheet.create({
   signOutText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#DC2626",
+    color: Colors.error,
   },
   signedAs: {
     marginTop: 4,
     textAlign: "center",
     fontSize: 11,
-    color: "#475569",
+    color: Colors.textSecondary,
   },
-});
+}));

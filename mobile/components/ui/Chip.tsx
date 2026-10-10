@@ -1,5 +1,11 @@
-import { Pressable, Text, StyleSheet, type ViewStyle } from "react-native";
-import { Colors, Radius, FontSize, Spacing } from "@/constants/theme";
+import { Pressable, Text, type ViewStyle } from "react-native";
+import {
+  Colors,
+  Radius,
+  FontSize,
+  Spacing,
+  themedStyles,
+} from "@/constants/theme";
 
 type Props = {
   label: string;
@@ -21,7 +27,7 @@ export function Chip({ label, selected, onPress, style }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   chip: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 2,
@@ -45,4 +51,4 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: "700",
   },
-});
+}));

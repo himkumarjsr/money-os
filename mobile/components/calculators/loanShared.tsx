@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import {
   generateAmortisationTable,
   type AmortisationRow,
@@ -93,26 +93,31 @@ export function useLoanSchedule(
         });
       }
     }
-    out.push({ kind: "total", principal: totalP, interest: totalI, emi: totalE });
+    out.push({
+      kind: "total",
+      principal: totalP,
+      interest: totalI,
+      emi: totalE,
+    });
     return out;
   }, [amortRows]);
 
   return { amortRows, yearlyBreakdown, tableWithSummaries };
 }
 
-const YEARLY_SERIES: ChartSeries[] = [
+const YEARLY_SERIES = (): ChartSeries[] => [
   {
     key: "principalPaid",
     label: "Principal paid",
     type: "bar",
-    color: "#534AB7",
+    color: Colors.primary,
     stackId: "a",
   },
   {
     key: "interestPaid",
     label: "Interest paid",
     type: "bar",
-    color: "#AFA9EC",
+    color: Colors.primaryMedium,
     stackId: "a",
   },
 ];
@@ -132,7 +137,7 @@ export function YearlyBreakupChart({
       <CalcChart
         data={data}
         xKey="year"
-        series={YEARLY_SERIES}
+        series={YEARLY_SERIES()}
         height={200}
         legend={false}
         yTickFormat={(v) => formatIndianCompact(v)}
@@ -246,7 +251,10 @@ export function AmortisationSchedule({
                 return (
                   <View
                     key={`year-${entry.year}`}
-                    style={[styles.row, { backgroundColor: "#F4F2FC" }]}
+                    style={[
+                      styles.row,
+                      { backgroundColor: Colors.surfaceMuted },
+                    ]}
                   >
                     <Cells
                       bold
@@ -286,14 +294,18 @@ export function AmortisationSchedule({
               const r = entry.row;
               const isCurrent = r.date === todayLabel;
               const bg = isCurrent
-                ? "#EEEDFE"
+                ? Colors.primaryLight
                 : idx % 2 === 0
-                  ? "#FFFFFF"
-                  : "#FAFAFE";
+                  ? tintBg("#FFFFFF")
+                  : tintBg("#FAFAFE");
               return (
                 <View
                   key={r.month}
-                  style={[styles.row, styles.rowBorder, { backgroundColor: bg }]}
+                  style={[
+                    styles.row,
+                    styles.rowBorder,
+                    { backgroundColor: bg },
+                  ]}
                 >
                   <Cells
                     bold={isCurrent}
@@ -338,25 +350,25 @@ export function AmortisationSchedule({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   linkRow: { flexDirection: "row", justifyContent: "flex-end" },
   linkBtn: { minHeight: 44, justifyContent: "center" },
   linkText: { fontSize: 12, fontWeight: "600", color: Colors.primary },
   tableCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.card,
     overflow: "hidden",
   },
   tableHead: {
     borderBottomWidth: 1,
-    borderBottomColor: "#F0EFF8",
+    borderBottomColor: Colors.borderLight,
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  tableTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
-  tableSub: { fontSize: 12, color: "#64748B" },
+  tableTitle: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
+  tableSub: { fontSize: 12, color: Colors.textMuted },
   headerRow: { flexDirection: "row", backgroundColor: Colors.primary },
   headerCell: {
     paddingHorizontal: 16,
@@ -365,19 +377,19 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
   },
   row: { flexDirection: "row" },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: "#F0EFF8" },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
   cell: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 13,
-    color: "#0F172A",
+    color: Colors.textPrimary,
     fontVariant: ["tabular-nums"],
   },
   cellBold: { fontWeight: "600" },
   moreRow: { flexDirection: "row", flexWrap: "wrap", gap: 16, paddingTop: 4 },
   moreBtn: { minHeight: 44, justifyContent: "center" },
   moreText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
-});
+}));

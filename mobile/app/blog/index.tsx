@@ -1,7 +1,7 @@
 /** Native Blog index — port of web app/blog/page.tsx. */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { BLOG_ARTICLES } from "@/lib/blogContent";
 import { openContentHref } from "@/lib/contentLinks";
@@ -15,12 +15,15 @@ const FOOTER_LINKS = [
 
 export default function BlogIndexScreen() {
   return (
-    <ContentScreen barTitle="Blog" share={{ title: "Money guides for India | Finkoin", path: "/blog" }}>
+    <ContentScreen
+      barTitle="Blog"
+      share={{ title: "Money guides for India | Finkoin", path: "/blog" }}
+    >
       <Text style={styles.eyebrow}>BLOG</Text>
       <Text style={styles.h1}>Money guides for India</Text>
       <Text style={styles.lead}>
-        Plain-language articles on tax, insurance, saving, and investing — with links to free
-        calculators and tools.
+        Plain-language articles on tax, insurance, saving, and investing — with
+        links to free calculators and tools.
       </Text>
 
       <View style={styles.list}>
@@ -30,7 +33,10 @@ export default function BlogIndexScreen() {
             <Pressable
               key={a.slug}
               onPress={open}
-              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+              style={({ pressed }) => [
+                styles.card,
+                pressed && styles.cardPressed,
+              ]}
               accessibilityRole="link"
               accessibilityLabel={a.title}
             >
@@ -60,7 +66,7 @@ export default function BlogIndexScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   eyebrow: {
     fontSize: 12,
     fontWeight: "700",
@@ -74,12 +80,17 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 34,
   },
-  lead: { marginTop: 12, fontSize: 15, lineHeight: 23, color: "#475569" },
+  lead: {
+    marginTop: 12,
+    fontSize: 15,
+    lineHeight: 23,
+    color: Colors.textSecondary,
+  },
   list: { marginTop: 28, gap: 16 },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 18,
     padding: 18,
     shadowColor: "#000",
@@ -89,7 +100,12 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardPressed: { borderColor: Colors.primary },
-  category: { fontSize: 12, fontWeight: "700", letterSpacing: 0.6, color: "#64748B" },
+  category: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: Colors.textMuted,
+  },
   title: {
     marginTop: 8,
     fontSize: 17,
@@ -97,10 +113,25 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 23,
   },
-  desc: { marginTop: 8, fontSize: 14, lineHeight: 21, color: "#475569" },
-  date: { marginTop: 12, fontSize: 12, color: "#64748B" },
-  read: { marginTop: 10, fontSize: 14, fontWeight: "700", color: Colors.primary },
-  footer: { marginTop: 36, flexDirection: "row", flexWrap: "wrap", columnGap: 16 },
+  desc: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Colors.textSecondary,
+  },
+  date: { marginTop: 12, fontSize: 12, color: Colors.textMuted },
+  read: {
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
+  footer: {
+    marginTop: 36,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 16,
+  },
   footerLink: { minHeight: 44, justifyContent: "center" },
   footerLinkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
-});
+}));

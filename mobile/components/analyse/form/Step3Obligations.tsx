@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useFormContext, type UseFieldArrayReturn } from "react-hook-form";
 import {
   clearLegacyLoanScalars,
@@ -9,7 +9,7 @@ import {
 } from "@/lib/analyse-form-schema";
 import { useFinancialStore } from "@/store/financialStore";
 import { formatIndian, formatInWords } from "@/lib/formatters";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import {
   Card,
   ClampNumberField,
@@ -84,10 +84,10 @@ export function Step3Obligations({
   const { totalIncome, fixedObligations } = live;
   const obligationsBg =
     totalIncome > 0 && fixedObligations > totalIncome * 0.5
-      ? "#FEF2F2"
+      ? tintBg("#FEF2F2")
       : totalIncome > 0 && fixedObligations > totalIncome * 0.35
-        ? "#FFFBEB"
-        : "#ECFDF5";
+        ? tintBg("#FFFBEB")
+        : tintBg("#ECFDF5");
 
   return (
     <View style={formStyles.stepWrap}>
@@ -535,14 +535,14 @@ export function Step3Obligations({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   indented: {
     gap: 16,
     borderLeftWidth: 3,
     borderLeftColor: Colors.primary,
     paddingLeft: 14,
   },
-  strong: { fontWeight: "700", color: "#334155" },
+  strong: { fontWeight: "700", color: Colors.textSecondary },
   savedCard: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveLoanBtnOff: { backgroundColor: Colors.border },
-  saveLoanText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  saveLoanText: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
   obligationsPanel: {
     flexDirection: "row",
     alignItems: "center",
@@ -602,7 +602,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  obligationsLabel: { fontSize: 14, fontWeight: "500", color: "#334155" },
-  obligationsAmount: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
-  obligationsWords: { fontSize: 11, color: "#64748B", textAlign: "right" },
-});
+  obligationsLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.textSecondary,
+  },
+  obligationsAmount: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  obligationsWords: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    textAlign: "right",
+  },
+}));

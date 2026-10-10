@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -11,7 +10,7 @@ import {
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { PolicyDateField } from "@/components/policies/PolicyDateField";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import { formatIndian, handleMoneyInput } from "@/lib/formatters";
 import {
   INSURER_SUGGESTIONS,
@@ -38,7 +37,11 @@ function formatTyping(raw: string): string {
   return Number.isFinite(num) ? formatIndian(num) : cleaned;
 }
 
-function Label({ text, optional, required }: {
+function Label({
+  text,
+  optional,
+  required,
+}: {
   text: string;
   optional?: boolean;
   required?: boolean;
@@ -170,7 +173,9 @@ export function PolicyFormSheet({
   return (
     <BottomSheet visible={visible} onClose={onClose} scroll>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>{editId ? "Edit policy" : "Add policy"}</Text>
+        <Text style={styles.title}>
+          {editId ? "Edit policy" : "Add policy"}
+        </Text>
         <Pressable
           onPress={onClose}
           style={styles.closeBtn}
@@ -316,7 +321,7 @@ export function PolicyFormSheet({
           accessibilityRole="button"
         >
           {saving ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={Colors.onPrimary} />
           ) : (
             <Text style={styles.saveText}>Save policy</Text>
           )}
@@ -340,7 +345,7 @@ export function PolicyFormSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -358,12 +363,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#334155",
+    color: Colors.textSecondary,
     marginBottom: 6,
   },
-  required: { fontWeight: "400", color: "#DC2626" },
-  optional: { fontWeight: "400", color: "#94A3B8" },
-  hint: { fontSize: 12, color: "#64748B", marginBottom: 6 },
+  required: { fontWeight: "400", color: Colors.error },
+  optional: { fontWeight: "400", color: Colors.textMuted },
+  hint: { fontSize: 12, color: Colors.textMuted, marginBottom: 6 },
   input: {
     height: 52,
     borderRadius: 12,
@@ -402,15 +407,20 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     justifyContent: "center",
   },
   suggestText: { fontSize: 13, color: Colors.textSecondary },
   moneyWrap: { marginBottom: 16 },
-  preview: { fontSize: 12, color: "#64748B", marginTop: -8, marginBottom: 16 },
+  preview: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: -8,
+    marginBottom: 16,
+  },
   segment: {
     flexDirection: "row",
-    backgroundColor: "#F1F0F7",
+    backgroundColor: tintBg("#F1F0F7"),
     borderRadius: 12,
     padding: 4,
     marginBottom: 16,
@@ -436,12 +446,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
+    borderTopColor: Colors.border,
   },
   error: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#DC2626",
+    color: Colors.error,
     marginBottom: 12,
   },
   saveBtn: {
@@ -451,7 +461,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  saveText: { color: Colors.onPrimary, fontSize: 15, fontWeight: "700" },
   deleteBtn: {
     marginTop: 8,
     minHeight: 48,
@@ -459,4 +469,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   deleteText: { color: Colors.error, fontSize: 15, fontWeight: "700" },
-});
+}));

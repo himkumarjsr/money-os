@@ -1,9 +1,9 @@
 /** Native port of components/learn/tools/SipCroreCalculatorEmbed.tsx. */
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { SliderField } from "@/components/ui/SliderField";
 import { ContentBlocks } from "@/components/content/ContentBlocks";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { formatIndian } from "@/lib/formatters";
 import { CRORE, monthlySipForGoal, sipMaturityAmount } from "@/lib/sipGoal";
 
@@ -15,8 +15,14 @@ export function SipCroreTool() {
   const [goalLakh, setGoalLakh] = useState(100);
 
   const goal = goalLakh * 1_00_000;
-  const monthly = useMemo(() => monthlySipForGoal(goal, rate, years), [goal, rate, years]);
-  const check = useMemo(() => sipMaturityAmount(monthly, rate, years), [monthly, rate, years]);
+  const monthly = useMemo(
+    () => monthlySipForGoal(goal, rate, years),
+    [goal, rate, years],
+  );
+  const check = useMemo(
+    () => sipMaturityAmount(monthly, rate, years),
+    [monthly, rate, years],
+  );
   const invested = monthly * years * 12;
   const gain = Math.max(0, check - invested);
 
@@ -25,8 +31,8 @@ export function SipCroreTool() {
       <View style={styles.head}>
         <Text style={styles.title}>SIP for your goal — live calculator</Text>
         <Text style={styles.sub}>
-          Target keyword: sip calculator 1 crore. Change years and return to see the monthly SIP
-          you need.
+          Target keyword: sip calculator 1 crore. Change years and return to see
+          the monthly SIP you need.
         </Text>
       </View>
       <View style={styles.body}>
@@ -41,7 +47,11 @@ export function SipCroreTool() {
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{y} years</Text>
+                <Text
+                  style={[styles.chipText, active && styles.chipTextActive]}
+                >
+                  {y} years
+                </Text>
               </Pressable>
             );
           })}
@@ -54,7 +64,9 @@ export function SipCroreTool() {
           max={500}
           step={10}
           onChange={(v) => setGoalLakh(Math.round(v))}
-          format={() => `₹${formatIndian(goal)}${goal === CRORE ? " (₹1 crore)" : ""}`}
+          format={() =>
+            `₹${formatIndian(goal)}${goal === CRORE ? " (₹1 crore)" : ""}`
+          }
         />
         <SliderField
           label="Expected return (% p.a.)"
@@ -68,24 +80,33 @@ export function SipCroreTool() {
 
         <View style={styles.results}>
           <View style={[styles.result, styles.resultPrimary]}>
-            <Text style={[styles.resultLabel, { color: Colors.primary }]}>Monthly SIP needed</Text>
-            <Text style={styles.resultBig}>₹{formatIndian(Math.round(monthly))}</Text>
+            <Text style={[styles.resultLabel, { color: Colors.primary }]}>
+              Monthly SIP needed
+            </Text>
+            <Text style={styles.resultBig}>
+              ₹{formatIndian(Math.round(monthly))}
+            </Text>
           </View>
           <View style={styles.resultRow}>
             <View style={[styles.result, styles.resultOutline]}>
               <Text style={styles.resultLabel}>Total invested</Text>
-              <Text style={styles.resultValue}>₹{formatIndian(Math.round(invested))}</Text>
+              <Text style={styles.resultValue}>
+                ₹{formatIndian(Math.round(invested))}
+              </Text>
             </View>
             <View style={[styles.result, styles.resultOutline]}>
               <Text style={styles.resultLabel}>Estimated gain</Text>
-              <Text style={styles.resultValue}>₹{formatIndian(Math.round(gain))}</Text>
+              <Text style={styles.resultValue}>
+                ₹{formatIndian(Math.round(gain))}
+              </Text>
             </View>
           </View>
         </View>
       </View>
       <View style={styles.foot}>
         <Text style={styles.footText}>
-          Educational estimate — not investment advice. Know it. Fix it. Grow it.
+          Educational estimate — not investment advice. Know it. Fix it. Grow
+          it.
         </Text>
         <ContentBlocks
           blocks={[
@@ -93,7 +114,11 @@ export function SipCroreTool() {
               kind: "actions",
               tone: "grey",
               actions: [
-                { label: "Open SIP calculator →", href: "/calculators/sip", primary: true },
+                {
+                  label: "Open SIP calculator →",
+                  href: "/calculators/sip",
+                  primary: true,
+                },
                 { label: "Full health check →", href: "/analyse" },
               ],
             },
@@ -104,23 +129,28 @@ export function SipCroreTool() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     overflow: "hidden",
   },
   head: {
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEEDFE",
+    borderBottomColor: Colors.primaryLight,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   title: { fontSize: 14, fontWeight: "800", color: Colors.textPrimary },
-  sub: { marginTop: 4, fontSize: 12, lineHeight: 18, color: Colors.textSecondary },
+  sub: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    color: Colors.textSecondary,
+  },
   body: { padding: 16, gap: 12 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
@@ -129,20 +159,35 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     justifyContent: "center",
   },
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary },
-  chipTextActive: { color: "#FFFFFF" },
+  chipTextActive: { color: Colors.onPrimary },
   results: { gap: 10 },
   resultRow: { flexDirection: "row", gap: 10 },
-  result: { flex: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12 },
-  resultPrimary: { backgroundColor: "#EEEDFE" },
+  result: {
+    flex: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  resultPrimary: { backgroundColor: Colors.primaryLight },
   resultOutline: { borderWidth: 1, borderColor: Colors.border },
   resultLabel: { fontSize: 11, fontWeight: "600", color: Colors.textMuted },
-  resultBig: { marginTop: 4, fontSize: 20, fontWeight: "800", color: Colors.textPrimary },
-  resultValue: { marginTop: 4, fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
+  resultBig: {
+    marginTop: 4,
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
+  resultValue: {
+    marginTop: 4,
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
   foot: {
     borderTopWidth: 1,
     borderTopColor: Colors.border,
@@ -151,4 +196,4 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footText: { fontSize: 11, color: Colors.textMuted },
-});
+}));

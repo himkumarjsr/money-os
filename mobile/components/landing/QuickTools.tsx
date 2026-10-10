@@ -1,6 +1,6 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
-import { Colors, Radius, Shadow } from "@/constants/theme";
+import { Colors, Radius, Shadow, themedStyles } from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { useAuthStore } from "@/store/authStore";
 
@@ -96,12 +96,12 @@ export function QuickTools() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   section: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: Colors.border,
+    backgroundColor: Colors.glassCard,
     paddingHorizontal: 12,
     paddingVertical: 12,
     shadowColor: "#4F46E5",
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#9B9A94",
+    color: Colors.textMuted,
   },
   grid: {
     flexDirection: "row",
@@ -131,13 +131,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cellPressed: {
-    backgroundColor: "rgba(238,237,254,0.7)",
+    backgroundColor: Colors.primaryTint,
   },
   iconBox: {
     height: 40,
     width: 40,
     borderRadius: 12,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -146,6 +146,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     lineHeight: 14,
-    color: "#111110",
+    color: Colors.textPrimary,
   },
-});
+}));

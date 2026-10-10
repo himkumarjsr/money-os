@@ -3,9 +3,9 @@
  * render errors on Result / Fix Plan, logs them, and offers "Start again".
  */
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 
 type Props = { children: ReactNode; label?: string };
 type State = { error: Error | null };
@@ -48,22 +48,22 @@ export class AnalyseErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: { flex: 1, justifyContent: "center", padding: 20 },
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
+    borderColor: Colors.errorLight,
+    backgroundColor: Colors.errorLight,
     paddingHorizontal: 24,
     paddingVertical: 40,
     alignItems: "center",
   },
-  title: { fontSize: 18, fontWeight: "600", color: "#0F172A" },
+  title: { fontSize: 18, fontWeight: "600", color: Colors.textPrimary },
   message: {
     marginTop: 8,
     fontSize: 14,
-    color: "#B91C1C",
+    color: Colors.errorText,
     textAlign: "center",
   },
   btn: {
@@ -74,5 +74,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: 20,
   },
-  btnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
-});
+  btnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "600" },
+}));

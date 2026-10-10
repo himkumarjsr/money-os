@@ -1,29 +1,40 @@
 /** Native Learn hub — port of web app/learn/page.tsx + components/learn/learn-hub.tsx. */
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { LEARN_BADGE } from "@/components/learn/categoryBadge";
-import { learnArticles, learnCategories, type LearnCategory } from "@/lib/learnContent";
+import {
+  learnArticles,
+  learnCategories,
+  type LearnCategory,
+} from "@/lib/learnContent";
 import { openContentHref } from "@/lib/contentLinks";
 
 export default function LearnHubScreen() {
   const [filter, setFilter] = useState<LearnCategory | "All">("All");
 
   const filtered = useMemo(
-    () => (filter === "All" ? learnArticles : learnArticles.filter((a) => a.category === filter)),
+    () =>
+      filter === "All"
+        ? learnArticles
+        : learnArticles.filter((a) => a.category === filter),
     [filter],
   );
 
   return (
     <ContentScreen
       barTitle="Learn"
-      share={{ title: "Learn Personal Finance — India Guide | Finkoin", path: "/learn" }}
+      share={{
+        title: "Learn Personal Finance — India Guide | Finkoin",
+        path: "/learn",
+      }}
     >
       <Text style={styles.h1}>Learn finance</Text>
       <Text style={styles.lead}>
-        Short, India-relevant guides — no paywall, no fluff. Pick a category or browse everything.
+        Short, India-relevant guides — no paywall, no fluff. Pick a category or
+        browse everything.
       </Text>
       <View style={styles.topLinks}>
         <Pressable
@@ -59,7 +70,11 @@ export default function LearnHubScreen() {
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >
-              <Text style={[styles.filterText, active && styles.filterTextActive]}>{c}</Text>
+              <Text
+                style={[styles.filterText, active && styles.filterTextActive]}
+              >
+                {c}
+              </Text>
             </Pressable>
           );
         })}
@@ -72,14 +87,22 @@ export default function LearnHubScreen() {
             <Pressable
               key={a.id}
               onPress={() => router.push(`/learn/${a.id}` as Href)}
-              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+              style={({ pressed }) => [
+                styles.card,
+                pressed && styles.cardPressed,
+              ]}
               accessibilityRole="link"
               accessibilityLabel={a.title}
             >
               <View
-                style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}
+                style={[
+                  styles.badge,
+                  { backgroundColor: badge.bg, borderColor: badge.border },
+                ]}
               >
-                <Text style={[styles.badgeText, { color: badge.fg }]}>{a.category}</Text>
+                <Text style={[styles.badgeText, { color: badge.fg }]}>
+                  {a.category}
+                </Text>
               </View>
               <Text style={styles.title}>{a.title}</Text>
               <Text style={styles.subtitle}>{a.subtitle}</Text>
@@ -96,34 +119,49 @@ export default function LearnHubScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  h1: { fontSize: 26, fontWeight: "700", color: Colors.textPrimary, lineHeight: 32 },
-  lead: { marginTop: 8, fontSize: 15, lineHeight: 22, color: "#475569" },
-  topLinks: { flexDirection: "row", flexWrap: "wrap", columnGap: 16, marginTop: 4 },
+const styles = themedStyles(() => ({
+  h1: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    lineHeight: 32,
+  },
+  lead: {
+    marginTop: 8,
+    fontSize: 15,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+  },
+  topLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 16,
+    marginTop: 4,
+  },
   topLink: { minHeight: 44, justifyContent: "center" },
   topLinkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   filterBar: {
     marginTop: 8,
     marginHorizontal: -20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: Colors.border,
   },
   filters: { paddingHorizontal: 20, paddingBottom: 14, gap: 8 },
   filter: {
     minHeight: 44,
     paddingHorizontal: 16,
     borderRadius: 999,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: Colors.surfaceMuted,
     justifyContent: "center",
   },
   filterActive: { backgroundColor: Colors.primary },
-  filterText: { fontSize: 14, fontWeight: "700", color: "#334155" },
-  filterTextActive: { color: "#FFFFFF" },
+  filterText: { fontSize: 14, fontWeight: "700", color: Colors.textSecondary },
+  filterTextActive: { color: Colors.onPrimary },
   list: { marginTop: 20, gap: 14 },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 18,
     padding: 18,
     shadowColor: "#000",
@@ -132,7 +170,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  cardPressed: { borderColor: "#B3ADE3" },
+  cardPressed: { borderColor: Colors.borderIndigo },
   badge: {
     alignSelf: "flex-start",
     borderRadius: 999,
@@ -148,7 +186,22 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 23,
   },
-  subtitle: { marginTop: 8, fontSize: 14, lineHeight: 21, color: "#475569" },
-  read: { marginTop: 14, fontSize: 12, fontWeight: "600", color: "#64748B" },
-  empty: { marginTop: 32, textAlign: "center", fontSize: 14, color: "#475569" },
-});
+  subtitle: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Colors.textSecondary,
+  },
+  read: {
+    marginTop: 14,
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textMuted,
+  },
+  empty: {
+    marginTop: 32,
+    textAlign: "center",
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+}));

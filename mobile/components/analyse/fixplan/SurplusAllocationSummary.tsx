@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { PriorityItem, PriorityPlan } from "@/lib/priorityEngine";
 import { remainingBuffer, stepStartLabel } from "@/lib/fixPlanMerge";
-import { Colors, Spacing } from "@/constants/theme";
+import { Colors, Spacing, themedStyles } from "@/constants/theme";
 import { inr, shared } from "./shared";
 
 type Props = {
@@ -15,10 +15,7 @@ export function SurplusAllocationSummary({
   monthlySurplus,
   plan,
 }: Props) {
-  const remaining = remainingBuffer(
-    plan ?? { monthlySurplus },
-    priorities,
-  );
+  const remaining = remainingBuffer(plan ?? { monthlySurplus }, priorities);
   return (
     <View style={[shared.card, styles.card]}>
       <Text style={shared.cardTitle}>Surplus Allocation Summary</Text>
@@ -40,9 +37,7 @@ export function SurplusAllocationSummary({
         ))}
         <View style={[shared.row, shared.totalRow]}>
           <Text style={[shared.totalText, { flex: 1 }]}>Remaining buffer</Text>
-          <Text style={shared.totalText}>
-            ₹{inr(remaining)}
-          </Text>
+          <Text style={shared.totalText}>₹{inr(remaining)}</Text>
         </View>
         <Text style={styles.note}>
           (Available for debt extra payment + future SIP)
@@ -52,9 +47,9 @@ export function SurplusAllocationSummary({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: { borderWidth: 1, borderColor: Colors.border },
   body: { marginTop: Spacing.md },
   medium: { fontWeight: "500" },
   note: { marginTop: 2, fontSize: 12, color: Colors.textMuted },
-});
+}));

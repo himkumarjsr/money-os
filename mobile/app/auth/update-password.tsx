@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Redirect, router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
-import { Colors, Spacing, FontSize } from "@/constants/theme";
+import { Colors, Spacing, FontSize, themedStyles } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -95,7 +94,7 @@ export default function UpdatePasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.xl, paddingTop: 56, flexGrow: 1 },
   logoContainer: { alignItems: "center", marginBottom: Spacing.xxl },
@@ -106,4 +105,4 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: "center",
   },
-});
+}));

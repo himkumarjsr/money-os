@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { themedStyles, Colors } from "@/constants/theme";
 
 type NavLink = { label: string; route: Href } | { label: string; mail: string };
 
@@ -181,7 +182,12 @@ export function NavDrawer({
               accessibilityLabel="Close menu"
               style={styles.closeBtn}
             >
-              <AppIcon name="close" size={22} color="#FFFFFF" strokeWidth={2} />
+              <AppIcon
+                name="close"
+                size={22}
+                color={Colors.onPrimary}
+                strokeWidth={2}
+              />
             </Pressable>
           </View>
 
@@ -277,7 +283,7 @@ export function NavDrawer({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   backdrop: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -318,7 +324,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   brandText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 20,
     fontWeight: "700",
     letterSpacing: -0.3,
@@ -341,7 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.1)",
     padding: 18,
   },
-  ctaTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "600" },
+  ctaTitle: { color: Colors.onPrimary, fontSize: 18, fontWeight: "600" },
   ctaSub: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 4 },
   ctaBtn: {
     marginTop: 14,
@@ -353,7 +359,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+  ctaBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "600" },
   tagline: {
     marginTop: 22,
     color: "rgba(255,255,255,0.8)",
@@ -426,4 +432,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   copyText: { color: "rgba(255,255,255,0.6)", fontSize: 12 },
-});
+}));

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { formatIndian } from "@/lib/formatters";
 import { TEACH } from "@/lib/taxTeachContent";
 import { TaxTeachTooltip } from "../TaxTeachTooltip";
@@ -6,6 +6,7 @@ import { ToggleSection } from "../ToggleSection";
 import { rupees } from "./format";
 import { Mt, StepCard, TaxNumberInput, tx } from "./primitives";
 import type { TaxCalcState } from "./useTaxCalculatorState";
+import { themedStyles, Colors } from "@/constants/theme";
 
 export function DeductionsStep({ s }: { s: TaxCalcState }) {
   const { i, update } = s;
@@ -261,8 +262,8 @@ export function DeductionsStep({ s }: { s: TaxCalcState }) {
             />
             <View style={styles.stdText}>
               <Text style={tx.xsMuted}>
-                Old regime ₹50k standard deduction; new regime ₹75k in this
-                tool (
+                Old regime ₹50k standard deduction; new regime ₹75k in this tool
+                (
               </Text>
               <TaxTeachTooltip
                 content={TEACH.deductions.standardNew}
@@ -277,7 +278,7 @@ export function DeductionsStep({ s }: { s: TaxCalcState }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   runningBox: {
     marginBottom: 12,
     flexDirection: "row",
@@ -285,8 +286,8 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#EEEDFE",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.background,
     padding: 12,
   },
   runningText: {
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: "600",
-    color: "#534AB7",
+    color: Colors.primary,
   },
   mb12: { marginBottom: 12 },
   stdBox: {
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -315,4 +316,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 2,
   },
-});
+}));

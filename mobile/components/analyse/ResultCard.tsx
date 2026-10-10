@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { Card } from "@/components/ui/Card";
-import { Colors, FontSize, Spacing } from "@/constants/theme";
+import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import { HealthScoreRing } from "@/components/ui/HealthScoreRing";
 
 type Props = {
@@ -23,7 +23,7 @@ export function ResultCard({ score, title = "Health score", subtitle }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     backgroundColor: Colors.primaryLight,
     borderColor: Colors.primaryMedium,
@@ -43,4 +43,4 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: Colors.textSecondary,
   },
-});
+}));

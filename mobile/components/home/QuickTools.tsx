@@ -1,56 +1,65 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
-import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
+import {
+  Colors,
+  Spacing,
+  Radius,
+  FontSize,
+  Shadow,
+  themedStyles,
+  tintBg,
+} from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 
-export const QUICK_TOOLS: Array<{
+/** Built per render so tile tints follow the active theme. */
+export const quickTools = (): Array<{
   label: string;
   route: string;
   icon: AppIconName;
   bg: string;
-}> = [
+}> => [
   {
     label: "Health Check",
     route: "/(tabs)/analyse",
     icon: "chart",
-    bg: "#EEEDFE",
+    bg: tintBg("#EEEDFE"),
   },
   {
     label: "Tax Calc",
     route: "/calculators/tax-regime",
     icon: "receipt",
-    bg: "#E1F5EE",
+    bg: tintBg("#E1F5EE"),
   },
   {
     label: "SIP Calc",
     route: "/calculators/sip",
     icon: "trending",
-    bg: "#FFF3E0",
+    bg: tintBg("#FFF3E0"),
   },
   {
     label: "Tracker",
     route: "/(tabs)/tracker",
     icon: "notebook",
-    bg: "#FCEBEB",
+    bg: tintBg("#FCEBEB"),
   },
   {
     label: "Home Loan",
     route: "/calculators/home",
     icon: "bank",
-    bg: "#E8F5E9",
+    bg: tintBg("#E8F5E9"),
   },
   {
     label: "Insurance",
     route: "/(tabs)/analyse",
     icon: "shield",
-    bg: "#EDE7F6",
+    bg: tintBg("#EDE7F6"),
   },
 ];
 
 export function QuickTools() {
   return (
     <View style={styles.grid}>
-      {QUICK_TOOLS.map((tool) => (
+      {quickTools().map((tool) => (
         <TouchableOpacity
           key={tool.label}
           style={styles.card}
@@ -67,7 +76,7 @@ export function QuickTools() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -99,4 +108,4 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
   },
-});
+}));

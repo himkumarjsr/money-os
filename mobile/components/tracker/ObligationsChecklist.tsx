@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import {
   AddObligationForm,
   type ObligationFormPayload,
@@ -8,7 +8,7 @@ import { CollapsiblePanel } from "@/components/tracker/CollapsiblePanel";
 import { PlannedInvestmentsSection } from "@/components/tracker/PlannedInvestmentsSection";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
 
@@ -318,7 +318,11 @@ export function ObligationsChecklist({
                         ]}
                       >
                         {isPaid && !isClosed ? (
-                          <AppIcon name="check" size={14} color="#FFFFFF" />
+                          <AppIcon
+                            name="check"
+                            size={14}
+                            color={Colors.onPrimary}
+                          />
                         ) : isClosed ? (
                           <Text style={styles.dotDash}>—</Text>
                         ) : null}
@@ -333,7 +337,7 @@ export function ObligationsChecklist({
                             isClosed
                               ? styles.struckMuted
                               : isPaid
-                                ? { color: "#1D5C3A" }
+                                ? { color: Colors.successText }
                                 : null,
                             isSkipped && !isClosed && styles.struck,
                           ]}
@@ -540,7 +544,7 @@ export function ObligationsChecklist({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   learned: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -571,7 +575,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  learnedYesText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
+  learnedYesText: { fontSize: 13, fontWeight: "700", color: Colors.onPrimary },
   learnedNo: { minHeight: 44, paddingHorizontal: 12, justifyContent: "center" },
   learnedNoText: { fontSize: 13, color: Colors.primary },
   headerTrash: { padding: 6 },
@@ -603,7 +607,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: "center",
   },
-  setupBtnText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
+  setupBtnText: { fontSize: 13, fontWeight: "700", color: Colors.onPrimary },
   list: {
     borderRadius: 12,
     borderWidth: 1,
@@ -623,7 +627,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stripLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)" },
-  stripTotal: { fontSize: 18, fontWeight: "800", color: "#FFFFFF" },
+  stripTotal: { fontSize: 18, fontWeight: "800", color: Colors.onPrimary },
   stripTrack: {
     height: 6,
     borderRadius: 999,
@@ -643,9 +647,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
   },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: Colors.background },
-  rowClosed: { backgroundColor: "#FAFAFA", opacity: 0.7 },
-  rowPaid: { backgroundColor: "#F7FDF9" },
-  rowSkipped: { backgroundColor: "#FAFAFA", opacity: 0.6 },
+  rowClosed: { backgroundColor: Colors.background, opacity: 0.7 },
+  rowPaid: { backgroundColor: tintBg("#F7FDF9") },
+  rowSkipped: { backgroundColor: Colors.background, opacity: 0.6 },
   rowMain: { flexDirection: "row", alignItems: "center", gap: 10 },
   dot: {
     width: 26,
@@ -768,5 +772,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  resetConfirmText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
-});
+  resetConfirmText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.onPrimary,
+  },
+}));

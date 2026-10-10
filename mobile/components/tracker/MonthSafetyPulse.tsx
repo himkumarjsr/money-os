@@ -1,36 +1,39 @@
 import { useState, type ReactNode } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import type { SafetyPulseResult } from "@/lib/trackerSafetyPulse";
 import { SectionPrivacyEye } from "@/components/ui/PrivacyEye";
 import { formatIndian } from "@/lib/formatters";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg, themed, tintFg } from "@/constants/theme";
 
-const STATUS_STYLE = {
-  safe: {
-    bg: "#F3F1FC",
-    border: "#D4D2F5",
-    badgeBg: "#E8E6F8",
-    badgeText: "#3C3489",
-  },
-  tight: {
-    bg: "#F7F4FF",
-    border: "#C9C2F0",
-    badgeBg: "#EEE9FF",
-    badgeText: "#534AB7",
-  },
-  over: {
-    bg: "#FBF5F5",
-    border: "#F0D4D4",
-    badgeBg: "#FDEDED",
-    badgeText: "#991B1B",
-  },
-  unknown: {
-    bg: "#F7F7F4",
-    border: "#E8E6F0",
-    badgeBg: "#EEEDFE",
-    badgeText: "#534AB7",
-  },
-} as const;
+const STATUS_STYLE = themed(
+  () =>
+    ({
+      safe: {
+        bg: tintBg("#F3F1FC"),
+        border: "#D4D2F5",
+        badgeBg: tintBg("#E8E6F8"),
+        badgeText: tintFg("#3C3489"),
+      },
+      tight: {
+        bg: tintBg("#F7F4FF"),
+        border: "#C9C2F0",
+        badgeBg: tintBg("#EEE9FF"),
+        badgeText: tintFg("#534AB7"),
+      },
+      over: {
+        bg: tintBg("#FBF5F5"),
+        border: tintBg("#F0D4D4"),
+        badgeBg: tintBg("#FDEDED"),
+        badgeText: tintFg("#991B1B"),
+      },
+      unknown: {
+        bg: tintBg("#F7F7F4"),
+        border: tintBg("#E8E6F0"),
+        badgeBg: tintBg("#EEEDFE"),
+        badgeText: tintFg("#534AB7"),
+      },
+    }) as const,
+);
 
 function maskOrShow(n: number, visible: boolean, signed = false): string {
   if (!visible) return "₹••••••";
@@ -191,7 +194,7 @@ export function MonthSafetyPulse({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: {
     borderWidth: 1,
     borderRadius: 16,
@@ -220,15 +223,15 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111110",
+    color: Colors.textPrimary,
     lineHeight: 20,
   },
   eyeBtn: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    borderColor: "#D4D2F5",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
   },
   badge: {
     paddingHorizontal: 10,
@@ -243,11 +246,11 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
   reason: {
     fontSize: 13,
-    color: "#3C3489",
+    color: Colors.primaryDark,
     lineHeight: 20,
   },
   actionBox: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -265,7 +268,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#111110",
+    color: Colors.textPrimary,
     lineHeight: 20,
   },
   grid: {
@@ -275,7 +278,7 @@ const styles = StyleSheet.create({
   },
   stat: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: Colors.glassCard,
     borderRadius: 12,
     padding: 12,
   },
@@ -288,7 +291,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
   delta: {
     fontSize: 11,
@@ -309,19 +312,24 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  moverName: { fontSize: 12, fontWeight: "600", color: "#111110", flex: 1 },
+  moverName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    flex: 1,
+  },
   dailySafe: {
     marginTop: 12,
     fontSize: 12,
     lineHeight: 17,
-    color: "#3C3489",
+    color: Colors.primaryDark,
   },
-  dailySafeAmount: { fontWeight: "700", color: "#111110" },
+  dailySafeAmount: { fontWeight: "700", color: Colors.textPrimary },
   children: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(83,74,183,0.15)",
+    borderTopColor: Colors.primaryTintBorder,
   },
   childrenLabel: {
     fontSize: 10,
@@ -331,4 +339,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 8,
   },
-});
+}));

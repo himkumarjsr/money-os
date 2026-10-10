@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -21,6 +20,7 @@ import {
 } from "@/lib/formatters";
 import type { TaxTeachContent } from "@/lib/taxTeachContent";
 import { TaxTeachTooltip, useLazySheet } from "../TaxTeachTooltip";
+import { themedStyles, Colors } from "@/constants/theme";
 
 /** Small `i` helper chip (PWA FieldTooltip) — opens the helper text in a sheet. */
 export function FieldTooltip({
@@ -99,7 +99,9 @@ export function Mt({
         <View style={styles.labelLeft}>
           <Text style={styles.label}>
             {label}
-            {optional ? <Text style={styles.optional}>{"  "}optional</Text> : null}
+            {optional ? (
+              <Text style={styles.optional}>{"  "}optional</Text>
+            ) : null}
           </Text>
           {helper ? <FieldTooltip text={helper} /> : null}
         </View>
@@ -136,7 +138,7 @@ export function Mt({
             if (next !== value) onChange(next);
           }}
           placeholder="0"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={Colors.textMuted}
           keyboardType="decimal-pad"
           autoComplete="off"
           style={styles.input}
@@ -225,13 +227,13 @@ export function TaxNumberInput({
             setDraft(next === 0 ? "" : String(next));
           }}
           placeholder={placeholder}
-          placeholderTextColor="#9B9A94"
+          placeholderTextColor={Colors.textMuted}
           keyboardType="decimal-pad"
           style={[
             styles.numInput,
             draft
-              ? { fontWeight: "600", color: "#111110" }
-              : { fontWeight: "400", color: "#9B9A94" },
+              ? { fontWeight: "600", color: Colors.textPrimary }
+              : { fontWeight: "400", color: Colors.textMuted },
           ]}
           accessibilityLabel={label}
         />
@@ -262,7 +264,9 @@ export function Checkbox({
       style={[styles.checkRow, boxed && styles.checkRowBoxed, style]}
     >
       <View style={[styles.checkBox, checked && styles.checkBoxOn]}>
-        {checked ? <AppIcon name="check" size={12} color="#FFFFFF" /> : null}
+        {checked ? (
+          <AppIcon name="check" size={12} color={Colors.onPrimary} />
+        ) : null}
       </View>
       <Text style={styles.checkLabel}>{label}</Text>
     </Pressable>
@@ -342,7 +346,7 @@ export function StepCard({
             open && { transform: [{ rotate: "180deg" }] },
           ]}
         >
-          <AppIcon name="chevronDown" size={16} color="#7A7871" />
+          <AppIcon name="chevronDown" size={16} color={Colors.textMuted} />
         </View>
       </Pressable>
       {open ? (
@@ -412,7 +416,7 @@ export function PrivateAmount({
         accessibilityLabel={visible ? `Hide ${label}` : `Show ${label}`}
         style={styles.eyeBtn}
       >
-        <EyeIcon open={visible} size={16} color="#534AB7" />
+        <EyeIcon open={visible} size={16} color={Colors.primary} />
       </Pressable>
     </View>
   );
@@ -432,29 +436,49 @@ export function InfoBox({
   );
 }
 
-export const tx = StyleSheet.create({
-  xsMuted: { fontSize: 12, lineHeight: 18, color: "#7A7871" },
-  xs: { fontSize: 12, lineHeight: 18, color: "#5F5E5A" },
-  sm: { fontSize: 14, lineHeight: 20, color: "#5F5E5A" },
-  smStrong: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: "#111110" },
-  smLabel: { fontSize: 14, lineHeight: 20, fontWeight: "500", color: "#5F5E5A" },
-  smDark: { fontSize: 14, lineHeight: 20, fontWeight: "500", color: "#111110" },
-  hint: { fontSize: 12, lineHeight: 17, color: "#9B9A94" },
-});
+export const tx = themedStyles(() => ({
+  xsMuted: { fontSize: 12, lineHeight: 18, color: Colors.textMuted },
+  xs: { fontSize: 12, lineHeight: 18, color: Colors.textSecondary },
+  sm: { fontSize: 14, lineHeight: 20, color: Colors.textSecondary },
+  smStrong: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  smLabel: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    color: Colors.textSecondary,
+  },
+  smDark: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    color: Colors.textPrimary,
+  },
+  hint: { fontSize: 12, lineHeight: 17, color: Colors.textMuted },
+}));
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   infoChip: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "rgba(83,74,183,0.35)",
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  infoChipText: { fontSize: 11, fontWeight: "700", color: "#534AB7", lineHeight: 13 },
-  infoSheetText: { fontSize: 13, lineHeight: 19, color: "#5F5E5A" },
+  infoChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.primary,
+    lineHeight: 13,
+  },
+  infoSheetText: { fontSize: 13, lineHeight: 19, color: Colors.textSecondary },
   mtWrap: { marginBottom: 20, minWidth: 0 },
   labelRow: {
     marginBottom: 6,
@@ -471,8 +495,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  label: { fontSize: 14, lineHeight: 20, fontWeight: "500", color: "#5F5E5A", flexShrink: 1 },
-  optional: { fontSize: 11, fontWeight: "400", color: "#9B9A94" },
+  label: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    color: Colors.textSecondary,
+    flexShrink: 1,
+  },
+  optional: { fontSize: 11, fontWeight: "400", color: Colors.textMuted },
   box: {
     minHeight: 52,
     flexDirection: "row",
@@ -480,23 +510,31 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     paddingHorizontal: 16,
   },
-  boxFocused: { borderColor: "#534AB7", backgroundColor: "#FAFAFE" },
+  boxFocused: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.background,
+  },
   boxDisabled: { opacity: 0.5 },
-  rupee: { fontSize: 15, fontWeight: "600", color: "#9B9A94" },
+  rupee: { fontSize: 15, fontWeight: "600", color: Colors.textMuted },
   input: {
     flex: 1,
     minWidth: 0,
     paddingVertical: 12,
     fontSize: 16,
     fontWeight: "600",
-    color: "#111110",
+    color: Colors.textPrimary,
   },
-  clear: { fontSize: 12, fontWeight: "500", color: "#9B9A94" },
-  words: { marginTop: 4, paddingLeft: 4, fontSize: 12, color: "#9B9A94" },
+  clear: { fontSize: 12, fontWeight: "500", color: Colors.textMuted },
+  words: {
+    marginTop: 4,
+    paddingLeft: 4,
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
   numWrap: { width: "100%", marginBottom: 16 },
   numLabelRow: {
     marginBottom: 6,
@@ -511,8 +549,8 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     paddingHorizontal: 14,
   },
   numInput: { flex: 1, minWidth: 0, paddingVertical: 12, fontSize: 18 },
@@ -526,7 +564,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ECEAF8",
+    borderColor: Colors.borderLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -537,12 +575,17 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1.5,
     borderColor: "#9B9A94",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkBoxOn: { borderColor: "#534AB7", backgroundColor: "#534AB7" },
-  checkLabel: { flex: 1, fontSize: 14, lineHeight: 20, color: "#5F5E5A" },
+  checkBoxOn: { borderColor: Colors.primary, backgroundColor: Colors.primary },
+  checkLabel: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.textSecondary,
+  },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     minHeight: 36,
@@ -551,16 +594,26 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     justifyContent: "center",
   },
-  chipOn: { backgroundColor: "#534AB7" },
-  chipOff: { backgroundColor: "#F1F5F9" },
-  chipText: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: "#334155" },
-  chipTextOn: { color: "#FFFFFF" },
-  blurb: { marginTop: 8, fontSize: 11, lineHeight: 15, color: "#7A7871" },
+  chipOn: { backgroundColor: Colors.primary },
+  chipOff: { backgroundColor: Colors.surfaceMuted },
+  chipText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+  chipTextOn: { color: Colors.onPrimary },
+  blurb: {
+    marginTop: 8,
+    fontSize: 11,
+    lineHeight: 15,
+    color: Colors.textMuted,
+  },
   stepCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F0EFF8",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.card,
     padding: 16,
   },
   stepSummary: {
@@ -576,7 +629,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: "#534AB7",
+    color: Colors.primary,
   },
   stepChevron: { marginLeft: "auto" },
   disclosureSummary: {
@@ -584,25 +637,30 @@ const styles = StyleSheet.create({
     marginVertical: -8,
     justifyContent: "center",
   },
-  disclosureText: { fontSize: 12, fontWeight: "500", color: "#534AB7" },
-  privateRow: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
+  disclosureText: { fontSize: 12, fontWeight: "500", color: Colors.primary },
+  privateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+  },
   eyeBtn: {
     width: 30,
     height: 30,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
-    backgroundColor: "#F9F9FC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
     alignItems: "center",
     justifyContent: "center",
   },
   infoBox: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#EEEDFE",
-    backgroundColor: "#FAFAFE",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.background,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  infoBoxText: { fontSize: 12, lineHeight: 18, color: "#5F5E5A" },
-});
+  infoBoxText: { fontSize: 12, lineHeight: 18, color: Colors.textSecondary },
+}));

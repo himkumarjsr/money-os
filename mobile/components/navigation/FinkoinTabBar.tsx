@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import Svg, { Path } from "react-native-svg";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { AppIcon } from "@/components/ui/AppIcon";
 
@@ -93,7 +93,7 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
               state.routes.findIndex(
                 (r: (typeof state.routes)[number]) => r.name === name,
               );
-            const color = focused ? Colors.primary : "#3D3A5C";
+            const color = focused ? Colors.primary : Colors.tabIdle;
             const onPress = () => {
               const event = navigation.emit({
                 type: "tabPress",
@@ -198,7 +198,7 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: {
     position: "absolute",
     left: 0,
@@ -212,8 +212,8 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.7)",
-    backgroundColor: "rgba(245,243,252,0.94)",
+    borderColor: Colors.glassBorder,
+    backgroundColor: Colors.glass,
     paddingHorizontal: 6,
     paddingTop: 8,
     paddingBottom: 8,
@@ -254,15 +254,15 @@ const styles = StyleSheet.create({
   pill: {
     ...StyleSheet.absoluteFill,
     borderRadius: 999,
-    backgroundColor: "rgba(83,74,183,0.16)",
+    backgroundColor: Colors.primaryTint,
     borderWidth: 1,
-    borderColor: "rgba(83,74,183,0.2)",
+    borderColor: Colors.primaryTintBorder,
   },
   iconZ: { zIndex: 1 },
   label: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#3D3A5C",
+    color: Colors.tabIdle,
   },
   labelActive: {
     fontWeight: "600",
@@ -273,12 +273,12 @@ const styles = StyleSheet.create({
     height: 48,
     width: 48,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     padding: 3,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     shadowColor: "#534AB7",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.28,
@@ -289,20 +289,20 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     margin: -4,
     borderRadius: 999,
-    backgroundColor: "rgba(83,74,183,0.14)",
+    backgroundColor: Colors.primaryTint,
     borderWidth: 1,
-    borderColor: "rgba(83,74,183,0.25)",
+    borderColor: Colors.primaryTintBorder,
   },
   plusInner: {
     height: 40,
     width: 40,
     borderRadius: 999,
-    backgroundColor: "#534AB7",
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   plusText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 26,
     fontWeight: "300",
     marginTop: -2,
@@ -311,11 +311,11 @@ const styles = StyleSheet.create({
     height: 28,
     width: 28,
     borderRadius: 999,
-    backgroundColor: "#534AB7",
+    backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     overflow: "hidden",
   },
   avatarImg: {
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   avatarLetter: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -332,9 +332,9 @@ const styles = StyleSheet.create({
     height: 28,
     width: 28,
     borderRadius: 999,
-    backgroundColor: "#F4F2FC",
+    backgroundColor: Colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -345,14 +345,14 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 4,
-    backgroundColor: "#534AB7",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 3,
     alignItems: "center",
     justifyContent: "center",
   },
   fkText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 9,
     fontWeight: "700",
   },
-});
+}));

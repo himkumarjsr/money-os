@@ -3,12 +3,12 @@
  * Copy is verbatim from web.
  */
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { FIX_PLAN_PRICE_INR, PAYMENTS_ENABLED } from "@/lib/analyseEntitlement";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import { ResultColors as C, badgeTone, inr } from "./format";
 import type { BucketView, ResultModel } from "./model";
 import {
@@ -134,7 +134,7 @@ function BucketRow({ b }: { b: BucketView }) {
       accessibilityState={{ expanded: open }}
       style={({ pressed }) => [
         styles.bucket,
-        pressed && { backgroundColor: "#F3F2FB" },
+        pressed && { backgroundColor: tintBg("#F3F2FB") },
       ]}
     >
       <View style={styles.bucketHead}>
@@ -294,10 +294,10 @@ export function SafetyNetSection({
         {model.safetyItems.map((item) => {
           const partial = item.status === "partial";
           const tone = partial
-            ? { bg: "#FFF3E6", fg: "#BA7517", glyph: "⚠" }
+            ? { bg: tintBg("#FFF3E6"), fg: "#BA7517", glyph: "⚠" }
             : item.isOk
-              ? { bg: "#E8F6F1", fg: "#1D9E75", glyph: "✓" }
-              : { bg: "#FDEDEC", fg: "#E24B4A", glyph: "✕" };
+              ? { bg: tintBg("#E8F6F1"), fg: "#1D9E75", glyph: "✓" }
+              : { bg: tintBg("#FDEDEC"), fg: "#E24B4A", glyph: "✕" };
           return (
             <View key={item.id} style={styles.safetyRow}>
               <View style={{ flex: 1 }}>
@@ -381,7 +381,7 @@ export function PlanTeaserSection({
 }) {
   const { first, teaserTitles, moreCount } = model.planTeaser;
   return (
-    <View style={[styles.card, { borderColor: "#DCD8F4" }]}>
+    <View style={[styles.card, { borderColor: Colors.primaryLight }]}>
       <Text style={styles.h2}>Your personalised 12-month plan</Text>
       <View style={styles.teaserBox}>
         {first ? (
@@ -422,7 +422,8 @@ export function PlanTeaserSection({
         <Text style={styles.paywallFk}>
           {PAYMENTS_ENABLED ? `Pay ₹${FIX_PLAN_PRICE_INR} · ` : ""}Earn Finkoin
           Keys (FK) for activity on Finkoin — use them on partner perks where
-          available.{PAYMENTS_ENABLED ? " FK do not reduce this unlock price." : ""}
+          available.
+          {PAYMENTS_ENABLED ? " FK do not reduce this unlock price." : ""}
         </Text>
         {surplusBreakdown ? (
           <View style={styles.surplus}>
@@ -499,9 +500,9 @@ export function KeepGoingSection({
     { label: "Learn personal finance", onPress: onLearn },
   ];
   return (
-    <View style={[styles.card, { borderColor: "#E2E8F0" }]}>
-      <Text style={[styles.h2, { color: "#0F172A" }]}>Keep going</Text>
-      <Text style={[styles.sub, { color: "#475569", marginTop: 4 }]}>
+    <View style={[styles.card, { borderColor: Colors.border }]}>
+      <Text style={[styles.h2, { color: Colors.textPrimary }]}>Keep going</Text>
+      <Text style={[styles.sub, { color: Colors.textSecondary, marginTop: 4 }]}>
         Explore calculators and tools that pair with your report.
       </Text>
       <View style={styles.linksRow}>
@@ -520,7 +521,7 @@ export function KeepGoingSection({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   hero: {
     borderRadius: 24,
     backgroundColor: Colors.primary,
@@ -538,7 +539,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 28,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
   },
   heroMeta: {
     marginTop: 4,
@@ -567,14 +568,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     marginBottom: 4,
   },
   card: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: C.border,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     padding: 16,
   },
   smartNote: {
@@ -582,8 +583,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "#E1F5EE",
-    color: "#085041",
+    backgroundColor: Colors.successLight,
+    color: Colors.successText,
     fontSize: 12,
     fontWeight: "500",
     lineHeight: 18,
@@ -694,7 +695,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#D4D2F5",
+    borderColor: Colors.border,
     backgroundColor: C.pageBg,
     padding: 16,
   },
@@ -738,7 +739,7 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ECEAF5",
+    borderColor: Colors.surfaceMuted,
     padding: 12,
   },
   safetyTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -767,7 +768,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: 12,
   },
-  termLearnText: { fontSize: 12, fontWeight: "600", color: "#FFFFFF" },
+  termLearnText: { fontSize: 12, fontWeight: "600", color: Colors.onPrimary },
   progressLabel: {
     marginTop: 12,
     fontSize: 14,
@@ -779,13 +780,13 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 999,
     overflow: "hidden",
-    backgroundColor: "#ECEAF5",
+    backgroundColor: Colors.surfaceMuted,
   },
   progressFill: { height: "100%", backgroundColor: Colors.primary },
   teaserBox: {
     marginTop: 12,
     borderRadius: 12,
-    backgroundColor: "#F7F6FE",
+    backgroundColor: Colors.surfaceMuted,
     padding: 12,
   },
   teaserStep: { fontSize: 14, fontWeight: "500", color: C.ink },
@@ -856,7 +857,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  unlockText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  unlockText: { fontSize: 15, fontWeight: "700", color: Colors.onPrimary },
   ctaSub: {
     marginTop: 8,
     textAlign: "center",
@@ -872,4 +873,4 @@ const styles = StyleSheet.create({
   },
   linkBtn: { minHeight: 44, justifyContent: "center" },
   linkText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
-});
+}));

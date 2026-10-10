@@ -1,6 +1,12 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import Card from "@/components/ui/Card";
-import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  FontSize,
+  Radius,
+  Spacing,
+  themedStyles,
+} from "@/constants/theme";
 
 type Props = {
   severity?: string;
@@ -68,7 +74,7 @@ export function IssueCard({
   return <Card style={styles.card}>{content}</Card>;
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: { padding: Spacing.lg },
   row: {
     flexDirection: "row",
@@ -101,4 +107,4 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     overflow: "hidden",
   },
-});
+}));

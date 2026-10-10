@@ -3,7 +3,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -17,7 +16,7 @@ import { ExpenseList } from "@/components/tracker/ExpenseList";
 import { MonthSummary } from "@/components/tracker/MonthSummary";
 import { TrackerConsent } from "@/components/tracker/TrackerConsent";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Colors, Spacing } from "@/constants/theme";
+import { Colors, Spacing, themedStyles, tintBg } from "@/constants/theme";
 import { localISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { trackerTotalAmount } from "@/lib/tracker-categories";
@@ -261,7 +260,7 @@ export default function TrackerMonthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.lg, paddingBottom: 80 },
   back: {
@@ -290,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.success,
-    backgroundColor: "#E8F8EF",
+    backgroundColor: tintBg("#E8F8EF"),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -303,7 +302,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  addExpenseText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  addExpenseText: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
   hero: {
     borderRadius: 16,
     backgroundColor: Colors.primary,
@@ -312,7 +311,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   heroLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 4 },
-  heroValue: { fontSize: 32, fontWeight: "800", color: "#FFFFFF" },
+  heroValue: { fontSize: 32, fontWeight: "800", color: Colors.onPrimary },
   heroSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 4 },
   listCard: {
     borderRadius: 16,
@@ -327,4 +326,4 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   listTitle: { fontSize: 13, fontWeight: "700", color: Colors.textPrimary },
-});
+}));

@@ -3,13 +3,17 @@
  * (tables, multi-line bullet lists, ##/### headings, paragraphs) and the
  * same inline subset (bold + links only).
  */
-import { StyleSheet, Text, View } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Text, View } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 import { ContentBlocks } from "./ContentBlocks";
 import { InlineText } from "./InlineText";
 
 function isMarkdownTable(block: string): boolean {
-  const lines = block.trim().split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = block
+    .trim()
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (lines.length < 2) return false;
   if (!lines[0].includes("|")) return false;
   const sep = lines[1].replace(/\s/g, "");
@@ -26,12 +30,18 @@ function parseTableRow(row: string): string[] {
 }
 
 function isBulletList(block: string): boolean {
-  const lines = block.trim().split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = block
+    .trim()
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (lines.length < 2) return false;
   return lines.every((l) => /^[-*]\s+/.test(l));
 }
 
-const BODY = { fontSize: 16, lineHeight: 26, color: "#334155" } as const;
+const bodyStyles = themedStyles(() => ({
+  body: { fontSize: 16, lineHeight: 26, color: Colors.textSecondary },
+}));
 
 export function BlogBody({ body }: { body: string }) {
   const blocks = body.trim().split(/\n\n+/);
@@ -42,7 +52,10 @@ export function BlogBody({ body }: { body: string }) {
         const firstLine = trimmed.split("\n")[0] ?? "";
 
         if (isMarkdownTable(trimmed)) {
-          const lines = trimmed.split("\n").map((l) => l.trim()).filter(Boolean);
+          const lines = trimmed
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
           return (
             <View key={i} style={styles.mt24}>
               <ContentBlocks
@@ -68,11 +81,11 @@ export function BlogBody({ body }: { body: string }) {
             <View key={i} style={[styles.mt16, { gap: 8 }]}>
               {items.map((item, li) => (
                 <View key={li} style={styles.li}>
-                  <Text style={[BODY, styles.bullet]}>•</Text>
+                  <Text style={[bodyStyles.body, styles.bullet]}>•</Text>
                   <InlineText
                     text={item}
                     italics={false}
-                    style={[BODY, { flex: 1 }]}
+                    style={[bodyStyles.body, { flex: 1 }]}
                     boldColor={Colors.textPrimary}
                   />
                 </View>
@@ -90,7 +103,7 @@ export function BlogBody({ body }: { body: string }) {
                 <InlineText
                   text={rest}
                   italics={false}
-                  style={[BODY, styles.mt8]}
+                  style={[bodyStyles.body, styles.mt8]}
                   boldColor={Colors.textPrimary}
                 />
               ) : null}
@@ -111,7 +124,7 @@ export function BlogBody({ body }: { body: string }) {
             key={i}
             text={trimmed}
             italics={false}
-            style={[BODY, styles.mt16]}
+            style={[bodyStyles.body, styles.mt16]}
             boldColor={Colors.textPrimary}
           />
         );
@@ -120,7 +133,7 @@ export function BlogBody({ body }: { body: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   mt8: { marginTop: 8 },
   mt16: { marginTop: 16 },
   mt24: { marginTop: 24 },
@@ -140,4 +153,4 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 24,
   },
-});
+}));

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { PO_RATES_PERIOD, PO_RATES_SOURCE } from "@/lib/postOfficeSchemes";
 import { Insight, calcStyles } from "./calculator-ui";
 import {
@@ -98,9 +98,14 @@ export {
   PoTimeDepositCalculator,
 } from "./postOffice/schemeCalculators";
 
-const styles = StyleSheet.create({
-  pickerLabel: { fontSize: 13, fontWeight: "600", color: "#5F5E5A" },
-  pickerHint: { marginTop: 4, fontSize: 12, lineHeight: 16, color: "#64748B" },
+const styles = themedStyles(() => ({
+  pickerLabel: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  pickerHint: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Colors.textMuted,
+  },
   schemeGrid: { marginTop: 12, gap: 8 },
   schemeCard: {
     minHeight: 44,
@@ -111,22 +116,27 @@ const styles = StyleSheet.create({
   },
   schemeCardSelected: {
     borderColor: Colors.primary,
-    backgroundColor: "#F7F6FC",
+    backgroundColor: Colors.surfaceMuted,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  schemeCardIdle: { borderColor: "#E2E8F0", backgroundColor: "#FFFFFF" },
+  schemeCardIdle: { borderColor: Colors.border, backgroundColor: Colors.card },
   schemeCardPressed: { borderColor: "rgba(83,74,183,0.5)" },
   schemeShort: {
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
-    color: "#0F172A",
+    color: Colors.textPrimary,
   },
-  schemeName: { marginTop: 2, fontSize: 12, lineHeight: 16, color: "#64748B" },
+  schemeName: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Colors.textMuted,
+  },
   schemeRate: {
     marginTop: 8,
     fontSize: 12,
@@ -137,18 +147,23 @@ const styles = StyleSheet.create({
   activeCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     padding: 16,
   },
   activeTitle: {
     fontSize: 16,
     lineHeight: 24,
     fontWeight: "600",
-    color: "#0F172A",
+    color: Colors.textPrimary,
   },
-  activeHint: { marginTop: 4, fontSize: 12, lineHeight: 16, color: "#64748B" },
+  activeHint: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Colors.textMuted,
+  },
   activeLink: { fontWeight: "500", color: Colors.primary },
   activeBody: { marginTop: 16 },
   insightLink: { fontWeight: "600", textDecorationLine: "underline" },
-});
+}));

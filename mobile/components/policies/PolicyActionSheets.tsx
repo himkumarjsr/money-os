@@ -1,13 +1,7 @@
 import { useState, type ReactNode } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
 import { openWebPage } from "@/lib/openWebPage";
 import {
   FINKOIN_AGENT_CODE,
@@ -37,7 +31,13 @@ function isHealthCategory(t: PolicyType): boolean {
   return t === "health";
 }
 
-function SheetTitle({ title, onClose }: { title: string; onClose: () => void }) {
+function SheetTitle({
+  title,
+  onClose,
+}: {
+  title: string;
+  onClose: () => void;
+}) {
   return (
     <View style={styles.titleRow}>
       <Text style={styles.title}>{title}</Text>
@@ -117,7 +117,7 @@ export function RenewOptionsSheet({
               label={`Go to ${policy.insurerName} →`}
               bg={Colors.card}
               color={Colors.textPrimary}
-              border="#E2E8F0"
+              border={tintBg("#E2E8F0")}
               onPress={() =>
                 openWebPage(insurerRenewalWebsite(policy.insurerName))
               }
@@ -151,10 +151,10 @@ export function RenewOptionsSheet({
           </View>
 
           <View style={[styles.card, styles.cardTeal]}>
-            <Text style={[styles.cardTitle, { color: "#134E4A" }]}>
+            <Text style={[styles.cardTitle, { color: tintFg("#134E4A") }]}>
               Transfer to Finkoin first
             </Text>
-            <Text style={[styles.cardBody, { color: "#115E59" }]}>
+            <Text style={[styles.cardBody, { color: tintFg("#115E59") }]}>
               Transfer this policy to Finkoin. We will remind you every renewal.
               You get free annual policy review.
             </Text>
@@ -256,7 +256,9 @@ export function TransferGuideSheet({
             bg={Colors.card}
             color={Colors.primary}
             border={Colors.primary}
-            onPress={() => openWebPage(insurerFormDownloadUrl(policy.insurerName))}
+            onPress={() =>
+              openWebPage(insurerFormDownloadUrl(policy.insurerName))
+            }
           />
           <ActionButton
             label="Mark as transferred to Finkoin"
@@ -274,7 +276,7 @@ export function TransferGuideSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -292,13 +294,13 @@ const styles = StyleSheet.create({
   card: { borderRadius: 16, padding: 16 },
   cardPlain: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
   },
   cardCompare: {
     borderWidth: 2,
     borderColor: "rgba(83,74,183,0.4)",
-    backgroundColor: "#F4F2FC",
+    backgroundColor: Colors.surfaceMuted,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
@@ -307,19 +309,24 @@ const styles = StyleSheet.create({
   },
   cardTeal: {
     borderWidth: 1,
-    borderColor: "#99F6E4",
-    backgroundColor: "#F0FDFA",
+    borderColor: Colors.successLight,
+    backgroundColor: Colors.successLight,
   },
-  cardTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
-  cardBody: { marginTop: 4, fontSize: 13, color: "#475569", lineHeight: 19 },
-  cardMeta: { marginTop: 8, fontSize: 12, color: "#64748B" },
+  cardTitle: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
+  cardBody: {
+    marginTop: 4,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 19,
+  },
+  cardMeta: { marginTop: 8, fontSize: 12, color: Colors.textMuted },
   alt: {
-    backgroundColor: "rgba(255,255,255,0.8)",
+    backgroundColor: Colors.glassCard,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-  altText: { fontSize: 13, color: "#334155", lineHeight: 18 },
+  altText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
   btn: {
     marginTop: 12,
     minHeight: 48,
@@ -329,9 +336,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   btnText: { fontSize: 15, fontWeight: "700" },
-  sectionTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
+  sectionTitle: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
   step: { flexDirection: "row", gap: 8 },
-  stepNum: { width: 18, fontSize: 14, color: "#334155", lineHeight: 21 },
-  stepText: { flex: 1, fontSize: 14, color: "#334155", lineHeight: 21 },
-  bold: { fontWeight: "700", color: "#0F172A" },
-});
+  stepNum: {
+    width: 18,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 21,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 21,
+  },
+  bold: { fontWeight: "700", color: Colors.textPrimary },
+}));

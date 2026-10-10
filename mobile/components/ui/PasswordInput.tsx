@@ -3,10 +3,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   type TextInputProps,
 } from "react-native";
-import { Colors, FontSize } from "@/constants/theme";
+import { Colors, FontSize, themedStyles } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 
 type Props = Omit<TextInputProps, "secureTextEntry"> & {
@@ -39,7 +38,7 @@ function PasswordInput(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   input: { paddingRight: 56 },
   toggle: {
     position: "absolute",
@@ -55,7 +54,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.primary,
   },
-});
+}));
 
 export { PasswordInput };
 export default PasswordInput;

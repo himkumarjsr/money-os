@@ -2,11 +2,11 @@
  * Rewards — port of web app/rewards/page.tsx.
  */
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { useGamification } from "@/lib/useGamification";
 import { useAuthStore } from "@/store/authStore";
 
@@ -77,7 +77,7 @@ export default function RewardsScreen() {
       </View>
 
       <View style={styles.useCard}>
-        <Text style={[styles.sectionTitle, { color: "#3C3489" }]}>
+        <Text style={[styles.sectionTitle, { color: Colors.primaryDark }]}>
           How to use FK
         </Text>
         <Text style={styles.useText}>
@@ -114,32 +114,37 @@ function StatCard({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   stat: { flexBasis: "47%", flexGrow: 1, padding: 16 },
   statLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#9B9A94",
+    color: Colors.textMuted,
     letterSpacing: 0.5,
   },
-  statValue: { fontSize: 18, fontWeight: "700", color: "#111110" },
+  statValue: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
   inline: { flexDirection: "row", alignItems: "center", gap: 6 },
-  sectionTitle: { fontSize: 17, fontWeight: "700", color: "#111110" },
+  sectionTitle: { fontSize: 17, fontWeight: "700", color: Colors.textPrimary },
   earnRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 8,
   },
-  earnLabel: { flex: 1, fontSize: 14, color: "#5F5E5A" },
-  earnFk: { fontSize: 14, fontWeight: "600", color: "#1D9E75" },
+  earnLabel: { flex: 1, fontSize: 14, color: Colors.textSecondary },
+  earnFk: { fontSize: 14, fontWeight: "600", color: Colors.success },
   useCard: {
     marginTop: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#EEEDFE",
-    backgroundColor: "rgba(238,237,254,0.5)",
+    borderColor: Colors.primaryLight,
+    backgroundColor: Colors.primaryTint,
     padding: 20,
   },
-  useText: { marginTop: 8, fontSize: 14, color: "#5F5E5A", lineHeight: 21 },
-});
+  useText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 21,
+  },
+}));

@@ -1,7 +1,13 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { PriorityItem } from "@/lib/priorityEngine";
 import { monthsForPriority } from "@/lib/fixPlanMerge";
-import { Colors, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  Radius,
+  Spacing,
+  themedStyles,
+  tintBg,
+} from "@/constants/theme";
 import { inr, loc, shared, urgencyColor } from "./shared";
 import { openContentHref } from "@/lib/contentLinks";
 
@@ -104,7 +110,7 @@ export function PriorityCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   card: { borderLeftWidth: 4 },
   header: {
     flexDirection: "row",
@@ -129,7 +135,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   urgencyPill: {
-    backgroundColor: "#F7F6FE",
+    backgroundColor: Colors.surfaceMuted,
     borderRadius: Radius.round,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -142,19 +148,19 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   cellText: { fontSize: 14, color: Colors.textPrimary },
-  cellSub: { marginTop: 2, fontSize: 12, color: "#6B7280" },
+  cellSub: { marginTop: 2, fontSize: 12, color: Colors.textMuted },
   instrument: { marginTop: Spacing.sm, fontSize: 14, color: Colors.primary },
   why: {
     marginTop: Spacing.sm,
     fontSize: 14,
     fontStyle: "italic",
-    color: "#7A7871",
+    color: Colors.textMuted,
     lineHeight: 20,
   },
   thisWeek: {
     marginTop: Spacing.sm,
     borderRadius: Radius.md,
-    backgroundColor: "#E7F6F4",
+    backgroundColor: tintBg("#E7F6F4"),
     padding: Spacing.md,
   },
   thisWeekText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
@@ -167,8 +173,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     borderWidth: 1,
     borderColor: "rgba(83,74,183,0.3)",
-    backgroundColor: "#F7F6FE",
+    backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: Spacing.md,
   },
   learnText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
-});
+}));

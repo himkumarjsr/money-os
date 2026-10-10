@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { PaywallSheet } from "@/components/analyse/PaywallSheet";
 import { AdditionalIncomeStep } from "./tax/AdditionalIncomeStep";
 import { DeductionsStep } from "./tax/DeductionsStep";
@@ -7,14 +7,12 @@ import { PersonalCAWizard } from "./tax/PersonalCAWizard";
 import { ProfileStep } from "./tax/ProfileStep";
 import { ExemptMemo, ResultsStep } from "./tax/ResultsStep";
 import { SalaryStep } from "./tax/SalaryStep";
-import {
-  EMPTY_CA_CHECKLIST,
-  type CAChecklist,
-} from "./tax/personalCASteps";
+import { EMPTY_CA_CHECKLIST, type CAChecklist } from "./tax/personalCASteps";
 import {
   clearStoredTaxInputs,
   useTaxCalculatorState,
 } from "./tax/useTaxCalculatorState";
+import { themedStyles, Colors, tintBg } from "@/constants/theme";
 
 export { TAX_CALCULATOR_STORAGE_KEY } from "./tax/useTaxCalculatorState";
 
@@ -56,7 +54,7 @@ function TaxRegimeCalculatorBody({ onReset }: { onReset: () => void }) {
                 accessibilityRole="button"
                 style={({ pressed }) => [
                   styles.caBtn,
-                  pressed && { backgroundColor: "#EEEDFE" },
+                  pressed && { backgroundColor: Colors.primaryLight },
                 ]}
               >
                 <Text style={styles.caBtnText}>Personal CA (guided)</Text>
@@ -137,7 +135,7 @@ export function TaxRegimeCalculator() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   root: { gap: 24 },
   topRow: {
     flexDirection: "row",
@@ -146,8 +144,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
-  saved: { fontSize: 12, color: "#9B9A94" },
-  savedAt: { marginTop: 2, fontSize: 10, color: "#C5C4BD" },
+  saved: { fontSize: 12, color: Colors.textMuted },
+  savedAt: { marginTop: 2, fontSize: 10, color: Colors.textMuted },
   topActions: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -159,22 +157,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#DCD9F7",
-    backgroundColor: "#F7F6FE",
+    borderColor: tintBg("#DCD9F7"),
+    backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: 12,
   },
-  caBtnText: { fontSize: 12, fontWeight: "600", color: "#534AB7" },
+  caBtnText: { fontSize: 12, fontWeight: "600", color: Colors.primary },
   resetBtn: {
     minHeight: 44,
     justifyContent: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     paddingHorizontal: 16,
   },
-  resetText: { fontSize: 13, color: "#9B9A94" },
-  intro: { fontSize: 12, lineHeight: 18, color: "#7A7871" },
-  introQ: { fontWeight: "600", color: "#534AB7" },
+  resetText: { fontSize: 13, color: Colors.textMuted },
+  intro: { fontSize: 12, lineHeight: 18, color: Colors.textMuted },
+  introQ: { fontWeight: "600", color: Colors.primary },
   steps: { gap: 24 },
-  footer: { fontSize: 12, color: "#9B9A94" },
-});
+  footer: { fontSize: 12, color: Colors.textMuted },
+}));

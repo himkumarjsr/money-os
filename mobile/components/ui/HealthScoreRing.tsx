@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { scoreBand } from "@/lib/financialEngine";
-import { Colors, FontSize } from "@/constants/theme";
+import { Colors, FontSize, themedStyles } from "@/constants/theme";
 
 type Props = {
   score: number;
@@ -9,14 +9,15 @@ type Props = {
   strokeWidth?: number;
 };
 
-const BAND_COLOR = {
-  good: Colors.success,
-  warning: Colors.warning,
-  critical: Colors.error,
-} as const;
+const bandColor = () =>
+  ({
+    good: Colors.success,
+    warning: Colors.warning,
+    critical: Colors.error,
+  }) as const;
 
 function scoreColor(s: number) {
-  return BAND_COLOR[scoreBand(s)];
+  return bandColor()[scoreBand(s)];
 }
 
 export function HealthScoreRing({ score, size = 72, strokeWidth = 6 }: Props) {
@@ -63,10 +64,10 @@ export function HealthScoreRing({ score, size = 72, strokeWidth = 6 }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   text: {
     position: "absolute",
     fontSize: FontSize.xl,
     fontWeight: "800",
   },
-});
+}));

@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import Slider from "@react-native-community/slider";
-import { Colors, FontSize, Spacing } from "@/constants/theme";
+import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 
 type Props = {
   label: string;
@@ -43,7 +43,7 @@ export function SliderField({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   wrap: { marginBottom: Spacing.lg },
   row: {
     flexDirection: "row",
@@ -64,4 +64,4 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   slider: { width: "100%", height: 36 },
-});
+}));

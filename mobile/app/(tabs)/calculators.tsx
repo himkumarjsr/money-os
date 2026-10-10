@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
-import { Colors, FontSize, Spacing } from "@/constants/theme";
+import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import { AppHeader } from "@/components/AppHeader";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
@@ -100,8 +100,8 @@ export default function CalculatorsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+const styles = themedStyles(() => ({
+  container: { flex: 1, backgroundColor: Colors.card },
   pad: { padding: Spacing.xl, paddingBottom: TAB_PAD },
   title: {
     fontSize: FontSize.xxl,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
     borderRadius: 999,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: Colors.surfaceMuted,
   },
   catChipOn: {
     backgroundColor: Colors.primary,
@@ -140,10 +140,10 @@ const styles = StyleSheet.create({
   catChipText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#334155",
+    color: Colors.textSecondary,
   },
   catChipTextOn: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
   },
   catLabel: {
     marginTop: 8,
@@ -159,10 +159,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginBottom: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -185,4 +185,4 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     lineHeight: 16,
   },
-});
+}));

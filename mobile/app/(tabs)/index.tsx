@@ -4,6 +4,7 @@ import {
   Colors,
   FINKOIN_TAGLINE,
   FINKOIN_TAGLINE_SUB,
+  themedStyles,
 } from "@/constants/theme";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { HeroCarousel } from "@/components/landing/HeroCarousel";
@@ -85,11 +86,11 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   root: {
     flex: 1,
     // PWA: from-indigo-50 via-[#F4F2FC] to-violet-50
-    backgroundColor: "#F4F2FC",
+    backgroundColor: Colors.surfaceMuted,
   },
   scroll: {
     paddingBottom: 120,
@@ -99,13 +100,13 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 40,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(199,210,254,0.8)",
+    borderBottomColor: Colors.heroBorder,
     overflow: "hidden",
     alignItems: "center",
   },
   heroWash: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(224,231,255,0.72)",
+    backgroundColor: Colors.heroWash,
   },
   orbA: {
     position: "absolute",
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     height: 100,
     width: 100,
     borderRadius: 999,
-    backgroundColor: "rgba(191,219,254,0.35)",
+    backgroundColor: Colors.primaryTint,
   },
   // PWA mobile: text-3xl / text-center / #534AB7 then slate-900
   h1Sub: {
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 28,
     fontWeight: "800",
-    color: "#0F172A",
+    color: Colors.textPrimary,
     letterSpacing: -0.5,
     lineHeight: 34,
     paddingHorizontal: 8,
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     fontWeight: "400",
-    color: "#475569",
+    color: Colors.textSecondary,
     maxWidth: 340,
     paddingHorizontal: 8,
   },
@@ -173,19 +174,19 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   belowFold: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     paddingTop: 8,
     paddingHorizontal: 16,
   },
   footer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 16,
     alignItems: "center",
   },
   footerLoggedIn: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     height: 16,
   },
   footerText: {
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   footerCtaText: {
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -218,4 +219,4 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: "700",
   },
-});
+}));

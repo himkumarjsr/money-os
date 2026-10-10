@@ -2,8 +2,8 @@
  * Shared privacy eye icons — match PWA tracker (open = amounts visible).
  */
 import Svg, { Circle, Path } from "react-native-svg";
-import { Pressable, StyleSheet, type ViewStyle } from "react-native";
-import { Colors } from "@/constants/theme";
+import { Pressable, type ViewStyle } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
 
 export function EyeIcon({
   open,
@@ -80,7 +80,7 @@ export function SectionPrivacyEye({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   btn: {
     width: 36,
     height: 36,
@@ -96,6 +96,6 @@ const styles = StyleSheet.create({
     height: 32,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: "#F9F9FC",
+    backgroundColor: Colors.background,
   },
-});
+}));

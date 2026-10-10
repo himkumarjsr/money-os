@@ -7,7 +7,6 @@ import {
 } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -21,7 +20,16 @@ import {
   type FieldPath,
 } from "react-hook-form";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors, FontSize, Radius, Spacing } from "@/constants/theme";
+import {
+  Colors,
+  FontSize,
+  Radius,
+  Spacing,
+  themedStyles,
+  tintBg,
+  tintFg,
+  themed,
+} from "@/constants/theme";
 import { formatIndian, formatInWords } from "@/lib/formatters";
 import {
   parseMoneyInput,
@@ -89,12 +97,28 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 const NOTE_TONES: Record<NoteTone, { border: string; bg: string; fg: string }> =
-  {
-    red: { border: "#FECACA", bg: "#FEF2F2", fg: "#991B1B" },
-    green: { border: "#A7F3D0", bg: "#ECFDF5", fg: "#064E3B" },
-    blue: { border: "#C9C4F2", bg: "#EEEDFE", fg: "#3C3489" },
-    yellow: { border: "#FDE68A", bg: "#FFFBEB", fg: "#78350F" },
-  };
+  themed(() => ({
+    red: {
+      border: tintBg("#FECACA"),
+      bg: tintBg("#FEF2F2"),
+      fg: tintFg("#991B1B"),
+    },
+    green: {
+      border: tintBg("#A7F3D0"),
+      bg: tintBg("#ECFDF5"),
+      fg: tintFg("#064E3B"),
+    },
+    blue: {
+      border: tintBg("#C9C4F2"),
+      bg: tintBg("#EEEDFE"),
+      fg: tintFg("#3C3489"),
+    },
+    yellow: {
+      border: tintBg("#FDE68A"),
+      bg: tintBg("#FFFBEB"),
+      fg: tintFg("#78350F"),
+    },
+  }));
 
 export function Note({
   tone = "yellow",
@@ -121,7 +145,12 @@ export function Hint({
 }) {
   const info = tone === "info";
   return (
-    <View style={[s.hint, { backgroundColor: info ? "#EEEDFE" : "#FAEEDA" }]}>
+    <View
+      style={[
+        s.hint,
+        { backgroundColor: info ? tintBg("#EEEDFE") : tintBg("#FAEEDA") },
+      ]}
+    >
       <Text style={[s.hintText, { color: info ? "#3C3489" : "#633806" }]}>
         {children}
       </Text>
@@ -247,14 +276,15 @@ export function MoneyField({
   );
 }
 
-const inputBase = {
-  height: 52,
-  borderRadius: Radius.lg,
-  borderWidth: 1.5,
-  borderColor: Colors.border,
-  backgroundColor: Colors.card,
-  paddingHorizontal: 14,
-} as const;
+const inputBase = () =>
+  ({
+    height: 52,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
+    paddingHorizontal: 14,
+  }) as const;
 
 /**
  * Web `AgeNumberInput` + `bindWholeNumberField`: value is `parseMoneyInput(text)`,
@@ -956,7 +986,10 @@ export function TotalPanel({
     <View
       style={[
         s.totalPanel,
-        { backgroundColor: bg ?? (purple ? "#EEEDFE" : "#ECFDF5") },
+        {
+          backgroundColor:
+            bg ?? (purple ? tintBg("#EEEDFE") : tintBg("#ECFDF5")),
+        },
       ]}
     >
       <Text style={[s.totalLabel, { color: purple ? "#3C3489" : "#334155" }]}>
@@ -1038,16 +1071,16 @@ export function RemoveX({
   );
 }
 
-export const formStyles = StyleSheet.create({
+export const formStyles = themedStyles(() => ({
   stepWrap: { gap: 24 },
   group: { gap: 16 },
-  rowTitle: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
-  body: { fontSize: 14, lineHeight: 20, color: "#475569" },
-  small: { fontSize: 12, lineHeight: 17, color: "#64748B" },
+  rowTitle: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
+  body: { fontSize: 14, lineHeight: 20, color: Colors.textSecondary },
+  small: { fontSize: 12, lineHeight: 17, color: Colors.textMuted },
   muted13: { fontSize: 13, lineHeight: 18, color: Colors.textMuted },
-});
+}));
 
-const s = StyleSheet.create({
+const s = themedStyles(() => ({
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700",
@@ -1066,7 +1099,7 @@ const s = StyleSheet.create({
   hintText: { fontSize: 12, lineHeight: 17 },
   card: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 16,
     padding: 16,
     gap: 16,
@@ -1078,7 +1111,7 @@ const s = StyleSheet.create({
   error: { fontSize: 12, color: Colors.error, fontWeight: "600" },
   helper: { fontSize: 12, lineHeight: 17, color: Colors.textMuted },
   textInput: {
-    ...inputBase,
+    ...inputBase(),
     fontSize: 16,
     color: Colors.textPrimary,
   },
@@ -1113,7 +1146,7 @@ const s = StyleSheet.create({
     height: "100%",
   },
   suffixRow: {
-    ...inputBase,
+    ...inputBase(),
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -1126,7 +1159,7 @@ const s = StyleSheet.create({
     color: Colors.textPrimary,
   },
   suffix: { fontSize: 14, fontWeight: "600", color: Colors.textMuted },
-  question: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
+  question: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
   questionSub: {
     marginTop: 2,
     fontSize: 13,
@@ -1175,7 +1208,7 @@ const s = StyleSheet.create({
   segmentTextOn: { fontWeight: "700", color: Colors.primary },
   premiumBox: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     borderRadius: 16,
     padding: 12,
     gap: 12,
@@ -1187,7 +1220,7 @@ const s = StyleSheet.create({
     minHeight: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
@@ -1197,8 +1230,8 @@ const s = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: "rgba(83,74,183,0.1)",
   },
-  radioText: { fontSize: 14, fontWeight: "500", color: "#475569" },
-  radioTextOn: { color: "#0F172A" },
+  radioText: { fontSize: 14, fontWeight: "500", color: Colors.textSecondary },
+  radioTextOn: { color: Colors.textPrimary },
   choiceCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -1206,7 +1239,7 @@ const s = StyleSheet.create({
     minHeight: 52,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     backgroundColor: Colors.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -1230,10 +1263,10 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: "500",
-    color: "#1E293B",
+    color: Colors.textPrimary,
   },
   selectBtn: {
-    ...inputBase,
+    ...inputBase(),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1282,7 +1315,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Colors.border,
     backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
@@ -1300,4 +1333,4 @@ const s = StyleSheet.create({
     lineHeight: 26,
     color: Colors.textPrimary,
   },
-});
+}));

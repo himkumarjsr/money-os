@@ -3,7 +3,7 @@
  * hero gauge + the 4-gauge bucket meter). Geometry, thresholds and copy match web.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import Svg, { Circle, Line, Path, Text as SvgText } from "react-native-svg";
 import {
   investStatus,
@@ -12,6 +12,13 @@ import {
   type SpeedoMeterProps,
 } from "@/lib/speedo-meter-buckets";
 import { inr } from "./format";
+import {
+  themedStyles,
+  Colors,
+  tintBg,
+  tintFg,
+  themed,
+} from "@/constants/theme";
 
 function resolveCaps(
   hasHomeLoan: boolean,
@@ -32,28 +39,34 @@ const R_OUT = 54;
 const R_IN = 41;
 const R_PROGRESS = (R_OUT + R_IN) / 2;
 
-const COLORS = {
-  needs: "#534AB7",
-  wants: "#BA7517",
-  security: "#2E7DB5",
-  loans: "#E24B4A",
-  investment: "#1D9E75",
-  green: "#1D9E75",
-  amber: "#BA7517",
-  red: "#E24B4A",
-  zoneGreen: "#E1F5EE",
-  zoneAmber: "#FAEEDA",
-  zoneRed: "#FCEBEB",
-} as const;
+const COLORS = themed(
+  () =>
+    ({
+      needs: "#534AB7",
+      wants: "#BA7517",
+      security: "#2E7DB5",
+      loans: "#E24B4A",
+      investment: "#1D9E75",
+      green: "#1D9E75",
+      amber: "#BA7517",
+      red: "#E24B4A",
+      zoneGreen: tintBg("#E1F5EE"),
+      zoneAmber: tintBg("#FAEEDA"),
+      zoneRed: tintBg("#FCEBEB"),
+    }) as const,
+);
 
 const SPEND_RANGE_MULT = 1.5;
 const INVEST_RANGE_MULT = 2;
 
-const CHIP = {
-  good: { bg: "#E1F5EE", fg: "#085041" },
-  warning: { bg: "#FAEEDA", fg: "#633806" },
-  critical: { bg: "#FCEBEB", fg: "#791F1F" },
-} as const;
+const CHIP = themed(
+  () =>
+    ({
+      good: { bg: tintBg("#E1F5EE"), fg: tintFg("#085041") },
+      warning: { bg: tintBg("#FAEEDA"), fg: tintFg("#633806") },
+      critical: { bg: tintBg("#FCEBEB"), fg: tintFg("#791F1F") },
+    }) as const,
+);
 
 type Status = "good" | "warning" | "critical";
 
@@ -664,12 +677,12 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   multi: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     padding: 16,
   },
   grid: {
@@ -694,7 +707,7 @@ const styles = StyleSheet.create({
   gaugeAmount: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#1E293B",
+    color: Colors.textPrimary,
     fontVariant: ["tabular-nums"],
   },
   chip: {
@@ -713,7 +726,7 @@ const styles = StyleSheet.create({
   insight: {
     marginTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
+    borderTopColor: Colors.surfaceMuted,
     paddingTop: 16,
     gap: 4,
   },
@@ -721,16 +734,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 14,
     fontWeight: "500",
-    color: "#085041",
+    color: Colors.successText,
   },
   bulletRow: { flexDirection: "row", gap: 6 },
-  bulletDot: { fontSize: 14, color: "#334155", lineHeight: 20 },
-  bulletText: { flex: 1, fontSize: 14, color: "#334155", lineHeight: 20 },
+  bulletDot: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+  bulletText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
   footnote: {
     marginTop: 12,
     textAlign: "center",
     fontSize: 10,
     fontWeight: "500",
-    color: "#475569",
+    color: Colors.textSecondary,
   },
-});
+}));

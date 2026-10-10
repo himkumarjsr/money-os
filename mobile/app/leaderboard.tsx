@@ -8,7 +8,6 @@ import {
   Text,
   Pressable,
   ScrollView,
-  StyleSheet,
   ActivityIndicator,
   RefreshControl,
   Image,
@@ -16,7 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Colors } from "@/constants/theme";
+import { Colors, themedStyles } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 import { useAuthStore } from "@/store/authStore";
@@ -74,13 +73,7 @@ function formatTime(ms: number) {
   }
 }
 
-function Avatar({
-  entry,
-  isMe,
-}: {
-  entry: LeaderboardEntry;
-  isMe: boolean;
-}) {
+function Avatar({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(entry.avatar_url) && !failed;
   return (
@@ -127,9 +120,11 @@ export default function LeaderboardScreen() {
         try {
           const raw = await AsyncStorage.getItem(CACHE_KEY);
           if (raw) {
-            const { data, fetchedAt, userId: cachedFor } = JSON.parse(
-              raw,
-            ) as CachedLeaderboard;
+            const {
+              data,
+              fetchedAt,
+              userId: cachedFor,
+            } = JSON.parse(raw) as CachedLeaderboard;
             const age = Date.now() - Number(fetchedAt ?? 0);
             if (age < CACHE_TTL && data && (cachedFor ?? null) === userId) {
               if (!mounted.current) return;
@@ -396,7 +391,7 @@ export default function LeaderboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 120 },
   back: {
@@ -407,7 +402,7 @@ const styles = StyleSheet.create({
   },
   backText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
   gate: { padding: 24, alignItems: "center" },
-  gateText: { color: "#5F5E5A", marginBottom: 16, fontSize: 15 },
+  gateText: { color: Colors.textSecondary, marginBottom: 16, fontSize: 15 },
   gateBtn: {
     backgroundColor: Colors.primary,
     paddingVertical: 12,
@@ -416,7 +411,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
   },
-  gateBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
+  gateBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 15 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -424,10 +419,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     gap: 12,
   },
-  h1: { fontSize: 22, fontWeight: "800", color: "#111110" },
-  sub: { marginTop: 4, fontSize: 12, color: "#9B9A94" },
+  h1: { fontSize: 22, fontWeight: "800", color: Colors.textPrimary },
+  sub: { marginTop: 4, fontSize: 12, color: Colors.textMuted },
   refreshBtn: {
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -452,61 +447,61 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  meAvatarText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
-  meTitle: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  meAvatarText: { fontSize: 16, fontWeight: "700", color: Colors.onPrimary },
+  meTitle: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
   meSub: {
     fontSize: 11,
     color: "rgba(255,255,255,0.7)",
     marginTop: 2,
   },
-  meFk: { fontSize: 20, fontWeight: "800", color: "#FFFFFF" },
+  meFk: { fontSize: 20, fontWeight: "800", color: Colors.onPrimary },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E8E6F0",
+    borderColor: Colors.border,
     overflow: "hidden",
   },
   tableHead: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0EFF8",
+    borderBottomColor: Colors.borderLight,
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "#FAFAFE",
+    backgroundColor: Colors.background,
   },
   tableHeadLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#9B9A94",
+    color: Colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  tableHeadRight: { fontSize: 11, color: "#9B9A94" },
+  tableHeadRight: { fontSize: 11, color: Colors.textMuted },
   loader: {
     minHeight: 120,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  loaderText: { fontSize: 13, color: "#9B9A94" },
+  loaderText: { fontSize: 13, color: Colors.textMuted },
   row: {
     paddingVertical: 13,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.card,
   },
-  rowDivider: { borderBottomWidth: 1, borderBottomColor: "#F7F7F4" },
-  rowMe: { backgroundColor: "#EEEDFE" },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: Colors.background },
+  rowMe: { backgroundColor: Colors.primaryLight },
   rank: { fontWeight: "700", minWidth: 28, textAlign: "center" },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#EEEDFE",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -514,16 +509,16 @@ const styles = StyleSheet.create({
   avatarMe: { backgroundColor: Colors.primary },
   avatarImg: { width: 36, height: 36, borderRadius: 18 },
   avatarText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
-  avatarTextMe: { color: "#FFFFFF" },
-  name: { fontSize: 13, fontWeight: "500", color: "#111110" },
+  avatarTextMe: { color: Colors.onPrimary },
+  name: { fontSize: 13, fontWeight: "500", color: Colors.textPrimary },
   nameMe: { fontWeight: "700", color: Colors.primary },
-  streak: { fontSize: 11, color: "#9B9A94", marginTop: 1 },
-  fk: { fontSize: 14, fontWeight: "700", color: "#111110" },
+  streak: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+  fk: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   earnCard: { padding: 16, marginTop: 16 },
   earnTitle: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#9B9A94",
+    color: Colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 12,
@@ -534,8 +529,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#F7F7F4",
+    borderBottomColor: Colors.background,
   },
-  earnAction: { fontSize: 13, color: "#5F5E5A" },
+  earnAction: { fontSize: 13, color: Colors.textSecondary },
   earnReward: { fontSize: 12, fontWeight: "700", color: Colors.primary },
-});
+}));

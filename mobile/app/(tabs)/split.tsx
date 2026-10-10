@@ -8,7 +8,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   RefreshControl,
   Alert,
@@ -25,7 +24,14 @@ import * as Clipboard from "expo-clipboard";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 import { getSupabase } from "@/lib/supabase";
-import { Colors, Spacing, Radius, FontSize, Shadow } from "@/constants/theme";
+import {
+  Colors,
+  Spacing,
+  Radius,
+  FontSize,
+  Shadow,
+  themedStyles,
+} from "@/constants/theme";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
@@ -205,7 +211,7 @@ function InviteLinkShare({
           onPress={openWhatsApp}
           activeOpacity={0.85}
         >
-          <AppIcon name="phone" size={16} color="#FFFFFF" />
+          <AppIcon name="phone" size={16} color={Colors.onPrimary} />
           <Text style={styles.waBtnText}>WhatsApp</Text>
         </TouchableOpacity>
       </View>
@@ -660,7 +666,9 @@ function SplitHomeInner() {
               onPress={() => void handleCreate()}
               activeOpacity={0.85}
             >
-              {busy ? <ActivityIndicator color="#FFFFFF" size="small" /> : null}
+              {busy ? (
+                <ActivityIndicator color={Colors.onPrimary} size="small" />
+              ) : null}
               <Text style={styles.primaryBtnText}>
                 {busy ? "Creating…" : "Create & get invite link"}
               </Text>
@@ -728,7 +736,7 @@ function SplitHomeInner() {
             activeOpacity={0.85}
           >
             {joinBusy ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={Colors.onPrimary} size="small" />
             ) : null}
             <Text style={styles.primaryBtnText}>
               {joinBusy ? "Joining…" : "Join group"}
@@ -740,7 +748,7 @@ function SplitHomeInner() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: 120 },
 
@@ -761,7 +769,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: FontSize.xxl,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     marginTop: Spacing.sm,
     lineHeight: 29,
   },
@@ -780,7 +788,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  heroBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  heroBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
   tiles: { flexDirection: "row", gap: Spacing.md, marginTop: Spacing.xl },
   tile: {
     flex: 1,
@@ -798,13 +806,13 @@ const styles = StyleSheet.create({
   tileValue: {
     fontSize: FontSize.xl,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     marginTop: Spacing.xs,
   },
   tileTip: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: Colors.onPrimary,
     marginTop: Spacing.xs,
     lineHeight: 19,
   },
@@ -817,7 +825,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  joinBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  joinBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
 
   sectionHead: {
     flexDirection: "row",
@@ -918,14 +926,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  deleteText: { fontSize: 12, fontWeight: "700", color: "#C0392B" },
+  deleteText: { fontSize: 12, fontWeight: "700", color: Colors.errorText },
   chevronBtn: {
     minHeight: 44,
     minWidth: 44,
     alignItems: "center",
     justifyContent: "center",
   },
-  chevron: { fontSize: 14, fontWeight: "700", color: "#94A3B8" },
+  chevron: { fontSize: 14, fontWeight: "700", color: Colors.textMuted },
 
   primaryBtn: {
     minHeight: 44,
@@ -937,7 +945,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.sm,
   },
-  primaryBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+  primaryBtnText: { color: Colors.onPrimary, fontWeight: "800", fontSize: 14 },
   fullBtn: { alignSelf: "stretch", marginTop: Spacing.xs },
   disabled: { opacity: 0.5 },
 
@@ -971,8 +979,8 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     borderRadius: Radius.md,
-    backgroundColor: "#FEF2F2",
-    color: "#B91C1C",
+    backgroundColor: Colors.errorLight,
+    color: Colors.errorText,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     fontSize: 14,
@@ -981,8 +989,8 @@ const styles = StyleSheet.create({
   },
   warnBox: {
     borderRadius: Radius.md,
-    backgroundColor: "#FFFBEB",
-    color: "#92400E",
+    backgroundColor: Colors.warningLight,
+    color: Colors.warningText,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     fontSize: 14,
@@ -1046,7 +1054,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     backgroundColor: "#25D366",
   },
-  waBtnText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  waBtnText: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
 
   landingContent: { paddingHorizontal: Spacing.lg, paddingBottom: 120 },
   landingHero: { alignItems: "center", paddingTop: 40, paddingBottom: 40 },
@@ -1061,14 +1069,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "700",
-    color: "#1A1824",
+    color: Colors.textPrimary,
     textAlign: "center",
   },
   landingSub: {
     marginTop: Spacing.lg,
     fontSize: 16,
     lineHeight: 24,
-    color: "#475569",
+    color: Colors.textSecondary,
     textAlign: "center",
   },
   landingPrimary: {
@@ -1081,15 +1089,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...Shadow.strong,
   },
-  landingPrimaryText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+  landingPrimaryText: {
+    color: Colors.onPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   landingSecondary: {
     marginTop: Spacing.md,
     minHeight: 48,
     alignSelf: "stretch",
     borderRadius: Radius.round,
     borderWidth: 1,
-    borderColor: "rgba(83,74,183,0.25)",
-    backgroundColor: "rgba(255,255,255,0.7)",
+    borderColor: Colors.primaryTintBorder,
+    backgroundColor: Colors.glassCard,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1102,13 +1114,13 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     fontSize: 12,
     fontWeight: "500",
-    color: "#64748B",
+    color: Colors.textMuted,
     textAlign: "center",
   },
   landingH2: {
     fontSize: FontSize.xxl,
     fontWeight: "700",
-    color: "#1A1824",
+    color: Colors.textPrimary,
     textAlign: "center",
     marginTop: Spacing.lg,
   },
@@ -1125,7 +1137,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 14,
     lineHeight: 21,
-    color: "#475569",
+    color: Colors.textSecondary,
   },
   stepList: { gap: Spacing.xxl, marginTop: Spacing.xl },
   stepRow: { flexDirection: "row", gap: Spacing.lg },
@@ -1137,6 +1149,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  stepNumText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
-  stepTitle: { fontSize: 17, fontWeight: "600", color: "#1A1824" },
-});
+  stepNumText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
+  stepTitle: { fontSize: 17, fontWeight: "600", color: Colors.textPrimary },
+}));
