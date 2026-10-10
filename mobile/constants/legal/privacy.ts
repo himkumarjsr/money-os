@@ -179,7 +179,7 @@ export const PRIVACY_POLICY: LegalDoc = {
         { kind: "h3", text: "Grievance Officer" },
         {
           kind: "p",
-          text: "As required under DPDP Act 2023 and IT Act 2000:\nName: Himanshu Kumar\nEmail: [grievance@finkoin.com](mailto:grievance@finkoin.com)\nResponse time: Within 30 days",
+          text: "As required under DPDP Act 2023 and IT Act 2000:\nName: Himanshu Kumar Gupta\nEmail: [grievance@finkoin.com](mailto:grievance@finkoin.com)\nResponse time: Within 30 days",
         },
       ],
     },

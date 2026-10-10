@@ -54,7 +54,7 @@ export default function BlogArticleScreen() {
       <Text style={styles.category}>{article.category.toUpperCase()}</Text>
       <Text style={styles.h1}>{article.title}</Text>
       <Text style={styles.byline}>
-        By Himanshu Kumar · {article.publishedAt}
+        By Himanshu Kumar Gupta · {article.publishedAt}
         {article.readTimeMinutes
           ? ` · ${article.readTimeMinutes} min read`
           : ""}
