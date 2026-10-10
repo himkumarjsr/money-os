@@ -29,7 +29,8 @@
     "pwa:splashes": "node scripts/generate-splashes.mjs",
     "pwa:assets": "node scripts/generate-icons.mjs && node scripts/generate-splashes.mjs",
     "og:placeholders": "node scripts/generate-og-placeholders.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "theme:css": "node scripts/generate-theme-css.mjs && prettier --write app/theme.css"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
