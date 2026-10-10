@@ -55,6 +55,7 @@ const OWNED_TABLES = [
   "obligation_checklist",
   "user_planned_investments",
   "user_policies",
+  "user_policy_import_dismissals",
   "notification_preferences",
   "push_subscriptions",
   "expo_push_tokens",

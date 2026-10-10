@@ -64,7 +64,7 @@ export function RenewalReminderBanner() {
       first.planName?.trim() ||
         `${first.insurerName || "Policy"} (${first.policyType.replace(/_/g, " ")})`,
     );
-    setSampleDate(formatRenewalDayMonth(first.renewalDate));
+    setSampleDate(formatRenewalDayMonth(first.renewalDate ?? ""));
     setShow(true);
   }, [hasInitialized, isLoggedIn]);
 
