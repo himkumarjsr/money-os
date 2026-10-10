@@ -14,6 +14,8 @@ export type ThemePreference = "system" | ThemeName;
 
 export const THEME_PREF_KEY = "finkoin_theme";
 export const THEME_PREMIUM_KEY = "finkoin_premium_theme";
+/** User id that Premium was last switched on for automatically. */
+export const THEME_PREMIUM_AUTO_KEY = "finkoin_premium_auto";
 
 export const PREMIUM_STREAK_DAYS = 90;
 export const PREMIUM_TOP_RANK = 10;
