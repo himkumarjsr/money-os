@@ -1,6 +1,7 @@
 "use client";
 
 import BrandCoin from "@/components/ui/BrandCoin";
+import PremiumAvatarRing from "@/components/ui/PremiumAvatarRing";
 import NotificationBell from "@/components/NotificationBell";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
@@ -14,6 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGamificationStore } from "@/store/gamificationStore";
+import { useThemeStore } from "@/store/themeStore";
 import { usePathname } from "next/navigation";
 
 const centerNavItems = [
@@ -90,6 +92,9 @@ export function GlobalNavbar() {
   const showAsLoggedIn = authUiReady && isLoggedIn && Boolean(user);
   const showLoginCta = authUiReady && hasInitialized && !isLoggedIn;
   const authChromePending = !authUiReady || (!hasInitialized && !isLoggedIn);
+  // Premium members get gold accents (coin, avatar ring), not the gold theme.
+  const premiumUnlocked = useThemeStore((s) => s.premium?.unlocked ?? false);
+  const isPremium = showAsLoggedIn && premiumUnlocked;
   const subscriptionTier = useAuthStore(
     (s) => s.user?.subscriptionTier ?? "free",
   );
@@ -227,7 +232,7 @@ export function GlobalNavbar() {
             className="flex min-w-0 items-center gap-2 sm:gap-2.5"
             aria-label="Finkoin home"
           >
-            <BrandCoin size={32} decorative />
+            <BrandCoin size={32} decorative gold={isPremium} />
             <span className="fk-brand-name truncate text-[18px] font-bold tracking-[-0.5px] text-[#534AB7] sm:text-[20px]">
               Finkoin
             </span>
@@ -274,54 +279,56 @@ export function GlobalNavbar() {
               </Link>
             ) : null}
 
-            <button
-              ref={profileButtonRef}
-              type="button"
-              onClick={() => {
-                if (authChromePending) return;
-                if (!showAsLoggedIn) {
-                  router.push(loginHrefPreserveRef("/login"));
-                  return;
-                }
-                setProfileOpen((v) => !v);
-              }}
-              className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white/75 shadow-sm transition-transform duration-300 hover:scale-105"
-              aria-label="Profile"
-            >
-              {authChromePending ? (
-                <span
-                  className="h-full w-full animate-pulse bg-[#E8E6F0]"
-                  aria-hidden
-                />
-              ) : !showAsLoggedIn ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <circle
-                    cx="12"
-                    cy="8"
-                    r="4"
-                    stroke="#534AB7"
-                    strokeWidth="2"
+            <PremiumAvatarRing premium={isPremium}>
+              <button
+                ref={profileButtonRef}
+                type="button"
+                onClick={() => {
+                  if (authChromePending) return;
+                  if (!showAsLoggedIn) {
+                    router.push(loginHrefPreserveRef("/login"));
+                    return;
+                  }
+                  setProfileOpen((v) => !v);
+                }}
+                className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white/75 shadow-sm transition-transform duration-300 hover:scale-105"
+                aria-label="Profile"
+              >
+                {authChromePending ? (
+                  <span
+                    className="h-full w-full animate-pulse bg-[#E8E6F0]"
+                    aria-hidden
                   />
-                  <path
-                    d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5"
-                    stroke="#534AB7"
-                    strokeWidth="2"
-                    strokeLinecap="round"
+                ) : !showAsLoggedIn ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle
+                      cx="12"
+                      cy="8"
+                      r="4"
+                      stroke="#534AB7"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M4 20c1.2-3.3 4.3-5 8-5s6.8 1.7 8 5"
+                      stroke="#534AB7"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : user?.photoURL ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.photoURL}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
                   />
-                </svg>
-              ) : user?.photoURL ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.photoURL}
-                  alt="Profile"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="inline-flex h-full w-full items-center justify-center bg-[#534AB7] text-sm font-bold text-white">
-                  {avatarLetter}
-                </span>
-              )}
-            </button>
+                ) : (
+                  <span className="inline-flex h-full w-full items-center justify-center bg-[#534AB7] text-sm font-bold text-white">
+                    {avatarLetter}
+                  </span>
+                )}
+              </button>
+            </PremiumAvatarRing>
           </div>
         </div>
       </m.header>
@@ -355,18 +362,20 @@ export function GlobalNavbar() {
               className="fixed right-4 top-14 z-[1000] w-[min(320px,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-2xl border border-[#F0EFF8] bg-white p-4 shadow-[0_8px_40px_rgba(0,0,0,0.12)]"
             >
               <div className="text-center">
-                <div className="mx-auto mb-2 inline-flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-lg font-bold text-white">
-                  {user?.photoURL ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={user.photoURL}
-                      alt="Profile"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    avatarLetter
-                  )}
-                </div>
+                <PremiumAvatarRing premium={isPremium} className="mb-2">
+                  <div className="mx-auto inline-flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-lg font-bold text-white">
+                    {user?.photoURL ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={user.photoURL}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      avatarLetter
+                    )}
+                  </div>
+                </PremiumAvatarRing>
                 <p className="text-base font-bold text-slate-900">
                   {user?.name ?? "Finkoin user"}
                 </p>
@@ -761,17 +770,21 @@ export function GlobalNavbar() {
                           />
                         </svg>
                       </span>
-                    ) : user?.photoURL ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={user.photoURL}
-                        alt=""
-                        className="h-7 w-7 rounded-full border border-[#E8E6F0] object-cover"
-                      />
                     ) : (
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8E6F0] bg-[#534AB7] text-xs font-bold text-white">
-                        {avatarLetter}
-                      </span>
+                      <PremiumAvatarRing premium={isPremium}>
+                        {user?.photoURL ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={user.photoURL}
+                            alt=""
+                            className="h-7 w-7 rounded-full border border-[#E8E6F0] object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E8E6F0] bg-[#534AB7] text-xs font-bold text-white">
+                            {avatarLetter}
+                          </span>
+                        )}
+                      </PremiumAvatarRing>
                     )}
                     {showAsLoggedIn ? (
                       <span className="absolute -right-1 -top-0.5 z-20 min-h-[16px] min-w-[16px] rounded bg-[#534AB7] px-1 text-[9px] font-bold leading-[14px] text-white">

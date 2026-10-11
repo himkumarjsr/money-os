@@ -10,11 +10,13 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandTile, BrandWordmark } from "@/components/ui/BrandMark";
+import { PremiumAvatarRing } from "@/components/ui/PremiumAvatarRing";
 import { NavDrawer } from "@/components/NavDrawer";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
+import { useThemeStore } from "@/store/themeStore";
 
 type Props = {
   homeOnLogo?: boolean;
@@ -24,6 +26,7 @@ export function AppHeader({ homeOnLogo = true }: Props) {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
+  const premium = useThemeStore((s) => s.premium?.unlocked ?? false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -61,33 +64,35 @@ export function AppHeader({ homeOnLogo = true }: Props) {
         <View style={styles.right}>
           {isLoggedIn ? <NotificationBell /> : null}
 
-          <Pressable
-            onPress={() => {
-              if (!isLoggedIn) {
-                router.push("/(auth)/login");
-                return;
-              }
-              setProfileOpen(true);
-            }}
-            style={styles.avatarBtn}
-            accessibilityLabel="Profile"
-            accessibilityRole="button"
-          >
-            {isLoggedIn ? (
-              <View style={styles.avatarFill}>
-                {user?.photoURL ? (
-                  <Image
-                    source={{ uri: user.photoURL }}
-                    style={styles.avatarImg}
-                  />
-                ) : (
-                  <Text style={styles.avatarLetter}>{letter}</Text>
-                )}
-              </View>
-            ) : (
-              <AppIcon name="user" size={18} color={Colors.primary} />
-            )}
-          </Pressable>
+          <PremiumAvatarRing premium={isLoggedIn && premium} size={36}>
+            <Pressable
+              onPress={() => {
+                if (!isLoggedIn) {
+                  router.push("/(auth)/login");
+                  return;
+                }
+                setProfileOpen(true);
+              }}
+              style={styles.avatarBtn}
+              accessibilityLabel="Profile"
+              accessibilityRole="button"
+            >
+              {isLoggedIn ? (
+                <View style={styles.avatarFill}>
+                  {user?.photoURL ? (
+                    <Image
+                      source={{ uri: user.photoURL }}
+                      style={styles.avatarImg}
+                    />
+                  ) : (
+                    <Text style={styles.avatarLetter}>{letter}</Text>
+                  )}
+                </View>
+              ) : (
+                <AppIcon name="user" size={18} color={Colors.primary} />
+              )}
+            </Pressable>
+          </PremiumAvatarRing>
         </View>
       </View>
 

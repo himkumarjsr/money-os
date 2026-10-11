@@ -8,11 +8,13 @@ export type ThemePreference = "system" | ThemeName;
 
 const PREF_KEY = "finkoin_theme";
 const PREMIUM_KEY = "finkoin_premium_theme";
-/** User id that Premium was last switched on for automatically. */
-const PREMIUM_AUTO_KEY = "finkoin_premium_auto";
 
 type ThemeState = {
   preference: ThemePreference;
+  /**
+   * Premium (Finkoin) membership. Unlocking adds small gold accents (coin,
+   * avatar ring, badge); the full gold theme stays an opt-in preference.
+   */
   premium: PremiumStatus | null;
   /** Route to reopen after the screen tree remounts for a theme change. */
   returnTo: string | null;
@@ -62,13 +64,8 @@ export const useThemeStore = create<ThemeState>((set) => ({
     syncKv.setItem(PREMIUM_KEY, JSON.stringify({ userId, status }));
     set({ premium: status });
     void syncPremiumAppIcon(status.unlocked);
-    // Switch to Premium automatically the first time this account unlocks it;
-    // a later manual choice sticks.
-    if (status.unlocked && syncKv.getItem(PREMIUM_AUTO_KEY) !== userId) {
-      syncKv.setItem(PREMIUM_AUTO_KEY, userId);
-      syncKv.setItem(PREF_KEY, "premium");
-      set({ preference: "premium" });
-    }
+    // Unlocking never switches the theme; the gold theme is chosen in
+    // Settings → Appearance.
   },
 
   clearReturnTo: () => set({ returnTo: null }),
