@@ -48,6 +48,7 @@ const OWNED_TABLES = [
   "user_financial_data",
   "gamification",
   "fk_transactions",
+  "points_transactions",
   "expense_transactions",
   "tracker_consent",
   "user_credit_cards",

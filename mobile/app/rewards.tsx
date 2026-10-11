@@ -1,7 +1,11 @@
 /**
  * Rewards — port of web app/rewards/page.tsx.
  */
-import { FK_EARN_ACTIONS } from "@/lib/fkRewards";
+import {
+  FK_EARN_ACTIONS,
+  FK_EXPLAINER,
+  POINTS_EARN_ACTIONS,
+} from "@/lib/fkRewards";
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -12,8 +16,6 @@ import { useGamification } from "@/lib/useGamification";
 import { useAuthStore } from "@/store/authStore";
 import { GoldText } from "@/components/ui/GoldMirror";
 
-const EARN = FK_EARN_ACTIONS;
-
 export default function RewardsScreen() {
   const userId = useAuthStore((s) => s.user?.id);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -22,11 +24,26 @@ export default function RewardsScreen() {
   return (
     <PageScaffold
       title="Rewards"
-      subtitle="Earn and spend Finkoin tokens (FK) across the app."
+      subtitle="Earn points to climb the leaderboard and FK to save on Finkoin products."
       requireAuth
       refreshing={loading && refreshKey > 0}
       onRefresh={() => setRefreshKey((k) => k + 1)}
     >
+      <View style={[styles.useCard, { marginTop: 0, marginBottom: 24 }]}>
+        <GoldText style={[styles.sectionTitle, { color: Colors.primaryDark }]}>
+          What is FK?
+        </GoldText>
+        <View style={{ marginTop: 12, gap: 14 }}>
+          {FK_EXPLAINER.map(([q, a]) => (
+            <View key={q}>
+              <Text style={styles.question}>{q}</Text>
+              <Text style={styles.useText}>{a}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.note}>Using FK for discounts is coming soon.</Text>
+      </View>
+
       {loading && !stats ? (
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
@@ -61,35 +78,38 @@ export default function RewardsScreen() {
         </View>
       )}
 
-      <View style={[pageStyles.card, { marginTop: 24 }]}>
-        <Text style={styles.sectionTitle}>How to earn more</Text>
-        <View style={{ marginTop: 12, gap: 12 }}>
-          {EARN.map(([label, fk]) => (
-            <View key={label} style={styles.earnRow}>
-              <Text style={styles.earnLabel}>{label}</Text>
-              <Text style={styles.earnFk}>{fk}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.useCard}>
-        <GoldText style={[styles.sectionTitle, { color: Colors.primaryDark }]}>
-          How to use FK
-        </GoldText>
-        <Text style={styles.useText}>
-          Use <Text style={{ fontWeight: "700" }}>500 FK</Text> toward
-          discounted unlocks on the fix plan flow where shown — see{" "}
-          <Text
-            style={pageStyles.link}
-            onPress={() => router.push("/(tabs)/analyse")}
-          >
-            your analysis
-          </Text>
-          .
+      <EarnCard title="Earn FK" items={FK_EARN_ACTIONS} />
+      <EarnCard title="Earn points" items={POINTS_EARN_ACTIONS} />
+      <Text style={[styles.useText, { marginTop: 16 }]}>
+        See where you stand on the{" "}
+        <Text style={pageStyles.link} onPress={() => router.push("/leaderboard")}>
+          leaderboard
         </Text>
-      </View>
+        .
+      </Text>
     </PageScaffold>
+  );
+}
+
+function EarnCard({
+  title,
+  items,
+}: {
+  title: string;
+  items: ReadonlyArray<readonly [string, string]>;
+}) {
+  return (
+    <View style={[pageStyles.card, { marginTop: 24 }]}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={{ marginTop: 12, gap: 12 }}>
+        {items.map(([label, reward]) => (
+          <View key={label} style={styles.earnRow}>
+            <Text style={styles.earnLabel}>{label}</Text>
+            <Text style={styles.earnFk}>{reward}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -138,8 +158,10 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryTint,
     padding: 20,
   },
+  question: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
+  note: { marginTop: 14, fontSize: 12, color: Colors.textMuted },
   useText: {
-    marginTop: 8,
+    marginTop: 4,
     fontSize: 14,
     color: Colors.textSecondary,
     lineHeight: 21,

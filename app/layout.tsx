@@ -166,18 +166,27 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
       {
-        url: "/assets/brand/finkoin-icon-1024.svg",
+        url: "/assets/brand/finkoin-coin.svg",
         type: "image/svg+xml",
         sizes: "any",
       },
-      { url: "/icons/icon-192x192.png", type: "image/png", sizes: "192x192" },
-      { url: "/icons/icon-512x512.png", type: "image/png", sizes: "512x512" },
+      {
+        url: "/icons/icon-192x192.png?v=coin",
+        type: "image/png",
+        sizes: "192x192",
+      },
+      {
+        url: "/icons/icon-512x512.png?v=coin",
+        type: "image/png",
+        sizes: "512x512",
+      },
     ],
-    shortcut: "/assets/brand/finkoin-icon-1024.svg",
+    shortcut: "/assets/brand/finkoin-coin.svg",
     apple: [
-      { url: "/icons/icon-192x192.png", sizes: "192x192" },
-      { url: "/icons/icon-152x152.png", sizes: "152x152" },
+      { url: "/icons/icon-192x192.png?v=coin", sizes: "192x192" },
+      { url: "/icons/icon-152x152.png?v=coin", sizes: "152x152" },
     ],
   },
 };
@@ -201,21 +210,21 @@ export default function RootLayout({
       <head>
         {/* Applies the saved Appearance choice before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png?v=coin" />
         <link
           rel="apple-touch-icon"
           sizes="152x152"
-          href="/icons/icon-152x152.png"
+          href="/icons/icon-152x152.png?v=coin"
         />
         <link
           rel="apple-touch-icon"
           sizes="180x180"
-          href="/icons/icon-192x192.png"
+          href="/icons/icon-192x192.png?v=coin"
         />
         <link
           rel="apple-touch-icon"
           sizes="167x167"
-          href="/icons/icon-192x192.png"
+          href="/icons/icon-192x192.png?v=coin"
         />
         <meta name="theme-color" content="#534AB7" />
         <meta

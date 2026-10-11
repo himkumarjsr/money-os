@@ -34,8 +34,8 @@ self.addEventListener("push", function (event) {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
       tag: data.tag,
       renotify: true,
       data: { url: data.url, title: data.title, body: data.body },
