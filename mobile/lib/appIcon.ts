@@ -1,3 +1,4 @@
+import { requireOptionalNativeModule } from "expo";
 import { Platform } from "react-native";
 
 /** Alternate home-screen icon for Premium, declared in app.json. */
@@ -10,9 +11,11 @@ type AppIcons = {
 };
 
 function loadAppIcons(): AppIcons | null {
+  // The native side is missing in Expo Go and in builds made before the
+  // module was added; requiring the JS then throws a red-box error.
   if (Platform.OS === "web") return null;
+  if (!requireOptionalNativeModule("ExpoAlternateAppIcons")) return null;
   try {
-    // Missing in Expo Go and in builds made before the module was added.
     return require("expo-alternate-app-icons") as AppIcons;
   } catch {
     return null;
