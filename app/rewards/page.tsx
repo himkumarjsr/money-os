@@ -1,5 +1,6 @@
 "use client";
 
+import { FK_EARN_ACTIONS } from "@/lib/fkRewards";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
@@ -102,22 +103,12 @@ export default function RewardsPage() {
         <section className="mt-10 rounded-2xl border border-[#F0EFF8] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-[#111110]">How to earn more</h2>
           <ul className="mt-4 space-y-3 text-sm text-[#5F5E5A]">
-            <li className="flex justify-between gap-2">
-              <span>Complete analysis</span>
-              <span className="font-semibold text-[#1D9E75]">+100 FK</span>
-            </li>
-            <li className="flex justify-between gap-2">
-              <span>Refer a friend (they sign up)</span>
-              <span className="font-semibold text-[#1D9E75]">+200 FK</span>
-            </li>
-            <li className="flex justify-between gap-2">
-              <span>Daily login streak</span>
-              <span className="font-semibold text-[#1D9E75]">+10 FK / day</span>
-            </li>
-            <li className="flex justify-between gap-2">
-              <span>Complete profile</span>
-              <span className="font-semibold text-[#1D9E75]">+50 FK</span>
-            </li>
+            {FK_EARN_ACTIONS.map(([action, reward]) => (
+              <li key={action} className="flex justify-between gap-2">
+                <span>{action}</span>
+                <span className="font-semibold text-[#1D9E75]">{reward}</span>
+              </li>
+            ))}
           </ul>
         </section>
 

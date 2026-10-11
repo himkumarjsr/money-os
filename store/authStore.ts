@@ -247,6 +247,8 @@ export const useAuthStore = create<AuthState>()(
               const key = localStorage.key(i);
               if (
                 key &&
+                // Keep "already asked for feedback" so signing back in doesn't re-prompt.
+                !key.startsWith("finkoin_feedback_") &&
                 (key.startsWith("finkoin") ||
                   key.includes("supabase") ||
                   key.toLowerCase().includes("auth-token"))
