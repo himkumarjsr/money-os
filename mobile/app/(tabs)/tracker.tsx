@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
@@ -23,6 +23,10 @@ import {
   Shadow,
   themedStyles,
   tintBg,
+  onPrimaryAlpha,
+  onPrimaryStatus,
+  themed,
+  getActiveTheme,
 } from "@/constants/theme";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionPrivacyEye, EyeIcon } from "@/components/ui/PrivacyEye";
@@ -481,6 +485,19 @@ export default function TrackerScreen() {
   useEffect(() => {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
+
+  // The Track button in the bottom nav is the "+": every tap passes a fresh
+  // `add` param, and each new one opens a new entry.
+  const { add: addRequest } = useLocalSearchParams<{ add?: string }>();
+  useEffect(() => {
+    // Module-level so a remount (theme switch) never replays an old tap.
+    if (!addRequest || addRequest === lastAddRequest) return;
+    lastAddRequest = addRequest;
+    setEditingExpense(null);
+    setDefaultBucket("");
+    setSheetDefaults({});
+    setShowSheet(true);
+  }, [addRequest]);
 
   // Soft refresh when returning to the tab (e.g. after editing in the month drill-down).
   // Refs keep the callback stable so it fires on focus only, and never mid-edit.
@@ -1289,7 +1306,7 @@ export default function TrackerScreen() {
           <Text
             style={[
               styles.summaryValue,
-              totalSpent > displayIncome && { color: "#FFB3B3" },
+              totalSpent > displayIncome && { color: onPrimaryStatus("bad") },
             ]}
             numberOfLines={1}
             adjustsFontSizeToFit
@@ -1302,7 +1319,9 @@ export default function TrackerScreen() {
           <Text
             style={[
               styles.summaryValue,
-              { color: remaining < 0 ? "#FFB3B3" : "#B3FFD9" },
+              {
+                color: onPrimaryStatus(remaining < 0 ? "bad" : "good"),
+              },
             ]}
             numberOfLines={1}
             adjustsFontSizeToFit
@@ -1328,10 +1347,10 @@ export default function TrackerScreen() {
               width: revealed ? `${spentPercent}%` : "0%",
               backgroundColor:
                 spentPercent > 90
-                  ? "#FF6B6B"
+                  ? progressTone.bad
                   : spentPercent > 70
-                    ? "#FFD93D"
-                    : "#6BCB77",
+                    ? progressTone.warn
+                    : progressTone.good,
             },
           ]}
         />
@@ -1885,18 +1904,6 @@ export default function TrackerScreen() {
         </MonthSafetyPulse>
       </ScrollView>
 
-      <Pressable
-        style={styles.fab}
-        onPress={() => {
-          setEditingExpense(null);
-          setDefaultBucket("");
-          setSheetDefaults({});
-          setShowSheet(true);
-        }}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
-
       <AddExpenseSheet
         visible={showSheet}
         onClose={() => {
@@ -1928,6 +1935,15 @@ export default function TrackerScreen() {
   );
 }
 
+/** Budget bar fill: bright on purple, deep on Premium gold so it stays visible. */
+let lastAddRequest: string | undefined;
+
+const progressTone = themed(() =>
+  getActiveTheme() === "premium"
+    ? { bad: "#9B1C1C", warn: "#6B4A00", good: "#14632F" }
+    : { bad: "#FF6B6B", warn: "#FFD93D", good: "#6BCB77" },
+);
+
 const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   flipFace: { backfaceVisibility: "hidden" },
@@ -1950,7 +1966,7 @@ const styles = themedStyles(() => ({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: onPrimaryAlpha(0.16),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1969,7 +1985,8 @@ const styles = themedStyles(() => ({
   },
   summaryLabel: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
+    fontWeight: "600",
+    color: onPrimaryAlpha(0.9),
     marginBottom: 4,
   },
   summaryValue: {
@@ -1983,10 +2000,14 @@ const styles = themedStyles(() => ({
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  progressLabel: { fontSize: 11, color: "rgba(255,255,255,0.7)" },
+  progressLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: onPrimaryAlpha(0.9),
+  },
   progressTrack: {
     height: 8,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: onPrimaryAlpha(0.18),
     borderRadius: 4,
     overflow: "hidden",
   },
@@ -2168,23 +2189,5 @@ const styles = themedStyles(() => ({
     fontSize: 13,
     color: Colors.primaryDark,
     lineHeight: 19,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 100,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    ...Shadow.strong,
-  },
-  fabText: {
-    fontSize: 28,
-    color: Colors.onPrimary,
-    fontWeight: "300",
-    lineHeight: 30,
   },
 }));
