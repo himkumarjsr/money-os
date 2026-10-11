@@ -20,7 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, brand, getActiveTheme } from "@/constants/theme";
 
 type NavLink = { label: string; route: Href } | { label: string; mail: string };
 
@@ -152,9 +152,9 @@ export function NavDrawer({
         <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
           <Defs>
             <LinearGradient id="fkFooter" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#161430" />
-              <Stop offset="0.5" stopColor="#221944" />
-              <Stop offset="1" stopColor="#0D0D17" />
+              <Stop offset="0" stopColor={DRAWER_STOPS()[0]} />
+              <Stop offset="0.5" stopColor={DRAWER_STOPS()[1]} />
+              <Stop offset="1" stopColor={DRAWER_STOPS()[2]} />
             </LinearGradient>
           </Defs>
           <Rect width="100%" height="100%" fill="url(#fkFooter)" />
@@ -185,7 +185,7 @@ export function NavDrawer({
               <AppIcon
                 name="close"
                 size={22}
-                color={Colors.onPrimary}
+                color={drawerInk()}
                 strokeWidth={2}
               />
             </Pressable>
@@ -261,7 +261,7 @@ export function NavDrawer({
               <Text style={styles.trustText}>10,000+ users</Text>
               <Text style={styles.trustText}>Made in India 🇮🇳</Text>
               <View style={styles.trustInline}>
-                <AppIcon name="lock" size={14} color="#C4C2E8" />
+                <AppIcon name="lock" size={14} color={brand("#C4C2E8")} />
                 <Text style={styles.trustText}>Bank-level security</Text>
               </View>
               <Text style={styles.trustText}>
@@ -273,7 +273,7 @@ export function NavDrawer({
               <Text style={styles.copyText}>
                 © 2026 Finkoin. All rights reserved. Made with{" "}
               </Text>
-              <AppIcon name="heart" size={14} color="#C4C2E8" />
+              <AppIcon name="heart" size={14} color={brand("#C4C2E8")} />
               <Text style={styles.copyText}> in India 🇮🇳</Text>
             </View>
           </ScrollView>
@@ -282,6 +282,15 @@ export function NavDrawer({
     </Modal>
   );
 }
+
+const isPremium = () => getActiveTheme() === "premium";
+/** The drawer is always dark: white text, or warm ivory in Premium. */
+const drawerInk = () => (isPremium() ? Colors.textPrimary : "#FFFFFF");
+/** Indigo night, or Premium's dark gold hero like the PWA. */
+const DRAWER_STOPS = () =>
+  isPremium()
+    ? ["#221C0E", "#12100B", "#1C170C"]
+    : ["#161430", "#221944", "#0D0D17"];
 
 const styles = themedStyles(() => ({
   backdrop: {
@@ -302,12 +311,16 @@ const styles = themedStyles(() => ({
   glowIndigo: {
     left: -80,
     top: 60,
-    backgroundColor: "rgba(99,102,241,0.18)",
+    backgroundColor: isPremium()
+      ? "rgba(212,175,55,0.14)"
+      : "rgba(99,102,241,0.18)",
   },
   glowViolet: {
     right: -90,
     top: 260,
-    backgroundColor: "rgba(139,92,246,0.14)",
+    backgroundColor: isPremium()
+      ? "rgba(212,175,55,0.1)"
+      : "rgba(139,92,246,0.14)",
   },
   topRow: {
     flexDirection: "row",
@@ -324,7 +337,7 @@ const styles = themedStyles(() => ({
     minHeight: 44,
   },
   brandText: {
-    color: Colors.onPrimary,
+    color: drawerInk(),
     fontSize: 20,
     fontWeight: "700",
     letterSpacing: -0.3,
@@ -347,7 +360,7 @@ const styles = themedStyles(() => ({
     backgroundColor: "rgba(255,255,255,0.1)",
     padding: 18,
   },
-  ctaTitle: { color: Colors.onPrimary, fontSize: 18, fontWeight: "600" },
+  ctaTitle: { color: drawerInk(), fontSize: 18, fontWeight: "600" },
   ctaSub: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 4 },
   ctaBtn: {
     marginTop: 14,
@@ -355,11 +368,15 @@ const styles = themedStyles(() => ({
     minHeight: 44,
     paddingHorizontal: 18,
     borderRadius: 12,
-    backgroundColor: "#6D5CF0",
+    backgroundColor: isPremium() ? Colors.primary : "#6D5CF0",
     alignItems: "center",
     justifyContent: "center",
   },
-  ctaBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "600" },
+  ctaBtnText: {
+    color: isPremium() ? Colors.onPrimary : "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
   tagline: {
     marginTop: 22,
     color: "rgba(255,255,255,0.8)",
