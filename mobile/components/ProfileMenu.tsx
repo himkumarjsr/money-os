@@ -113,7 +113,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                     style={[
                       styles.tierText,
                       tier === "promax" && { color: Colors.onPrimary },
-                      tier === "pro" && { color: Colors.primary },
+                      tier === "pro" && { color: Colors.primaryText },
                     ]}
                   >
                     {tierLabel}
@@ -126,7 +126,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
               <View style={styles.stats}>
                 <View style={styles.stat}>
                   <View style={styles.statNumRow}>
-                    <AppIcon name="coin" size={15} color={Colors.primary} />
+                    <AppIcon name="coin" size={15} color={Colors.primaryText} />
                     <Text style={styles.statNum}>{fk}</Text>
                   </View>
                   <Text style={styles.statLabel}>tokens earned</Text>
@@ -137,7 +137,11 @@ export function ProfileMenu({ visible, onClose }: Props) {
                 </View>
                 <View style={styles.stat}>
                   <View style={styles.statNumRow}>
-                    <AppIcon name="flame" size={15} color={Colors.primary} />
+                    <AppIcon
+                      name="flame"
+                      size={15}
+                      color={Colors.primaryText}
+                    />
                     <Text style={styles.statNum}>{streakDays}</Text>
                   </View>
                   <Text style={styles.statLabel}>day streak</Text>
@@ -160,7 +164,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                       <AppIcon
                         name={item.icon}
                         size={17}
-                        color={Colors.primary}
+                        color={Colors.primaryText}
                       />
                       <Text style={styles.menuLabel}>{item.label}</Text>
                     </View>
@@ -370,7 +374,7 @@ const styles = themedStyles(() => ({
   feedbackText: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   legalRow: {
     flexDirection: "row",

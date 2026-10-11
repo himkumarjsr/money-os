@@ -340,13 +340,17 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
+  secondaryBtnText: {
+    color: Colors.primaryText,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   textBtn: {
     minHeight: 44,
     paddingHorizontal: 12,
     justifyContent: "center",
   },
-  textBtnLabel: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
+  textBtnLabel: { color: Colors.primaryText, fontSize: 14, fontWeight: "600" },
   disabled: { opacity: 0.6 },
   error: { marginTop: 4, fontSize: 13, color: Colors.error },
   sheetTitle: { fontSize: 17, fontWeight: "700", color: Colors.textPrimary },
@@ -359,7 +363,7 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 16,
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   inputError: { borderColor: Colors.error },
   saveBtn: {

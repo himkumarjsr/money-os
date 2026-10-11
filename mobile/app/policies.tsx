@@ -165,7 +165,10 @@ export default function PoliciesScreen() {
   if (!hasInitialized) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+        <ActivityIndicator
+          color={Colors.primaryText}
+          style={{ marginTop: 60 }}
+        />
       </SafeAreaView>
     );
   }
@@ -226,7 +229,7 @@ export default function PoliciesScreen() {
         {!isLoggedIn ? (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-              <AppIcon name="shield" size={40} color={Colors.primary} />
+              <AppIcon name="shield" size={40} color={Colors.primaryText} />
             </View>
             <Text style={styles.emptyTitle}>
               Sign in to use your policy vault
@@ -245,13 +248,13 @@ export default function PoliciesScreen() {
           </View>
         ) : loading ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={Colors.primary} />
+            <ActivityIndicator color={Colors.primaryText} />
             <Text style={styles.loadingText}>Loading…</Text>
           </View>
         ) : policies.length === 0 ? (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-              <AppIcon name="shield" size={40} color={Colors.primary} />
+              <AppIcon name="shield" size={40} color={Colors.primaryText} />
             </View>
             <Text style={styles.emptyTitle}>No policies added yet</Text>
             <Text style={styles.emptySub}>
@@ -330,7 +333,7 @@ const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 120 },
   back: { minHeight: 44, justifyContent: "center", paddingHorizontal: 16 },
-  backText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  backText: { color: Colors.primaryText, fontWeight: "700", fontSize: 14 },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",

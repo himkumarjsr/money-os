@@ -81,7 +81,9 @@ export function SipCroreTool() {
 
         <View style={styles.results}>
           <View style={[styles.result, styles.resultPrimary]}>
-            <GoldText style={[styles.resultLabel, { color: Colors.primary }]}>
+            <GoldText
+              style={[styles.resultLabel, { color: Colors.primaryText }]}
+            >
               Monthly SIP needed
             </GoldText>
             <Text style={styles.resultBig}>

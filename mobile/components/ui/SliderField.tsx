@@ -62,7 +62,7 @@ const styles = themedStyles(() => ({
   value: {
     fontSize: FontSize.md,
     fontWeight: "800",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   slider: { width: "100%", height: 36 },
 }));

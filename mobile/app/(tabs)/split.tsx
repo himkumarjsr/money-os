@@ -204,7 +204,7 @@ function InviteLinkShare({
           <AppIcon
             name={copied ? "check" : "doc"}
             size={16}
-            color={Colors.primary}
+            color={Colors.primaryText}
           />
           <Text style={styles.copyBtnText}>{copied ? "Copied" : "Copy"}</Text>
         </TouchableOpacity>
@@ -242,7 +242,7 @@ function SheetHeader({
         accessibilityRole="button"
         accessibilityLabel="Close"
       >
-        <AppIcon name="close" size={16} color={Colors.primary} />
+        <AppIcon name="close" size={16} color={Colors.primaryText} />
       </TouchableOpacity>
     </View>
   );
@@ -538,13 +538,13 @@ function SplitHomeInner() {
         <View style={styles.list}>
           {showLoader ? (
             <View style={styles.loaderCard}>
-              <ActivityIndicator color={Colors.primary} />
+              <ActivityIndicator color={Colors.primaryText} />
               <Text style={styles.loaderText}>Loading…</Text>
             </View>
           ) : groups.length === 0 ? (
             <View style={styles.empty}>
               <View style={styles.emptyIcon}>
-                <AppIcon name="users" size={26} color={Colors.primary} />
+                <AppIcon name="users" size={26} color={Colors.primaryText} />
               </View>
               <Text style={styles.emptyTitle}>No groups yet</Text>
               <Text style={styles.emptySub}>
@@ -577,7 +577,11 @@ function SplitHomeInner() {
                     {g.emoji ? (
                       <Text style={styles.emojiText}>{g.emoji}</Text>
                     ) : (
-                      <AppIcon name="users" size={22} color={Colors.primary} />
+                      <AppIcon
+                        name="users"
+                        size={22}
+                        color={Colors.primaryText}
+                      />
                     )}
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -842,7 +846,7 @@ const styles = themedStyles(() => ({
     color: Colors.textMuted,
   },
   refreshBtn: { minHeight: 44, justifyContent: "center" },
-  refresh: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  refresh: { fontSize: 12, fontWeight: "700", color: Colors.primaryText },
 
   list: { gap: Spacing.md, marginTop: Spacing.xs },
   loaderCard: {
@@ -1008,7 +1012,7 @@ const styles = themedStyles(() => ({
     fontSize: 20,
     fontWeight: "800",
     letterSpacing: 3,
-    color: Colors.primary,
+    color: Colors.primaryText,
     textAlign: "center",
     backgroundColor: Colors.background,
   },
@@ -1030,7 +1034,7 @@ const styles = themedStyles(() => ({
     fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }),
     fontSize: 12,
     fontWeight: "500",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   inviteActions: { flexDirection: "row", gap: Spacing.sm },
   copyBtn: {
@@ -1045,7 +1049,7 @@ const styles = themedStyles(() => ({
     borderColor: Colors.border,
     backgroundColor: Colors.card,
   },
-  copyBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  copyBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   waBtn: {
     flex: 1,
     minHeight: 44,
@@ -1064,7 +1068,7 @@ const styles = themedStyles(() => ({
     fontSize: 12,
     fontWeight: "600",
     letterSpacing: 2,
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   landingTitle: {
     marginTop: Spacing.md,
@@ -1108,7 +1112,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   landingSecondaryText: {
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1134,7 +1138,7 @@ const styles = themedStyles(() => ({
     borderColor: Colors.border,
     padding: Spacing.lg,
   },
-  featureTitle: { fontSize: 17, fontWeight: "600", color: Colors.primary },
+  featureTitle: { fontSize: 17, fontWeight: "600", color: Colors.primaryText },
   featureDesc: {
     marginTop: 6,
     fontSize: 14,

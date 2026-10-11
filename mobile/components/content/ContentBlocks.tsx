@@ -503,7 +503,7 @@ const styles = themedStyles(() => ({
   },
   td: { fontSize: 13, color: Colors.textPrimary, lineHeight: 19 },
   tdBold: { fontWeight: "700", color: Colors.textPrimary },
-  tdAccent: { fontWeight: "700", color: Colors.primary },
+  tdAccent: { fontWeight: "700", color: Colors.primaryText },
   h3: {
     fontSize: 16,
     fontWeight: "700",
@@ -563,7 +563,11 @@ const styles = themedStyles(() => ({
     borderColor: Colors.border,
   },
   btnPrimaryText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
-  btnSecondaryText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  btnSecondaryText: {
+    color: Colors.primaryText,
+    fontWeight: "700",
+    fontSize: 14,
+  },
   tool: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -606,7 +610,7 @@ const styles = themedStyles(() => ({
     borderRadius: 12,
     padding: 14,
   },
-  linkCardText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  linkCardText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: {
     borderRadius: 999,

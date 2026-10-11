@@ -128,7 +128,7 @@ export function TopPicks() {
             {c.icon === "dot" ? (
               <Text style={styles.dotIcon}>◉</Text>
             ) : (
-              <AppIcon name={c.icon} size={28} color={Colors.primary} />
+              <AppIcon name={c.icon} size={28} color={Colors.primaryText} />
             )}
             <Text style={styles.title}>{c.title}</Text>
             <Text style={styles.body}>{c.body}</Text>
@@ -203,7 +203,7 @@ const styles = themedStyles(() => ({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  dotIcon: { fontSize: 26, color: Colors.primary },
+  dotIcon: { fontSize: 26, color: Colors.primaryText },
   title: {
     marginTop: 12,
     fontSize: 17,

@@ -29,7 +29,7 @@ const styles = themedStyles(() => ({
     fontSize: FONT_SIZE,
     lineHeight: LINE_HEIGHT,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     letterSpacing: -0.5,
   },
 }));

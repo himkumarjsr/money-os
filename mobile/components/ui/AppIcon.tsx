@@ -1,14 +1,14 @@
 /**
  * App-wide line icons matching web `components/ui/AppIcon.tsx`.
- * Stroke color defaults to Finkoin purple #534AB7.
+ * Stroke color defaults to the theme's accessible brand colour.
  */
 import Svg, { Path, Circle, Rect, G } from "react-native-svg";
-import { Colors } from "@/constants/theme";
+import { Colors, readableIcon } from "@/constants/theme";
 import { GoldStrokeDefs, isMirrorGold } from "@/components/ui/GoldMirror";
 
 /** Default icon colour; a getter so it follows the active theme. */
 export function appIconColor(): string {
-  return Colors.primary;
+  return Colors.primaryText;
 }
 
 export type AppIconName =
@@ -315,7 +315,8 @@ export function AppIcon({
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {mirror ? <GoldStrokeDefs id="fkIconGold" /> : null}
       <G
-        stroke={mirror ? "url(#fkIconGold)" : color}
+        // Icons need 3:1 against the card (WCAG 2.2 non-text contrast).
+        stroke={mirror ? "url(#fkIconGold)" : readableIcon(color)}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"

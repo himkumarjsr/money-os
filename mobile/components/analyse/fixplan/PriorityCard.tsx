@@ -128,7 +128,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  rankText: { fontSize: 14, color: Colors.primary, fontWeight: "600" },
+  rankText: { fontSize: 14, color: Colors.primaryText, fontWeight: "600" },
   title: {
     flex: 1,
     fontSize: 17,
@@ -141,7 +141,7 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  urgencyText: { fontSize: 11, color: Colors.primary },
+  urgencyText: { fontSize: 11, color: Colors.primaryText },
   grid: { marginTop: Spacing.md, gap: Spacing.sm },
   cell: {
     backgroundColor: Colors.background,
@@ -150,7 +150,11 @@ const styles = themedStyles(() => ({
   },
   cellText: { fontSize: 14, color: Colors.textPrimary },
   cellSub: { marginTop: 2, fontSize: 12, color: Colors.textMuted },
-  instrument: { marginTop: Spacing.sm, fontSize: 14, color: Colors.primary },
+  instrument: {
+    marginTop: Spacing.sm,
+    fontSize: 14,
+    color: Colors.primaryText,
+  },
   why: {
     marginTop: Spacing.sm,
     fontSize: 14,
@@ -180,5 +184,5 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: Spacing.md,
   },
-  learnText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  learnText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
 }));

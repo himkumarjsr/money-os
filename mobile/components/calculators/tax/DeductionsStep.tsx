@@ -295,7 +295,7 @@ const styles = themedStyles(() => ({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   mb12: { marginBottom: 12 },
   stdBox: {

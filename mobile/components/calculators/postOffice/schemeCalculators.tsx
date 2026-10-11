@@ -569,7 +569,7 @@ const styles = themedStyles(() => ({
     paddingVertical: 8,
   },
   badgeText: { fontSize: 12, lineHeight: 16, color: Colors.textSecondary },
-  badgeRate: { fontWeight: "600", color: Colors.primary },
+  badgeRate: { fontWeight: "600", color: Colors.primaryText },
   groupLabel: {
     marginBottom: 8,
     fontSize: 13,

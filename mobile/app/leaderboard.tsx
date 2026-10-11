@@ -279,7 +279,10 @@ export default function LeaderboardScreen() {
   if (!hasInitialized) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+        <ActivityIndicator
+          color={Colors.primaryText}
+          style={{ marginTop: 60 }}
+        />
       </SafeAreaView>
     );
   }
@@ -421,7 +424,7 @@ export default function LeaderboardScreen() {
 
           {loading ? (
             <View style={styles.loader}>
-              <ActivityIndicator color={Colors.primary} />
+              <ActivityIndicator color={Colors.primaryText} />
               <Text style={styles.loaderText}>Loading…</Text>
             </View>
           ) : entries.length === 0 ? (
@@ -508,7 +511,7 @@ const styles = themedStyles(() => ({
     alignSelf: "flex-start",
     paddingRight: 16,
   },
-  backText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  backText: { color: Colors.primaryText, fontWeight: "700", fontSize: 14 },
   gate: { padding: 24, alignItems: "center" },
   gateText: { color: Colors.textSecondary, marginBottom: 16, fontSize: 15 },
   gateBtn: {
@@ -537,7 +540,7 @@ const styles = themedStyles(() => ({
     minHeight: 44,
     justifyContent: "center",
   },
-  refreshText: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  refreshText: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   tabs: {
     flexDirection: "row",
     gap: 4,
@@ -555,7 +558,7 @@ const styles = themedStyles(() => ({
   },
   tabActive: { backgroundColor: Colors.card },
   tabText: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary },
-  tabTextActive: { color: Colors.primary },
+  tabTextActive: { color: Colors.primaryText },
   prize: {
     fontSize: 12,
     color: Colors.textSecondary,
@@ -647,7 +650,7 @@ const styles = themedStyles(() => ({
   },
   avatarMe: { backgroundColor: Colors.primary },
   avatarImg: { width: 36, height: 36, borderRadius: 18 },
-  avatarText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  avatarText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   avatarTextMe: { color: Colors.onPrimary },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   name: {
@@ -656,7 +659,7 @@ const styles = themedStyles(() => ({
     fontWeight: "500",
     color: Colors.textPrimary,
   },
-  nameMe: { fontWeight: "700", color: Colors.primary },
+  nameMe: { fontWeight: "700", color: Colors.primaryText },
   streak: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   fk: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   earnCard: { padding: 16, marginTop: 16 },
@@ -678,5 +681,5 @@ const styles = themedStyles(() => ({
     borderBottomColor: Colors.background,
   },
   earnAction: { flex: 1, fontSize: 13, color: Colors.textSecondary },
-  earnReward: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  earnReward: { fontSize: 12, fontWeight: "700", color: Colors.primaryText },
 }));

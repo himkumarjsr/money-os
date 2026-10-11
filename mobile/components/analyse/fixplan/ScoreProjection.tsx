@@ -113,7 +113,7 @@ const styles = themedStyles(() => ({
   score: { fontSize: 22, fontWeight: "800", lineHeight: 24 },
   outOf: { fontSize: 10, color: Colors.textMuted },
   middle: { flex: 1, alignItems: "center" },
-  arrow: { fontSize: 28, color: Colors.primary, lineHeight: 30 },
+  arrow: { fontSize: 28, color: Colors.primaryText, lineHeight: 30 },
   gain: {
     fontSize: 14,
     fontWeight: "700",

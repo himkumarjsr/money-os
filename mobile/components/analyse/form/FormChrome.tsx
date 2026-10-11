@@ -131,7 +131,7 @@ const styles = themedStyles(() => ({
     color: Colors.textMuted,
     textAlign: "center",
   },
-  pillLabelOn: { color: Colors.primary, fontWeight: "700" },
+  pillLabelOn: { color: Colors.primaryText, fontWeight: "700" },
   banner: {
     gap: 12,
     borderRadius: 12,
@@ -143,7 +143,7 @@ const styles = themedStyles(() => ({
     marginBottom: 20,
   },
   bannerTitle: { fontSize: 14, fontWeight: "700", color: Colors.primaryDark },
-  bannerSub: { marginTop: 2, fontSize: 12, color: Colors.primary },
+  bannerSub: { marginTop: 2, fontSize: 12, color: Colors.primaryText },
   bannerActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   optionRow: {
     flexDirection: "row",

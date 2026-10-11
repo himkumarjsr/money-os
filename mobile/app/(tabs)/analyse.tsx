@@ -34,6 +34,16 @@ import Button from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ResultCard } from "@/components/analyse/ResultCard";
 import { IssueCard } from "@/components/analyse/IssueCard";
+import {
+  SignedOutPrompt,
+  type SignedOutBenefit,
+} from "@/components/auth/SignedOutPrompt";
+
+const ANALYSE_BENEFITS: readonly SignedOutBenefit[] = [
+  { icon: "target", text: "Health score in 2 minutes" },
+  { icon: "check", text: "Fix plan with clear next steps" },
+  { icon: "lock", text: "No PAN or Aadhaar needed" },
+];
 
 const SCORE_TONES = themed(
   () =>
@@ -48,7 +58,11 @@ const SCORE_TONES = themed(
         fg: tintFg("#92400E"),
         label: "Needs attention",
       },
-      good: { bg: tintBg("#DCFCE7"), fg: tintFg("#166534"), label: "Great shape" },
+      good: {
+        bg: tintBg("#DCFCE7"),
+        fg: tintFg("#166534"),
+        label: "Great shape",
+      },
     }) as const,
 );
 
@@ -180,30 +194,13 @@ export default function AnalyseScreen() {
   if (!isLoggedIn) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📊</Text>
-          <Text style={styles.emptyTitle}>Know your financial health</Text>
-          <Text style={styles.emptySub}>
-            Log in to see your score, or start a free health check after signing
-            in.
-          </Text>
-          <Button
-            label="Log in"
-            onPress={() =>
-              router.push({
-                pathname: "/(auth)/login",
-                params: { next: "/(tabs)/analyse" },
-              })
-            }
-            style={{ marginTop: 24, minHeight: 52, alignSelf: "stretch" }}
-          />
-          <Button
-            label="Create free account"
-            variant="secondary"
-            onPress={() => router.push("/(auth)/signup")}
-            style={{ marginTop: 12, minHeight: 52, alignSelf: "stretch" }}
-          />
-        </View>
+        <SignedOutPrompt
+          icon="chart"
+          title="Know your financial health"
+          subtitle="Log in to see your score out of 100 and exactly where your money needs attention."
+          benefits={ANALYSE_BENEFITS}
+          next="/(tabs)/analyse"
+        />
       </SafeAreaView>
     );
   }
@@ -431,7 +428,7 @@ const styles = themedStyles(() => ({
   },
   retake: {
     fontSize: FontSize.md,
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontWeight: "700",
   },
   errorBox: {
@@ -454,7 +451,7 @@ const styles = themedStyles(() => ({
   retry: {
     fontSize: FontSize.md,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   scoreBanner: {
     marginTop: Spacing.xl,
@@ -536,12 +533,12 @@ const styles = themedStyles(() => ({
   ctaTitle: {
     fontSize: FontSize.lg,
     fontWeight: "800",
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginBottom: 6,
   },
   ctaSub: {
     fontSize: FontSize.md,
-    color: Colors.primary,
+    color: Colors.primaryText,
     lineHeight: 20,
     opacity: 0.8,
   },
@@ -578,7 +575,7 @@ const styles = themedStyles(() => ({
   statVal: {
     fontSize: FontSize.lg,
     fontWeight: "800",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   statSub: {
     fontSize: FontSize.sm,

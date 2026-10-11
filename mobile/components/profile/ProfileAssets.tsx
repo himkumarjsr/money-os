@@ -390,7 +390,7 @@ function SectionCard({
             {money(total)}
           </Text>
           <View style={open ? styles.chevronOpen : null}>
-            <AppIcon name="chevronDown" size={16} color={Colors.primary} />
+            <AppIcon name="chevronDown" size={16} color={Colors.primaryText} />
           </View>
         </View>
       </Pressable>
@@ -408,7 +408,11 @@ function SectionCard({
               ]}
             >
               <View style={styles.itemLeft}>
-                <LineIcon name={item.icon} size={16} color={Colors.primary} />
+                <LineIcon
+                  name={item.icon}
+                  size={16}
+                  color={Colors.primaryText}
+                />
                 <View style={styles.flexShrink}>
                   <Text style={styles.itemLabel} numberOfLines={1}>
                     {item.label}
@@ -1002,7 +1006,7 @@ const styles = themedStyles(() => {
       textAlign: "center",
       fontSize: FontSize.sm,
       fontWeight: "600",
-      color: Colors.primary,
+      color: Colors.primaryText,
     },
     section: {
       overflow: "hidden",
@@ -1124,7 +1128,7 @@ const styles = themedStyles(() => {
       flexShrink: 0,
       fontSize: FontSize.md,
       fontWeight: "700",
-      color: Colors.primary,
+      color: Colors.primaryText,
     },
     addBtn: {
       marginTop: 4,
@@ -1140,7 +1144,7 @@ const styles = themedStyles(() => {
     addBtnText: {
       fontSize: FontSize.sm,
       fontWeight: "700",
-      color: Colors.primary,
+      color: Colors.primaryText,
     },
     sheetHead: {
       flexDirection: "row",
@@ -1164,7 +1168,7 @@ const styles = themedStyles(() => {
     closeText: {
       fontSize: FontSize.md,
       fontWeight: "700",
-      color: Colors.primary,
+      color: Colors.primaryText,
     },
     pickRow: {
       flexDirection: "row",
@@ -1183,7 +1187,7 @@ const styles = themedStyles(() => {
       fontWeight: "600",
       color: Colors.textPrimary,
     },
-    pickArrow: { fontSize: FontSize.md, color: Colors.primary },
+    pickArrow: { fontSize: FontSize.md, color: Colors.primaryText },
     field: { marginBottom: Spacing.md },
     fieldPair: { flexDirection: "row", gap: Spacing.md },
     fieldLabel: {

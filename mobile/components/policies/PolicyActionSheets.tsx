@@ -264,7 +264,7 @@ export function TransferGuideSheet({
           <ActionButton
             label="Open insurer site for forms →"
             bg={Colors.card}
-            color={Colors.primary}
+            color={Colors.primaryText}
             border={Colors.primary}
             onPress={() =>
               openWebPage(insurerFormDownloadUrl(policy.insurerName))

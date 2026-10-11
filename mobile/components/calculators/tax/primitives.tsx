@@ -417,7 +417,7 @@ export function PrivateAmount({
         accessibilityLabel={visible ? `Hide ${label}` : `Show ${label}`}
         style={styles.eyeBtn}
       >
-        <EyeIcon open={visible} size={16} color={Colors.primary} />
+        <EyeIcon open={visible} size={16} color={Colors.primaryText} />
       </Pressable>
     </View>
   );
@@ -479,7 +479,7 @@ const styles = themedStyles(() => ({
   infoChipText: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     lineHeight: 13,
   },
   infoSheetText: { fontSize: 13, lineHeight: 19, color: Colors.textSecondary },
@@ -633,7 +633,7 @@ const styles = themedStyles(() => ({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   stepChevron: { marginLeft: "auto" },
   disclosureSummary: {
@@ -641,7 +641,11 @@ const styles = themedStyles(() => ({
     marginVertical: -8,
     justifyContent: "center",
   },
-  disclosureText: { fontSize: 12, fontWeight: "500", color: Colors.primary },
+  disclosureText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: Colors.primaryText,
+  },
   privateRow: {
     flexDirection: "row",
     alignItems: "center",

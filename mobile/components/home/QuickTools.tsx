@@ -67,7 +67,7 @@ export function QuickTools() {
           activeOpacity={0.85}
         >
           <View style={[styles.icon, { backgroundColor: tool.bg }]}>
-            <AppIcon name={tool.icon} size={22} color={Colors.primary} />
+            <AppIcon name={tool.icon} size={22} color={Colors.primaryText} />
           </View>
           <Text style={styles.label}>{tool.label}</Text>
         </TouchableOpacity>

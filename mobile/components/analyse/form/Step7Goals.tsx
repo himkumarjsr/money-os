@@ -226,7 +226,7 @@ const styles = themedStyles(() => ({
         : "rgba(83,74,183,0.1)",
   },
   goalText: { fontSize: 15, fontWeight: "500", color: Colors.textPrimary },
-  purpleNote: { fontSize: 12, color: Colors.primary },
+  purpleNote: { fontSize: 12, color: Colors.primaryText },
   greyNote: { fontSize: 14, lineHeight: 20, color: Colors.textMuted },
   riskQuestion: {
     fontSize: 14,

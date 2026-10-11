@@ -115,7 +115,7 @@ const YEARLY_SERIES = (): ChartSeries[] => [
     key: "principalPaid",
     label: "Principal paid",
     type: "bar",
-    color: Colors.primary,
+    color: Colors.primaryText,
     stackId: "a",
   },
   {
@@ -363,7 +363,7 @@ export function AmortisationSchedule({
 const styles = themedStyles(() => ({
   linkRow: { flexDirection: "row", justifyContent: "flex-end" },
   linkBtn: { minHeight: 44, justifyContent: "center" },
-  linkText: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  linkText: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   tableCard: {
     borderRadius: 12,
     borderWidth: 1,
@@ -401,5 +401,5 @@ const styles = themedStyles(() => ({
   cellBold: { fontWeight: "600" },
   moreRow: { flexDirection: "row", flexWrap: "wrap", gap: 16, paddingTop: 4 },
   moreBtn: { minHeight: 44, justifyContent: "center" },
-  moreText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  moreText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
 }));

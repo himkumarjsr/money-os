@@ -149,7 +149,7 @@ const styles = themedStyles(() => ({
     textAlign: "center",
     fontSize: 28,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
     letterSpacing: -0.5,
     lineHeight: 32,
     paddingHorizontal: 8,
@@ -225,7 +225,7 @@ const styles = themedStyles(() => ({
     textAlign: "center",
   },
   footerLoginStrong: {
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontWeight: "700",
   },
 }));

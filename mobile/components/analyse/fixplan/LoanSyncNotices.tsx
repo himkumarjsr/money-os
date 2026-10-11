@@ -184,9 +184,9 @@ const styles = themedStyles(() => ({
   },
   driftNote: { marginTop: Spacing.sm, fontSize: 12, color: Colors.warningText },
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
-  linkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  linkText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   detailsCard: { backgroundColor: Colors.surfaceMuted, gap: Spacing.sm },
-  detailsTitle: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  detailsTitle: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   loan: {
     backgroundColor: Colors.card,
     borderRadius: Radius.md,
@@ -227,6 +227,6 @@ const styles = themedStyles(() => ({
     paddingHorizontal: Spacing.md,
     justifyContent: "center",
   },
-  skipText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  skipText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   disabled: { opacity: 0.6 },
 }));

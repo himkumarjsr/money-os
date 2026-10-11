@@ -305,7 +305,7 @@ const styles = themedStyles(() => ({
     alignSelf: "flex-start",
     marginBottom: 8,
   },
-  backText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  backText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
   heading: { fontSize: 22, fontWeight: "800", color: Colors.textPrimary },
   subheading: {
     fontSize: 13,

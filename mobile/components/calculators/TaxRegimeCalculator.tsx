@@ -161,7 +161,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: 12,
   },
-  caBtnText: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  caBtnText: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   resetBtn: {
     minHeight: 44,
     justifyContent: "center",
@@ -172,7 +172,7 @@ const styles = themedStyles(() => ({
   },
   resetText: { fontSize: 13, color: Colors.textMuted },
   intro: { fontSize: 12, lineHeight: 18, color: Colors.textMuted },
-  introQ: { fontWeight: "600", color: Colors.primary },
+  introQ: { fontWeight: "600", color: Colors.primaryText },
   steps: { gap: 24 },
   footer: { fontSize: 12, color: Colors.textMuted },
 }));

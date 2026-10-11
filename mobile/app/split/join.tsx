@@ -89,7 +89,7 @@ export default function JoinSplitGroupScreen() {
       <View style={styles.card}>
         {showLoader ? (
           <View style={styles.loader}>
-            <ActivityIndicator color={Colors.primary} />
+            <ActivityIndicator color={Colors.primaryText} />
             <Text style={styles.loaderText}>
               {status === "joining" ? "Joining group…" : "Checking invite…"}
             </Text>
@@ -99,7 +99,7 @@ export default function JoinSplitGroupScreen() {
         {status === "login" ? (
           <>
             <View style={styles.iconCircle}>
-              <AppIcon name="users" size={28} color={Colors.primary} />
+              <AppIcon name="users" size={28} color={Colors.primaryText} />
             </View>
             <Text style={styles.title}>Log in to join</Text>
             <Text style={styles.body}>
@@ -136,7 +136,7 @@ export default function JoinSplitGroupScreen() {
         {status === "success" ? (
           <>
             <View style={styles.iconCircle}>
-              <AppIcon name="check" size={28} color={Colors.primary} />
+              <AppIcon name="check" size={28} color={Colors.primaryText} />
             </View>
             <Text style={styles.title}>Joined “{groupName}”</Text>
             <Text style={styles.muted}>Taking you to the group…</Text>
@@ -146,7 +146,7 @@ export default function JoinSplitGroupScreen() {
         {status === "error" ? (
           <>
             <View style={styles.iconCircle}>
-              <AppIcon name="users" size={28} color={Colors.primary} />
+              <AppIcon name="users" size={28} color={Colors.primaryText} />
             </View>
             <Text style={styles.titleSm}>Could not join group</Text>
             <Text style={styles.muted}>{message}</Text>
@@ -257,5 +257,9 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "700" },
+  secondaryBtnText: {
+    color: Colors.primaryText,
+    fontSize: 14,
+    fontWeight: "700",
+  },
 }));

@@ -75,7 +75,7 @@ export function TrackerConsent({ onAccept }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>
-            <AppIcon name="chart" size={48} color={Colors.primary} />
+            <AppIcon name="chart" size={48} color={Colors.primaryText} />
           </View>
           <Text style={styles.title}>Start your money tracker</Text>
           <Text style={styles.sub}>
@@ -91,10 +91,14 @@ export function TrackerConsent({ onAccept }: Props) {
                   <TrackerIcon
                     name={item.icon}
                     size={16}
-                    color={Colors.primary}
+                    color={Colors.primaryText}
                   />
                 ) : (
-                  <AppIcon name={item.icon} size={16} color={Colors.primary} />
+                  <AppIcon
+                    name={item.icon}
+                    size={16}
+                    color={Colors.primaryText}
+                  />
                 )}
                 <Text style={styles.listItem}>{item.label}</Text>
               </View>
@@ -102,7 +106,7 @@ export function TrackerConsent({ onAccept }: Props) {
           </View>
 
           <View style={styles.privacyBox}>
-            <AppIcon name="lock" size={16} color={Colors.primary} />
+            <AppIcon name="lock" size={16} color={Colors.primaryText} />
             <Text style={styles.privacyText}>
               Your expenses and credit-card nicknames, optional last-4 digits,
               and billing/due dates stay private to your account. Sensitive
@@ -211,7 +215,7 @@ const styles = themedStyles(() => ({
   listHead: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginBottom: 12,
   },
   listRow: {
@@ -239,7 +243,7 @@ const styles = themedStyles(() => ({
   privacyText: {
     flex: 1,
     fontSize: 13,
-    color: Colors.primary,
+    color: Colors.primaryText,
     lineHeight: 21,
   },
   checkRow: {
@@ -268,7 +272,7 @@ const styles = themedStyles(() => ({
     color: Colors.textSecondary,
     lineHeight: 20,
   },
-  link: { color: Colors.primary, textDecorationLine: "underline" },
+  link: { color: Colors.primaryText, textDecorationLine: "underline" },
   startBtn: {
     height: 48,
     borderRadius: 12,

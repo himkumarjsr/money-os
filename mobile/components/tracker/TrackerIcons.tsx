@@ -2,7 +2,7 @@
  * Tracker category/subcategory icons — ports web `components/tracker/TrackerIcons.tsx`
  * shapes 1:1 onto react-native-svg so bucket + subcategory rows match the PWA visually.
  */
-import { brand } from "@/constants/theme";
+import { brand, readableIcon } from "@/constants/theme";
 import { View } from "react-native";
 import Svg, { Path, Circle, Rect, G } from "react-native-svg";
 import {
@@ -250,10 +250,12 @@ export function TrackerIcon({
   color?: string;
 }) {
   const s = shapes[name] ?? shapes.other;
-  const paint = isMirrorGold(color) ? "url(#fkTrackerGold)" : color;
+  // Icons need 3:1 against the card (WCAG 2.2 non-text contrast).
+  const stroke = isMirrorGold(color) ? color : readableIcon(color);
+  const paint = isMirrorGold(color) ? "url(#fkTrackerGold)" : stroke;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {paint !== color ? <GoldStrokeDefs id="fkTrackerGold" /> : null}
+      {paint !== stroke ? <GoldStrokeDefs id="fkTrackerGold" /> : null}
       <G
         stroke={paint}
         strokeWidth={1.75}

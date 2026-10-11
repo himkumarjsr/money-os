@@ -234,7 +234,7 @@ export function SliderField({
           <Text
             style={[
               styles.rightUnit,
-              isPercent && { color: Colors.primary, fontWeight: "600" },
+              isPercent && { color: Colors.primaryText, fontWeight: "600" },
             ]}
           >
             {rightUnit}
@@ -379,7 +379,7 @@ export function ExcelDownloadButton({
           </View>
         </View>
         {busy ? (
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={Colors.primaryText} />
         ) : (
           <Text style={styles.excelArrow}>→</Text>
         )}

@@ -114,7 +114,7 @@ export function ToggleSection({
               { backgroundColor: isOn ? tintBg("#EEEDFE") : tintBg("#F7F7F4") },
             ]}
           >
-            <AppIcon name={resolvedIcon} size={20} color={Colors.primary} />
+            <AppIcon name={resolvedIcon} size={20} color={Colors.primaryText} />
           </View>
           <View style={styles.textCol}>
             <Text style={styles.title}>{title}</Text>
@@ -149,7 +149,11 @@ export function ToggleSection({
               <View
                 style={expanded ? { transform: [{ rotate: "180deg" }] } : null}
               >
-                <AppIcon name="chevronDown" size={18} color={Colors.primary} />
+                <AppIcon
+                  name="chevronDown"
+                  size={18}
+                  color={Colors.primaryText}
+                />
               </View>
             </Pressable>
           ) : null}

@@ -37,9 +37,10 @@ function Button({
 
   const textColor = {
     primary: Colors.onPrimary,
-    secondary: Colors.primary,
+    // primaryText meets WCAG AA on primaryLight / the page in every theme.
+    secondary: Colors.primaryText,
     danger: "#fff",
-    ghost: Colors.primary,
+    ghost: Colors.primaryText,
   }[variant];
 
   return (
