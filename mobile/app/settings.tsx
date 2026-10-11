@@ -30,6 +30,7 @@ import { syncKv } from "@/lib/syncKv";
 import { uploadAvatar } from "@/lib/avatarUpload";
 import {
   getPushPermission,
+  pushAvailable,
   registerPushToken,
   requestPushPermission,
   unregisterPushToken,
@@ -137,7 +138,7 @@ function SettingsInner() {
   const [exportBusy, setExportBusy] = useState(false);
   const [deleteSheet, setDeleteSheet] = useState(false);
 
-  const pushSupported = Device.isDevice;
+  const pushSupported = Device.isDevice && pushAvailable;
 
   useEffect(() => {
     setName(user?.name ?? "");
@@ -387,11 +388,13 @@ function SettingsInner() {
     }
   }, [exportBusy, user, lastSubmission]);
 
-  const pushStatusText = !pushSupported
-    ? "Push needs a physical phone — simulators can't receive notifications."
-    : pushConsent
-      ? "✓ Device push on — tips and Split expense alerts on this phone"
-      : "Off — enable for tips and Split expense alerts on this phone";
+  const pushStatusText = !pushAvailable
+    ? "Push isn't available in Expo Go on Android. Use a development or store build."
+    : !pushSupported
+      ? "Push needs a physical phone — simulators can't receive notifications."
+      : pushConsent
+        ? "✓ Device push on — tips and Split expense alerts on this phone"
+        : "Off — enable for tips and Split expense alerts on this phone";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

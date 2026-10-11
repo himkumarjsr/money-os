@@ -5,11 +5,12 @@
  */
 import { useEffect, useRef } from "react";
 import { router } from "expo-router";
-import * as Notifications from "expo-notifications";
+import type * as Notifications from "expo-notifications";
 import { hydrateSyncKv, syncKv } from "@/lib/syncKv";
 import {
   askPushPermissionOnce,
   ensureAndroidChannel,
+  getNotifications,
   registerPushToken,
   routeForPushUrl,
 } from "@/lib/pushNotifications";
@@ -75,6 +76,8 @@ export function PushNotificationsManager() {
   }, [userId]);
 
   useEffect(() => {
+    const api = getNotifications();
+    if (!api) return;
     const open = (response: Notifications.NotificationResponse) => {
       const id = response.notification.request.identifier;
       if (handled.current.has(id) || syncKv.getItem(LAST_HANDLED_KEY) === id) {
@@ -98,15 +101,15 @@ export function PushNotificationsManager() {
       }
     };
 
-    const received = Notifications.addNotificationReceivedListener(() => {
+    const received = api.addNotificationReceivedListener(() => {
       const uid = useAuthStore.getState().user?.id;
       if (uid) void useNotificationStore.getState().fetchNotifications(uid);
     });
-    const tapped = Notifications.addNotificationResponseReceivedListener(open);
+    const tapped = api.addNotificationResponseReceivedListener(open);
 
     const coldStart = setTimeout(async () => {
       await hydrateSyncKv();
-      const last = await Notifications.getLastNotificationResponseAsync();
+      const last = await api.getLastNotificationResponseAsync();
       if (last) open(last);
     }, 600);
 

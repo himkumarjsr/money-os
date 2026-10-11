@@ -4,9 +4,9 @@
  * (daily tip, split expense) with `data.url` = the same deep link the PWA uses.
  */
 import { Platform } from "react-native";
-import Constants from "expo-constants";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
+import type * as NotificationsModule from "expo-notifications";
 import type { Href } from "expo-router";
 import { brand } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
@@ -16,17 +16,45 @@ import { nativeRouteForPath } from "@/lib/contentLinks";
 const ASKED_KEY = "finkoin_push_permission_asked";
 const TOKEN_KEY = "finkoin_expo_push_token";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+type NotificationsApi = typeof NotificationsModule;
+
+/**
+ * Expo Go on Android dropped remote push in SDK 53, and importing
+ * expo-notifications there throws. Push works in dev and store builds.
+ */
+export const pushAvailable = !(
+  Platform.OS === "android" &&
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+);
+
+let notificationsApi: NotificationsApi | null | undefined;
+
+/** expo-notifications, loaded on first use; null where push isn't available. */
+export function getNotifications(): NotificationsApi | null {
+  if (notificationsApi !== undefined) return notificationsApi;
+  notificationsApi = null;
+  if (!pushAvailable) return null;
+  try {
+    const api = require("expo-notifications") as NotificationsApi;
+    api.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+    notificationsApi = api;
+  } catch (e) {
+    console.warn("expo-notifications unavailable", e);
+  }
+  return notificationsApi;
+}
 
 export async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") return;
+  const Notifications = getNotifications();
+  if (!Notifications) return;
   await Notifications.setNotificationChannelAsync("default", {
     name: "Finkoin",
     importance: Notifications.AndroidImportance.HIGH,
@@ -37,6 +65,8 @@ export async function ensureAndroidChannel(): Promise<void> {
 export async function getPushPermission(): Promise<
   "granted" | "denied" | "undetermined"
 > {
+  const Notifications = getNotifications();
+  if (!Notifications) return "undetermined";
   const { status } = await Notifications.getPermissionsAsync();
   return status;
 }
@@ -46,6 +76,8 @@ export async function getPushPermission(): Promise<
  * uninstall, so a reinstall asks again). Returns true when granted.
  */
 export async function askPushPermissionOnce(): Promise<boolean> {
+  const Notifications = getNotifications();
+  if (!Notifications) return false;
   const current = await getPushPermission();
   if (current === "granted") return true;
   if (syncKv.getItem(ASKED_KEY)) return false;
@@ -57,6 +89,8 @@ export async function askPushPermissionOnce(): Promise<boolean> {
 
 /** Ask again (e.g. from Profile); false when the OS has blocked further prompts. */
 export async function requestPushPermission(): Promise<boolean> {
+  const Notifications = getNotifications();
+  if (!Notifications) return false;
   await ensureAndroidChannel();
   const { status } = await Notifications.requestPermissionsAsync();
   return status === "granted";
@@ -72,7 +106,8 @@ function projectId(): string | undefined {
 /** Save this device's Expo push token for the signed-in user (needs permission). */
 export async function registerPushToken(userId: string): Promise<boolean> {
   try {
-    if (!Device.isDevice) return false;
+    const Notifications = getNotifications();
+    if (!Notifications || !Device.isDevice) return false;
     if ((await getPushPermission()) !== "granted") return false;
     await ensureAndroidChannel();
     const { data: token } = await Notifications.getExpoPushTokenAsync({
