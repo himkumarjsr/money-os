@@ -9,6 +9,7 @@ import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useGamification } from "@/lib/useGamification";
 import { useAuthStore } from "@/store/authStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const EARN = [
   ["Complete analysis", "+100 FK"],
@@ -77,9 +78,9 @@ export default function RewardsScreen() {
       </View>
 
       <View style={styles.useCard}>
-        <Text style={[styles.sectionTitle, { color: Colors.primaryDark }]}>
+        <GoldText style={[styles.sectionTitle, { color: Colors.primaryDark }]}>
           How to use FK
-        </Text>
+        </GoldText>
         <Text style={styles.useText}>
           Use <Text style={{ fontWeight: "700" }}>500 FK</Text> toward
           discounted unlocks on the fix plan flow where shown — see{" "}

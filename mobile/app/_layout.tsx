@@ -123,10 +123,7 @@ export default function RootLayout() {
             <MorningTipPopup />
           </View>
         ) : null}
-        <AnimatedSplash
-          ready={ready}
-          accent={theme === "premium" ? Colors.accent : "#FFFFFF"}
-        />
+        <AnimatedSplash ready={ready} theme={theme} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

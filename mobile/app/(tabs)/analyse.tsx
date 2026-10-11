@@ -25,7 +25,10 @@ import {
   tintBg,
   tintFg,
   themed,
+  getActiveTheme,
+  HERO_GRADIENT,
 } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -232,7 +235,9 @@ export default function AnalyseScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Financial Health</Text>
+          <GoldText style={styles.headerTitle} always>
+            Financial Health
+          </GoldText>
           {result ? (
             <TouchableOpacity
               onPress={() => void goToHealthCheck(user?.id)}
@@ -261,21 +266,50 @@ export default function AnalyseScreen() {
 
         {result ? (
           <>
-            <View
-              style={[
-                styles.scoreBanner,
-                { backgroundColor: tone.bg, marginHorizontal: Spacing.xl },
-              ]}
-            >
-              <Text style={[styles.scoreNum, { color: tone.fg }]}>{score}</Text>
-              <Text style={[styles.scoreOf, { color: tone.fg }]}>/100</Text>
-              <Text style={[styles.scoreLabel, { color: tone.fg }]}>
-                {tone.label}
-              </Text>
-              <Text style={[styles.scoreSubtitle, { color: tone.fg }]}>
-                Financial Health Score
-              </Text>
-            </View>
+            {getActiveTheme() === "premium" ? (
+              // Premium: the dark gold hero panel with a 24K mirror score,
+              // like the PWA, instead of a green or amber wash.
+              <View
+                style={[
+                  styles.scoreBanner,
+                  styles.scoreBannerPremium,
+                  { marginHorizontal: Spacing.xl },
+                ]}
+              >
+                <GoldText style={styles.scoreNum} always>
+                  {String(score)}
+                </GoldText>
+                <GoldText style={styles.scoreOf} always>
+                  /100
+                </GoldText>
+                <View style={[styles.scorePill, { backgroundColor: tone.bg }]}>
+                  <Text style={[styles.scorePillText, { color: tone.fg }]}>
+                    {tone.label}
+                  </Text>
+                </View>
+                <Text style={styles.scoreSubtitlePremium}>
+                  Financial Health Score
+                </Text>
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.scoreBanner,
+                  { backgroundColor: tone.bg, marginHorizontal: Spacing.xl },
+                ]}
+              >
+                <Text style={[styles.scoreNum, { color: tone.fg }]}>
+                  {score}
+                </Text>
+                <Text style={[styles.scoreOf, { color: tone.fg }]}>/100</Text>
+                <Text style={[styles.scoreLabel, { color: tone.fg }]}>
+                  {tone.label}
+                </Text>
+                <Text style={[styles.scoreSubtitle, { color: tone.fg }]}>
+                  Financial Health Score
+                </Text>
+              </View>
+            )}
 
             <View
               style={{ paddingHorizontal: Spacing.xl, marginTop: Spacing.md }}
@@ -318,7 +352,9 @@ export default function AnalyseScreen() {
                 style={{ minHeight: 48, marginBottom: Spacing.md }}
               />
               <Card style={styles.ctaCard}>
-                <Text style={styles.ctaTitle}>Get your complete fix plan</Text>
+                <GoldText style={styles.ctaTitle}>
+                  Get your complete fix plan
+                </GoldText>
                 <Text style={styles.ctaSub}>
                   Step-by-step actions with exact ₹ numbers. AI powered.
                   Personal to you.
@@ -446,6 +482,27 @@ const styles = themedStyles(() => ({
     fontSize: FontSize.md,
     marginTop: 4,
     opacity: 0.8,
+  },
+  scoreBannerPremium: {
+    backgroundColor: "#12100B",
+    experimental_backgroundImage: HERO_GRADIENT,
+    borderWidth: 1,
+    borderColor: "rgba(212,175,55,0.45)",
+  },
+  scorePill: {
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  scorePillText: {
+    fontSize: FontSize.md,
+    fontWeight: "800",
+  },
+  scoreSubtitlePremium: {
+    fontSize: FontSize.md,
+    marginTop: 8,
+    color: Colors.textSecondary,
   },
   section: {
     paddingHorizontal: Spacing.xl,

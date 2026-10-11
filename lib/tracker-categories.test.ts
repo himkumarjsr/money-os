@@ -5,6 +5,7 @@ import {
   findSubcategory,
   normalizeTrackerBucket,
   pickerSubcategories,
+  trackerTotalAmount,
   type BucketType,
 } from "./tracker-categories";
 
@@ -67,7 +68,7 @@ describe("TRACKER_CATEGORIES", () => {
     expect(countsTowardTrackerTotals({ subcategory: "sip" })).toBe(true);
   });
 
-  it("counts credit-card purchases in their bucket; leaves out bill pays", () => {
+  it("counts credit-card purchases in their bucket; bill pays only above them", () => {
     expect(
       countsTowardTrackerTotals({
         bucket: "needs",
@@ -75,22 +76,35 @@ describe("TRACKER_CATEGORIES", () => {
         payment_method: "credit_card::c1::HDFC",
       }),
     ).toBe(true);
-    expect(
-      countsTowardTrackerTotals({
-        bucket: "loans",
-        subcategory: "credit_card",
-        payment_method: "upi",
-      }),
-    ).toBe(false);
+    const billPay = {
+      bucket: "loans",
+      subcategory: "credit_card",
+      payment_method: "upi",
+      amount: 10000,
+    };
+    expect(countsTowardTrackerTotals(billPay)).toBe(true);
+    // No card purchases seen: the full payment counts.
+    expect(trackerTotalAmount(billPay)).toBe(10000);
+    // Only the part above purchases already counted (applyCardBillCoverage).
+    expect(trackerTotalAmount({ ...billPay, card_bill_counted: 2500 })).toBe(
+      2500,
+    );
+    expect(trackerTotalAmount({ ...billPay, card_bill_counted: 0 })).toBe(0);
+    expect(trackerTotalAmount({ ...billPay, card_bill_counted: -5 })).toBe(0);
+    expect(trackerTotalAmount({ ...billPay, card_bill_counted: 99999 })).toBe(
+      10000,
+    );
     // "Pay bill · …" notes logged elsewhere are bill pays too.
     expect(
-      countsTowardTrackerTotals({
+      trackerTotalAmount({
         bucket: "others",
         subcategory: "others",
         payment_method: "upi",
         description: "Pay bill · HDFC",
+        amount: 700,
+        card_bill_counted: 200,
       }),
-    ).toBe(false);
+    ).toBe(200);
     expect(
       countsTowardTrackerTotals({
         bucket: "needs",

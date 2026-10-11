@@ -7,6 +7,7 @@ import {
   Spacing,
   themedStyles,
   tintBg,
+  getActiveTheme,
 } from "@/constants/theme";
 import { inr, loc, shared, urgencyColor } from "./shared";
 import { openContentHref } from "@/lib/contentLinks";
@@ -172,7 +173,10 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     borderRadius: Radius.sm,
     borderWidth: 1,
-    borderColor: "rgba(83,74,183,0.3)",
+    borderColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.3)"
+        : "rgba(83,74,183,0.3)",
     backgroundColor: Colors.surfaceMuted,
     paddingHorizontal: Spacing.md,
   },

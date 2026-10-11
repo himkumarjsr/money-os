@@ -8,9 +8,17 @@ import { CollapsiblePanel } from "@/components/tracker/CollapsiblePanel";
 import { PlannedInvestmentsSection } from "@/components/tracker/PlannedInvestmentsSection";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors, themedStyles, tintBg } from "@/constants/theme";
+import {
+  Colors,
+  themedStyles,
+  tintBg,
+  onPrimaryAlpha,
+  getActiveTheme,
+  onPrimaryStatus,
+} from "@/constants/theme";
 import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const CATEGORY_ICON: Record<string, string> = {
   insurance_life: "🛡️",
@@ -183,7 +191,9 @@ export function ObligationsChecklist({
         <View style={styles.learned}>
           <AppIcon name="bulb" size={20} color={Colors.primary} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.learnedTitle}>Add to your obligations?</Text>
+            <GoldText style={styles.learnedTitle}>
+              Add to your obligations?
+            </GoldText>
             <Text style={styles.learnedBody}>
               Looks like &quot;{learnedSuggestion.title}&quot; (
               {inr(learnedSuggestion.amount)}) is a recurring payment. Add it so
@@ -234,9 +244,9 @@ export function ObligationsChecklist({
           <View style={styles.setup}>
             <AppIcon name="bulb" size={22} color={Colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.setupTitle}>
+              <GoldText style={styles.setupTitle}>
                 Set up your financial calendar
-              </Text>
+              </GoldText>
               <Text style={styles.setupBody}>
                 Add EMI dates, insurance renewals and SIPs. Finkoin reminds you
                 before each one. Recurring expenses can also be added
@@ -626,21 +636,26 @@ const styles = themedStyles(() => ({
     gap: 12,
     marginBottom: 8,
   },
-  stripLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)" },
+  stripLabel: { fontSize: 12, color: onPrimaryAlpha(0.7) },
   stripTotal: { fontSize: 18, fontWeight: "800", color: Colors.onPrimary },
   stripTrack: {
     height: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: onPrimaryAlpha(0.2),
     overflow: "hidden",
   },
-  stripFill: { height: "100%", borderRadius: 999, backgroundColor: "#90EE90" },
+  stripFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor:
+      getActiveTheme() === "premium" ? onPrimaryStatus("good") : "#90EE90",
+  },
   stripFoot: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 6,
   },
-  stripFootText: { fontSize: 11, color: "rgba(255,255,255,0.7)" },
+  stripFootText: { fontSize: 11, color: onPrimaryAlpha(0.7) },
   row: {
     paddingHorizontal: 14,
     paddingVertical: 12,

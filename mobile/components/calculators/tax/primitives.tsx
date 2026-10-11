@@ -20,7 +20,8 @@ import {
 } from "@/lib/formatters";
 import type { TaxTeachContent } from "@/lib/taxTeachContent";
 import { TaxTeachTooltip, useLazySheet } from "../TaxTeachTooltip";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, getActiveTheme } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** Small `i` helper chip (PWA FieldTooltip) — opens the helper text in a sheet. */
 export function FieldTooltip({
@@ -338,7 +339,7 @@ export function StepCard({
         accessibilityState={{ expanded: open }}
         style={styles.stepSummary}
       >
-        <Text style={styles.stepTitle}>{title}</Text>
+        <GoldText style={styles.stepTitle}>{title}</GoldText>
         <TaxTeachTooltip content={teach} ariaLabel={`About ${title}`} />
         <View
           style={[
@@ -467,7 +468,10 @@ const styles = themedStyles(() => ({
     height: 20,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(83,74,183,0.35)",
+    borderColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.35)"
+        : "rgba(83,74,183,0.35)",
     backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",

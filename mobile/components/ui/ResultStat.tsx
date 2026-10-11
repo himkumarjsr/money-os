@@ -7,6 +7,7 @@ import {
   Shadow,
   themedStyles,
 } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type Props = {
   label: string;
@@ -19,7 +20,9 @@ export function ResultStat({ label, value, hint, accent }: Props) {
   return (
     <View style={[styles.box, accent && styles.boxAccent]}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, accent && styles.valueAccent]}>{value}</Text>
+      <GoldText style={[styles.value, accent && styles.valueAccent]}>
+        {value}
+      </GoldText>
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );

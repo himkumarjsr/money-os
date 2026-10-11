@@ -22,6 +22,7 @@ import {
   type AppNotification,
 } from "@/store/notificationStore";
 import { openContentHref } from "@/lib/contentLinks";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** IST wall clock without relying on Intl time zones (UTC+5:30, no DST). */
 function istNow(): Date {
@@ -151,7 +152,7 @@ export function MorningTipPopup() {
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.kickerRow}>
-              <Text style={styles.kicker}>{greeting}</Text>
+              <GoldText style={styles.kicker}>{greeting}</GoldText>
               {greeting === "Good morning" ? (
                 <AppIcon name="sunrise" size={14} color={Colors.primary} />
               ) : null}

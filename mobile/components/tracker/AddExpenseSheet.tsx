@@ -18,7 +18,12 @@ import {
   TrackerIcon,
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
-import { Colors, themedStyles } from "@/constants/theme";
+import {
+  Colors,
+  themedStyles,
+  tintBg,
+  getActiveTheme,
+} from "@/constants/theme";
 import {
   TRACKER_CATEGORIES,
   pickerSubcategories,
@@ -687,11 +692,12 @@ export function AddExpenseSheet({
                   {isCcBillPay ? (
                     <Text style={styles.ccHint}>
                       Paying the bill takes money from your bank, so it counts
-                      in Spent today. It{" "}
+                      in Spent today. In Loans it{" "}
                       <Text style={styles.ccHintStrong}>
-                        doesn&apos;t add to Loans
+                        counts only the part above
                       </Text>{" "}
-                      — the card spends already counted in their sections.
+                      this card&apos;s spends you logged last month and this
+                      month — those already counted in their sections.
                     </Text>
                   ) : null}
                   {isCcBillPay &&
@@ -1237,7 +1243,7 @@ const styles = themedStyles(() => ({
     borderRadius: 10,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#C9C4F2",
+    borderColor: getActiveTheme() === "premium" ? tintBg("#C9C4F2") : "#C9C4F2",
     backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",

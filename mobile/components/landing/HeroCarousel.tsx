@@ -180,7 +180,7 @@ const styles = themedStyles(() => ({
     paddingVertical: 1,
   },
   badgeNewText: {
-    color: Colors.onPrimary,
+    color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.6,
@@ -188,7 +188,9 @@ const styles = themedStyles(() => ({
   },
   badgeSoon: {
     marginBottom: 2,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.primaryTint,
+    borderWidth: 1,
+    borderColor: Colors.primaryTintBorder,
     borderRadius: Radius.round,
     paddingHorizontal: 6,
     paddingVertical: 1,

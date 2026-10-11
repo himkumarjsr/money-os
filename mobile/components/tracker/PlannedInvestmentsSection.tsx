@@ -9,6 +9,7 @@ import {
   type PlannedInvestment,
 } from "@/lib/plannedInvestments";
 import { getSupabase } from "@/lib/supabase";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** Matches web PlannedInvestmentsSection: consented Fix Plan reminders, marked started by the user. */
 export function PlannedInvestmentsSection({ userId }: { userId: string }) {
@@ -59,7 +60,7 @@ export function PlannedInvestmentsSection({ userId }: { userId: string }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
-        <Text style={styles.headTitle}>Planned investments</Text>
+        <GoldText style={styles.headTitle}>Planned investments</GoldText>
         <Text style={styles.headMeta}>
           ₹{total.toLocaleString("en-IN")}/mo · {started}/{rows.length} started
         </Text>
@@ -106,7 +107,7 @@ export function PlannedInvestmentsSection({ userId }: { userId: string }) {
                   <Text
                     style={[
                       styles.btnText,
-                      { color: isStarted ? "#5F5E5A" : "#fff" },
+                      { color: isStarted ? "#5F5E5A" : Colors.onPrimary },
                     ]}
                   >
                     {isStarted ? "Undo" : "Mark started"}

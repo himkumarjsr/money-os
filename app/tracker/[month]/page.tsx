@@ -9,11 +9,14 @@ import MonthSummary from "@/components/tracker/MonthSummary";
 import TrackerConsent from "@/components/tracker/TrackerConsent";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { trackerTotalAmount } from "@/lib/tracker-categories";
+import { applyCardBillCoverage } from "@/lib/trackerCardLedger";
 import { monthSummaryCaps } from "@/lib/trackerMonthSummary";
 import {
   hasTrackerConsentLocal,
+  isCreditCardPaymentMethod,
   setTrackerConsentLocal,
 } from "@/lib/trackerCreditCards";
+import { localISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -56,6 +59,8 @@ function TrackerMonthContent() {
     return null;
   });
   const [transactions, setTransactions] = useState<TrackerTransactionRow[]>([]);
+  /** Previous month's card purchases, so card bill payments aren't double-counted. */
+  const [prevCardRows, setPrevCardRows] = useState<TrackerTransactionRow[]>([]);
   /** Prefer showing the UI shell immediately; soft fetches never blank it. */
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -125,21 +130,44 @@ function TrackerMonthContent() {
       }
       try {
         const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from("expense_transactions")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("month", parsed.monthName)
-          .eq("year", parsed.year)
-          .order("date", { ascending: false });
+        const [{ data, error }, prevRes] = await Promise.all([
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", parsed.monthName)
+            .eq("year", parsed.year)
+            .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .gte(
+              "date",
+              localISODate(new Date(parsed.year, parsed.monthIndex - 1, 1)),
+            )
+            .lt(
+              "date",
+              localISODate(new Date(parsed.year, parsed.monthIndex, 1)),
+            ),
+        ]);
 
         if (fetchReqId.current !== myId) return;
         if (error) console.warn("tracker month fetch:", error.message);
+        if (prevRes.error) {
+          console.warn("tracker prev month fetch:", prevRes.error.message);
+        }
         setTransactions((data as TrackerTransactionRow[]) || []);
+        setPrevCardRows(
+          ((prevRes.data as TrackerTransactionRow[]) || []).filter((t) =>
+            isCreditCardPaymentMethod(t.payment_method),
+          ),
+        );
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker month fetch failed", e);
         setTransactions([]);
+        setPrevCardRows([]);
       } finally {
         if (!soft) {
           hardInFlight.current = Math.max(0, hardInFlight.current - 1);
@@ -185,10 +213,12 @@ function TrackerMonthContent() {
     return <TrackerConsent onAccept={() => setHasConsent(true)} />;
   }
 
-  const bucketTotals = transactions.reduce(
+  // Card bill payments count above the card purchases already counted (this
+  // month and last month, same card).
+  const bucketTotals = applyCardBillCoverage(transactions, prevCardRows).reduce(
     (acc, t) => {
       if (t.bucket === "income") return acc;
-      // Signed: card refunds lower the bucket, EMI purchases and bill pays add 0.
+      // Signed: card refunds lower the bucket, EMI purchases add 0.
       acc[t.bucket] = (acc[t.bucket] || 0) + trackerTotalAmount(t);
       return acc;
     },

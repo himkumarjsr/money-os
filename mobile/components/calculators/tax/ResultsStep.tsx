@@ -13,6 +13,7 @@ import {
 import type { TaxCalcState } from "./useTaxCalculatorState";
 import { openContentHref } from "@/lib/contentLinks";
 import { themedStyles, Colors, tintBg, tintFg } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const LEARN_TAX_LINKS = [
   {
@@ -332,7 +333,7 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
       </Insight>
 
       <View style={styles.itrCard}>
-        <Text style={styles.eyebrow}>Suggested ITR form</Text>
+        <GoldText style={styles.eyebrow}>Suggested ITR form</GoldText>
         <Text style={styles.itrForm}>{itrSuggestion.form}</Text>
         <Text style={styles.itrWhy}>{itrSuggestion.why}</Text>
         <Text style={styles.itrNote}>{itrSuggestion.note}</Text>
@@ -374,7 +375,9 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
 
       {s.learnedToday.length > 0 ? (
         <View style={styles.learned}>
-          <Text style={styles.learnedTitle}>What you learned today</Text>
+          <GoldText style={styles.learnedTitle}>
+            What you learned today
+          </GoldText>
           <View style={{ marginTop: 12, gap: 12 }}>
             {s.learnedToday.map((row) => (
               <View key={row.title}>
@@ -390,7 +393,7 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
 
       <View style={styles.faq}>
         <View style={styles.faqHead}>
-          <Text style={styles.eyebrow}>FAQ</Text>
+          <GoldText style={styles.eyebrow}>FAQ</GoldText>
           <TaxTeachTooltip
             content={TEACH.sections.deductions}
             ariaLabel="Tax glossary context"

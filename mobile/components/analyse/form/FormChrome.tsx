@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import { STEPS } from "./shared";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** 7 clickable step pills — jumping is not validation-gated (web behaviour). */
 export function ProgressPills({
@@ -57,7 +58,9 @@ export function ResumeBanner({
   return (
     <View style={styles.banner}>
       <View>
-        <Text style={styles.bannerTitle}>Continue where you left off</Text>
+        <GoldText style={styles.bannerTitle}>
+          Continue where you left off
+        </GoldText>
         <Text style={styles.bannerSub}>Your form data is saved locally</Text>
       </View>
       <View style={styles.bannerActions}>

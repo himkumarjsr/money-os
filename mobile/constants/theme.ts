@@ -186,14 +186,38 @@ export const GOLD_GRADIENT =
 export const HERO_GRADIENT =
   "linear-gradient(160deg, #221C0E 0%, #12100B 55%, #1C170C 100%)";
 
+/** The free themes' Violet Satin sheen on solid purple, like the PWA's `--fk-satin-grad`. */
+export const SATIN_GRADIENT = {
+  light:
+    "linear-gradient(135deg, #463DA6 0%, #7C73DB 40%, #534AB7 60%, #3C3489 100%)",
+  dark: "linear-gradient(135deg, #5A51CC 0%, #958DF0 40%, #6C63E0 60%, #4B42B8 100%)",
+} as const;
+
 const GOLD_FILLS = new Set(["#d4af37", "#e8c766", "#b38728"]);
+const SATIN_FILLS = {
+  light: new Set(["#534ab7", "#3c3489"]),
+  dark: new Set(["#6c63e0", "#534ab7", "#3c3489"]),
+} as const;
 
 /**
- * Like the PWA, Premium paints solid gold surfaces (buttons, chips, active
- * pills, progress fills) with the gold gradient instead of a flat colour.
+ * Like the PWA, solid brand surfaces (buttons, chips, active pills, progress
+ * fills) get a polished gradient instead of a flat colour: 24K mirror gold in
+ * Premium, Violet Satin in the free themes.
  */
 function premiumFills<T>(styles: T): T {
-  if (activeTheme !== "premium") return styles;
+  if (activeTheme !== "premium") {
+    const fills = SATIN_FILLS[activeTheme];
+    for (const style of Object.values(styles as Record<string, unknown>)) {
+      if (!style || typeof style !== "object") continue;
+      const s = style as Record<string, unknown>;
+      if (
+        typeof s.backgroundColor === "string" &&
+        fills.has(s.backgroundColor.toLowerCase())
+      )
+        s.experimental_backgroundImage ??= SATIN_GRADIENT[activeTheme];
+    }
+    return styles;
+  }
   for (const style of Object.values(styles as Record<string, unknown>)) {
     if (!style || typeof style !== "object") continue;
     const s = style as Record<string, unknown>;

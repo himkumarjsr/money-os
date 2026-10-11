@@ -4,6 +4,7 @@ import { Colors, themedStyles } from "@/constants/theme";
 import { TRACKER_CATEGORIES, type BucketType } from "@/lib/tracker-categories";
 import { buildMonthSummaryRows } from "@/lib/trackerMonthSummary";
 import type { UniversalBucketKey } from "@/lib/universal-buckets";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** Per-bucket spend against the user's budget — port of web MonthSummary. */
 export function MonthSummary({
@@ -29,7 +30,7 @@ export function MonthSummary({
   });
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{title}</Text>
+      <GoldText style={styles.title}>{title}</GoldText>
       {rows.map(
         (
           { key, amount, capPct, isTarget, fillPct, over: isOverBudget },

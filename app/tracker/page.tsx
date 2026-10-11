@@ -15,7 +15,11 @@ import {
   sumTrackerTotals,
   trackerTotalAmount,
 } from "@/lib/tracker-categories";
-import { buildCardMonthRows, monthStartIso } from "@/lib/trackerCardLedger";
+import {
+  buildCardMonthRows,
+  cardBillCoverageNote,
+  monthStartIso,
+} from "@/lib/trackerCardLedger";
 import {
   buildSmartBudget,
   learnCapsFromSpending,
@@ -877,8 +881,9 @@ function TrackerContent() {
     }
   }, [trackerStart, selectedMonth, selectedYear]);
 
-  // Card-aware rows: card EMIs for the month, and bill payments counted only
-  // above the card spends they settle (see lib/trackerCardLedger.ts).
+  // Card-aware rows: card EMIs for the month, and card bill payments counted
+  // in Loans only above the same card's purchases already counted
+  // (see applyCardBillCoverage in lib/trackerCardLedger.ts).
   const cardMonth = useMemo(
     () =>
       buildCardMonthRows({
@@ -2484,6 +2489,9 @@ function TrackerContent() {
                             const notCounted =
                               trackerTotalAmount(txn) === 0 &&
                               txn.bucket !== "income";
+                            // Card bill payment: part already counted as
+                            // card purchases (see applyCardBillCoverage).
+                            const billCover = cardBillCoverageNote(txn);
                             return (
                               <div
                                 key={txn.id}
@@ -2561,6 +2569,23 @@ function TrackerContent() {
                                       {formatExpenseDate(txn.date)}
                                     </span>
                                   </div>
+                                  {billCover ? (
+                                    <div
+                                      style={{
+                                        fontSize: 11,
+                                        color: "#5F5E5A",
+                                        fontWeight: 500,
+                                        marginTop: 2,
+                                      }}
+                                    >
+                                      {billCover.fullyCounted
+                                        ? "Already counted in your purchases"
+                                        : `${formatMaskedAmount(
+                                            billCover.alreadyCounted,
+                                            sectionVisible,
+                                          )} already counted in purchases`}
+                                    </div>
+                                  ) : null}
                                 </div>
                                 <div
                                   style={{

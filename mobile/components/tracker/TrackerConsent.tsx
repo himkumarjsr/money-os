@@ -13,6 +13,7 @@ import {
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
 import { openContentHref } from "@/lib/contentLinks";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type TrackItem =
   | { kind: "tracker"; icon: TrackerIconName; label: string }
@@ -83,7 +84,7 @@ export function TrackerConsent({ onAccept }: Props) {
           </Text>
 
           <View style={styles.listBox}>
-            <Text style={styles.listHead}>WHAT YOU CAN TRACK</Text>
+            <GoldText style={styles.listHead}>WHAT YOU CAN TRACK</GoldText>
             {TRACK_ITEMS.map((item) => (
               <View key={item.label} style={styles.listRow}>
                 {item.kind === "tracker" ? (

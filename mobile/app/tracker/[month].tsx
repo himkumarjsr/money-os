@@ -16,13 +16,21 @@ import { ExpenseList } from "@/components/tracker/ExpenseList";
 import { MonthSummary } from "@/components/tracker/MonthSummary";
 import { TrackerConsent } from "@/components/tracker/TrackerConsent";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Colors, Spacing, themedStyles, tintBg } from "@/constants/theme";
+import {
+  Colors,
+  Spacing,
+  themedStyles,
+  tintBg,
+  onPrimaryAlpha,
+} from "@/constants/theme";
 import { localISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { trackerTotalAmount } from "@/lib/tracker-categories";
+import { applyCardBillCoverage } from "@/lib/trackerCardLedger";
 import { monthSummaryCaps } from "@/lib/trackerMonthSummary";
 import {
   hasTrackerConsentLocal,
+  isCreditCardPaymentMethod,
   setTrackerConsentLocal,
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
@@ -55,6 +63,8 @@ export default function TrackerMonthScreen() {
     hasTrackerConsentLocal() ? true : null,
   );
   const [transactions, setTransactions] = useState<TrackerTxn[]>([]);
+  /** Previous month's card purchases, so card bill payments aren't double-counted. */
+  const [prevCardRows, setPrevCardRows] = useState<TrackerTxn[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showSheet, setShowSheet] = useState(false);
@@ -94,20 +104,44 @@ export default function TrackerMonthScreen() {
       const soft = opts?.soft !== false;
       if (!soft) setLoading(true);
       try {
-        const { data, error } = await getSupabase()
-          .from("expense_transactions")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("month", parsed.monthName)
-          .eq("year", parsed.year)
-          .order("date", { ascending: false });
+        const supabase = getSupabase();
+        const [{ data, error }, prevRes] = await Promise.all([
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("month", parsed.monthName)
+            .eq("year", parsed.year)
+            .order("date", { ascending: false }),
+          supabase
+            .from("expense_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .gte(
+              "date",
+              localISODate(new Date(parsed.year, parsed.monthIndex - 1, 1)),
+            )
+            .lt(
+              "date",
+              localISODate(new Date(parsed.year, parsed.monthIndex, 1)),
+            ),
+        ]);
         if (fetchReqId.current !== myId) return;
         if (error) console.warn("tracker month fetch:", error.message);
+        if (prevRes.error) {
+          console.warn("tracker prev month fetch:", prevRes.error.message);
+        }
         setTransactions((data as TrackerTxn[]) || []);
+        setPrevCardRows(
+          ((prevRes.data as TrackerTxn[]) || []).filter((t) =>
+            isCreditCardPaymentMethod(t.payment_method),
+          ),
+        );
       } catch (e) {
         if (fetchReqId.current !== myId) return;
         console.warn("tracker month fetch failed", e);
         setTransactions([]);
+        setPrevCardRows([]);
       } finally {
         if (fetchReqId.current === myId) setLoading(false);
       }
@@ -139,10 +173,12 @@ export default function TrackerMonthScreen() {
     return <TrackerConsent onAccept={() => setHasConsent(true)} />;
   }
 
-  const bucketTotals = transactions.reduce(
+  // Card bill payments count above the card purchases already counted (this
+  // month and last month, same card).
+  const bucketTotals = applyCardBillCoverage(transactions, prevCardRows).reduce(
     (acc, t) => {
       if (t.bucket === "income") return acc;
-      // Signed: card refunds lower the bucket, EMI purchases and bill pays add 0.
+      // Signed: card refunds lower the bucket, EMI purchases add 0.
       acc[t.bucket] = (acc[t.bucket] || 0) + trackerTotalAmount(t);
       return acc;
     },
@@ -310,9 +346,9 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 24,
     marginBottom: 20,
   },
-  heroLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 4 },
+  heroLabel: { fontSize: 12, color: onPrimaryAlpha(0.7), marginBottom: 4 },
   heroValue: { fontSize: 32, fontWeight: "800", color: Colors.onPrimary },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 4 },
+  heroSub: { fontSize: 13, color: onPrimaryAlpha(0.7), marginTop: 4 },
   listCard: {
     borderRadius: 16,
     borderWidth: 1,

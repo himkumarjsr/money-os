@@ -1,5 +1,7 @@
 "use client";
 
+import BrandCoin from "@/components/ui/BrandCoin";
+
 type BrandPageLoaderProps = {
   /** Full viewport overlay (refresh / route transition). Default true. */
   fullScreen?: boolean;
@@ -16,29 +18,13 @@ type BrandPageLoaderProps = {
 };
 
 const SIZES = {
-  md: {
-    ring: 56,
-    inset: 10,
-    radius: 12,
-    font: 12,
-    gap: 16,
-    border: 3,
-    pad: 24,
-  },
-  sm: {
-    ring: 40,
-    inset: 8,
-    radius: 10,
-    font: 10,
-    gap: 12,
-    border: 2.5,
-    pad: 16,
-  },
-  xs: { ring: 20, inset: 4, radius: 5, font: 7, gap: 8, border: 2, pad: 4 },
+  md: { ring: 56, gap: 16, pad: 24 },
+  sm: { ring: 40, gap: 12, pad: 16 },
+  xs: { ring: 20, gap: 8, pad: 4 },
 } as const;
 
 /**
- * Single app-wide Finkoin loader — purple ring + FK mark.
+ * Single app-wide Finkoin loader: the FK coin turning on its edge.
  * Use this for every loading state in the repo (page, Suspense, section, button).
  */
 export default function BrandPageLoader({
@@ -67,42 +53,8 @@ export default function BrandPageLoader({
         padding: bare || inline ? 0 : s.pad,
       }}
     >
-      <div
-        aria-hidden
-        style={{
-          position: "relative",
-          width: s.ring,
-          height: s.ring,
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: "50%",
-            border: `${s.border}px solid var(--color-border, #E2DFF0)`,
-            borderTopColor: "var(--color-primary, #534AB7)",
-            animation: "spin 0.75s linear infinite",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            inset: s.inset,
-            borderRadius: s.radius,
-            background: "var(--color-primary, #534AB7)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            fontSize: s.font,
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          FK
-        </div>
+      <div aria-hidden style={{ perspective: 600, flexShrink: 0 }}>
+        <BrandCoin size={s.ring} spinning decorative />
       </div>
       {label ? (
         <p
@@ -146,8 +98,9 @@ export default function BrandPageLoader({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        // Dark and Premium define --fk-bg; light keeps its soft wash.
         background:
-          "linear-gradient(160deg, #F4F3F8 0%, #FFFFFF 45%, #EEEDFE 100%)",
+          "var(--fk-bg, linear-gradient(160deg, #F4F3F8 0%, #FFFFFF 45%, #EEEDFE 100%))",
       }}
     >
       {content}
