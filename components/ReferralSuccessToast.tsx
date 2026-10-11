@@ -4,7 +4,7 @@ import { FINKOIN_REFERRAL_SUCCESS_KEY } from "@/lib/referralRewards";
 import { useGamificationStore } from "@/store/gamificationStore";
 import { useEffect } from "react";
 
-/** Shows one-shot toast after referral FK bonus (set by `applyPendingReferralRewards`). */
+/** Shows a one-shot toast after a referral is applied (set by `applyPendingReferralRewards`). */
 export function ReferralSuccessToast() {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -14,9 +14,12 @@ export function ReferralSuccessToast() {
 
       const data = JSON.parse(stored) as { fkAwarded?: number; showUntil?: string };
       if (data.showUntil && new Date(data.showUntil) > new Date()) {
-        const fk = Number(data.fkAwarded ?? 100);
+        const fk = Number(data.fkAwarded ?? 0);
         useGamificationStore.setState({
-          toastMessage: `Referral bonus: +${fk} FK earned!`,
+          toastMessage:
+            fk > 0
+              ? `Referral bonus: +${fk} FK earned!`
+              : "Referral applied: add your first expense to unlock 100 FK",
         });
       }
       localStorage.removeItem(FINKOIN_REFERRAL_SUCCESS_KEY);

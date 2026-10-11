@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { getAuthedUser, unauthorized } from "@/lib/apiGuard";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 
-const REFERRER_REWARD_FK = 200;
-const NEW_USER_REWARD_FK = 100;
-
 /**
- * Links the signed-in (new) user to the owner of a referral code and pays
- * both sides once. Runs on the server so a user can't credit themselves or
- * anyone else (migration 045 makes FK balances server-only).
+ * Links the signed-in (new) user to the owner of a referral code. Both sides
+ * are paid once the new user adds their first expense (migration 050), so a
+ * fake sign-up earns nothing. Runs on the server so a user can't credit
+ * themselves or anyone else (migration 045 makes FK balances server-only).
  */
 export async function POST(req: Request) {
   const user = await getAuthedUser();
@@ -64,39 +62,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not apply the referral." }, { status: 500 });
   }
 
-  // award_fk pays each (user, reason, reference) once, so a retry is safe.
-  const [toReferrer, toNewUser] = await Promise.all([
-    admin.rpc("award_fk", {
-      p_user_id: referrer.id,
-      p_amount: REFERRER_REWARD_FK,
-      p_reason: "referral_reward_referrer",
-      p_reference_id: user.id,
-    }),
-    admin.rpc("award_fk", {
-      p_user_id: user.id,
-      p_amount: NEW_USER_REWARD_FK,
-      p_reason: "referral_reward_new_user",
-      p_reference_id: referrer.id,
-    }),
-  ]);
-  if (toReferrer.error || toNewUser.error) {
-    console.error(
-      "referral award failed:",
-      toReferrer.error?.message,
-      toNewUser.error?.message,
-    );
-    return NextResponse.json({ error: "Could not award the referral bonus." }, { status: 500 });
+  // Pays both sides now if the new user already has an expense; otherwise
+  // the expense trigger pays them later. Safe to repeat.
+  const { error: activateErr } = await admin.rpc("check_referral_activation", {
+    p_user_id: user.id,
+  });
+  if (activateErr) {
+    console.error("referral activation check failed:", activateErr.message);
   }
-
-  await admin.from("referrals").update({ tokens_awarded: true }).eq("referred_id", user.id);
+  const { data: paid } = await admin
+    .from("fk_transactions")
+    .select("amount")
+    .eq("user_id", user.id)
+    .eq("reason", "referral_reward_new_user")
+    .limit(1)
+    .maybeSingle();
+  const fkAwarded = Number(paid?.amount ?? 0);
 
   const { error: linkErr } = await admin
     .from("users")
-    .update({ referred_by: referrer.id, referral_reward_given: true })
+    .update({ referred_by: referrer.id, referral_reward_given: fkAwarded > 0 })
     .eq("id", user.id);
   if (linkErr) {
     await admin.from("users").update({ referred_by: referrer.id }).eq("id", user.id);
   }
 
-  return NextResponse.json({ applied: true, fkAwarded: NEW_USER_REWARD_FK });
+  return NextResponse.json({ applied: true, fkAwarded });
 }

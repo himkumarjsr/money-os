@@ -1,12 +1,17 @@
 "use client";
 
-import { FK_EARN_ACTIONS } from "@/lib/fkRewards";
+import {
+  FK_EARN_ACTIONS,
+  MONTHLY_PRIZES_FK,
+  POINTS_EARN_ACTIONS,
+} from "@/lib/fkRewards";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useGamificationStore } from "@/store/gamificationStore";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 
 interface LeaderboardEntry {
@@ -15,26 +20,93 @@ interface LeaderboardEntry {
   avatar_url: string | null;
   fk_balance: number;
   streak_days: number;
+  points: number;
   rank: number;
   percentile: number;
 }
 
+type Tab = "month" | "all";
+
+const TABS: ReadonlyArray<{ id: Tab; label: string; view: string }> = [
+  { id: "month", label: "This month", view: "leaderboard_view" },
+  { id: "all", label: "All time", view: "leaderboard_all_view" },
+];
+
 const CACHE_KEY = "finkoin_leaderboard";
 const CACHE_TTL = 5 * 60 * 1000;
 
+const cacheKey = (tab: Tab) => `${CACHE_KEY}_${tab}`;
+
+const formatPoints = (n: number | null | undefined) =>
+  `${Number(n ?? 0).toLocaleString("en-IN")} pts`;
+
+function EarnList({
+  title,
+  items,
+}: {
+  title: string;
+  items: ReadonlyArray<readonly [string, string]>;
+}) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: "#9B9A94",
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+          marginBottom: 4,
+        }}
+      >
+        {title}
+      </div>
+      {items.map(([action, reward]) => (
+        <div
+          key={action}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            padding: "8px 0",
+            borderBottom: "1px solid #F7F7F4",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#5F5E5A" }}>{action}</span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#534AB7",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {reward}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LeaderboardContent() {
   const { user } = useAuthStore();
-  const { rank, percentile, fkBalance } = useGamificationStore();
+  const { rank, percentile } = useGamificationStore();
 
+  const [tab, setTab] = useState<Tab>("month");
+  const tabRef = useRef<Tab>(tab);
+  tabRef.current = tab;
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [userEntry, setUserEntry] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
 
-  const fetchLeaderboard = async (force = false) => {
+  const fetchLeaderboard = async (force = false, which: Tab = tab) => {
+    const view = TABS.find((t) => t.id === which)?.view ?? "leaderboard_view";
     if (!force) {
       try {
-        const cached = localStorage.getItem(CACHE_KEY);
+        const cached = localStorage.getItem(cacheKey(which));
         if (cached) {
           const { data, fetchedAt } = JSON.parse(cached) as {
             data?: { top?: LeaderboardEntry[]; me?: LeaderboardEntry | null };
@@ -42,6 +114,7 @@ function LeaderboardContent() {
           };
           const age = Date.now() - Number(fetchedAt ?? 0);
           if (age < CACHE_TTL && data) {
+            if (tabRef.current !== which) return;
             setEntries(data.top ?? []);
             setUserEntry(data.me ?? null);
             setLoading(false);
@@ -60,7 +133,7 @@ function LeaderboardContent() {
     try {
       const supabase = getSupabase();
       const { data: top, error: topError } = await supabase
-        .from("leaderboard_view")
+        .from(view)
         .select("*")
         .limit(50);
       if (topError) throw topError;
@@ -68,7 +141,7 @@ function LeaderboardContent() {
       let me: LeaderboardEntry | null = null;
       if (user?.id) {
         const { data: myRow, error: meError } = await supabase
-          .from("leaderboard_view")
+          .from(view)
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
@@ -77,19 +150,20 @@ function LeaderboardContent() {
       }
 
       const topData = (top as LeaderboardEntry[] | null) ?? [];
-      setEntries(topData);
-      setUserEntry(me);
-
       const now = Date.now();
       localStorage.setItem(
-        CACHE_KEY,
+        cacheKey(which),
         JSON.stringify({ data: { top: topData, me }, fetchedAt: now }),
       );
+      // The user may have switched tabs while this was loading.
+      if (tabRef.current !== which) return;
+      setEntries(topData);
+      setUserEntry(me);
       setLastFetched(new Date(now).toLocaleTimeString());
     } catch (err) {
       console.error("Leaderboard fetch error:", err);
     } finally {
-      setLoading(false);
+      if (tabRef.current === which) setLoading(false);
     }
   };
 
@@ -112,8 +186,8 @@ function LeaderboardContent() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          localStorage.removeItem(CACHE_KEY);
-          void fetchLeaderboard(true);
+          for (const t of TABS) localStorage.removeItem(cacheKey(t.id));
+          void fetchLeaderboard(true, tabRef.current);
         },
       )
       .subscribe();
@@ -121,7 +195,7 @@ function LeaderboardContent() {
     return () => {
       void supabase.removeChannel(sub);
     };
-  }, [user?.id]);
+  }, [user?.id, tab]);
 
   const getInitials = (name: string) =>
     (name || "U")
@@ -138,11 +212,12 @@ function LeaderboardContent() {
     return "#9B9A94";
   };
 
-  const me =
+  // The store's rank is this month's rank; fall back to it while the
+  // monthly row is missing (points unknown there, so none are shown).
+  const me: { rank: number; percentile: number; points?: number } | null =
     userEntry ??
-    (rank
-      ? { rank, percentile: percentile ?? 0, fk_balance: fkBalance }
-      : null);
+    (tab === "month" && rank ? { rank, percentile: percentile ?? 0 } : null);
+  const tabLabel = tab === "month" ? "this month" : "all time";
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 80px" }}>
@@ -163,7 +238,7 @@ function LeaderboardContent() {
               margin: 0,
             }}
           >
-            FK Leaderboard
+            Leaderboard
           </h1>
           <p style={{ fontSize: 12, color: "#9B9A94", margin: "4px 0 0" }}>
             {lastFetched ? `Updated ${lastFetched}` : "Live rankings"}
@@ -171,7 +246,7 @@ function LeaderboardContent() {
         </div>
         <button
           type="button"
-          onClick={() => void fetchLeaderboard(true)}
+          onClick={() => void fetchLeaderboard(true, tab)}
           style={{
             background: "#EEEDFE",
             border: "none",
@@ -186,6 +261,68 @@ function LeaderboardContent() {
           Refresh
         </button>
       </div>
+
+      <div
+        role="tablist"
+        aria-label="Leaderboard period"
+        style={{
+          display: "flex",
+          gap: 4,
+          background: "#EEEDFE",
+          borderRadius: 12,
+          padding: 4,
+          marginBottom: 12,
+        }}
+      >
+        {TABS.map((t) => {
+          const active = t.id === tab;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                if (active) return;
+                setEntries([]);
+                setUserEntry(null);
+                setLastFetched(null);
+                setLoading(true);
+                setTab(t.id);
+              }}
+              style={{
+                flex: 1,
+                border: "none",
+                borderRadius: 9,
+                padding: "8px 0",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                background: active ? "white" : "transparent",
+                color: active ? "#534AB7" : "#7F77DD",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "month" ? (
+        <p
+          style={{
+            fontSize: 12,
+            color: "#5F5E5A",
+            background: "#FAFAFE",
+            border: "1px solid #E8E6F0",
+            borderRadius: 10,
+            padding: "8px 12px",
+            margin: "0 0 16px",
+          }}
+        >
+          Top 3 on the 1st win {MONTHLY_PRIZES_FK.join(" / ")} FK
+        </p>
+      ) : null}
 
       {me ? (
         <div
@@ -221,13 +358,15 @@ function LeaderboardContent() {
               You · Rank #{me.rank}
             </div>
             <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
-              Top {me.percentile}% of all users
+              Top {me.percentile}% {tabLabel}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 20, fontWeight: 800 }}>
-              {me.fk_balance} FK
-            </div>
+            {me.points != null ? (
+              <div style={{ fontSize: 20, fontWeight: 800 }}>
+                {formatPoints(me.points)}
+              </div>
+            ) : null}
             <div style={{ fontSize: 11, opacity: 0.7 }}>
               {userEntry?.streak_days ?? 0} day streak
             </div>
@@ -261,9 +400,9 @@ function LeaderboardContent() {
               letterSpacing: 0.5,
             }}
           >
-            Top users this month
+            Top users {tabLabel}
           </span>
-          <span style={{ fontSize: 11, color: "#9B9A94" }}>FK Balance</span>
+          <span style={{ fontSize: 11, color: "#9B9A94" }}>Points</span>
         </div>
 
         {loading ? (
@@ -273,6 +412,18 @@ function LeaderboardContent() {
             minHeight={120}
             label="Loading…"
           />
+        ) : entries.length === 0 ? (
+          <p
+            style={{
+              fontSize: 13,
+              color: "#9B9A94",
+              textAlign: "center",
+              padding: "32px 16px",
+              margin: 0,
+            }}
+          >
+            No rankings yet.
+          </p>
         ) : (
           entries.map((entry, i) => {
             const isMe = entry.user_id === user?.id;
@@ -362,7 +513,7 @@ function LeaderboardContent() {
                     color: isMe ? "#534AB7" : "#111110",
                   }}
                 >
-                  {entry.fk_balance} FK
+                  {formatPoints(entry.points)}
                 </div>
               </div>
             );
@@ -379,35 +530,19 @@ function LeaderboardContent() {
           marginTop: 16,
         }}
       >
-        <div
+        <EarnList title="Earn points" items={POINTS_EARN_ACTIONS} />
+        <EarnList title="Earn FK" items={FK_EARN_ACTIONS} />
+        <Link
+          href="/rewards"
           style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#9B9A94",
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-            marginBottom: 12,
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#534AB7",
+            textDecoration: "none",
           }}
         >
-          HOW TO EARN FK
-        </div>
-        {FK_EARN_ACTIONS.map(([action, reward]) => (
-          <div
-            key={action}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "8px 0",
-              borderBottom: "1px solid #F7F7F4",
-            }}
-          >
-            <span style={{ fontSize: 13, color: "#5F5E5A" }}>{action}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#534AB7" }}>
-              {reward}
-            </span>
-          </div>
-        ))}
+          What is FK? →
+        </Link>
       </div>
     </div>
   );

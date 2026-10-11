@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="face" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#463DA6"/>
+      <stop offset="40%" stop-color="#7C73DB"/>
+      <stop offset="60%" stop-color="#534AB7"/>
+      <stop offset="100%" stop-color="#3C3489"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2E2770"/>
+      <stop offset="50%" stop-color="#6A61D1"/>
+      <stop offset="100%" stop-color="#2E2770"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#rim)"/>
+  <circle cx="32" cy="32" r="29" fill="url(#face)"/>
+  <circle cx="32" cy="32" r="25" fill="none" stroke="#C9C4FF" stroke-width="2" stroke-dasharray="1.6 2.4" opacity="0.6"/>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#C9C4FF" stroke-width="1.2" opacity="0.4"/>
+  <text x="32" y="38.5" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-weight="800" font-size="18" letter-spacing="-0.5" fill="#FFFFFF">FK</text>
+</svg>
