@@ -34,7 +34,7 @@ const styles = themedStyles(() => ({
   wordmark: {
     fontSize: 18,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     letterSpacing: -0.5,
   },
 }));

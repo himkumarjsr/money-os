@@ -180,7 +180,7 @@ const styles = themedStyles(() => ({
   amount: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontVariant: ["tabular-nums"],
   },
   share: { fontSize: 12, fontWeight: "600", color: Colors.textMuted },

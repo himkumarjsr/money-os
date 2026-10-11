@@ -86,7 +86,7 @@ export function QuickTools() {
             ]}
           >
             <View style={styles.iconBox}>
-              <AppIcon name={t.icon} size={18} color={Colors.primary} />
+              <AppIcon name={t.icon} size={18} color={Colors.primaryText} />
             </View>
             <Text style={styles.label}>{t.label}</Text>
           </Pressable>

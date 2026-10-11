@@ -65,7 +65,10 @@ export default function SettingsScreen() {
   if (!hasInitialized) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+        <ActivityIndicator
+          color={Colors.primaryText}
+          style={{ marginTop: 60 }}
+        />
       </SafeAreaView>
     );
   }
@@ -494,7 +497,7 @@ function SettingsInner() {
             style={[styles.outlineBtn, { marginTop: 16 }]}
             accessibilityRole="button"
           >
-            <AppIcon name="lock" size={18} color={Colors.primary} />
+            <AppIcon name="lock" size={18} color={Colors.primaryText} />
             <Text style={styles.outlineBtnText}>Change password</Text>
           </Pressable>
           {passwordChanged ? (
@@ -512,7 +515,7 @@ function SettingsInner() {
             ]}
             accessibilityRole="button"
           >
-            <AppIcon name="mail" size={18} color={Colors.primary} />
+            <AppIcon name="mail" size={18} color={Colors.primaryText} />
             <Text style={styles.outlineBtnText}>
               {resetBusy ? "Sending…" : "Email me a password reset link"}
             </Text>
@@ -575,7 +578,7 @@ function SettingsInner() {
               </View>
               {pushBusy ? (
                 <View style={styles.toggleSpinner}>
-                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <ActivityIndicator size="small" color={Colors.primaryText} />
                 </View>
               ) : (
                 <SettingsToggle
@@ -669,7 +672,7 @@ function SettingsInner() {
             </Text>
             <View style={styles.fkRow}>
               <Text style={styles.appLine}>FK balance: </Text>
-              <AppIcon name="coin" size={16} color={Colors.primary} />
+              <AppIcon name="coin" size={16} color={Colors.primaryText} />
               <Text style={styles.strong}> {user?.fkBalance ?? 0} · </Text>
               <Pressable
                 onPress={() => router.push("/rewards" as Href)}
@@ -685,7 +688,7 @@ function SettingsInner() {
             style={styles.feedbackBtn}
             accessibilityRole="button"
           >
-            <AppIcon name="mail" size={16} color={Colors.primary} />
+            <AppIcon name="mail" size={16} color={Colors.primaryText} />
             <Text style={styles.feedbackText}>Share feedback</Text>
           </Pressable>
           <Pressable
@@ -693,7 +696,7 @@ function SettingsInner() {
             style={styles.feedbackBtn}
             accessibilityRole="button"
           >
-            <AppIcon name="heart" size={16} color={Colors.primary} />
+            <AppIcon name="heart" size={16} color={Colors.primaryText} />
             <Text style={styles.feedbackText}>Rate Finkoin</Text>
           </Pressable>
         </View>
@@ -729,7 +732,7 @@ const styles = themedStyles(() => ({
     alignSelf: "flex-start",
     paddingRight: 16,
   },
-  backText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  backText: { color: Colors.primaryText, fontWeight: "700", fontSize: 14 },
   gate: { padding: 24, alignItems: "center" },
   gateText: { color: Colors.textSecondary, marginBottom: 16, fontSize: 15 },
   gateBtn: {
@@ -771,7 +774,7 @@ const styles = themedStyles(() => ({
     lineHeight: 18,
     color: Colors.textMuted,
   },
-  link: { color: Colors.primary, fontWeight: "700" },
+  link: { color: Colors.primaryText, fontWeight: "700" },
   ok: { marginTop: 6, fontSize: 12, fontWeight: "600", color: Colors.success },
   err: { marginTop: 6, fontSize: 12, fontWeight: "600", color: Colors.error },
   dim: { opacity: 0.5 },
@@ -859,7 +862,11 @@ const styles = themedStyles(() => ({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  outlineBtnText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  outlineBtnText: {
+    color: Colors.primaryText,
+    fontWeight: "700",
+    fontSize: 14,
+  },
 
   notifBox: {
     marginTop: 20,
@@ -891,7 +898,7 @@ const styles = themedStyles(() => ({
     marginTop: 4,
     fontSize: 12,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   openSettings: { minHeight: 44, justifyContent: "center" },
   toggleSpinner: {
@@ -955,5 +962,5 @@ const styles = themedStyles(() => ({
     borderColor: Colors.primaryMedium,
     alignSelf: "flex-start",
   },
-  feedbackText: { fontSize: 13, fontWeight: "600", color: Colors.primary },
+  feedbackText: { fontSize: 13, fontWeight: "600", color: Colors.primaryText },
 }));

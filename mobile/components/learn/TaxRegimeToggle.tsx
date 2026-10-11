@@ -217,7 +217,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryLight,
   },
   chipText: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary },
-  chipTextActive: { color: Colors.primary },
+  chipTextActive: { color: Colors.primaryText },
   note: {
     borderWidth: 1,
     borderColor: Colors.warningLight,
@@ -237,5 +237,5 @@ const styles = themedStyles(() => ({
   li: { flexDirection: "row", gap: 8 },
   liText: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
   more: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
-  moreLink: { color: Colors.primary, fontWeight: "700" },
+  moreLink: { color: Colors.primaryText, fontWeight: "700" },
 }));

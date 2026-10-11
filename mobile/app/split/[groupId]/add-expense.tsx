@@ -570,7 +570,7 @@ export default function AddExpenseScreen() {
           >
             {!groupLoaded || storeLoading ? (
               <View style={styles.loader}>
-                <ActivityIndicator color={Colors.primary} />
+                <ActivityIndicator color={Colors.primaryText} />
                 <Text style={styles.loaderText}>Loading…</Text>
               </View>
             ) : null}
@@ -713,7 +713,7 @@ export default function AddExpenseScreen() {
                           <AppIcon
                             name="check"
                             size={16}
-                            color={Colors.primary}
+                            color={Colors.primaryText}
                           />
                         ) : null}
                       </Pressable>
@@ -869,7 +869,7 @@ export default function AddExpenseScreen() {
                           keyboardType="number-pad"
                           style={[
                             styles.rowInput,
-                            { width: 80, color: Colors.primary },
+                            { width: 80, color: Colors.primaryText },
                             fieldErrors.shares && styles.inputError,
                           ]}
                         />
@@ -1130,7 +1130,7 @@ const styles = themedStyles(() => ({
     fontSize: 13,
     fontWeight: "600",
     letterSpacing: 0.5,
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   amountRow: {
     flexDirection: "row",
@@ -1138,13 +1138,13 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     gap: 4,
   },
-  rupee: { fontSize: 28, fontWeight: "700", color: Colors.primary },
+  rupee: { fontSize: 28, fontWeight: "700", color: Colors.primaryText },
   amountInput: {
     width: "80%",
     paddingVertical: 0,
     textAlign: "center",
     fontWeight: "800",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   preview: { marginTop: 12, gap: 4 },
   previewHead: {
@@ -1152,7 +1152,7 @@ const styles = themedStyles(() => ({
     textAlign: "center",
     fontSize: 12,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   previewRow: {
     flexDirection: "row",
@@ -1164,10 +1164,10 @@ const styles = themedStyles(() => ({
     flex: 1,
     fontSize: 12,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
     opacity: 0.8,
   },
-  previewAmt: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  previewAmt: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   label: {
     fontSize: 12,
     fontWeight: "600",
@@ -1213,7 +1213,7 @@ const styles = themedStyles(() => ({
   },
   optionOn: { backgroundColor: Colors.primaryLight },
   optionText: { flex: 1, fontSize: 15, color: Colors.textPrimary },
-  optionTextOn: { color: Colors.primary, fontWeight: "700" },
+  optionTextOn: { color: Colors.primaryText, fontWeight: "700" },
   errorText: {
     marginTop: 6,
     fontSize: 12,
@@ -1244,7 +1244,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryLight,
   },
   gridBtnText: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
-  gridBtnTextOn: { color: Colors.primary },
+  gridBtnTextOn: { color: Colors.primaryText },
   catBtn: { flexDirection: "row", gap: 6, paddingHorizontal: 8 },
   catText: { fontSize: 12, fontWeight: "800", flexShrink: 1 },
   membersWrap: {

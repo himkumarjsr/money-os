@@ -230,8 +230,8 @@ const styles = themedStyles(() => ({
     textAlign: "center",
     lineHeight: 16,
   },
-  legalLink: { color: Colors.primary, fontWeight: "600" },
+  legalLink: { color: Colors.primaryText, fontWeight: "600" },
   linkWrap: { marginTop: Spacing.xl, alignItems: "center" },
   link: { fontSize: FontSize.md, color: Colors.textMuted },
-  linkStrong: { color: Colors.primary, fontWeight: "700" },
+  linkStrong: { color: Colors.primaryText, fontWeight: "700" },
 }));

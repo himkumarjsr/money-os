@@ -102,7 +102,7 @@ export function ExpenseList({
                     style={styles.cardChip}
                     accessibilityLabel="Paid by credit card — not in purple LEFT or bucket totals"
                   >
-                    <AppIcon name="card" size={12} color={Colors.primary} />
+                    <AppIcon name="card" size={12} color={Colors.primaryText} />
                     <Text style={styles.cardChipText}>Card</Text>
                   </View>
                 ) : null}
@@ -174,7 +174,7 @@ const styles = themedStyles(() => ({
     borderRadius: 6,
     backgroundColor: Colors.primaryLight,
   },
-  cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primary },
+  cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primaryText },
   amount: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   actions: { flexDirection: "row", justifyContent: "flex-end", gap: 4 },
   actionBtn: {
@@ -183,6 +183,6 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 10,
     justifyContent: "center",
   },
-  editText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  editText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   deleteText: { fontSize: 13, fontWeight: "700", color: Colors.error },
 }));

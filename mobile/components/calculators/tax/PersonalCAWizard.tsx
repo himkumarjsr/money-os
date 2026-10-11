@@ -63,7 +63,7 @@ export function PersonalCAWizard({
             pressed && { backgroundColor: Colors.surfaceMuted },
           ]}
         >
-          <AppIcon name="close" size={16} color={Colors.primary} />
+          <AppIcon name="close" size={16} color={Colors.primaryText} />
         </Pressable>
       </View>
 
@@ -146,7 +146,7 @@ const styles = themedStyles(() => ({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   title: { fontSize: 18, fontWeight: "600", color: Colors.textPrimary },
   stepLine: { marginTop: 4, fontSize: 12, color: Colors.textSecondary },

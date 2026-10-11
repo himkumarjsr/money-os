@@ -49,6 +49,8 @@ const lightPalette = {
   tabIdle: "#3D3A5C",
   primaryTint: "rgba(83,74,183,0.16)",
   primaryTintBorder: "rgba(83,74,183,0.22)",
+  /** Brand colour for text and icons; meets WCAG 2.2 AA (4.5:1) on cards. */
+  primaryText: "#534AB7",
 };
 
 export type Palette = typeof lightPalette;
@@ -57,7 +59,7 @@ const darkPalette: Palette = {
   primary: "#6C63E0",
   primaryDark: "#C9C4FF",
   primaryLight: "#26234A",
-  primaryMedium: "#5A52B5",
+  primaryMedium: "#7B73E3",
   accent: "#8B83F0",
   onPrimary: "#FFFFFF",
   success: "#34C08F",
@@ -79,8 +81,8 @@ const darkPalette: Palette = {
   borderIndigo: "#3B3A66",
   borderLight: "#22212C",
   textPrimary: "#F2F1EE",
-  textSecondary: "#B5B3AD",
-  textMuted: "#85837D",
+  textSecondary: "#BDBBB5",
+  textMuted: "#A09E97",
   textWhite: "#FFFFFF",
   slate300: "#3A3F4A",
   slate800: "#E2E8F0",
@@ -96,6 +98,7 @@ const darkPalette: Palette = {
   tabIdle: "#B5B3AD",
   primaryTint: "rgba(139,131,240,0.2)",
   primaryTintBorder: "rgba(139,131,240,0.3)",
+  primaryText: "#ABA5F7",
 };
 
 /**
@@ -144,6 +147,7 @@ const premiumPalette: Palette = {
   tabIdle: "#E8C766",
   primaryTint: "rgba(212,175,55,0.14)",
   primaryTintBorder: "rgba(212,175,55,0.32)",
+  primaryText: "#E8C766",
 };
 
 export type ThemeName = "light" | "dark" | "premium";
@@ -414,4 +418,54 @@ export function tintFg(darkHex: string): string {
   return activeTheme === "light"
     ? darkHex
     : mixHex(brand(darkHex), "#FFFFFF", 0.62);
+}
+
+function luminance(hex: string): number {
+  const lin = (c: number) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const [r, g, b] = hexToRgb(hex);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/** WCAG 2.2 contrast ratio between two hex colours (1 to 21). */
+export function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * A colour written for the light theme (category, chart or brand hex), used
+ * as text or an icon: kept as is when it already reads on `bg`, otherwise
+ * lightened (dark themes) or darkened (light) until it meets `min` contrast.
+ * WCAG 2.2 AA asks 4.5:1 for text and 3:1 for icons and large text.
+ */
+export function readable(
+  hex: string,
+  bg: string = Colors.card,
+  min = 4.5,
+): string {
+  const base = brand(hex);
+  if (!/^#[0-9a-fA-F]{6}$/.test(base) || !/^#[0-9a-fA-F]{6}$/.test(bg))
+    return base;
+  if (contrastRatio(base, bg) >= min) return base;
+  const toward = luminance(bg) < 0.18 ? "#FFFFFF" : "#000000";
+  for (let t = 0.1; t < 1; t += 0.1) {
+    const mixed = mixHex(base, toward, t);
+    if (contrastRatio(mixed, bg) >= min) return mixed;
+  }
+  return toward;
+}
+
+/**
+ * `readable()` for line icons (3:1 on the card) in the dark themes. Light
+ * keeps its colours, and `onPrimary` stays as is since it sits on a brand
+ * fill, not the card.
+ */
+export function readableIcon(hex: string): string {
+  if (activeTheme === "light") return hex;
+  if (hex.toLowerCase() === Palettes[activeTheme].onPrimary.toLowerCase())
+    return hex;
+  return readable(hex, Palettes[activeTheme].card, 3);
 }

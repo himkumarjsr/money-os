@@ -148,13 +148,13 @@ export function MorningTipPopup() {
 
         <View style={styles.head}>
           <View style={styles.iconBox}>
-            <AppIcon name="bulb" size={22} color={Colors.primary} />
+            <AppIcon name="bulb" size={22} color={Colors.primaryText} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.kickerRow}>
               <GoldText style={styles.kicker}>{greeting}</GoldText>
               {greeting === "Good morning" ? (
-                <AppIcon name="sunrise" size={14} color={Colors.primary} />
+                <AppIcon name="sunrise" size={14} color={Colors.primaryText} />
               ) : null}
             </View>
             <Text style={styles.title}>{tip.title}</Text>
@@ -244,7 +244,7 @@ const styles = themedStyles(() => ({
   },
   kicker: {
     fontSize: 11,
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.6,
@@ -274,5 +274,9 @@ const styles = themedStyles(() => ({
   btnPrimary: { backgroundColor: Colors.primary },
   btnPrimaryText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
   btnSecondary: { backgroundColor: Colors.primaryLight },
-  btnSecondaryText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
+  btnSecondaryText: {
+    color: Colors.primaryText,
+    fontSize: 14,
+    fontWeight: "600",
+  },
 }));

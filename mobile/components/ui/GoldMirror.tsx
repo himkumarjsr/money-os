@@ -148,10 +148,12 @@ export function GoldText({ children, style, numberOfLines, always }: Props) {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const flat = (StyleSheet.flatten(style) ?? {}) as TextStyle;
   const theme = getActiveTheme();
+  // Only Premium paints the mirror. In the free themes the satin overlay
+  // could drift from the real glyphs and read as doubled, blurry text, so
+  // they keep plain solid text.
   const mirror =
-    theme === "premium"
-      ? always || flat.color === undefined || isMirrorGold(String(flat.color))
-      : flat.color !== undefined && isMirrorGold(String(flat.color));
+    theme === "premium" &&
+    (always || flat.color === undefined || isMirrorGold(String(flat.color)));
   const stops =
     theme === "premium" ? GOLD_MIRROR_STOPS : SATIN_TEXT_STOPS[theme];
 

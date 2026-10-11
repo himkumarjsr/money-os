@@ -940,7 +940,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  backNavText: { fontSize: 15, fontWeight: "600", color: Colors.primary },
+  backNavText: { fontSize: 15, fontWeight: "600", color: Colors.primaryText },
   primaryBtn: {
     flex: 1,
     minHeight: 52,

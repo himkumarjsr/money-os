@@ -120,14 +120,14 @@ const styles = themedStyles(() => ({
   chipText: {
     fontSize: 12,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     lineHeight: 14,
   },
   panel: { gap: 8, paddingBottom: 4 },
   term: {
     fontSize: 12,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
     lineHeight: 19,
   },
   body: {
@@ -155,6 +155,6 @@ const styles = themedStyles(() => ({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
 }));

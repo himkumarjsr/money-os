@@ -52,7 +52,7 @@ const styles = themedStyles(() => ({
   toggleText: {
     fontSize: FontSize.sm,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
 }));
 

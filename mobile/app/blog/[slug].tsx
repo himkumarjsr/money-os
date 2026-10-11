@@ -120,7 +120,7 @@ const styles = themedStyles(() => ({
   linkText: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     lineHeight: 20,
   },
   category: {

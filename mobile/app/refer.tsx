@@ -166,7 +166,7 @@ export default function ReferScreen() {
         <Text style={styles.statsHead}>YOUR REFERRAL STATS</Text>
         <View style={styles.statsRow}>
           <View style={{ flex: 1 }}>
-            <GoldText style={[styles.statNum, { color: Colors.primary }]}>
+            <GoldText style={[styles.statNum, { color: Colors.primaryText }]}>
               {referralCount ?? "—"}
             </GoldText>
             <Text style={styles.statLabel}>Friends referred</Text>
@@ -213,7 +213,7 @@ const styles = themedStyles(() => ({
     padding: 16,
     gap: 12,
   },
-  linkText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  linkText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
   copyBtn: {
     flexDirection: "row",
     alignItems: "center",

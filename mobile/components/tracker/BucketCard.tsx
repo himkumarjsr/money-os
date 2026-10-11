@@ -61,7 +61,11 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
   },
   spent: { marginTop: 2, fontSize: FontSize.md, color: Colors.textSecondary },
-  pct: { fontSize: FontSize.base, fontWeight: "800", color: Colors.primary },
+  pct: {
+    fontSize: FontSize.base,
+    fontWeight: "800",
+    color: Colors.primaryText,
+  },
   barTrack: {
     marginTop: Spacing.md,
     height: 6,

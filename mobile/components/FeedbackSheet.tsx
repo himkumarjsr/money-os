@@ -351,7 +351,9 @@ function Option({
       accessibilityRole="radio"
       accessibilityState={{ selected: active }}
     >
-      <Text style={[styles.optionText, active && { color: Colors.primary }]}>
+      <Text
+        style={[styles.optionText, active && { color: Colors.primaryText }]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -363,7 +365,7 @@ const styles = themedStyles(() => ({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.5,
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   title: {
     marginTop: 4,

@@ -63,7 +63,7 @@ export default function ForgotPasswordScreen() {
 
           {sent ? (
             <View style={styles.success}>
-              <AppIcon name="mail" size={44} color={Colors.primary} />
+              <AppIcon name="mail" size={44} color={Colors.primaryText} />
               <Text style={styles.title}>Check your email</Text>
               <Text style={styles.subtitle}>
                 We sent a password reset link to {email.trim()}. Open it on this
@@ -129,5 +129,5 @@ const styles = themedStyles(() => ({
   },
   linkWrap: { marginTop: Spacing.md, alignItems: "center" },
   link: { fontSize: FontSize.md, color: Colors.textMuted },
-  linkStrong: { color: Colors.primary, fontWeight: "700" },
+  linkStrong: { color: Colors.primaryText, fontWeight: "700" },
 }));

@@ -50,7 +50,7 @@ export function CollapsiblePanel({
         style={[styles.header, open && styles.headerOpen]}
       >
         <View style={styles.iconBadge}>
-          <AppIcon name={icon} size={16} color={Colors.primary} />
+          <AppIcon name={icon} size={16} color={Colors.primaryText} />
         </View>
         <View style={styles.titleWrap}>
           <Text style={styles.title}>{title}</Text>
@@ -64,7 +64,7 @@ export function CollapsiblePanel({
         <AppIcon
           name={open ? "chevronDown" : "chevronRight"}
           size={18}
-          color={Colors.primary}
+          color={Colors.primaryText}
         />
       </Pressable>
       {open ? <View style={styles.body}>{children}</View> : null}

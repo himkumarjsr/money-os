@@ -164,7 +164,7 @@ const styles = themedStyles(() => ({
   eyebrow: {
     fontSize: 12,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 8,

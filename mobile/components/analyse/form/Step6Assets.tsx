@@ -584,7 +584,7 @@ const styles = themedStyles(() => ({
   cardSub: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   teal: { fontSize: 12, lineHeight: 17, color: "#0D9488" },
   linkBtn: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
-  link: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  link: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
   infoBox: {
     gap: 8,
     borderRadius: 12,
@@ -621,7 +621,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.border,
     marginVertical: 12,
   },
-  erTotal: { fontSize: 22, fontWeight: "700", color: Colors.primary },
+  erTotal: { fontSize: 22, fontWeight: "700", color: Colors.primaryText },
   erMonths: { marginTop: 8, fontSize: 14, fontWeight: "600" },
   rowBetween: {
     flexDirection: "row",

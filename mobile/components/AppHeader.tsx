@@ -44,7 +44,7 @@ export function AppHeader({ homeOnLogo = true }: Props) {
             <AppIcon
               name="menu"
               size={22}
-              color={Colors.primary}
+              color={Colors.primaryText}
               strokeWidth={2}
             />
           </Pressable>
@@ -89,7 +89,7 @@ export function AppHeader({ homeOnLogo = true }: Props) {
                   )}
                 </View>
               ) : (
-                <AppIcon name="user" size={18} color={Colors.primary} />
+                <AppIcon name="user" size={18} color={Colors.primaryText} />
               )}
             </Pressable>
           </PremiumAvatarRing>

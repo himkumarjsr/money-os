@@ -48,7 +48,7 @@ const styles = themedStyles(() => ({
     color: Colors.textSecondary,
   },
   textOn: {
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontWeight: "700",
   },
 }));

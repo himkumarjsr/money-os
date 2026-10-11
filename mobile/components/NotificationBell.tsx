@@ -117,12 +117,12 @@ export function NotificationBell() {
             <ScrollView style={styles.list} bounces>
               {loading ? (
                 <ActivityIndicator
-                  color={Colors.primary}
+                  color={Colors.primaryText}
                   style={{ marginVertical: 40 }}
                 />
               ) : notifications.length === 0 ? (
                 <View style={styles.empty}>
-                  <AppIcon name="bell" size={44} color={Colors.primary} />
+                  <AppIcon name="bell" size={44} color={Colors.primaryText} />
                   <Text style={styles.emptyTitle}>No tips yet</Text>
                   <Text style={styles.emptySub}>
                     Your daily finance tip will appear here every morning at
@@ -142,7 +142,11 @@ export function NotificationBell() {
                     ]}
                   >
                     <View style={styles.iconBox}>
-                      <AppIcon name="bulb" size={18} color={Colors.primary} />
+                      <AppIcon
+                        name="bulb"
+                        size={18}
+                        color={Colors.primaryText}
+                      />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={styles.titleRow}>

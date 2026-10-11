@@ -155,7 +155,7 @@ export function EmergencyFundCalculator() {
                 {optionLabel(k)}
               </Text>
               {selected ? (
-                <AppIcon name="check" size={18} color={Colors.primary} />
+                <AppIcon name="check" size={18} color={Colors.primaryText} />
               ) : null}
             </Pressable>
           );
@@ -199,5 +199,5 @@ const styles = themedStyles(() => ({
   },
   optionSelected: { backgroundColor: Colors.surfaceMuted },
   optionText: { flex: 1, fontSize: 15, color: Colors.textPrimary },
-  optionTextSelected: { color: Colors.primary, fontWeight: "600" },
+  optionTextSelected: { color: Colors.primaryText, fontWeight: "600" },
 }));

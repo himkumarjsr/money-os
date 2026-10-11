@@ -45,7 +45,10 @@ export default function RewardsScreen() {
       </View>
 
       {loading && !stats ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator
+          color={Colors.primaryText}
+          style={{ marginTop: 40 }}
+        />
       ) : (
         <View style={styles.grid}>
           <StatCard
@@ -60,7 +63,7 @@ export default function RewardsScreen() {
             label="Streak"
             value={
               <View style={styles.inline}>
-                <AppIcon name="flame" size={18} color={Colors.primary} />
+                <AppIcon name="flame" size={18} color={Colors.primaryText} />
                 <Text style={styles.statValue}>
                   {stats?.streakDays ?? 0} days
                 </Text>
@@ -82,7 +85,10 @@ export default function RewardsScreen() {
       <EarnCard title="Earn points" items={POINTS_EARN_ACTIONS} />
       <Text style={[styles.useText, { marginTop: 16 }]}>
         See where you stand on the{" "}
-        <Text style={pageStyles.link} onPress={() => router.push("/leaderboard")}>
+        <Text
+          style={pageStyles.link}
+          onPress={() => router.push("/leaderboard")}
+        >
           leaderboard
         </Text>
         .
@@ -116,7 +122,7 @@ function EarnCard({
 function Coin({ value }: { value: number }) {
   return (
     <View style={styles.inline}>
-      <AppIcon name="coin" size={18} color={Colors.primary} />
+      <AppIcon name="coin" size={18} color={Colors.primaryText} />
       <Text style={styles.statValue}>{value}</Text>
     </View>
   );
