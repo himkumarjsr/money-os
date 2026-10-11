@@ -19,7 +19,7 @@ export default function FeedbackWidget({
   pageContext,
   onClose,
 }: FeedbackWidgetProps) {
-  const { user, isLoggedIn } = useAuthStore();
+  const { user } = useAuthStore();
   const result = useFinancialStore((s) => s.result);
 
   const [rating, setRating] = useState(0);
@@ -27,6 +27,7 @@ export default function FeedbackWidget({
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [fkAwarded, setFkAwarded] = useState(0);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
@@ -53,7 +54,11 @@ export default function FeedbackWidget({
         body: JSON.stringify(payload),
       });
 
-      const data = (await res.json()) as { error?: string; success?: boolean };
+      const data = (await res.json()) as {
+        error?: string;
+        success?: boolean;
+        fk_awarded?: number;
+      };
 
       if (!res.ok) {
         setError(data.error || `Error ${res.status}`);
@@ -62,6 +67,7 @@ export default function FeedbackWidget({
       }
 
       markFeedbackAsked(pageContext, user?.id);
+      setFkAwarded(data.fk_awarded ?? 0);
       setSaving(false);
       setDone(true);
 
@@ -113,9 +119,9 @@ export default function FeedbackWidget({
         >
           Thanks for your feedback!
         </div>
-        {isLoggedIn ? (
+        {fkAwarded > 0 ? (
           <div style={{ fontSize: 13, color: "#534AB7", fontWeight: 600 }}>
-            +50 FK tokens added
+            +{fkAwarded} FK tokens added
           </div>
         ) : null}
 
@@ -181,7 +187,7 @@ export default function FeedbackWidget({
         Was this helpful?
       </div>
       <div style={{ fontSize: 12, color: "#9B9A94", marginBottom: 16 }}>
-        Rate your experience · Earn 50 FK tokens
+        Rate your experience · 50 FK for your first feedback
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
@@ -298,7 +304,7 @@ export default function FeedbackWidget({
             fontFamily: "inherit",
           }}
         >
-          {saving ? "Saving..." : "Submit · Earn 50 FK"}
+          {saving ? "Saving..." : "Submit"}
         </button>
       </div>
     </div>

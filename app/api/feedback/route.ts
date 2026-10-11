@@ -6,7 +6,6 @@ import {
   rateLimit,
   tooManyRequests,
 } from "@/lib/apiGuard";
-import { istDate } from "@/lib/istDate";
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,6 +19,8 @@ function getAdmin() {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_MESSAGE_LEN = 4000;
+const FEEDBACK_REWARD_FK = 50;
+const FEEDBACK_REASON = "feedback_submitted";
 
 export async function POST(req: NextRequest) {
   const supabaseAdmin = getAdmin();
@@ -91,19 +92,27 @@ export async function POST(req: NextRequest) {
     let fkAwarded = 0;
     if (user_id && UUID_RE.test(user_id)) {
       try {
-        // One 50 FK reward per user per day; page_context is client-supplied,
-        // so it can't be the key (it let one user claim the reward repeatedly).
-        const { data: awarded, error: awardErr } = await supabaseAdmin.rpc(
-          "award_fk",
-          {
-            p_user_id: user_id,
-            p_amount: 50,
-            p_reason: "feedback_submitted",
-            p_reference_id: istDate(),
-          },
-        );
-        if (awardErr) throw awardErr;
-        if (awarded) fkAwarded = 50;
+        // Feedback pays 50 FK once per user, ever. Older rewards used other
+        // reference ids (a date or a page), so check for any earlier one too.
+        const { count, error: countErr } = await supabaseAdmin
+          .from("fk_transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user_id)
+          .eq("reason", FEEDBACK_REASON);
+        if (countErr) throw countErr;
+        if (!count) {
+          const { data: awarded, error: awardErr } = await supabaseAdmin.rpc(
+            "award_fk",
+            {
+              p_user_id: user_id,
+              p_amount: FEEDBACK_REWARD_FK,
+              p_reason: FEEDBACK_REASON,
+              p_reference_id: "first_feedback",
+            },
+          );
+          if (awardErr) throw awardErr;
+          if (awarded) fkAwarded = FEEDBACK_REWARD_FK;
+        }
       } catch (fkErr) {
         console.error("FK award error:", fkErr);
       }

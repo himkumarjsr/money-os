@@ -1,6 +1,7 @@
 /**
  * Rewards — port of web app/rewards/page.tsx.
  */
+import { FK_EARN_ACTIONS } from "@/lib/fkRewards";
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -11,12 +12,7 @@ import { useGamification } from "@/lib/useGamification";
 import { useAuthStore } from "@/store/authStore";
 import { GoldText } from "@/components/ui/GoldMirror";
 
-const EARN = [
-  ["Complete analysis", "+100 FK"],
-  ["Refer a friend (they sign up)", "+200 FK"],
-  ["Daily login streak", "+10 FK / day"],
-  ["Complete profile", "+50 FK"],
-] as const;
+const EARN = FK_EARN_ACTIONS;
 
 export default function RewardsScreen() {
   const userId = useAuthStore((s) => s.user?.id);
