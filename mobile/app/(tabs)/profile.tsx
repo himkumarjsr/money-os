@@ -15,6 +15,7 @@ import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
+import { useThemeStore } from "@/store/themeStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { analyseFinances } from "@/lib/financialEngine";
 import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
@@ -33,6 +34,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { PremiumAvatarRing } from "@/components/ui/PremiumAvatarRing";
+import { PremiumBadge } from "@/components/ui/PremiumBadge";
 import { AppHeader } from "@/components/AppHeader";
 import { AppIcon } from "@/components/ui/AppIcon";
 import ProfileAssets from "@/components/profile/ProfileAssets";
@@ -147,6 +150,7 @@ export default function ProfileScreen() {
   };
 
   const initials = (user?.name?.trim()?.charAt(0) || "U").toUpperCase();
+  const premium = useThemeStore((s) => s.premium?.unlocked ?? false);
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -246,13 +250,18 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.pad}>
         <Card style={styles.identityCard}>
           <View style={styles.avatarWrap}>
-            {user?.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={styles.avatarImg} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitials}>{initials}</Text>
-              </View>
-            )}
+            <PremiumAvatarRing premium={premium} size={88}>
+              {user?.photoURL ? (
+                <Image
+                  source={{ uri: user.photoURL }}
+                  style={styles.avatarImg}
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarInitials}>{initials}</Text>
+                </View>
+              )}
+            </PremiumAvatarRing>
             <Pressable
               onPress={() => void handlePickPhoto()}
               disabled={photoBusy}
@@ -267,7 +276,10 @@ export default function ProfileScreen() {
               )}
             </Pressable>
           </View>
-          <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
+            {premium ? <PremiumBadge size="md" /> : null}
+          </View>
           <Text style={styles.sub}>{user?.email ?? "No phone/email"}</Text>
         </Card>
 
@@ -451,9 +463,8 @@ const styles = themedStyles(() => ({
     padding: Spacing.xxl,
     alignItems: "center",
   },
+  /** Sized by the avatar (plus the gold ring for Premium members). */
   avatarWrap: {
-    width: 88,
-    height: 88,
     marginBottom: Spacing.md,
   },
   avatarImg: {
@@ -495,7 +506,15 @@ const styles = themedStyles(() => ({
     marginBottom: Spacing.xl,
   },
   card: { marginBottom: Spacing.lg },
+  nameRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+  },
   name: {
+    flexShrink: 1,
     fontSize: FontSize.xl,
     fontWeight: "800",
     color: Colors.textPrimary,

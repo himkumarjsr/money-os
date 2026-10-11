@@ -13,10 +13,14 @@ const OPTIONS: { value: ThemePreference; label: string; hint: string }[] = [
   { value: "system", label: "System", hint: "Follows your device" },
   { value: "light", label: "Light", hint: "Bright and clean" },
   { value: "dark", label: "Dark", hint: "Easy on the eyes" },
-  { value: "premium", label: "Premium", hint: "Black and gold" },
+  { value: "premium", label: "Gold", hint: "Black and gold · Premium" },
 ];
 
-/** Settings → Appearance. Premium is locked until the user earns it. */
+/**
+ * Settings → Appearance. "Gold" (value `premium`) is an optional theme for
+ * Premium members, locked until the user earns Premium; unlocking never
+ * switches to it on its own.
+ */
 export function AppearancePicker() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const preference = useThemeStore((s) => s.preference);
@@ -98,7 +102,7 @@ export function AppearancePicker() {
         </div>
       ) : (
         <p className="text-xs font-semibold text-[#9A7B2F]">
-          Premium unlocked. Thanks for sticking with Finkoin.
+          Premium unlocked. The Gold theme is yours to try anytime.
         </p>
       )}
     </div>

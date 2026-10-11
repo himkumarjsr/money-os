@@ -4,12 +4,15 @@ import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import ProfileAssets from "@/components/profile/ProfileAssets";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BackLink from "@/components/ui/BackLink";
+import PremiumAvatarRing from "@/components/ui/PremiumAvatarRing";
+import PremiumBadge from "@/components/ui/PremiumBadge";
 import { analyseFinances } from "@/lib/financialEngine";
 import { trackShare } from "@/lib/gtag";
 import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
+import { useThemeStore } from "@/store/themeStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,6 +24,7 @@ export default function ProfilePage() {
   const submission = useFinancialStore((s) => s.lastSubmission);
   const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
   const fkBalance = useGamificationStore((s) => s.fkBalance);
+  const isPremium = useThemeStore((s) => s.premium?.unlocked ?? false);
 
   const [referralCopied, setReferralCopied] = useState(false);
 
@@ -93,20 +97,25 @@ export default function ProfilePage() {
       <main className="mx-auto w-full max-w-5xl min-w-0 space-y-6 overflow-x-hidden px-4 py-8 pb-28 sm:px-6 md:pb-8">
         <BackLink fallbackHref="/" label="Back" />
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-6 text-center">
-          <div className="mx-auto inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-2xl font-bold text-white">
-            {user?.photoURL ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.photoURL}
-                alt="Profile"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              (user?.name?.charAt(0) || "U").toUpperCase()
-            )}
-          </div>
-          <h1 className="mt-3 text-2xl font-bold text-slate-900">
-            {user?.name ?? "Finkoin user"}
+          <PremiumAvatarRing premium={isPremium}>
+            <div className="mx-auto inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#534AB7] text-2xl font-bold text-white">
+              {user?.photoURL ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                (user?.name?.charAt(0) || "U").toUpperCase()
+              )}
+            </div>
+          </PremiumAvatarRing>
+          <h1 className="mt-3 flex flex-wrap items-center justify-center gap-2 text-2xl font-bold text-slate-900">
+            <span className="min-w-0 break-words">
+              {user?.name ?? "Finkoin user"}
+            </span>
+            {isPremium ? <PremiumBadge size="md" /> : null}
           </h1>
           <p className="text-sm text-slate-500">
             {user?.phone ?? user?.email ?? "No phone/email"}

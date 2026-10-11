@@ -10,10 +10,13 @@ const OPTIONS: { value: ThemePreference; label: string; hint: string }[] = [
   { value: "system", label: "System", hint: "Follows your phone" },
   { value: "light", label: "Light", hint: "Bright and clean" },
   { value: "dark", label: "Dark", hint: "Easy on the eyes" },
-  { value: "premium", label: "Premium", hint: "Black and gold" },
+  { value: "premium", label: "Gold", hint: "Black and gold · Premium" },
 ];
 
-/** Settings → Appearance. Premium is locked until the user earns it. */
+/**
+ * Settings → Appearance. The optional Gold theme is for Premium members and
+ * stays locked until the user earns Premium.
+ */
 export function AppearancePicker() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const preference = useThemeStore((s) => s.preference);
@@ -75,7 +78,9 @@ export function AppearancePicker() {
 
       {!unlocked ? (
         <View style={styles.note}>
-          <Text style={styles.noteTitle}>How to unlock Premium</Text>
+          <Text style={styles.noteTitle}>
+            How to unlock Premium and the Gold theme
+          </Text>
           <Text style={styles.noteText}>
             Generate your report and keep a {PREMIUM_STREAK_DAYS}-day streak
             (about 3 months of daily use), or reach the top {PREMIUM_TOP_RANK}{" "}
@@ -93,7 +98,7 @@ export function AppearancePicker() {
         </View>
       ) : (
         <Text style={styles.unlocked}>
-          Premium unlocked. Thanks for sticking with Finkoin.
+          Premium unlocked. The Gold theme is yours to try, any time.
         </Text>
       )}
     </View>

@@ -182,6 +182,7 @@ export function NavDrawer({
               accessibilityLabel="Finkoin home"
               style={styles.brandRow}
             >
+              {/* Gold coin for Premium members in any theme. */}
               <BrandLogo size={36} />
               <Text style={styles.brandText}>Finkoin</Text>
             </Pressable>
@@ -292,6 +293,7 @@ export function NavDrawer({
   );
 }
 
+/** The Gold theme; Premium membership alone only turns the coin gold. */
 const isPremium = () => getActiveTheme() === "premium";
 /** The drawer is always dark: white text, or warm ivory in Premium. */
 const drawerInk = () => (isPremium() ? Colors.textPrimary : "#FFFFFF");
