@@ -1,8 +1,13 @@
 /**
- * FK Leaderboard — port of web app/leaderboard/page.tsx.
- * Reads `leaderboard_view` directly and refetches on `gamification` updates.
+ * Leaderboard — port of web app/leaderboard/page.tsx.
+ * Ranks by points: `leaderboard_view` (this month) or `leaderboard_all_view`
+ * (all time). Refetches on `gamification` updates.
  */
-import { FK_EARN_ACTIONS } from "@/lib/fkRewards";
+import {
+  FK_EARN_ACTIONS,
+  MONTHLY_PRIZES_FK,
+  POINTS_EARN_ACTIONS,
+} from "@/lib/fkRewards";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
@@ -27,6 +32,7 @@ interface LeaderboardEntry {
   avatar_url: string | null;
   fk_balance: number;
   streak_days: number;
+  points: number;
   rank: number;
   percentile: number;
 }
@@ -37,10 +43,21 @@ interface CachedLeaderboard {
   userId?: string | null;
 }
 
+type Tab = "month" | "all";
+
+const TABS: ReadonlyArray<{ id: Tab; label: string; view: string }> = [
+  { id: "month", label: "This month", view: "leaderboard_view" },
+  { id: "all", label: "All time", view: "leaderboard_all_view" },
+];
+
 const CACHE_KEY = "finkoin_leaderboard";
 const CACHE_TTL = 5 * 60 * 1000;
 
-const EARN_ACTIONS = FK_EARN_ACTIONS;
+const cacheKey = (tab: Tab) => `${CACHE_KEY}_${tab}`;
+
+function formatPoints(n: number | null | undefined) {
+  return `${Number(n ?? 0).toLocaleString("en-IN")} pts`;
+}
 
 function getInitials(name: string) {
   return (name || "U")
@@ -65,6 +82,26 @@ function formatTime(ms: number) {
   } catch {
     return "";
   }
+}
+
+function EarnList({
+  title,
+  items,
+}: {
+  title: string;
+  items: ReadonlyArray<readonly [string, string]>;
+}) {
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <Text style={styles.earnTitle}>{title}</Text>
+      {items.map(([action, reward]) => (
+        <View key={action} style={styles.earnRow}>
+          <Text style={styles.earnAction}>{action}</Text>
+          <Text style={styles.earnReward}>{reward}</Text>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function Avatar({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
@@ -94,6 +131,9 @@ export default function LeaderboardScreen() {
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const userId = user?.id ?? null;
 
+  const [tab, setTab] = useState<Tab>("month");
+  const tabRef = useRef<Tab>(tab);
+  tabRef.current = tab;
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [userEntry, setUserEntry] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,9 +150,12 @@ export default function LeaderboardScreen() {
 
   const fetchLeaderboard = useCallback(
     async (force = false) => {
+      const which = tab;
+      const view = TABS.find((t) => t.id === which)?.view ?? "leaderboard_view";
+      const current = () => mounted.current && tabRef.current === which;
       if (!force) {
         try {
-          const raw = await AsyncStorage.getItem(CACHE_KEY);
+          const raw = await AsyncStorage.getItem(cacheKey(which));
           if (raw) {
             const {
               data,
@@ -121,7 +164,7 @@ export default function LeaderboardScreen() {
             } = JSON.parse(raw) as CachedLeaderboard;
             const age = Date.now() - Number(fetchedAt ?? 0);
             if (age < CACHE_TTL && data && (cachedFor ?? null) === userId) {
-              if (!mounted.current) return;
+              if (!current()) return;
               setEntries(data.top ?? []);
               setUserEntry(data.me ?? null);
               setLoading(false);
@@ -134,10 +177,10 @@ export default function LeaderboardScreen() {
         }
       }
 
-      if (mounted.current) setLoading(true);
+      if (current()) setLoading(true);
       try {
         const { data: top, error: topError } = await supabase
-          .from("leaderboard_view")
+          .from(view)
           .select("*")
           .limit(50);
         if (topError) throw topError;
@@ -145,7 +188,7 @@ export default function LeaderboardScreen() {
         let me: LeaderboardEntry | null = null;
         if (userId) {
           const { data: myRow, error: meError } = await supabase
-            .from("leaderboard_view")
+            .from(view)
             .select("*")
             .eq("user_id", userId)
             .maybeSingle();
@@ -155,13 +198,13 @@ export default function LeaderboardScreen() {
 
         const topData = (top as LeaderboardEntry[] | null) ?? [];
         const now = Date.now();
-        if (mounted.current) {
+        if (current()) {
           setEntries(topData);
           setUserEntry(me);
           setLastFetched(formatTime(now));
         }
         await AsyncStorage.setItem(
-          CACHE_KEY,
+          cacheKey(which),
           JSON.stringify({
             data: { top: topData, me },
             fetchedAt: now,
@@ -171,10 +214,10 @@ export default function LeaderboardScreen() {
       } catch (err) {
         console.error("Leaderboard fetch error:", err);
       } finally {
-        if (mounted.current) setLoading(false);
+        if (current()) setLoading(false);
       }
     },
-    [userId],
+    [userId, tab],
   );
 
   useEffect(() => {
@@ -195,7 +238,9 @@ export default function LeaderboardScreen() {
           filter: `user_id=eq.${userId}`,
         },
         () => {
-          void AsyncStorage.removeItem(CACHE_KEY).catch(() => undefined);
+          void AsyncStorage.multiRemove(TABS.map((t) => cacheKey(t.id))).catch(
+            () => undefined,
+          );
           void fetchLeaderboard(true);
         },
       )
@@ -236,7 +281,7 @@ export default function LeaderboardScreen() {
         </Pressable>
         <View style={styles.gate}>
           <Text style={styles.gateText}>
-            Sign in to see the FK leaderboard.
+            Sign in to see the leaderboard.
           </Text>
           <Pressable
             onPress={() => router.push("/(auth)/login")}
@@ -251,6 +296,16 @@ export default function LeaderboardScreen() {
   }
 
   const me = userEntry;
+  const tabLabel = tab === "month" ? "this month" : "all time";
+
+  const selectTab = (next: Tab) => {
+    if (next === tab) return;
+    setEntries([]);
+    setUserEntry(null);
+    setLastFetched(null);
+    setLoading(true);
+    setTab(next);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -275,7 +330,7 @@ export default function LeaderboardScreen() {
 
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.h1}>FK Leaderboard</Text>
+            <Text style={styles.h1}>Leaderboard</Text>
             <Text style={styles.sub}>
               {lastFetched ? `Updated ${lastFetched}` : "Live rankings"}
             </Text>
@@ -293,6 +348,31 @@ export default function LeaderboardScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.tabs} accessibilityRole="tablist">
+          {TABS.map((t) => {
+            const active = t.id === tab;
+            return (
+              <Pressable
+                key={t.id}
+                onPress={() => selectTab(t.id)}
+                style={[styles.tab, active && styles.tabActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {tab === "month" ? (
+          <Text style={styles.prize}>
+            Top 3 on the 1st win {MONTHLY_PRIZES_FK.join(" / ")} FK
+          </Text>
+        ) : null}
+
         {me ? (
           <View style={styles.meCard}>
             <View style={styles.meAvatar}>
@@ -303,11 +383,11 @@ export default function LeaderboardScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.meTitle}>You · Rank #{me.rank}</Text>
               <Text style={styles.meSub}>
-                Top {me.percentile}% of all users
+                Top {me.percentile}% {tabLabel}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.meFk}>{me.fk_balance} FK</Text>
+              <Text style={styles.meFk}>{formatPoints(me.points)}</Text>
               <Text style={styles.meSub}>{me.streak_days ?? 0} day streak</Text>
             </View>
           </View>
@@ -315,8 +395,8 @@ export default function LeaderboardScreen() {
 
         <View style={styles.card}>
           <View style={styles.tableHead}>
-            <Text style={styles.tableHeadLabel}>Top users this month</Text>
-            <Text style={styles.tableHeadRight}>FK Balance</Text>
+            <Text style={styles.tableHeadLabel}>Top users {tabLabel}</Text>
+            <Text style={styles.tableHeadRight}>Points</Text>
           </View>
 
           {loading ? (
@@ -371,7 +451,7 @@ export default function LeaderboardScreen() {
                   </View>
 
                   <Text style={[styles.fk, isMe && styles.nameMe]}>
-                    {entry.fk_balance} FK
+                    {formatPoints(entry.points)}
                   </Text>
                 </View>
               );
@@ -380,13 +460,15 @@ export default function LeaderboardScreen() {
         </View>
 
         <View style={[styles.card, styles.earnCard]}>
-          <Text style={styles.earnTitle}>HOW TO EARN FK</Text>
-          {EARN_ACTIONS.map(([action, reward]) => (
-            <View key={action} style={styles.earnRow}>
-              <Text style={styles.earnAction}>{action}</Text>
-              <Text style={styles.earnReward}>{reward}</Text>
-            </View>
-          ))}
+          <EarnList title="Earn points" items={POINTS_EARN_ACTIONS} />
+          <EarnList title="Earn FK" items={FK_EARN_ACTIONS} />
+          <Pressable
+            onPress={() => router.push("/rewards")}
+            style={styles.fkLink}
+            accessibilityRole="link"
+          >
+            <Text style={styles.backText}>What is FK? →</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -432,6 +514,37 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   refreshText: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  tabs: {
+    flexDirection: "row",
+    gap: 4,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+  },
+  tab: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabActive: { backgroundColor: Colors.card },
+  tabText: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary },
+  tabTextActive: { color: Colors.primary },
+  prize: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  fkLink: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   meCard: {
     backgroundColor: Colors.primary,
     borderRadius: 14,
@@ -523,16 +636,17 @@ const styles = themedStyles(() => ({
     color: Colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 12,
+    marginBottom: 4,
   },
   earnRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.background,
   },
-  earnAction: { fontSize: 13, color: Colors.textSecondary },
+  earnAction: { flex: 1, fontSize: 13, color: Colors.textSecondary },
   earnReward: { fontSize: 12, fontWeight: "700", color: Colors.primary },
 }));

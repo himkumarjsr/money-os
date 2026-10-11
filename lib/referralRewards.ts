@@ -97,7 +97,8 @@ function clearPendingAfterSuccess(): void {
 
 /**
  * Links the new user to the referrer from localStorage (`finkoin_pending_ref`).
- * The server records the referral and pays both FK bonuses once.
+ * The server records the referral; both FK bonuses are paid once the new
+ * user adds their first expense.
  */
 export async function applyPendingReferralRewards(supabase: SupabaseClient, newUserId: string): Promise<void> {
   if (referralApplyLocks.has(newUserId)) return;
@@ -134,7 +135,7 @@ export async function applyPendingReferralRewards(supabase: SupabaseClient, newU
       localStorage.setItem(
         FINKOIN_REFERRAL_SUCCESS_KEY,
         JSON.stringify({
-          fkAwarded: result.fkAwarded ?? 100,
+          fkAwarded: result.fkAwarded ?? 0,
           showUntil: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
         }),
       );

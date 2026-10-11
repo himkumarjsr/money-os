@@ -4,8 +4,9 @@ import { istDate } from "@/lib/istDate";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 
 /**
- * Records today's visit: updates the login streak and awards the daily 5 FK
- * once per (India) day. FK balances are server-only (migration 045).
+ * Records today's visit: updates the login streak and awards the daily login
+ * points once per (India) day, plus streak rewards (migration 050). FK
+ * balances are server-only (migration 045).
  */
 export async function POST() {
   const user = await getAuthedUser();
@@ -28,6 +29,7 @@ export async function POST() {
         last_login: string | null;
         badges: unknown;
         awarded: number | null;
+        points_awarded: number | null;
       }
     | undefined;
 
@@ -38,5 +40,6 @@ export async function POST() {
     lastLogin: row?.last_login ?? null,
     badges: Array.isArray(row?.badges) ? row.badges : [],
     awarded: Number(row?.awarded ?? 0),
+    pointsAwarded: Number(row?.points_awarded ?? 0),
   });
 }
