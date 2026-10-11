@@ -8,6 +8,7 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import type { Href } from "expo-router";
+import { brand } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { syncKv } from "@/lib/syncKv";
 import { nativeRouteForPath } from "@/lib/contentLinks";
@@ -29,7 +30,7 @@ export async function ensureAndroidChannel(): Promise<void> {
   await Notifications.setNotificationChannelAsync("default", {
     name: "Finkoin",
     importance: Notifications.AndroidImportance.HIGH,
-    lightColor: "#534AB7",
+    lightColor: brand("#534AB7"),
   });
 }
 
@@ -159,9 +160,7 @@ export function routeForPushUrl(url: unknown): Href {
     const notif = queryParam(query, "notif");
     return {
       pathname: "/split/[groupId]",
-      params: notif
-        ? { groupId: split[1], notif }
-        : { groupId: split[1] },
+      params: notif ? { groupId: split[1], notif } : { groupId: split[1] },
     };
   }
   if (path.startsWith("/tracker")) return "/(tabs)/tracker";

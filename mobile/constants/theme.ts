@@ -112,8 +112,12 @@ const premiumPalette: Palette = {
   onPrimary: "#1A1405",
   success: "#6FCF97",
   successDark: "#6FCF97",
+  successLight: "#0F2A1C",
   successText: "#6FCF97",
+  warningLight: "#2E2410",
+  warningText: "#F3D27A",
   error: "#EB7A72",
+  errorLight: "#341615",
   errorText: "#EB7A72",
   background: "#0A0A0A",
   backgroundDeep: "#12100B",
@@ -126,6 +130,8 @@ const premiumPalette: Palette = {
   textPrimary: "#F5EFDC",
   textSecondary: "#C9C1AE",
   textMuted: "#9E978A",
+  slate300: "#4A3F1F",
+  slate800: "#F5EFDC",
   indigo600: "#D4AF37",
   violet600: "#E8C766",
   blue600: "#B38728",
@@ -135,7 +141,7 @@ const premiumPalette: Palette = {
   glassCard: "rgba(255,255,255,0.05)",
   heroWash: "rgba(34,28,14,0.7)",
   heroBorder: "rgba(90,74,30,0.8)",
-  tabIdle: "#C9C1AE",
+  tabIdle: "#E8C766",
   primaryTint: "rgba(212,175,55,0.14)",
   primaryTintBorder: "rgba(212,175,55,0.32)",
 };
@@ -173,6 +179,35 @@ export const Colors: Readonly<Palette> = new Proxy({} as Palette, {
   }),
 });
 
+/** Premium's polished-gold sheen, the same as the PWA's `--fk-gold-grad`. */
+export const GOLD_GRADIENT =
+  "linear-gradient(100deg, #AA771C 0%, #FCF6BA 30%, #D4AF37 50%, #FBF5B7 70%, #B38728 100%)";
+/** Premium's dark gold hero panel, the same as the PWA's `--fk-hero`. */
+export const HERO_GRADIENT =
+  "linear-gradient(160deg, #221C0E 0%, #12100B 55%, #1C170C 100%)";
+
+const GOLD_FILLS = new Set(["#d4af37", "#e8c766", "#b38728"]);
+
+/**
+ * Like the PWA, Premium paints solid gold surfaces (buttons, chips, active
+ * pills, progress fills) with the gold gradient instead of a flat colour.
+ */
+function premiumFills<T>(styles: T): T {
+  if (activeTheme !== "premium") return styles;
+  for (const style of Object.values(styles as Record<string, unknown>)) {
+    if (!style || typeof style !== "object") continue;
+    const s = style as Record<string, unknown>;
+    const bg =
+      typeof s.backgroundColor === "string"
+        ? s.backgroundColor.toLowerCase()
+        : "";
+    if (GOLD_FILLS.has(bg)) s.experimental_backgroundImage ??= GOLD_GRADIENT;
+    else if (bg === premiumPalette.heroWash.toLowerCase())
+      s.experimental_backgroundImage ??= HERO_GRADIENT;
+  }
+  return styles;
+}
+
 /**
  * `StyleSheet.create` that follows the active theme: the factory runs once per
  * palette, on first use, and reads `Colors` like any other code.
@@ -182,7 +217,7 @@ export function themedStyles<T extends StyleSheet.NamedStyles<T>>(
 ): T {
   const cache: Partial<Record<ThemeName, T>> = {};
   const current = (): T =>
-    (cache[activeTheme] ??= StyleSheet.create(factory()));
+    (cache[activeTheme] ??= StyleSheet.create(premiumFills(factory())));
   return new Proxy({} as T, {
     get: (_t, key) => current()[key as keyof T],
     ownKeys: () => Reflect.ownKeys(current()),
@@ -232,12 +267,14 @@ export const Shadow = {
     shadowRadius: 8,
     elevation: 2,
   },
-  strong: {
-    shadowColor: "#534AB7",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+  get strong() {
+    return {
+      shadowColor: brand("#534AB7"),
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      elevation: 6,
+    } as const;
   },
 } as const;
 
