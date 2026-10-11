@@ -2,6 +2,7 @@
  * FK Leaderboard — port of web app/leaderboard/page.tsx.
  * Reads `leaderboard_view` directly and refetches on `gamification` updates.
  */
+import { FK_EARN_ACTIONS } from "@/lib/fkRewards";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
@@ -39,14 +40,7 @@ interface CachedLeaderboard {
 const CACHE_KEY = "finkoin_leaderboard";
 const CACHE_TTL = 5 * 60 * 1000;
 
-const EARN_ACTIONS: [string, string][] = [
-  ["Complete health check", "+100 FK"],
-  ["Buy fix plan", "+150 FK"],
-  ["Refer a friend", "+200 FK"],
-  ["Leave feedback", "+50 FK"],
-  ["Daily login", "+10 FK/day"],
-  ["Read daily tip", "+5 FK"],
-];
+const EARN_ACTIONS = FK_EARN_ACTIONS;
 
 function getInitials(name: string) {
   return (name || "U")

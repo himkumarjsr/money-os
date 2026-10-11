@@ -1,5 +1,6 @@
 "use client";
 
+import { FK_EARN_ACTIONS } from "@/lib/fkRewards";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { getSupabase } from "@/lib/supabase";
@@ -390,14 +391,7 @@ function LeaderboardContent() {
         >
           HOW TO EARN FK
         </div>
-        {[
-          ["Complete health check", "+100 FK"],
-          ["Buy fix plan", "+150 FK"],
-          ["Refer a friend", "+200 FK"],
-          ["Leave feedback", "+50 FK"],
-          ["Daily login", "+10 FK/day"],
-          ["Read daily tip", "+5 FK"],
-        ].map(([action, reward]) => (
+        {FK_EARN_ACTIONS.map(([action, reward]) => (
           <div
             key={action}
             style={{
