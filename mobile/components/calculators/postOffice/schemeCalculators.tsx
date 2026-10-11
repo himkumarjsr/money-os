@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, themedStyles, getActiveTheme } from "@/constants/theme";
 import { formatCurrency } from "@/lib/finance";
 import {
   PO_RATES,
@@ -590,7 +590,12 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primary,
   },
   chipIdle: { borderColor: Colors.border, backgroundColor: Colors.card },
-  chipPressed: { borderColor: "rgba(83,74,183,0.4)" },
+  chipPressed: {
+    borderColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.4)"
+        : "rgba(83,74,183,0.4)",
+  },
   chipText: { fontSize: 14, lineHeight: 20, fontWeight: "600" },
   chipTextSelected: { color: Colors.onPrimary },
   chipTextIdle: { color: Colors.textSecondary },

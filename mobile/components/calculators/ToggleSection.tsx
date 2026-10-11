@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
-import { themedStyles, Colors, tintBg } from "@/constants/theme";
+import { themedStyles, Colors, tintBg, brand } from "@/constants/theme";
 
 /** Map legacy emoji props → purple AppIcon names (🇮🇳 is never mapped). */
 const EMOJI_TO_ICON: Record<string, AppIconName> = {
@@ -58,7 +58,7 @@ export function ToggleSwitch({
       <View
         style={[
           styles.track,
-          { backgroundColor: isOn ? "#534AB7" : tintBg("#E8E6F0") },
+          { backgroundColor: isOn ? brand("#534AB7") : tintBg("#E8E6F0") },
         ]}
       >
         <Animated.View
@@ -103,7 +103,7 @@ export function ToggleSection({
     <View
       style={[
         styles.wrap,
-        { borderColor: isOn ? "#534AB7" : tintBg("#E8E6F0") },
+        { borderColor: isOn ? brand("#534AB7") : tintBg("#E8E6F0") },
       ]}
     >
       <View style={[styles.header, isOn && styles.headerOn]}>

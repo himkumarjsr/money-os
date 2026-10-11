@@ -6,6 +6,7 @@ import { ContentBlocks } from "@/components/content/ContentBlocks";
 import { Colors, themedStyles } from "@/constants/theme";
 import { formatIndian } from "@/lib/formatters";
 import { CRORE, monthlySipForGoal, sipMaturityAmount } from "@/lib/sipGoal";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const YEAR_OPTIONS = [10, 15, 20] as const;
 
@@ -80,9 +81,9 @@ export function SipCroreTool() {
 
         <View style={styles.results}>
           <View style={[styles.result, styles.resultPrimary]}>
-            <Text style={[styles.resultLabel, { color: Colors.primary }]}>
+            <GoldText style={[styles.resultLabel, { color: Colors.primary }]}>
               Monthly SIP needed
-            </Text>
+            </GoldText>
             <Text style={styles.resultBig}>
               ₹{formatIndian(Math.round(monthly))}
             </Text>

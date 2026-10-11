@@ -5,6 +5,7 @@ import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { BLOG_ARTICLES } from "@/lib/blogContent";
 import { openContentHref } from "@/lib/contentLinks";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const FOOTER_LINKS = [
   { label: "Tax calculator", href: "/calculators/tax-regime-2026" },
@@ -19,7 +20,7 @@ export default function BlogIndexScreen() {
       barTitle="Blog"
       share={{ title: "Money guides for India | Finkoin", path: "/blog" }}
     >
-      <Text style={styles.eyebrow}>BLOG</Text>
+      <GoldText style={styles.eyebrow}>BLOG</GoldText>
       <Text style={styles.h1}>Money guides for India</Text>
       <Text style={styles.lead}>
         Plain-language articles on tax, insurance, saving, and investing — with

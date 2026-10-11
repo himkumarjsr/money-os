@@ -11,6 +11,7 @@ import {
 } from "@/lib/plannedInvestments";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { getSupabase } from "@/lib/supabase";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** Matches web StartPlanSheet: consent before any reminder is created. Nothing is ever invested. */
 export function StartPlanSheet({
@@ -64,9 +65,9 @@ export function StartPlanSheet({
       <Text style={styles.title}>Start this plan</Text>
 
       <View style={[styles.box, { backgroundColor: Colors.primaryLight }]}>
-        <Text style={[styles.boxTitle, { color: Colors.primary }]}>
+        <GoldText style={[styles.boxTitle, { color: Colors.primary }]}>
           What will happen
-        </Text>
+        </GoldText>
         <Text style={styles.body}>
           {drafts.length} planned{" "}
           {drafts.length === 1 ? "investment" : "investments"} across{" "}

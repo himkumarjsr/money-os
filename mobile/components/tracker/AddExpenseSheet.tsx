@@ -18,7 +18,12 @@ import {
   TrackerIcon,
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
-import { Colors, themedStyles } from "@/constants/theme";
+import {
+  Colors,
+  themedStyles,
+  tintBg,
+  getActiveTheme,
+} from "@/constants/theme";
 import {
   TRACKER_CATEGORIES,
   pickerSubcategories,
@@ -1238,7 +1243,7 @@ const styles = themedStyles(() => ({
     borderRadius: 10,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#C9C4F2",
+    borderColor: getActiveTheme() === "premium" ? tintBg("#C9C4F2") : "#C9C4F2",
     backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",

@@ -99,6 +99,18 @@ export function GoldStrokeDefs({ id }: { id: string }) {
   );
 }
 
+/** SVG text ignores `textTransform`, so apply it to each line ourselves. */
+function caseOf(text: string, transform: TextStyle["textTransform"]): string {
+  if (transform === "uppercase") return text.toUpperCase();
+  if (transform === "lowercase") return text.toLowerCase();
+  if (transform === "capitalize")
+    return text.replace(
+      /(^|\s)(\S)/g,
+      (_m, a: string, b: string) => a + b.toUpperCase(),
+    );
+  return text;
+}
+
 // Keys that place the text in its parent; they move to the wrapper View.
 const OUTER_KEYS = [
   "margin",
@@ -205,7 +217,7 @@ export function GoldText({ children, style, numberOfLines, always }: Props) {
               letterSpacing={flat.letterSpacing}
               fill="url(#fkGoldText)"
             >
-              {line.text.replace(/\n$/, "")}
+              {caseOf(line.text.replace(/\n$/, ""), flat.textTransform)}
             </SvgText>
           ))}
         </Svg>

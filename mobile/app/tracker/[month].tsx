@@ -16,7 +16,13 @@ import { ExpenseList } from "@/components/tracker/ExpenseList";
 import { MonthSummary } from "@/components/tracker/MonthSummary";
 import { TrackerConsent } from "@/components/tracker/TrackerConsent";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Colors, Spacing, themedStyles, tintBg } from "@/constants/theme";
+import {
+  Colors,
+  Spacing,
+  themedStyles,
+  tintBg,
+  onPrimaryAlpha,
+} from "@/constants/theme";
 import { localISODate } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
 import { trackerTotalAmount } from "@/lib/tracker-categories";
@@ -340,9 +346,9 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 24,
     marginBottom: 20,
   },
-  heroLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 4 },
+  heroLabel: { fontSize: 12, color: onPrimaryAlpha(0.7), marginBottom: 4 },
   heroValue: { fontSize: 32, fontWeight: "800", color: Colors.onPrimary },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 4 },
+  heroSub: { fontSize: 13, color: onPrimaryAlpha(0.7), marginTop: 4 },
   listCard: {
     borderRadius: 16,
     borderWidth: 1,

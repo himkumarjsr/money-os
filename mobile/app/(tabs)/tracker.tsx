@@ -2200,7 +2200,7 @@ const styles = themedStyles(() => ({
   txnAmountNotCounted: { textDecorationLine: "line-through", opacity: 0.6 },
   cardRulesNote: {
     backgroundColor: Colors.primaryLight,
-    borderColor: "#D8D6F5",
+    borderColor: getActiveTheme() === "premium" ? tintBg("#D8D6F5") : "#D8D6F5",
     borderWidth: 1,
     borderRadius: 14,
     padding: 12,

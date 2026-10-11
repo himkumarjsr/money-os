@@ -12,6 +12,7 @@ import { HeroCarousel } from "@/components/landing/HeroCarousel";
 import { QuickTools } from "@/components/landing/QuickTools";
 import { TopPicks } from "@/components/landing/TopPicks";
 import { useAuthStore } from "@/store/authStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /**
  * Public home = PWA landing (`app/page.tsx` + HomePageClient mobile).
@@ -33,7 +34,7 @@ export default function HomeScreen() {
           <View style={styles.orbB} pointerEvents="none" />
           <View style={styles.orbC} pointerEvents="none" />
 
-          <Text style={styles.h1Sub}>{FINKOIN_TAGLINE_SUB}</Text>
+          <GoldText style={styles.h1Sub}>{FINKOIN_TAGLINE_SUB}</GoldText>
           <Text style={styles.h1Main}>{FINKOIN_TAGLINE}</Text>
           <Text style={styles.h2}>
             Check your financial health score, calculate tax savings, plan

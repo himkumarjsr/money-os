@@ -1,5 +1,6 @@
-import { View, Image, Text, type ViewStyle } from "react-native";
+import { View, Image, type ViewStyle } from "react-native";
 import { Colors, getActiveTheme, themedStyles } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const logoSource = require("@/assets/logo.png");
 const premiumLogoSource = require("@/assets/icon-premium.png");
@@ -23,9 +24,9 @@ export function BrandLogo({ size = 32, withWordmark = false, style }: Props) {
         alt="Finkoin"
       />
       {withWordmark ? (
-        <Text style={styles.wordmark} numberOfLines={1}>
+        <GoldText style={styles.wordmark} numberOfLines={1}>
           Finkoin
-        </Text>
+        </GoldText>
       ) : null}
     </View>
   );
