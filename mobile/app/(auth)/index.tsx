@@ -11,7 +11,7 @@ export default function AuthIndexRedirect() {
 
   return (
     <View style={styles.wrap}>
-      <ActivityIndicator color={Colors.primary} />
+      <ActivityIndicator color={Colors.primaryText} />
     </View>
   );
 }

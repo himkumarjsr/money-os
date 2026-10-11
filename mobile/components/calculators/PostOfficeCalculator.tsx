@@ -147,7 +147,7 @@ const styles = themedStyles(() => ({
     fontSize: 12,
     lineHeight: 16,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   activeCard: {
     borderRadius: 16,
@@ -168,7 +168,7 @@ const styles = themedStyles(() => ({
     lineHeight: 16,
     color: Colors.textMuted,
   },
-  activeLink: { fontWeight: "500", color: Colors.primary },
+  activeLink: { fontWeight: "500", color: Colors.primaryText },
   activeBody: { marginTop: 16 },
   insightLink: { fontWeight: "600", textDecorationLine: "underline" },
 }));

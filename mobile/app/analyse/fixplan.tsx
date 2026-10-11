@@ -333,7 +333,7 @@ function FixPlanScreen() {
             <Text style={styles.pdfText}>Generating PDF...</Text>
           ) : (
             <View style={styles.pdfInner}>
-              <AppIcon name="doc" size={18} color={Colors.primary} />
+              <AppIcon name="doc" size={18} color={Colors.primaryText} />
               <Text style={styles.pdfText}>Download full report PDF</Text>
             </View>
           )}
@@ -364,7 +364,7 @@ const styles = themedStyles(() => ({
     paddingTop: Spacing.sm,
   },
   back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
-  backText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  backText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
   content: { padding: Spacing.lg, paddingBottom: 40 },
   notice: {
     borderRadius: Radius.md,
@@ -394,7 +394,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     alignSelf: "flex-start",
   },
-  noticeBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  noticeBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   pdfBtn: {
     minHeight: 48,
     borderRadius: Radius.md,
@@ -407,7 +407,7 @@ const styles = themedStyles(() => ({
   },
   pdfBtnDisabled: { opacity: 0.7 },
   pdfInner: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pdfText: { fontSize: 15, fontWeight: "700", color: Colors.primary },
+  pdfText: { fontSize: 15, fontWeight: "700", color: Colors.primaryText },
   disclaimer: {
     paddingBottom: Spacing.lg,
     textAlign: "center",

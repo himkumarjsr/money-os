@@ -284,7 +284,7 @@ const styles = themedStyles(() => ({
     fontSize: 16,
     color: Colors.textPrimary,
   },
-  amountInput: { fontWeight: "700", color: Colors.primary },
+  amountInput: { fontWeight: "700", color: Colors.primaryText },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   pill: {
     minHeight: 44,
@@ -301,7 +301,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryLight,
   },
   pillText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
-  pillTextActive: { color: Colors.primary },
+  pillTextActive: { color: Colors.primaryText },
   dayGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   dayCell: {
     width: 44,

@@ -269,7 +269,7 @@ const styles = themedStyles(() => ({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   tipBody: {
     marginTop: 8,

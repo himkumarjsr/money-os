@@ -60,7 +60,7 @@ const SERIES = (): ChartSeries[] => [
     key: "portfolio",
     label: "Portfolio value",
     type: "line",
-    color: Colors.primary,
+    color: Colors.primaryText,
     strokeWidth: 2.5,
   },
 ];

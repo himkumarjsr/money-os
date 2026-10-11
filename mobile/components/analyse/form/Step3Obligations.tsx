@@ -556,7 +556,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.background,
     padding: 16,
   },
-  savedTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  savedTitle: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   savedAmounts: { marginTop: 4, fontSize: 14, color: Colors.textPrimary },
   savedNote: { marginTop: 4, fontSize: 11, color: Colors.success },
   savedActions: { flexDirection: "row", alignItems: "center", gap: 4 },
@@ -570,7 +570,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  editText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  editText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   loanCard: {
     gap: 14,
     borderRadius: 14,
@@ -586,7 +586,7 @@ const styles = themedStyles(() => ({
     marginTop: -8,
     marginRight: -10,
   },
-  loanTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  loanTitle: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   saveLoanBtn: {
     minHeight: 44,
     borderRadius: 10,

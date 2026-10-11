@@ -87,7 +87,7 @@ const styles = themedStyles(() => ({
     lineHeight: 19,
     color: Colors.textSecondary,
   },
-  highlight: { fontWeight: "700", color: Colors.primary },
+  highlight: { fontWeight: "700", color: Colors.primaryText },
   chart: {
     marginTop: Spacing.lg,
     flexDirection: "row",

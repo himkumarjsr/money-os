@@ -67,7 +67,7 @@ export function AppearancePicker() {
                 {locked ? (
                   <AppIcon name="lock" size={14} color={Colors.textMuted} />
                 ) : selected ? (
-                  <AppIcon name="check" size={14} color={Colors.primary} />
+                  <AppIcon name="check" size={14} color={Colors.primaryText} />
                 ) : null}
               </View>
               <Text style={styles.optionHint}>{o.hint}</Text>
@@ -143,6 +143,6 @@ const styles = themedStyles(() => ({
   },
   noteTitle: { fontSize: 13, fontWeight: "700", color: Colors.textPrimary },
   noteText: { fontSize: 12, lineHeight: 18, color: Colors.textSecondary },
-  noteProgress: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  noteProgress: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   unlocked: { fontSize: 12, fontWeight: "600", color: Colors.accent },
 }));

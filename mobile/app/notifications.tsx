@@ -56,10 +56,15 @@ function OpenSplitGroupButton({ title }: { title: string }) {
         router.push(await splitGroupRouteForTitle(title));
         setBusy(false);
       }}
-      style={({ pressed }) => [styles.openGroup, (pressed || busy) && { opacity: 0.8 }]}
+      style={({ pressed }) => [
+        styles.openGroup,
+        (pressed || busy) && { opacity: 0.8 },
+      ]}
       accessibilityRole="button"
     >
-      <Text style={styles.openGroupText}>{busy ? "Opening…" : "Open group"}</Text>
+      <Text style={styles.openGroupText}>
+        {busy ? "Opening…" : "Open group"}
+      </Text>
     </Pressable>
   );
 }
@@ -141,7 +146,10 @@ export default function NotificationsScreen() {
   if (!hasInitialized) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+        <ActivityIndicator
+          color={Colors.primaryText}
+          style={{ marginTop: 60 }}
+        />
       </SafeAreaView>
     );
   }
@@ -217,7 +225,7 @@ export default function NotificationsScreen() {
           <View style={styles.spotlight}>
             {directLoading && !focused ? (
               <View style={styles.opening}>
-                <ActivityIndicator color={Colors.primary} />
+                <ActivityIndicator color={Colors.primaryText} />
                 <Text style={styles.openingText}>Opening…</Text>
               </View>
             ) : focused ? (
@@ -256,10 +264,13 @@ export default function NotificationsScreen() {
         </Text>
 
         {loading && notifications.length === 0 ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 24 }} />
+          <ActivityIndicator
+            color={Colors.primaryText}
+            style={{ marginTop: 24 }}
+          />
         ) : notifications.length === 0 ? (
           <View style={styles.empty}>
-            <AppIcon name="bell" size={40} color={Colors.primary} />
+            <AppIcon name="bell" size={40} color={Colors.primaryText} />
             <Text style={styles.emptyTitle}>No notifications yet</Text>
             <Text style={styles.emptySub}>
               Daily finance tips and alerts will show up here.
@@ -309,7 +320,7 @@ const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 120 },
   back: { minHeight: 44, justifyContent: "center", paddingHorizontal: 16 },
-  backText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  backText: { color: Colors.primaryText, fontWeight: "700", fontSize: 14 },
   gate: { padding: 24, alignItems: "center" },
   gateText: { color: Colors.textSecondary, marginBottom: 16, fontSize: 15 },
   gateBtn: {
@@ -338,7 +349,7 @@ const styles = themedStyles(() => ({
     minHeight: 44,
     justifyContent: "center",
   },
-  markAllText: { color: Colors.primary, fontWeight: "700", fontSize: 12 },
+  markAllText: { color: Colors.primaryText, fontWeight: "700", fontSize: 12 },
   spotlight: {
     backgroundColor: Colors.card,
     borderWidth: 1.5,
@@ -371,7 +382,7 @@ const styles = themedStyles(() => ({
   spotCat: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },

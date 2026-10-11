@@ -103,7 +103,7 @@ const styles = themedStyles(() => ({
     fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   rowSpaced: { marginBottom: 12 },
   rowHead: {

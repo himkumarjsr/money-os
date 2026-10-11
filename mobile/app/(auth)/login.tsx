@@ -223,7 +223,11 @@ const styles = themedStyles(() => ({
   },
   form: { gap: Spacing.lg },
   forgotWrap: { alignSelf: "flex-end", marginTop: -Spacing.sm },
-  forgot: { fontSize: FontSize.md, color: Colors.primary, fontWeight: "700" },
+  forgot: {
+    fontSize: FontSize.md,
+    color: Colors.primaryText,
+    fontWeight: "700",
+  },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -241,7 +245,7 @@ const styles = themedStyles(() => ({
   },
   linkWrap: { marginTop: Spacing.xl, alignItems: "center" },
   link: { fontSize: FontSize.md, color: Colors.textMuted },
-  linkStrong: { color: Colors.primary, fontWeight: "700" },
+  linkStrong: { color: Colors.primaryText, fontWeight: "700" },
   privacy: {
     textAlign: "center",
     fontSize: FontSize.sm,

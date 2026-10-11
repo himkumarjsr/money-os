@@ -27,6 +27,7 @@ import {
   onPrimaryStatus,
   themed,
   getActiveTheme,
+  readable,
 } from "@/constants/theme";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionPrivacyEye, EyeIcon } from "@/components/ui/PrivacyEye";
@@ -35,6 +36,10 @@ import {
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
 import { TrackerConsent } from "@/components/tracker/TrackerConsent";
+import {
+  SignedOutPrompt,
+  type SignedOutBenefit,
+} from "@/components/auth/SignedOutPrompt";
 import { AppHeader } from "@/components/AppHeader";
 import {
   AddExpenseSheet,
@@ -176,8 +181,15 @@ function SmartBudgetNote({
   );
 }
 
+const TRACKER_BENEFITS: readonly SignedOutBenefit[] = [
+  { icon: "receipt", text: "Add an expense in seconds" },
+  { icon: "chart", text: "Needs, wants and savings at a glance" },
+  { icon: "bell", text: "Never miss an EMI or card bill" },
+];
+
 export default function TrackerScreen() {
   const user = useAuthStore((s) => s.user);
+  const authReady = useAuthStore((s) => s.hasInitialized);
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analyseResult = useFinancialStore((s) => s.result);
   const analyseCompleted = Boolean(lastSubmission && analyseResult);
@@ -982,6 +994,28 @@ export default function TrackerScreen() {
     void saveUserAnalyseSnapshotSmartBudget(user.id, next, result);
   });
 
+  // Signed out: the consent check below needs a user id, so without one it
+  // would never resolve and the loader would spin forever. Show a sign-in
+  // prompt once auth has initialised (spinner only while it is starting up).
+  if (!user?.id) {
+    return (
+      <SafeAreaView style={styles.container} edges={[]}>
+        <AppHeader />
+        {authReady ? (
+          <SignedOutPrompt
+            icon="wallet"
+            title="Track every rupee, calmly"
+            subtitle="Log in to log expenses, see your monthly budget and stay on top of bills."
+            benefits={TRACKER_BENEFITS}
+            next="/(tabs)/tracker"
+          />
+        ) : (
+          <LoadingSpinner full />
+        )}
+      </SafeAreaView>
+    );
+  }
+
   if (hasConsent === null) {
     return (
       <SafeAreaView style={styles.container} edges={[]}>
@@ -1441,7 +1475,7 @@ export default function TrackerScreen() {
             <Text style={styles.allTxnText}>All transactions →</Text>
           </Pressable>
           <Pressable onPress={toggleShowAll} style={styles.showAllBtn}>
-            <EyeIcon open={allVisible} size={14} color={Colors.primary} />
+            <EyeIcon open={allVisible} size={14} color={Colors.primaryText} />
             <Text style={styles.showAllText}>
               {allVisible ? "Hide all" : "Show all"}
             </Text>
@@ -1550,7 +1584,12 @@ export default function TrackerScreen() {
                 </Text>
               )}
               <Pressable onPress={openAddIncome} style={styles.addBtn}>
-                <Text style={[styles.addBtnText, { color: incomeCat.color }]}>
+                <Text
+                  style={[
+                    styles.addBtnText,
+                    { color: readable(incomeCat.color) },
+                  ]}
+                >
                   + Add income
                 </Text>
               </Pressable>
@@ -1712,7 +1751,12 @@ export default function TrackerScreen() {
                       },
                     ]}
                   >
-                    <Text style={[styles.addBtnText, { color: cat.color }]}>
+                    <Text
+                      style={[
+                        styles.addBtnText,
+                        { color: readable(cat.color) },
+                      ]}
+                    >
                       {bucketKey === "investment"
                         ? "+ Add savings"
                         : "+ Add expense"}{" "}
@@ -2040,7 +2084,7 @@ const styles = themedStyles(() => ({
     marginBottom: Spacing.md,
   },
   allTxnLink: { minHeight: 44, justifyContent: "center" },
-  allTxnText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  allTxnText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   showAllBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -2052,7 +2096,7 @@ const styles = themedStyles(() => ({
     borderColor: Colors.border,
     backgroundColor: Colors.background,
   },
-  showAllText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  showAllText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   sectionCard: {
     backgroundColor: Colors.card,
     borderWidth: 1.5,
@@ -2120,7 +2164,7 @@ const styles = themedStyles(() => ({
     marginTop: 8,
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   overBudgetText: {
     fontSize: 11,
@@ -2165,7 +2209,7 @@ const styles = themedStyles(() => ({
   txnAmount: { fontSize: 13, fontWeight: "700", color: Colors.textPrimary },
   txnMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   editLink: {
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontWeight: "700",
     fontSize: 13,
     padding: 6,
@@ -2196,7 +2240,7 @@ const styles = themedStyles(() => ({
     borderRadius: 6,
     backgroundColor: Colors.primaryLight,
   },
-  cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primary },
+  cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primaryText },
   txnAmountNotCounted: { textDecorationLine: "line-through", opacity: 0.6 },
   cardRulesNote: {
     backgroundColor: Colors.primaryLight,

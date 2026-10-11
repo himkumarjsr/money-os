@@ -1101,7 +1101,7 @@ const s = themedStyles(() => ({
     fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   note: {
     borderWidth: 1,
@@ -1157,7 +1157,7 @@ const s = themedStyles(() => ({
     flex: 1,
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     height: "100%",
   },
   suffixRow: {
@@ -1220,7 +1220,7 @@ const s = themedStyles(() => ({
     elevation: 1,
   },
   segmentText: { fontSize: 14, fontWeight: "500", color: Colors.textMuted },
-  segmentTextOn: { fontWeight: "700", color: Colors.primary },
+  segmentTextOn: { fontWeight: "700", color: Colors.primaryText },
   premiumBox: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -1330,7 +1330,7 @@ const s = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  dashedText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  dashedText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
   secondaryBtn: {
     minHeight: 44,
     paddingHorizontal: 14,
@@ -1341,7 +1341,7 @@ const s = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  secondaryText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
   removeX: {
     width: 44,
     height: 44,

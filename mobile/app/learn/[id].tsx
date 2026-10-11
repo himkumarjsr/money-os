@@ -212,7 +212,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     alignSelf: "flex-start",
   },
-  linkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  linkText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   badge: {
     borderRadius: 999,
@@ -239,7 +239,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.card,
     justifyContent: "center",
   },
-  shareBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  shareBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   toc: {
     marginTop: 20,
     borderWidth: 1,
@@ -281,7 +281,7 @@ const styles = themedStyles(() => ({
     padding: 14,
   },
   relCardPressed: { borderColor: Colors.borderIndigo },
-  relRead: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  relRead: { fontSize: 12, fontWeight: "700", color: Colors.primaryText },
   relTitle: {
     marginTop: 4,
     fontSize: 15,

@@ -78,7 +78,7 @@ const styles = themedStyles(() => ({
     color: Colors.textMuted,
     textAlign: "center",
   },
-  labelActive: { color: Colors.primary, fontWeight: "600" },
+  labelActive: { color: Colors.primaryText, fontWeight: "600" },
   line: {
     position: "absolute",
     top: 13,

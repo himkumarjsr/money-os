@@ -189,7 +189,7 @@ export function ObligationsChecklist({
     <>
       {learnedSuggestion && learnedSuggestion.category !== "credit_card" ? (
         <View style={styles.learned}>
-          <AppIcon name="bulb" size={20} color={Colors.primary} />
+          <AppIcon name="bulb" size={20} color={Colors.primaryText} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <GoldText style={styles.learnedTitle}>
               Add to your obligations?
@@ -242,7 +242,7 @@ export function ObligationsChecklist({
       >
         {showSetupEmpty ? (
           <View style={styles.setup}>
-            <AppIcon name="bulb" size={22} color={Colors.primary} />
+            <AppIcon name="bulb" size={22} color={Colors.primaryText} />
             <View style={{ flex: 1 }}>
               <GoldText style={styles.setupTitle}>
                 Set up your financial calendar
@@ -421,7 +421,7 @@ export function ObligationsChecklist({
                             <AppIcon
                               name="pencil"
                               size={14}
-                              color={Colors.primary}
+                              color={Colors.primaryText}
                             />
                             <Text style={styles.actionEdit}>Edit</Text>
                           </Pressable>
@@ -567,12 +567,12 @@ const styles = themedStyles(() => ({
   learnedTitle: {
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginBottom: 2,
   },
   learnedBody: {
     fontSize: 12,
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginBottom: 8,
     lineHeight: 17,
   },
@@ -587,7 +587,7 @@ const styles = themedStyles(() => ({
   },
   learnedYesText: { fontSize: 13, fontWeight: "700", color: Colors.onPrimary },
   learnedNo: { minHeight: 44, paddingHorizontal: 12, justifyContent: "center" },
-  learnedNoText: { fontSize: 13, color: Colors.primary },
+  learnedNoText: { fontSize: 13, color: Colors.primaryText },
   headerTrash: { padding: 6 },
   setup: {
     flexDirection: "row",
@@ -600,13 +600,13 @@ const styles = themedStyles(() => ({
   setupTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginBottom: 4,
   },
   setupBody: {
     fontSize: 13,
     lineHeight: 19,
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginBottom: 10,
   },
   setupBtn: {
@@ -713,11 +713,11 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 8,
     borderRadius: 8,
   },
-  actionEdit: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  actionEdit: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   actionRestore: {
     fontSize: 12,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textDecorationLine: "underline",
   },
   actionSkip: {
@@ -745,7 +745,7 @@ const styles = themedStyles(() => ({
     paddingVertical: 4,
   },
   addBtn: { minHeight: 44, justifyContent: "center" },
-  addText: { fontSize: 13, fontWeight: "600", color: Colors.primary },
+  addText: { fontSize: 13, fontWeight: "600", color: Colors.primaryText },
   footerHint: {
     flex: 1,
     textAlign: "right",

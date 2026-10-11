@@ -113,7 +113,7 @@ const styles = themedStyles(() => ({
     flex: 1,
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     height: "100%",
   },
   helper: {

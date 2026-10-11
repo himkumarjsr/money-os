@@ -38,7 +38,7 @@ export default function InvestmentsScreen() {
     >
       {!submission ? (
         <View style={[pageStyles.card, styles.empty]}>
-          <AppIcon name="trending" size={40} color={Colors.primary} />
+          <AppIcon name="trending" size={40} color={Colors.primaryText} />
           <Text style={styles.emptyTitle}>No analysis yet</Text>
           <Text style={styles.emptySub}>
             Complete your financial analysis to see your mutual funds, FDs, PPF,

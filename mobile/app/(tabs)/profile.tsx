@@ -401,7 +401,7 @@ export default function ProfileScreen() {
               onPress={() => void copyReferral()}
             >
               {copied ? (
-                <AppIcon name="check" size={14} color={Colors.primary} />
+                <AppIcon name="check" size={14} color={Colors.primaryText} />
               ) : null}
               <Text style={[styles.refBtnText, copied && styles.copiedText]}>
                 {copied ? "Copied" : "Copy link"}
@@ -602,7 +602,11 @@ const styles = themedStyles(() => ({
     borderRadius: Radius.round,
     marginBottom: Spacing.xs,
   },
-  soonText: { fontSize: FontSize.xs, fontWeight: "700", color: Colors.primary },
+  soonText: {
+    fontSize: FontSize.xs,
+    fontWeight: "700",
+    color: Colors.primaryText,
+  },
   refLink: {
     marginVertical: Spacing.md,
     padding: Spacing.md,
@@ -676,5 +680,5 @@ const styles = themedStyles(() => ({
     lineHeight: 22,
   },
   link: { marginTop: 24, alignItems: "center" },
-  linkText: { color: Colors.primary, fontWeight: "700" },
+  linkText: { color: Colors.primaryText, fontWeight: "700" },
 }));

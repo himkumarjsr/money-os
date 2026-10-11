@@ -50,7 +50,7 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.iconWell}>
-          <AppIcon name="lock" size={28} color={Colors.primary} />
+          <AppIcon name="lock" size={28} color={Colors.primaryText} />
         </View>
         <Text style={styles.title}>Your data is safe with us</Text>
         <Text style={styles.lead}>
@@ -191,7 +191,7 @@ const styles = themedStyles(() => ({
   blockLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 12,
@@ -228,7 +228,7 @@ const styles = themedStyles(() => ({
   link: {
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textDecorationLine: "underline",
   },
   checkRow: {

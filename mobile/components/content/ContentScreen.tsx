@@ -105,7 +105,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     paddingHorizontal: 8,
   },
-  backText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  backText: { color: Colors.primaryText, fontWeight: "700", fontSize: 14 },
   barTitle: {
     flex: 1,
     textAlign: "center",
@@ -120,7 +120,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     paddingHorizontal: 8,
   },
-  shareText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+  shareText: { color: Colors.primaryText, fontWeight: "700", fontSize: 14 },
   barSpacer: { minWidth: 72 },
   content: { paddingBottom: 120 },
 }));
