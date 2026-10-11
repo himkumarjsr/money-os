@@ -4,6 +4,7 @@ import {
   Colors,
   FINKOIN_TAGLINE,
   FINKOIN_TAGLINE_SUB,
+  getActiveTheme,
   themedStyles,
 } from "@/constants/theme";
 import { LandingHeader } from "@/components/landing/LandingHeader";
@@ -86,6 +87,9 @@ export default function HomeScreen() {
   );
 }
 
+/** Premium: soft gold glow over the dark gold hero instead of violet orbs. */
+const premiumHero = () => getActiveTheme() === "premium";
+
 const styles = themedStyles(() => ({
   root: {
     flex: 1,
@@ -115,7 +119,9 @@ const styles = themedStyles(() => ({
     height: 160,
     width: 160,
     borderRadius: 999,
-    backgroundColor: "rgba(167,139,250,0.28)",
+    backgroundColor: premiumHero()
+      ? "rgba(212,175,55,0.07)"
+      : "rgba(167,139,250,0.28)",
   },
   orbB: {
     position: "absolute",
@@ -124,7 +130,9 @@ const styles = themedStyles(() => ({
     height: 192,
     width: 192,
     borderRadius: 999,
-    backgroundColor: "rgba(129,140,248,0.22)",
+    backgroundColor: premiumHero()
+      ? "rgba(252,246,186,0.05)"
+      : "rgba(129,140,248,0.22)",
   },
   orbC: {
     position: "absolute",

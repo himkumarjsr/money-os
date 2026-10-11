@@ -979,7 +979,7 @@ export default function TrackerScreen() {
 
   if (hasConsent === null) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={[]}>
         <AppHeader />
         <LoadingSpinner full />
       </SafeAreaView>
@@ -1359,7 +1359,7 @@ export default function TrackerScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <AppHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
