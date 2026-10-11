@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { router, type Href } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -99,6 +99,9 @@ export function NavDrawer({
 }) {
   const [mounted, setMounted] = useState(visible);
   const slide = useRef(new Animated.Value(0)).current;
+  // A Modal is its own native window, so SafeAreaView inside it can measure
+  // zero insets on iOS. The hook reads the app-level provider instead.
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
@@ -162,7 +165,13 @@ export function NavDrawer({
         <View style={[styles.glow, styles.glowIndigo]} pointerEvents="none" />
         <View style={[styles.glow, styles.glowViolet]} pointerEvents="none" />
 
-        <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1 }}>
+        <View
+          style={{
+            flex: 1,
+            paddingTop: insets.top + 8,
+            paddingBottom: insets.bottom,
+          }}
+        >
           <View style={styles.topRow}>
             <Pressable
               onPress={() => {
@@ -277,7 +286,7 @@ export function NavDrawer({
               <Text style={styles.copyText}> in India 🇮🇳</Text>
             </View>
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Animated.View>
     </Modal>
   );
