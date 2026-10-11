@@ -1,7 +1,8 @@
 import { View, Image, Text, type ViewStyle } from "react-native";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, getActiveTheme, themedStyles } from "@/constants/theme";
 
 const logoSource = require("@/assets/logo.png");
+const premiumLogoSource = require("@/assets/icon-premium.png");
 
 type Props = {
   size?: number;
@@ -14,7 +15,7 @@ export function BrandLogo({ size = 32, withWordmark = false, style }: Props) {
   return (
     <View style={[withWordmark ? styles.row : styles.wrap, style]}>
       <Image
-        source={logoSource}
+        source={getActiveTheme() === "premium" ? premiumLogoSource : logoSource}
         style={{ width: size, height: size, borderRadius: size * 0.28 }}
         resizeMode="contain"
         accessibilityLabel="Finkoin"

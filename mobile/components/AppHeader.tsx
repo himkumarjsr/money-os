@@ -1,6 +1,6 @@
 /**
  * Top bar matching PWA GlobalNavbar (mobile):
- * hamburger + "Finkoin" | NotificationBell + profile avatar
+ * hamburger + FK tile + "Finkoin" | NotificationBell + profile avatar
  * Hamburger opens NavDrawer (PWA footer links).
  * Profile opens dropdown panel (not full profile page).
  */
@@ -9,6 +9,7 @@ import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { BrandTile, BrandWordmark } from "@/components/ui/BrandMark";
 import { NavDrawer } from "@/components/NavDrawer";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -52,9 +53,8 @@ export function AppHeader({ homeOnLogo = true }: Props) {
             accessibilityRole="link"
             accessibilityLabel="Finkoin home"
           >
-            <Text style={styles.wordmark} numberOfLines={1}>
-              Finkoin
-            </Text>
+            <BrandTile size={32} />
+            <BrandWordmark />
           </Pressable>
         </View>
 
@@ -135,12 +135,11 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  wordmarkBtn: { minHeight: 44, justifyContent: "center" },
-  wordmark: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.primary,
-    letterSpacing: -0.5,
+  wordmarkBtn: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   right: {
     flexDirection: "row",
