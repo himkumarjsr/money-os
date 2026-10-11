@@ -687,11 +687,12 @@ export function AddExpenseSheet({
                   {isCcBillPay ? (
                     <Text style={styles.ccHint}>
                       Paying the bill takes money from your bank, so it counts
-                      in Spent today. It{" "}
+                      in Spent today. In Loans it{" "}
                       <Text style={styles.ccHintStrong}>
-                        doesn&apos;t add to Loans
+                        counts only the part above
                       </Text>{" "}
-                      — the card spends already counted in their sections.
+                      this card&apos;s spends you logged last month and this
+                      month — those already counted in their sections.
                     </Text>
                   ) : null}
                   {isCcBillPay &&

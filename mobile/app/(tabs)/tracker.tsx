@@ -51,7 +51,11 @@ import {
   trackerTotalAmount,
   type BucketType,
 } from "@/lib/tracker-categories";
-import { buildCardMonthRows, monthStartIso } from "@/lib/trackerCardLedger";
+import {
+  buildCardMonthRows,
+  cardBillCoverageNote,
+  monthStartIso,
+} from "@/lib/trackerCardLedger";
 import {
   buildSmartBudget,
   learnCapsFromSpending,
@@ -639,8 +643,9 @@ export default function TrackerScreen() {
     }
   }, [trackerStart, selectedMonth, selectedYear]);
 
-  // Card-aware rows: card EMIs for the month, and bill payments counted only
-  // above the card spends they settle (see lib/trackerCardLedger.ts).
+  // Card-aware rows: card EMIs for the month, and card bill payments counted
+  // in Loans only above the same card's purchases already counted
+  // (see applyCardBillCoverage in lib/trackerCardLedger.ts).
   const cardMonth = useMemo(
     () =>
       buildCardMonthRows({
@@ -1752,6 +1757,9 @@ export default function TrackerScreen() {
                             const notCounted =
                               trackerTotalAmount(txn) === 0 &&
                               txn.bucket !== "income";
+                            // Card bill payment: part already counted as
+                            // card purchases (see applyCardBillCoverage).
+                            const billCover = cardBillCoverageNote(txn);
                             const tag = onEmi
                               ? "On EMI"
                               : refund
@@ -1804,6 +1812,19 @@ export default function TrackerScreen() {
                                       .filter(Boolean)
                                       .join(" · ")}
                                   </Text>
+                                  {billCover ? (
+                                    <Text
+                                      style={styles.txnMeta}
+                                      numberOfLines={1}
+                                    >
+                                      {billCover.fullyCounted
+                                        ? "Already counted in your purchases"
+                                        : `${formatMasked(
+                                            billCover.alreadyCounted,
+                                            visible,
+                                          )} already counted in purchases`}
+                                    </Text>
+                                  ) : null}
                                 </View>
                                 <View
                                   style={{
