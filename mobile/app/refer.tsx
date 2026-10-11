@@ -10,6 +10,7 @@ import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { Colors, themedStyles } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const SITE = (
   process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
@@ -165,9 +166,9 @@ export default function ReferScreen() {
         <Text style={styles.statsHead}>YOUR REFERRAL STATS</Text>
         <View style={styles.statsRow}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.statNum, { color: Colors.primary }]}>
+            <GoldText style={[styles.statNum, { color: Colors.primary }]}>
               {referralCount ?? "—"}
-            </Text>
+            </GoldText>
             <Text style={styles.statLabel}>Friends referred</Text>
           </View>
           <View style={{ flex: 1 }}>

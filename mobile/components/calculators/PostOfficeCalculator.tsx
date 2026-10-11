@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, themedStyles, getActiveTheme } from "@/constants/theme";
 import { PO_RATES_PERIOD, PO_RATES_SOURCE } from "@/lib/postOfficeSchemes";
 import { Insight, calcStyles } from "./calculator-ui";
 import {
@@ -124,7 +124,12 @@ const styles = themedStyles(() => ({
     elevation: 1,
   },
   schemeCardIdle: { borderColor: Colors.border, backgroundColor: Colors.card },
-  schemeCardPressed: { borderColor: "rgba(83,74,183,0.5)" },
+  schemeCardPressed: {
+    borderColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.5)"
+        : "rgba(83,74,183,0.5)",
+  },
   schemeShort: {
     fontSize: 14,
     lineHeight: 20,

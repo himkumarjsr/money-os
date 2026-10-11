@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import Slider from "@react-native-community/slider";
 import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type Props = {
   label: string;
@@ -26,7 +27,7 @@ export function SliderField({
     <View style={styles.wrap}>
       <View style={styles.row}>
         <Text style={styles.label}>{label}</Text>
-        <Text style={styles.value}>{display}</Text>
+        <GoldText style={styles.value}>{display}</GoldText>
       </View>
       <Slider
         style={styles.slider}

@@ -14,7 +14,14 @@ import {
   type InsightTone,
 } from "./calculator-ui";
 import { openContentHref } from "@/lib/contentLinks";
-import { themedStyles, Colors, tintFg } from "@/constants/theme";
+import {
+  themedStyles,
+  Colors,
+  tintBg,
+  tintFg,
+  getActiveTheme,
+} from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -200,7 +207,7 @@ export function FIRECalculator() {
       <Insight tone={tone}>{insight}</Insight>
 
       <View style={styles.tipBox}>
-        <Text style={styles.tipTitle}>Finkoin tip</Text>
+        <GoldText style={styles.tipTitle}>Finkoin tip</GoldText>
         <Text style={styles.tipBody}>
           Map income, real spends, and loans in one pass with the{" "}
           <Text
@@ -240,7 +247,10 @@ const styles = themedStyles(() => ({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.borderIndigo,
-    backgroundColor: "rgba(245,243,255,0.8)",
+    backgroundColor:
+      getActiveTheme() === "premium"
+        ? tintBg("#F5F3FF")
+        : "rgba(245,243,255,0.8)",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },

@@ -30,6 +30,7 @@ import {
   tintFg,
   themed,
   brand,
+  getActiveTheme,
 } from "@/constants/theme";
 import { formatIndian, formatInWords } from "@/lib/formatters";
 import {
@@ -44,6 +45,7 @@ import {
   moneyValueOnBlur,
 } from "./formState";
 import { MONTHS, type NoteTone } from "./shared";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 export type FormPath = FieldPath<AnalyseFormValues>;
 
@@ -94,7 +96,7 @@ function formatMoneyText(raw: string): string {
 }
 
 export function SectionTitle({ children }: { children: ReactNode }) {
-  return <Text style={s.sectionTitle}>{children}</Text>;
+  return <GoldText style={s.sectionTitle}>{children}</GoldText>;
 }
 
 const NOTE_TONES: Record<NoteTone, { border: string; bg: string; fg: string }> =
@@ -1241,7 +1243,10 @@ const s = themedStyles(() => ({
   },
   radioCardOn: {
     borderColor: Colors.primary,
-    backgroundColor: "rgba(83,74,183,0.1)",
+    backgroundColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.1)"
+        : "rgba(83,74,183,0.1)",
   },
   radioText: { fontSize: 14, fontWeight: "500", color: Colors.textSecondary },
   radioTextOn: { color: Colors.textPrimary },
@@ -1259,7 +1264,10 @@ const s = themedStyles(() => ({
   },
   choiceCardOn: {
     borderColor: Colors.primary,
-    backgroundColor: "rgba(83,74,183,0.1)",
+    backgroundColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.1)"
+        : "rgba(83,74,183,0.1)",
   },
   choiceDot: {
     width: 18,

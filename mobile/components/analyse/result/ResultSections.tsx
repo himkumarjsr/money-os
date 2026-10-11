@@ -8,7 +8,12 @@ import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { FIX_PLAN_PRICE_INR, PAYMENTS_ENABLED } from "@/lib/analyseEntitlement";
-import { Colors, themedStyles, tintBg } from "@/constants/theme";
+import {
+  Colors,
+  themedStyles,
+  tintBg,
+  onPrimaryAlpha,
+} from "@/constants/theme";
 import { ResultColors as C, badgeTone, inr } from "./format";
 import type { BucketView, ResultModel } from "./model";
 import {
@@ -17,6 +22,7 @@ import {
   scoreGaugeTone,
 } from "./resultDerivations";
 import { SpeedoMeterMulti, SpeedoMeterSingle } from "./SpeedoMeter";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const leftColor = (v: number) => (v >= 0 ? C.teal : C.red);
 
@@ -44,8 +50,8 @@ export function ResultHero({
           score={model.score}
           tone={scoreGaugeTone(model.score)}
           width={210}
-          textColor="#FFFFFF"
-          subTextColor="rgba(255,255,255,0.85)"
+          textColor={Colors.onPrimary}
+          subTextColor={onPrimaryAlpha(0.85)}
         />
       </View>
     </View>
@@ -56,7 +62,7 @@ export function MonthlySummaryCard({ model }: { model: ResultModel }) {
   const left = model.amountLeftInHand;
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>Monthly summary</Text>
+      <GoldText style={styles.eyebrow}>Monthly summary</GoldText>
       <View style={styles.tile}>
         <Text style={styles.tileLabel}>Total income</Text>
         <Text style={[styles.tileValue, { color: C.ink }]}>
@@ -96,7 +102,7 @@ export function MonthlySummaryCard({ model }: { model: ResultModel }) {
 export function NetWorthCard({ model }: { model: ResultModel }) {
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>Live net worth summary</Text>
+      <GoldText style={styles.eyebrow}>Live net worth summary</GoldText>
       <View style={styles.nwRow}>
         <Text style={styles.tileLabel}>Total assets</Text>
         <Text style={[styles.nwValue, { color: C.ink }]}>
@@ -201,7 +207,7 @@ export function BucketCapsSection({ model }: { model: ResultModel }) {
   const left = model.amountLeftInHand;
   return (
     <View style={[styles.card, { borderWidth: 0 }]}>
-      <Text style={styles.eyebrow}>Category caps vs actual</Text>
+      <GoldText style={styles.eyebrow}>Category caps vs actual</GoldText>
       {model.smartNote ? (
         <Text style={styles.smartNote}>{model.smartNote}</Text>
       ) : null}
@@ -533,7 +539,7 @@ const styles = themedStyles(() => ({
   heroEyebrow: {
     fontSize: 14,
     fontWeight: "500",
-    color: "rgba(255,255,255,0.9)",
+    color: onPrimaryAlpha(0.9),
   },
   heroTitle: {
     marginTop: 4,
@@ -544,7 +550,7 @@ const styles = themedStyles(() => ({
   heroMeta: {
     marginTop: 4,
     fontSize: 14,
-    color: "rgba(255,255,255,0.85)",
+    color: onPrimaryAlpha(0.85),
     textAlign: "center",
   },
   badge: {
@@ -559,7 +565,7 @@ const styles = themedStyles(() => ({
     width: "100%",
     maxWidth: 280,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: onPrimaryAlpha(0.15),
     padding: 12,
     alignItems: "center",
   },

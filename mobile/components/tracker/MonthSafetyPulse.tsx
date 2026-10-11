@@ -3,20 +3,30 @@ import { View, Text } from "react-native";
 import type { SafetyPulseResult } from "@/lib/trackerSafetyPulse";
 import { SectionPrivacyEye } from "@/components/ui/PrivacyEye";
 import { formatIndian } from "@/lib/formatters";
-import { Colors, themedStyles, tintBg, themed, tintFg } from "@/constants/theme";
+import {
+  Colors,
+  themedStyles,
+  tintBg,
+  themed,
+  tintFg,
+  getActiveTheme,
+} from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const STATUS_STYLE = themed(
   () =>
     ({
       safe: {
         bg: tintBg("#F3F1FC"),
-        border: "#D4D2F5",
+        border:
+          getActiveTheme() === "premium" ? tintBg("#D4D2F5") : "#D4D2F5",
         badgeBg: tintBg("#E8E6F8"),
         badgeText: tintFg("#3C3489"),
       },
       tight: {
         bg: tintBg("#F7F4FF"),
-        border: "#C9C2F0",
+        border:
+          getActiveTheme() === "premium" ? tintBg("#C9C2F0") : "#C9C2F0",
         badgeBg: tintBg("#EEE9FF"),
         badgeText: tintFg("#534AB7"),
       },
@@ -72,7 +82,7 @@ export function MonthSafetyPulse({
     >
       <View style={styles.head}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.kicker}>Month safety pulse</Text>
+          <GoldText style={styles.kicker}>Month safety pulse</GoldText>
           <Text style={styles.headline}>{pulse.headline}</Text>
         </View>
         <View style={styles.headRight}>

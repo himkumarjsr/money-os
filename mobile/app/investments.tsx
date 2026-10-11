@@ -7,7 +7,7 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { formatIndian } from "@/lib/formatters";
 import { useFinancialStore } from "@/store/financialStore";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, getActiveTheme } from "@/constants/theme";
 
 function n(v: number | undefined | null) {
   return Math.max(0, Number(v ?? 0));
@@ -145,7 +145,10 @@ const styles = themedStyles(() => ({
   },
   soonBtn: {
     marginTop: 16,
-    backgroundColor: "rgba(83,74,183,0.4)",
+    backgroundColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.4)"
+        : "rgba(83,74,183,0.4)",
     borderRadius: 12,
     paddingHorizontal: 20,
     minHeight: 44,

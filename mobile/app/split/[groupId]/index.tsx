@@ -32,7 +32,12 @@ import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
-import { themedStyles, Colors, tintBg } from "@/constants/theme";
+import {
+  themedStyles,
+  Colors,
+  tintBg,
+  onPrimaryAlpha,
+} from "@/constants/theme";
 import { useNotificationStore } from "@/store/notificationStore";
 
 type Tab = "expenses" | "members" | "settlements";
@@ -1197,13 +1202,13 @@ const styles = themedStyles(() => ({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: onPrimaryAlpha(0.15),
     alignItems: "center",
     justifyContent: "center",
   },
   backArrow: { color: Colors.onPrimary, fontSize: 16, fontWeight: "700" },
   backText: {
-    color: "rgba(255,255,255,0.9)",
+    color: onPrimaryAlpha(0.9),
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1217,9 +1222,9 @@ const styles = themedStyles(() => ({
     width: 44,
     height: 44,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: onPrimaryAlpha(0.15),
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: onPrimaryAlpha(0.2),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1228,7 +1233,7 @@ const styles = themedStyles(() => ({
   groupName: { color: Colors.onPrimary, fontSize: 20, fontWeight: "800" },
   groupMeta: {
     marginTop: 2,
-    color: "rgba(255,255,255,0.8)",
+    color: onPrimaryAlpha(0.8),
     fontSize: 12,
   },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -1236,9 +1241,9 @@ const styles = themedStyles(() => ({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: onPrimaryAlpha(0.15),
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: onPrimaryAlpha(0.2),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1247,9 +1252,9 @@ const styles = themedStyles(() => ({
     minHeight: 44,
     paddingHorizontal: 16,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: onPrimaryAlpha(0.15),
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: onPrimaryAlpha(0.25),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1259,13 +1264,13 @@ const styles = themedStyles(() => ({
   statTile: {
     flex: 1,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: onPrimaryAlpha(0.1),
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: onPrimaryAlpha(0.15),
     padding: 14,
   },
   statLabel: {
-    color: "rgba(255,255,255,0.75)",
+    color: onPrimaryAlpha(0.75),
     fontSize: 11,
     fontWeight: "600",
   },
@@ -1282,8 +1287,8 @@ const styles = themedStyles(() => ({
     height: 48,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    backgroundColor: "rgba(255,255,255,0.15)",
+    borderColor: onPrimaryAlpha(0.25),
+    backgroundColor: onPrimaryAlpha(0.15),
     alignItems: "center",
     justifyContent: "center",
   },

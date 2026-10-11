@@ -357,14 +357,22 @@ type TotalsTxn = {
   bucket?: string | null;
   payment_method?: string | null;
   description?: string | null;
+  /**
+   * Card bill payments only: the part of the payment that counts in its
+   * bucket, set by `applyCardBillCoverage` (lib/trackerCardLedger.ts). Unset
+   * means no card purchases were visible, so the full payment counts.
+   */
+  card_bill_counted?: number | null;
 };
 
 /**
- * True when a row counts at face value in its bucket total.
+ * True when a row counts in its bucket total (card bill payments count at
+ * `card_bill_counted`, see `trackerTotalAmount`).
  *
  * - Card purchases count in their own bucket in the month they are made.
- * - Card bill payments do not: they settle spends already counted (they do
- *   count in the bank SPENT on the top card the day they are paid).
+ * - Card bill payments count too (money left the bank), but only the part
+ *   above the same card's purchases already counted last month and this month
+ *   up to the payment date — see `applyCardBillCoverage`.
  * - A card purchase converted to EMI does not; its monthly EMI rows do.
  * - Legacy generated `card_extra` / `card_overdue` rows never count: unpaid
  *   bills live only in the Card bills section.
@@ -379,9 +387,22 @@ export function countsTowardTrackerTotals(txn: TotalsTxn): boolean {
     return false;
   }
   if (isCreditCardRefund(txn)) return false;
-  if (isCreditCardBillPayment(txn)) return false;
   if (isCardEmiPurchase(txn)) return false;
   return true;
+}
+
+/**
+ * Part of a card bill payment that counts in its bucket: `card_bill_counted`
+ * when set (clamped to 0…amount), else the full amount.
+ */
+export function cardBillCountedAmount(
+  txn: TotalsTxn & { amount: number | string },
+): number {
+  const n = Number(txn.amount);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  const c = txn.card_bill_counted;
+  if (c == null || !Number.isFinite(Number(c))) return n;
+  return Math.min(n, Math.max(0, Number(c)));
 }
 
 /** Signed amount a row adds to its bucket total (refunds are negative). */
@@ -391,7 +412,9 @@ export function trackerTotalAmount(
   const n = Number(txn.amount);
   if (!Number.isFinite(n)) return 0;
   if (isCreditCardRefund(txn)) return -Math.abs(n);
-  return countsTowardTrackerTotals(txn) ? n : 0;
+  if (!countsTowardTrackerTotals(txn)) return 0;
+  if (isCreditCardBillPayment(txn)) return cardBillCountedAmount(txn);
+  return n;
 }
 
 /** Sum of `trackerTotalAmount` over rows (optionally one bucket). */

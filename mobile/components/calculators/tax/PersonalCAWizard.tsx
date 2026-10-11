@@ -8,6 +8,7 @@ import {
 } from "./personalCASteps";
 import type { TaxCalcState } from "./useTaxCalculatorState";
 import { themedStyles, Colors } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /**
  * Guided 19-step Q&A. On the PWA this is a fixed dialog over the page; here it
@@ -44,7 +45,7 @@ export function PersonalCAWizard({
     <View style={styles.card} accessibilityLabel="Personal CA">
       <View style={styles.head}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.eyebrow}>Personal CA</Text>
+          <GoldText style={styles.eyebrow}>Personal CA</GoldText>
           <Text style={styles.title} accessibilityRole="header">
             Your guided tax Q&amp;A
           </Text>

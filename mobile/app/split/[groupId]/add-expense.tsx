@@ -28,7 +28,15 @@ import type { TrackerIconName } from "@/lib/tracker-categories";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
 import { DateField } from "@/components/tracker/DateField";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { Colors, themedStyles, tintBg, tintFg, brand } from "@/constants/theme";
+import {
+  Colors,
+  themedStyles,
+  tintBg,
+  tintFg,
+  brand,
+  onPrimaryAlpha,
+} from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type SplitType = "equal" | "exact" | "percentage" | "shares";
 type FieldKey =
@@ -583,9 +591,9 @@ export default function AddExpenseScreen() {
                 fieldErrors.amount ? styles.amountBoxError : null,
               ]}
             >
-              <Text style={styles.amountLabel}>TOTAL AMOUNT</Text>
+              <GoldText style={styles.amountLabel}>TOTAL AMOUNT</GoldText>
               <View style={styles.amountRow}>
-                <Text style={styles.rupee}>₹</Text>
+                <GoldText style={styles.rupee}>₹</GoldText>
                 <TextInput
                   value={amountText}
                   onChangeText={(text) => {
@@ -1053,18 +1061,18 @@ const styles = themedStyles(() => ({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: onPrimaryAlpha(0.15),
     alignItems: "center",
     justifyContent: "center",
   },
   backArrow: { color: Colors.onPrimary, fontSize: 16, fontWeight: "700" },
   backText: {
-    color: "rgba(255,255,255,0.9)",
+    color: onPrimaryAlpha(0.9),
     fontSize: 14,
     fontWeight: "600",
   },
   headerEyebrow: {
-    color: "rgba(255,255,255,0.75)",
+    color: onPrimaryAlpha(0.75),
     fontSize: 12,
     fontWeight: "600",
   },
@@ -1076,7 +1084,7 @@ const styles = themedStyles(() => ({
   },
   headerSub: {
     marginTop: 2,
-    color: "rgba(255,255,255,0.8)",
+    color: onPrimaryAlpha(0.8),
     fontSize: 14,
   },
   card: {

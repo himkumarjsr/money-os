@@ -3,6 +3,7 @@ import {
   computeMonthSafetyPulse,
   previousCalendarMonth,
 } from "./trackerSafetyPulse";
+import { applyCardBillCoverage } from "./trackerCardLedger";
 
 describe("trackerSafetyPulse", () => {
   it("previousCalendarMonth wraps year", () => {
@@ -512,20 +513,17 @@ describe("trackerSafetyPulse", () => {
 
   it("bank spend: card purchases wait for the bill payment; income can be given", () => {
     const card = "credit_card::c1::HDFC";
-    const pulse = computeMonthSafetyPulse({
-      monthIndex: 9,
-      year: 2026,
-      asOf: new Date(2026, 9, 9),
-      bankSpend: true,
-      income: 120000,
-      currentTxns: [
+    const rows = (billPay: number) =>
+      applyCardBillCoverage([
         {
+          date: "2026-10-01",
           amount: 100000,
           bucket: "income",
           category: "salary",
           subcategory: "salary",
         },
         {
+          date: "2026-10-02",
           amount: 8000,
           bucket: "needs",
           category: "grocery",
@@ -533,6 +531,7 @@ describe("trackerSafetyPulse", () => {
           payment_method: "upi",
         },
         {
+          date: "2026-10-02",
           amount: 15000,
           bucket: "wants",
           category: "shopping",
@@ -540,6 +539,7 @@ describe("trackerSafetyPulse", () => {
           payment_method: card,
         },
         {
+          date: "2026-10-03",
           amount: 2500,
           bucket: "loans",
           category: "card_emi",
@@ -547,21 +547,37 @@ describe("trackerSafetyPulse", () => {
           payment_method: card,
         },
         {
-          amount: 12000,
+          date: "2026-10-05",
+          amount: billPay,
           bucket: "loans",
           category: "credit_card",
           subcategory: "credit_card",
           payment_method: "upi",
           description: "Pay bill · HDFC",
         },
-      ],
-      previousTxns: [],
-    });
-    expect(pulse.current.totalSpent).toBe(20000);
-    expect(pulse.current.income).toBe(120000);
-    expect(pulse.current.remaining).toBe(100000);
-    // Buckets still count card spends when bought (bill pay not in Loans).
-    expect(pulse.current.bucketTotals.wants).toBe(15000);
-    expect(pulse.current.bucketTotals.loans).toBe(2500);
+      ]);
+    const pulse = (billPay: number) =>
+      computeMonthSafetyPulse({
+        monthIndex: 9,
+        year: 2026,
+        asOf: new Date(2026, 9, 9),
+        bankSpend: true,
+        income: 120000,
+        currentTxns: rows(billPay),
+        previousTxns: [],
+      });
+    const p1 = pulse(12000);
+    expect(p1.current.totalSpent).toBe(20000);
+    expect(p1.current.income).toBe(120000);
+    expect(p1.current.remaining).toBe(100000);
+    // Buckets count card spends when bought; the bill pay settles them, so
+    // it adds nothing more to Loans.
+    expect(p1.current.bucketTotals.wants).toBe(15000);
+    expect(p1.current.bucketTotals.loans).toBe(2500);
+
+    // Bill above the logged card spends (17,500): only the extra 2,500 counts.
+    const p2 = pulse(20000);
+    expect(p2.current.totalSpent).toBe(28000);
+    expect(p2.current.bucketTotals.loans).toBe(5000);
   });
 });

@@ -30,6 +30,7 @@ import {
 import { syncKv } from "@/lib/syncKv";
 import { loansOffPatch, writeLoansCleared } from "./formState";
 import { LOAN_TYPE_OPTIONS, type StepProps } from "./shared";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 export type UnifiedLoansArray = UseFieldArrayReturn<
   AnalyseFormValues,
@@ -180,10 +181,10 @@ export function Step3Obligations({
                   return (
                     <View key={field.id} style={styles.savedCard}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.savedTitle}>
+                        <GoldText style={styles.savedTitle}>
                           {typeLabel}
                           {loanLender ? ` · ${loanLender}` : ""}
-                        </Text>
+                        </GoldText>
                         <Text style={styles.savedAmounts}>
                           EMI ₹{Number(loanEmi).toLocaleString("en-IN")}
                           {loanOutstanding > 0
@@ -220,7 +221,9 @@ export function Step3Obligations({
                 return (
                   <View key={field.id} style={styles.loanCard}>
                     <View style={styles.loanHead}>
-                      <Text style={styles.loanTitle}>Loan {index + 1}</Text>
+                      <GoldText style={styles.loanTitle}>
+                        Loan {index + 1}
+                      </GoldText>
                       <RemoveX
                         label="Remove loan"
                         onPress={() => removeUnifiedLoanAt(index, rowId)}

@@ -4,6 +4,7 @@
  */
 import Svg, { Path, Circle, Rect, G } from "react-native-svg";
 import { Colors } from "@/constants/theme";
+import { GoldStrokeDefs, isMirrorGold } from "@/components/ui/GoldMirror";
 
 /** Default icon colour; a getter so it follows the active theme. */
 export function appIconColor(): string {
@@ -308,10 +309,13 @@ export function AppIcon({
   color = appIconColor(),
   strokeWidth = 1.75,
 }: Props) {
+  // Premium strokes gold icons with the 24K mirror gradient, like the logo.
+  const mirror = isMirrorGold(color);
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {mirror ? <GoldStrokeDefs id="fkIconGold" /> : null}
       <G
-        stroke={color}
+        stroke={mirror ? "url(#fkIconGold)" : color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"

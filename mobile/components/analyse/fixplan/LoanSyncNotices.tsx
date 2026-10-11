@@ -12,6 +12,7 @@ import {
   tintBg,
 } from "@/constants/theme";
 import { shared } from "./shared";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type Details = { outstandingAmount?: number; interestRate?: number } | "skip";
 
@@ -147,10 +148,10 @@ export function LoanSyncNotices({ status, onSaveDetails }: Props) {
       ) : null}
       {status.needDetails.length > 0 ? (
         <View style={[shared.card, styles.detailsCard]}>
-          <Text style={styles.detailsTitle}>
+          <GoldText style={styles.detailsTitle}>
             Finish {status.needDetails.length === 1 ? "a loan" : "loans"} from
             Tracker
-          </Text>
+          </GoldText>
           {status.needDetails.map((loan) => (
             <LoanDetailsForm
               key={String(loan.id)}

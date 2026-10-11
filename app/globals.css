@@ -192,15 +192,7 @@ body[data-analyse-modal-open="true"] [data-track-nav-zone="bottom_nav"] {
     inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
 }
 
-/* Premium (24K Mirror): shiny gold logo and wordmark */
-:root[data-theme="premium"] .fk-logo-tile {
-  fill: url(#fk-gold-tile) !important;
-}
-
-:root[data-theme="premium"] .fk-logo-mark {
-  fill: var(--fk-on-gold) !important;
-}
-
+/* Premium (24K Mirror): shiny gold wordmark */
 :root[data-theme="premium"] .fk-brand-name {
   background: var(--fk-gold-grad);
   -webkit-background-clip: text;
@@ -210,4 +202,96 @@ body[data-analyse-modal-open="true"] [data-track-nav-zone="bottom_nav"] {
 
 :root[data-theme="premium"] .bg-primary {
   background-image: var(--fk-gold-grad);
+}
+
+/* Violet Satin: the free themes give the brand purple a soft polished sheen,
+   the same way Premium gets its 24K mirror gold. */
+:root {
+  --fk-satin-grad: linear-gradient(
+    135deg,
+    #463da6 0%,
+    #7c73db 40%,
+    #534ab7 60%,
+    #3c3489 100%
+  );
+  --fk-satin-text: linear-gradient(
+    100deg,
+    #3c3489 0%,
+    #6a61d1 50%,
+    #3c3489 100%
+  );
+}
+
+:root[data-theme="dark"] {
+  --fk-satin-grad: linear-gradient(
+    135deg,
+    #5a51cc 0%,
+    #958df0 40%,
+    #6c63e0 60%,
+    #4b42b8 100%
+  );
+  --fk-satin-text: linear-gradient(
+    100deg,
+    #a49df5 0%,
+    #d7d2ff 50%,
+    #a49df5 100%
+  );
+}
+
+:root:not([data-theme="premium"]) .bg-\[\#534AB7\],
+:root:not([data-theme="premium"]) .bg-\[\#3C3489\],
+:root:not([data-theme="premium"]) .bg-primary {
+  background-image: var(--fk-satin-grad);
+}
+
+/* The FK coin (components/ui/BrandCoin.tsx) */
+:root {
+  --fk-coin-1: #463da6;
+  --fk-coin-2: #7c73db;
+  --fk-coin-3: #534ab7;
+  --fk-coin-4: #3c3489;
+  --fk-coin-rim: #2e2770;
+  --fk-coin-rim-hi: #6a61d1;
+  --fk-coin-ring: #c9c4ff;
+  --fk-coin-mark: #ffffff;
+}
+
+:root[data-theme="dark"] {
+  --fk-coin-1: #5a51cc;
+  --fk-coin-2: #958df0;
+  --fk-coin-3: #6c63e0;
+  --fk-coin-4: #4b42b8;
+  --fk-coin-rim: #3c3489;
+  --fk-coin-rim-hi: #8f87f0;
+  --fk-coin-ring: #d7d2ff;
+}
+
+:root[data-theme="premium"] {
+  --fk-coin-1: #aa771c;
+  --fk-coin-2: #fcf6ba;
+  --fk-coin-3: #d4af37;
+  --fk-coin-4: #b38728;
+  --fk-coin-rim: #8a6a1e;
+  --fk-coin-rim-hi: #fcf6ba;
+  --fk-coin-ring: #8a6a1e;
+  --fk-coin-mark: #1a1405;
+}
+
+@keyframes fk-coin-turn {
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fk-coin-spin {
+    animation: fk-coin-turn 1.6s ease-in-out infinite;
+  }
+}
+
+:root:not([data-theme="premium"]) .fk-brand-name {
+  background: var(--fk-satin-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
 }

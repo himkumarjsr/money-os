@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Colors, themedStyles, brand } from "@/constants/theme";
+import { Colors, themedStyles, brand, onPrimaryAlpha } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 import { useAuthStore } from "@/store/authStore";
@@ -451,7 +451,7 @@ const styles = themedStyles(() => ({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: onPrimaryAlpha(0.2),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -459,7 +459,7 @@ const styles = themedStyles(() => ({
   meTitle: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
   meSub: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.7)",
+    color: onPrimaryAlpha(0.7),
     marginTop: 2,
   },
   meFk: { fontSize: 20, fontWeight: "800", color: Colors.onPrimary },

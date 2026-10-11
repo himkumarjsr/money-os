@@ -16,6 +16,11 @@ import Svg, { Path } from "react-native-svg";
 import { Colors, themedStyles, brand } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { AppIcon } from "@/components/ui/AppIcon";
+import {
+  GoldStrokeDefs,
+  GoldText,
+  isMirrorGold,
+} from "@/components/ui/GoldMirror";
 
 const ORDER = [
   "index",
@@ -34,11 +39,13 @@ const LABELS: Record<(typeof ORDER)[number], string> = {
 };
 
 function HomeSvg({ color }: { color: string }) {
+  const paint = isMirrorGold(color) ? "url(#fkTabHome)" : color;
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      {paint !== color ? <GoldStrokeDefs id="fkTabHome" /> : null}
       <Path
         d="M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"
-        stroke={color}
+        stroke={paint}
         strokeWidth={1.5}
         strokeLinejoin="round"
       />
@@ -47,17 +54,19 @@ function HomeSvg({ color }: { color: string }) {
 }
 
 function ReportSvg({ color }: { color: string }) {
+  const paint = isMirrorGold(color) ? "url(#fkTabReport)" : color;
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      {paint !== color ? <GoldStrokeDefs id="fkTabReport" /> : null}
       <Path
         d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
-        stroke={color}
+        stroke={paint}
         strokeWidth={1.5}
         strokeLinejoin="round"
       />
       <Path
         d="M14 2v6h6"
-        stroke={color}
+        stroke={paint}
         strokeWidth={1.5}
         strokeLinejoin="round"
       />
@@ -128,7 +137,7 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                       <Text style={styles.plusText}>+</Text>
                     </View>
                   </View>
-                  <Text
+                  <GoldText
                     style={[
                       styles.label,
                       focused && styles.labelActive,
@@ -136,7 +145,7 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                     ]}
                   >
                     {LABELS.tracker}
-                  </Text>
+                  </GoldText>
                 </Pressable>
               );
             }
@@ -196,7 +205,7 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                     ) : null}
                   </View>
                 </View>
-                <Text
+                <GoldText
                   style={[
                     styles.label,
                     focused && styles.labelActive,
@@ -204,7 +213,7 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                   ]}
                 >
                   {LABELS[name]}
-                </Text>
+                </GoldText>
               </Pressable>
             );
           })}

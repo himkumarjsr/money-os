@@ -5,6 +5,7 @@ import {
   monthSpendFromRows,
   sameSmartBudget,
 } from "./learned-caps";
+import { applyCardBillCoverage } from "./trackerCardLedger";
 import { BUCKET_CAPS } from "./universal-buckets";
 
 const month = (needs: number, wants: number, hasData = true, loans = 0) => ({
@@ -137,7 +138,7 @@ describe("monthSpendFromRows", () => {
         subcategory: "home_loan_emi",
         payment_method: "upi",
       },
-      // Bill payment: settles spends already counted.
+      // Bill payment: counts only above the card spends already counted.
       {
         bucket: "loans",
         amount: 9000,
@@ -171,10 +172,15 @@ describe("monthSpendFromRows", () => {
         payment_method: null,
       },
     ];
-    expect(monthSpendFromRows(rows)).toEqual({
+    // Card c1 spends counted: 2,000 + 900 − 400 + 2,500 EMI = 5,000, so
+    // 4,000 of the 9,000 bill counts in Loans.
+    const dated = applyCardBillCoverage(
+      rows.map((r) => ({ ...r, date: "2026-10-05" })),
+    );
+    expect(monthSpendFromRows(dated)).toEqual({
       needs: 3000,
       wants: 500,
-      loans: 17500,
+      loans: 21500,
       hasData: true,
     });
   });
