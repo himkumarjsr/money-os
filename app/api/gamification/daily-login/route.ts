@@ -12,12 +12,12 @@ export async function POST() {
   const user = await getAuthedUser();
   if (!user) return unauthorized();
 
-  const { data, error } = await getSupabaseAdmin().rpc("record_daily_login", {
+  const { data, error } = await getSupabaseAdmin().rpc("record_daily_visit", {
     p_user_id: user.id,
     p_today: istDate(),
   });
   if (error) {
-    console.error("record_daily_login failed:", error.message);
+    console.error("record_daily_visit failed:", error.message);
     return NextResponse.json({ error: "Could not record today's visit." }, { status: 500 });
   }
 

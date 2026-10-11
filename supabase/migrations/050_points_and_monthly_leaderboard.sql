@@ -442,10 +442,11 @@ BEGIN
 END;
 $$;
 
--- ── Daily login: points instead of FK, streak rewards, month-end prizes ─
+-- ── Daily visit: points instead of FK, streak rewards, month-end prizes ─
+-- record_daily_visit also reports the points it gave. record_daily_login
+-- keeps its old signature for older deployments and runs the same logic.
 
-DROP FUNCTION IF EXISTS public.record_daily_login(uuid, date);
-CREATE FUNCTION public.record_daily_login(p_user_id uuid, p_today date)
+CREATE OR REPLACE FUNCTION public.record_daily_visit(p_user_id uuid, p_today date)
 RETURNS TABLE (
   fk_balance integer,
   total_earned integer,
@@ -509,10 +510,24 @@ BEGIN
 END;
 $$;
 
--- ── Leaderboards: this month and all time, ranked by points ─────────────
+CREATE OR REPLACE FUNCTION public.record_daily_login(p_user_id uuid, p_today date)
+RETURNS TABLE (
+  fk_balance integer,
+  total_earned integer,
+  streak_days integer,
+  last_login date,
+  badges jsonb,
+  awarded integer
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT v.fk_balance, v.total_earned, v.streak_days, v.last_login, v.badges, v.awarded
+  FROM public.record_daily_visit(p_user_id, p_today) v;
+$$;
 
-DROP VIEW IF EXISTS public.leaderboard_view;
-DROP FUNCTION IF EXISTS private.leaderboard_rows();
+-- ── Leaderboards: this month and all time, ranked by points ─────────────
 
 CREATE OR REPLACE FUNCTION private.leaderboard_points_rows(p_since timestamptz)
 RETURNS TABLE (
@@ -556,11 +571,12 @@ $$;
 REVOKE ALL ON FUNCTION private.leaderboard_points_rows(timestamptz) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION private.leaderboard_points_rows(timestamptz) TO anon, authenticated, service_role;
 
-CREATE VIEW public.leaderboard_view
+-- Same columns as before, plus points at the end.
+CREATE OR REPLACE VIEW public.leaderboard_view
 WITH (security_invoker = on) AS
   SELECT * FROM private.leaderboard_points_rows(private.ist_month_start(now()));
 
-CREATE VIEW public.leaderboard_all_view
+CREATE OR REPLACE VIEW public.leaderboard_all_view
 WITH (security_invoker = on) AS
   SELECT * FROM private.leaderboard_points_rows('-infinity'::timestamptz);
 
@@ -620,6 +636,8 @@ REVOKE EXECUTE ON FUNCTION private.points_on_analyse() FROM PUBLIC, anon, authen
 REVOKE EXECUTE ON FUNCTION public.check_referral_activation(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_referral_activation(uuid) TO service_role;
 
+REVOKE EXECUTE ON FUNCTION public.record_daily_visit(uuid, date) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_daily_visit(uuid, date) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.record_daily_login(uuid, date) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_daily_login(uuid, date) TO service_role;
 
