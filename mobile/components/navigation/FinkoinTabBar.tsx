@@ -165,9 +165,15 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                             )}
                           </View>
                           {/* Outside the clipped circle so the FK count is never cut off. */}
-                          <View style={styles.fkBadge}>
+                          <View
+                            style={[
+                              styles.fkBadge,
+                              // Sized from the label: the 28px avatar would otherwise clip "999+".
+                              { width: fkLabel(fk).length * 6 + 10 },
+                            ]}
+                          >
                             <Text style={styles.fkText} numberOfLines={1}>
-                              {fk > 999 ? "999+" : String(fk)}
+                              {fkLabel(fk)}
                             </Text>
                           </View>
                         </View>
@@ -200,6 +206,8 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
     </View>
   );
 }
+
+const fkLabel = (fk: number) => (fk > 999 ? "999+" : String(fk));
 
 const styles = themedStyles(() => ({
   wrap: {

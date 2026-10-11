@@ -1,3 +1,4 @@
+import { brand } from "@/constants/theme";
 import { isPaidFromSavings } from "@/lib/trackerSavingsPayment";
 import {
   CARD_EMI_SUBCATEGORY,
@@ -305,6 +306,15 @@ export const TRACKER_CATEGORIES = {
     ],
   },
 } as const satisfies Record<string, TrackerBucket>;
+
+// Premium shows gold where the light theme shows brand purple, like the PWA.
+for (const bucket of Object.values(TRACKER_CATEGORIES)) {
+  const color = bucket.color;
+  Object.defineProperty(bucket, "color", {
+    get: () => brand(color),
+    enumerable: true,
+  });
+}
 
 export type BucketType = keyof typeof TRACKER_CATEGORIES;
 
