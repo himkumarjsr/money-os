@@ -175,8 +175,8 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  headTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
-  headMeta: { fontSize: 12, fontWeight: "600", color: Colors.primary },
+  headTitle: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
+  headMeta: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   group: { paddingHorizontal: 14, paddingVertical: 10 },
   divider: { borderBottomWidth: 1, borderBottomColor: Colors.background },
   groupTitle: {

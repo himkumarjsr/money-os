@@ -458,7 +458,7 @@ const styles = themedStyles(() => ({
     borderBottomColor: Colors.borderLight,
     backgroundColor: Colors.background,
   },
-  tHeadText: { fontSize: 11, fontWeight: "600", color: Colors.primary },
+  tHeadText: { fontSize: 11, fontWeight: "600", color: Colors.primaryText },
   tDivider: { borderTopWidth: 1, borderTopColor: tintBg("#F4F3FA") },
   tTotalRow: { backgroundColor: Colors.background },
   cLabel: { flex: 1.2 },
@@ -560,7 +560,7 @@ const styles = themedStyles(() => ({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   itrForm: {
     marginTop: 4,
@@ -626,7 +626,7 @@ const styles = themedStyles(() => ({
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   learnedRowTitle: {
     fontSize: 14,
@@ -669,5 +669,5 @@ const styles = themedStyles(() => ({
     color: Colors.textSecondary,
   },
   linkRow: { minHeight: 44, justifyContent: "center" },
-  linkText: { fontSize: 14, color: Colors.primary },
+  linkText: { fontSize: 14, color: Colors.primaryText },
 }));

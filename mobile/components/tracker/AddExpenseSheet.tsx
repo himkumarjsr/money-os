@@ -19,6 +19,7 @@ import {
   TrackerIconBadge,
 } from "@/components/tracker/TrackerIcons";
 import {
+  readable,
   Colors,
   themedStyles,
   tintBg,
@@ -622,7 +623,10 @@ export function AddExpenseSheet({
                             color={cat.color}
                           />
                           <Text
-                            style={[styles.catText, on && { color: cat.color }]}
+                            style={[
+                              styles.catText,
+                              on && { color: readable(cat.color) },
+                            ]}
                             numberOfLines={2}
                           >
                             {cat.label}
@@ -661,7 +665,7 @@ export function AddExpenseSheet({
                             style={[
                               styles.chipText,
                               on && {
-                                color: selectedBucket.color,
+                                color: readable(selectedBucket.color),
                                 fontWeight: "700",
                               },
                             ]}
@@ -1171,14 +1175,14 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryLight,
   },
   payChipText: { fontSize: 13, color: Colors.textPrimary },
-  payTextOn: { color: Colors.primary, fontWeight: "700" },
+  payTextOn: { color: Colors.primaryText, fontWeight: "700" },
   ccHint: {
     marginBottom: 8,
     fontSize: 12,
     lineHeight: 17,
     color: Colors.textSecondary,
   },
-  ccHintStrong: { color: Colors.primary, fontWeight: "700" },
+  ccHintStrong: { color: Colors.primaryText, fontWeight: "700" },
   rdRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1248,7 +1252,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  addCardText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  addCardText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   smallLabel: {
     fontSize: 12,
     fontWeight: "600",
@@ -1264,7 +1268,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveCardText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  saveCardText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   cardFootnote: { fontSize: 11, lineHeight: 15, color: Colors.textMuted },
   errorBox: {
     backgroundColor: Colors.errorLight,

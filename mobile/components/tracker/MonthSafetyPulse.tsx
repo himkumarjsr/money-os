@@ -18,15 +18,13 @@ const STATUS_STYLE = themed(
     ({
       safe: {
         bg: tintBg("#F3F1FC"),
-        border:
-          getActiveTheme() === "premium" ? tintBg("#D4D2F5") : "#D4D2F5",
+        border: getActiveTheme() === "premium" ? tintBg("#D4D2F5") : "#D4D2F5",
         badgeBg: tintBg("#E8E6F8"),
         badgeText: tintFg("#3C3489"),
       },
       tight: {
         bg: tintBg("#F7F4FF"),
-        border:
-          getActiveTheme() === "premium" ? tintBg("#C9C2F0") : "#C9C2F0",
+        border: getActiveTheme() === "premium" ? tintBg("#C9C2F0") : "#C9C2F0",
         badgeBg: tintBg("#EEE9FF"),
         badgeText: tintFg("#534AB7"),
       },
@@ -225,7 +223,7 @@ const styles = themedStyles(() => ({
   kicker: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textTransform: "uppercase",
     letterSpacing: 0.6,
     marginBottom: 6,
@@ -270,7 +268,7 @@ const styles = themedStyles(() => ({
   actionLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -295,7 +293,7 @@ const styles = themedStyles(() => ({
   statLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginBottom: 4,
   },
   statValue: {
@@ -311,7 +309,7 @@ const styles = themedStyles(() => ({
   moversLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 6,
@@ -344,7 +342,7 @@ const styles = themedStyles(() => ({
   childrenLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 8,

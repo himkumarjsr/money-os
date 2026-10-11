@@ -308,7 +308,11 @@ export function SafetyNetSection({
             <View key={item.id} style={styles.safetyRow}>
               <View style={{ flex: 1 }}>
                 <View style={styles.safetyTitleRow}>
-                  <AppIcon name={item.icon} size={18} color={Colors.primary} />
+                  <AppIcon
+                    name={item.icon}
+                    size={18}
+                    color={Colors.primaryText}
+                  />
                   <Text style={styles.safetyTitle}>{item.title}</Text>
                 </View>
                 <Text style={styles.safetyMeta}>
@@ -601,7 +605,7 @@ const styles = themedStyles(() => ({
     fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   h2: { fontSize: 20, fontWeight: "600", color: C.ink },
   sub: { fontSize: 14, fontWeight: "500", lineHeight: 20, color: C.body },
@@ -643,7 +647,7 @@ const styles = themedStyles(() => ({
   },
   bucketHead: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   bucketTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  caret: { color: Colors.primary, fontSize: 14 },
+  caret: { color: Colors.primaryText, fontSize: 14 },
   bucketTitle: { fontSize: 15, fontWeight: "600", color: C.ink },
   bucketDetails: { marginTop: 4, fontSize: 12, lineHeight: 16, color: C.label },
   pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
@@ -824,7 +828,7 @@ const styles = themedStyles(() => ({
     marginTop: 8,
     fontSize: 14,
     lineHeight: 20,
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   surplus: {
     marginTop: 12,
@@ -878,5 +882,5 @@ const styles = themedStyles(() => ({
     columnGap: 16,
   },
   linkBtn: { minHeight: 44, justifyContent: "center" },
-  linkText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  linkText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
 }));

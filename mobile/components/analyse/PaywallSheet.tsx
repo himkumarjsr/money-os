@@ -112,7 +112,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     marginBottom: 8,
   },
-  avatarText: { fontSize: 18, fontWeight: "600", color: Colors.primary },
+  avatarText: { fontSize: 18, fontWeight: "600", color: Colors.primaryText },
   title: { fontSize: 20, fontWeight: "600", color: Colors.textPrimary },
   subtitle: { marginTop: 4, fontSize: 14, color: Colors.textSecondary },
   close: {

@@ -581,7 +581,7 @@ const styles = themedStyles(() => ({
   linkText: {
     fontSize: 12,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     marginTop: 4,
   },
   actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -704,7 +704,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  editText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  editText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
   usageRow: {
     flexDirection: "row",
     justifyContent: "space-between",

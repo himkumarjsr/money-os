@@ -139,7 +139,7 @@ const styles = themedStyles(() => ({
     marginTop: 4,
   },
   topLink: { minHeight: 44, justifyContent: "center" },
-  topLinkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  topLinkText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   filterBar: {
     marginTop: 8,
     marginHorizontal: -20,

@@ -56,7 +56,7 @@ const styles = themedStyles(() => ({
     fontWeight: "800",
     color: Colors.textPrimary,
   },
-  valueAccent: { color: Colors.primary },
+  valueAccent: { color: Colors.primaryText },
   hint: {
     marginTop: 2,
     fontSize: FontSize.xs,

@@ -125,7 +125,7 @@ const styles = themedStyles(() => ({
     marginTop: 10,
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   footer: {
     marginTop: 36,
@@ -134,5 +134,9 @@ const styles = themedStyles(() => ({
     columnGap: 16,
   },
   footerLink: { minHeight: 44, justifyContent: "center" },
-  footerLinkText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  footerLinkText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.primaryText,
+  },
 }));

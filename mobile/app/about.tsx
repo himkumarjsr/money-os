@@ -1,7 +1,12 @@
 /** Native About — port of web app/about/page.tsx. */
 import { Image, Linking, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Colors, themedStyles, onPrimaryAlpha } from "@/constants/theme";
+import {
+  readable,
+  Colors,
+  themedStyles,
+  onPrimaryAlpha,
+} from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { openContentHref } from "@/lib/contentLinks";
@@ -44,7 +49,7 @@ const STEPS = () => [
     step: "01",
     title: "Financial Health Check",
     desc: "Answer simple questions about your income, expenses, loans, and savings. No PAN. No Aadhaar. Just numbers.",
-    color: Colors.primary,
+    color: Colors.primaryText,
   },
   {
     step: "02",
@@ -147,7 +152,7 @@ export default function AboutScreen() {
           {PROBLEMS.map((p) => (
             <View key={p.title} style={styles.greyCard}>
               <View style={{ marginBottom: 12 }}>
-                <AppIcon name={p.icon} size={28} color={Colors.primary} />
+                <AppIcon name={p.icon} size={28} color={Colors.primaryText} />
               </View>
               <Text style={styles.cardTitle}>{p.title}</Text>
               <Text style={styles.cardText}>{p.desc}</Text>
@@ -164,7 +169,7 @@ export default function AboutScreen() {
               <View
                 style={[styles.stepBadge, { backgroundColor: `${s.color}20` }]}
               >
-                <Text style={[styles.stepNum, { color: s.color }]}>
+                <Text style={[styles.stepNum, { color: readable(s.color) }]}>
                   {s.step}
                 </Text>
               </View>
@@ -191,7 +196,7 @@ export default function AboutScreen() {
                 {v.flag ? (
                   <Text style={{ fontSize: 28 }}>{v.flag}</Text>
                 ) : v.icon ? (
-                  <AppIcon name={v.icon} size={26} color={Colors.primary} />
+                  <AppIcon name={v.icon} size={26} color={Colors.primaryText} />
                 ) : null}
               </View>
               <Text style={styles.valueTitle}>{v.title}</Text>
@@ -301,7 +306,7 @@ const styles = themedStyles(() => ({
   missionLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.primary,
+    color: Colors.primaryText,
     letterSpacing: 1,
     marginBottom: 14,
   },
@@ -401,7 +406,7 @@ const styles = themedStyles(() => ({
   },
   founderRole: {
     fontSize: 13,
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontWeight: "600",
     marginBottom: 4,
   },
@@ -412,7 +417,7 @@ const styles = themedStyles(() => ({
     minHeight: 44,
     alignSelf: "flex-start",
   },
-  linkedInText: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
+  linkedInText: { fontSize: 13, color: Colors.primaryText, fontWeight: "600" },
   founderBio: {
     marginTop: 12,
     fontSize: 15,
@@ -457,5 +462,5 @@ const styles = themedStyles(() => ({
     minHeight: 48,
     justifyContent: "center",
   },
-  ctaBtnText: { color: Colors.primary, fontSize: 16, fontWeight: "700" },
+  ctaBtnText: { color: Colors.primaryText, fontSize: 16, fontWeight: "700" },
 }));

@@ -147,7 +147,7 @@ function AnalyseResultContent() {
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <Header />
         <View style={styles.empty}>
-          <AppIcon name="chart" size={44} color={Colors.primary} />
+          <AppIcon name="chart" size={44} color={Colors.primaryText} />
           <Text style={styles.emptyTitle}>No analysis found</Text>
           <Text style={styles.emptySub}>
             Please complete the financial analysis form to see your results.
@@ -272,7 +272,11 @@ const styles = themedStyles(() => ({
     minHeight: 52,
   },
   back: { minHeight: 44, justifyContent: "center", minWidth: 64 },
-  backText: { fontSize: FontSize.md, fontWeight: "700", color: Colors.primary },
+  backText: {
+    fontSize: FontSize.md,
+    fontWeight: "700",
+    color: Colors.primaryText,
+  },
   headerTitle: {
     fontSize: FontSize.lg,
     fontWeight: "800",

@@ -91,7 +91,7 @@ export default function PortfolioScreen() {
     return (
       <PageScaffold title="MF Portfolio Analysis" requireAuth>
         <View style={pageStyles.card}>
-          <AppIcon name="lock" size={28} color={Colors.primary} />
+          <AppIcon name="lock" size={28} color={Colors.primaryText} />
           <Text style={styles.lockTitle}>MF Portfolio Analysis</Text>
           <Text style={styles.lockSub}>Available in Pro Max.</Text>
         </View>

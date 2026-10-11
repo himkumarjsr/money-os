@@ -634,7 +634,7 @@ export default function GroupDetailScreen() {
               <View style={styles.stack}>
                 {loading ? (
                   <View style={[styles.card, styles.loaderCard]}>
-                    <ActivityIndicator color={Colors.primary} />
+                    <ActivityIndicator color={Colors.primaryText} />
                     <Text style={styles.loaderText}>Loading…</Text>
                   </View>
                 ) : null}
@@ -783,7 +783,7 @@ export default function GroupDetailScreen() {
                             <AppIcon
                               name="pencil"
                               size={15}
-                              color={Colors.primary}
+                              color={Colors.primaryText}
                             />
                           </TouchableOpacity>
                           <TouchableOpacity
@@ -927,7 +927,7 @@ export default function GroupDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Close"
           >
-            <AppIcon name="close" size={16} color={Colors.primary} />
+            <AppIcon name="close" size={16} color={Colors.primaryText} />
           </TouchableOpacity>
         </View>
 
@@ -953,7 +953,7 @@ export default function GroupDetailScreen() {
                   <AppIcon
                     name={copied ? "check" : "doc"}
                     size={16}
-                    color={Colors.primary}
+                    color={Colors.primaryText}
                   />
                   <Text style={styles.copyBtnText}>
                     {copied ? "Copied" : "Copy"}
@@ -1045,7 +1045,7 @@ export default function GroupDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Close"
           >
-            <AppIcon name="close" size={16} color={Colors.primary} />
+            <AppIcon name="close" size={16} color={Colors.primaryText} />
           </TouchableOpacity>
         </View>
 
@@ -1310,7 +1310,11 @@ const styles = themedStyles(() => ({
     shadowOffset: { width: 0, height: 10 },
     elevation: 3,
   },
-  ctaPrimaryText: { color: Colors.primary, fontSize: 14, fontWeight: "800" },
+  ctaPrimaryText: {
+    color: Colors.primaryText,
+    fontSize: 14,
+    fontWeight: "800",
+  },
 
   tabs: {
     marginTop: 16,
@@ -1356,7 +1360,7 @@ const styles = themedStyles(() => ({
     alignItems: "flex-end",
     justifyContent: "center",
   },
-  refreshText: { color: Colors.primary, fontSize: 12, fontWeight: "700" },
+  refreshText: { color: Colors.primaryText, fontSize: 12, fontWeight: "700" },
   stack: { marginTop: 12, gap: 8 },
 
   card: {
@@ -1464,7 +1468,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: Colors.primary, fontSize: 13, fontWeight: "700" },
+  avatarText: { color: Colors.primaryText, fontSize: 13, fontWeight: "700" },
   memberName: { color: Colors.textPrimary, fontSize: 14, fontWeight: "600" },
   memberMeta: { marginTop: 2, color: Colors.textMuted, fontSize: 11 },
   pillTarget: { minHeight: 44, justifyContent: "center" },
@@ -1528,7 +1532,7 @@ const styles = themedStyles(() => ({
   },
   linkUrl: {
     marginTop: 4,
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontSize: 12,
     fontWeight: "500",
     fontFamily: MONO,
@@ -1546,7 +1550,7 @@ const styles = themedStyles(() => ({
     borderColor: BORDER(),
     backgroundColor: Colors.card,
   },
-  copyBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "700" },
+  copyBtnText: { color: Colors.primaryText, fontSize: 14, fontWeight: "700" },
   waBtn: {
     flex: 1,
     minHeight: 44,
@@ -1582,7 +1586,7 @@ const styles = themedStyles(() => ({
   },
   groupLinkUrl: {
     flex: 1,
-    color: Colors.primary,
+    color: Colors.primaryText,
     fontSize: 12,
     fontFamily: MONO,
   },
@@ -1636,7 +1640,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryLight,
   },
   chipText: { color: Colors.textPrimary, fontSize: 14, fontWeight: "600" },
-  chipTextActive: { color: Colors.primary, fontWeight: "800" },
+  chipTextActive: { color: Colors.primaryText, fontWeight: "800" },
   chipSub: { color: Colors.textMuted, fontSize: 11 },
 
   methodRow: { flexDirection: "row", gap: 8 },

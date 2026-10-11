@@ -65,7 +65,7 @@ export function StartPlanSheet({
       <Text style={styles.title}>Start this plan</Text>
 
       <View style={[styles.box, { backgroundColor: Colors.primaryLight }]}>
-        <GoldText style={[styles.boxTitle, { color: Colors.primary }]}>
+        <GoldText style={[styles.boxTitle, { color: Colors.primaryText }]}>
           What will happen
         </GoldText>
         <Text style={styles.body}>
@@ -282,5 +282,5 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     marginTop: 4,
   },
-  secondaryText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
+  secondaryText: { color: Colors.primaryText, fontSize: 14, fontWeight: "600" },
 }));

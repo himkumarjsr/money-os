@@ -77,7 +77,7 @@ export function DateField({
         style={[styles.field, open && styles.fieldOpen]}
       >
         <Text style={styles.fieldText}>{display}</Text>
-        <AppIcon name="calendar" size={18} color={Colors.primary} />
+        <AppIcon name="calendar" size={18} color={Colors.primaryText} />
       </Pressable>
 
       {open ? (
@@ -198,7 +198,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  navText: { fontSize: 24, color: Colors.primary, fontWeight: "700" },
+  navText: { fontSize: 24, color: Colors.primaryText, fontWeight: "700" },
   calTitle: { fontSize: 14, fontWeight: "800", color: Colors.textPrimary },
   grid: { flexDirection: "row", flexWrap: "wrap" },
   weekday: {

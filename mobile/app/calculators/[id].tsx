@@ -85,7 +85,11 @@ export default function CalculatorScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={styles.titleRow}>
                 {item?.icon ? (
-                  <AppIcon name={item.icon} size={20} color={Colors.primary} />
+                  <AppIcon
+                    name={item.icon}
+                    size={20}
+                    color={Colors.primaryText}
+                  />
                 ) : null}
                 <Text style={styles.title}>{item?.title ?? "Calculator"}</Text>
               </View>
@@ -145,8 +149,8 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  backArrow: { fontSize: 16, fontWeight: "700", color: Colors.primary },
-  backText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
+  backArrow: { fontSize: 16, fontWeight: "700", color: Colors.primaryText },
+  backText: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
   topTitle: {
     flex: 1,
     textAlign: "center",
@@ -185,5 +189,5 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  shareText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  shareText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
 }));

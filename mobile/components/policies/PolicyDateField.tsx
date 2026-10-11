@@ -84,7 +84,7 @@ export function PolicyDateField({
         <Text style={[styles.fieldText, !selected && styles.placeholder]}>
           {display}
         </Text>
-        <AppIcon name="calendar" size={18} color={Colors.primary} />
+        <AppIcon name="calendar" size={18} color={Colors.primaryText} />
       </Pressable>
 
       {open ? (
@@ -225,7 +225,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  navText: { fontSize: 22, color: Colors.primary, fontWeight: "700" },
+  navText: { fontSize: 22, color: Colors.primaryText, fontWeight: "700" },
   calTitle: {
     flex: 1,
     textAlign: "center",

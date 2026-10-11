@@ -400,7 +400,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryLight,
   },
   chipText: { fontSize: 14, fontWeight: "600", color: Colors.textSecondary },
-  chipTextOn: { color: Colors.primary, fontWeight: "700" },
+  chipTextOn: { color: Colors.primaryText, fontWeight: "700" },
   suggest: {
     minHeight: 44,
     paddingHorizontal: 12,
@@ -441,7 +441,7 @@ const styles = themedStyles(() => ({
     elevation: 1,
   },
   segText: { fontSize: 14, fontWeight: "600", color: Colors.textMuted },
-  segTextOn: { color: Colors.primary, fontWeight: "700" },
+  segTextOn: { color: Colors.primaryText, fontWeight: "700" },
   footer: {
     marginTop: 8,
     paddingTop: 16,

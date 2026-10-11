@@ -64,7 +64,7 @@ const SERIES = (): ChartSeries[] => [
     key: "interest",
     label: "interest",
     type: "area",
-    color: Colors.primary,
+    color: Colors.primaryText,
     fillOpacity: 0.6,
     stackId: "a",
   },

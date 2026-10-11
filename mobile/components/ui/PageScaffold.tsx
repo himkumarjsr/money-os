@@ -78,7 +78,10 @@ export function PageScaffold({
         </View>
 
         {waiting ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator
+            color={Colors.primaryText}
+            style={{ marginTop: 40 }}
+          />
         ) : gated ? (
           <View style={styles.gate}>
             <Text style={styles.gateTitle}>Sign in to continue</Text>
@@ -132,14 +135,14 @@ export const pageStyles = themedStyles(() => ({
     color: Colors.textMuted,
     lineHeight: 18,
   },
-  link: { color: Colors.primary, fontWeight: "600" },
+  link: { color: Colors.primaryText, fontWeight: "600" },
 }));
 
 const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 48 },
   back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
-  backText: { color: Colors.primary, fontWeight: "600", fontSize: 14 },
+  backText: { color: Colors.primaryText, fontWeight: "600", fontSize: 14 },
   header: {
     flexDirection: "row",
     alignItems: "center",

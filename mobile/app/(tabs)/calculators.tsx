@@ -86,7 +86,7 @@ export default function CalculatorsScreen() {
               <AppIcon
                 name={item.icon ?? "trending"}
                 size={20}
-                color={Colors.primary}
+                color={Colors.primaryText}
               />
             </View>
             <View style={{ flex: 1 }}>

@@ -198,7 +198,7 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                           <AppIcon
                             name="user"
                             size={18}
-                            color={Colors.primary}
+                            color={Colors.primaryText}
                           />
                         </View>
                       )
