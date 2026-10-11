@@ -2,6 +2,7 @@ import { View, Text } from "react-native";
 import { Card } from "@/components/ui/Card";
 import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import { formatIndianCompact } from "@/lib/formatters";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type Props = {
   name: string;
@@ -28,9 +29,9 @@ export function BucketCard({ name, spent, budget, emoji = "📂" }: Props) {
           </Text>
         </View>
         {pct != null ? (
-          <Text style={[styles.pct, pct >= 100 && { color: Colors.error }]}>
+          <GoldText style={[styles.pct, pct >= 100 && { color: Colors.error }]}>
             {pct}%
-          </Text>
+          </GoldText>
         ) : null}
       </View>
       {pct != null ? (

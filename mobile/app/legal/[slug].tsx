@@ -16,6 +16,7 @@ import {
   type LegalDoc,
 } from "@/constants/legal";
 import { useAuthStore } from "@/store/authStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 function DeleteAccountAction() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
@@ -74,7 +75,7 @@ function LegalBody({ doc }: { doc: LegalDoc }) {
   return (
     <>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>{doc.eyebrow}</Text>
+        <GoldText style={styles.eyebrow}>{doc.eyebrow}</GoldText>
         <Text style={styles.h1}>{doc.title}</Text>
         <Text style={styles.meta}>{doc.meta}</Text>
       </View>

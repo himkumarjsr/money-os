@@ -1,6 +1,11 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { Colors, themedStyles, tintBg } from "@/constants/theme";
+import {
+  Colors,
+  themedStyles,
+  tintBg,
+  getActiveTheme,
+} from "@/constants/theme";
 import {
   generateAmortisationTable,
   type AmortisationRow,
@@ -275,7 +280,12 @@ export function AmortisationSchedule({
                     key="total"
                     style={[
                       styles.row,
-                      { backgroundColor: "rgba(83,74,183,0.10)" },
+                      {
+                        backgroundColor:
+                          getActiveTheme() === "premium"
+                            ? "rgba(212,175,55,0.10)"
+                            : "rgba(83,74,183,0.10)",
+                      },
                     ]}
                   >
                     <Cells

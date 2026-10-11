@@ -1,10 +1,11 @@
 /** Native About — port of web app/about/page.tsx. */
 import { Image, Linking, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, themedStyles, onPrimaryAlpha } from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { openContentHref } from "@/lib/contentLinks";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** Why Finkoin exists, in the founder's words. Same text as app/about/page.tsx. */
 const FOUNDER_NOTE = [
@@ -133,11 +134,11 @@ export default function AboutScreen() {
       </View>
 
       <View style={styles.mission}>
-        <Text style={styles.missionLabel}>OUR MISSION</Text>
-        <Text style={styles.missionText}>
+        <GoldText style={styles.missionLabel}>OUR MISSION</GoldText>
+        <GoldText style={styles.missionText}>
           To give every Indian access to personalised financial guidance that
           was previously only available to the wealthy few.
-        </Text>
+        </GoldText>
       </View>
 
       <View style={styles.block}>
@@ -210,7 +211,7 @@ export default function AboutScreen() {
           />
           <View style={{ flex: 1, minWidth: 180 }}>
             <Text style={styles.founderName}>Himanshu Kumar Gupta</Text>
-            <Text style={styles.founderRole}>Founder, Finkoin</Text>
+            <GoldText style={styles.founderRole}>Founder, Finkoin</GoldText>
             <Pressable
               onPress={() => void Linking.openURL(LINKEDIN_URL).catch(() => {})}
               style={styles.linkedIn}
@@ -444,7 +445,7 @@ const styles = themedStyles(() => ({
   },
   ctaSub: {
     fontSize: 15,
-    color: "rgba(255,255,255,0.8)",
+    color: onPrimaryAlpha(0.8),
     marginBottom: 22,
     textAlign: "center",
   },

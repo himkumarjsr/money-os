@@ -31,10 +31,12 @@ import {
   FontSize,
   Shadow,
   themedStyles,
+  onPrimaryAlpha,
 } from "@/constants/theme";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const FEATURES = [
   {
@@ -88,7 +90,7 @@ function SplitMarketingLanding() {
         contentContainerStyle={styles.landingContent}
       >
         <View style={styles.landingHero}>
-          <Text style={styles.landingEyebrow}>FINKOIN SPLIT</Text>
+          <GoldText style={styles.landingEyebrow}>FINKOIN SPLIT</GoldText>
           <Text style={styles.landingTitle}>
             Split expenses with friends — simply
           </Text>
@@ -122,7 +124,7 @@ function SplitMarketingLanding() {
         <View style={styles.featureList}>
           {FEATURES.map((f) => (
             <View key={f.t} style={styles.featureCard}>
-              <Text style={styles.featureTitle}>{f.t}</Text>
+              <GoldText style={styles.featureTitle}>{f.t}</GoldText>
               <Text style={styles.featureDesc}>{f.d}</Text>
             </View>
           ))}
@@ -764,7 +766,7 @@ const styles = themedStyles(() => ({
     fontSize: 12,
     fontWeight: "600",
     letterSpacing: 0.6,
-    color: "rgba(255,255,255,0.8)",
+    color: onPrimaryAlpha(0.8),
   },
   heroTitle: {
     fontSize: FontSize.xxl,
@@ -775,16 +777,16 @@ const styles = themedStyles(() => ({
   },
   heroSub: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
+    color: onPrimaryAlpha(0.8),
     marginTop: Spacing.sm,
   },
   heroBtn: {
     minHeight: 44,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radius.xl,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: onPrimaryAlpha(0.15),
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: onPrimaryAlpha(0.25),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -793,15 +795,15 @@ const styles = themedStyles(() => ({
   tile: {
     flex: 1,
     borderRadius: Radius.xl,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: onPrimaryAlpha(0.1),
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: onPrimaryAlpha(0.15),
     padding: Spacing.lg,
   },
   tileLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.75)",
+    color: onPrimaryAlpha(0.75),
   },
   tileValue: {
     fontSize: FontSize.xl,
@@ -821,7 +823,7 @@ const styles = themedStyles(() => ({
     minHeight: 44,
     borderRadius: Radius.xl,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: onPrimaryAlpha(0.25),
     alignItems: "center",
     justifyContent: "center",
   },

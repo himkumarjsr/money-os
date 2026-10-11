@@ -1,5 +1,6 @@
 "use client";
 
+import BrandCoin from "@/components/ui/BrandCoin";
 import NotificationBell from "@/components/NotificationBell";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
@@ -226,51 +227,7 @@ export function GlobalNavbar() {
             className="flex min-w-0 items-center gap-2 sm:gap-2.5"
             aria-label="Finkoin home"
           >
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 64 64"
-              role="img"
-              aria-label="Finkoin logo"
-              className="shrink-0"
-            >
-              <defs>
-                <linearGradient id="fk-gold-tile" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#AA771C" />
-                  <stop offset="45%" stopColor="#FCF6BA" />
-                  <stop offset="70%" stopColor="#D4AF37" />
-                  <stop offset="100%" stopColor="#B38728" />
-                </linearGradient>
-              </defs>
-              <rect
-                className="fk-logo-tile"
-                width="64"
-                height="64"
-                rx="18"
-                fill="#534AB7"
-              />
-              <circle
-                cx="32"
-                cy="32"
-                r="18"
-                fill="none"
-                stroke="#EEEDFE"
-                strokeWidth="2"
-                opacity="0.4"
-              />
-              <text
-                x="32"
-                y="39"
-                textAnchor="middle"
-                fontFamily="system-ui"
-                fontWeight="800"
-                fontSize="20"
-                fill="#FFFFFF"
-                className="fk-logo-mark"
-              >
-                FK
-              </text>
-            </svg>
+            <BrandCoin size={32} decorative />
             <span className="fk-brand-name truncate text-[18px] font-bold tracking-[-0.5px] text-[#534AB7] sm:text-[20px]">
               Finkoin
             </span>

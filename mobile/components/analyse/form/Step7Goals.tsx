@@ -5,7 +5,7 @@ import {
   PRIMARY_GOAL_VALUES,
   type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, themedStyles, getActiveTheme } from "@/constants/theme";
 import {
   RISK_QUESTIONS,
   RISK_TOLERANCE_LABELS,
@@ -220,7 +220,10 @@ const styles = themedStyles(() => ({
   },
   goalCardOn: {
     borderColor: Colors.primary,
-    backgroundColor: "rgba(83,74,183,0.1)",
+    backgroundColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.1)"
+        : "rgba(83,74,183,0.1)",
   },
   goalText: { fontSize: 15, fontWeight: "500", color: Colors.textPrimary },
   purpleNote: { fontSize: 12, color: Colors.primary },

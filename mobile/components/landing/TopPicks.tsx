@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { Colors, Radius, themedStyles, brand } from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { useAuthStore } from "@/store/authStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type Card = {
   key: string;
@@ -94,7 +95,7 @@ export function TopPicks() {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.kicker}>Start here</Text>
+      <GoldText style={styles.kicker}>Start here</GoldText>
       <Text style={styles.head}>
         Top picks on Finkoin — advisor, tax, portfolio, and tracking
       </Text>

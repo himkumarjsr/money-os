@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { View, ActivityIndicator, Text } from "react-native";
+import { View, Text } from "react-native";
+import { CoinSpinner } from "@/components/ui/LoadingSpinner";
 import {
   router,
   useLocalSearchParams,
@@ -130,7 +131,7 @@ export default function AuthCallbackScreen() {
 
   return (
     <View style={styles.box}>
-      <ActivityIndicator size="large" color={Colors.primary} />
+      <CoinSpinner />
       <Text style={styles.text}>Completing sign-in…</Text>
     </View>
   );

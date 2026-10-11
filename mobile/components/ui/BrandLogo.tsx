@@ -1,8 +1,7 @@
-import { View, Image, Text, type ViewStyle } from "react-native";
-import { Colors, getActiveTheme, themedStyles } from "@/constants/theme";
-
-const logoSource = require("@/assets/logo.png");
-const premiumLogoSource = require("@/assets/icon-premium.png");
+import { View, type ViewStyle } from "react-native";
+import { Colors, themedStyles } from "@/constants/theme";
+import { BrandCoin } from "@/components/ui/BrandCoin";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type Props = {
   size?: number;
@@ -14,18 +13,11 @@ type Props = {
 export function BrandLogo({ size = 32, withWordmark = false, style }: Props) {
   return (
     <View style={[withWordmark ? styles.row : styles.wrap, style]}>
-      <Image
-        source={getActiveTheme() === "premium" ? premiumLogoSource : logoSource}
-        style={{ width: size, height: size, borderRadius: size * 0.28 }}
-        resizeMode="contain"
-        accessibilityLabel="Finkoin"
-        // Web a11y (lint); RN uses accessibilityLabel above
-        alt="Finkoin"
-      />
+      <BrandCoin size={size} />
       {withWordmark ? (
-        <Text style={styles.wordmark} numberOfLines={1}>
+        <GoldText style={styles.wordmark} numberOfLines={1}>
           Finkoin
-        </Text>
+        </GoldText>
       ) : null}
     </View>
   );

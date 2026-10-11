@@ -34,6 +34,7 @@ import {
   mergeHelpers,
   type StepProps,
 } from "./shared";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 type CustomInvestmentType = NonNullable<
   AnalyseFormValues["customInvestments"]
@@ -222,9 +223,9 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
             />
           </View>
           <View style={styles.divider} />
-          <Text style={styles.erTotal}>
+          <GoldText style={styles.erTotal}>
             Real emergency fund: {formatCurrencyINR(live.erTotal)}
-          </Text>
+          </GoldText>
           <Text style={[styles.erMonths, { color: live.erMonthsColor }]}>
             {live.monthlyNeedsForEmergency > 0
               ? `This covers ${live.erMonths.toFixed(1)} months of expenses`

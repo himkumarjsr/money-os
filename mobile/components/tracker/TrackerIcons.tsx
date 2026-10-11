@@ -10,6 +10,7 @@ import {
   type TrackerIconName,
 } from "@/lib/tracker-categories";
 import { themedStyles } from "@/constants/theme";
+import { GoldStrokeDefs, isMirrorGold } from "@/components/ui/GoldMirror";
 
 type IconShape = {
   d?: string[];
@@ -249,10 +250,12 @@ export function TrackerIcon({
   color?: string;
 }) {
   const s = shapes[name] ?? shapes.other;
+  const paint = isMirrorGold(color) ? "url(#fkTrackerGold)" : color;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {paint !== color ? <GoldStrokeDefs id="fkTrackerGold" /> : null}
       <G
-        stroke={color}
+        stroke={paint}
         strokeWidth={1.75}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -276,8 +279,8 @@ export function TrackerIcon({
             cx={c.cx}
             cy={c.cy}
             r={c.r}
-            fill={c.filled ? color : "none"}
-            stroke={c.filled ? "none" : color}
+            fill={c.filled ? paint : "none"}
+            stroke={c.filled ? "none" : paint}
           />
         ))}
       </G>

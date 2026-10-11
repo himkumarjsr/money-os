@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { TaxTeachContent } from "@/lib/taxTeachContent";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, getActiveTheme } from "@/constants/theme";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 export type { TaxTeachContent } from "@/lib/taxTeachContent";
 
@@ -92,7 +93,7 @@ export function SectionTeachHeading({
 }) {
   return (
     <View style={styles.heading}>
-      <Text style={styles.headingText}>{title}</Text>
+      <GoldText style={styles.headingText}>{title}</GoldText>
       <TaxTeachTooltip content={content} ariaLabel={`Learn more: ${title}`} />
     </View>
   );
@@ -110,7 +111,10 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   chipPressed: {
-    borderColor: "rgba(83,74,183,0.4)",
+    borderColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.4)"
+        : "rgba(83,74,183,0.4)",
     backgroundColor: Colors.primaryLight,
   },
   chipText: {

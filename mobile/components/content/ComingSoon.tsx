@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { Colors, themedStyles } from "@/constants/theme";
 import { openContentHref } from "@/lib/contentLinks";
 import { ContentScreen } from "./ContentScreen";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /** Shared layout for the PWA "Coming soon" pages (careers, press). */
 export function ComingSoon({
@@ -18,7 +19,7 @@ export function ComingSoon({
   return (
     <ContentScreen barTitle={eyebrow}>
       <View style={styles.wrap}>
-        <Text style={styles.eyebrow}>{eyebrow.toUpperCase()}</Text>
+        <GoldText style={styles.eyebrow}>{eyebrow.toUpperCase()}</GoldText>
         <Text style={styles.h1}>Coming soon</Text>
         <Text style={styles.body}>{body}</Text>
         <Pressable

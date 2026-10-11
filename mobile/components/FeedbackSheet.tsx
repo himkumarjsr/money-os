@@ -16,6 +16,7 @@ import { Colors, themedStyles } from "@/constants/theme";
 import { siteBase } from "@/lib/splitApi";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const STEPS = [
   {
@@ -159,7 +160,7 @@ export function FeedbackSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} scroll>
-      <Text style={styles.eyebrow}>FEEDBACK</Text>
+      <GoldText style={styles.eyebrow}>FEEDBACK</GoldText>
       <Text style={styles.title}>{done ? "Thank you!" : meta.title}</Text>
       {!done ? <Text style={styles.subtitle}>{meta.subtitle}</Text> : null}
 

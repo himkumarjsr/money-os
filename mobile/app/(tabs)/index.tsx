@@ -4,6 +4,7 @@ import {
   Colors,
   FINKOIN_TAGLINE,
   FINKOIN_TAGLINE_SUB,
+  getActiveTheme,
   themedStyles,
 } from "@/constants/theme";
 import { LandingHeader } from "@/components/landing/LandingHeader";
@@ -11,6 +12,7 @@ import { HeroCarousel } from "@/components/landing/HeroCarousel";
 import { QuickTools } from "@/components/landing/QuickTools";
 import { TopPicks } from "@/components/landing/TopPicks";
 import { useAuthStore } from "@/store/authStore";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 /**
  * Public home = PWA landing (`app/page.tsx` + HomePageClient mobile).
@@ -32,7 +34,7 @@ export default function HomeScreen() {
           <View style={styles.orbB} pointerEvents="none" />
           <View style={styles.orbC} pointerEvents="none" />
 
-          <Text style={styles.h1Sub}>{FINKOIN_TAGLINE_SUB}</Text>
+          <GoldText style={styles.h1Sub}>{FINKOIN_TAGLINE_SUB}</GoldText>
           <Text style={styles.h1Main}>{FINKOIN_TAGLINE}</Text>
           <Text style={styles.h2}>
             Check your financial health score, calculate tax savings, plan
@@ -86,6 +88,9 @@ export default function HomeScreen() {
   );
 }
 
+/** Premium: soft gold glow over the dark gold hero instead of violet orbs. */
+const premiumHero = () => getActiveTheme() === "premium";
+
 const styles = themedStyles(() => ({
   root: {
     flex: 1,
@@ -115,7 +120,9 @@ const styles = themedStyles(() => ({
     height: 160,
     width: 160,
     borderRadius: 999,
-    backgroundColor: "rgba(167,139,250,0.28)",
+    backgroundColor: premiumHero()
+      ? "rgba(212,175,55,0.07)"
+      : "rgba(167,139,250,0.28)",
   },
   orbB: {
     position: "absolute",
@@ -124,7 +131,9 @@ const styles = themedStyles(() => ({
     height: 192,
     width: 192,
     borderRadius: 999,
-    backgroundColor: "rgba(129,140,248,0.22)",
+    backgroundColor: premiumHero()
+      ? "rgba(252,246,186,0.05)"
+      : "rgba(129,140,248,0.22)",
   },
   orbC: {
     position: "absolute",

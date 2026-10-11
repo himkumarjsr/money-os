@@ -1,7 +1,15 @@
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
+import { isMirrorGold } from "@/components/ui/GoldMirror";
+import {
+  Colors,
+  GOLD_GRADIENT,
+  themedStyles,
+  tintBg,
+  tintFg,
+  getActiveTheme,
+} from "@/constants/theme";
 import { openWebPage } from "@/lib/openWebPage";
 import {
   FINKOIN_AGENT_CODE,
@@ -75,6 +83,7 @@ function ActionButton({
       style={({ pressed }) => [
         styles.btn,
         { backgroundColor: bg },
+        isMirrorGold(bg) && { experimental_backgroundImage: GOLD_GRADIENT },
         border ? { borderWidth: 1.5, borderColor: border } : null,
         (pressed || loading) && { opacity: 0.85 },
       ]}
@@ -146,6 +155,7 @@ export function RenewOptionsSheet({
             <ActionButton
               label="Compare plans →"
               bg={Colors.primary}
+              color={Colors.onPrimary}
               onPress={() => onCompare(policy)}
             />
           </View>
@@ -263,6 +273,7 @@ export function TransferGuideSheet({
           <ActionButton
             label="Mark as transferred to Finkoin"
             bg={Colors.violet600}
+            color={Colors.onPrimary}
             loading={marking}
             onPress={async () => {
               setMarking(true);
@@ -299,7 +310,10 @@ const styles = themedStyles(() => ({
   },
   cardCompare: {
     borderWidth: 2,
-    borderColor: "rgba(83,74,183,0.4)",
+    borderColor:
+      getActiveTheme() === "premium"
+        ? "rgba(212,175,55,0.4)"
+        : "rgba(83,74,183,0.4)",
     backgroundColor: Colors.surfaceMuted,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },

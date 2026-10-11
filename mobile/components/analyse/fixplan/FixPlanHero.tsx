@@ -1,5 +1,11 @@
 import { Text, View } from "react-native";
-import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
+import {
+  Colors,
+  Radius,
+  Spacing,
+  themedStyles,
+  onPrimaryAlpha,
+} from "@/constants/theme";
 
 type Props = {
   attentionCount: number;
@@ -43,7 +49,7 @@ const styles = themedStyles(() => ({
   eyebrow: {
     fontSize: 12,
     letterSpacing: 0.6,
-    color: "rgba(255,255,255,0.8)",
+    color: onPrimaryAlpha(0.8),
   },
   greeting: {
     marginTop: Spacing.sm,
@@ -55,12 +61,12 @@ const styles = themedStyles(() => ({
   summary: {
     marginTop: Spacing.sm,
     fontSize: 14,
-    color: "rgba(255,255,255,0.9)",
+    color: onPrimaryAlpha(0.9),
     lineHeight: 20,
   },
   badge: {
     marginTop: Spacing.xs,
     fontSize: 12,
-    color: "rgba(255,255,255,0.9)",
+    color: onPrimaryAlpha(0.9),
   },
 }));

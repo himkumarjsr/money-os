@@ -11,6 +11,7 @@ import {
   themedStyles,
 } from "@/constants/theme";
 import { openContentHref } from "@/lib/contentLinks";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const COLLECT = [
   "Income and salary numbers",
@@ -57,7 +58,7 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
         </Text>
 
         <View style={styles.block}>
-          <Text style={styles.blockLabel}>What we collect</Text>
+          <GoldText style={styles.blockLabel}>What we collect</GoldText>
           {COLLECT.map((item) => (
             <View key={item} style={styles.row}>
               <View style={[styles.mark, styles.markOk]}>
@@ -69,9 +70,9 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
         </View>
 
         <View style={[styles.block, styles.blockWarn]}>
-          <Text style={[styles.blockLabel, { color: Colors.warning }]}>
+          <GoldText style={[styles.blockLabel, { color: Colors.warning }]}>
             We never ask for
-          </Text>
+          </GoldText>
           {NEVER.map((item) => (
             <View key={item} style={styles.row}>
               <View style={[styles.mark, styles.markNo]}>
