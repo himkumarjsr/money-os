@@ -77,7 +77,7 @@ export async function fetchPremiumStatus(
   try {
     const [{ data: row }, snapshot] = await Promise.all([
       getSupabase()
-        .from("leaderboard_view")
+        .from("leaderboard_all_view")
         .select("rank, streak_days")
         .eq("user_id", userId)
         .maybeSingle(),

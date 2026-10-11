@@ -33,7 +33,7 @@ const features = [
   },
   {
     title: "Earn Finkoin Keys",
-    body: "Collect FK for consistent use of Finkoin tools — redeem on partner perks when we offer them.",
+    body: "Earn FK as you hit money milestones, then use it as a discount on Finkoin products.",
   },
 ] as const;
 

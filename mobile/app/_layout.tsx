@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { useAuthStore } from "@/store/authStore";
 import { hydrateSyncKv } from "@/lib/syncKv";
+import { pingDailyLogin } from "@/lib/dailyLogin";
 import { PushNotificationsManager } from "@/components/PushNotificationsManager";
 import { MorningTipPopup } from "@/components/MorningTipPopup";
 import { installCrashReporter } from "@/lib/crashReporter";
@@ -66,6 +67,11 @@ export default function RootLayout() {
       setReady(true);
     });
   }, [initAuth]);
+
+  // Login streak and daily points, once per app session per user.
+  useEffect(() => {
+    pingDailyLogin(userId);
+  }, [userId]);
 
   useEffect(() => {
     if (!ready) return;

@@ -93,19 +93,17 @@ export const useGamificationStore = create<GamificationState>()(
             });
           }
 
+          // This month's rank (by points). No row means no points yet this
+          // month, so the user has no rank; show none rather than an error.
           const { data: rankData, error: rankError } = await supabase
             .from("leaderboard_view")
             .select("rank, percentile")
             .eq("user_id", userId)
             .maybeSingle();
-          if (rankError) {
-            console.error("fetchGamification rank error:", rankError);
-          } else if (rankData) {
-            set({
-              rank: Number(rankData.rank ?? 0) || null,
-              percentile: Number(rankData.percentile ?? 0) || null,
-            });
-          }
+          set({
+            rank: (!rankError && Number(rankData?.rank ?? 0)) || null,
+            percentile: (!rankError && Number(rankData?.percentile ?? 0)) || null,
+          });
         } catch (err) {
           console.error("fetchGamification error:", err);
         }
@@ -148,7 +146,7 @@ export const useGamificationStore = create<GamificationState>()(
           void supabase.removeChannel(subscription);
         };
       },
-      // Streak and the daily 5 FK are recorded by the server (FK balances
+      // Streak and the daily login points are recorded by the server (FK balances
       // are server-only); the response carries the updated row.
       updateLoginStreak: async () => {
         try {
@@ -166,7 +164,9 @@ export const useGamificationStore = create<GamificationState>()(
             lastLogin: string | null;
             badges: string[];
             awarded: number;
+            pointsAwarded?: number;
           };
+          const points = Number(data.pointsAwarded ?? 0);
           set((state) => ({
             fkBalance: data.fkBalance,
             totalEarned: data.totalEarned,
@@ -177,7 +177,9 @@ export const useGamificationStore = create<GamificationState>()(
             toastMessage:
               data.awarded > 0
                 ? `+${data.awarded} FK earned! 🎉`
-                : state.toastMessage,
+                : points > 0
+                  ? `+${points} points earned`
+                  : state.toastMessage,
           }));
         } catch (err) {
           console.error("updateLoginStreak error:", err);
