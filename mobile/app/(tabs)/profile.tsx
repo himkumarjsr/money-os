@@ -13,13 +13,10 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
-import { router, type Href } from "expo-router";
+import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { analyseFinances } from "@/lib/financialEngine";
-import { financialProfileToFormValues } from "@/lib/analyse-form-schema";
-import { buildNetWorth } from "@/lib/netWorth";
-import { formatIndian } from "@/lib/formatters";
 import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { useGamification } from "@/lib/useGamification";
 import { supabase } from "@/lib/supabase";
@@ -31,21 +28,18 @@ import {
   Spacing,
   Radius,
   themedStyles,
+  tintBg,
 } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AppHeader } from "@/components/AppHeader";
 import { AppIcon } from "@/components/ui/AppIcon";
+import ProfileAssets from "@/components/profile/ProfileAssets";
 
 const SITE = (
   process.env.EXPO_PUBLIC_SITE_URL || "https://www.finkoin.com"
 ).replace(/\/$/, "");
-
-function money(v: number): string {
-  const sign = v < 0 ? "-" : "";
-  return `${sign}₹${formatIndian(Math.round(Math.abs(v)))}`;
-}
 
 export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
@@ -116,13 +110,6 @@ export default function ProfileScreen() {
           analysis.issues.filter((i) => i.severity === "warning").length * 7,
       )
     : null;
-  const netWorth = useMemo(
-    () =>
-      submission
-        ? buildNetWorth(financialProfileToFormValues(submission))
-        : null,
-    [submission],
-  );
   const checklist = analysis?.securityChecklist ?? [];
   const checklistDone = checklist.filter((i) => i.status === "ok").length;
 
@@ -257,9 +244,7 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <AppHeader />
       <ScrollView contentContainerStyle={styles.pad}>
-        <Text style={styles.title}>Profile</Text>
-
-        <View style={styles.avatarRow}>
+        <Card style={styles.identityCard}>
           <View style={styles.avatarWrap}>
             {user?.photoURL ? (
               <Image source={{ uri: user.photoURL }} style={styles.avatarImg} />
@@ -271,6 +256,8 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => void handlePickPhoto()}
               disabled={photoBusy}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
               style={styles.avatarEditBadge}
             >
               {photoBusy ? (
@@ -280,10 +267,9 @@ export default function ProfileScreen() {
               )}
             </Pressable>
           </View>
-        </View>
-
-        <Text style={styles.name}>{user?.name || "Finkoin user"}</Text>
-        <Text style={styles.sub}>{user?.email || "No email"}</Text>
+          <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
+          <Text style={styles.sub}>{user?.email ?? "No phone/email"}</Text>
+        </Card>
 
         <View style={[styles.plan, paid && styles.planPaid]}>
           <Text style={[styles.planTitle, paid && styles.onPrimary]}>
@@ -306,60 +292,14 @@ export default function ProfileScreen() {
             <View style={styles.stat}>
               <Text style={styles.statLabel}>FK tokens</Text>
               <View style={styles.inline}>
-                <AppIcon name="coin" size={18} />
+                <AppIcon name="coin" size={20} />
                 <Text style={styles.statValue}>{fk}</Text>
-              </View>
-            </View>
-          </View>
-          <View style={[styles.statsRow, { marginTop: Spacing.md }]}>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Badges</Text>
-              <Text style={styles.statValue}>{stats?.badges.length ?? 0}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Day streak</Text>
-              <View style={styles.inline}>
-                <AppIcon name="flame" size={18} />
-                <Text style={styles.statValue}>{stats?.streakDays ?? 0}</Text>
               </View>
             </View>
           </View>
         </Card>
 
-        <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Your assets</Text>
-          {netWorth ? (
-            <>
-              <View style={styles.rowBetween}>
-                <Text style={styles.rowLabel}>Total assets</Text>
-                <Text style={styles.rowValue}>{money(netWorth.assets)}</Text>
-              </View>
-              <View style={styles.rowBetween}>
-                <Text style={styles.rowLabel}>Loans & liabilities</Text>
-                <Text style={styles.rowValue}>
-                  {money(netWorth.liabilities)}
-                </Text>
-              </View>
-              <View style={[styles.rowBetween, styles.rowTotal]}>
-                <Text style={styles.rowStrong}>Net worth</Text>
-                <Text style={styles.rowStrong}>{money(netWorth.netWorth)}</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.muted}>
-              Complete your analysis to see your assets here.
-            </Text>
-          )}
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => router.push("/(tabs)/analyse")}
-          >
-            <Text style={styles.linkText}>
-              {netWorth ? "Update assets & loans" : "Start analysis"}
-            </Text>
-            <AppIcon name="chevronRight" size={16} />
-          </Pressable>
-        </Card>
+        <ProfileAssets profile={submission} analysis={analysis} />
 
         <Card style={styles.card}>
           <Text style={styles.sectionTitle}>Your financial checklist</Text>
@@ -397,7 +337,7 @@ export default function ProfileScreen() {
             </View>
           ))}
           {checklist.length === 0 ? (
-            <Text style={[styles.muted, { marginTop: Spacing.md }]}>
+            <Text style={[styles.muted, styles.centered, styles.spaced]}>
               Complete analysis to unlock your checklist.
             </Text>
           ) : null}
@@ -410,10 +350,25 @@ export default function ProfileScreen() {
               <Text style={styles.soonText}>Coming soon</Text>
             </View>
           </View>
-          <Text style={styles.muted}>
+          <Text style={styles.small}>
             PAN, Aadhaar, and full identity checks are on the way. We&apos;ll
             notify you when verification opens on Finkoin.
           </Text>
+          <View style={styles.kycList}>
+            <View style={styles.kycBox}>
+              <Text style={styles.kycTitle}>PAN verification</Text>
+              <Text style={styles.small}>Coming soon</Text>
+            </View>
+            <View style={styles.kycBox}>
+              <Text style={styles.kycText}>
+                Mobile verification:{" "}
+                <Text style={styles.kycMuted}>Coming soon</Text>
+              </Text>
+              <Text style={[styles.kycMuted, { marginTop: 4 }]}>
+                Aadhaar verification: Coming soon
+              </Text>
+            </View>
+          </View>
         </Card>
 
         <Card style={styles.card}>
@@ -425,11 +380,18 @@ export default function ProfileScreen() {
           </Text>
           <View style={styles.inline}>
             <Pressable
-              style={[styles.refBtn, !referralUrl && { opacity: 0.5 }]}
+              style={[
+                styles.refBtn,
+                copied && styles.refBtnCopied,
+                !referralUrl && { opacity: 0.5 },
+              ]}
               disabled={!referralUrl}
               onPress={() => void copyReferral()}
             >
-              <Text style={styles.refBtnText}>
+              {copied ? (
+                <AppIcon name="check" size={14} color={Colors.primary} />
+              ) : null}
+              <Text style={[styles.refBtnText, copied && styles.copiedText]}>
                 {copied ? "Copied" : "Copy link"}
               </Text>
             </Pressable>
@@ -443,53 +405,39 @@ export default function ProfileScreen() {
           </View>
         </Card>
 
-        <Card style={styles.card}>
-          {(
-            [
-              ["settings", "Settings & theme", "/settings"],
-              ["gift", "Rewards", "/rewards"],
-              ["trophy", "Leaderboard", "/leaderboard"],
-            ] as const
-          ).map(([icon, label, href]) => (
+        <Card style={styles.accountCard}>
+          <Text style={[styles.sectionTitle, styles.accountTitle]}>
+            Account
+          </Text>
+          <View style={[styles.inline, { marginTop: Spacing.sm }]}>
             <Pressable
-              key={href}
-              style={styles.menuRow}
-              onPress={() => router.push(href as Href)}
+              style={[styles.accountBtn, styles.deleteBtn]}
+              disabled={deleteBusy}
+              onPress={handleDeleteAccount}
             >
-              <View style={styles.inline}>
-                <AppIcon name={icon} size={18} />
-                <Text style={styles.menuText}>{label}</Text>
-              </View>
-              <AppIcon name="chevronRight" size={16} />
+              <Text style={styles.deleteText}>
+                {deleteBusy ? "Deleting…" : "Delete all my data"}
+              </Text>
             </Pressable>
-          ))}
+            <Pressable
+              style={styles.accountBtn}
+              onPress={() => {
+                Alert.alert("Sign out?", "You can log in again anytime.", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Sign out",
+                    style: "destructive",
+                    onPress: () => {
+                      void signOut().then(() => router.replace("/(tabs)"));
+                    },
+                  },
+                ]);
+              }}
+            >
+              <Text style={styles.accountBtnText}>Sign out</Text>
+            </Pressable>
+          </View>
         </Card>
-
-        <Button
-          label="Sign out"
-          variant="ghost"
-          onPress={() => {
-            Alert.alert("Sign out?", "You can log in again anytime.", [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Sign out",
-                style: "destructive",
-                onPress: () => {
-                  void signOut().then(() => router.replace("/(tabs)"));
-                },
-              },
-            ]);
-          }}
-        />
-
-        <Button
-          label={deleteBusy ? "Deleting…" : "Delete account permanently"}
-          variant="ghost"
-          disabled={deleteBusy}
-          onPress={handleDeleteAccount}
-          style={{ marginTop: 8 }}
-          textStyle={{ color: Colors.error }}
-        />
       </ScrollView>
     </View>
   );
@@ -498,13 +446,15 @@ export default function ProfileScreen() {
 const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
   pad: { flexGrow: 1, padding: Spacing.xl, paddingBottom: 120 },
-  avatarRow: {
+  identityCard: {
+    marginBottom: Spacing.lg,
+    padding: Spacing.xxl,
     alignItems: "center",
-    marginBottom: Spacing.md,
   },
   avatarWrap: {
     width: 88,
     height: 88,
+    marginBottom: Spacing.md,
   },
   avatarImg: {
     width: 88,
@@ -553,7 +503,6 @@ const styles = themedStyles(() => ({
   },
   sub: {
     marginTop: 2,
-    marginBottom: Spacing.xl,
     fontSize: FontSize.md,
     color: Colors.textMuted,
     textAlign: "center",
@@ -596,35 +545,6 @@ const styles = themedStyles(() => ({
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: Spacing.sm,
-  },
-  rowLabel: {
-    marginTop: Spacing.sm,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-  },
-  rowValue: {
-    marginTop: Spacing.sm,
-    fontSize: FontSize.md,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-  },
-  rowTotal: {
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  rowStrong: {
-    marginTop: Spacing.sm,
-    fontSize: FontSize.base,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-  },
-  linkRow: {
-    marginTop: Spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
   },
   track: {
     marginTop: Spacing.md,
@@ -673,6 +593,9 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
   },
   refBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.sm,
@@ -684,6 +607,11 @@ const styles = themedStyles(() => ({
     fontWeight: "700",
     color: Colors.textPrimary,
   },
+  refBtnCopied: {
+    borderColor: tintBg("#A7F3D0"),
+    backgroundColor: Colors.successLight,
+  },
+  copiedText: { color: Colors.successText },
   waBtn: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -691,17 +619,37 @@ const styles = themedStyles(() => ({
     backgroundColor: "#25D366",
   },
   waText: { fontSize: FontSize.md, fontWeight: "700", color: "#FFFFFF" },
-  menuRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: Spacing.md,
+  small: { marginTop: 4, fontSize: FontSize.sm, color: Colors.textMuted },
+  centered: { textAlign: "center" },
+  spaced: { marginTop: Spacing.md },
+  kycList: { marginTop: Spacing.md, gap: Spacing.md, opacity: 0.6 },
+  kycBox: {
+    padding: Spacing.md,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceMuted,
   },
-  menuText: {
-    fontSize: FontSize.base,
+  kycTitle: {
+    fontSize: FontSize.md,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: Colors.textSecondary,
   },
+  kycText: { fontSize: FontSize.md, color: Colors.textSecondary },
+  kycMuted: { fontSize: FontSize.md, color: Colors.textMuted },
+  accountCard: { marginBottom: Spacing.lg, borderColor: Colors.errorLight },
+  accountTitle: { color: Colors.errorText },
+  accountBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  accountBtnText: { fontSize: FontSize.md, color: Colors.textPrimary },
+  deleteBtn: { borderColor: tintBg("#FECACA") },
+  deleteText: { fontSize: FontSize.md, color: Colors.error },
   gateSub: {
     textAlign: "center",
     color: Colors.textMuted,
