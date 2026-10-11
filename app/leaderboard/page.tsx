@@ -7,9 +7,12 @@ import {
 } from "@/lib/fkRewards";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
+import PremiumAvatarRing from "@/components/ui/PremiumAvatarRing";
+import PremiumBadge from "@/components/ui/PremiumBadge";
 import { getSupabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useGamificationStore } from "@/store/gamificationStore";
+import { useThemeStore } from "@/store/themeStore";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
@@ -23,6 +26,8 @@ interface LeaderboardEntry {
   points: number;
   rank: number;
   percentile: number;
+  /** From the views once migration 052 is live; missing means false. */
+  is_premium?: boolean;
 }
 
 type Tab = "month" | "all";
@@ -218,6 +223,10 @@ function LeaderboardContent() {
     userEntry ??
     (tab === "month" && rank ? { rank, percentile: percentile ?? 0 } : null);
   const tabLabel = tab === "month" ? "this month" : "all time";
+  // Local unlock covers the user's own row before the views expose is_premium.
+  const mePremium =
+    useThemeStore((s) => s.premium?.unlocked ?? false) ||
+    userEntry?.is_premium === true;
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 80px" }}>
@@ -337,25 +346,36 @@ function LeaderboardContent() {
             gap: 12,
           }}
         >
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            {getInitials(user?.name || "You")}
-          </div>
+          <PremiumAvatarRing premium={mePremium}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {getInitials(user?.name || "You")}
+            </div>
+          </PremiumAvatarRing>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
               You · Rank #{me.rank}
+              {mePremium ? <PremiumBadge size="sm" /> : null}
             </div>
             <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
               Top {me.percentile}% {tabLabel}
@@ -427,6 +447,7 @@ function LeaderboardContent() {
         ) : (
           entries.map((entry, i) => {
             const isMe = entry.user_id === user?.id;
+            const isPremium = entry.is_premium === true || (isMe && mePremium);
             return (
               <div
                 key={entry.user_id}
@@ -452,50 +473,64 @@ function LeaderboardContent() {
                   {entry.rank <= 3 ? "★" : entry.rank}
                 </div>
 
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "50%",
-                    background: isMe ? "#534AB7" : "#EEEDFE",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: isMe ? "white" : "#534AB7",
-                    flexShrink: 0,
-                    overflow: "hidden",
-                  }}
-                >
-                  {entry.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={entry.avatar_url}
-                      alt="avatar"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  ) : (
-                    getInitials(entry.name || "U")
-                  )}
-                </div>
+                <PremiumAvatarRing premium={isPremium}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      background: isMe ? "#534AB7" : "#EEEDFE",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: isMe ? "white" : "#534AB7",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {entry.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={entry.avatar_url}
+                        alt="avatar"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      getInitials(entry.name || "U")
+                    )}
+                  </div>
+                </PremiumAvatarRing>
 
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
                       fontSize: 13,
                       fontWeight: isMe ? 700 : 500,
                       color: isMe ? "#534AB7" : "#111110",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
                     }}
                   >
-                    {isMe
-                      ? `You · ${entry.name || "User"}`
-                      : entry.name || "User"}
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {isMe
+                        ? `You · ${entry.name || "User"}`
+                        : entry.name || "User"}
+                    </span>
+                    {isPremium ? <PremiumBadge size="sm" /> : null}
                   </div>
                   {entry.streak_days > 0 ? (
                     <div

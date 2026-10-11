@@ -8,24 +8,25 @@ vi.mock("@/lib/theme", async (orig) => ({
 
 import { useThemeStore } from "@/store/themeStore";
 
-describe("themeStore premium auto-switch", () => {
+describe("themeStore premium unlock", () => {
   beforeEach(() => {
     localStorage.clear();
     useThemeStore.setState({ preference: "light", premium: null });
     status.unlocked = true;
   });
 
-  it("switches to Premium the first time it unlocks", async () => {
+  it("marks the account Premium without switching the theme", async () => {
     await useThemeStore.getState().refreshPremium("u1");
-    expect(useThemeStore.getState().preference).toBe("premium");
-    expect(localStorage.getItem("finkoin_theme")).toBe("premium");
+    expect(useThemeStore.getState().premium?.unlocked).toBe(true);
+    expect(useThemeStore.getState().preference).toBe("light");
+    expect(localStorage.getItem("finkoin_theme")).toBeNull();
   });
 
-  it("keeps a later manual choice", async () => {
+  it("keeps an opt-in Gold choice across refreshes", async () => {
     await useThemeStore.getState().refreshPremium("u1");
-    useThemeStore.getState().setPreference("light");
+    useThemeStore.getState().setPreference("premium");
     await useThemeStore.getState().refreshPremium("u1");
-    expect(useThemeStore.getState().preference).toBe("light");
+    expect(useThemeStore.getState().preference).toBe("premium");
   });
 
   it("leaves the theme alone while locked", async () => {

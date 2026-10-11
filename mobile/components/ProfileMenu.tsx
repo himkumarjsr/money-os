@@ -13,8 +13,10 @@ import {
 import { useState } from "react";
 import { router, type Href } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import { PremiumAvatarRing } from "@/components/ui/PremiumAvatarRing";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
+import { useThemeStore } from "@/store/themeStore";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { useGamification } from "@/lib/useGamification";
 
@@ -41,6 +43,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
+  const premium = useThemeStore((s) => s.premium?.unlocked ?? false);
   const tier = user?.subscriptionTier || "free";
   const { stats } = useGamification(visible ? user?.id : undefined);
   const fk = stats?.fkBalance ?? user?.fkBalance ?? 0;
@@ -83,16 +86,24 @@ export function ProfileMenu({ visible, onClose }: Props) {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.identity}>
-                <View style={styles.avatarLg}>
-                  {user?.photoURL ? (
-                    <Image
-                      source={{ uri: user.photoURL }}
-                      style={styles.avatarLgImg}
-                    />
-                  ) : (
-                    <Text style={styles.avatarLgLetter}>{letter}</Text>
-                  )}
-                </View>
+                <PremiumAvatarRing
+                  premium={premium}
+                  size={52}
+                  style={styles.avatarRing}
+                >
+                  <View
+                    style={[styles.avatarLg, premium && styles.avatarLgRinged]}
+                  >
+                    {user?.photoURL ? (
+                      <Image
+                        source={{ uri: user.photoURL }}
+                        style={styles.avatarLgImg}
+                      />
+                    ) : (
+                      <Text style={styles.avatarLgLetter}>{letter}</Text>
+                    )}
+                  </View>
+                </PremiumAvatarRing>
                 <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
                 <Text style={styles.contact}>
                   {user?.email ?? "No contact added"}
@@ -266,6 +277,8 @@ const styles = themedStyles(() => ({
     marginBottom: 8,
     overflow: "hidden",
   },
+  avatarRing: { marginBottom: 8 },
+  avatarLgRinged: { marginBottom: 0 },
   avatarLgImg: { width: 52, height: 52, borderRadius: 999 },
   avatarLgLetter: {
     color: Colors.onPrimary,

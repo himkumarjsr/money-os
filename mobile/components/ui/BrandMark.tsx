@@ -7,7 +7,7 @@ import { GoldText } from "@/components/ui/GoldMirror";
 import { BrandCoin } from "@/components/ui/BrandCoin";
 import { Colors, themedStyles } from "@/constants/theme";
 
-/** The header mark: the FK coin. */
+/** The header mark: the FK coin (gold for Premium members in any theme). */
 export function BrandTile({ size = 32 }: { size?: number }) {
   return <BrandCoin size={size} />;
 }
