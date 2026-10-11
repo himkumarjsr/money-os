@@ -1,7 +1,7 @@
 /**
  * Premium's 24K mirror finish for text and line icons: the same shiny gold
- * gradient the PWA paints with `background-clip: text`. Outside Premium these
- * render as plain text and flat strokes.
+ * gradient the PWA paints with `background-clip: text`. The free themes get
+ * the softer Violet Satin sheen on brand-purple text and icons instead.
  */
 import { useState, type ReactNode } from "react";
 import {
@@ -19,7 +19,7 @@ import Svg, {
   Stop,
   Text as SvgText,
 } from "react-native-svg";
-import { GOLD, getActiveTheme } from "@/constants/theme";
+import { GOLD, Palettes, getActiveTheme } from "@/constants/theme";
 
 /** The PWA's `--fk-gold-grad` stops. */
 export const GOLD_MIRROR_STOPS = [
@@ -30,27 +30,70 @@ export const GOLD_MIRROR_STOPS = [
   ["1", GOLD.deep],
 ] as const;
 
+/** Violet Satin text stops, the same as the PWA's `--fk-satin-text`. */
+const SATIN_TEXT_STOPS = {
+  light: [
+    ["0", "#3C3489"],
+    ["0.5", "#6A61D1"],
+    ["1", "#3C3489"],
+  ],
+  dark: [
+    ["0", "#A49DF5"],
+    ["0.5", "#D7D2FF"],
+    ["1", "#A49DF5"],
+  ],
+} as const;
+
+const SATIN_STROKE_STOPS = {
+  light: [
+    ["0", "#3C3489"],
+    ["0.5", "#7C73DB"],
+    ["1", "#3C3489"],
+  ],
+  dark: [
+    ["0", "#6C63E0"],
+    ["0.5", "#C9C4FF"],
+    ["1", "#6C63E0"],
+  ],
+} as const;
+
+const GOLD_STROKE_STOPS = [
+  ["0", GOLD.deep],
+  ["0.35", GOLD.shine],
+  ["0.55", GOLD.base],
+  ["0.8", GOLD.shine],
+  ["1", GOLD.deep],
+] as const;
+
 const GOLD_HUES = new Set(["#d4af37", "#e8c766", "#b38728", "#fcf6ba"]);
 
 export function isPremium(): boolean {
   return getActiveTheme() === "premium";
 }
 
-/** True when Premium should swap this flat gold for the mirror gradient. */
+/**
+ * True when this flat colour should become the theme's mirror gradient: gold
+ * hues in Premium, the brand purple in the free themes.
+ */
 export function isMirrorGold(color: string | undefined): boolean {
-  return !!color && isPremium() && GOLD_HUES.has(color.toLowerCase());
+  if (!color) return false;
+  const theme = getActiveTheme();
+  const c = color.toLowerCase();
+  if (theme === "premium") return GOLD_HUES.has(c);
+  return c === Palettes[theme].primary.toLowerCase();
 }
 
 /** A diagonal mirror gradient for strokes; reference it as `url(#id)`. */
 export function GoldStrokeDefs({ id }: { id: string }) {
+  const theme = getActiveTheme();
+  const stops =
+    theme === "premium" ? GOLD_STROKE_STOPS : SATIN_STROKE_STOPS[theme];
   return (
     <Defs>
       <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-        <Stop offset="0" stopColor={GOLD.deep} />
-        <Stop offset="0.35" stopColor={GOLD.shine} />
-        <Stop offset="0.55" stopColor={GOLD.base} />
-        <Stop offset="0.8" stopColor={GOLD.shine} />
-        <Stop offset="1" stopColor={GOLD.deep} />
+        {stops.map(([offset, color]) => (
+          <Stop key={offset} offset={offset} stopColor={color} />
+        ))}
       </LinearGradient>
     </Defs>
   );
@@ -79,7 +122,7 @@ type Props = {
   children: ReactNode;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
-  /** Force the mirror even when the text colour is not gold. */
+  /** In Premium, use the mirror even when the text colour is not gold. */
   always?: boolean;
 };
 
@@ -92,9 +135,13 @@ export function GoldText({ children, style, numberOfLines, always }: Props) {
   const [lines, setLines] = useState<TextLayoutLine[]>([]);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const flat = (StyleSheet.flatten(style) ?? {}) as TextStyle;
+  const theme = getActiveTheme();
   const mirror =
-    isPremium() &&
-    (always || flat.color === undefined || isMirrorGold(String(flat.color)));
+    theme === "premium"
+      ? always || flat.color === undefined || isMirrorGold(String(flat.color))
+      : flat.color !== undefined && isMirrorGold(String(flat.color));
+  const stops =
+    theme === "premium" ? GOLD_MIRROR_STOPS : SATIN_TEXT_STOPS[theme];
 
   if (!mirror) {
     return (
@@ -142,7 +189,7 @@ export function GoldText({ children, style, numberOfLines, always }: Props) {
               y2={box.h}
               gradientUnits="userSpaceOnUse"
             >
-              {GOLD_MIRROR_STOPS.map(([offset, color]) => (
+              {stops.map(([offset, color]) => (
                 <Stop key={offset} offset={offset} stopColor={color} />
               ))}
             </LinearGradient>

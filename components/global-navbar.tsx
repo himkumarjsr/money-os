@@ -241,13 +241,19 @@ export function GlobalNavbar() {
                   <stop offset="70%" stopColor="#D4AF37" />
                   <stop offset="100%" stopColor="#B38728" />
                 </linearGradient>
+                <linearGradient id="fk-satin-tile" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#463DA6" />
+                  <stop offset="40%" stopColor="#7C73DB" />
+                  <stop offset="60%" stopColor="#534AB7" />
+                  <stop offset="100%" stopColor="#3C3489" />
+                </linearGradient>
               </defs>
               <rect
                 className="fk-logo-tile"
                 width="64"
                 height="64"
                 rx="18"
-                fill="#534AB7"
+                fill="url(#fk-satin-tile)"
               />
               <circle
                 cx="32"

@@ -211,3 +211,50 @@ body[data-analyse-modal-open="true"] [data-track-nav-zone="bottom_nav"] {
 :root[data-theme="premium"] .bg-primary {
   background-image: var(--fk-gold-grad);
 }
+
+/* Violet Satin: the free themes give the brand purple a soft polished sheen,
+   the same way Premium gets its 24K mirror gold. */
+:root {
+  --fk-satin-grad: linear-gradient(
+    135deg,
+    #463da6 0%,
+    #7c73db 40%,
+    #534ab7 60%,
+    #3c3489 100%
+  );
+  --fk-satin-text: linear-gradient(
+    100deg,
+    #3c3489 0%,
+    #6a61d1 50%,
+    #3c3489 100%
+  );
+}
+
+:root[data-theme="dark"] {
+  --fk-satin-grad: linear-gradient(
+    135deg,
+    #5a51cc 0%,
+    #958df0 40%,
+    #6c63e0 60%,
+    #4b42b8 100%
+  );
+  --fk-satin-text: linear-gradient(
+    100deg,
+    #a49df5 0%,
+    #d7d2ff 50%,
+    #a49df5 100%
+  );
+}
+
+:root:not([data-theme="premium"]) .bg-\[\#534AB7\],
+:root:not([data-theme="premium"]) .bg-\[\#3C3489\],
+:root:not([data-theme="premium"]) .bg-primary {
+  background-image: var(--fk-satin-grad);
+}
+
+:root:not([data-theme="premium"]) .fk-brand-name {
+  background: var(--fk-satin-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
