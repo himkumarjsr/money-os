@@ -25,6 +25,9 @@ import { Colors, themedStyles, brand, onPrimaryAlpha } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 import { uniqueChannelName } from "@/lib/realtimeChannel";
 import { useAuthStore } from "@/store/authStore";
+import { useThemeStore } from "@/store/themeStore";
+import { PremiumAvatarRing } from "@/components/ui/PremiumAvatarRing";
+import { PremiumBadge } from "@/components/ui/PremiumBadge";
 
 interface LeaderboardEntry {
   user_id: string;
@@ -35,6 +38,8 @@ interface LeaderboardEntry {
   points: number;
   rank: number;
   percentile: number;
+  /** Premium (Finkoin) member; absent until the views expose the column. */
+  is_premium?: boolean;
 }
 
 interface CachedLeaderboard {
@@ -104,24 +109,34 @@ function EarnList({
   );
 }
 
-function Avatar({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+function Avatar({
+  entry,
+  isMe,
+  premium,
+}: {
+  entry: LeaderboardEntry;
+  isMe: boolean;
+  premium: boolean;
+}) {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(entry.avatar_url) && !failed;
   return (
-    <View style={[styles.avatar, isMe && styles.avatarMe]}>
-      {showImage ? (
-        <Image
-          source={{ uri: entry.avatar_url as string }}
-          style={styles.avatarImg}
-          onError={() => setFailed(true)}
-          accessibilityIgnoresInvertColors
-        />
-      ) : (
-        <Text style={[styles.avatarText, isMe && styles.avatarTextMe]}>
-          {getInitials(entry.name || "U")}
-        </Text>
-      )}
-    </View>
+    <PremiumAvatarRing premium={premium} size={36}>
+      <View style={[styles.avatar, isMe && styles.avatarMe]}>
+        {showImage ? (
+          <Image
+            source={{ uri: entry.avatar_url as string }}
+            style={styles.avatarImg}
+            onError={() => setFailed(true)}
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <Text style={[styles.avatarText, isMe && styles.avatarTextMe]}>
+            {getInitials(entry.name || "U")}
+          </Text>
+        )}
+      </View>
+    </PremiumAvatarRing>
   );
 }
 
@@ -130,6 +145,7 @@ export default function LeaderboardScreen() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const userId = user?.id ?? null;
+  const premiumUnlocked = useThemeStore((s) => s.premium?.unlocked ?? false);
 
   const [tab, setTab] = useState<Tab>("month");
   const tabRef = useRef<Tab>(tab);
@@ -280,9 +296,7 @@ export default function LeaderboardScreen() {
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
         <View style={styles.gate}>
-          <Text style={styles.gateText}>
-            Sign in to see the leaderboard.
-          </Text>
+          <Text style={styles.gateText}>Sign in to see the leaderboard.</Text>
           <Pressable
             onPress={() => router.push("/(auth)/login")}
             style={styles.gateBtn}
@@ -296,6 +310,10 @@ export default function LeaderboardScreen() {
   }
 
   const me = userEntry;
+  // Rows carry `is_premium` once the views expose it; the viewer's own row
+  // also counts their locally known Premium status.
+  const isPremiumEntry = (entry: LeaderboardEntry) =>
+    entry.is_premium === true || (entry.user_id === userId && premiumUnlocked);
   const tabLabel = tab === "month" ? "this month" : "all time";
 
   const selectTab = (next: Tab) => {
@@ -375,11 +393,13 @@ export default function LeaderboardScreen() {
 
         {me ? (
           <View style={styles.meCard}>
-            <View style={styles.meAvatar}>
-              <Text style={styles.meAvatarText}>
-                {getInitials(user?.name || "You")}
-              </Text>
-            </View>
+            <PremiumAvatarRing premium={isPremiumEntry(me)} size={44}>
+              <View style={styles.meAvatar}>
+                <Text style={styles.meAvatarText}>
+                  {getInitials(user?.name || "You")}
+                </Text>
+              </View>
+            </PremiumAvatarRing>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.meTitle}>You · Rank #{me.rank}</Text>
               <Text style={styles.meSub}>
@@ -411,6 +431,7 @@ export default function LeaderboardScreen() {
           ) : (
             entries.map((entry, i) => {
               const isMe = entry.user_id === userId;
+              const premium = isPremiumEntry(entry);
               return (
                 <View
                   key={entry.user_id}
@@ -432,17 +453,20 @@ export default function LeaderboardScreen() {
                     {entry.rank <= 3 ? "★" : entry.rank}
                   </Text>
 
-                  <Avatar entry={entry} isMe={isMe} />
+                  <Avatar entry={entry} isMe={isMe} premium={premium} />
 
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.name, isMe && styles.nameMe]}
-                    >
-                      {isMe
-                        ? `You · ${entry.name || "User"}`
-                        : entry.name || "User"}
-                    </Text>
+                    <View style={styles.nameRow}>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.name, isMe && styles.nameMe]}
+                      >
+                        {isMe
+                          ? `You · ${entry.name || "User"}`
+                          : entry.name || "User"}
+                      </Text>
+                      {premium ? <PremiumBadge size="sm" /> : null}
+                    </View>
                     {entry.streak_days > 0 ? (
                       <Text style={styles.streak}>
                         {entry.streak_days} day streak
@@ -625,7 +649,13 @@ const styles = themedStyles(() => ({
   avatarImg: { width: 36, height: 36, borderRadius: 18 },
   avatarText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   avatarTextMe: { color: Colors.onPrimary },
-  name: { fontSize: 13, fontWeight: "500", color: Colors.textPrimary },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  name: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    color: Colors.textPrimary,
+  },
   nameMe: { fontWeight: "700", color: Colors.primary },
   streak: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   fk: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },

@@ -9,18 +9,22 @@ type Props = {
   spinning?: boolean;
   /** Decorative next to a visible "Finkoin" label. */
   decorative?: boolean;
+  /** Gold coin in any theme (marks a Premium member). */
+  gold?: boolean;
 };
 
 /**
  * The Finkoin mark: "FK" struck on a coin with a milled rim. Its colours come
  * from `--fk-coin-*` in globals.css: Violet Satin in light and dark, 24K
- * mirror gold in Premium. Matches the app's `mobile/components/ui/BrandCoin.tsx`.
+ * mirror gold in Premium or with `gold` (a Premium member's mark in any
+ * theme). Matches the app's `mobile/components/ui/BrandCoin.tsx`.
  */
 export default function BrandCoin({
   size = 32,
   className,
   spinning = false,
   decorative = false,
+  gold = false,
 }: Props) {
   const id = useId().replace(/:/g, "");
   const face = `fk-coin-face-${id}`;
@@ -33,7 +37,11 @@ export default function BrandCoin({
       role={decorative ? undefined : "img"}
       aria-hidden={decorative || undefined}
       aria-label={decorative ? undefined : "Finkoin"}
-      className={[spinning ? "fk-coin-spin" : "", className ?? ""]
+      className={[
+        spinning ? "fk-coin-spin" : "",
+        gold ? "fk-coin-gold" : "",
+        className ?? "",
+      ]
         .join(" ")
         .trim()}
       style={{ flexShrink: 0 }}

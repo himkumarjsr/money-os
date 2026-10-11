@@ -1,6 +1,7 @@
 /**
  * The Finkoin mark: "FK" struck on a coin with a milled rim. Violet Satin in
- * the free themes, 24K mirror gold in Premium. Matches the PWA's
+ * the free themes, 24K mirror gold in the Gold theme and, as a small accent,
+ * for a signed-in Premium member in any theme. Matches the PWA's
  * `components/ui/BrandCoin.tsx`.
  */
 import Svg, {
@@ -11,6 +12,7 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg";
 import { getActiveTheme, type ThemeName } from "@/constants/theme";
+import { useThemeStore } from "@/store/themeStore";
 
 type CoinPaint = {
   face: readonly string[];
@@ -50,7 +52,9 @@ type Props = {
 };
 
 export function BrandCoin({ size = 32, theme }: Props) {
-  const p = COIN_PAINT[theme ?? getActiveTheme()];
+  const premiumUnlocked = useThemeStore((s) => s.premium?.unlocked ?? false);
+  const p =
+    COIN_PAINT[theme ?? (premiumUnlocked ? "premium" : getActiveTheme())];
   return (
     <Svg
       width={size}

@@ -266,7 +266,8 @@ body[data-analyse-modal-open="true"] [data-track-nav-zone="bottom_nav"] {
   --fk-coin-ring: #d7d2ff;
 }
 
-:root[data-theme="premium"] {
+:root[data-theme="premium"],
+.fk-coin-gold {
   --fk-coin-1: #aa771c;
   --fk-coin-2: #fcf6ba;
   --fk-coin-3: #d4af37;
