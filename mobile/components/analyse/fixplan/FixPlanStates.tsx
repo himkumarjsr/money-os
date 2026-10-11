@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { CoinSpinner } from "@/components/ui/LoadingSpinner";
 import { router } from "expo-router";
 import Button from "@/components/ui/Button";
 import { LOADING_MESSAGES } from "@/lib/fixPlanMerge";
@@ -17,7 +18,7 @@ export function FixPlanLoader({ label }: { label?: string }) {
   }, [label]);
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color={Colors.primary} />
+      <CoinSpinner />
       <Text style={styles.loaderText}>
         {label ?? LOADING_MESSAGES[messageIndex] ?? "Loading…"}
       </Text>

@@ -1,7 +1,8 @@
 /**
  * Animated intro that takes over from the static native splash (Android and
- * iOS only allow a still image there). It starts on the same purple "FK" frame,
- * then settles into the logo, ring and wordmark, and fades out once the app is ready.
+ * iOS only allow a still image there). It starts on the same purple as the
+ * native splash, fades into the theme's backdrop while the FK coin flips in,
+ * then the wordmark rises. It fades out once the app is ready.
  */
 import { useEffect, useRef, useState } from "react";
 import {
@@ -12,68 +13,95 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { FINKOIN_TAGLINE } from "@/constants/theme";
+import {
+  FINKOIN_TAGLINE,
+  HERO_GRADIENT,
+  type ThemeName,
+} from "@/constants/theme";
+import { BrandCoin } from "@/components/ui/BrandCoin";
+import { GoldText } from "@/components/ui/GoldMirror";
 
 const SPLASH_BG = "#534AB7"; // matches app.json splash backgroundColor
-const MIN_VISIBLE_MS = 1700;
+const MIN_VISIBLE_MS = 1900;
+
+const BACKDROP: Record<ThemeName, string> = {
+  light: "linear-gradient(160deg, #5A51C4 0%, #463DA6 55%, #3C3489 100%)",
+  dark: "linear-gradient(160deg, #1E1A44 0%, #12102A 55%, #1A1638 100%)",
+  premium: HERO_GRADIENT,
+};
 
 type Props = {
   /** App finished loading; the intro may leave once its animation has played. */
   ready: boolean;
-  /** Ring colour: white normally, gold for the premium theme. */
-  accent?: string;
+  /** Theme to paint the backdrop and coin with. */
+  theme: ThemeName;
 };
 
-export function AnimatedSplash({ ready, accent = "#FFFFFF" }: Props) {
+/** The theme backdrop; fades in over the native purple when it mounts. */
+function Backdrop({ theme }: { theme: ThemeName }) {
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: 450,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [fade]);
+  return (
+    <Animated.View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          opacity: fade,
+          backgroundColor: SPLASH_BG,
+          experimental_backgroundImage: BACKDROP[theme],
+        },
+      ]}
+    />
+  );
+}
+
+export function AnimatedSplash({ ready, theme }: Props) {
   const { width } = useWindowDimensions();
   const [gone, setGone] = useState(false);
   const [minDone, setMinDone] = useState(false);
 
-  const mark = useRef(new Animated.Value(0)).current;
-  const ring = useRef(new Animated.Value(0)).current;
+  const coin = useRef(new Animated.Value(0)).current;
   const words = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  const spin = useRef(new Animated.Value(0)).current;
   const exit = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const ease = Easing.out(Easing.cubic);
-    Animated.sequence([
-      Animated.delay(150),
-      Animated.parallel([
-        Animated.timing(mark, {
-          toValue: 1,
-          duration: 650,
-          easing: ease,
-          useNativeDriver: true,
-        }),
-        Animated.timing(ring, {
-          toValue: 1,
-          duration: 700,
-          delay: 250,
-          easing: Easing.out(Easing.back(1.4)),
-          useNativeDriver: true,
-        }),
-        Animated.timing(words, {
-          toValue: 1,
-          duration: 550,
-          delay: 450,
-          easing: ease,
-          useNativeDriver: true,
-        }),
-      ]),
+    Animated.parallel([
+      Animated.timing(coin, {
+        toValue: 1,
+        duration: 1300,
+        delay: 150,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(words, {
+        toValue: 1,
+        duration: 550,
+        delay: 1000,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
     ]).start();
+    // While the app is still loading, the coin turns once every few seconds.
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, {
+        Animated.timing(spin, {
           toValue: 1,
-          duration: 900,
-          easing: Easing.inOut(Easing.quad),
+          duration: 1100,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-        Animated.timing(pulse, {
+        Animated.delay(900),
+        Animated.timing(spin, {
           toValue: 0,
-          duration: 900,
-          easing: Easing.inOut(Easing.quad),
+          duration: 0,
           useNativeDriver: true,
         }),
       ]),
@@ -86,7 +114,7 @@ export function AnimatedSplash({ ready, accent = "#FFFFFF" }: Props) {
       clearTimeout(t);
       loop.stop();
     };
-  }, [mark, ring, words, pulse]);
+  }, [coin, words, spin]);
 
   useEffect(() => {
     if (!ready || !minDone) return;
@@ -100,10 +128,8 @@ export function AnimatedSplash({ ready, accent = "#FFFFFF" }: Props) {
 
   if (gone) return null;
 
-  // Native splash shows "FK" at roughly a third of the screen width.
-  const startSize = width * 0.36;
-  const endScale = 0.42;
-  const ringSize = startSize * 1.7;
+  const coinSize = Math.min(width * 0.34, 150);
+  const premium = theme === "premium";
 
   return (
     <Animated.View
@@ -128,87 +154,78 @@ export function AnimatedSplash({ ready, accent = "#FFFFFF" }: Props) {
       ]}
       accessibilityLabel="Finkoin is loading"
     >
+      {/* Keyed so a theme that resolves late fades in rather than snapping. */}
+      <Backdrop key={theme} theme={theme} />
+
       <View style={styles.center}>
         <Animated.View
-          style={[
-            styles.ring,
-            {
-              width: ringSize,
-              height: ringSize,
-              borderRadius: ringSize / 2,
-              borderColor: accent,
-              opacity: Animated.multiply(
-                ring,
-                pulse.interpolate({
+          style={{
+            opacity: coin.interpolate({
+              inputRange: [0, 0.25, 1],
+              outputRange: [0, 1, 1],
+            }),
+            transform: [
+              { perspective: 800 },
+              {
+                scale: coin.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.9, 0.55],
+                  outputRange: [0.6, 1],
                 }),
-              ),
-              transform: [
-                {
-                  scale: Animated.add(
-                    ring.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.4 / endScale, 1],
-                    }),
-                    pulse.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 0.06],
-                    }),
-                  ),
-                },
-                { scale: endScale },
-              ],
-            },
-          ]}
-        />
-        <Animated.Text
-          style={[
-            styles.mark,
-            {
-              fontSize: startSize,
-              lineHeight: startSize * 1.1,
-              transform: [
-                {
-                  scale: mark.interpolate({
+              },
+              {
+                rotateY: Animated.add(
+                  coin.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [1, endScale],
+                    outputRange: [-540, 0],
+                  }),
+                  spin.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 360],
+                  }),
+                ).interpolate({
+                  inputRange: [-540, 360],
+                  outputRange: ["-540deg", "360deg"],
+                }),
+              },
+            ],
+          }}
+        >
+          <BrandCoin size={coinSize} theme={theme} />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.words,
+            {
+              opacity: words,
+              transform: [
+                {
+                  translateY: words.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
                   }),
                 },
               ],
             },
           ]}
-          allowFontScaling={false}
         >
-          FK
-        </Animated.Text>
+          {premium ? (
+            <GoldText style={styles.wordmark} always>
+              Finkoin
+            </GoldText>
+          ) : (
+            <Text style={styles.wordmark} allowFontScaling={false}>
+              Finkoin
+            </Text>
+          )}
+          <Text
+            style={[styles.tagline, premium && styles.taglinePremium]}
+            allowFontScaling={false}
+          >
+            {FINKOIN_TAGLINE}
+          </Text>
+        </Animated.View>
       </View>
-
-      <Animated.View
-        style={[
-          styles.words,
-          {
-            top: "50%",
-            marginTop: (ringSize * endScale) / 2 + 28,
-            opacity: words,
-            transform: [
-              {
-                translateY: words.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [18, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <Text style={styles.wordmark} allowFontScaling={false}>
-          Finkoin
-        </Text>
-        <Text style={styles.tagline} allowFontScaling={false}>
-          {FINKOIN_TAGLINE}
-        </Text>
-      </Animated.View>
     </Animated.View>
   );
 }
@@ -224,20 +241,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ring: {
-    position: "absolute",
-    borderWidth: 6,
-  },
-  mark: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    letterSpacing: 2,
-    textAlign: "center",
-  },
   words: {
-    position: "absolute",
-    left: 0,
-    right: 0,
+    marginTop: 28,
     alignItems: "center",
     gap: 6,
   },
@@ -251,5 +256,8 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 14,
     fontWeight: "600",
+  },
+  taglinePremium: {
+    color: "#BFB38A",
   },
 });
