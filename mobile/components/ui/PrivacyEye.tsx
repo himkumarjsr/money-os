@@ -3,7 +3,7 @@
  */
 import Svg, { Circle, Path } from "react-native-svg";
 import { Pressable, type ViewStyle } from "react-native";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, onPrimaryAlpha, themedStyles } from "@/constants/theme";
 
 export function EyeIcon({
   open,
@@ -59,7 +59,7 @@ export function SectionPrivacyEye({
 }: {
   visible: boolean;
   onToggle: () => void;
-  /** White glass button for purple summary card */
+  /** Glass button for the primary summary card */
   light?: boolean;
   style?: ViewStyle;
 }) {
@@ -74,7 +74,7 @@ export function SectionPrivacyEye({
       <EyeIcon
         open={visible}
         size={light ? 18 : 16}
-        color={light ? "#FFFFFF" : Colors.primary}
+        color={light ? Colors.onPrimary : Colors.primary}
       />
     </Pressable>
   );
@@ -89,7 +89,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   btnLight: {
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: onPrimaryAlpha(0.16),
   },
   btnSection: {
     width: 32,

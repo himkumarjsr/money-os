@@ -368,6 +368,23 @@ export function tintBg(lightHex: string, strength = 0.22): string {
   return mixHex(Palettes[activeTheme].card, full, strength);
 }
 
+/** `onPrimary` at an alpha: muted text, buttons and tracks on a primary card. */
+export function onPrimaryAlpha(alpha: number): string {
+  const [r, g, b] = hexToRgb(Palettes[activeTheme].onPrimary);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * Status colours for text on a primary card. Light and dark themes keep the
+ * pale tones that read on purple; Premium's gold needs deep ones to pass
+ * WCAG contrast.
+ */
+export function onPrimaryStatus(tone: "good" | "warn" | "bad"): string {
+  if (activeTheme === "premium")
+    return { good: "#052E16", warn: "#3D2800", bad: "#4A0A0A" }[tone];
+  return { good: "#B3FFD9", warn: "#FFE08A", bad: "#FFB3B3" }[tone];
+}
+
 /** Dark text meant for a light tint; lightened so it stays readable on `tintBg()`. */
 export function tintFg(darkHex: string): string {
   return activeTheme === "light"
