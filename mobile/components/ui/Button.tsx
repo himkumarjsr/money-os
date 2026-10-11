@@ -36,7 +36,7 @@ function Button({
   }[variant];
 
   const textColor = {
-    primary: "#fff",
+    primary: Colors.onPrimary,
     secondary: Colors.primary,
     danger: "#fff",
     ghost: Colors.primary,

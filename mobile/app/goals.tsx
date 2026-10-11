@@ -7,49 +7,49 @@ import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { TrackerIcon } from "@/components/tracker/TrackerIcons";
-import { themedStyles, Colors } from "@/constants/theme";
+import { themedStyles, Colors, brand } from "@/constants/theme";
 
 const THEME = "#534AB7";
 
-const GOALS: Array<{
+const goals = (): Array<{
   id: string;
   icon: ReactNode;
   title: string;
   description: string;
-}> = [
+}> => [
   {
     id: "emergency",
-    icon: <AppIcon name="shield" size={32} color={THEME} />,
+    icon: <AppIcon name="shield" size={32} color={brand(THEME)} />,
     title: "Emergency Fund",
     description: "6–9 months of expenses saved",
   },
   {
     id: "home",
-    icon: <AppIcon name="home" size={32} color={THEME} />,
+    icon: <AppIcon name="home" size={32} color={brand(THEME)} />,
     title: "Buy a Home",
     description: "Save for down payment",
   },
   {
     id: "retirement",
-    icon: <AppIcon name="sunrise" size={32} color={THEME} />,
+    icon: <AppIcon name="sunrise" size={32} color={brand(THEME)} />,
     title: "Retirement Corpus",
     description: "25× annual expenses by retirement",
   },
   {
     id: "education",
-    icon: <TrackerIcon name="graduation" size={32} color={THEME} />,
+    icon: <TrackerIcon name="graduation" size={32} color={brand(THEME)} />,
     title: "Child Education",
     description: "Fund for children's education",
   },
   {
     id: "vehicle",
-    icon: <TrackerIcon name="car" size={32} color={THEME} />,
+    icon: <TrackerIcon name="car" size={32} color={brand(THEME)} />,
     title: "Buy a Vehicle",
     description: "Save for car or bike",
   },
   {
     id: "travel",
-    icon: <TrackerIcon name="plane" size={32} color={THEME} />,
+    icon: <TrackerIcon name="plane" size={32} color={brand(THEME)} />,
     title: "Dream Vacation",
     description: "Save for travel goals",
   },
@@ -71,7 +71,7 @@ export default function GoalsScreen() {
       </Pressable>
 
       <View style={{ gap: 12 }}>
-        {GOALS.map((g) => (
+        {goals().map((g) => (
           <View key={g.id} style={pageStyles.card}>
             <View style={styles.soon}>
               <Text style={styles.soonText}>COMING SOON</Text>
