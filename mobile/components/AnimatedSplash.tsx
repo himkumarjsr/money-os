@@ -1,8 +1,8 @@
 /**
  * Animated intro that takes over from the static native splash (Android and
- * iOS only allow a still image there). It starts on the same purple as the
- * native splash, fades into the theme's backdrop while the FK coin flips in,
- * then the wordmark rises. It fades out once the app is ready.
+ * iOS only allow a still image there). It starts on the native splash's FK
+ * coin, fades into the theme's backdrop while the coin flips twice and
+ * settles, then the wordmark rises. It fades out once the app is ready.
  */
 import { useEffect, useRef, useState } from "react";
 import {
@@ -160,31 +160,27 @@ export function AnimatedSplash({ ready, theme }: Props) {
       <View style={styles.center}>
         <Animated.View
           style={{
-            opacity: coin.interpolate({
-              inputRange: [0, 0.25, 1],
-              outputRange: [0, 1, 1],
-            }),
             transform: [
               { perspective: 800 },
               {
                 scale: coin.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.6, 1],
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [1, 0.82, 1],
                 }),
               },
               {
                 rotateY: Animated.add(
                   coin.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [-540, 0],
+                    outputRange: [-720, 0],
                   }),
                   spin.interpolate({
                     inputRange: [0, 1],
                     outputRange: [0, 360],
                   }),
                 ).interpolate({
-                  inputRange: [-540, 360],
-                  outputRange: ["-540deg", "360deg"],
+                  inputRange: [-720, 360],
+                  outputRange: ["-720deg", "360deg"],
                 }),
               },
             ],
