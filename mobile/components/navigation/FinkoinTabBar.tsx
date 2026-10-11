@@ -100,7 +100,14 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                 target: route.key,
                 canPreventDefault: true,
               });
-              if (!focused && !event.defaultPrevented) {
+              if (event.defaultPrevented) return;
+              if (name === "tracker") {
+                // Track is the "+": always open a new entry, even when already on Tracker.
+                (navigation.navigate as (name: string, params: object) => void)(
+                  route.name,
+                  { add: String(Date.now()) },
+                );
+              } else if (!focused) {
                 // Cast: tab route names are strings; RN nav typing is generic.
                 navigation.navigate(route.name as never);
               }
