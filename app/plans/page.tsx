@@ -6,6 +6,13 @@ import { useAuthStore } from "@/store/authStore";
 import AnimateOnScroll from "@/components/ui/AnimateOnScroll";
 import { fadeUp } from "@/lib/animations";
 import { m } from "framer-motion";
+import { useState } from "react";
+import { BillingToggle } from "@/components/ui/BillingToggle";
+import {
+  MONEY_MAP_FEATURE_LABEL,
+  planPriceDisplay,
+  type BillingPeriod,
+} from "@/lib/planPricing";
 
 const plans = [
   {
@@ -29,6 +36,7 @@ const plans = [
       { label: "AI fix plan with ₹ amounts", yes: true },
       { label: "Goal roadmap", yes: true },
       { label: "Smart debt advice", yes: true },
+      { label: MONEY_MAP_FEATURE_LABEL, yes: true },
       { label: "MF portfolio analysis", yes: false },
     ],
   },
@@ -38,6 +46,7 @@ const plans = [
     period: "/month",
     features: [
       { label: "Everything in Pro", yes: true },
+      { label: MONEY_MAP_FEATURE_LABEL, yes: true },
       { label: "MF portfolio analysis", yes: true },
       { label: "AI fund verdicts", yes: true },
       { label: "Portfolio migration", yes: true },
@@ -48,90 +57,128 @@ const plans = [
 export default function PlansPage() {
   const router = useRouter();
   const setSubscription = useAuthStore((s) => s.setSubscription);
+  const [billing, setBilling] = useState<BillingPeriod>("monthly");
 
   return (
     <div className="min-h-dvh bg-white px-4 py-10 text-slate-900 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <h1 className="text-3xl font-semibold">Choose your Finkoin plan</h1>
-        <p className="mt-2 text-slate-600">Upgrade instantly. You can test full product flow without payment now.</p>
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          {plans.map((plan, planIndex) => (
-            <AnimateOnScroll
-              key={plan.name}
-              variant={planIndex === 0 ? "slideInLeft" : planIndex === 1 ? "fadeUp" : "slideInRight"}
-              delay={planIndex * 0.1}
-              className={`rounded-2xl border p-6 ${plan.name === "Pro" ? "border-[#534AB7] ring-1 ring-[#534AB7]" : "border-slate-200"}`}
-            >
-              {plan.name === "Pro" ? (
-                <span className="inline-flex rounded-full bg-[#EEEDFE] px-2 py-1 text-xs font-semibold text-[#534AB7]">
-                  Most popular
-                </span>
-              ) : null}
-              <h2 className="mt-2 text-xl font-semibold">{plan.name}</h2>
-              <p className="mt-2">
-                <span className="text-3xl font-bold">{plan.price}</span>
-                <span className="text-slate-600"> {plan.period}</span>
-              </p>
-              <ul className="mt-4 space-y-2 text-sm">
-                {plan.features.map((feature, featureIndex) => (
-                  <m.li
-                    key={feature.label}
-                    variants={fadeUp}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    transition={{ delay: featureIndex * 0.04 }}
-                    className={feature.yes ? "text-slate-800" : "text-slate-500"}
-                  >
-                    {feature.yes ? "✓" : "✗"} {feature.label}
-                  </m.li>
-                ))}
-              </ul>
-              <div className="mt-6">
-                {plan.name === "Free" ? (
-                  <button
-                    type="button"
-                    onClick={() => router.push("/analyse")}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2 font-semibold"
-                  >
-                    Start free
-                  </button>
-                ) : null}
-                {plan.name === "Pro" ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // TODO: Replace with Razorpay later
-                      setSubscription("pro");
-                      router.push("/analyse/result");
-                    }}
-                    className="w-full rounded-xl bg-[#534AB7] px-4 py-2 font-semibold text-white"
-                  >
-                    Get Pro
-                  </button>
-                ) : null}
-                {plan.name === "Pro Max" ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // TODO: Replace with Razorpay later
-                      setSubscription("promax");
-                      router.push("/analyse/result");
-                    }}
-                    className="w-full rounded-xl bg-[#534AB7] px-4 py-2 font-semibold text-white"
-                  >
-                    Get Pro Max
-                  </button>
-                ) : null}
-              </div>
-            </AnimateOnScroll>
-          ))}
+        <p className="mt-2 text-slate-600">
+          Upgrade instantly. You can test full product flow without payment now.
+        </p>
+        <div className="mt-6">
+          <BillingToggle value={billing} onChange={setBilling} />
         </div>
-        <Link href="/" className="mt-8 inline-flex text-sm font-semibold text-[#534AB7] hover:underline">
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {plans.map((plan, planIndex) => {
+            const paidId =
+              plan.name === "Pro"
+                ? "pro"
+                : plan.name === "Pro Max"
+                  ? "promax"
+                  : null;
+            const shown = paidId ? planPriceDisplay(paidId, billing) : null;
+            return (
+              <AnimateOnScroll
+                key={plan.name}
+                variant={
+                  planIndex === 0
+                    ? "slideInLeft"
+                    : planIndex === 1
+                      ? "fadeUp"
+                      : "slideInRight"
+                }
+                delay={planIndex * 0.1}
+                className={`rounded-2xl border p-6 ${plan.name === "Pro" ? "border-[#534AB7] ring-1 ring-[#534AB7]" : "border-slate-200"}`}
+              >
+                {plan.name === "Pro" ? (
+                  <span className="inline-flex rounded-full bg-[#EEEDFE] px-2 py-1 text-xs font-semibold text-[#534AB7]">
+                    Most popular
+                  </span>
+                ) : null}
+                <h2 className="mt-2 text-xl font-semibold">{plan.name}</h2>
+                <p className="mt-2">
+                  <span className="text-3xl font-bold">
+                    {shown ? shown.price : plan.price}
+                  </span>
+                  <span className="text-slate-600">
+                    {" "}
+                    {shown ? shown.period : plan.period}
+                  </span>
+                  {shown?.saveLabel ? (
+                    <span className="ml-2 inline-flex rounded-full bg-[#EEEDFE] px-2 py-0.5 text-xs font-semibold text-[#534AB7]">
+                      {shown.saveLabel}
+                    </span>
+                  ) : null}
+                </p>
+                {shown?.note ? (
+                  <p className="mt-1 text-sm text-slate-600">{shown.note}</p>
+                ) : null}
+                <ul className="mt-4 space-y-2 text-sm">
+                  {plan.features.map((feature, featureIndex) => (
+                    <m.li
+                      key={feature.label}
+                      variants={fadeUp}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true }}
+                      transition={{ delay: featureIndex * 0.04 }}
+                      className={
+                        feature.yes ? "text-slate-800" : "text-slate-500"
+                      }
+                    >
+                      {feature.yes ? "✓" : "✗"} {feature.label}
+                    </m.li>
+                  ))}
+                </ul>
+                <div className="mt-6">
+                  {plan.name === "Free" ? (
+                    <button
+                      type="button"
+                      onClick={() => router.push("/analyse")}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2 font-semibold"
+                    >
+                      Start free
+                    </button>
+                  ) : null}
+                  {plan.name === "Pro" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // TODO: Replace with Razorpay later
+                        setSubscription("pro");
+                        router.push("/analyse/result");
+                      }}
+                      className="w-full rounded-xl bg-[#534AB7] px-4 py-2 font-semibold text-white"
+                    >
+                      Get Pro
+                    </button>
+                  ) : null}
+                  {plan.name === "Pro Max" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // TODO: Replace with Razorpay later
+                        setSubscription("promax");
+                        router.push("/analyse/result");
+                      }}
+                      className="w-full rounded-xl bg-[#534AB7] px-4 py-2 font-semibold text-white"
+                    >
+                      Get Pro Max
+                    </button>
+                  ) : null}
+                </div>
+              </AnimateOnScroll>
+            );
+          })}
+        </div>
+        <Link
+          href="/"
+          className="mt-8 inline-flex text-sm font-semibold text-[#534AB7] hover:underline"
+        >
           ← Back to home
         </Link>
       </div>
     </div>
   );
 }
-

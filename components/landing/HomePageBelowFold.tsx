@@ -8,7 +8,9 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { trackCta } from "@/lib/gtag";
 import { m, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { BillingToggle } from "@/components/ui/BillingToggle";
+import { planPriceDisplay, type BillingPeriod } from "@/lib/planPricing";
 
 const features = [
   {
@@ -53,6 +55,7 @@ const pricing = [
       "AI fix plan plus optional chat with a qualified advisor for clarifications.",
     cta: { label: "Get Pro — ₹49/mo", href: "/plans", highlight: true },
     popular: true,
+    planId: "pro",
   },
   {
     name: "Pro Max",
@@ -61,10 +64,12 @@ const pricing = [
     description:
       "Full workspace: goals, automations, exports, and priority support.",
     cta: { label: "Get Pro Max — ₹99/mo", href: "/plans", highlight: false },
+    planId: "promax",
   },
 ] as const;
 
 export default function HomePageBelowFold() {
+  const [billing, setBilling] = useState<BillingPeriod>("monthly");
   return (
     <>
       <TrackImpression component_id="home_top_picks" threshold={0.18}>
@@ -249,62 +254,84 @@ export default function HomePageBelowFold() {
               Start free. Upgrade when you want a human in the loop.
             </p>
           </AnimateOnScroll>
+          <div className="mt-6 text-center">
+            <BillingToggle value={billing} onChange={setBilling} />
+          </div>
           <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
-            {pricing.map((tier, index) => (
-              <AnimateOnScroll
-                key={tier.name}
-                variant={
-                  index === 0
-                    ? "slideInLeft"
-                    : index === 1
-                      ? "fadeUp"
-                      : "slideInRight"
-                }
-                delay={index * 0.1}
-                aboveFold
-                className={`relative flex flex-col overflow-hidden rounded-2xl border p-6 shadow-lg shadow-indigo-500/[0.06] backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/15 sm:p-7 ${
-                  tier.cta.highlight
-                    ? "border-indigo-400/70 bg-white/80 ring-2 ring-indigo-500/30"
-                    : "border-white/70 bg-white/65"
-                }`}
-              >
-                {"popular" in tier && tier.popular ? (
-                  <span className="absolute right-4 top-4 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md shadow-indigo-500/30">
-                    Most Popular
-                  </span>
-                ) : null}
-                <p className="text-sm font-semibold text-slate-600">
-                  {tier.name}
-                </p>
-                <p className="mt-2 flex items-baseline gap-1">
-                  <span className="text-3xl font-semibold tracking-tight text-slate-900">
-                    {tier.price}
-                  </span>
-                  <span className="text-slate-600">{tier.period}</span>
-                </p>
-                <p className="mt-4 flex-1 text-sm leading-relaxed text-slate-600">
-                  {tier.description}
-                </p>
-                <Link
-                  href={tier.cta.href}
-                  onClick={() =>
-                    trackCta({
-                      cta_name: tier.cta.label,
-                      cta_location: "home_pricing",
-                      href: tier.cta.href,
-                      tier: tier.name,
-                    })
+            {pricing.map((tier, index) => {
+              const shown =
+                "planId" in tier
+                  ? planPriceDisplay(tier.planId, billing)
+                  : null;
+              const ctaLabel = shown
+                ? `Get ${tier.name} — ${shown.price}${shown.periodShort}`
+                : tier.cta.label;
+              return (
+                <AnimateOnScroll
+                  key={tier.name}
+                  variant={
+                    index === 0
+                      ? "slideInLeft"
+                      : index === 1
+                        ? "fadeUp"
+                        : "slideInRight"
                   }
-                  className={`relative mt-6 inline-flex min-h-11 items-center justify-center rounded-xl text-center text-sm font-semibold no-underline transition duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.99] ${
+                  delay={index * 0.1}
+                  aboveFold
+                  className={`relative flex flex-col overflow-hidden rounded-2xl border p-6 shadow-lg shadow-indigo-500/[0.06] backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/15 sm:p-7 ${
                     tier.cta.highlight
-                      ? "bg-[#534AB7] text-white shadow-md shadow-indigo-500/25 hover:bg-[#44399a] hover:shadow-indigo-500/35"
-                      : "border border-slate-300 bg-white text-slate-900 hover:border-indigo-300 hover:bg-white"
-                  } `}
+                      ? "border-indigo-400/70 bg-white/80 ring-2 ring-indigo-500/30"
+                      : "border-white/70 bg-white/65"
+                  }`}
                 >
-                  {tier.cta.label}
-                </Link>
-              </AnimateOnScroll>
-            ))}
+                  {"popular" in tier && tier.popular ? (
+                    <span className="absolute right-4 top-4 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md shadow-indigo-500/30">
+                      Most Popular
+                    </span>
+                  ) : null}
+                  <p className="text-sm font-semibold text-slate-600">
+                    {tier.name}
+                  </p>
+                  <p className="mt-2 flex items-baseline gap-1">
+                    <span className="text-3xl font-semibold tracking-tight text-slate-900">
+                      {shown ? shown.price : tier.price}
+                    </span>
+                    <span className="text-slate-600">
+                      {shown ? shown.periodShort : tier.period}
+                    </span>
+                    {shown?.saveLabel ? (
+                      <span className="ml-2 rounded-full bg-[#EEEDFE] px-2 py-0.5 text-xs font-semibold text-[#534AB7]">
+                        {shown.saveLabel}
+                      </span>
+                    ) : null}
+                  </p>
+                  {shown?.note ? (
+                    <p className="mt-1 text-xs text-slate-600">{shown.note}</p>
+                  ) : null}
+                  <p className="mt-4 flex-1 text-sm leading-relaxed text-slate-600">
+                    {tier.description}
+                  </p>
+                  <Link
+                    href={tier.cta.href}
+                    onClick={() =>
+                      trackCta({
+                        cta_name: ctaLabel,
+                        cta_location: "home_pricing",
+                        href: tier.cta.href,
+                        tier: tier.name,
+                      })
+                    }
+                    className={`relative mt-6 inline-flex min-h-11 items-center justify-center rounded-xl text-center text-sm font-semibold no-underline transition duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.99] ${
+                      tier.cta.highlight
+                        ? "bg-[#534AB7] text-white shadow-md shadow-indigo-500/25 hover:bg-[#44399a] hover:shadow-indigo-500/35"
+                        : "border border-slate-300 bg-white text-slate-900 hover:border-indigo-300 hover:bg-white"
+                    } `}
+                  >
+                    {ctaLabel}
+                  </Link>
+                </AnimateOnScroll>
+              );
+            })}
           </div>
         </div>
       </StorySection>
