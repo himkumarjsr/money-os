@@ -31,3 +31,23 @@ export function canOpenFixPlanDirectly(
 export function canViewFixPlan(tier: string | null | undefined): boolean {
   return !PAYMENTS_ENABLED || canOpenFixPlanDirectly(tier);
 }
+
+/** Emails that unlock Pro UX without payment (same list as web subscriptionBypass). */
+const PRO_PAYWALL_BYPASS_EMAILS = ["finkoin.os@gmail.com"];
+
+/**
+ * Money Map is Pro only: Pro / Pro Max tier from the user row, admins and the
+ * internal bypass account, like web `canViewMoneyMap`. Unlike the Fix Plan it
+ * stays locked while PAYMENTS_ENABLED is false: free users see the teaser.
+ */
+export function canViewMoneyMap(opts: {
+  tier: string | null | undefined;
+  email?: string | null;
+  isAdmin?: boolean | null;
+}): boolean {
+  if (opts.isAdmin) return true;
+  const tier = String(opts.tier ?? "").toLowerCase();
+  if (tier === "pro" || tier === "promax" || tier === "admin") return true;
+  const e = opts.email?.trim().toLowerCase();
+  return !!e && PRO_PAYWALL_BYPASS_EMAILS.includes(e);
+}

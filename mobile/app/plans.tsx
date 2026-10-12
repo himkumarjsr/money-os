@@ -4,11 +4,18 @@
  * are off (store billing rules), so Pro / Pro Max show "Available soon in the
  * app" instead of calling setSubscription.
  */
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";
 import { openContentHref } from "@/lib/contentLinks";
+import { BillingToggle } from "@/components/ui/BillingToggle";
+import {
+  MONEY_MAP_FEATURE_LABEL,
+  planPriceDisplay,
+  type BillingPeriod,
+} from "@/lib/planPricing";
 
 const plans = [
   {
@@ -32,6 +39,7 @@ const plans = [
       { label: "AI fix plan with ₹ amounts", yes: true },
       { label: "Goal roadmap", yes: true },
       { label: "Smart debt advice", yes: true },
+      { label: MONEY_MAP_FEATURE_LABEL, yes: true },
       { label: "MF portfolio analysis", yes: false },
     ],
   },
@@ -41,6 +49,7 @@ const plans = [
     period: "/month",
     features: [
       { label: "Everything in Pro", yes: true },
+      { label: MONEY_MAP_FEATURE_LABEL, yes: true },
       { label: "MF portfolio analysis", yes: true },
       { label: "AI fund verdicts", yes: true },
       { label: "Portfolio migration", yes: true },
@@ -49,6 +58,7 @@ const plans = [
 ] as const;
 
 export default function PlansScreen() {
+  const [billing, setBilling] = useState<BillingPeriod>("monthly");
   return (
     <ContentScreen barTitle="Plans">
       <Text style={styles.h1}>Choose your Finkoin plan</Text>
@@ -57,9 +67,20 @@ export default function PlansScreen() {
         early access.
       </Text>
 
-      <View style={{ marginTop: 32, gap: 16 }}>
+      <View style={{ marginTop: 24 }}>
+        <BillingToggle value={billing} onChange={setBilling} />
+      </View>
+
+      <View style={{ marginTop: 24, gap: 16 }}>
         {plans.map((plan) => {
           const popular = plan.name === "Pro";
+          const paidId =
+            plan.name === "Pro"
+              ? "pro"
+              : plan.name === "Pro Max"
+                ? "promax"
+                : null;
+          const shown = paidId ? planPriceDisplay(paidId, billing) : null;
           return (
             <View
               key={plan.name}
@@ -72,9 +93,22 @@ export default function PlansScreen() {
               ) : null}
               <Text style={styles.planName}>{plan.name}</Text>
               <Text style={styles.priceRow}>
-                <Text style={styles.price}>{plan.price}</Text>
-                <Text style={styles.period}> {plan.period}</Text>
+                <Text style={styles.price}>
+                  {shown ? shown.price : plan.price}
+                </Text>
+                <Text style={styles.period}>
+                  {" "}
+                  {shown ? shown.period : plan.period}
+                </Text>
               </Text>
+              {shown?.saveLabel ? (
+                <View style={styles.saveBadge}>
+                  <Text style={styles.badgeText}>{shown.saveLabel}</Text>
+                </View>
+              ) : null}
+              {shown?.note ? (
+                <Text style={styles.priceNote}>{shown.note}</Text>
+              ) : null}
               <View style={{ marginTop: 16, gap: 8 }}>
                 {plan.features.map((f) => (
                   <Text
@@ -154,6 +188,15 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
   },
   priceRow: { marginTop: 8 },
+  saveBadge: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: Colors.primaryLight,
+  },
+  priceNote: { marginTop: 4, fontSize: 14, color: Colors.textSecondary },
   price: { fontSize: 30, fontWeight: "700", color: Colors.textPrimary },
   period: { fontSize: 16, color: Colors.textSecondary },
   featYes: { fontSize: 14, color: Colors.textPrimary },

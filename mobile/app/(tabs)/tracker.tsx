@@ -57,7 +57,14 @@ import {
   type SavedExpense,
   type TrackerTxn,
 } from "@/components/tracker/AddExpenseSheet";
+import { MoneyMapCard } from "@/components/tracker/MoneyMapCard";
 import { MonthSafetyPulse } from "@/components/tracker/MonthSafetyPulse";
+import { canViewMoneyMap } from "@/lib/analyseEntitlement";
+import {
+  fetchNatureRows,
+  type NatureRowsResult,
+} from "@/lib/trackerNatureFetch";
+import { buildNatureReport } from "@/lib/trackerNatureReport";
 import { ObligationsChecklist } from "@/components/tracker/ObligationsChecklist";
 import {
   TRACKER_CATEGORIES,
@@ -592,6 +599,47 @@ export default function TrackerScreen() {
   useEffect(() => {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
+
+  // Money Map: the last 6 months by nature, in one range query. Reloads when
+  // this month's rows change (add / edit / delete), not when the month tab moves.
+  const [natureData, setNatureData] = useState<NatureRowsResult | null>(null);
+  const natureSig = `${transactions.length}:${transactions.reduce((a, t) => a + Number(t.amount || 0), 0)}`;
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    let cancelled = false;
+    const now = new Date();
+    void fetchNatureRows(
+      getSupabase(),
+      user.id,
+      now.getFullYear(),
+      now.getMonth(),
+    )
+      .then((res) => {
+        if (!cancelled && res.ok) setNatureData(res);
+      })
+      .catch(() => {
+        /* Money Map simply stays hidden */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasConsent, user?.id, natureSig]);
+  const natureReport = useMemo(
+    () =>
+      natureData
+        ? buildNatureReport({
+            rows: natureData.rows,
+            emiSources: natureData.emiSources,
+            profileSalary: profileMonthlyFromDb,
+          })
+        : null,
+    [natureData, profileMonthlyFromDb],
+  );
+  const moneyMapUnlocked = canViewMoneyMap({
+    tier: user?.subscriptionTier,
+    email: user?.email,
+    isAdmin: user?.isAdmin,
+  });
 
   // The Track button in the bottom nav is the "+": every tap passes a fresh
   // `add` param, and each new one opens a new entry.
@@ -1526,6 +1574,11 @@ export default function TrackerScreen() {
           />
         }
       >
+        <MoneyMapCard
+          report={natureReport}
+          locked={!moneyMapUnlocked}
+          forceVisible={allVisible}
+        />
         {/* Summary card — flips like a coin to reveal amounts (PWA parity). */}
         <View>
           <Animated.View
