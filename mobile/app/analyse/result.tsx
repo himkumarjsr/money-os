@@ -5,7 +5,7 @@
  */
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, type Href } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
@@ -17,7 +17,6 @@ import { canOpenFixPlanDirectly } from "@/lib/analyseEntitlement";
 import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import Button from "@/components/ui/Button";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { IssueCard } from "@/components/analyse/IssueCard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AnalyseErrorBoundary } from "@/components/analyse/AnalyseErrorBoundary";
 import { PaywallSheet } from "@/components/analyse/PaywallSheet";
@@ -36,23 +35,32 @@ import {
   SafetyNetSection,
 } from "@/components/analyse/result/ResultSections";
 import { GoalsSection } from "@/components/analyse/result/GoalsSection";
+import FeedbackCard from "@/components/FeedbackCard";
 import { PremiumRdCard } from "@/components/analyse/result/PremiumRdCard";
 import { openContentHref } from "@/lib/contentLinks";
 import { maybeAskForReview } from "@/lib/storeReview";
+import { hasAnalyseConsent } from "@/lib/analyseConsent";
+import { getUniversalCaps } from "@/lib/universal-buckets";
 
-function goBack() {
-  if (router.canGoBack()) router.back();
-  else router.replace("/(tabs)/analyse");
+/** Web `/analyse`: skips consent when it was already given. */
+async function goToForm(userId: string | undefined, replace = false) {
+  const ok = userId ? await hasAnalyseConsent(userId) : false;
+  const href = ok ? "/analyse/form" : "/analyse/consent";
+  if (replace) router.replace(href);
+  else router.push(href);
 }
 
-function Header() {
+function Header({ userId }: { userId?: string }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+      <TouchableOpacity
+        onPress={() => void goToForm(userId, true)}
+        hitSlop={12}
+        style={styles.back}
+        accessibilityRole="button"
+      >
+        <Text style={styles.backText}>← Back to form</Text>
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Full report</Text>
-      <View style={{ width: 64 }} />
     </View>
   );
 }
@@ -145,7 +153,7 @@ function AnalyseResultContent() {
   if (!result || !lastSubmission || !priorityPlan || !model) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        <Header />
+        <Header userId={user?.id} />
         <View style={styles.empty}>
           <AppIcon name="chart" size={44} color={Colors.primaryText} />
           <Text style={styles.emptyTitle}>No analysis found</Text>
@@ -154,7 +162,7 @@ function AnalyseResultContent() {
           </Text>
           <Button
             label="Start analysis →"
-            onPress={() => router.replace("/analyse/consent")}
+            onPress={() => void goToForm(user?.id, true)}
             style={{ marginTop: 20, minHeight: 48 }}
             fullWidth={false}
           />
@@ -178,11 +186,9 @@ function AnalyseResultContent() {
     setPaywallOpen(true);
   };
 
-  const issues = (result.issues ?? []).slice(0, 8);
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Header />
+      <Header userId={user?.id} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -191,7 +197,10 @@ function AnalyseResultContent() {
         <MonthlySummaryCard model={model} />
         <NetWorthCard model={model} />
         <BucketCapsSection model={model} />
-        <GaugesSection profile={lastSubmission} />
+        <GaugesSection
+          profile={lastSubmission}
+          loanCap={getUniversalCaps(lastSubmission).loans}
+        />
         <SafetyNetSection
           model={model}
           onTermLearn={() =>
@@ -205,38 +214,20 @@ function AnalyseResultContent() {
 
         <GoalsSection profile={lastSubmission} userId={user?.id} />
 
-        {issues.length > 0 ? (
-          <View>
-            <Text style={styles.sectionTitle}>What needs attention</Text>
-            {issues.map((issue, i) => (
-              <View
-                key={`${issue.code}-${i}`}
-                style={{ marginBottom: Spacing.md }}
-              >
-                <IssueCard severity={issue.severity} title={issue.message} />
-              </View>
-            ))}
-          </View>
-        ) : null}
-
         <PlanTeaserSection
           model={model}
           surplusBreakdown={!!priorityPlan.surplusBreakdown}
           onUnlock={handleUnlock}
         />
 
+        <FeedbackCard pageContext="analyse" />
+
         <KeepGoingSection
-          onTax={() => router.push("/calculators/tax-regime" as Href)}
+          onTax={() => openContentHref("/calculators/tax-regime-2026")}
           onTracker={() => router.push("/(tabs)/tracker")}
           onLearn={() => openContentHref("/learn")}
         />
 
-        <Button
-          label="Retake health check"
-          variant="secondary"
-          onPress={() => router.push("/analyse/consent")}
-          style={{ minHeight: 52 }}
-        />
       </ScrollView>
 
       <PaywallSheet
@@ -266,7 +257,7 @@ const styles = themedStyles(() => ({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     minHeight: 52,
@@ -276,11 +267,6 @@ const styles = themedStyles(() => ({
     fontSize: FontSize.md,
     fontWeight: "700",
     color: Colors.primaryText,
-  },
-  headerTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: "800",
-    color: Colors.textPrimary,
   },
   scroll: {
     paddingHorizontal: Spacing.lg,

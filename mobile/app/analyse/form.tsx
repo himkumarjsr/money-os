@@ -50,6 +50,8 @@ import {
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
+import { CoinSpinner } from "@/components/ui/LoadingSpinner";
+import { runPostSubmitChain } from "@/components/analyse/postSubmit";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
 import {
   Colors,
@@ -182,7 +184,6 @@ export default function AnalyseFormScreen() {
   const emergencyAutoFilledRef = useRef(false);
 
   const values = watch();
-  const isFormDirty = methods.formState.isDirty;
   const emergencyTargetEdited =
     !!methods.formState.dirtyFields.emergencyFundTarget ||
     !!methods.formState.touchedFields.emergencyFundTarget;
@@ -668,6 +669,13 @@ export default function AnalyseFormScreen() {
             .getState()
             .syncFromHealthCheck(uid, savedProfile, previousProfile)
             .catch((err) => console.warn("Obligation sync failed:", err));
+
+          // Web parity: AI plan prefetch, encrypted save, fix-plan cache warm.
+          void runPostSubmitChain({
+            uid,
+            profile: savedProfile,
+            result: nextResult,
+          }).catch((err) => console.warn("Post-submit AI chain failed:", err));
         } catch (err) {
           console.warn("Post-submit snapshot failed:", err);
         }
@@ -714,30 +722,14 @@ export default function AnalyseFormScreen() {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [reset, replaceLoans, clearErrors, scrollRef]);
 
-  const leaveForm = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/");
-  }, []);
-
-  /** Shared by the header ← and Android hardware back: step back, or leave from step 1. */
+  /** Web: step back, or from step 1 leave to home with no confirmation. */
   const handleBack = useCallback(() => {
     if (step > 0) {
       goBack();
       return;
     }
-    if (!isFormDirty) {
-      leaveForm();
-      return;
-    }
-    Alert.alert(
-      "Leave the health check?",
-      "Your progress is saved as a draft — you can pick up where you left off.",
-      [
-        { text: "Stay", style: "cancel" },
-        { text: "Leave", onPress: leaveForm },
-      ],
-    );
-  }, [step, goBack, leaveForm, isFormDirty]);
+    router.replace("/(tabs)");
+  }, [step, goBack]);
 
   useFocusEffect(
     useCallback(() => {
@@ -760,19 +752,15 @@ export default function AnalyseFormScreen() {
           <TouchableOpacity
             onPress={handleBack}
             style={styles.backBtn}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Text style={styles.backText}>←</Text>
+            <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
-          <View style={styles.stepInfo}>
-            <Text style={styles.stepLabel}>
-              Step {step + 1} of {STEPS.length}
-            </Text>
-            <Text style={styles.stepTitle} numberOfLines={1}>
-              {STEPS[step]?.title ?? "Profile"}
-            </Text>
-          </View>
+          <Text style={styles.stepLabel}>
+            Step {step + 1} of {STEPS.length}
+          </Text>
         </View>
         <ProgressPills step={step} onJump={jumpToStep} />
 
@@ -853,11 +841,16 @@ export default function AnalyseFormScreen() {
                   },
                 ]}
               >
-                <Text style={styles.primaryText}>
-                  {isSubmitting
-                    ? "Analysing your finances…"
-                    : "Analyse my finances →"}
-                </Text>
+                {isSubmitting ? (
+                  <View style={styles.submitRow}>
+                    <CoinSpinner size={22} />
+                    <Text style={styles.primaryText}>
+                      Analysing your finances…
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.primaryText}>Analyse my finances →</Text>
+                )}
               </Pressable>
             ) : (
               <Pressable
@@ -883,35 +876,22 @@ const styles = themedStyles(() => ({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
     gap: Spacing.md,
   },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
+  backBtn: { minHeight: 44, justifyContent: "center" },
   backText: {
-    fontSize: FontSize.xl,
-    color: Colors.textSecondary,
+    fontSize: FontSize.base,
+    fontWeight: "600",
+    color: Colors.primaryText,
   },
-  stepInfo: { flex: 1, gap: 2 },
   stepLabel: {
     fontSize: FontSize.md,
     color: Colors.textMuted,
     fontWeight: "600",
-  },
-  stepTitle: {
-    fontSize: FontSize.lg,
-    color: Colors.textPrimary,
-    fontWeight: "800",
   },
   scroll: { flex: 1 },
   scrollContent: {
@@ -949,6 +929,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
     paddingHorizontal: 16,
   },
+  submitRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   primaryText: { fontSize: 16, fontWeight: "700", color: Colors.onPrimary },
   errorBanner: {
     borderRadius: 8,

@@ -26,18 +26,11 @@ export function FixPlanLoader({ label }: { label?: string }) {
   );
 }
 
-export function FixPlanError({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
+/** Web: plain "Unable to generate fix plan. {aiError}" — no retry button. */
+export function FixPlanError({ message }: { message: string }) {
   return (
     <View style={styles.center}>
-      <Text style={styles.title}>Unable to generate fix plan.</Text>
-      {message ? <Text style={styles.sub}>{message}</Text> : null}
-      <Button label="Try again" onPress={onRetry} style={styles.btn} />
+      <Text style={styles.sub}>Unable to generate fix plan. {message}</Text>
     </View>
   );
 }

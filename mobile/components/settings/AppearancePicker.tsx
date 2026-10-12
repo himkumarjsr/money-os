@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useThemeStore, type ThemePreference } from "@/store/themeStore";
 
 const OPTIONS: { value: ThemePreference; label: string; hint: string }[] = [
-  { value: "system", label: "System", hint: "Follows your phone" },
+  { value: "system", label: "System", hint: "Follows your device" },
   { value: "light", label: "Light", hint: "Bright and clean" },
   { value: "dark", label: "Dark", hint: "Easy on the eyes" },
   { value: "premium", label: "Gold", hint: "Black and gold · Premium" },
@@ -79,7 +79,7 @@ export function AppearancePicker() {
       {!unlocked ? (
         <View style={styles.note}>
           <Text style={styles.noteTitle}>
-            How to unlock Premium and the Gold theme
+            How to unlock Premium
           </Text>
           <Text style={styles.noteText}>
             Generate your report and keep a {PREMIUM_STREAK_DAYS}-day streak
@@ -98,7 +98,7 @@ export function AppearancePicker() {
         </View>
       ) : (
         <Text style={styles.unlocked}>
-          Premium unlocked. The Gold theme is yours to try, any time.
+          Premium unlocked. The Gold theme is yours to try anytime.
         </Text>
       )}
     </View>

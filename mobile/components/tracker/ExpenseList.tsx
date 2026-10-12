@@ -58,6 +58,14 @@ export function ExpenseList({
 
   return (
     <View>
+      <View style={[styles.row, styles.headerRow]}>
+        <Text style={[styles.headCell, styles.colDate]}>Date</Text>
+        <Text style={[styles.headCell, styles.colCategory]}>Category</Text>
+        <Text style={[styles.headCell, styles.colNote]}>Note</Text>
+        <Text style={[styles.headCell, styles.colAmount, styles.right]}>
+          Amount
+        </Text>
+      </View>
       {transactions.map((t, i) => {
         const bucketKey = t.bucket as BucketType;
         const bucket = TRACKER_CATEGORIES[bucketKey];
@@ -76,31 +84,33 @@ export function ExpenseList({
             ]}
           >
             <View style={styles.rowTop}>
-              {bucket ? (
-                <TrackerIcon
-                  name={sub?.icon ?? bucket.icon}
-                  size={18}
-                  color={bucket.color}
-                />
-              ) : null}
-              <View style={styles.rowText}>
-                <Text style={styles.category} numberOfLines={1}>
+              <Text style={[styles.cell, styles.colDate]}>
+                {new Date(t.date).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </Text>
+              <View style={[styles.colCategory, styles.categoryWrap]}>
+                {bucket ? (
+                  <TrackerIcon
+                    name={sub?.icon ?? bucket.icon}
+                    size={16}
+                    color={bucket.color}
+                  />
+                ) : null}
+                <Text style={[styles.cell, { flexShrink: 1 }]}>
                   {sub?.label ?? t.category}
                 </Text>
-                <Text style={styles.meta} numberOfLines={1}>
-                  {new Date(t.date).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                  {note ? ` · ${note}` : ""}
-                </Text>
               </View>
-              <View style={styles.amountWrap}>
+              <Text style={[styles.noteText, styles.colNote]} numberOfLines={2}>
+                {note || "—"}
+              </Text>
+              <View style={[styles.colAmount, styles.amountWrap]}>
                 {onCard ? (
                   <View
                     style={styles.cardChip}
-                    accessibilityLabel="Paid by credit card — not in purple LEFT or bucket totals"
+                    accessibilityLabel="Paid by credit card"
                   >
                     <AppIcon name="card" size={12} color={Colors.primaryText} />
                     <Text style={styles.cardChipText}>Card</Text>
@@ -160,11 +170,24 @@ const styles = themedStyles(() => ({
   },
   row: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: Colors.background },
-  rowTop: { flexDirection: "row", alignItems: "center", gap: 10 },
-  rowText: { flex: 1, minWidth: 0 },
-  category: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
-  meta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  amountWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
+  rowTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  headCell: { fontSize: 12, fontWeight: "700", color: Colors.textPrimary },
+  right: { textAlign: "right" },
+  cell: { fontSize: 12, fontWeight: "600", color: Colors.textPrimary },
+  noteText: { fontSize: 12, color: Colors.textPrimary },
+  colDate: { width: 66 },
+  colCategory: { flex: 1.1, minWidth: 0 },
+  colNote: { flex: 1, minWidth: 0 },
+  colAmount: { width: 74 },
+  categoryWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
+  amountWrap: { alignItems: "flex-end", gap: 4 },
   cardChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -175,7 +198,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.primaryLight,
   },
   cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primaryText },
-  amount: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
+  amount: { fontSize: 13, fontWeight: "700", color: Colors.textPrimary },
   actions: { flexDirection: "row", justifyContent: "flex-end", gap: 4 },
   actionBtn: {
     minHeight: 44,

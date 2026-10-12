@@ -1,9 +1,13 @@
 import { useMemo } from "react";
-import { Pressable, ScrollView, Share, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, themedStyles } from "@/constants/theme";
-import { AppIcon } from "@/components/ui/AppIcon";
+import { ShareButton } from "@/components/ui/ShareButton";
+import {
+  CalculatorRelatedLinks,
+  TaxExploreMore,
+} from "@/components/calculators/CalculatorRelatedLinks";
 import { CATEGORIES, type CalcItem } from "@/constants/calculator-config";
 import { calculatorsById } from "@/components/calculators/registry";
 import { useKeyboardSheet } from "@/lib/useKeyboardSheet";
@@ -34,19 +38,6 @@ export default function CalculatorScreen() {
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace("/(tabs)/calculators");
-  };
-
-  const onShare = async () => {
-    if (!item) return;
-    const url = `${siteBase()}${sharePath(id)}`;
-    try {
-      await Share.share({
-        title: `${item.title} | Finkoin`,
-        message: `${item.title} | Finkoin\n${url}`,
-      });
-    } catch {
-      // User dismissed or share unavailable.
-    }
   };
 
   return (
@@ -82,42 +73,26 @@ export default function CalculatorScreen() {
       >
         <View style={styles.card} onFocus={onFocusWithin}>
           <View style={styles.headRow}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={styles.titleRow}>
-                {item?.icon ? (
-                  <AppIcon
-                    name={item.icon}
-                    size={20}
-                    color={Colors.primaryText}
-                  />
-                ) : null}
-                <Text style={styles.title}>{item?.title ?? "Calculator"}</Text>
-              </View>
-              {item?.blurb ? (
-                <Text style={styles.blurb}>{item.blurb}</Text>
-              ) : null}
-            </View>
+            <Text style={styles.blurb}>{item?.blurb ?? ""}</Text>
             {item ? (
-              <Pressable
-                onPress={() => void onShare()}
-                style={styles.shareBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Share calculator"
-              >
-                <Text style={styles.shareText}>Share</Text>
-              </Pressable>
+              <ShareButton
+                title={`${item.title} | Finkoin`}
+                url={`${siteBase()}${sharePath(id)}`}
+              />
             ) : null}
           </View>
           <View style={{ marginTop: 20 }}>
             {Calc ? (
               <Calc />
             ) : (
-              <Text style={styles.blurb}>
+              <Text style={styles.fallback}>
                 This calculator isn&apos;t available yet.
               </Text>
             )}
           </View>
         </View>
+        <CalculatorRelatedLinks calcId={id} />
+        {id === "tax-regime" ? <TaxExploreMore /> : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -167,27 +142,12 @@ const styles = themedStyles(() => ({
     padding: 16,
   },
   headRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-    flexShrink: 1,
-  },
+  fallback: { fontSize: 14, lineHeight: 20, color: Colors.textSecondary },
   blurb: {
-    marginTop: 4,
+    flex: 1,
+    minWidth: 0,
     fontSize: 14,
     lineHeight: 20,
     color: Colors.textSecondary,
   },
-  shareBtn: {
-    minHeight: 44,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shareText: { fontSize: 13, fontWeight: "700", color: Colors.primaryText },
 }));

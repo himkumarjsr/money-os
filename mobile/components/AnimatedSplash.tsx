@@ -25,7 +25,7 @@ const SPLASH_BG = "#534AB7"; // matches app.json splash backgroundColor
 const MIN_VISIBLE_MS = 1900;
 
 const BACKDROP: Record<ThemeName, string> = {
-  light: "linear-gradient(160deg, #5A51C4 0%, #463DA6 55%, #3C3489 100%)",
+  light: "linear-gradient(165deg, #5F56C4 0%, #534AB7 48%, #3C3489 100%)",
   dark: "linear-gradient(160deg, #1E1A44 0%, #12102A 55%, #1A1638 100%)",
   premium: HERO_GRADIENT,
 };

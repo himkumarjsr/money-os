@@ -578,7 +578,7 @@ const styles = themedStyles(() => ({
     marginTop: 1,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: "#9B9A94",
+    borderColor: Colors.textMuted,
     backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",

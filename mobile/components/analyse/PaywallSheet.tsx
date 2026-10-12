@@ -65,8 +65,8 @@ export function PaywallSheet({
       </View>
 
       <Text style={styles.fk}>
-        Finkoin Keys (FK) are rewards for activity on Finkoin and are not tied
-        to buying any product here.
+        Finkoin Keys (FK) are rewards for activity on Finkoin. They do not
+        reduce this unlock price and are not tied to buying any product here.
       </Text>
 
       <View style={styles.priceCard}>

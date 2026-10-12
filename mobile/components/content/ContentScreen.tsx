@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, themedStyles } from "@/constants/theme";
 import { goBackOr, PUBLIC_SITE_URL } from "@/lib/contentLinks";
+import { Footer } from "@/components/landing/Footer";
+import { reportScrollY } from "@/store/chromeStore";
 
 export async function shareFinkoinPage(title: string, path: string) {
   const url = `${PUBLIC_SITE_URL}${path}`;
@@ -77,11 +79,15 @@ export const ContentScreen = forwardRef<ScrollView, Props>(
         <ScrollView
           ref={ref}
           contentContainerStyle={[styles.content, { padding: contentPadding }]}
-          onScroll={onScroll}
+          onScroll={(e) => {
+            reportScrollY(e.nativeEvent.contentOffset.y);
+            onScroll?.(e);
+          }}
           scrollEventThrottle={64}
           keyboardShouldPersistTaps="handled"
         >
           {children}
+          <Footer />
         </ScrollView>
       </SafeAreaView>
     );

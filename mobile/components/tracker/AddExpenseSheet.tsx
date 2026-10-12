@@ -998,7 +998,7 @@ export function AddExpenseSheet({
                                   style={styles.textInput}
                                 />
                               </View>
-                              <Text style={styles.cardFootnote}>
+                              <Text style={styles.cardFootnoteSecondary}>
                                 Only the monthly EMI counts each month, under
                                 Loans, until the last month. The fee counts
                                 once, in the first month.
@@ -1006,7 +1006,10 @@ export function AddExpenseSheet({
                             </View>
                           ) : entryMode === "refund" ? (
                             <Text
-                              style={[styles.cardFootnote, { marginTop: 10 }]}
+                              style={[
+                                styles.cardFootnoteSecondary,
+                                { marginTop: 10 },
+                              ]}
                             >
                               Lowers this section and your card bill. It is not
                               counted as income.
@@ -1053,7 +1056,7 @@ export function AddExpenseSheet({
                         <Text style={styles.payChipText}>
                           Paid from my RD savings
                         </Text>
-                        <Text style={styles.ccHint}>
+                        <Text style={[styles.ccHint, { marginBottom: 0 }]}>
                           Money you already set aside each month, so it won't
                           count again.
                         </Text>
@@ -1270,6 +1273,11 @@ const styles = themedStyles(() => ({
   },
   saveCardText: { fontSize: 14, fontWeight: "700", color: Colors.primaryText },
   cardFootnote: { fontSize: 11, lineHeight: 15, color: Colors.textMuted },
+  cardFootnoteSecondary: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: Colors.textSecondary,
+  },
   errorBox: {
     backgroundColor: Colors.errorLight,
     borderRadius: 8,

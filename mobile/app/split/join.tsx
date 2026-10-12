@@ -7,10 +7,30 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import Svg, { Path } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
+
+/** Web AppIcon "alert" (triangle) — swap for AppIcon once it ships there. */
+function AlertGlyph() {
+  return (
+    <Svg
+      width={28}
+      height={28}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={Colors.primaryText}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Path d="M12 4l9 15H3L12 4z" />
+      <Path d="M12 10v4M12 16.5v.5" />
+    </Svg>
+  );
+}
 
 type JoinStatus = "checking" | "login" | "joining" | "success" | "error";
 
@@ -136,7 +156,7 @@ export default function JoinSplitGroupScreen() {
         {status === "success" ? (
           <>
             <View style={styles.iconCircle}>
-              <AppIcon name="check" size={28} color={Colors.primaryText} />
+              <AppIcon name="checkCircle" size={28} color={Colors.primaryText} />
             </View>
             <Text style={styles.title}>Joined “{groupName}”</Text>
             <Text style={styles.muted}>Taking you to the group…</Text>
@@ -146,7 +166,7 @@ export default function JoinSplitGroupScreen() {
         {status === "error" ? (
           <>
             <View style={styles.iconCircle}>
-              <AppIcon name="users" size={28} color={Colors.primaryText} />
+              <AlertGlyph />
             </View>
             <Text style={styles.titleSm}>Could not join group</Text>
             <Text style={styles.muted}>{message}</Text>

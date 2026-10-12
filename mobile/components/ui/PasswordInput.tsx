@@ -44,11 +44,11 @@ const styles = themedStyles(() => ({
     position: "absolute",
     right: 16,
     top: 0,
-    height: 52,
+    height: 48,
     justifyContent: "center",
   },
-  // Label row (FontSize.md line + 6 gap) sits above the input box.
-  toggleWithLabel: { top: FontSize.md + 10 },
+  // Label row (20px line + 6 gap) sits above the input box.
+  toggleWithLabel: { top: 26 },
   toggleText: {
     fontSize: FontSize.sm,
     fontWeight: "700",

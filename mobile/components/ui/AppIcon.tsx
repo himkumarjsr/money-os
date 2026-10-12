@@ -50,7 +50,12 @@ export type AppIconName =
   | "menu"
   | "close"
   | "heart"
-  | "sunrise";
+  | "sunrise"
+  | "lifebuoy"
+  | "beach"
+  | "plane"
+  | "checkCircle"
+  | "sparkle";
 
 type Props = {
   name: AppIconName;
@@ -296,6 +301,38 @@ function IconPaths({ name }: { name: AppIconName }) {
         <>
           <Path d="M3 18h18M6.5 18a5.5 5.5 0 0 1 11 0" />
           <Path d="M12 4v3M4.5 8.5l1.5 1.5M19.5 8.5L18 10" />
+        </>
+      );
+    case "sparkle":
+      return (
+        <>
+          <Path d="M12 4l1.2 4.2L17.5 9.5 13.2 11 12 15.5 10.8 11 6.5 9.5l4.3-1.3L12 4z" />
+          <Path d="M18 14l.6 2 2 .6-2 .6-.6 2-.6-2-2-.6 2-.6.6-2z" />
+        </>
+      );
+    case "lifebuoy":
+      return (
+        <>
+          <Circle cx="12" cy="12" r="8" />
+          <Circle cx="12" cy="12" r="3.2" />
+          <Path d="M5.5 5.5l3.2 3.2M15.3 15.3l3.2 3.2M18.5 5.5l-3.2 3.2M8.7 15.3l-3.2 3.2" />
+        </>
+      );
+    case "beach":
+      return (
+        <>
+          <Path d="M3 20h18" />
+          <Path d="M12 20V9M12 9c-3-3-6-2-8 1 3-1 5 0 8-1zM12 9c2-3 5-3 8-1-3-1-6 0-8 1z" />
+          <Circle cx="17" cy="6" r="2" />
+        </>
+      );
+    case "plane":
+      return <Path d="M4 14l7-2 8-6 1 1-5 6 4 1-3 2-4-1-3 3-2-1 2-4-5-1z" />;
+    case "checkCircle":
+      return (
+        <>
+          <Circle cx="12" cy="12" r="8.5" />
+          <Path d="M8 12.5l2.5 2.5L16 9.5" />
         </>
       );
     default:

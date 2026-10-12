@@ -12,15 +12,23 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, usePathname, type Href } from "expo-router";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
+import { reportScrollY } from "@/store/chromeStore";
+import { Footer } from "@/components/landing/Footer";
 
 type Props = {
   title: string;
   subtitle?: string;
   requireAuth?: boolean;
   right?: ReactNode;
+  /** Small purple line above the title. */
+  eyebrow?: string;
+  /** Back link text; defaults to "← Back". */
+  backLabel?: string;
+  /** Where Back goes when set; otherwise history back, or home. */
+  backTo?: Href;
   refreshing?: boolean;
   onRefresh?: () => void;
   children: ReactNode;
@@ -36,10 +44,14 @@ export function PageScaffold({
   subtitle,
   requireAuth = false,
   right,
+  eyebrow,
+  backLabel,
+  backTo,
   refreshing,
   onRefresh,
   children,
 }: Props) {
+  const pathname = usePathname();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const hasInitialized = useAuthStore((s) => s.hasInitialized);
   const gated = requireAuth && hasInitialized && !isLoggedIn;
@@ -50,6 +62,8 @@ export function PageScaffold({
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        onScroll={(e) => reportScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={32}
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -60,45 +74,51 @@ export function PageScaffold({
           ) : undefined
         }
       >
-        <Pressable
-          onPress={goBackOrHome}
-          style={styles.back}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-        >
-          <Text style={styles.backText}>← Back</Text>
-        </Pressable>
+        <View style={styles.pad}>
+          <Pressable
+            onPress={() => (backTo ? router.push(backTo) : goBackOrHome())}
+            style={styles.back}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Text style={styles.backText}>{backLabel ?? "← Back"}</Text>
+          </Pressable>
 
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
             <Text style={styles.h1}>{title}</Text>
-            {subtitle ? <Text style={styles.sub}>{subtitle}</Text> : null}
+              {subtitle ? <Text style={styles.sub}>{subtitle}</Text> : null}
+            </View>
+            {right}
           </View>
-          {right}
-        </View>
 
-        {waiting ? (
-          <ActivityIndicator
-            color={Colors.primaryText}
-            style={{ marginTop: 40 }}
-          />
-        ) : gated ? (
-          <View style={styles.gate}>
-            <Text style={styles.gateTitle}>Sign in to continue</Text>
-            <Text style={styles.gateSub}>
-              Log in to your Finkoin account to see this page.
-            </Text>
-            <Pressable
-              onPress={() => router.push("/(auth)/login")}
-              style={styles.gateBtn}
-              accessibilityRole="button"
-            >
-              <Text style={styles.gateBtnText}>Sign in</Text>
-            </Pressable>
-          </View>
-        ) : (
-          children
-        )}
+          {waiting ? (
+            <ActivityIndicator
+              color={Colors.primaryText}
+              style={{ marginTop: 40 }}
+            />
+          ) : gated ? (
+            <View style={styles.gate}>
+              <Text style={styles.gateTitle}>Sign in to continue</Text>
+              <Text style={styles.gateSub}>
+                Log in to your Finkoin account to see this page.
+              </Text>
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: "/(auth)/login", params: { next: pathname } })
+                }
+                style={styles.gateBtn}
+                accessibilityRole="button"
+              >
+                <Text style={styles.gateBtnText}>Sign in</Text>
+              </Pressable>
+            </View>
+          ) : (
+            children
+          )}
+        </View>
+        <Footer />
       </ScrollView>
     </SafeAreaView>
   );
@@ -140,7 +160,8 @@ export const pageStyles = themedStyles(() => ({
 
 const styles = themedStyles(() => ({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 16, paddingBottom: 48 },
+  content: { paddingBottom: 0 },
+  pad: { padding: 16, paddingBottom: 48 },
   back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   backText: { color: Colors.primaryText, fontWeight: "600", fontSize: 14 },
   header: {
@@ -149,7 +170,19 @@ const styles = themedStyles(() => ({
     gap: 12,
     marginBottom: 20,
   },
-  h1: { fontSize: 26, fontWeight: "800", color: Colors.textPrimary },
+  eyebrow: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.primaryText,
+    marginBottom: 4,
+  },
+  // Web h1: text-3xl font-bold (30/36)
+  h1: {
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
   sub: {
     marginTop: 6,
     fontSize: 14,

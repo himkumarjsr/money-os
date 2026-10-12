@@ -19,7 +19,7 @@ const goals = (): Array<{
 }> => [
   {
     id: "emergency",
-    icon: <AppIcon name="shield" size={32} color={brand(THEME)} />,
+    icon: <AppIcon name="lifebuoy" size={32} color={brand(THEME)} />,
     title: "Emergency Fund",
     description: "6–9 months of expenses saved",
   },
@@ -31,7 +31,7 @@ const goals = (): Array<{
   },
   {
     id: "retirement",
-    icon: <AppIcon name="sunrise" size={32} color={brand(THEME)} />,
+    icon: <AppIcon name="beach" size={32} color={brand(THEME)} />,
     title: "Retirement Corpus",
     description: "25× annual expenses by retirement",
   },
@@ -49,7 +49,7 @@ const goals = (): Array<{
   },
   {
     id: "travel",
-    icon: <TrackerIcon name="plane" size={32} color={brand(THEME)} />,
+    icon: <AppIcon name="plane" size={32} color={brand(THEME)} />,
     title: "Dream Vacation",
     description: "Save for travel goals",
   },

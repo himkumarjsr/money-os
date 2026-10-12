@@ -15,6 +15,7 @@ import { FaqAccordion } from "@/components/content/FaqAccordion";
 import { InlineText } from "@/components/content/InlineText";
 import { buildLearnPage } from "@/components/learn/buildLearnPage";
 import { LEARN_BADGE } from "@/components/learn/categoryBadge";
+import { HomeLoanPrepayTool } from "@/components/learn/HomeLoanPrepayTool";
 import { SipCroreTool } from "@/components/learn/SipCroreTool";
 import { TaxRegimeToggle } from "@/components/learn/TaxRegimeToggle";
 import { LEARN_WIDGETS } from "@/components/learn/types";
@@ -23,6 +24,7 @@ import { learnArticleById, learnArticles } from "@/lib/learnContent";
 function renderWidget(name: string) {
   if (name === LEARN_WIDGETS.sipCrore) return <SipCroreTool />;
   if (name === LEARN_WIDGETS.taxRegimeToggle) return <TaxRegimeToggle />;
+  if (name === LEARN_WIDGETS.homeLoanPrepay) return <HomeLoanPrepayTool />;
   return null;
 }
 
@@ -79,9 +81,21 @@ export default function LearnArticleScreen() {
       ref={scrollRef}
       barTitle="Learn"
       backFallback="/learn"
-      share={{ title: article.title, path: sharePath }}
     >
       <View style={styles.header}>
+        <View style={styles.crumbs} accessibilityRole="header">
+          <Text
+            style={styles.crumbLink}
+            onPress={() => router.push("/learn" as Href)}
+            accessibilityRole="link"
+          >
+            Learn
+          </Text>
+          <Text style={styles.crumbSep}> › </Text>
+          <Text style={styles.crumbCurrent} numberOfLines={1}>
+            {article.title}
+          </Text>
+        </View>
         <Pressable
           onPress={() => router.push("/learn" as Href)}
           style={styles.inlineLink}
@@ -112,7 +126,7 @@ export default function LearnArticleScreen() {
           ]}
           accessibilityRole="button"
         >
-          <Text style={styles.shareBtnText}>Share article</Text>
+          <Text style={styles.shareBtnText}>Share</Text>
         </Pressable>
       </View>
 
@@ -201,6 +215,10 @@ export default function LearnArticleScreen() {
 }
 
 const styles = themedStyles(() => ({
+  crumbs: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
+  crumbLink: { fontSize: 13, fontWeight: "600", color: Colors.primaryText },
+  crumbSep: { fontSize: 13, color: Colors.textMuted },
+  crumbCurrent: { flexShrink: 1, fontSize: 13, color: Colors.textMuted },
   header: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,

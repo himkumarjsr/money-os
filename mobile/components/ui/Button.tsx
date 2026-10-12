@@ -30,16 +30,16 @@ function Button({
 }: Props) {
   const bg = {
     primary: Colors.primary,
-    secondary: Colors.primaryLight,
-    danger: Colors.error,
+    // Web secondary: bg-surface with a border and the body text colour.
+    secondary: Colors.card,
+    danger: Colors.dangerSolid,
     ghost: "transparent",
   }[variant];
 
   const textColor = {
     primary: Colors.onPrimary,
-    // primaryText meets WCAG AA on primaryLight / the page in every theme.
-    secondary: Colors.primaryText,
-    danger: "#fff",
+    secondary: Colors.textPrimary,
+    danger: Colors.textWhite,
     ghost: Colors.primaryText,
   }[variant];
 
@@ -51,6 +51,7 @@ function Button({
       style={[
         styles.base,
         { backgroundColor: bg },
+        variant === "secondary" && styles.secondaryBorder,
         fullWidth && styles.full,
         (disabled || loading) && styles.disabled,
         style,
@@ -69,13 +70,15 @@ function Button({
 
 const styles = themedStyles(() => ({
   base: {
-    height: 52,
-    borderRadius: Radius.lg,
+    // Web Button lg: min-h-12, rounded-xl.
+    height: 48,
+    borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
   },
   full: { width: "100%" },
+  secondaryBorder: { borderWidth: 1, borderColor: Colors.border },
   disabled: { opacity: 0.5 },
   text: {
     fontSize: FontSize.base,

@@ -376,95 +376,100 @@ export function ObligationsChecklist({
                               }${isSkipped ? " · Skipped" : ""}`}
                         </Text>
                       </View>
-                      <Text
-                        style={[
-                          styles.rowAmount,
-                          isClosed
-                            ? styles.struckMuted
-                            : isPaid
-                              ? { color: Colors.success }
-                              : null,
-                        ]}
-                      >
-                        {inr(shownAmount)}
-                      </Text>
-                    </View>
+                      <View style={styles.rightCol}>
+                        <Text
+                          style={[
+                            styles.rowAmount,
+                            isClosed
+                              ? styles.struckMuted
+                              : isPaid
+                                ? { color: Colors.success }
+                                : null,
+                          ]}
+                        >
+                          {inr(shownAmount)}
+                        </Text>
 
-                    {isClosed ? (
-                      <Text style={styles.closedTag}>Closed</Text>
-                    ) : (
-                      <View style={styles.actions}>
-                        {ob ? (
-                          <Pressable
-                            onPress={() => {
-                              setShowAdd(false);
-                              setEditing({
-                                id: ob.id,
-                                payload: {
-                                  title: ob.title,
-                                  category: ob.category,
-                                  amount: ob.amount,
-                                  frequency: ob.frequency,
-                                  due_day: ob.due_day ?? null,
-                                  due_month: ob.due_month ?? null,
-                                  source: ob.source,
-                                  is_active: true,
-                                  remind_days_before: ob.remind_days_before,
-                                },
-                              });
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Edit ${ob.title}`}
-                            hitSlop={6}
-                            style={styles.actionBtn}
-                          >
-                            <AppIcon
-                              name="pencil"
-                              size={14}
-                              color={Colors.primaryText}
-                            />
-                            <Text style={styles.actionEdit}>Edit</Text>
-                          </Pressable>
-                        ) : null}
-                        {isSkipped ? (
-                          <Pressable
-                            onPress={() => void markUnpaid(item.id)}
-                            accessibilityRole="button"
-                            hitSlop={6}
-                            style={styles.actionBtn}
-                          >
-                            <Text style={styles.actionRestore}>Restore</Text>
-                          </Pressable>
-                        ) : null}
-                        {!isPaid && !isSkipped ? (
-                          <Pressable
-                            onPress={() => void markSkipped(item.id)}
-                            accessibilityRole="button"
-                            accessibilityHint="Skip this month only — comes back next month"
-                            hitSlop={6}
-                            style={styles.actionBtn}
-                          >
-                            <Text style={styles.actionSkip}>Skip</Text>
-                          </Pressable>
-                        ) : null}
-                        {ob ? (
-                          <Pressable
-                            onPress={() => confirmClose(ob.id, ob.title)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Mark ${ob.title} as closed`}
-                            hitSlop={6}
-                            style={[styles.actionBtn, styles.closeBtn]}
-                          >
-                            <AppIcon
-                              name="trash"
-                              size={12}
-                              color={Colors.error}
-                            />
-                            <Text style={styles.closeText}>Mark closed</Text>
-                          </Pressable>
-                        ) : null}
+                        {isClosed ? (
+                          <Text style={styles.closedTag}>Closed</Text>
+                        ) : (
+                          <View style={styles.actions}>
+                            {ob ? (
+                              <Pressable
+                                onPress={() => {
+                                  setShowAdd(false);
+                                  setEditing({
+                                    id: ob.id,
+                                    payload: {
+                                      title: ob.title,
+                                      category: ob.category,
+                                      amount: ob.amount,
+                                      frequency: ob.frequency,
+                                      due_day: ob.due_day ?? null,
+                                      due_month: ob.due_month ?? null,
+                                      source: ob.source,
+                                      is_active: true,
+                                      remind_days_before: ob.remind_days_before,
+                                    },
+                                  });
+                                }}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Edit ${ob.title}`}
+                                hitSlop={6}
+                                style={styles.actionBtn}
+                              >
+                                <AppIcon
+                                  name="pencil"
+                                  size={14}
+                                  color={Colors.primaryText}
+                                />
+                              </Pressable>
+                            ) : null}
+                            {isSkipped ? (
+                              <Pressable
+                                onPress={() => void markUnpaid(item.id)}
+                                accessibilityRole="button"
+                                hitSlop={6}
+                                style={styles.actionBtn}
+                              >
+                                <Text style={styles.actionRestore}>
+                                  Restore
+                                </Text>
+                              </Pressable>
+                            ) : null}
+                            {!isPaid && !isSkipped ? (
+                              <Pressable
+                                onPress={() => void markSkipped(item.id)}
+                                accessibilityRole="button"
+                                accessibilityHint="Skip this month only — comes back next month"
+                                hitSlop={6}
+                                style={styles.actionBtn}
+                              >
+                                <Text style={styles.actionSkip}>Skip</Text>
+                              </Pressable>
+                            ) : null}
+                            {ob ? (
+                              <Pressable
+                                onPress={() => confirmClose(ob.id, ob.title)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Mark ${ob.title} as closed`}
+                                hitSlop={6}
+                                style={[styles.actionBtn, styles.closeBtn]}
+                              >
+                                <AppIcon
+                                  name="trash"
+                                  size={12}
+                                  color={Colors.error}
+                                />
+                                <Text style={styles.closeText}>
+                                  Mark closed
+                                </Text>
+                              </Pressable>
+                            ) : null}
+                          </View>
+                        )}
                       </View>
-                    )}
+                    </View>
                   </View>
                 );
               })
@@ -525,9 +530,7 @@ export function ObligationsChecklist({
             accessibilityRole="button"
             style={[styles.resetConfirm, resetting && { opacity: 0.6 }]}
           >
-            <Text style={styles.resetConfirmText}>
-              {resetting ? "Deleting…" : "Delete all"}
-            </Text>
+            <Text style={styles.resetConfirmText}>Delete all</Text>
           </Pressable>
         </View>
       </BottomSheet>
@@ -676,7 +679,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  dotClosed: { borderColor: "#D3D1C7", backgroundColor: Colors.border },
+  dotClosed: { borderColor: Colors.border, backgroundColor: Colors.border },
   dotPaid: { borderColor: Colors.success, backgroundColor: Colors.success },
   dotSkipped: { borderColor: Colors.border },
   dotDash: { fontSize: 11, fontWeight: "700", color: Colors.textMuted },
@@ -690,7 +693,13 @@ const styles = themedStyles(() => ({
   struck: { textDecorationLine: "line-through" },
   struckMuted: { color: Colors.textMuted, textDecorationLine: "line-through" },
   rowMeta: { fontSize: 11, color: Colors.textMuted },
-  rowAmount: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
+  rightCol: { flexShrink: 0, alignItems: "flex-end" },
+  rowAmount: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
   closedTag: {
     alignSelf: "flex-end",
     marginTop: 4,
@@ -701,32 +710,35 @@ const styles = themedStyles(() => ({
   actions: {
     flexDirection: "row",
     flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "flex-end",
-    gap: 6,
-    marginTop: 6,
+    columnGap: 8,
+    rowGap: 4,
+    marginTop: 4,
   },
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    minHeight: 32,
-    paddingHorizontal: 8,
-    borderRadius: 8,
   },
-  actionEdit: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
   actionRestore: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     color: Colors.primaryText,
     textDecorationLine: "underline",
   },
   actionSkip: {
-    fontSize: 12,
+    fontSize: 10,
     color: Colors.textMuted,
     textDecorationLine: "underline",
   },
-  closeBtn: { backgroundColor: Colors.errorLight },
-  closeText: { fontSize: 12, fontWeight: "700", color: Colors.error },
+  closeBtn: {
+    backgroundColor: Colors.errorLight,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  closeText: { fontSize: 10, fontWeight: "700", color: Colors.error },
   emptyRow: {
     paddingHorizontal: 14,
     paddingVertical: 12,

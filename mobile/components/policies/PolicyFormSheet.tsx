@@ -60,6 +60,7 @@ export function PolicyFormSheet({
   onClose,
   editId,
   initial,
+  analyseMissing,
   onSaved,
 }: {
   visible: boolean;
@@ -67,6 +68,8 @@ export function PolicyFormSheet({
   editId: string | null;
   /** Remount (via `key`) to reset the form when this changes. */
   initial: PolicyFormInput;
+  /** Missing fields of an Analyse-imported policy being edited. */
+  analyseMissing?: string[];
   onSaved: () => void;
 }) {
   const [form, setForm] = useState<PolicyFormInput>(initial);
@@ -185,6 +188,15 @@ export function PolicyFormSheet({
           <Text style={styles.closeText}>✕</Text>
         </Pressable>
       </View>
+
+      {analyseMissing && analyseMissing.length > 0 ? (
+        <View style={styles.analyseHint}>
+          <Text style={styles.analyseHintText}>
+            We filled this in from your analysis. Add the{" "}
+            {analyseMissing.join(", ")} to complete it.
+          </Text>
+        </View>
+      ) : null}
 
       <Label text="Policy type" />
       <View style={styles.chipRow}>
@@ -346,6 +358,14 @@ export function PolicyFormSheet({
 }
 
 const styles = themedStyles(() => ({
+  analyseHint: {
+    marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: Colors.warningLight,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  analyseHintText: { fontSize: 14, color: Colors.warningText, lineHeight: 20 },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",

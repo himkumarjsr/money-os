@@ -13,22 +13,12 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
-
-type Fund = {
-  name: string;
-  invested: number;
-  value: number;
-  xirr: number;
-  verdict: "CONTINUE" | "WATCH" | "SWITCH" | "STOP";
-  reason: string;
-};
-
-type Analysis = {
-  totalInvested: number;
-  currentValue: number;
-  xirr: number;
-  funds: Fund[];
-};
+import {
+  usePortfolioStore,
+  type PortfolioAnalysis as Analysis,
+  type PortfolioFund as Fund,
+} from "@/components/content/portfolioStore";
+import { router } from "expo-router";
 
 const FALLBACK_FUNDS: Fund[] = [
   {
@@ -80,7 +70,11 @@ export default function PortfolioScreen() {
   const [folio, setFolio] = useState("");
   const [pan, setPan] = useState("");
   const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const analysis = usePortfolioStore((st) => st.lastAnalysis);
+  const setLastAnalysis = usePortfolioStore((st) => st.setLastAnalysis);
+  const awardBadge = usePortfolioStore((st) => st.awardBadge);
+  const hasEarnedAction = usePortfolioStore((st) => st.hasEarnedAction);
+  const markEarnedAction = usePortfolioStore((st) => st.markEarnedAction);
 
   const gain = useMemo(
     () => (analysis ? analysis.currentValue - analysis.totalInvested : 0),
@@ -89,11 +83,20 @@ export default function PortfolioScreen() {
 
   if (tier === "free" || tier === "pro") {
     return (
-      <PageScaffold title="MF Portfolio Analysis" requireAuth>
+      <PageScaffold title="MF Portfolio Analysis">
         <View style={pageStyles.card}>
           <AppIcon name="lock" size={28} color={Colors.primaryText} />
           <Text style={styles.lockTitle}>MF Portfolio Analysis</Text>
-          <Text style={styles.lockSub}>Available in Pro Max.</Text>
+          <Text style={styles.lockSub}>
+            Available in Pro Max — ₹99/month
+          </Text>
+          <Pressable
+            onPress={() => router.push("/plans")}
+            style={[pageStyles.primaryBtn, { marginTop: 20 }]}
+            accessibilityRole="button"
+          >
+            <Text style={pageStyles.primaryBtnText}>Upgrade to Pro Max</Text>
+          </Pressable>
         </View>
       </PageScaffold>
     );
@@ -105,12 +108,16 @@ export default function PortfolioScreen() {
     const totalInvested = funds.reduce((sum, f) => sum + f.invested, 0);
     const currentValue = funds.reduce((sum, f) => sum + f.value, 0);
     const xirr = Number(((currentValue / totalInvested - 1) * 100).toFixed(2));
-    setAnalysis({ totalInvested, currentValue, xirr, funds });
+    setLastAnalysis({ totalInvested, currentValue, xirr, funds });
+    if (!hasEarnedAction("portfolio-analysis")) {
+      awardBadge("portfolio-pro");
+      markEarnedAction("portfolio-analysis");
+    }
     setLoading(false);
   };
 
   return (
-    <PageScaffold title="MF Portfolio Analysis" requireAuth>
+    <PageScaffold title="MF Portfolio Analysis">
       <View style={[pageStyles.card, { gap: 12 }]}>
         <TextInput
           value={folio}
