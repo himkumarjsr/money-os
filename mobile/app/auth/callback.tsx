@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { View, Text } from "react-native";
 import { CoinSpinner } from "@/components/ui/LoadingSpinner";
 import {
+  type Href,
   router,
   useLocalSearchParams,
   useGlobalSearchParams,
@@ -9,6 +10,10 @@ import {
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useAuthStore, createSessionFromUrl } from "@/store/authStore";
+import {
+  applyPendingReferral,
+  savePendingReferral,
+} from "@/components/auth/referral";
 import { Colors, FontSize, themedStyles } from "@/constants/theme";
 
 const OAUTH_WAIT_MS = 30_000;
@@ -66,6 +71,9 @@ export default function AuthCallbackScreen() {
           return;
         }
 
+        await savePendingReferral(
+          (params.ref as string) || (globalParams.ref as string) || "",
+        );
         const linkingUrl = await Linking.getInitialURL();
         let handled = false;
         const typeParam =
@@ -119,7 +127,15 @@ export default function AuthCallbackScreen() {
           const loggedIn = useAuthStore.getState().isLoggedIn;
           if (!loggedIn) router.replace("/(auth)/login");
           else if (isRecovery) router.replace("/auth/update-password");
-          else router.replace("/(tabs)");
+          else {
+            void applyPendingReferral();
+            const nx = (params.next as string) || (globalParams.next as string);
+            router.replace(
+              (typeof nx === "string" && nx.startsWith("/") && !nx.startsWith("//")
+                ? nx
+                : "/(tabs)") as Href,
+            );
+          }
         }
       }
     })();
@@ -132,7 +148,7 @@ export default function AuthCallbackScreen() {
   return (
     <View style={styles.box}>
       <CoinSpinner />
-      <Text style={styles.text}>Completing sign-in…</Text>
+      <Text style={styles.text}>Completing login…</Text>
     </View>
   );
 }

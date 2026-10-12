@@ -30,9 +30,10 @@ export function Chip({ label, selected, onPress, style }: Props) {
 const styles = themedStyles(() => ({
   chip: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
+    paddingVertical: Spacing.sm,
     borderRadius: Radius.round,
-    borderWidth: 1.5,
+    // Web ChipSelector: rounded-full border px-3 py-2 text-sm
+    borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.card,
     marginRight: Spacing.sm,
@@ -44,11 +45,10 @@ const styles = themedStyles(() => ({
   },
   text: {
     fontSize: FontSize.sm,
-    fontWeight: "600",
+    fontWeight: "400",
     color: Colors.textSecondary,
   },
   textOn: {
     color: Colors.primaryText,
-    fontWeight: "700",
   },
 }));

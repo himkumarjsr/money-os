@@ -16,6 +16,11 @@ import { ExpenseList } from "@/components/tracker/ExpenseList";
 import { MonthSummary } from "@/components/tracker/MonthSummary";
 import { TrackerConsent } from "@/components/tracker/TrackerConsent";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { UpdatingLoader } from "@/components/tracker/UpdatingLoader";
+import {
+  SignedOutPrompt,
+  type SignedOutBenefit,
+} from "@/components/auth/SignedOutPrompt";
 import {
   Colors,
   Spacing,
@@ -36,10 +41,17 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 
+const TRACKER_BENEFITS: readonly SignedOutBenefit[] = [
+  { icon: "receipt", text: "Add an expense in seconds" },
+  { icon: "chart", text: "Needs, wants and savings at a glance" },
+  { icon: "bell", text: "Never miss an EMI or card bill" },
+];
+
 /** All transactions for one month (`/tracker/2026-03`) — port of web app/tracker/[month]. */
 export default function TrackerMonthScreen() {
   const { month: monthParam = "" } = useLocalSearchParams<{ month: string }>();
   const user = useAuthStore((s) => s.user);
+  const authReady = useAuthStore((s) => s.hasInitialized);
   const lastSubmission = useFinancialStore((s) => s.lastSubmission);
   const analyseResult = useFinancialStore((s) => s.result);
   // Same caps as the main tracker: the user's split once Analyse is done.
@@ -162,6 +174,26 @@ export default function TrackerMonthScreen() {
     setSheetBucket(undefined);
   };
 
+  // Signed out: the consent check needs a user id, so without one the loader
+  // would spin forever. Show the sign-in prompt once auth has initialised.
+  if (!user?.id) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {authReady ? (
+          <SignedOutPrompt
+            icon="wallet"
+            title="Track every rupee, calmly"
+            subtitle="Log in to log expenses, see your monthly budget and stay on top of bills."
+            benefits={TRACKER_BENEFITS}
+            next={`/tracker/${monthParam}`}
+          />
+        ) : (
+          <LoadingSpinner full />
+        )}
+      </SafeAreaView>
+    );
+  }
+
   if (!parsed || hasConsent === null) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -215,37 +247,41 @@ export default function TrackerMonthScreen() {
           accessibilityRole="button"
           style={styles.back}
         >
-          <Text style={styles.backText}>← Back to tracker</Text>
+          <Text style={styles.backText}>← Back to current month</Text>
         </Pressable>
 
-        <Text style={styles.heading}>
-          {parsed.monthName} {parsed.year}
-        </Text>
-        <Text style={styles.subheading}>All transactions</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.heading}>
+              {parsed.monthName} {parsed.year}
+            </Text>
+            <Text style={styles.subheading}>All transactions</Text>
+          </View>
 
-        <View style={styles.headerActions}>
-          <Pressable
-            onPress={() => {
-              setEditingExpense(null);
-              setSheetBucket("income");
-              setShowSheet(true);
-            }}
-            accessibilityRole="button"
-            style={styles.addIncome}
-          >
-            <Text style={styles.addIncomeText}>+ Add income</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              setEditingExpense(null);
-              setSheetBucket(undefined);
-              setShowSheet(true);
-            }}
-            accessibilityRole="button"
-            style={styles.addExpense}
-          >
-            <Text style={styles.addExpenseText}>+ Add expense</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => {
+                setEditingExpense(null);
+                setSheetBucket("income");
+                setShowSheet(true);
+              }}
+              accessibilityRole="button"
+              style={styles.addIncome}
+            >
+              <Text style={styles.addIncomeText}>+ Add income</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setEditingExpense(null);
+                setSheetBucket(undefined);
+                setShowSheet(true);
+              }}
+              accessibilityRole="button"
+              style={styles.addExpense}
+            >
+              <Text style={styles.addExpenseText}>+ Add expense</Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.hero}>
@@ -268,7 +304,7 @@ export default function TrackerMonthScreen() {
           <View style={styles.listHead}>
             <Text style={styles.listTitle}>ALL TRANSACTIONS</Text>
           </View>
-          {loading ? <LoadingSpinner /> : null}
+          {loading ? <UpdatingLoader /> : null}
           <ExpenseList
             transactions={transactions}
             onChanged={() => void fetchTransactions({ soft: true })}
@@ -313,14 +349,21 @@ const styles = themedStyles(() => ({
     opacity: 0.88,
     marginTop: 4,
   },
+  headerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 24,
+  },
   headerActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
-    marginTop: 16,
-    marginBottom: 20,
   },
   addIncome: {
-    flex: 1,
+    paddingHorizontal: 16,
     height: 44,
     borderRadius: 12,
     borderWidth: 1.5,
@@ -331,7 +374,7 @@ const styles = themedStyles(() => ({
   },
   addIncomeText: { fontSize: 14, fontWeight: "700", color: Colors.success },
   addExpense: {
-    flex: 1,
+    paddingHorizontal: 16,
     height: 44,
     borderRadius: 12,
     backgroundColor: Colors.primary,

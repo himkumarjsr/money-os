@@ -60,7 +60,6 @@ const FIELD_ORDER: FieldKey[] = [
   "form",
 ];
 
-const ERROR_RED = "#E24B4A";
 const ERROR_BG = () => tintBg("#FDEDED");
 const ERROR_TEXT = () => tintFg("#991B1B");
 const ERROR_BORDER = () => tintBg("#F5D0D0");
@@ -1123,7 +1122,7 @@ const styles = themedStyles(() => ({
     borderWidth: 2,
     borderColor: "transparent",
   },
-  amountBoxError: { backgroundColor: ERROR_BG(), borderColor: ERROR_RED },
+  amountBoxError: { backgroundColor: ERROR_BG(), borderColor: Colors.error },
   amountLabel: {
     marginBottom: 8,
     textAlign: "center",
@@ -1185,7 +1184,7 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
   },
   inputFocused: { borderColor: Colors.primary },
-  inputError: { borderColor: ERROR_RED, backgroundColor: ERROR_BG() },
+  inputError: { borderColor: Colors.error, backgroundColor: ERROR_BG() },
   select: {
     flexDirection: "row",
     alignItems: "center",
@@ -1218,7 +1217,7 @@ const styles = themedStyles(() => ({
     marginTop: 6,
     fontSize: 12,
     fontWeight: "600",
-    color: ERROR_RED,
+    color: Colors.error,
   },
   center: { textAlign: "center" },
   hint: { marginTop: 8, fontSize: 12, color: Colors.textMuted },
@@ -1254,7 +1253,7 @@ const styles = themedStyles(() => ({
     borderWidth: 2,
     borderColor: "transparent",
   },
-  membersWrapError: { borderColor: ERROR_RED },
+  membersWrapError: { borderColor: Colors.error },
   chips: { marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     minHeight: 44,
@@ -1278,7 +1277,7 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.background,
     padding: 16,
   },
-  subCardError: { borderColor: ERROR_RED, borderWidth: 2 },
+  subCardError: { borderColor: Colors.error, borderWidth: 2 },
   subTitle: {
     fontSize: 12,
     fontWeight: "700",

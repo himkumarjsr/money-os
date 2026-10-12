@@ -396,7 +396,7 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   starOn: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  starText: { fontSize: 22, color: "#CBD5E1" },
+  starText: { fontSize: 22, color: Colors.slate300 },
   option: {
     minHeight: 48,
     borderRadius: 12,

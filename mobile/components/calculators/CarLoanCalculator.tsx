@@ -15,7 +15,6 @@ import {
   type InsightTone,
 } from "./calculator-ui";
 import {
-  AmortisationSchedule,
   LoanExcelDownloads,
   YearlyBreakupChart,
   emi,
@@ -54,7 +53,7 @@ export function CarLoanCalculator() {
         ? "warn"
         : "good";
 
-  const { amortRows, yearlyBreakdown, tableWithSummaries } = useLoanSchedule(
+  const { amortRows, yearlyBreakdown } = useLoanSchedule(
     loan,
     rate,
     months,
@@ -159,8 +158,6 @@ export function CarLoanCalculator() {
         e={e}
         name="car-loan"
       />
-
-      <AmortisationSchedule entries={tableWithSummaries} months={months} />
 
       <Text style={calcStyles.body}>
         Affordability rule of thumb: car value ≤ <B>6×</B> monthly salary (≈{" "}

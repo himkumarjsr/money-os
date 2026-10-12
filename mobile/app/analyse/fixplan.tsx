@@ -4,7 +4,6 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -116,6 +115,7 @@ function FixPlanScreen() {
   const result = useFinancialStore((s) => s.result);
   const storeHydrated = useFinancialStore((s) => s.hasHydrated);
   const [downloading, setDownloading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
 
   const hasAccess = canViewFixPlan(user?.subscriptionTier);
   const allowed = hasInitialized && isLoggedIn && hasAccess;
@@ -132,7 +132,7 @@ function FixPlanScreen() {
     if (!hasAccess) router.replace("/analyse/result");
   }, [hasInitialized, isLoggedIn, hasAccess]);
 
-  const { aiPlan, aiLoading, aiError, refreshing, notice, retry, refresh } =
+  const { aiPlan, aiLoading, aiError, refreshing, notice, refresh } =
     useFixPlan({
       profile,
       result,
@@ -179,7 +179,7 @@ function FixPlanScreen() {
     return (
       <>
         {header}
-        <FixPlanError message={aiError} onRetry={() => void retry()} />
+        <FixPlanError message={aiError} />
       </>
     );
   }
@@ -192,6 +192,7 @@ function FixPlanScreen() {
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
+    setPdfError("");
     try {
       const res = await shareFixPlanPdf({
         profile,
@@ -200,12 +201,13 @@ function FixPlanScreen() {
         explanations: expl,
         dataAsOf: loanStatus?.submittedAt ?? undefined,
       });
-      if (res.error) Alert.alert("Couldn't create PDF", res.error);
+      if (res.error) setPdfError(res.error);
     } catch (err) {
       console.error("PDF error:", err);
-      Alert.alert(
-        "Couldn't create PDF",
-        err instanceof Error ? err.message : "Please try again.",
+      setPdfError(
+        err instanceof Error
+          ? err.message
+          : "Could not generate the PDF. Please try again.",
       );
     } finally {
       setDownloading(false);
@@ -226,35 +228,11 @@ function FixPlanScreen() {
           />
         }
       >
-        {notice ? (
-          <View
-            style={styles.info}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-          >
-            <Text style={styles.infoText}>{notice}</Text>
-          </View>
-        ) : null}
-
-        {aiError ? (
-          <View style={styles.notice}>
-            <Text style={styles.noticeText}>
-              Couldn&apos;t refresh your plan. {aiError}
-            </Text>
-            <Pressable
-              onPress={() => void refresh()}
-              style={styles.noticeBtn}
-              accessibilityRole="button"
-            >
-              <Text style={styles.noticeBtnText}>Try again</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
         <FixPlanHero
           attentionCount={visiblePriorities.length}
           overallSummary={expl?.overallSummary}
           isFallback={aiPlan.isFallback}
+          refreshNotice={notice}
         />
 
         <LoanSyncNotices status={loanStatus} onSaveDetails={saveLoanDetails} />
@@ -339,6 +317,12 @@ function FixPlanScreen() {
           )}
         </Pressable>
 
+        {pdfError ? (
+          <Text style={styles.pdfError} accessibilityRole="alert">
+            {pdfError}
+          </Text>
+        ) : null}
+
         <Text style={styles.disclaimer}>
           Educational guidance only. Not SEBI registered investment advice.
         </Text>
@@ -403,6 +387,12 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.card,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: Spacing.lg,
+  },
+  pdfError: {
+    textAlign: "center",
+    fontSize: FontSize.sm,
+    color: Colors.errorText,
     marginBottom: Spacing.lg,
   },
   pdfBtnDisabled: { opacity: 0.7 },

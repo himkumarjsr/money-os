@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Alert,
   Image,
 } from "react-native";
 import { useState } from "react";
@@ -17,6 +16,7 @@ import { PremiumAvatarRing } from "@/components/ui/PremiumAvatarRing";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
+import Svg, { Path } from "react-native-svg";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { useGamification } from "@/lib/useGamification";
 
@@ -24,7 +24,7 @@ const MENU: Array<{ icon: AppIconName; label: string; href: Href }> = [
   { icon: "user", label: "My Profile", href: "/(tabs)/profile" },
   { icon: "notebook", label: "Expense Tracker", href: "/(tabs)/tracker" },
   { icon: "users", label: "FK Split", href: "/(tabs)/split" },
-  { icon: "chart", label: "My Analysis", href: "/(tabs)/analyse" },
+  { icon: "chart", label: "My Analysis", href: "/analyse/result" as Href },
   { icon: "shield", label: "My Policies", href: "/policies" as Href },
   { icon: "target", label: "My Goals", href: "/goals" as Href },
   { icon: "trending", label: "My Investments", href: "/investments" as Href },
@@ -50,6 +50,9 @@ export function ProfileMenu({ visible, onClose }: Props) {
   const badges = stats?.badges.length ?? 0;
   const streakDays = stats?.streakDays ?? 0;
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Web: user.phone ?? user.email
+  const contactLine =
+    (user as { phone?: string | null } | null)?.phone ?? user?.email ?? null;
 
   const tierLabel =
     tier === "promax" ? "Pro Max" : tier === "pro" ? "Pro" : "Free plan";
@@ -106,7 +109,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                 </PremiumAvatarRing>
                 <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
                 <Text style={styles.contact}>
-                  {user?.email ?? "No contact added"}
+                  {contactLine ?? "No contact added"}
                 </Text>
                 <View style={[styles.tierPill, tierStyle]}>
                   <Text
@@ -182,7 +185,15 @@ export function ProfileMenu({ visible, onClose }: Props) {
                 }}
                 style={styles.feedbackBtn}
               >
-                <Text style={styles.feedbackText}>Send feedback</Text>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                    stroke={Colors.primaryText}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  />
+                </Svg>
+                <Text style={styles.feedbackText}>Share feedback</Text>
               </Pressable>
 
               <View style={styles.divider} />
@@ -194,7 +205,6 @@ export function ProfileMenu({ visible, onClose }: Props) {
                     ["Terms", "/legal/terms"],
                     ["Refunds", "/legal/refund"],
                     ["Disclaimer", "/legal/disclaimer"],
-                    ["Delete account", "/legal/delete-account"],
                   ] as const
                 ).map(([label, path], i) => (
                   <View key={label} style={styles.legalItem}>
@@ -210,17 +220,8 @@ export function ProfileMenu({ visible, onClose }: Props) {
 
               <Pressable
                 onPress={() => {
-                  Alert.alert("Sign out?", "You can log in again anytime.", [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Sign out",
-                      style: "destructive",
-                      onPress: () => {
-                        onClose();
-                        void signOut().then(() => router.replace("/(tabs)"));
-                      },
-                    },
-                  ]);
+                  onClose();
+                  void signOut().then(() => router.replace("/(tabs)"));
                 }}
                 style={styles.signOut}
               >
@@ -228,7 +229,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                 <Text style={styles.signOutText}>Sign out</Text>
               </Pressable>
               <Text style={styles.signedAs}>
-                Signed in as {user?.email ?? "user"}
+                Signed in as {contactLine ?? "user"}
               </Text>
             </ScrollView>
           </Pressable>
@@ -367,12 +368,22 @@ const styles = themedStyles(() => ({
     fontSize: 16,
     color: Colors.textMuted,
   },
+  // Web FeedbackFormButton: #EEEDFE pill, #AFA9EC border.
   feedbackBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.primaryTintBorder,
+    backgroundColor: Colors.primaryTint,
   },
   feedbackText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: Colors.primaryText,
   },
@@ -394,7 +405,7 @@ const styles = themedStyles(() => ({
   },
   dot: {
     fontSize: 11,
-    color: "#CBD5E1",
+    color: Colors.slate300,
     marginHorizontal: 2,
   },
   signOut: {

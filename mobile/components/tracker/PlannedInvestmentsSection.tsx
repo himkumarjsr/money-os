@@ -107,7 +107,7 @@ export function PlannedInvestmentsSection({ userId }: { userId: string }) {
                   <Text
                     style={[
                       styles.btnText,
-                      { color: isStarted ? "#5F5E5A" : Colors.onPrimary },
+                      { color: isStarted ? Colors.textSecondary : Colors.onPrimary },
                     ]}
                   >
                     {isStarted ? "Undo" : "Mark started"}

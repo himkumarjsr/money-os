@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import type { PriorityPlan } from "@/lib/priorityEngine";
 import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 import { inr, shared } from "./shared";
+import { PrivateAmount } from "@/components/analyse/PrivateAmount";
 
 type Props = { breakdown: PriorityPlan["surplusBreakdown"] };
 
@@ -32,9 +33,13 @@ export function SurplusBreakdown({ breakdown }: Props) {
         <View style={styles.body}>
           <View style={shared.row}>
             <Text style={shared.rowLabel}>Monthly income</Text>
-            <Text style={[shared.rowValue, styles.bold]}>
-              +₹{inr(breakdown.totalIncome)}
-            </Text>
+            <PrivateAmount
+              value={breakdown.totalIncome || 0}
+              display={`+₹${inr(breakdown.totalIncome)}`}
+              label="monthly income"
+              textStyle={[shared.rowValue, styles.bold]}
+              eyeSize={12}
+            />
           </View>
           {deductions.map(([label, value]) => (
             <View key={label} style={shared.row}>

@@ -5,6 +5,7 @@ import type { Faq } from "@/components/content/FaqAccordion";
 export const LEARN_WIDGETS = {
   sipCrore: "learn-sip-crore",
   taxRegimeToggle: "learn-tax-regime-toggle",
+  homeLoanPrepay: "learn-home-loan-prepay",
 } as const;
 
 /** A bespoke guide body (port of components/learn/*Guide.tsx). */

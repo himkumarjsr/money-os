@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -22,15 +23,39 @@ type Props = TextInputProps & {
   style?: StyleProp<TextStyle>;
 };
 
-function Input({ label, helper, error, prefix, style, ...props }: Props) {
+function Input({
+  label,
+  helper,
+  error,
+  prefix,
+  style,
+  onFocus,
+  onBlur,
+  ...props
+}: Props) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrapper}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={[styles.inputRow, error ? styles.inputError : null]}>
+      <View
+        style={[
+          styles.inputRow,
+          focused ? styles.inputFocused : null,
+          error ? styles.inputError : null,
+        ]}
+      >
         {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
         <TextInput
           style={[styles.input, style]}
           placeholderTextColor={Colors.textMuted}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
           {...props}
         />
       </View>
@@ -43,19 +68,25 @@ function Input({ label, helper, error, prefix, style, ...props }: Props) {
 const styles = themedStyles(() => ({
   wrapper: { gap: 6 },
   label: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
+    // Web label: text-sm font-medium text-[#5F5E5A]
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+    fontWeight: "500",
     color: Colors.textSecondary,
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    height: 52,
+    // Web: h-12 rounded-xl border border-[#E8E6F0] px-4, focus:border-primary-text
+    height: 48,
     backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.borderSoft,
     paddingHorizontal: Spacing.lg,
+  },
+  inputFocused: {
+    borderColor: Colors.primaryText,
   },
   inputError: {
     borderColor: Colors.error,

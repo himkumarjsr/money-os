@@ -79,5 +79,5 @@ export function bucketCapRows(
 }
 
 export function safetyNetHeading(itemCount: number): string {
-  return `Your financial safety net — ${itemCount} ${itemCount === 1 ? "check" : "checks"}`;
+  return `Your financial safety net — ${itemCount} checks`;
 }

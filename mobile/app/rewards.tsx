@@ -2,11 +2,12 @@
  * Rewards — port of web app/rewards/page.tsx.
  */
 import {
+  FK_PER_RUPEE,
   FK_EARN_ACTIONS,
   FK_EXPLAINER,
   POINTS_EARN_ACTIONS,
 } from "@/lib/fkRewards";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -14,10 +15,12 @@ import { PageScaffold, pageStyles } from "@/components/ui/PageScaffold";
 import { Colors, themedStyles } from "@/constants/theme";
 import { useGamification } from "@/lib/useGamification";
 import { useAuthStore } from "@/store/authStore";
+import { supabase } from "@/lib/supabase";
 import { GoldText } from "@/components/ui/GoldMirror";
 
 export default function RewardsScreen() {
   const userId = useAuthStore((s) => s.user?.id);
+  const isAdmin = useAuthStore((s) => s.user?.isAdmin === true);
   const [refreshKey, setRefreshKey] = useState(0);
   const { stats, loading } = useGamification(userId, refreshKey);
 
@@ -43,6 +46,8 @@ export default function RewardsScreen() {
         </View>
         <Text style={styles.note}>Using FK for discounts is coming soon.</Text>
       </View>
+
+      {isAdmin ? <AdminFkCard /> : null}
 
       {loading && !stats ? (
         <ActivityIndicator
@@ -119,6 +124,73 @@ function EarnCard({
   );
 }
 
+type FkSummary = {
+  outstanding_fk: number | null;
+  outstanding_inr: number | null;
+  issued_this_month: number | null;
+  issued_last_month: number | null;
+  monthly_budget_fk: number | null;
+};
+
+/** Admin-only view of FK owed to users; the RPC refuses non-admins. */
+function AdminFkCard() {
+  const [summary, setSummary] = useState<FkSummary | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data, error } = await supabase.rpc("admin_fk_summary");
+        if (cancelled || error) return;
+        const row = (Array.isArray(data) ? data[0] : data) as
+          | FkSummary
+          | null
+          | undefined;
+        if (row) setSummary(row);
+      } catch {
+        // admin-only extra; ignore failures
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!summary) return null;
+
+  const fk = (n: number | null) => Number(n ?? 0).toLocaleString("en-IN");
+  const inr =
+    summary.outstanding_inr != null
+      ? Number(summary.outstanding_inr)
+      : Number(summary.outstanding_fk ?? 0) / FK_PER_RUPEE;
+  const rows: Array<[string, string]> = [
+    ["Outstanding", `${fk(summary.outstanding_fk)} FK`],
+    ["Worth", `₹${inr.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`],
+    ["Issued this month", `${fk(summary.issued_this_month)} FK`],
+    ["Issued last month", `${fk(summary.issued_last_month)} FK`],
+    [
+      "Monthly budget",
+      summary.monthly_budget_fk == null
+        ? "No limit"
+        : `${fk(summary.monthly_budget_fk)} FK`,
+    ],
+  ];
+
+  return (
+    <View style={[pageStyles.card, { marginBottom: 24 }]}>
+      <Text style={styles.adminTitle}>FK LIABILITY (ADMIN)</Text>
+      <View style={{ marginTop: 12, gap: 8 }}>
+        {rows.map(([label, value]) => (
+          <View key={label} style={styles.earnRow}>
+            <Text style={styles.earnLabel}>{label}</Text>
+            <Text style={styles.statValue2}>{value}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function Coin({ value }: { value: number }) {
   return (
     <View style={styles.inline}>
@@ -149,6 +221,13 @@ const styles = themedStyles(() => ({
   statValue: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
   inline: { flexDirection: "row", alignItems: "center", gap: 6 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: Colors.textPrimary },
+  adminTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  statValue2: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   earnRow: {
     flexDirection: "row",
     justifyContent: "space-between",

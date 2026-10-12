@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import MoneyInput from "@/components/ui/MoneyInput";
-import { Colors, themedStyles, tintBg } from "@/constants/theme";
+import { Colors, readable, themedStyles, tintBg } from "@/constants/theme";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { formatIndian } from "@/lib/formatters";
 import {
@@ -149,10 +149,10 @@ export function GoalsSection({
                   <Text
                     style={[
                       styles.chipText,
-                      { color: g.isDefaultTarget ? "#BA7517" : "#1D9E75" },
+                      { color: g.isDefaultTarget ? readable("#BA7517") : readable("#1D9E75") },
                     ]}
                   >
-                    {g.isDefaultTarget ? "Suggested" : "Your amount"}
+                    {g.isDefaultTarget ? "Suggested amount" : "Your amount"}
                   </Text>
                 </View>
               </View>

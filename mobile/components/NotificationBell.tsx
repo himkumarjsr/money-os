@@ -77,7 +77,7 @@ export function NotificationBell() {
         accessibilityLabel="Notifications"
         accessibilityRole="button"
       >
-        <BellSvg color={open ? Colors.primary : "#5F5E5A"} />
+        <BellSvg color={open ? Colors.primary : Colors.textSecondary} />
         {unreadCount > 0 ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>
