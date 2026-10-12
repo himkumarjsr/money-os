@@ -93,14 +93,26 @@
   }
 
   /* iOS Safari: native date/month picks readable text on white/light backgrounds */
-  input[type="date"],
-  input[type="datetime-local"],
-  input[type="month"],
-  input[type="week"],
-  input[type="time"] {
+  :root:not([data-theme]) input[type="date"],
+  :root:not([data-theme]) input[type="datetime-local"],
+  :root:not([data-theme]) input[type="month"],
+  :root:not([data-theme]) input[type="week"],
+  :root:not([data-theme]) input[type="time"] {
     color: #111110 !important;
     -webkit-text-fill-color: #111110 !important;
     color-scheme: light;
+  }
+
+  /* Dark / Premium: the field is dark, so the date text and the native
+     picker (calendar popup, selected day, icon) must be light-on-dark. */
+  :root[data-theme] input[type="date"],
+  :root[data-theme] input[type="datetime-local"],
+  :root[data-theme] input[type="month"],
+  :root[data-theme] input[type="week"],
+  :root[data-theme] input[type="time"] {
+    color: var(--fk-text) !important;
+    -webkit-text-fill-color: var(--fk-text) !important;
+    color-scheme: dark;
   }
 
   html::-webkit-scrollbar,

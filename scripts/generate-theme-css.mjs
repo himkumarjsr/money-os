@@ -657,6 +657,19 @@ ${vars}
   color: var(--fk-text);
   background-color: var(--fk-card);
   border-color: var(--fk-border);
+  accent-color: var(--fk-primary);
+}
+
+/* iOS fixes pin -webkit-text-fill-color inline (e.g. #111110); it wins over
+   color, so typed text stayed black on the dark field. Follow color instead. */
+:root[data-theme] [style*="-webkit-text-fill-color"] {
+  -webkit-text-fill-color: currentColor !important;
+}
+
+:root[data-theme] option,
+:root[data-theme] optgroup {
+  color: var(--fk-text);
+  background-color: var(--fk-card);
 }
 
 :where(:root[data-theme]) ::placeholder {
