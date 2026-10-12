@@ -90,6 +90,19 @@
   color: var(--fk-text);
   background-color: var(--fk-card);
   border-color: var(--fk-border);
+  accent-color: var(--fk-primary);
+}
+
+/* iOS fixes pin -webkit-text-fill-color inline (e.g. #111110); it wins over
+   color, so typed text stayed black on the dark field. Follow color instead. */
+:root[data-theme] [style*="-webkit-text-fill-color"] {
+  -webkit-text-fill-color: currentColor !important;
+}
+
+:root[data-theme] option,
+:root[data-theme] optgroup {
+  color: var(--fk-text);
+  background-color: var(--fk-card);
 }
 
 :where(:root[data-theme]) ::placeholder {
@@ -1833,12 +1846,6 @@
 :root[data-theme] [style*="border: rgb(240, 212, 212)"] {
   border-color: var(--fk-danger-border) !important;
 }
-:root[data-theme]
-  [style*="border:${s.border}px solid var(--color-border, #e2dff0 )" i],
-:root[data-theme]
-  [style*="border: ${s.border}px solid var(--color-border, rgb(226, 223, 240) )"] {
-  border-color: var(--fk-border) !important;
-}
 :root[data-theme] [style*="border:1.5px solid #534ab7" i],
 :root[data-theme] [style*="border: 1.5px solid rgb(83, 74, 183)"] {
   border-color: var(--fk-primary-text) !important;
@@ -1983,6 +1990,10 @@
 :root[data-theme] [style*="color: rgb(29, 158, 117)"] {
   color: var(--fk-success-text) !important;
 }
+:root[data-theme] [style*="color:#2a1f05" i],
+:root[data-theme] [style*="color: rgb(42, 31, 5)"] {
+  color: var(--fk-text) !important;
+}
 :root[data-theme] [style*="color:#3c3489" i],
 :root[data-theme] [style*="color: rgb(60, 52, 137)"] {
   color: var(--fk-primary-text) !important;
@@ -2006,6 +2017,10 @@
 :root[data-theme] [style*="color:#791f1f" i],
 :root[data-theme] [style*="color: rgb(121, 31, 31)"] {
   color: var(--fk-danger-text) !important;
+}
+:root[data-theme] [style*="color:#7f77dd" i],
+:root[data-theme] [style*="color: rgb(127, 119, 221)"] {
+  color: var(--fk-primary-text) !important;
 }
 :root[data-theme] [style*="color:#991b1b" i],
 :root[data-theme] [style*="color: rgb(153, 27, 27)"] {
@@ -2041,14 +2056,36 @@
   [style*="background: linear-gradient(135deg, rgb(247, 247, 244) 0%, rgb(238, 237, 254) 100%)"] {
   background: var(--fk-bg) !important;
 }
-:root[data-theme]
-  [style*="background:linear-gradient(160deg, #F4F3F8 0%, #FFFFFF 45%, #EEEDFE 100%)" i],
-:root[data-theme]
-  [style*="background: linear-gradient(160deg, rgb(244, 243, 248) 0%, rgb(255, 255, 255) 45%, rgb(238, 237, 254) 100%)"] {
-  background: var(--fk-bg) !important;
-}
 
 /* Premium: no blue or purple anywhere */
+:root[data-theme="premium"] [fill="#12102a" i] {
+  fill: var(--fk-primary);
+}
+:root[data-theme="premium"] [stroke="#12102a" i] {
+  stroke: var(--fk-primary);
+}
+:root[data-theme="premium"] [style*="color:#12102a" i],
+:root[data-theme="premium"] [style*="color: rgb(18, 16, 42)"] {
+  color: var(--fk-primary-text) !important;
+}
+:root[data-theme="premium"] [style*="solid #12102a" i],
+:root[data-theme="premium"] [style*="solid rgb(18, 16, 42)"],
+:root[data-theme="premium"] [style*="border-color:#12102a" i],
+:root[data-theme="premium"] [style*="border-color: rgb(18, 16, 42)"] {
+  border-color: var(--fk-primary) !important;
+}
+:root[data-theme="premium"] [style*="background:#12102a" i],
+:root[data-theme="premium"] [style*="background: rgb(18, 16, 42)"],
+:root[data-theme="premium"] [style*="background-color:#12102a" i],
+:root[data-theme="premium"] [style*="background-color: rgb(18, 16, 42)"] {
+  background: var(--fk-surface) !important;
+}
+:root[data-theme="premium"] [style*="gradient"][style*="#12102a" i],
+:root[data-theme="premium"] [style*="gradient"][style*="rgb(18, 16, 42)"] {
+  background: var(--fk-hero) !important;
+  border-color: var(--fk-primary-border) !important;
+  box-shadow: inset 0 0 0 1px var(--fk-primary-border);
+}
 :root[data-theme="premium"] [fill="#161430" i] {
   fill: var(--fk-primary);
 }
@@ -2073,6 +2110,62 @@
 }
 :root[data-theme="premium"] [style*="gradient"][style*="#161430" i],
 :root[data-theme="premium"] [style*="gradient"][style*="rgb(22, 20, 48)"] {
+  background: var(--fk-hero) !important;
+  border-color: var(--fk-primary-border) !important;
+  box-shadow: inset 0 0 0 1px var(--fk-primary-border);
+}
+:root[data-theme="premium"] [fill="#1a1638" i] {
+  fill: var(--fk-primary);
+}
+:root[data-theme="premium"] [stroke="#1a1638" i] {
+  stroke: var(--fk-primary);
+}
+:root[data-theme="premium"] [style*="color:#1a1638" i],
+:root[data-theme="premium"] [style*="color: rgb(26, 22, 56)"] {
+  color: var(--fk-primary-text) !important;
+}
+:root[data-theme="premium"] [style*="solid #1a1638" i],
+:root[data-theme="premium"] [style*="solid rgb(26, 22, 56)"],
+:root[data-theme="premium"] [style*="border-color:#1a1638" i],
+:root[data-theme="premium"] [style*="border-color: rgb(26, 22, 56)"] {
+  border-color: var(--fk-primary) !important;
+}
+:root[data-theme="premium"] [style*="background:#1a1638" i],
+:root[data-theme="premium"] [style*="background: rgb(26, 22, 56)"],
+:root[data-theme="premium"] [style*="background-color:#1a1638" i],
+:root[data-theme="premium"] [style*="background-color: rgb(26, 22, 56)"] {
+  background: var(--fk-surface) !important;
+}
+:root[data-theme="premium"] [style*="gradient"][style*="#1a1638" i],
+:root[data-theme="premium"] [style*="gradient"][style*="rgb(26, 22, 56)"] {
+  background: var(--fk-hero) !important;
+  border-color: var(--fk-primary-border) !important;
+  box-shadow: inset 0 0 0 1px var(--fk-primary-border);
+}
+:root[data-theme="premium"] [fill="#1e1a44" i] {
+  fill: var(--fk-primary);
+}
+:root[data-theme="premium"] [stroke="#1e1a44" i] {
+  stroke: var(--fk-primary);
+}
+:root[data-theme="premium"] [style*="color:#1e1a44" i],
+:root[data-theme="premium"] [style*="color: rgb(30, 26, 68)"] {
+  color: var(--fk-primary-text) !important;
+}
+:root[data-theme="premium"] [style*="solid #1e1a44" i],
+:root[data-theme="premium"] [style*="solid rgb(30, 26, 68)"],
+:root[data-theme="premium"] [style*="border-color:#1e1a44" i],
+:root[data-theme="premium"] [style*="border-color: rgb(30, 26, 68)"] {
+  border-color: var(--fk-primary) !important;
+}
+:root[data-theme="premium"] [style*="background:#1e1a44" i],
+:root[data-theme="premium"] [style*="background: rgb(30, 26, 68)"],
+:root[data-theme="premium"] [style*="background-color:#1e1a44" i],
+:root[data-theme="premium"] [style*="background-color: rgb(30, 26, 68)"] {
+  background: var(--fk-surface) !important;
+}
+:root[data-theme="premium"] [style*="gradient"][style*="#1e1a44" i],
+:root[data-theme="premium"] [style*="gradient"][style*="rgb(30, 26, 68)"] {
   background: var(--fk-hero) !important;
   border-color: var(--fk-primary-border) !important;
   box-shadow: inset 0 0 0 1px var(--fk-primary-border);
