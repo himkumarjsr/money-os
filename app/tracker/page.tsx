@@ -4,6 +4,7 @@ import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import CreditCardBillReminder from "@/components/tracker/CreditCardBillReminder";
+import MoneyMapCard from "@/components/tracker/MoneyMapCard";
 import MonthSafetyPulse from "@/components/tracker/MonthSafetyPulse";
 import ObligationsChecklist from "@/components/tracker/ObligationsChecklist";
 // import PurpleCashAudit from "@/components/tracker/PurpleCashAudit";
@@ -90,6 +91,12 @@ import {
   planObligationExpenseSync,
 } from "@/lib/trackerObligationSync";
 import { useAuthStore } from "@/store/authStore";
+import { canViewMoneyMap } from "@/lib/moneyMapEntitlement";
+import {
+  fetchNatureRows,
+  type NatureRowsResult,
+} from "@/lib/trackerNatureFetch";
+import { buildNatureReport } from "@/lib/trackerNatureReport";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -704,6 +711,47 @@ function TrackerContent() {
   useEffect(() => {
     if (hasConsent) void fetchTransactions({ soft: true });
   }, [hasConsent, fetchTransactions]);
+
+  // Money Map: the last 6 months by nature, in one range query. Reloads when
+  // this month's rows change (add / edit / delete), not when the month tab moves.
+  const [natureData, setNatureData] = useState<NatureRowsResult | null>(null);
+  const natureSig = `${transactions.length}:${transactions.reduce((a, t) => a + Number(t.amount || 0), 0)}`;
+  useEffect(() => {
+    if (!hasConsent || !user?.id) return;
+    let cancelled = false;
+    const now = new Date();
+    void fetchNatureRows(
+      getSupabase(),
+      user.id,
+      now.getFullYear(),
+      now.getMonth(),
+    )
+      .then((res) => {
+        if (!cancelled && res.ok) setNatureData(res);
+      })
+      .catch(() => {
+        /* Money Map simply stays hidden */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasConsent, user?.id, natureSig]);
+  const natureReport = useMemo(
+    () =>
+      natureData
+        ? buildNatureReport({
+            rows: natureData.rows,
+            emiSources: natureData.emiSources,
+            profileSalary: profileMonthlyFromDb,
+          })
+        : null,
+    [natureData, profileMonthlyFromDb],
+  );
+  const moneyMapUnlocked = canViewMoneyMap({
+    tier: user?.subscriptionTier,
+    email: user?.email,
+    isAdmin: user?.isAdmin,
+  });
 
   // Drop optimistic CC pay credits once a matching bill payment is fetched.
   useEffect(() => {
@@ -1691,6 +1739,11 @@ function TrackerContent() {
 
   return (
     <div className="mx-auto box-border w-full max-w-[920px] px-4 pb-20 pt-6 sm:px-6">
+      <MoneyMapCard
+        report={natureReport}
+        locked={!moneyMapUnlocked}
+        forceVisible={allAmountsVisible}
+      />
       {/* Only this summary card flips 180°; other sections just mask amounts. */}
       <div
         className="mb-5 w-full"
