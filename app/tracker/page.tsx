@@ -101,6 +101,8 @@ import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+const MONEY_MAP_ANCHOR = "monthly-report";
+
 export type TrackerTransaction = {
   id: string;
   date: string;
@@ -1739,11 +1741,46 @@ function TrackerContent() {
 
   return (
     <div className="mx-auto box-border w-full max-w-[920px] px-4 pb-20 pt-6 sm:px-6">
-      <MoneyMapCard
-        report={natureReport}
-        locked={!moneyMapUnlocked}
-        forceVisible={allAmountsVisible}
-      />
+      {natureReport ? (
+        <button
+          type="button"
+          onClick={() =>
+            document.getElementById(MONEY_MAP_ANCHOR)?.scrollIntoView({
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                .matches
+                ? "auto"
+                : "smooth",
+              block: "start",
+            })
+          }
+          className="mb-4 flex min-h-[48px] w-full items-center gap-3 rounded-2xl border border-[#E8E6F0] bg-white px-4 py-2 text-left"
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEEDFE] text-[#534AB7]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M4 20V10M10 20V4M16 20v-7M22 20H2"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-[#111110]">
+              Monthly report
+            </span>
+            <span className="block truncate text-xs text-[#5F5E5A]">
+              Where your money goes, month by month
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-sm font-bold text-[#534AB7]">
+            ↓
+          </span>
+        </button>
+      ) : null}
       {/* Only this summary card flips 180°; other sections just mask amounts. */}
       <div
         className="mb-5 w-full"
@@ -2774,6 +2811,15 @@ function TrackerContent() {
           />
         ) : null}
       </MonthSafetyPulse>
+
+      <div className="mt-5">
+        <MoneyMapCard
+          id={MONEY_MAP_ANCHOR}
+          report={natureReport}
+          locked={!moneyMapUnlocked}
+          forceVisible={allAmountsVisible}
+        />
+      </div>
 
       <div style={{ marginTop: 16 }}>
         <FeedbackWidget pageContext="tracker" />
