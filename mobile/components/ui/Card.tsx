@@ -1,5 +1,5 @@
 import { View, type ViewStyle, type ViewProps } from "react-native";
-import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
+import { Colors, Radius, Shadow, Spacing, themedStyles } from "@/constants/theme";
 
 type Props = ViewProps & {
   children: React.ReactNode;
@@ -32,13 +32,8 @@ const styles = themedStyles(() => ({
     borderColor: Colors.border,
     padding: Spacing.lg,
   },
-  elevated: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+  // Web cards: shadow-sm
+  elevated: { ...Shadow.card },
 }));
 
 export { Card };

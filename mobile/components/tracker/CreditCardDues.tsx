@@ -5,7 +5,6 @@ import {
   animateNextPanelToggle,
 } from "@/components/tracker/CollapsiblePanel";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import {
   buildCardBills,
@@ -309,12 +308,18 @@ export function CreditCardDues({
                   {c.label}
                 </Text>
                 <Pressable
-                  onPress={() => startEditCard(card)}
+                  onPress={() =>
+                    editingCard?.id === card.id
+                      ? closeCardEdit()
+                      : startEditCard(card)
+                  }
                   accessibilityRole="button"
                   accessibilityLabel={`Edit ${c.label}`}
                   style={styles.editBtn}
                 >
-                  <Text style={styles.editText}>Edit</Text>
+                  <Text style={styles.editText}>
+                    {editingCard?.id === card.id ? "Close" : "Edit"}
+                  </Text>
                 </Pressable>
               </View>
 
@@ -419,6 +424,115 @@ export function CreditCardDues({
                   ) : null}
                 </View>
               ) : null}
+
+              {editingCard?.id === card.id && cardDraft ? (
+                <View style={styles.editPanel}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View style={{ flex: 2 }}>
+                      <Text style={styles.sheetLabel}>Card name</Text>
+                      <TextInput
+                        value={cardDraft.nickname}
+                        onChangeText={(v) =>
+                          setCardDraft({ ...cardDraft, nickname: v })
+                        }
+                        style={styles.dueInput}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.sheetLabel}>Last 4 digits</Text>
+                      <TextInput
+                        value={cardDraft.last4}
+                        onChangeText={(v) =>
+                          setCardDraft({
+                            ...cardDraft,
+                            last4: v.replace(/[^\d]/g, "").slice(0, 4),
+                          })
+                        }
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        placeholder="1234"
+                        placeholderTextColor={Colors.textMuted}
+                        style={styles.dueInput}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.sheetLabel}>Billing day</Text>
+                      <TextInput
+                        value={cardDraft.billingDay}
+                        onChangeText={(v) =>
+                          setCardDraft({
+                            ...cardDraft,
+                            billingDay: v.replace(/[^\d]/g, "").slice(0, 2),
+                          })
+                        }
+                        keyboardType="number-pad"
+                        placeholder="15"
+                        placeholderTextColor={Colors.textMuted}
+                        style={styles.dueInput}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.sheetLabel}>Due day</Text>
+                      <TextInput
+                        value={cardDraft.dueDay}
+                        onChangeText={(v) =>
+                          setCardDraft({
+                            ...cardDraft,
+                            dueDay: v.replace(/[^\d]/g, "").slice(0, 2),
+                          })
+                        }
+                        keyboardType="number-pad"
+                        placeholder="5"
+                        placeholderTextColor={Colors.textMuted}
+                        style={styles.dueInput}
+                      />
+                    </View>
+                    <View style={{ flex: 1.4 }}>
+                      <Text style={styles.sheetLabel}>Credit limit (₹)</Text>
+                      <TextInput
+                        value={cardDraft.creditLimit}
+                        onChangeText={(v) =>
+                          setCardDraft({
+                            ...cardDraft,
+                            creditLimit: v.replace(/[^\d]/g, ""),
+                          })
+                        }
+                        keyboardType="number-pad"
+                        placeholder="Optional"
+                        placeholderTextColor={Colors.textMuted}
+                        style={styles.dueInput}
+                      />
+                    </View>
+                  </View>
+                  {cardEditError ? (
+                    <Text style={styles.dueError}>{cardEditError}</Text>
+                  ) : (
+                    <Text style={styles.dueHint}>
+                      Billing day = the day your statement is made. Bills are
+                      worked out again from the new dates.
+                    </Text>
+                  )}
+                  <View style={styles.editActions}>
+                    <Pressable onPress={saveCard} style={styles.saveBtn}>
+                      <Text style={styles.saveText}>Save</Text>
+                    </Pressable>
+                    <Pressable onPress={closeCardEdit} style={styles.cancelBtn}>
+                      <Text style={styles.cancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={confirmRemoveCard}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${c.label}`}
+                      style={styles.removeBtn}
+                    >
+                      <AppIcon name="trash" size={14} color={Colors.error} />
+                      <Text style={styles.removeText}>Remove card</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
             </View>
           );
         })}
@@ -452,112 +566,6 @@ export function CreditCardDues({
           <Text style={styles.footerText}>{inr(total)}</Text>
         </View>
       </CollapsiblePanel>
-
-      <BottomSheet visible={editingCard != null} onClose={closeCardEdit}>
-        <Text style={styles.sheetTitle}>Edit card</Text>
-        {cardDraft ? (
-          <View style={{ gap: 10 }}>
-            <View>
-              <Text style={styles.sheetLabel}>Card name</Text>
-              <TextInput
-                value={cardDraft.nickname}
-                onChangeText={(v) =>
-                  setCardDraft({ ...cardDraft, nickname: v })
-                }
-                style={styles.dueInput}
-              />
-            </View>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sheetLabel}>Last 4</Text>
-                <TextInput
-                  value={cardDraft.last4}
-                  onChangeText={(v) =>
-                    setCardDraft({
-                      ...cardDraft,
-                      last4: v.replace(/[^\d]/g, "").slice(0, 4),
-                    })
-                  }
-                  keyboardType="number-pad"
-                  placeholder="1234"
-                  style={styles.dueInput}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sheetLabel}>Limit (₹)</Text>
-                <TextInput
-                  value={cardDraft.creditLimit}
-                  onChangeText={(v) =>
-                    setCardDraft({
-                      ...cardDraft,
-                      creditLimit: v.replace(/[^\d]/g, ""),
-                    })
-                  }
-                  keyboardType="number-pad"
-                  placeholder="Optional"
-                  style={styles.dueInput}
-                />
-              </View>
-            </View>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sheetLabel}>Billing day</Text>
-                <TextInput
-                  value={cardDraft.billingDay}
-                  onChangeText={(v) =>
-                    setCardDraft({
-                      ...cardDraft,
-                      billingDay: v.replace(/[^\d]/g, "").slice(0, 2),
-                    })
-                  }
-                  keyboardType="number-pad"
-                  placeholder="15"
-                  style={styles.dueInput}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sheetLabel}>Due day</Text>
-                <TextInput
-                  value={cardDraft.dueDay}
-                  onChangeText={(v) =>
-                    setCardDraft({
-                      ...cardDraft,
-                      dueDay: v.replace(/[^\d]/g, "").slice(0, 2),
-                    })
-                  }
-                  keyboardType="number-pad"
-                  placeholder="5"
-                  style={styles.dueInput}
-                />
-              </View>
-            </View>
-            {cardEditError ? (
-              <Text style={styles.dueError}>{cardEditError}</Text>
-            ) : (
-              <Text style={styles.dueHint}>
-                Billing day = the day your statement is made. Bills are worked
-                out again from the new dates.
-              </Text>
-            )}
-          </View>
-        ) : null}
-        <View style={styles.sheetActions}>
-          <Pressable onPress={closeCardEdit} style={styles.cancelBtn}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </Pressable>
-          <Pressable onPress={saveCard} style={styles.saveBtn}>
-            <Text style={styles.saveText}>Save</Text>
-          </Pressable>
-        </View>
-        <Pressable
-          onPress={confirmRemoveCard}
-          accessibilityRole="button"
-          style={styles.removeBtn}
-        >
-          <AppIcon name="trash" size={14} color={Colors.error} />
-          <Text style={styles.removeText}>Remove card</Text>
-        </Pressable>
-      </BottomSheet>
     </>
   );
 }
@@ -620,64 +628,74 @@ const styles = themedStyles(() => ({
     borderColor: tintBg("#F0DEDE"),
     backgroundColor: tintBg("#FFF7F7"),
   },
-  sheetTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: 14,
-  },
   sheetLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  editPanel: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  editActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
   },
   dueInput: {
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    minHeight: 38,
+    borderRadius: 10,
+    borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    fontWeight: "700",
+    backgroundColor: Colors.card,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    fontWeight: "600",
     color: Colors.textPrimary,
   },
   dueError: {
     fontSize: 12,
     fontWeight: "600",
     color: Colors.error,
-    marginTop: 6,
   },
-  dueHint: { fontSize: 11, color: Colors.textMuted, marginTop: 6 },
-  sheetActions: { flexDirection: "row", gap: 8, marginTop: 16 },
+  dueHint: { fontSize: 11, color: Colors.textMuted },
   cancelBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelText: { fontSize: 14, fontWeight: "700", color: Colors.textSecondary },
+  cancelText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
   saveBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: 10,
     backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  saveText: { fontSize: 14, fontWeight: "700", color: Colors.onPrimary },
+  saveText: { fontSize: 13, fontWeight: "700", color: Colors.onPrimary },
   removeBtn: {
-    marginTop: 12,
-    minHeight: 44,
+    marginLeft: "auto",
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: tintBg("#F0DEDE"),
+    backgroundColor: tintBg("#FFF7F7"),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
   },
   removeText: { fontSize: 13, fontWeight: "600", color: Colors.error },
   overdueBox: {
@@ -685,7 +703,7 @@ const styles = themedStyles(() => ({
     borderRadius: 10,
     backgroundColor: Colors.errorLight,
     borderWidth: 1,
-    borderColor: "#F5C9C9",
+    borderColor: Colors.border,
   },
   overdueText: { fontSize: 12, lineHeight: 18, color: Colors.errorText },
   cardItem: {

@@ -51,6 +51,8 @@ export type UserPolicy = {
   purchaseDate: string | null;
   nomineeName: string | null;
   status: PolicyStatus;
+  /** Set when the policy was imported from the user's Analyse entries. */
+  analyseSourceKey: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -69,6 +71,7 @@ type UserPolicyRow = {
   purchase_date: string | null;
   nominee_name: string | null;
   status: string | null;
+  analyse_source_key?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -109,6 +112,7 @@ export function fromUserPolicyRow(row: UserPolicyRow): UserPolicy {
     purchaseDate: row.purchase_date,
     nomineeName: row.nominee_name,
     status: mapStatus(row.status),
+    analyseSourceKey: row.analyse_source_key ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

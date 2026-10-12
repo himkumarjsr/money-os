@@ -1,6 +1,9 @@
 /**
  * Floating glass dock — matches the PWA's mobile bottom nav exactly:
  * Home · Report · Track(+) · Calculators · Profile
+ *
+ * Rendered once by the root layout (components/navigation/GlobalChrome.tsx) so
+ * it appears on every screen the web navbar does, not only on the tab screens.
  */
 import {
   View,
@@ -8,12 +11,25 @@ import {
   Image,
   Pressable,
   StyleSheet,
-  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import Svg, { Path } from "react-native-svg";
-import { Colors, themedStyles, brand } from "@/constants/theme";
+import Svg, {
+  Defs,
+  LinearGradient,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
+import {
+  Colors,
+  Palettes,
+  Radius,
+  Shadow,
+  getActiveTheme,
+  themedStyles,
+  brand,
+} from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
@@ -22,13 +38,15 @@ import {
   isMirrorGold,
 } from "@/components/ui/GoldMirror";
 
-const ORDER = [
+export const DOCK_ORDER = [
   "index",
   "analyse",
   "tracker",
   "calculators",
   "profile",
 ] as const;
+export type DockId = (typeof DOCK_ORDER)[number];
+const ORDER = DOCK_ORDER;
 
 const LABELS: Record<(typeof ORDER)[number], string> = {
   index: "Home",
@@ -74,16 +92,98 @@ function ReportSvg({ color }: { color: string }) {
   );
 }
 
-export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
+function rgbOf(hex: string): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
+
+/**
+ * The web dock's glass (components/global-navbar.tsx + `.fk-nav-pill`): light
+ * is a white highlight, a violet glow and a lavender 165deg wash; dark and
+ * Premium are a card -> surface wash with a faint top highlight. There is no
+ * backdrop blur on native, so the base stays near-opaque.
+ */
+function DockGlass() {
+  const theme = getActiveTheme();
+  const p = Palettes[theme];
+  const light = theme === "light";
+  return (
+    <View style={styles.glassClip} pointerEvents="none">
+      <Svg width="100%" height="100%" preserveAspectRatio="none">
+        <Defs>
+          <LinearGradient id="dockWash" x1="0.37" y1="0" x2="0.63" y2="1">
+            <Stop
+              offset="0"
+              stopColor={light ? "#FFFFFF" : p.card}
+              stopOpacity={light ? 0.55 : 0.92}
+            />
+            <Stop
+              offset={light ? "0.42" : "0.5"}
+              stopColor={light ? "#E8E6F8" : p.card}
+              stopOpacity={light ? 0.42 : 0.9}
+            />
+            <Stop
+              offset="1"
+              stopColor={light ? "#C4BEF0" : p.surfaceMuted}
+              stopOpacity={light ? 0.48 : 0.88}
+            />
+          </LinearGradient>
+          <RadialGradient
+            id="dockTop"
+            cx="0.5"
+            cy="-0.1"
+            rx="0.66"
+            ry="0.44"
+            fx="0.5"
+            fy="-0.1"
+          >
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.85} />
+            <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient
+            id="dockBottom"
+            cx="0.5"
+            cy="1.2"
+            rx="0.495"
+            ry="0.33"
+            fx="0.5"
+            fy="1.2"
+          >
+            <Stop offset="0" stopColor="#534AB7" stopOpacity={0.22} />
+            <Stop offset="1" stopColor="#534AB7" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#dockWash)" />
+        {light ? (
+          <>
+            <Rect width="100%" height="100%" fill="url(#dockTop)" />
+            <Rect width="100%" height="100%" fill="url(#dockBottom)" />
+          </>
+        ) : null}
+      </Svg>
+      <View
+        style={[
+          styles.glassHighlight,
+          { backgroundColor: `rgba(255,255,255,${light ? 0.9 : 0.06})` },
+        ]}
+      />
+    </View>
+  );
+}
+
+type DockProps = {
+  active: DockId | null;
+  /** Web: scale 0.96 and a smaller "+" once the page is scrolled 20px. */
+  compact?: boolean;
+  onSelect: (id: DockId) => void;
+};
+
+export function FinkoinDock({ active, compact = false, onSelect }: DockProps) {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const fk = user?.fkBalance ?? 0;
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
-
-  const routesByName = Object.fromEntries(
-    state.routes.map((r: (typeof state.routes)[number]) => [r.name, r]),
-  );
 
   const bottomPad = Math.max(insets.bottom, 10);
 
@@ -92,35 +192,14 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
       pointerEvents="box-none"
       style={[styles.wrap, { paddingBottom: bottomPad }]}
     >
-      <View style={styles.dock}>
+      <View style={[styles.dock, compact && styles.dockCompact]}>
+        <DockGlass />
         <View style={styles.row}>
           {ORDER.map((name) => {
-            const route = routesByName[name];
-            if (!route) return null;
-            const focused =
-              state.index ===
-              state.routes.findIndex(
-                (r: (typeof state.routes)[number]) => r.name === name,
-              );
+            const focused = active === name;
             const color = focused ? Colors.primary : Colors.tabIdle;
-            const onPress = () => {
-              const event = navigation.emit({
-                type: "tabPress",
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (event.defaultPrevented) return;
-              if (name === "tracker") {
-                // Track is the "+": always open a new entry, even when already on Tracker.
-                (navigation.navigate as (name: string, params: object) => void)(
-                  route.name,
-                  { add: String(Date.now()) },
-                );
-              } else if (!focused) {
-                // Cast: tab route names are strings; RN nav typing is generic.
-                navigation.navigate(route.name as never);
-              }
-            };
+            // Track is a plain link to the tracker, same as web (no `add` param).
+            const onPress = () => onSelect(name);
 
             if (name === "tracker") {
               return (
@@ -131,9 +210,16 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                   accessibilityRole="button"
                   accessibilityState={{ selected: focused }}
                 >
-                  <View style={styles.plusOuter}>
+                  <View
+                    style={[styles.plusOuter, compact && styles.plusOuterCompact]}
+                  >
                     {focused ? <View style={styles.plusRing} /> : null}
-                    <View style={styles.plusInner}>
+                    <View
+                      style={[
+                        styles.plusInner,
+                        compact && styles.plusInnerCompact,
+                      ]}
+                    >
                       <Text style={styles.plusText}>+</Text>
                     </View>
                   </View>
@@ -166,7 +252,12 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                     ) : name === "analyse" ? (
                       <ReportSvg color={color} />
                     ) : name === "calculators" ? (
-                      <AppIcon name="calculator" size={22} color={color} />
+                      <AppIcon
+                        name="calculator"
+                        size={24}
+                        strokeWidth={1.5}
+                        color={color}
+                      />
                     ) : name === "profile" ? (
                       isLoggedIn ? (
                         <View style={styles.avatarWrap}>
@@ -237,22 +328,39 @@ const styles = themedStyles(() => ({
   dock: {
     width: "100%",
     maxWidth: 440,
-    borderRadius: 28,
+    borderRadius: Radius.dock,
     borderWidth: 1,
-    borderColor: Colors.glassBorder,
+    // Web: border-white/70 (light), var(--fk-border) (dark, Premium)
+    borderColor:
+      getActiveTheme() === "light" ? "rgba(255,255,255,0.7)" : Colors.border,
     backgroundColor: Colors.glass,
     paddingHorizontal: 6,
     paddingTop: 8,
     paddingBottom: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(60,50,120,0.45)",
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.35,
-        shadowRadius: 24,
-      },
-      android: { elevation: 14 },
-    }),
+    ...(getActiveTheme() === "light"
+      ? Shadow.dock
+      : {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.45,
+          shadowRadius: 40,
+          elevation: 14,
+        }),
+  },
+  glassClip: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: Radius.dock - 1,
+    overflow: "hidden",
+  },
+  glassHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1.5,
+  },
+  dockCompact: {
+    transform: [{ scale: 0.96 }],
   },
   row: {
     flexDirection: "row",
@@ -311,6 +419,14 @@ const styles = themedStyles(() => ({
     shadowOpacity: 0.28,
     shadowRadius: 10,
     elevation: 8,
+  },
+  plusOuterCompact: {
+    height: 44,
+    width: 44,
+  },
+  plusInnerCompact: {
+    height: 36,
+    width: 36,
   },
   plusRing: {
     ...StyleSheet.absoluteFill,

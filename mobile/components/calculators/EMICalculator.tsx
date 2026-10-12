@@ -14,7 +14,6 @@ import {
   type InsightTone,
 } from "./calculator-ui";
 import {
-  AmortisationSchedule,
   LoanExcelDownloads,
   YearlyBreakupChart,
   emi,
@@ -41,7 +40,7 @@ export function EMICalculator() {
   const tone: InsightTone =
     interestRatio < 0.35 ? "good" : interestRatio < 0.55 ? "warn" : "bad";
 
-  const { amortRows, yearlyBreakdown, tableWithSummaries } = useLoanSchedule(
+  const { amortRows, yearlyBreakdown } = useLoanSchedule(
     loan,
     rate,
     tenure,
@@ -120,8 +119,6 @@ export function EMICalculator() {
         e={e}
         name="emi"
       />
-
-      <AmortisationSchedule entries={tableWithSummaries} months={tenure} />
 
       <Insight tone={tone}>
         Interest is about <B>{(interestRatio * 100).toFixed(0)}%</B> of

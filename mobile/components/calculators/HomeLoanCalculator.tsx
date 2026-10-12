@@ -14,7 +14,6 @@ import {
   type InsightTone,
 } from "./calculator-ui";
 import {
-  AmortisationSchedule,
   LoanExcelDownloads,
   YearlyBreakupChart,
   emi,
@@ -46,7 +45,7 @@ export function HomeLoanCalculator() {
 
   const tone: InsightTone = breach ? "bad" : pctOfIncome > 32 ? "warn" : "good";
 
-  const { amortRows, yearlyBreakdown, tableWithSummaries } = useLoanSchedule(
+  const { amortRows, yearlyBreakdown } = useLoanSchedule(
     loan,
     rate,
     months,
@@ -151,8 +150,6 @@ export function HomeLoanCalculator() {
         e={e}
         name="home-loan"
       />
-
-      <AmortisationSchedule entries={tableWithSummaries} months={months} />
 
       <Insight tone={tone}>
         {breach

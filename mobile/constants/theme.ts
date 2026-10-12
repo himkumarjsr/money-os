@@ -23,16 +23,24 @@ const lightPalette = {
   error: "#E24B4A",
   errorLight: "#FCEBEB",
   errorText: "#991B1B",
-  background: "#F7F7F4",
+  /** Web --color-danger fill for solid danger buttons (white text on it). */
+  dangerSolid: "#D13B3A",
+  // Web: html/body #F4F2FC (globals.css)
+  background: "#F4F2FC",
   backgroundDeep: "#EEF2FF",
   card: "#FFFFFF",
   surfaceMuted: "#F4F2FC",
+  /** Web --color-surface-alt */
+  surfaceAlt: "#F4F3F8",
   inverseSurface: "#0F172A",
-  border: "#E8E6F0",
+  border: "#E2DFF0",
   borderIndigo: "#C7D2FE",
   borderLight: "#F0EFF8",
-  textPrimary: "#111110",
-  textSecondary: "#5F5E5A",
+  /** Web border-[#E8E6F0] (input outlines, avatar rings); dark themes use `border`. */
+  borderSoft: "#E8E6F0",
+  // Web --color-text / --color-muted (6B6680 is 5.1:1 on #F4F2FC, AA)
+  textPrimary: "#1A1824",
+  textSecondary: "#6B6680",
   textMuted: "#9B9A94",
   textWhite: "#FFFFFF",
   slate300: "#CBD5E1",
@@ -58,28 +66,32 @@ export type Palette = typeof lightPalette;
 const darkPalette: Palette = {
   primary: "#6C63E0",
   primaryDark: "#C9C4FF",
-  primaryLight: "#26234A",
+  // Web maps the light #EEEDFE / #E1F5EE / #FCEBEB tints to --fk-surface.
+  primaryLight: "#1F1E28",
   primaryMedium: "#7B73E3",
   accent: "#8B83F0",
   onPrimary: "#FFFFFF",
   success: "#34C08F",
   successDark: "#6EE7B7",
-  successLight: "#0F2E24",
+  successLight: "#1F1E28",
   successText: "#6EE7B7",
   warning: "#E0A23A",
   warningLight: "#33270F",
   warningText: "#FCD34D",
   error: "#F06A69",
-  errorLight: "#3A1A1A",
+  errorLight: "#1F1E28",
   errorText: "#FCA5A5",
+  dangerSolid: "#D13B3A",
   background: "#0E0E12",
   backgroundDeep: "#15142A",
   card: "#18181F",
   surfaceMuted: "#1F1E28",
+  surfaceAlt: "#1F1E28",
   inverseSurface: "#26253A",
   border: "#2A2935",
   borderIndigo: "#3B3A66",
   borderLight: "#22212C",
+  borderSoft: "#2A2935",
   textPrimary: "#F2F1EE",
   textSecondary: "#BDBBB5",
   textMuted: "#A09E97",
@@ -95,7 +107,8 @@ const darkPalette: Palette = {
   glassCard: "rgba(255,255,255,0.06)",
   heroWash: "rgba(38,35,74,0.6)",
   heroBorder: "rgba(59,58,102,0.8)",
-  tabIdle: "#B5B3AD",
+  // Web tab label text-[#3D3A5C] -> --fk-primary-text (raised for AA).
+  tabIdle: "#ABA5F7",
   primaryTint: "rgba(139,131,240,0.2)",
   primaryTintBorder: "rgba(139,131,240,0.3)",
   primaryText: "#ABA5F7",
@@ -109,27 +122,29 @@ const premiumPalette: Palette = {
   ...darkPalette,
   primary: "#D4AF37",
   primaryDark: "#FCF6BA",
-  primaryLight: "#1D1910",
+  primaryLight: "#1C1A15",
   primaryMedium: "#B38728",
   accent: "#E8C766",
   onPrimary: "#1A1405",
   success: "#6FCF97",
   successDark: "#6FCF97",
-  successLight: "#0F2A1C",
+  successLight: "#1C1A15",
   successText: "#6FCF97",
   warningLight: "#2E2410",
   warningText: "#F3D27A",
   error: "#EB7A72",
-  errorLight: "#341615",
+  errorLight: "#1C1A15",
   errorText: "#EB7A72",
   background: "#0A0A0A",
   backgroundDeep: "#12100B",
   card: "#151412",
   surfaceMuted: "#1C1A15",
+  surfaceAlt: "#1C1A15",
   inverseSurface: "#221C0E",
   border: "#2C2616",
   borderIndigo: "#5A4A1E",
   borderLight: "#201D14",
+  borderSoft: "#2C2616",
   textPrimary: "#F5EFDC",
   textSecondary: "#C9C1AE",
   textMuted: "#9E978A",
@@ -196,6 +211,26 @@ export const SATIN_GRADIENT = {
     "linear-gradient(135deg, #463DA6 0%, #7C73DB 40%, #534AB7 60%, #3C3489 100%)",
   dark: "linear-gradient(135deg, #5A51CC 0%, #958DF0 40%, #6C63E0 60%, #4B42B8 100%)",
 } as const;
+
+/**
+ * Light-theme-only gradients the PWA writes literally (fix-plan, optimizer and
+ * report heroes). In dark and Premium the web's theme.css flattens them to the
+ * theme primary / hero, which the themed brand-fill gradient already does.
+ */
+export const WEB_HERO_GRADIENT = {
+  /** app/analyse/fixplan: from-[#534AB7] to-[#6E62D7] (to right) */
+  fixPlan: "linear-gradient(90deg, #534AB7 0%, #6E62D7 100%)",
+  /** app/optimizer: from-[#534AB7] via-[#6B5FD4] to-[#8B7FE8] (to bottom right) */
+  optimizer: "linear-gradient(135deg, #534AB7 0%, #6B5FD4 50%, #8B7FE8 100%)",
+  /** app/analyse/result hero and tracker summary */
+  report: "linear-gradient(135deg, #3C3489 0%, #534AB7 100%)",
+} as const;
+
+export function lightGradient(
+  css: string,
+): { experimental_backgroundImage?: string } {
+  return activeTheme === "light" ? { experimental_backgroundImage: css } : {};
+}
 
 const GOLD_FILLS = new Set(["#d4af37", "#e8c766", "#b38728"]);
 const SATIN_FILLS = {
@@ -267,33 +302,46 @@ export const Spacing = {
   xxxl: 32,
 } as const;
 
+/** Tailwind radii: lg 8, xl 12, 2xl 16, 3xl 24, plus the dock's 28 and the hero's 32. */
 export const Radius = {
   sm: 8,
   md: 12,
-  lg: 14,
+  lg: 16,
   xl: 16,
   xxl: 20,
+  r24: 24,
+  dock: 28,
+  hero: 32,
   round: 999,
 } as const;
 
+/**
+ * Tailwind type scale: xs 12, sm 14, base 16, lg 18, xl 20, 2xl 24, 3xl 30,
+ * 4xl 36. `micro`, `caption` and `md` are the extra sizes (10, 11, 13) that
+ * mobile keeps for dense UI.
+ */
 export const FontSize = {
-  xs: 10,
-  sm: 11,
+  micro: 10,
+  caption: 11,
+  xs: 12,
   md: 13,
-  base: 15,
-  lg: 17,
+  sm: 14,
+  base: 16,
+  lg: 18,
   xl: 20,
   xxl: 24,
-  xxxl: 32,
+  xxxl: 30,
+  xxxxl: 36,
 } as const;
 
 export const Shadow = {
+  /** Tailwind shadow-sm: 0 1 2 rgba(0,0,0,.05) */
   card: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   get strong() {
     return {
@@ -303,6 +351,22 @@ export const Shadow = {
       shadowRadius: 12,
       elevation: 6,
     } as const;
+  },
+  /** Profile panel and bell dropdown: 0 8 40 rgba(0,0,0,.12) */
+  panel: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 40,
+    elevation: 12,
+  },
+  /** Mobile dock: 0 12 40 rgba(60,50,120,.28) */
+  dock: {
+    shadowColor: "rgb(60,50,120)",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.28,
+    shadowRadius: 40,
+    elevation: 14,
   },
 } as const;
 

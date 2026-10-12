@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import * as Speech from "expo-speech";
+import Svg, { Path } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
   PERSONAL_CA_TOTAL_STEPS,
@@ -9,6 +12,28 @@ import {
 import type { TaxCalcState } from "./useTaxCalculatorState";
 import { themedStyles, Colors } from "@/constants/theme";
 import { GoldText } from "@/components/ui/GoldMirror";
+
+/** Step 1 (checklist): only screen with voice. Spaced for clearer TTS. */
+const PERSONAL_CA_STEP1_WELCOME_TTS =
+  "Welcome to Finkoin — your Personal CA. Please have your documents ready before we start.";
+
+function SpeakerGlyph({ muted }: { muted: boolean }) {
+  return (
+    <Svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={Colors.primaryText}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Path d="M4 9v6h4l5 4V5L8 9H4z" />
+      <Path d={muted ? "M16 10l4 4M20 10l-4 4" : "M16 9a4 4 0 0 1 0 6"} />
+    </Svg>
+  );
+}
 
 /**
  * Guided 19-step Q&A. On the PWA this is a fixed dialog over the page; here it
@@ -35,6 +60,29 @@ export function PersonalCAWizard({
   const checklistReady = Object.values(checklist).every(Boolean);
   const isLast = step >= total - 1;
 
+  const [speechMuted, setSpeechMuted] = useState(false);
+
+  // Welcome line on step 1 only; stop whenever the wizard leaves step 0,
+  // is muted, or closes.
+  useEffect(() => {
+    if (speechMuted || step !== 0) return;
+    Speech.stop();
+    Speech.speak(PERSONAL_CA_STEP1_WELCOME_TTS, {
+      language: "en-IN",
+      rate: 0.94,
+      pitch: 1.06,
+    });
+    return () => {
+      Speech.stop();
+    };
+  }, [speechMuted, step]);
+
+  const toggleMute = () =>
+    setSpeechMuted((v) => {
+      if (!v) Speech.stop();
+      return !v;
+    });
+
   const next = () => {
     if (step === 0 && !checklistReady) return;
     setStep((v) => Math.min(total - 1, v + 1));
@@ -54,6 +102,17 @@ export function PersonalCAWizard({
             {personalCASection(step)}
           </Text>
         </View>
+        <Pressable
+          onPress={toggleMute}
+          accessibilityRole="button"
+          accessibilityLabel={speechMuted ? "Unmute voice" : "Mute voice"}
+          style={({ pressed }) => [
+            styles.muteBtn,
+            pressed && { backgroundColor: Colors.surfaceMuted },
+          ]}
+        >
+          <SpeakerGlyph muted={speechMuted} />
+        </Pressable>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
@@ -150,6 +209,17 @@ const styles = themedStyles(() => ({
   },
   title: { fontSize: 18, fontWeight: "600", color: Colors.textPrimary },
   stepLine: { marginTop: 4, fontSize: 12, color: Colors.textSecondary },
+  muteBtn: {
+    width: 44,
+    height: 44,
+    marginTop: -8,
+    marginRight: -8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   closeBtn: {
     width: 44,
     height: 44,

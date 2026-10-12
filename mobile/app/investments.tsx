@@ -80,7 +80,14 @@ export default function InvestmentsScreen() {
       )}
 
       <Text style={pageStyles.footnote}>
-        Illustrative totals from your inputs — not live broker sync.
+        Illustrative totals from your inputs — not live broker sync.{" "}
+        <Text
+          style={{ color: Colors.primaryText, fontWeight: "600" }}
+          onPress={() => router.push("/portfolio")}
+          accessibilityRole="link"
+        >
+          Portfolio tracker
+        </Text>
       </Text>
     </PageScaffold>
   );

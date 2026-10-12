@@ -1,7 +1,8 @@
 import { Tabs } from "expo-router";
-import { FinkoinTabBar } from "@/components/navigation/FinkoinTabBar";
 
 /**
+ * The dock itself is rendered by GlobalChrome (root layout) so it shows on
+ * every screen, not only these tabs; the navigator draws no tab bar.
  * Dock tabs match the PWA's mobile bottom nav exactly:
  * Home · Report · Track · Calculators · Profile.
  * Split remains in the stack (reachable from Home's quick tools) but
@@ -10,15 +11,10 @@ import { FinkoinTabBar } from "@/components/navigation/FinkoinTabBar";
 export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => <FinkoinTabBar {...props} />}
+      tabBar={() => null}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          position: "absolute",
-          backgroundColor: "transparent",
-          borderTopWidth: 0,
-          elevation: 0,
-        },
+        tabBarStyle: { display: "none" },
       }}
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />

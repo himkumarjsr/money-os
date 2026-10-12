@@ -14,6 +14,9 @@ import {
   Linking,
   ActivityIndicator,
   Platform,
+  Modal,
+  Pressable,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -37,6 +40,7 @@ import {
   Colors,
   tintBg,
   onPrimaryAlpha,
+  readable,
 } from "@/constants/theme";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -45,8 +49,6 @@ type PaymentMethod = "upi" | "cash" | "bank";
 
 const BORDER = () => tintBg("#E8E6F0");
 const SOFT = () => tintBg("#F7F7F4");
-const GREEN = "#1D9E75";
-const RED = "#E24B4A";
 
 const SPLIT_CATEGORY_ICON: Record<string, TrackerIconName> = {
   food: "utensils",
@@ -145,6 +147,13 @@ export default function GroupDetailScreen() {
   const [settleAmount, setSettleAmount] = useState("");
   const [settleBusy, setSettleBusy] = useState(false);
   const [settleMsg, setSettleMsg] = useState("");
+  const [settlePickerOpen, setSettlePickerOpen] = useState(false);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(
+    null,
+  );
+  const [deletingExpenseBusy, setDeletingExpenseBusy] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const [upiNote, setUpiNote] = useState("");
 
@@ -238,6 +247,12 @@ export default function GroupDetailScreen() {
     () => members.filter((m) => m.email?.toLowerCase() !== myEmail),
     [members, myEmail],
   );
+  const settleSelected = otherMembers.find(
+    (m) => m.email.toLowerCase() === settleToEmail.toLowerCase(),
+  );
+  const settleLabel = settleSelected
+    ? `${settleSelected.display_name} (${settleSelected.email})`
+    : "Select member…";
 
   const isCreator =
     Boolean(group?.created_by) && group?.created_by === user?.id;
@@ -384,21 +399,16 @@ export default function GroupDetailScreen() {
 
   const confirmDeleteExpense = (expenseId: string) => {
     if (!groupId) return;
-    Alert.alert(
-      "Delete this expense?",
-      "This cannot be undone. Balances will be updated.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, delete",
-          style: "destructive",
-          onPress: async () => {
-            const res = await deleteExpense(groupId, expenseId);
-            if (res.error) Alert.alert(res.error);
-          },
-        },
-      ],
-    );
+    setDeletingExpenseId(expenseId);
+  };
+
+  const handleConfirmDeleteExpense = async () => {
+    if (!groupId || !deletingExpenseId) return;
+    setDeletingExpenseBusy(true);
+    const res = await deleteExpense(groupId, deletingExpenseId);
+    setDeletingExpenseBusy(false);
+    setDeletingExpenseId(null);
+    if (res.error) Alert.alert(res.error);
   };
 
   const handleLeaveOrRemove = async (email?: string) => {
@@ -419,25 +429,21 @@ export default function GroupDetailScreen() {
 
   const confirmDeleteGroup = () => {
     if (!groupId || !group?.name) return;
-    Alert.alert(
-      `Delete "${group.name}"?`,
-      "This will remove the group for all members. Expense history will be saved but the group will be closed. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, delete group",
-          style: "destructive",
-          onPress: async () => {
-            const ok = await deleteGroup(groupId);
-            if (!ok) {
-              Alert.alert("Could not delete group.");
-              return;
-            }
-            router.replace("/(tabs)/split");
-          },
-        },
-      ],
-    );
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!groupId) return;
+    setDeleting(true);
+    const ok = await deleteGroup(groupId);
+    setDeleting(false);
+    if (!ok) {
+      setShowDeleteConfirm(false);
+      Alert.alert("Could not delete group.");
+      return;
+    }
+    setShowDeleteConfirm(false);
+    router.replace("/(tabs)/split");
   };
 
   const tone = myNet > 0 ? "owed" : myNet < 0 ? "owe" : "settled";
@@ -448,7 +454,7 @@ export default function GroupDetailScreen() {
         ? "You owe"
         : "All settled";
   const netColor =
-    tone === "owed" ? GREEN : tone === "owe" ? RED : Colors.textMuted;
+    tone === "owed" ? readable("#1D9E75") : tone === "owe" ? readable("#E24B4A") : Colors.textMuted;
 
   if (!groupId) {
     return (
@@ -706,7 +712,7 @@ export default function GroupDetailScreen() {
                           <Text
                             style={[
                               styles.balanceAmt,
-                              { color: owed ? GREEN : RED },
+                              { color: owed ? readable("#1D9E75") : readable("#E24B4A") },
                             ]}
                           >
                             {owed ? "gets back" : "owes"}{" "}
@@ -792,7 +798,7 @@ export default function GroupDetailScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Delete expense"
                           >
-                            <AppIcon name="trash" size={15} color={RED} />
+                            <AppIcon name="trash" size={15} color={readable("#E24B4A")} />
                           </TouchableOpacity>
                         </View>
                       ) : null}
@@ -1051,37 +1057,66 @@ export default function GroupDetailScreen() {
 
         <View style={{ marginTop: 20 }}>
           <Text style={styles.fieldLabel}>You paid</Text>
-          {otherMembers.length === 0 ? (
-            <Text style={[styles.mutedSm, { marginTop: 4 }]}>
-              Select member…
+          <TouchableOpacity
+            onPress={() => setSettlePickerOpen((v) => !v)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`You paid: ${settleLabel}`}
+            style={[
+              styles.input,
+              styles.select,
+              settlePickerOpen && { borderColor: Colors.primary },
+            ]}
+          >
+            <Text
+              style={[
+                styles.selectText,
+                !settleSelected && { color: Colors.textMuted },
+              ]}
+              numberOfLines={1}
+            >
+              {settleLabel}
             </Text>
-          ) : (
-            <View style={styles.chipWrap}>
+            <AppIcon
+              name="chevronDown"
+              size={18}
+              color={Colors.textSecondary}
+            />
+          </TouchableOpacity>
+          {settlePickerOpen ? (
+            <View style={styles.optionList}>
               {otherMembers.map((m) => {
-                const active =
+                const on =
                   settleToEmail.toLowerCase() === m.email.toLowerCase();
                 return (
                   <TouchableOpacity
                     key={m.email}
-                    onPress={() => setSettleToEmail(m.email)}
-                    style={[styles.chip, active && styles.chipActive]}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
+                    onPress={() => {
+                      setSettleToEmail(m.email);
+                      setSettlePickerOpen(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    style={[styles.option, on && styles.optionOn]}
                   >
                     <Text
-                      style={[styles.chipText, active && styles.chipTextActive]}
+                      style={[styles.optionText, on && styles.optionTextOn]}
                       numberOfLines={1}
                     >
-                      {m.display_name}
+                      {m.display_name} ({m.email})
                     </Text>
-                    <Text style={styles.chipSub} numberOfLines={1}>
-                      {m.email}
-                    </Text>
+                    {on ? (
+                      <AppIcon
+                        name="check"
+                        size={16}
+                        color={Colors.primaryText}
+                      />
+                    ) : null}
                   </TouchableOpacity>
                 );
               })}
             </View>
-          )}
+          ) : null}
         </View>
 
         <View style={{ marginTop: 16 }}>
@@ -1163,6 +1198,97 @@ export default function GroupDetailScreen() {
           </Text>
         </TouchableOpacity>
       </BottomSheet>
+      <Modal
+        visible={!!deletingExpenseId}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeletingExpenseId(null)}
+      >
+        <View style={styles.dlgBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setDeletingExpenseId(null)}
+            accessibilityLabel="Dismiss"
+          />
+          <View style={styles.dlgCard} accessibilityViewIsModal>
+            <View style={styles.dlgHead}>
+              <Text style={styles.dlgEmoji}>🗑️</Text>
+              <Text style={styles.dlgTitle17}>Delete this expense?</Text>
+              <Text style={styles.dlgBody13}>
+                This cannot be undone. Balances will be updated.
+              </Text>
+            </View>
+            <TouchableOpacity
+              disabled={deletingExpenseBusy}
+              onPress={() => void handleConfirmDeleteExpense()}
+              activeOpacity={0.85}
+              style={[styles.dlgDanger, deletingExpenseBusy && { opacity: 0.5 }]}
+              accessibilityRole="button"
+            >
+              <Text style={styles.dlgDangerText}>
+                {deletingExpenseBusy ? "Deleting…" : "Yes, delete"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setDeletingExpenseId(null)}
+              activeOpacity={0.85}
+              style={styles.dlgCancel}
+              accessibilityRole="button"
+            >
+              <Text style={styles.dlgCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteConfirm(false)}
+      >
+        <View style={[styles.dlgBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowDeleteConfirm(false)}
+            accessibilityLabel="Dismiss"
+          />
+          <View style={styles.dlgCard} accessibilityViewIsModal>
+            <View style={styles.dlgHead}>
+              <View style={styles.dlgIconCircle}>
+                <AppIcon name="trash" size={26} color={Colors.error} />
+              </View>
+              <Text style={styles.dlgTitle18}>{`Delete "${group?.name}"?`}</Text>
+              <Text style={styles.dlgBody14}>
+                This will remove the group for all members. Expense history will
+                be saved but the group will be closed. This cannot be undone.
+              </Text>
+            </View>
+            <TouchableOpacity
+              disabled={deleting}
+              onPress={() => void handleDeleteGroup()}
+              activeOpacity={0.85}
+              style={[
+                styles.dlgDanger,
+                deleting && { backgroundColor: Colors.textMuted },
+              ]}
+              accessibilityRole="button"
+            >
+              <Text style={styles.dlgDangerText}>
+                {deleting ? "Deleting..." : "Yes, delete group"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowDeleteConfirm(false)}
+              activeOpacity={0.85}
+              style={styles.dlgCancel}
+              accessibilityRole="button"
+            >
+              <Text style={styles.dlgCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1478,7 +1604,7 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  dangerPillText: { color: RED, fontSize: 11, fontWeight: "700" },
+  dangerPillText: { color: readable("#E24B4A"), fontSize: 11, fontWeight: "700" },
 
   settleEmpty: { paddingHorizontal: 24, paddingVertical: 40 },
   settleEmptyText: {
@@ -1494,9 +1620,9 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkText: { color: GREEN, fontSize: 18 },
+  checkText: { color: readable("#1D9E75"), fontSize: 18 },
   settleTitle: { color: Colors.textPrimary, fontSize: 13, fontWeight: "600" },
-  settleAmt: { color: GREEN, fontSize: 14, fontWeight: "700" },
+  settleAmt: { color: readable("#1D9E75"), fontSize: 14, fontWeight: "700" },
 
   sheetHead: {
     flexDirection: "row",
@@ -1623,25 +1749,100 @@ const styles = themedStyles(() => ({
   primaryBtnText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "800" },
   disabled: { opacity: 0.5 },
 
-  chipWrap: { marginTop: 6, flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    minHeight: 44,
-    maxWidth: "100%",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  select: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    height: 44,
+  },
+  selectText: { flex: 1, fontSize: 16, color: Colors.textPrimary },
+  optionList: {
+    marginTop: 6,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: BORDER(),
     backgroundColor: Colors.card,
+    overflow: "hidden",
   },
-  chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+  option: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BORDER(),
   },
-  chipText: { color: Colors.textPrimary, fontSize: 14, fontWeight: "600" },
-  chipTextActive: { color: Colors.primaryText, fontWeight: "800" },
-  chipSub: { color: Colors.textMuted, fontSize: 11 },
+  optionOn: { backgroundColor: Colors.primaryLight },
+  optionText: { flex: 1, fontSize: 15, color: Colors.textPrimary },
+  optionTextOn: { color: Colors.primaryText, fontWeight: "700" },
+
+  dlgBackdrop: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  dlgCard: {
+    width: "100%",
+    maxWidth: 384,
+    borderRadius: 24,
+    backgroundColor: Colors.card,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    gap: 10,
+  },
+  dlgHead: { alignItems: "center", marginBottom: 10 },
+  dlgEmoji: { fontSize: 36, marginBottom: 12 },
+  dlgIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.errorLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  dlgTitle17: {
+    marginBottom: 8,
+    fontSize: 17,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    textAlign: "center",
+  },
+  dlgTitle18: {
+    marginBottom: 8,
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    textAlign: "center",
+  },
+  dlgBody13: { fontSize: 13, color: Colors.textMuted, textAlign: "center" },
+  dlgBody14: {
+    fontSize: 14,
+    lineHeight: 24,
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  dlgDanger: {
+    height: 50,
+    borderRadius: 13,
+    backgroundColor: Colors.error,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dlgDangerText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  dlgCancel: {
+    height: 50,
+    borderRadius: 13,
+    backgroundColor: Colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dlgCancelText: { color: Colors.textSecondary, fontSize: 15 },
 
   methodRow: { flexDirection: "row", gap: 8 },
   methodBtn: {

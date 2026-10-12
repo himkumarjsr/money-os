@@ -1,32 +1,55 @@
-import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
-import { router } from "expo-router";
+import { useRef } from "react";
+import {
+  Animated,
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import {
   Colors,
   FINKOIN_TAGLINE,
   FINKOIN_TAGLINE_SUB,
+  brand,
   getActiveTheme,
   themedStyles,
 } from "@/constants/theme";
-import { LandingHeader } from "@/components/landing/LandingHeader";
 import { HeroCarousel } from "@/components/landing/HeroCarousel";
 import { QuickTools } from "@/components/landing/QuickTools";
 import { TopPicks } from "@/components/landing/TopPicks";
-import { useAuthStore } from "@/store/authStore";
+import { Footer } from "@/components/landing/Footer";
+import { WhatYouGet } from "@/components/home/WhatYouGet";
+import { Pricing } from "@/components/home/Pricing";
 import { GoldText } from "@/components/ui/GoldMirror";
+import { reportScrollY } from "@/store/chromeStore";
 
 /**
- * Public home = PWA landing (`app/page.tsx` + HomePageClient mobile).
- * Centered hero, indigo/violet wash, carousel, quick tools, top picks.
+ * Public home = PWA landing (`app/page.tsx` + HomePageClient + HomePageBelowFold).
+ * Order, signed in or out: H1/H2, hero carousel, quick tools, top picks,
+ * "What you get", "Pricing", then the global Footer. The header and dock come
+ * from GlobalChrome.
  */
 export default function HomeScreen() {
-  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const progress = useRef(new Animated.Value(0)).current;
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const y = contentOffset.y;
+    const max = Math.max(1, contentSize.height - layoutMeasurement.height);
+    progress.setValue(Math.min(1, Math.max(0, y / max)));
+    reportScrollY(y);
+  };
 
   return (
     <View style={styles.root}>
-      <LandingHeader />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <View style={styles.heroSection}>
           <View style={styles.heroWash} pointerEvents="none" />
@@ -54,36 +77,27 @@ export default function HomeScreen() {
           <TopPicks />
         </View>
 
-        {!isLoggedIn ? (
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Free forever · No PAN · No Aadhaar
-            </Text>
-            <Pressable
-              onPress={() => router.push("/(auth)/signup")}
-              style={({ pressed }) => [
-                styles.footerCta,
-                pressed && { opacity: 0.9 },
-              ]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.footerCtaText}>Create free account</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/(auth)/login")}
-              hitSlop={8}
-              style={{ minHeight: 44, justifyContent: "center" }}
-            >
-              <Text style={styles.footerLogin}>
-                Already have an account?{" "}
-                <Text style={styles.footerLoginStrong}>Log in</Text>
-              </Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.footerLoggedIn} />
-        )}
+        <WhatYouGet />
+        <Pricing />
+        <Footer bottomPad={96} />
       </ScrollView>
+
+      {/* Web HomePageClient: indigo -> violet -> fuchsia scroll progress bar. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.progress, { transform: [{ scaleX: progress }] }]}
+      >
+        <Svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 4">
+          <Defs>
+            <LinearGradient id="fkHomeProgress" x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0" stopColor={brand("#4F46E5")} />
+              <Stop offset="0.5" stopColor={brand("#7C3AED")} />
+              <Stop offset="1" stopColor={brand("#D946EF")} />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100" height="4" fill="url(#fkHomeProgress)" />
+        </Svg>
+      </Animated.View>
     </View>
   );
 }
@@ -98,7 +112,15 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.surfaceMuted,
   },
   scroll: {
-    paddingBottom: 120,
+    paddingBottom: 0,
+  },
+  progress: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    height: 4,
+    width: "100%",
+    transformOrigin: "left center",
   },
   heroSection: {
     paddingHorizontal: 16,
@@ -147,21 +169,21 @@ const styles = themedStyles(() => ({
   // PWA mobile: text-3xl / text-center / #534AB7 then slate-900
   h1Sub: {
     textAlign: "center",
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "600",
     color: Colors.primaryText,
-    letterSpacing: -0.5,
+    letterSpacing: -0.75,
     lineHeight: 32,
     paddingHorizontal: 8,
   },
   h1Main: {
     marginTop: 4,
     textAlign: "center",
-    fontSize: 28,
-    fontWeight: "800",
+    fontSize: 30,
+    fontWeight: "700",
     color: Colors.textPrimary,
-    letterSpacing: -0.5,
-    lineHeight: 34,
+    letterSpacing: -0.75,
+    lineHeight: 32,
     paddingHorizontal: 8,
   },
   h2: {
@@ -186,46 +208,5 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.card,
     paddingTop: 8,
     paddingHorizontal: 16,
-  },
-  footer: {
-    backgroundColor: Colors.card,
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 16,
-    alignItems: "center",
-  },
-  footerLoggedIn: {
-    backgroundColor: Colors.card,
-    height: 16,
-  },
-  footerText: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginBottom: 14,
-  },
-  footerCta: {
-    backgroundColor: Colors.primary,
-    borderRadius: 999,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    minWidth: 220,
-    minHeight: 48,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  footerCtaText: {
-    color: Colors.onPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  footerLogin: {
-    marginTop: 16,
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: "center",
-  },
-  footerLoginStrong: {
-    color: Colors.primaryText,
-    fontWeight: "700",
   },
 }));

@@ -169,7 +169,12 @@ export default function NotificationsScreen() {
             Sign in to read your notifications.
           </Text>
           <Pressable
-            onPress={() => router.push("/(auth)/login")}
+            onPress={() =>
+              router.push({
+                pathname: "/(auth)/login",
+                params: { next: "/notifications" },
+              })
+            }
             style={styles.gateBtn}
             accessibilityRole="button"
           >

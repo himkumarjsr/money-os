@@ -1,5 +1,6 @@
 import { Pressable, Text, View, type TextStyle } from "react-native";
 import { Colors, themedStyles, tintBg, tintFg } from "@/constants/theme";
+import { missingPolicyFields } from "@/components/policies/missingFields";
 import { formatIndian } from "@/lib/formatters";
 import {
   POLICY_TYPE_LABELS,
@@ -79,11 +80,15 @@ function statusBadge(policy: UserPolicy): Badge & { label: string } {
       fg: tintFg("#5B21B6"),
     };
   }
-  if (!policy.insurerName.trim() || !policy.renewalDate) {
-    return { label: "Details missing", bg: tintBg("#FEF3C7"), fg: tintFg("#92400E") };
+  if (missingPolicyFields(policy).length > 0) {
+    return {
+      label: "Details missing",
+      bg: tintBg("#FEF3C7"),
+      fg: tintFg("#92400E"),
+    };
   }
   const today = startOfLocalDay(new Date());
-  const rd = startOfLocalDay(parseLocalDate(policy.renewalDate));
+  const rd = startOfLocalDay(parseLocalDate(policy.renewalDate ?? ""));
   if (rd < today)
     return { label: "Expired", bg: tintBg("#FEE2E2"), fg: tintFg("#B91C1C") };
   return { label: "Active", bg: tintBg("#D1FAE5"), fg: tintFg("#065F46") };
@@ -93,22 +98,32 @@ function SmallButton({
   label,
   onPress,
   ghost,
+  primary,
 }: {
   label: string;
   onPress: () => void;
   ghost?: boolean;
+  primary?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.smallBtn,
-        ghost ? styles.smallBtnGhost : styles.smallBtnSecondary,
+        primary
+          ? styles.smallBtnPrimary
+          : ghost
+            ? styles.smallBtnGhost
+            : styles.smallBtnSecondary,
         pressed && { opacity: 0.75 },
       ]}
       accessibilityRole="button"
     >
-      <Text style={styles.smallBtnText}>{label}</Text>
+      <Text
+        style={[styles.smallBtnText, primary && styles.smallBtnTextPrimary]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -127,6 +142,7 @@ export function PolicyCard({
   const renew = renewalUi(p);
   const st = statusBadge(p);
   const type = policyBadge(p.policyType);
+  const missing = missingPolicyFields(p);
   const prem = `₹${formatIndian(p.premiumAmount)}${p.premiumFrequency === "yearly" ? "/year" : "/month"}`;
 
   return (
@@ -138,7 +154,9 @@ export function PolicyCard({
               {POLICY_TYPE_LABELS[p.policyType]}
             </Text>
           </View>
-          <Text style={styles.insurer}>{p.insurerName || "—"}</Text>
+          <Text style={styles.insurer}>
+            {p.insurerName || (p.analyseSourceKey ? "Insurer not added" : "—")}
+          </Text>
           <Text style={styles.plan}>
             {p.planName?.trim() || "Plan not specified"}
           </Text>
@@ -152,15 +170,30 @@ export function PolicyCard({
             Premium: <Text style={styles.rowValue}>{prem}</Text>
           </Text>
           <Text style={[styles.renew, renew.style]}>{renew.line}</Text>
+          {p.analyseSourceKey ? (
+            <Text style={styles.source}>
+              From your analysis
+              {missing.length > 0 ? ` · missing ${missing.join(", ")}` : ""}
+            </Text>
+          ) : null}
         </View>
         <View style={[styles.status, { backgroundColor: st.bg }]}>
           <Text style={[styles.pillText, { color: st.fg }]}>{st.label}</Text>
         </View>
       </View>
       <View style={styles.actions}>
-        <SmallButton label="Renew" onPress={onRenew} />
-        <SmallButton label="Transfer to Finkoin" onPress={onTransfer} />
-        <SmallButton label="Edit" onPress={onEdit} ghost />
+        {missing.length > 0 ? (
+          <SmallButton label="Add missing details" onPress={onEdit} primary />
+        ) : null}
+        {p.insurerName.trim() ? (
+          <>
+            <SmallButton label="Renew" onPress={onRenew} />
+            <SmallButton label="Transfer to Finkoin" onPress={onTransfer} />
+          </>
+        ) : null}
+        {missing.length === 0 ? (
+          <SmallButton label="Edit" onPress={onEdit} ghost />
+        ) : null}
       </View>
     </View>
   );
@@ -224,6 +257,9 @@ const styles = themedStyles(() => ({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  smallBtnPrimary: { backgroundColor: Colors.primary },
+  smallBtnTextPrimary: { color: Colors.onPrimary },
+  source: { marginTop: 4, fontSize: 12, color: Colors.textMuted },
   smallBtnGhost: { backgroundColor: "transparent" },
   smallBtnText: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
 }));

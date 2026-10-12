@@ -5,9 +5,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Redirect, router } from "expo-router";
+import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { Colors, Spacing, FontSize, themedStyles } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
@@ -24,8 +25,6 @@ export default function UpdatePasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  if (!isLoggedIn) return <Redirect href="/(auth)/login" />;
-
   const handleSubmit = async () => {
     setFormError(null);
     if (password.length < 6) {
@@ -33,7 +32,7 @@ export default function UpdatePasswordScreen() {
       return;
     }
     if (password !== confirm) {
-      setFormError("Passwords don't match");
+      setFormError("Passwords do not match");
       return;
     }
     setLoading(true);
@@ -49,6 +48,8 @@ export default function UpdatePasswordScreen() {
     }
   };
 
+  const hasSessionError = !isLoggedIn;
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
@@ -63,30 +64,53 @@ export default function UpdatePasswordScreen() {
             <BrandLogo size={64} />
           </View>
           <View style={styles.form}>
-            <Text style={styles.title}>Set a new password</Text>
-            <PasswordInput
-              label="New password"
-              placeholder="At least 6 characters"
-              value={password}
-              onChangeText={setPassword}
-              textContentType="newPassword"
-              autoComplete="new-password"
-            />
-            <PasswordInput
-              label="Confirm password"
-              placeholder="Re-enter password"
-              value={confirm}
-              onChangeText={setConfirm}
-              textContentType="newPassword"
-              autoComplete="new-password"
-            />
-            <FormError message={formError} />
-            <Button
-              label={loading ? "Saving…" : "Update password"}
-              onPress={() => void handleSubmit()}
-              loading={loading}
-              disabled={loading}
-            />
+            <Text style={styles.title}>Choose a new password</Text>
+            <Text style={styles.subtitle}>Use at least 6 characters.</Text>
+            {hasSessionError ? (
+              <>
+                <FormError message="Your reset link is invalid or has expired." />
+                <TouchableOpacity
+                  onPress={() => router.replace("/(auth)/forgot-password")}
+                  style={styles.linkWrap}
+                >
+                  <Text style={styles.linkStrong}>
+                    Request a new reset link
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <PasswordInput
+                  label="New password"
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChangeText={setPassword}
+                  textContentType="newPassword"
+                  autoComplete="new-password"
+                />
+                <PasswordInput
+                  label="Confirm password"
+                  placeholder="Re-enter password"
+                  value={confirm}
+                  onChangeText={setConfirm}
+                  textContentType="newPassword"
+                  autoComplete="new-password"
+                />
+                <FormError message={formError} />
+                <Button
+                  label={loading ? "Saving…" : "Update password"}
+                  onPress={() => void handleSubmit()}
+                  loading={loading}
+                  disabled={loading}
+                />
+              </>
+            )}
+            <TouchableOpacity
+              onPress={() => router.replace("/(auth)/login")}
+              style={styles.linkWrap}
+            >
+              <Text style={styles.linkStrong}>Back to login</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -99,6 +123,17 @@ const styles = themedStyles(() => ({
   content: { padding: Spacing.xl, paddingTop: 56, flexGrow: 1 },
   logoContainer: { alignItems: "center", marginBottom: Spacing.xxl },
   form: { gap: Spacing.lg },
+  subtitle: {
+    fontSize: FontSize.md,
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  linkWrap: { alignItems: "center" },
+  linkStrong: {
+    color: Colors.primaryText,
+    fontWeight: "700",
+    fontSize: FontSize.md,
+  },
   title: {
     fontSize: 22,
     fontWeight: "800",

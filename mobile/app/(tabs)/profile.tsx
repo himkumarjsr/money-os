@@ -126,9 +126,7 @@ export default function ProfileScreen() {
         : "Free Plan";
   const fk = stats?.fkBalance ?? user?.fkBalance ?? 0;
 
-  const referralUrl = referralCode
-    ? `${SITE}/?ref=${encodeURIComponent(referralCode)}`
-    : "";
+  const referralUrl = `${SITE}/?ref=${encodeURIComponent(referralCode ?? "FINK0000")}`;
   const shareMessage = `I use Finkoin to manage my finances. Get your free AI financial health check: ${referralUrl}`;
 
   const copyReferral = async () => {
@@ -280,7 +278,7 @@ export default function ProfileScreen() {
             <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
             {premium ? <PremiumBadge size="md" /> : null}
           </View>
-          <Text style={styles.sub}>{user?.email ?? "No phone/email"}</Text>
+          <Text style={styles.sub}>{user?.phone ?? user?.email ?? "No phone/email"}</Text>
         </Card>
 
         <View style={[styles.plan, paid && styles.planPaid]}>
@@ -331,7 +329,7 @@ export default function ProfileScreen() {
           {checklist.slice(0, 8).map((item) => (
             <View key={item.label} style={styles.checkItem}>
               <AppIcon
-                name={item.status === "ok" ? "check" : "close"}
+                name={item.status === "ok" ? "checkCircle" : "close"}
                 size={16}
                 color={item.status === "ok" ? Colors.success : Colors.error}
               />
@@ -374,7 +372,11 @@ export default function ProfileScreen() {
             <View style={styles.kycBox}>
               <Text style={styles.kycText}>
                 Mobile verification:{" "}
-                <Text style={styles.kycMuted}>Coming soon</Text>
+                {user?.phone ? (
+                  <Text style={styles.kycVerified}>Verified</Text>
+                ) : (
+                  <Text style={styles.kycMuted}>Coming soon</Text>
+                )}
               </Text>
               <Text style={[styles.kycMuted, { marginTop: 4 }]}>
                 Aadhaar verification: Coming soon
@@ -388,7 +390,7 @@ export default function ProfileScreen() {
             Refer friends · Earn FK tokens
           </Text>
           <Text style={styles.refLink}>
-            {referralUrl || "Generating link…"}
+            {referralUrl}
           </Text>
           <View style={styles.inline}>
             <Pressable
@@ -428,7 +430,7 @@ export default function ProfileScreen() {
               onPress={handleDeleteAccount}
             >
               <Text style={styles.deleteText}>
-                {deleteBusy ? "Deleting…" : "Delete all my data"}
+                {deleteBusy ? "Deleting…" : "Delete account permanently"}
               </Text>
             </Pressable>
             <Pressable
@@ -661,6 +663,11 @@ const styles = themedStyles(() => ({
   },
   kycText: { fontSize: FontSize.md, color: Colors.textSecondary },
   kycMuted: { fontSize: FontSize.md, color: Colors.textMuted },
+  kycVerified: {
+    fontSize: FontSize.md,
+    color: Colors.successText,
+    fontWeight: "600",
+  },
   accountCard: { marginBottom: Spacing.lg, borderColor: Colors.errorLight },
   accountTitle: { color: Colors.errorText },
   accountBtn: {

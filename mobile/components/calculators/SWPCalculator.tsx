@@ -1,3 +1,4 @@
+import { Colors } from "@/constants/theme";
 import { useCallback, useMemo, useState } from "react";
 import { View } from "react-native";
 import { formatCurrency } from "@/lib/finance";
@@ -57,7 +58,7 @@ export function SWPCalculator() {
   else if (lasts < 180 || withdraw > sustain) tone = "warn";
 
   const isSustainable = withdraw <= sustain;
-  const lineColor = isSustainable ? "#1D9E75" : "#E24B4A";
+  const lineColor = isSustainable ? Colors.success : Colors.error;
 
   const series = useMemo(() => {
     const r = rate / 100 / 12;

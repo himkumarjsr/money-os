@@ -22,8 +22,8 @@ export function Step2Income({ live }: Pick<StepProps, "live">) {
         name="otherIncome"
         label="Other income — freelance, rental, business"
       />
-      {live.debtWarning ? <Note tone="red">{live.debtWarning}</Note> : null}
       <TotalPanel label="Total monthly income" amount={live.totalIncome} />
+      {live.debtWarning ? <Note tone="red">{live.debtWarning}</Note> : null}
     </View>
   );
 }

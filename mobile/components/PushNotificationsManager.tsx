@@ -1,6 +1,6 @@
 /**
- * Root-level push wiring: OS permission on first launch (any user, signed in or
- * not), token registration once signed in, inbox refresh on receipt, and
+ * Root-level push wiring: token registration once signed in (the OS permission
+ * itself is requested by PushPermissionPrompt), inbox refresh on receipt, and
  * deep-link routing when a notification is tapped (warm or cold start).
  */
 import { useEffect, useRef } from "react";
@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import type * as Notifications from "expo-notifications";
 import { hydrateSyncKv, syncKv } from "@/lib/syncKv";
 import {
-  askPushPermissionOnce,
+  getPushPermission,
   ensureAndroidChannel,
   getNotifications,
   registerPushToken,
@@ -24,31 +24,25 @@ const LAST_HANDLED_KEY = "finkoin_last_push_handled";
 
 export function PushNotificationsManager() {
   const userId = useAuthStore((s) => (s.isLoggedIn ? s.user?.id : undefined));
-  const permissionChecked = useRef(false);
   const handled = useRef(new Set<string>());
 
+  // No OS permission request here: the signed-in PushPermissionPrompt asks
+  // first (web parity). If permission was already granted, just keep this
+  // device's token registered for the signed-in user.
   useEffect(() => {
+    if (!userId) return;
     let cancelled = false;
-    const timer = setTimeout(async () => {
+    void (async () => {
       await hydrateSyncKv();
       await ensureAndroidChannel();
-      const granted = await askPushPermissionOnce();
-      permissionChecked.current = true;
-      if (cancelled || !granted) return;
-      const uid = useAuthStore.getState().user?.id;
-      if (useAuthStore.getState().isLoggedIn && uid) {
-        void registerPushToken(uid);
+      if (cancelled) return;
+      if ((await getPushPermission()) === "granted") {
+        void registerPushToken(userId);
       }
-    }, 1200);
+    })();
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
-  }, []);
-
-  useEffect(() => {
-    if (!userId || !permissionChecked.current) return;
-    void registerPushToken(userId);
   }, [userId]);
 
   // One inbox subscription for the whole app; every header bell reads the store.

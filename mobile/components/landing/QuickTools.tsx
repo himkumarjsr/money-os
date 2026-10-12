@@ -2,7 +2,6 @@ import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
 import { Colors, Radius, Shadow, themedStyles, brand } from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
-import { useAuthStore } from "@/store/authStore";
 
 /** Same tools / order / icons as web HomeMobileQuickTools */
 const TOOLS: Array<{
@@ -10,7 +9,6 @@ const TOOLS: Array<{
   label: string;
   route: string;
   icon: AppIconName;
-  needsAuth?: boolean;
   calcTool?: string;
 }> = [
   {
@@ -45,7 +43,7 @@ const TOOLS: Array<{
   {
     id: "portfolio",
     label: "Portfolio",
-    route: "/(tabs)/calculators",
+    route: "/portfolio",
     icon: "briefcase",
   },
   {
@@ -53,18 +51,11 @@ const TOOLS: Array<{
     label: "Analyse",
     route: "/(tabs)/analyse",
     icon: "chart",
-    needsAuth: true,
   },
 ];
 
 export function QuickTools() {
-  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-
   const go = (t: (typeof TOOLS)[number]) => {
-    if (t.needsAuth && !isLoggedIn) {
-      router.push("/(auth)/login");
-      return;
-    }
     if (t.calcTool) {
       router.push(`/calculators/${t.calcTool}` as never);
       return;

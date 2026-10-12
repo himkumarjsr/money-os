@@ -83,8 +83,9 @@ function MoneyInput({
 const styles = themedStyles(() => ({
   wrapper: { gap: 6 },
   label: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+    fontWeight: "500",
     color: Colors.textSecondary,
   },
   row: {
@@ -92,14 +93,15 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     height: 52,
     backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.md,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: Colors.borderSoft,
     paddingHorizontal: Spacing.lg,
     gap: 6,
   },
   rowFocused: {
-    borderColor: Colors.primary,
+    borderColor: Colors.primaryText,
+    backgroundColor: Colors.card,
   },
   rowError: {
     borderColor: Colors.error,

@@ -145,7 +145,7 @@ export function MonthSafetyPulse({
                 style={[
                   styles.delta,
                   {
-                    color: pulse.spentDelta > 0 ? "#991B1B" : "#1B7A4E",
+                    color: pulse.spentDelta > 0 ? Colors.errorText : Colors.successText,
                   },
                 ]}
               >
@@ -167,8 +167,9 @@ export function MonthSafetyPulse({
               <Text style={styles.moverName}>{m.label}</Text>
               <Text
                 style={{
+                  fontSize: 12,
                   fontWeight: "700",
-                  color: m.delta > 0 ? "#991B1B" : "#1B7A4E",
+                  color: m.delta > 0 ? Colors.errorText : Colors.successText,
                 }}
               >
                 {maskOrShow(m.delta, true, true)}

@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { missingPolicyFields } from "@/components/policies/missingFields";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PolicyCard } from "@/components/policies/PolicyCard";
 import { PolicyFormSheet } from "@/components/policies/PolicyFormSheet";
@@ -33,13 +34,11 @@ import {
   type PremiumFrequency,
   type UserPolicy,
 } from "@/lib/policyVault";
+import { syncKv } from "@/lib/syncKv";
 import { useAuthStore } from "@/store/authStore";
 
-function showMarketplaceSoon() {
-  Alert.alert(
-    "Coming soon",
-    "Plan comparison and the insurance marketplace are coming to the app soon.",
-  );
+function openMarketplace() {
+  router.push("/insurance");
 }
 
 export default function PoliciesScreen() {
@@ -134,7 +133,8 @@ export default function PoliciesScreen() {
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace("/(tabs)");
-  const goLogin = () => router.push("/(auth)/login");
+  const goLogin = () =>
+    router.push({ pathname: "/(auth)/login", params: { next: "/policies" } });
 
   const openNew = () => {
     setForm(emptyPolicyForm());
@@ -161,6 +161,13 @@ export default function PoliciesScreen() {
     setTransferFor(null);
     void reload();
   };
+
+  const editingPolicy = editId
+    ? (policies.find((p) => p.id === editId) ?? null)
+    : null;
+  const incompleteCount = policies.filter(
+    (p) => missingPolicyFields(p).length > 0,
+  ).length;
 
   if (!hasInitialized) {
     return (
@@ -270,7 +277,7 @@ export default function PoliciesScreen() {
                 <Text style={styles.primaryBtnText}>Add first policy →</Text>
               </Pressable>
               <Pressable
-                onPress={showMarketplaceSoon}
+                onPress={openMarketplace}
                 style={styles.secondaryBtn}
                 accessibilityRole="button"
               >
@@ -282,6 +289,18 @@ export default function PoliciesScreen() {
           </View>
         ) : (
           <View style={{ gap: 16 }}>
+            {incompleteCount > 0 ? (
+              <View style={styles.incompleteBox}>
+                <Text style={styles.incompleteText}>
+                  {incompleteCount === 1
+                    ? "1 policy needs a few details."
+                    : `${incompleteCount} policies need a few details.`}{" "}
+                  We added what you entered in your analysis; tap{" "}
+                  <Text style={{ fontWeight: "700" }}>Add missing details</Text>{" "}
+                  to finish.
+                </Text>
+              </View>
+            ) : null}
             {policies.map((p) => (
               <PolicyCard
                 key={p.id}
@@ -301,6 +320,11 @@ export default function PoliciesScreen() {
         onClose={() => setAddOpen(false)}
         editId={editId}
         initial={form}
+        analyseMissing={
+          editingPolicy?.analyseSourceKey
+            ? missingPolicyFields(editingPolicy)
+            : undefined
+        }
         onSaved={() => {
           setAddOpen(false);
           void reload();
@@ -311,8 +335,21 @@ export default function PoliciesScreen() {
         policy={renewFor}
         onClose={() => setRenewFor(null)}
         onCompare={() => {
+          if (renewFor) {
+            syncKv.setItem(
+              "finkoin_compare_prefill",
+              JSON.stringify({
+                insurerName: renewFor.insurerName,
+                policyType: renewFor.policyType,
+                coverAmount: renewFor.coverAmount,
+                premiumAmount: renewFor.premiumAmount,
+                premiumFrequency: renewFor.premiumFrequency,
+                planName: renewFor.planName,
+              }),
+            );
+          }
           setRenewFor(null);
-          showMarketplaceSoon();
+          openMarketplace();
         }}
         onStartTransfer={(p) => {
           setRenewFor(null);
@@ -356,6 +393,13 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   addBtnText: { color: Colors.onPrimary, fontWeight: "700", fontSize: 14 },
+  incompleteBox: {
+    borderRadius: 12,
+    backgroundColor: Colors.warningLight,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  incompleteText: { fontSize: 14, color: Colors.warningText, lineHeight: 20 },
   errorBox: {
     marginBottom: 20,
     borderRadius: 12,
