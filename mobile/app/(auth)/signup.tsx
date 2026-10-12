@@ -1,20 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
-  TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, type Href } from "expo-router";
-import { useAuthStore, getOAuthRedirectUri } from "@/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { Colors, Spacing, FontSize, themedStyles } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AppleSignInButton } from "@/components/ui/AppleSignInButton";
-import { BrandLogo } from "@/components/ui/BrandLogo";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { FormError } from "@/components/ui/FormError";
+import {
+  AuthBrand,
+  AuthModeSwitch,
+  AuthHeading,
+  AuthDivider,
+  AuthSecurityFooter,
+} from "@/components/auth/AuthChrome";
+import {
+  applyPendingReferral,
+  savePendingReferral,
+} from "@/components/auth/referral";
 import { openContentHref } from "@/lib/contentLinks";
 
 /** Only allow in-app paths as post-signup targets. */
@@ -27,56 +38,81 @@ function safeNext(next: unknown): Href {
 }
 
 export default function SignupScreen() {
-  const { next } = useLocalSearchParams<{ next?: string }>();
+  const { next, ref } = useLocalSearchParams<{ next?: string; ref?: string }>();
   const target = safeNext(next);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const signUp = useAuthStore((s) => s.signUp);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const signInWithApple = useAuthStore((s) => s.signInWithApple);
   const [appleLoading, setAppleLoading] = useState(false);
 
+  useEffect(() => {
+    void savePendingReferral(ref);
+  }, [ref]);
+
   const handleSubmit = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Missing fields", "Please fill name, email and password");
+    setFormError(null);
+    if (!email.trim()) {
+      setFormError("Please enter your email");
+      return;
+    }
+    if (!password.trim()) {
+      setFormError("Please enter your password");
+      return;
+    }
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters");
+      return;
+    }
+    if (!name.trim()) {
+      setFormError("Please enter your name");
       return;
     }
     setLoading(true);
     try {
-      const result = await signUp(name.trim(), email.trim(), password);
+      const result = await signUp(
+        name.trim(),
+        email.trim(),
+        password,
+        typeof next === "string" ? next : undefined,
+      );
       if (result.error) {
-        Alert.alert("Sign up failed", result.error);
-      } else {
-        Alert.alert(
-          "Check your email",
-          "We sent a verification link. Please verify then log in.",
-          [
-            {
-              text: "OK",
-              onPress: () =>
-                router.replace({
-                  pathname: "/(auth)/login",
-                  params: next ? { next } : {},
-                }),
-            },
-          ],
-        );
+        setFormError(result.error);
+        return;
       }
+      if (result.needsConfirmation) {
+        // Web: success message, switch to login mode, clear the password.
+        router.replace({
+          pathname: "/(auth)/login",
+          params: {
+            notice: "confirm",
+            ...(next ? { next } : {}),
+            ...(ref ? { ref } : {}),
+          },
+        });
+        return;
+      }
+      await applyPendingReferral();
+      router.replace(target);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogle = async () => {
+    setFormError(null);
     setGoogleLoading(true);
     try {
       const result = await signInWithGoogle();
       if (result.error) {
-        Alert.alert("Google sign-in", result.error);
+        setFormError(result.error);
       } else {
+        void applyPendingReferral();
         router.replace(target);
       }
     } finally {
@@ -85,14 +121,14 @@ export default function SignupScreen() {
   };
 
   const handleApple = async () => {
+    setFormError(null);
     setAppleLoading(true);
     try {
       const result = await signInWithApple();
       if (result.error) {
-        if (!/cancelled/i.test(result.error)) {
-          Alert.alert("Apple sign-in", result.error);
-        }
+        if (!/cancelled/i.test(result.error)) setFormError(result.error);
       } else {
+        void applyPendingReferral();
         router.replace(target);
       }
     } finally {
@@ -103,125 +139,102 @@ export default function SignupScreen() {
   const busy = loading || googleLoading || appleLoading;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.logoContainer}>
-          <BrandLogo size={80} />
-          <Text style={styles.appName}>Create account</Text>
-          <Text style={styles.tagline}>Same Finkoin as the web</Text>
-        </View>
-
-        <View style={styles.form}>
-          <Input
-            label="Your name"
-            placeholder="Himanshu Kumar"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
-          <Input
-            label="Email"
-            placeholder="you@email.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Input
-            label="Password"
-            placeholder="Min 6 characters"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <Button
-            label={loading ? "Please wait…" : "Create account"}
-            onPress={() => void handleSubmit()}
-            loading={loading}
-            disabled={busy}
-          />
-          <Button
-            label={googleLoading ? "Opening Google…" : "Continue with Google"}
-            variant="secondary"
-            onPress={() => void handleGoogle()}
-            loading={googleLoading}
-            disabled={busy}
-          />
-          <AppleSignInButton
-            mode="signUp"
-            onPress={() => void handleApple()}
-            disabled={busy}
-          />
-        </View>
-
-        <Text style={styles.legalText}>
-          By signing up you agree to our{" "}
-          <Text
-            style={styles.legalLink}
-            onPress={() => openContentHref("/legal/terms")}
-          >
-            Terms
-          </Text>{" "}
-          and{" "}
-          <Text
-            style={styles.legalLink}
-            onPress={() => openContentHref("/legal/privacy")}
-          >
-            Privacy Policy
-          </Text>
-          .
-        </Text>
-
-        <TouchableOpacity
-          onPress={() =>
-            router.replace({
-              pathname: "/(auth)/login",
-              params: next ? { next } : {},
-            })
-          }
-          style={styles.linkWrap}
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.link}>
-            Have an account? <Text style={styles.linkStrong}>Log in</Text>
-          </Text>
-        </TouchableOpacity>
+          <AuthBrand />
+          <AuthModeSwitch mode="signup" next={next} refCode={ref} />
+          <AuthHeading
+            title="Create account"
+            subtitle="Join Indians taking control of finances."
+          />
 
-        <TouchableOpacity
-          onPress={() => router.replace("/(tabs)")}
-          style={styles.linkWrap}
-        >
-          <Text style={styles.link}>
-            ← Back to <Text style={styles.linkStrong}>home</Text>
+          <View style={styles.form}>
+            <Input
+              label="Your name"
+              placeholder="Your name"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoComplete="name"
+            />
+            <Input
+              label="Email address"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              autoComplete="email"
+            />
+            <PasswordInput
+              label="Password"
+              placeholder="Min 6 characters"
+              value={password}
+              onChangeText={setPassword}
+              textContentType="newPassword"
+              autoComplete="password-new"
+            />
+            <FormError message={formError} />
+            <Button
+              label={loading ? "Please wait…" : "Create my account"}
+              onPress={() => void handleSubmit()}
+              loading={loading}
+              disabled={busy}
+            />
+            <AuthDivider />
+            <Button
+              label={googleLoading ? "Opening Google…" : "Continue with Google"}
+              variant="secondary"
+              onPress={() => void handleGoogle()}
+              loading={googleLoading}
+              disabled={busy}
+            />
+            <AppleSignInButton
+              mode="signUp"
+              onPress={() => void handleApple()}
+              disabled={busy}
+            />
+          </View>
+
+          <Text style={styles.legalText}>
+            By signing up you agree to our{" "}
+            <Text
+              style={styles.legalLink}
+              onPress={() => openContentHref("/legal/terms")}
+            >
+              Terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={styles.legalLink}
+              onPress={() => openContentHref("/legal/privacy")}
+            >
+              Privacy Policy
+            </Text>
+            .{"\n"}We collect only financial numbers. No PAN or Aadhaar ever.
           </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          <AuthSecurityFooter />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = themedStyles(() => ({
+  safe: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.xl, paddingTop: 80, minHeight: "100%" as any },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: Spacing.xxxl,
-  },
-  appName: {
-    marginTop: Spacing.md,
-    fontSize: FontSize.xxl,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  tagline: { fontSize: FontSize.md, color: Colors.textMuted },
+  content: { padding: Spacing.xl, paddingTop: 56, minHeight: "100%" as any },
   form: { gap: Spacing.lg },
   legalText: {
     marginTop: Spacing.lg,
@@ -231,7 +244,4 @@ const styles = themedStyles(() => ({
     lineHeight: 16,
   },
   legalLink: { color: Colors.primaryText, fontWeight: "600" },
-  linkWrap: { marginTop: Spacing.xl, alignItems: "center" },
-  link: { fontSize: FontSize.md, color: Colors.textMuted },
-  linkStrong: { color: Colors.primaryText, fontWeight: "700" },
 }));

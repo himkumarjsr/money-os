@@ -24,18 +24,18 @@ const FREQUENCIES = [
 ] as const;
 
 const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
+  "January",
+  "February",
+  "March",
+  "April",
   "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 export type ObligationFormPayload = {
@@ -75,6 +75,7 @@ export function AddObligationForm({
   const [dueMonth, setDueMonth] = useState(
     initial?.due_month != null ? String(initial.due_month) : "",
   );
+  const [monthOpen, setMonthOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const isEdit = Boolean(initial);
@@ -211,26 +212,51 @@ export function AddObligationForm({
       {frequency === "yearly" ? (
         <>
           <Text style={[styles.label, styles.labelSpaced]}>Which month?</Text>
-          <View style={styles.dayGrid}>
-            {MONTHS.map((m, i) => {
-              const active = dueMonth === String(i + 1);
-              return (
-                <Pressable
-                  key={m}
-                  onPress={() => setDueMonth(String(i + 1))}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  style={[styles.monthCell, active && styles.pillActive]}
-                >
-                  <Text
-                    style={[styles.pillText, active && styles.pillTextActive]}
+          <Pressable
+            onPress={() => setMonthOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityLabel="Which month?"
+            accessibilityState={{ expanded: monthOpen }}
+            style={[styles.input, styles.select]}
+          >
+            <Text
+              style={[
+                styles.selectText,
+                !dueMonth && { color: Colors.textMuted },
+              ]}
+            >
+              {dueMonth ? MONTHS[Number(dueMonth) - 1] : "Select month"}
+            </Text>
+            <Text style={styles.selectChevron}>▼</Text>
+          </Pressable>
+          {monthOpen ? (
+            <View style={styles.monthList}>
+              {MONTHS.map((m, i) => {
+                const active = dueMonth === String(i + 1);
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => {
+                      setDueMonth(String(i + 1));
+                      setMonthOpen(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[styles.monthRow, active && styles.pillActive]}
                   >
-                    {m}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Text
+                      style={[
+                        styles.selectText,
+                        active && styles.pillTextActive,
+                      ]}
+                    >
+                      {m}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </>
       ) : null}
 
@@ -313,14 +339,25 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  monthCell: {
-    width: "23%",
-    height: 44,
-    borderRadius: 10,
+  select: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.card,
+  },
+  selectText: { fontSize: 15, color: Colors.textPrimary },
+  selectChevron: { fontSize: 12, color: Colors.textMuted },
+  monthList: {
+    marginTop: 6,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.card,
-    alignItems: "center",
+    overflow: "hidden",
+  },
+  monthRow: {
+    minHeight: 44,
+    paddingHorizontal: 14,
     justifyContent: "center",
   },
   error: {

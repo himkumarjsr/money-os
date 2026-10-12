@@ -30,6 +30,8 @@ export interface User {
   photoURL: string | null;
   subscriptionTier: string;
   fkBalance: number;
+  phone?: string | null;
+  isAdmin?: boolean;
 }
 
 interface AuthState {
@@ -47,7 +49,13 @@ interface AuthState {
     name: string,
     email: string,
     password: string,
-  ) => Promise<{ error?: string }>;
+    next?: string,
+  ) => Promise<{
+    error?: string;
+    /** Account created but the email must be confirmed before login. */
+    needsConfirmation?: boolean;
+    message?: string;
+  }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
   signInWithApple: () => Promise<{ error?: string }>;
   handleIncomingAuthUrl: (url: string) => Promise<{ error?: string }>;
@@ -133,6 +141,7 @@ function mapAuthUser(user: {
   id: string;
   email?: string | null;
   user_metadata?: Record<string, unknown>;
+  phone?: string | null;
 }): User {
   const meta = user.user_metadata ?? {};
   const name =
@@ -151,6 +160,7 @@ function mapAuthUser(user: {
     photoURL,
     subscriptionTier: "free",
     fkBalance: 0,
+    phone: user.phone || null,
   };
 }
 
@@ -301,7 +311,7 @@ export const useAuthStore = create<AuthState>()(
           try {
             const { data: profile } = await supabase
               .from("users")
-              .select("name, subscription_tier, fk_balance, avatar_url")
+              .select("name, subscription_tier, fk_balance, avatar_url, phone, is_admin")
               .eq("id", sessionUser.id)
               .maybeSingle();
             if (profile?.name) next = { ...next, name: profile.name };
@@ -310,6 +320,12 @@ export const useAuthStore = create<AuthState>()(
                 ...next,
                 subscriptionTier: profile.subscription_tier,
               };
+            }
+            if (typeof profile?.phone === "string" && profile.phone) {
+              next = { ...next, phone: profile.phone };
+            }
+            if (profile?.is_admin === true) {
+              next = { ...next, isAdmin: true };
             }
             if (typeof profile?.fk_balance === "number") {
               next = { ...next, fkBalance: profile.fk_balance };
@@ -380,7 +396,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signUp: async (name, email, password) => {
+      signUp: async (name, email, password, next) => {
         if (!isSupabaseConfigured()) {
           return {
             error:
@@ -392,7 +408,12 @@ export const useAuthStore = create<AuthState>()(
           const { data, error } = await supabase.auth.signUp({
             email: cleaned,
             password,
-            options: { data: { name } },
+            options: {
+              data: { name },
+              emailRedirectTo: Linking.createURL("auth/callback", {
+                queryParams: next ? { next } : {},
+              }),
+            },
           });
           if (error) return { error: error.message };
 
@@ -409,8 +430,9 @@ export const useAuthStore = create<AuthState>()(
           }
 
           return {
-            error:
-              "Check your email to confirm the account, then log in. (Or disable email confirm in Supabase → Auth → Providers for local testing.)",
+            needsConfirmation: true,
+            message:
+              "Account created! Check your email to verify your account, then log in.",
           };
         } catch (e) {
           return {

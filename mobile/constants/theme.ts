@@ -23,16 +23,20 @@ const lightPalette = {
   error: "#E24B4A",
   errorLight: "#FCEBEB",
   errorText: "#991B1B",
-  background: "#F7F7F4",
+  // Web: html/body #F4F2FC (globals.css)
+  background: "#F4F2FC",
   backgroundDeep: "#EEF2FF",
   card: "#FFFFFF",
   surfaceMuted: "#F4F2FC",
+  /** Web --color-surface-alt */
+  surfaceAlt: "#F4F3F8",
   inverseSurface: "#0F172A",
-  border: "#E8E6F0",
+  border: "#E2DFF0",
   borderIndigo: "#C7D2FE",
   borderLight: "#F0EFF8",
-  textPrimary: "#111110",
-  textSecondary: "#5F5E5A",
+  // Web --color-text / --color-muted (6B6680 is 5.1:1 on #F4F2FC, AA)
+  textPrimary: "#1A1824",
+  textSecondary: "#6B6680",
   textMuted: "#9B9A94",
   textWhite: "#FFFFFF",
   slate300: "#CBD5E1",
@@ -76,6 +80,7 @@ const darkPalette: Palette = {
   backgroundDeep: "#15142A",
   card: "#18181F",
   surfaceMuted: "#1F1E28",
+  surfaceAlt: "#1F1E28",
   inverseSurface: "#26253A",
   border: "#2A2935",
   borderIndigo: "#3B3A66",
@@ -126,6 +131,7 @@ const premiumPalette: Palette = {
   backgroundDeep: "#12100B",
   card: "#151412",
   surfaceMuted: "#1C1A15",
+  surfaceAlt: "#1C1A15",
   inverseSurface: "#221C0E",
   border: "#2C2616",
   borderIndigo: "#5A4A1E",
@@ -267,33 +273,46 @@ export const Spacing = {
   xxxl: 32,
 } as const;
 
+/** Tailwind radii: lg 8, xl 12, 2xl 16, 3xl 24, plus the dock's 28 and the hero's 32. */
 export const Radius = {
   sm: 8,
   md: 12,
-  lg: 14,
+  lg: 16,
   xl: 16,
   xxl: 20,
+  r24: 24,
+  dock: 28,
+  hero: 32,
   round: 999,
 } as const;
 
+/**
+ * Tailwind type scale: xs 12, sm 14, base 16, lg 18, xl 20, 2xl 24, 3xl 30,
+ * 4xl 36. `micro`, `caption` and `md` are the extra sizes (10, 11, 13) that
+ * mobile keeps for dense UI.
+ */
 export const FontSize = {
-  xs: 10,
-  sm: 11,
+  micro: 10,
+  caption: 11,
+  xs: 12,
   md: 13,
-  base: 15,
-  lg: 17,
+  sm: 14,
+  base: 16,
+  lg: 18,
   xl: 20,
   xxl: 24,
-  xxxl: 32,
+  xxxl: 30,
+  xxxxl: 36,
 } as const;
 
 export const Shadow = {
+  /** Tailwind shadow-sm: 0 1 2 rgba(0,0,0,.05) */
   card: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   get strong() {
     return {
@@ -303,6 +322,22 @@ export const Shadow = {
       shadowRadius: 12,
       elevation: 6,
     } as const;
+  },
+  /** Profile panel and bell dropdown: 0 8 40 rgba(0,0,0,.12) */
+  panel: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 40,
+    elevation: 12,
+  },
+  /** Mobile dock: 0 12 40 rgba(60,50,120,.28) */
+  dock: {
+    shadowColor: "rgb(60,50,120)",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.28,
+    shadowRadius: 40,
+    elevation: 14,
   },
 } as const;
 

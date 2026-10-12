@@ -3,7 +3,6 @@ import { View, Text, ScrollView, Pressable } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import { AppHeader } from "@/components/AppHeader";
-import { AppIcon } from "@/components/ui/AppIcon";
 import {
   CATEGORIES,
   findCategoryForCalc,
@@ -82,13 +81,6 @@ export default function CalculatorsScreen() {
             accessibilityRole="button"
             accessibilityLabel={item.title}
           >
-            <View style={styles.cardIcon}>
-              <AppIcon
-                name={item.icon ?? "trending"}
-                size={20}
-                color={Colors.primaryText}
-              />
-            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardDesc}>{item.blurb}</Text>
@@ -165,14 +157,6 @@ const styles = themedStyles(() => ({
     borderColor: Colors.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
-  },
-  cardIcon: {
-    height: 40,
-    width: 40,
-    borderRadius: 12,
-    backgroundColor: Colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
   },
   cardTitle: {
     fontSize: 14,

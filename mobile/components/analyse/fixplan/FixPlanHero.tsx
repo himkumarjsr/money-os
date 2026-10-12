@@ -11,12 +11,15 @@ type Props = {
   attentionCount: number;
   overallSummary?: string;
   isFallback?: boolean;
+  /** Rate-limit / refresh notice, shown inside the hero like web. */
+  refreshNotice?: string;
 };
 
 export function FixPlanHero({
   attentionCount,
   overallSummary,
   isFallback,
+  refreshNotice,
 }: Props) {
   return (
     <View style={styles.hero}>
@@ -35,6 +38,15 @@ export function FixPlanHero({
           ? "ℹ️ Showing estimated plan — AI analysis will load shortly"
           : "✓ AI personalised analysis"}
       </Text>
+      {refreshNotice ? (
+        <Text
+          style={styles.badge}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          {refreshNotice}
+        </Text>
+      ) : null}
     </View>
   );
 }

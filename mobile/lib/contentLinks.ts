@@ -61,8 +61,16 @@ export function nativeRouteForPath(pathWithQuery: string): string {
     case "refund":
     case "disclaimer":
       return `/legal/${first}`;
+    case "pricing":
+      return "/plans";
     case "about":
     case "careers":
+    case "contact":
+    case "features":
+    case "plans":
+    case "kyc":
+    case "insurance":
+    case "optimizer":
     case "press":
     case "settings":
     case "notifications":
@@ -93,10 +101,6 @@ export function openContentHref(href: string): void {
   }
   if (/^https?:\/\//i.test(h)) {
     void Linking.openURL(h).catch(() => {});
-    return;
-  }
-  if (h === "/contact") {
-    void Linking.openURL("mailto:hello@finkoin.com").catch(() => {});
     return;
   }
   router.push(nativeRouteForPath(h) as Href);

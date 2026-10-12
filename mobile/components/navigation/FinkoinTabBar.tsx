@@ -1,6 +1,9 @@
 /**
  * Floating glass dock — matches the PWA's mobile bottom nav exactly:
  * Home · Report · Track(+) · Calculators · Profile
+ *
+ * Rendered once by the root layout (components/navigation/GlobalChrome.tsx) so
+ * it appears on every screen the web navbar does, not only on the tab screens.
  */
 import {
   View,
@@ -8,12 +11,10 @@ import {
   Image,
   Pressable,
   StyleSheet,
-  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import Svg, { Path } from "react-native-svg";
-import { Colors, themedStyles, brand } from "@/constants/theme";
+import { Colors, Radius, Shadow, themedStyles, brand } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
@@ -22,13 +23,15 @@ import {
   isMirrorGold,
 } from "@/components/ui/GoldMirror";
 
-const ORDER = [
+export const DOCK_ORDER = [
   "index",
   "analyse",
   "tracker",
   "calculators",
   "profile",
 ] as const;
+export type DockId = (typeof DOCK_ORDER)[number];
+const ORDER = DOCK_ORDER;
 
 const LABELS: Record<(typeof ORDER)[number], string> = {
   index: "Home",
@@ -74,16 +77,19 @@ function ReportSvg({ color }: { color: string }) {
   );
 }
 
-export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
+type DockProps = {
+  active: DockId | null;
+  /** Web: scale 0.96 and a smaller "+" once the page is scrolled 20px. */
+  compact?: boolean;
+  onSelect: (id: DockId) => void;
+};
+
+export function FinkoinDock({ active, compact = false, onSelect }: DockProps) {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const fk = user?.fkBalance ?? 0;
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
-
-  const routesByName = Object.fromEntries(
-    state.routes.map((r: (typeof state.routes)[number]) => [r.name, r]),
-  );
 
   const bottomPad = Math.max(insets.bottom, 10);
 
@@ -92,35 +98,13 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
       pointerEvents="box-none"
       style={[styles.wrap, { paddingBottom: bottomPad }]}
     >
-      <View style={styles.dock}>
+      <View style={[styles.dock, compact && styles.dockCompact]}>
         <View style={styles.row}>
           {ORDER.map((name) => {
-            const route = routesByName[name];
-            if (!route) return null;
-            const focused =
-              state.index ===
-              state.routes.findIndex(
-                (r: (typeof state.routes)[number]) => r.name === name,
-              );
+            const focused = active === name;
             const color = focused ? Colors.primary : Colors.tabIdle;
-            const onPress = () => {
-              const event = navigation.emit({
-                type: "tabPress",
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (event.defaultPrevented) return;
-              if (name === "tracker") {
-                // Track is the "+": always open a new entry, even when already on Tracker.
-                (navigation.navigate as (name: string, params: object) => void)(
-                  route.name,
-                  { add: String(Date.now()) },
-                );
-              } else if (!focused) {
-                // Cast: tab route names are strings; RN nav typing is generic.
-                navigation.navigate(route.name as never);
-              }
-            };
+            // Track is a plain link to the tracker, same as web (no `add` param).
+            const onPress = () => onSelect(name);
 
             if (name === "tracker") {
               return (
@@ -131,9 +115,16 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                   accessibilityRole="button"
                   accessibilityState={{ selected: focused }}
                 >
-                  <View style={styles.plusOuter}>
+                  <View
+                    style={[styles.plusOuter, compact && styles.plusOuterCompact]}
+                  >
                     {focused ? <View style={styles.plusRing} /> : null}
-                    <View style={styles.plusInner}>
+                    <View
+                      style={[
+                        styles.plusInner,
+                        compact && styles.plusInnerCompact,
+                      ]}
+                    >
                       <Text style={styles.plusText}>+</Text>
                     </View>
                   </View>
@@ -166,7 +157,12 @@ export function FinkoinTabBar({ state, navigation }: BottomTabBarProps) {
                     ) : name === "analyse" ? (
                       <ReportSvg color={color} />
                     ) : name === "calculators" ? (
-                      <AppIcon name="calculator" size={22} color={color} />
+                      <AppIcon
+                        name="calculator"
+                        size={24}
+                        strokeWidth={1.5}
+                        color={color}
+                      />
                     ) : name === "profile" ? (
                       isLoggedIn ? (
                         <View style={styles.avatarWrap}>
@@ -237,22 +233,17 @@ const styles = themedStyles(() => ({
   dock: {
     width: "100%",
     maxWidth: 440,
-    borderRadius: 28,
+    borderRadius: Radius.dock,
     borderWidth: 1,
     borderColor: Colors.glassBorder,
     backgroundColor: Colors.glass,
     paddingHorizontal: 6,
     paddingTop: 8,
     paddingBottom: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(60,50,120,0.45)",
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.35,
-        shadowRadius: 24,
-      },
-      android: { elevation: 14 },
-    }),
+    ...Shadow.dock,
+  },
+  dockCompact: {
+    transform: [{ scale: 0.96 }],
   },
   row: {
     flexDirection: "row",
@@ -311,6 +302,14 @@ const styles = themedStyles(() => ({
     shadowOpacity: 0.28,
     shadowRadius: 10,
     elevation: 8,
+  },
+  plusOuterCompact: {
+    height: 44,
+    width: 44,
+  },
+  plusInnerCompact: {
+    height: 36,
+    width: 36,
   },
   plusRing: {
     ...StyleSheet.absoluteFill,

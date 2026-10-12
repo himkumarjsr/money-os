@@ -155,6 +155,11 @@ export default function LeaderboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
+  // This month's rank from leaderboard_view (web: gamification store).
+  const [storeRank, setStoreRank] = useState<{
+    rank: number;
+    percentile: number;
+  } | null>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -237,6 +242,24 @@ export default function LeaderboardScreen() {
   );
 
   useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("leaderboard_view")
+        .select("rank, percentile")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const rank = Number(data?.rank ?? 0);
+      if (cancelled || error || !rank) return;
+      setStoreRank({ rank, percentile: Number(data?.percentile ?? 0) });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
     if (!hasInitialized || !isLoggedIn) return;
     void fetchLeaderboard();
     if (!userId) return;
@@ -301,7 +324,12 @@ export default function LeaderboardScreen() {
         <View style={styles.gate}>
           <Text style={styles.gateText}>Sign in to see the leaderboard.</Text>
           <Pressable
-            onPress={() => router.push("/(auth)/login")}
+            onPress={() =>
+              router.push({
+                pathname: "/(auth)/login",
+                params: { next: "/leaderboard" },
+              })
+            }
             style={styles.gateBtn}
             accessibilityRole="button"
           >
@@ -312,7 +340,18 @@ export default function LeaderboardScreen() {
     );
   }
 
-  const me = userEntry;
+  // Fall back to this month's rank while the row is missing (points unknown).
+  const me: {
+    rank: number;
+    percentile: number;
+    points?: number;
+    streak_days?: number;
+    is_premium?: boolean;
+  } | null =
+    userEntry ??
+    (tab === "month" && storeRank
+      ? { rank: storeRank.rank, percentile: storeRank.percentile }
+      : null);
   // Rows carry `is_premium` once the views expose it; the viewer's own row
   // also counts their locally known Premium status.
   const isPremiumEntry = (entry: LeaderboardEntry) =>
@@ -396,7 +435,10 @@ export default function LeaderboardScreen() {
 
         {me ? (
           <View style={styles.meCard}>
-            <PremiumAvatarRing premium={isPremiumEntry(me)} size={44}>
+            <PremiumAvatarRing
+              premium={me.is_premium === true || premiumUnlocked}
+              size={44}
+            >
               <View style={styles.meAvatar}>
                 <Text style={styles.meAvatarText}>
                   {getInitials(user?.name || "You")}
@@ -410,7 +452,9 @@ export default function LeaderboardScreen() {
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.meFk}>{formatPoints(me.points)}</Text>
+              {me.points != null ? (
+                <Text style={styles.meFk}>{formatPoints(me.points)}</Text>
+              ) : null}
               <Text style={styles.meSub}>{me.streak_days ?? 0} day streak</Text>
             </View>
           </View>

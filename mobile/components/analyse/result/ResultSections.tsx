@@ -23,6 +23,7 @@ import {
 } from "./resultDerivations";
 import { SpeedoMeterMulti, SpeedoMeterSingle } from "./SpeedoMeter";
 import { GoldText } from "@/components/ui/GoldMirror";
+import { PrivateAmount } from "@/components/analyse/PrivateAmount";
 
 const leftColor = (v: number) => (v >= 0 ? C.teal : C.red);
 
@@ -65,9 +66,12 @@ export function MonthlySummaryCard({ model }: { model: ResultModel }) {
       <GoldText style={styles.eyebrow}>Monthly summary</GoldText>
       <View style={styles.tile}>
         <Text style={styles.tileLabel}>Total income</Text>
-        <Text style={[styles.tileValue, { color: C.ink }]}>
-          {inr(model.income)}
-        </Text>
+        <PrivateAmount
+          value={model.income}
+          display={inr(model.income)}
+          label="total income"
+          textStyle={[styles.tileValue, { color: C.ink }]}
+        />
         <Text style={styles.tileFoot}>per month</Text>
       </View>
       <View style={styles.tile}>
@@ -256,13 +260,19 @@ export function BucketCapsSection({ model }: { model: ResultModel }) {
   );
 }
 
-const GAUGE_TIPS = [
-  "Needs should stay close to cap for stability.",
-  "Loan ratio under 40% improves flexibility.",
-  "Investment consistency drives score growth.",
-];
-
-export function GaugesSection({ profile }: { profile: FinancialProfile }) {
+export function GaugesSection({
+  profile,
+  loanCap,
+}: {
+  profile: FinancialProfile;
+  /** `getUniversalCaps(profile).loans` as a 0-1 fraction. */
+  loanCap: number;
+}) {
+  const GAUGE_TIPS = [
+    "Needs should stay close to cap for stability.",
+    `Loan ratio under ${Math.round(loanCap * 100)}% improves flexibility.`,
+    "Investment consistency drives score growth.",
+  ];
   return (
     <View style={[styles.card, { borderWidth: 0 }]}>
       <Text style={styles.h2}>Your financial health gauges</Text>
@@ -403,7 +413,7 @@ export function PlanTeaserSection({
           </>
         ) : (
           <Text style={styles.teaserAction}>
-            No open gaps right now. The full plan shows how to keep it that way.
+            ✓ No open gaps right now — keep your current plan on track.
           </Text>
         )}
         {teaserTitles.length > 0 ? (
@@ -432,12 +442,20 @@ export function PlanTeaserSection({
         <Text style={styles.paywallFk}>
           {PAYMENTS_ENABLED ? `Pay ₹${FIX_PLAN_PRICE_INR} · ` : ""}Earn Finkoin
           Keys (FK) for activity on Finkoin — use them on partner perks where
-          available.
-          {PAYMENTS_ENABLED ? " FK do not reduce this unlock price." : ""}
+          available. FK do not reduce this unlock price.
         </Text>
         {surplusBreakdown ? (
           <View style={styles.surplus}>
-            <SurplusRow label="Monthly Income" value={inr(model.income)} />
+            <View style={styles.surplusRow}>
+              <Text style={styles.surplusText}>Monthly Income</Text>
+              <PrivateAmount
+                value={model.income}
+                display={inr(model.income)}
+                label="monthly income"
+                textStyle={styles.surplusText}
+                eyeSize={12}
+              />
+            </View>
             <SurplusRow
               label="Less: Living expenses (Needs)"
               value={`-${inr(model.needsActual)}`}

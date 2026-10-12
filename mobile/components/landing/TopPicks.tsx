@@ -2,7 +2,6 @@ import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
 import { Colors, Radius, themedStyles, brand } from "@/constants/theme";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
-import { useAuthStore } from "@/store/authStore";
 import { GoldText } from "@/components/ui/GoldMirror";
 
 type Card = {
@@ -11,7 +10,6 @@ type Card = {
   body: string;
   cta: string;
   route?: string;
-  needsAuth?: boolean;
   badge?: "new" | "soon";
   accent: string;
   border: string;
@@ -27,7 +25,6 @@ const cards = (): Card[] => [
     body: "Start your financial independence journey with interactive guidance — not just form filling.",
     cta: "Start guided checkup →",
     route: "/(tabs)/analyse",
-    needsAuth: true,
     accent: Colors.backgroundDeep,
     border: Colors.borderIndigo,
     ctaColor: Colors.indigo600,
@@ -61,7 +58,6 @@ const cards = (): Card[] => [
     body: "Track every rupee. See where money goes. Get insights to spend better.",
     cta: "Start tracking →",
     route: "/(tabs)/tracker",
-    needsAuth: true,
     badge: "new",
     accent: Colors.successLight,
     border: Colors.successLight,
@@ -72,7 +68,7 @@ const cards = (): Card[] => [
     key: "split",
     title: "FK Split",
     body: "Split bills, track shared expenses, and settle up — ₹ first. No ads.",
-    cta: "Open Split →",
+    cta: "Open FK Split →",
     route: "/(tabs)/split",
     accent: Colors.primaryLight,
     border: Colors.primaryTintBorder,
@@ -82,14 +78,8 @@ const cards = (): Card[] => [
 ];
 
 export function TopPicks() {
-  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-
   const go = (c: Card) => {
     if (!c.route || c.badge === "soon") return;
-    if (c.needsAuth && !isLoggedIn) {
-      router.push("/(auth)/login");
-      return;
-    }
     router.push(c.route as any);
   };
 

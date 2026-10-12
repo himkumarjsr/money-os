@@ -10,7 +10,6 @@ import {
   Spacing,
   themedStyles,
 } from "@/constants/theme";
-import { openContentHref } from "@/lib/contentLinks";
 import { GoldText } from "@/components/ui/GoldMirror";
 
 const COLLECT = [
@@ -89,13 +88,6 @@ export function ConsentSheet({ onAccept, onDecline }: Props) {
             generate your personalized plan. We do not sell your personal
             financial data.
           </Text>
-          <Pressable
-            onPress={() => openContentHref("/legal/privacy")}
-            hitSlop={8}
-            style={{ marginTop: 8 }}
-          >
-            <Text style={styles.link}>Privacy policy</Text>
-          </Pressable>
         </View>
 
         <Pressable

@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen() {
   const handleSubmit = async () => {
     setFormError(null);
     if (!email.trim()) {
-      setFormError("Enter your email");
+      setFormError("Please enter your email");
       return;
     }
     setLoading(true);
@@ -67,20 +67,19 @@ export default function ForgotPasswordScreen() {
               <Text style={styles.title}>Check your email</Text>
               <Text style={styles.subtitle}>
                 We sent a password reset link to {email.trim()}. Open it on this
-                phone to set a new password.
+                device to choose a new password.
               </Text>
               <Button label="Back to login" onPress={backToLogin} />
             </View>
           ) : (
             <View style={styles.form}>
-              <Text style={styles.title}>Reset your password</Text>
+              <Text style={styles.title}>Reset password</Text>
               <Text style={styles.subtitle}>
-                Enter the email you signed up with and we'll send you a reset
-                link.
+                Enter your email to receive a reset link.
               </Text>
               <Input
-                label="Email"
-                placeholder="you@email.com"
+                label="Email address"
+                placeholder="you@example.com"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -96,11 +95,11 @@ export default function ForgotPasswordScreen() {
                 loading={loading}
                 disabled={loading}
               />
-              <TouchableOpacity onPress={backToLogin} style={styles.linkWrap}>
-                <Text style={styles.link}>
-                  ← Back to <Text style={styles.linkStrong}>login</Text>
-                </Text>
-              </TouchableOpacity>
+              <Button
+                label="Back to login"
+                variant="secondary"
+                onPress={backToLogin}
+              />
             </View>
           )}
         </ScrollView>

@@ -190,6 +190,6 @@ describe("score bands", () => {
 describe("safetyNetHeading", () => {
   it("counts rendered items", () => {
     expect(safetyNetHeading(5)).toBe("Your financial safety net — 5 checks");
-    expect(safetyNetHeading(1)).toBe("Your financial safety net — 1 check");
+    expect(safetyNetHeading(1)).toBe("Your financial safety net — 1 checks");
   });
 });

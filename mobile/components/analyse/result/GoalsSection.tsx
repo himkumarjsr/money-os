@@ -152,7 +152,7 @@ export function GoalsSection({
                       { color: g.isDefaultTarget ? "#BA7517" : "#1D9E75" },
                     ]}
                   >
-                    {g.isDefaultTarget ? "Suggested" : "Your amount"}
+                    {g.isDefaultTarget ? "Suggested amount" : "Your amount"}
                   </Text>
                 </View>
               </View>

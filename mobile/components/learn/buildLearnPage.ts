@@ -10,7 +10,7 @@ import { INDEX_FUND_GUIDE } from "./guides/indexFundGuide";
 import { OLD_VS_NEW_REGIME_GUIDE } from "./guides/oldVsNewRegimeGuide";
 import { SIP_CRORE_GUIDE } from "./guides/sipCroreGuide";
 import { TERM_INSURANCE_GUIDE } from "./guides/termInsuranceGuide";
-import type { LearnGuideBody, LearnPage } from "./types";
+import { LEARN_WIDGETS, type LearnGuideBody, type LearnPage } from "./types";
 
 /** Article ids that render a bespoke (hand-built) guide on the PWA. */
 export const BESPOKE_GUIDES: Record<string, LearnGuideBody> = {
@@ -24,19 +24,10 @@ export const BESPOKE_GUIDES: Record<string, LearnGuideBody> = {
   "emergency-fund-how-much-where-to-keep-it": EMERGENCY_FUND_GUIDE,
 };
 
-/** Port of components/learn/tools/HomeLoanPrepayEmbed (as a native calculator link). */
+/** Native inline port of components/learn/tools/HomeLoanPrepayEmbed. */
 const HOME_LOAN_PREPAY_TOOL: ContentSection = {
   id: "prepay-tool",
-  blocks: [
-    {
-      kind: "tool",
-      title: "Home loan prepayment calculator",
-      subtitle: "Should you reduce EMI or tenure? Target: home loan prepayment calculator.",
-      text: "Model prepayments, EMI and tenure on your own loan numbers.",
-      href: "/calculators/home",
-      label: "Open home loan calculator →",
-    },
-  ],
+  blocks: [{ kind: "widget", widget: LEARN_WIDGETS.homeLoanPrepay }],
 };
 
 function richBlock(b: RichBlock): ContentBlock {

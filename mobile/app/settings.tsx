@@ -42,7 +42,7 @@ import { ChangePasswordSheet } from "@/components/settings/ChangePasswordSheet";
 import { DeleteAccountSheet } from "@/components/settings/DeleteAccountSheet";
 import { FeedbackSheet } from "@/components/FeedbackSheet";
 import { AppearancePicker } from "@/components/settings/AppearancePicker";
-import { openStoreRating } from "@/lib/storeReview";
+import { useGamification } from "@/lib/useGamification";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
 
@@ -80,7 +80,12 @@ export default function SettingsScreen() {
         <View style={styles.gate}>
           <Text style={styles.gateText}>Sign in to manage your settings.</Text>
           <Pressable
-            onPress={() => router.push("/(auth)/login")}
+            onPress={() =>
+              router.push({
+                pathname: "/(auth)/login",
+                params: { next: "/settings" },
+              })
+            }
             style={styles.gateBtn}
             accessibilityRole="button"
           >
@@ -109,6 +114,7 @@ function BackButton() {
 
 function SettingsInner() {
   const user = useAuthStore((s) => s.user);
+  const { stats } = useGamification(user?.id);
   const updateUser = useAuthStore((s) => s.updateUser);
   const refreshUser = useAuthStore((s) => s.refreshUser);
   const resetPassword = useAuthStore((s) => s.resetPassword);
@@ -489,6 +495,11 @@ function SettingsInner() {
           </Text>
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <AppearancePicker />
+        </View>
+
         {/* Security */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Security</Text>
@@ -528,11 +539,6 @@ function SettingsInner() {
           {resetError ? (
             <Text style={[styles.err, { marginTop: 10 }]}>{resetError}</Text>
           ) : null}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
-          <AppearancePicker />
         </View>
 
         {/* Notifications */}
@@ -644,8 +650,8 @@ function SettingsInner() {
             <Text style={styles.dangerBtnText}>Delete account permanently</Text>
           </Pressable>
           <Text style={[styles.helper, { marginTop: 8 }]}>
-            Export includes your profile and the last analysis saved on this
-            device. For full deletion from servers, email{" "}
+            Export includes profile snapshot from this browser session. For full
+            deletion from servers, email{" "}
             <Text
               style={styles.link}
               onPress={() => void Linking.openURL("mailto:privacy@finkoin.com")}
@@ -673,7 +679,10 @@ function SettingsInner() {
             <View style={styles.fkRow}>
               <Text style={styles.appLine}>FK balance: </Text>
               <AppIcon name="coin" size={16} color={Colors.primaryText} />
-              <Text style={styles.strong}> {user?.fkBalance ?? 0} · </Text>
+              <Text style={styles.strong}>
+                {" "}
+                {stats?.fkBalance ?? user?.fkBalance ?? 0} ·{" "}
+              </Text>
               <Pressable
                 onPress={() => router.push("/rewards" as Href)}
                 hitSlop={12}
@@ -690,14 +699,6 @@ function SettingsInner() {
           >
             <AppIcon name="mail" size={16} color={Colors.primaryText} />
             <Text style={styles.feedbackText}>Share feedback</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => void openStoreRating()}
-            style={styles.feedbackBtn}
-            accessibilityRole="button"
-          >
-            <AppIcon name="heart" size={16} color={Colors.primaryText} />
-            <Text style={styles.feedbackText}>Rate Finkoin</Text>
           </Pressable>
         </View>
       </ScrollView>

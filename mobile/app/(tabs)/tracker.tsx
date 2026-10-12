@@ -7,6 +7,8 @@ import {
   Alert,
   Animated,
   Easing,
+  AppState,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -30,6 +32,15 @@ import {
   readable,
 } from "@/constants/theme";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { UpdatingLoader } from "@/components/tracker/UpdatingLoader";
+import { FeedbackCard } from "@/components/FeedbackCard";
+import { AppIcon } from "@/components/ui/AppIcon";
+import Svg, {
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
 import { SectionPrivacyEye, EyeIcon } from "@/components/ui/PrivacyEye";
 import {
   TrackerIcon,
@@ -76,7 +87,11 @@ import {
   type SmartBudget,
 } from "@/lib/universal-buckets";
 import { saveUserAnalyseSnapshotSmartBudget } from "@/lib/userAnalyseSnapshot";
-import { formatExpenseDate, localISODate } from "@/lib/localDate";
+import {
+  formatExpenseDate,
+  localISODate,
+  msUntilNextLocalMidnight,
+} from "@/lib/localDate";
 import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
 import {
   computeMonthSafetyPulse,
@@ -126,6 +141,46 @@ const BUCKETS: BucketType[] = [
   "loans",
   "investment",
 ];
+
+/** Web's income-row date, e.g. "1 Oct 2026". */
+function incomeDateLabel(date: string): string {
+  return new Date(date).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** Web's "▼" chevron: rotated 180deg when collapsed, animated. */
+function Chevron({ open }: { open: boolean }) {
+  const rot = useRef(new Animated.Value(open ? 0 : 1)).current;
+  useEffect(() => {
+    Animated.timing(rot, {
+      toValue: open ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [open, rot]);
+  return (
+    <Animated.Text
+      style={[
+        styles.chevron,
+        {
+          transform: [
+            {
+              rotate: rot.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["0deg", "180deg"],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      ▼
+    </Animated.Text>
+  );
+}
 
 function formatMasked(n: number, visible: boolean) {
   return visible
@@ -326,6 +381,42 @@ export default function TrackerScreen() {
       .syncFromHealthCheck(user.id, lastSubmission)
       .catch(() => {});
   }, [user?.id, analyseCompleted, lastSubmission]);
+
+  // Follow the device calendar when the user is on "this month" past midnight.
+  const selectedCalRef = useRef({ month: selectedMonth, year: selectedYear });
+  selectedCalRef.current = { month: selectedMonth, year: selectedYear };
+  const clockCalRef = useRef({
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
+  });
+  useEffect(() => {
+    let midnightTimer: ReturnType<typeof setTimeout> | undefined;
+    const syncCalendar = () => {
+      const now = new Date();
+      const nextMonth = now.getMonth();
+      const nextYear = now.getFullYear();
+      const prevClock = clockCalRef.current;
+      if (prevClock.month !== nextMonth || prevClock.year !== nextYear) {
+        const { month: m, year: y } = selectedCalRef.current;
+        const followingClock = m === prevClock.month && y === prevClock.year;
+        clockCalRef.current = { month: nextMonth, year: nextYear };
+        if (followingClock) {
+          setSelectedMonth(nextMonth);
+          setSelectedYear(nextYear);
+        }
+      }
+      if (midnightTimer) clearTimeout(midnightTimer);
+      midnightTimer = setTimeout(syncCalendar, msUntilNextLocalMidnight());
+    };
+    syncCalendar();
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st === "active") syncCalendar();
+    });
+    return () => {
+      sub.remove();
+      if (midnightTimer) clearTimeout(midnightTimer);
+    };
+  }, []);
 
   // Snap back if a prior session had next-month open before the forward limit moved.
   useEffect(() => {
@@ -1302,11 +1393,35 @@ export default function TrackerScreen() {
 
   const renderSummaryCard = (revealed: boolean) => (
     <View style={styles.summaryCard}>
+      {getActiveTheme() === "light" ? (
+        <Svg
+          style={styles.summaryGradient}
+          width="100%"
+          height="100%"
+          preserveAspectRatio="none"
+          pointerEvents="none"
+        >
+          <Defs>
+            <SvgLinearGradient id="sumGrad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#534AB7" />
+              <Stop offset="1" stopColor="#3C3489" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            rx={Radius.xxl}
+            fill="url(#sumGrad)"
+          />
+        </Svg>
+      ) : null}
       <View style={styles.summaryTopRow}>
         <Pressable
           onPress={goToPrevMonth}
           disabled={isAtBackLimit}
-          style={[styles.navBtn, isAtBackLimit && { opacity: 0.4 }]}
+          style={[styles.navBtn, isAtBackLimit && { opacity: 0.5 }]}
         >
           <Text style={styles.navBtnText}>←</Text>
         </Pressable>
@@ -1322,7 +1437,7 @@ export default function TrackerScreen() {
           <Pressable
             onPress={goToNextMonth}
             disabled={isAtForwardLimit}
-            style={[styles.navBtn, isAtForwardLimit && { opacity: 0.4 }]}
+            style={[styles.navBtn, isAtForwardLimit && { opacity: 0.5 }]}
           >
             <Text style={styles.navBtnText}>→</Text>
           </Pressable>
@@ -1482,7 +1597,7 @@ export default function TrackerScreen() {
           </Pressable>
         </View>
 
-        {loading ? <LoadingSpinner /> : null}
+        {loading ? <UpdatingLoader /> : null}
 
         {/* Income section */}
         <View
@@ -1512,7 +1627,7 @@ export default function TrackerScreen() {
                   incomePlan.needsSavingsRow
                     ? " · includes saving from last month"
                     : monthlyIncome === 0 && profileMonthlyFromDb > 0
-                      ? " · synced from profile"
+                      ? " · synced from last month / profile"
                       : ""}
                 </Text>
               </View>
@@ -1521,7 +1636,7 @@ export default function TrackerScreen() {
               <Text style={styles.sectionAmount}>
                 {formatMasked(displayIncome, isSectionVisible("income"))}
               </Text>
-              <Text style={styles.chevron}>{expandedIncome ? "▾" : "▸"}</Text>
+              <Chevron open={expandedIncome} />
               <SectionPrivacyEye
                 visible={isSectionVisible("income")}
                 onToggle={() => toggleSectionVisible("income")}
@@ -1548,10 +1663,7 @@ export default function TrackerScreen() {
                         </Text>
                         <Text style={styles.txnMeta} numberOfLines={1}>
                           {sub?.label ?? txn.category} ·{" "}
-                          {[
-                            txn.description?.trim(),
-                            formatExpenseDate(txn.date),
-                          ]
+                          {[txn.description?.trim(), incomeDateLabel(txn.date)]
                             .filter(Boolean)
                             .join(" · ")}
                         </Text>
@@ -1566,23 +1678,69 @@ export default function TrackerScreen() {
                           }}
                           hitSlop={6}
                         >
-                          <Text style={styles.editLink}>Edit</Text>
+                          <Text style={styles.incomeEditLink}>Edit</Text>
                         </Pressable>
                         <Pressable
                           onPress={() => confirmDelete(txn)}
                           hitSlop={6}
                         >
-                          <Text style={styles.deleteLink}>Delete</Text>
+                          <Text style={styles.incomeDeleteLink}>Delete</Text>
                         </Pressable>
                       </View>
                     </View>
                   );
                 })
+              ) : displayIncome > 0 ? (
+                <View style={{ gap: 8 }}>
+                  {incomePlan.salaryAmount > 0 ? (
+                    <View style={styles.incomeInfoCard}>
+                      <Text style={styles.incomeInfoAmount}>
+                        {formatMasked(
+                          incomePlan.salaryAmount,
+                          isSectionVisible("income"),
+                        )}
+                      </Text>
+                      <Text style={styles.incomeInfoSub}>
+                        Salary · synced from last month
+                      </Text>
+                    </View>
+                  ) : null}
+                  {incomePlan.savingsAmount > 0 ? (
+                    <View style={styles.incomeInfoCard}>
+                      <Text style={styles.incomeInfoAmount}>
+                        {formatMasked(
+                          incomePlan.savingsAmount,
+                          isSectionVisible("income"),
+                        )}
+                      </Text>
+                      <Text style={styles.incomeInfoSub}>
+                        {SAVINGS_CARRY_FORWARD_DESC}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <Text style={styles.incomeNote}>
+                    Use Add income for bonus / freelance / other — leftover
+                    savings still auto-sync on the 1st if missing.
+                  </Text>
+                </View>
               ) : (
                 <Text style={styles.emptyText}>
                   No income logged this month. Tap Add income to get started.
                 </Text>
               )}
+              {incomeTxns.length > 0 && incomePlan.needsSavingsRow ? (
+                <View style={styles.pendingSavingsRow}>
+                  <Text style={styles.incomeInfoAmount}>
+                    {formatMasked(
+                      incomePlan.savingsAmount,
+                      isSectionVisible("income"),
+                    )}
+                  </Text>
+                  <Text style={styles.incomeInfoSub}>
+                    {SAVINGS_CARRY_FORWARD_DESC} · syncing…
+                  </Text>
+                </View>
+              ) : null}
               <Pressable onPress={openAddIncome} style={styles.addBtn}>
                 <Text
                   style={[
@@ -1673,7 +1831,7 @@ export default function TrackerScreen() {
                 }}
                 style={styles.sectionHeadWrap}
               >
-                <View style={styles.sectionHead}>
+                <View style={styles.bucketHead}>
                   <View style={styles.sectionHeadLeft}>
                     <TrackerIconBadge name={cat.icon} color={cat.color} />
                     <View style={{ flexShrink: 1 }}>
@@ -1700,7 +1858,7 @@ export default function TrackerScreen() {
                         </Text>
                       ) : null}
                     </View>
-                    <Text style={styles.chevron}>{isExpanded ? "▾" : "▸"}</Text>
+                    <Chevron open={isExpanded} />
                     <SectionPrivacyEye
                       visible={visible}
                       onToggle={() => toggleSectionVisible(bucketKey)}
@@ -1728,7 +1886,7 @@ export default function TrackerScreen() {
                 ) : null}
                 {overBudget ? (
                   <Text style={styles.overBudgetText}>
-                    Over budget by{" "}
+                    ⚠️ Over budget by{" "}
                     {formatMasked(bucketTotal - budgetAmount, visible)}
                   </Text>
                 ) : null}
@@ -1824,8 +1982,11 @@ export default function TrackerScreen() {
                                     <Text
                                       style={[
                                         styles.txnAmount,
+                                        onEmi || notCounted
+                                          ? styles.txnAmountStruck
+                                          : null,
                                         notCounted
-                                          ? styles.txnAmountNotCounted
+                                          ? styles.txnAmountFaded
                                           : null,
                                       ]}
                                     >
@@ -1837,6 +1998,11 @@ export default function TrackerScreen() {
                                     </Text>
                                     {tag ? (
                                       <View style={styles.cardChip}>
+                                        <AppIcon
+                                          name="card"
+                                          size={12}
+                                          color={Colors.primaryText}
+                                        />
                                         <Text style={styles.cardChipText}>
                                           {tag}
                                         </Text>
@@ -1847,14 +2013,15 @@ export default function TrackerScreen() {
                                     style={styles.txnMeta}
                                     numberOfLines={1}
                                   >
-                                    {[
-                                      displayExpenseDescription(
-                                        txn.description,
-                                      ),
-                                      formatExpenseDate(txn.date),
-                                    ]
-                                      .filter(Boolean)
-                                      .join(" · ")}
+                                    {displayExpenseDescription(txn.description)}
+                                    {displayExpenseDescription(
+                                      txn.description,
+                                    ) && formatExpenseDate(txn.date)
+                                      ? " · "
+                                      : ""}
+                                    <Text style={{ color: Colors.textMuted }}>
+                                      {formatExpenseDate(txn.date)}
+                                    </Text>
                                   </Text>
                                   {billCover ? (
                                     <Text
@@ -1967,6 +2134,10 @@ export default function TrackerScreen() {
             />
           ) : null}
         </MonthSafetyPulse>
+
+        <View style={{ marginTop: 16 }}>
+          <FeedbackCard pageContext="tracker" />
+        </View>
       </ScrollView>
 
       <AddExpenseSheet
@@ -2112,6 +2283,12 @@ const styles = themedStyles(() => ({
     padding: Spacing.lg,
     gap: Spacing.sm,
   },
+  bucketHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+  },
   sectionHeadLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -2136,7 +2313,7 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
   },
   budgetOf: { fontSize: 11, color: Colors.textSecondary },
-  chevron: { fontSize: 14, color: Colors.textSecondary },
+  chevron: { fontSize: 14, color: Colors.textPrimary },
   bucketProgressTrack: {
     height: 6,
     backgroundColor: Colors.background,
@@ -2235,13 +2412,62 @@ const styles = themedStyles(() => ({
   subMeta: { fontSize: 12, color: Colors.textSecondary },
   subTotal: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
   cardChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     backgroundColor: Colors.primaryLight,
   },
   cardChipText: { fontSize: 10, fontWeight: "700", color: Colors.primaryText },
-  txnAmountNotCounted: { textDecorationLine: "line-through", opacity: 0.6 },
+  txnAmountStruck: { textDecorationLine: "line-through" },
+  txnAmountFaded: { opacity: 0.6 },
+  incomeEditLink: {
+    color: Colors.primaryText,
+    fontWeight: "700",
+    fontSize: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  incomeDeleteLink: {
+    color: Colors.error,
+    fontWeight: "700",
+    fontSize: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  incomeInfoCard: {
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  incomeInfoAmount: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  incomeInfoSub: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+    opacity: 0.85,
+  },
+  incomeNote: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+    opacity: 0.8,
+  },
+  pendingSavingsRow: {
+    borderRadius: 8,
+    backgroundColor: Colors.primaryLight,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: Colors.primary,
+  },
+  summaryGradient: { ...StyleSheet.absoluteFill },
   cardRulesNote: {
     backgroundColor: Colors.primaryLight,
     borderColor: getActiveTheme() === "premium" ? tintBg("#D8D6F5") : "#D8D6F5",

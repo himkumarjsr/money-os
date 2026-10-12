@@ -1,17 +1,20 @@
 /**
  * Top bar matching PWA GlobalNavbar (mobile):
- * hamburger + FK tile + "Finkoin" | NotificationBell + profile avatar
- * Hamburger opens NavDrawer (PWA footer links).
- * Profile opens dropdown panel (not full profile page).
+ * FK coin + "Finkoin" link | NotificationBell (signed in) + profile avatar
+ * Profile opens dropdown panel (not full profile page). The footer links live
+ * in the page-bottom Footer, not a drawer.
+ *
+ * GlobalChrome renders the single instance (`root`); any other `<AppHeader />`
+ * inside a screen renders nothing so it never doubles.
  */
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandTile, BrandWordmark } from "@/components/ui/BrandMark";
 import { PremiumAvatarRing } from "@/components/ui/PremiumAvatarRing";
-import { NavDrawer } from "@/components/NavDrawer";
+import { ChromeContext } from "@/components/shell/ChromeContext";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { Colors, themedStyles } from "@/constants/theme";
@@ -20,34 +23,25 @@ import { useThemeStore } from "@/store/themeStore";
 
 type Props = {
   homeOnLogo?: boolean;
+  /** Only GlobalChrome sets this. */
+  root?: boolean;
 };
 
-export function AppHeader({ homeOnLogo = true }: Props) {
+export function AppHeader({ homeOnLogo = true, root = false }: Props) {
+  const insideChrome = useContext(ChromeContext);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
   const letter = (user?.name || user?.email || "U").charAt(0).toUpperCase();
   const premium = useThemeStore((s) => s.premium?.unlocked ?? false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+
+  if (insideChrome && !root) return null;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <View style={styles.wash} pointerEvents="none" />
       <View style={styles.bar}>
         <View style={styles.brand}>
-          <Pressable
-            onPress={() => setMenuOpen(true)}
-            style={styles.menuBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Open menu"
-          >
-            <AppIcon
-              name="menu"
-              size={22}
-              color={Colors.primaryText}
-              strokeWidth={2}
-            />
-          </Pressable>
           <Pressable
             onPress={() => {
               if (homeOnLogo) router.push("/(tabs)");
@@ -96,8 +90,6 @@ export function AppHeader({ homeOnLogo = true }: Props) {
         </View>
       </View>
 
-      <NavDrawer visible={menuOpen} onClose={() => setMenuOpen(false)} />
-
       {isLoggedIn ? (
         <ProfileMenu
           visible={profileOpen}
@@ -131,14 +123,6 @@ const styles = themedStyles(() => ({
     gap: 4,
     minWidth: 0,
     flexShrink: 1,
-  },
-  menuBtn: {
-    width: 44,
-    height: 44,
-    marginLeft: -10,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
   },
   wordmarkBtn: {
     minHeight: 44,

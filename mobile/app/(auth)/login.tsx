@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,18 @@ import { Colors, Spacing, FontSize, themedStyles } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AppleSignInButton } from "@/components/ui/AppleSignInButton";
-import { BrandLogo } from "@/components/ui/BrandLogo";
+import {
+  AuthBrand,
+  AuthModeSwitch,
+  AuthHeading,
+  AuthDivider,
+  AuthSecurityFooter,
+  AuthSuccess,
+} from "@/components/auth/AuthChrome";
+import {
+  applyPendingReferral,
+  savePendingReferral,
+} from "@/components/auth/referral";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FormError } from "@/components/ui/FormError";
 
@@ -32,7 +43,14 @@ function friendlyAuthError(msg: string): string {
 }
 
 export default function LoginScreen() {
-  const { next } = useLocalSearchParams<{ next?: string }>();
+  const { next, ref, notice } = useLocalSearchParams<{
+    next?: string;
+    ref?: string;
+    notice?: string;
+  }>();
+  useEffect(() => {
+    void savePendingReferral(ref);
+  }, [ref]);
   const target = safeNext(next);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,6 +68,10 @@ export default function LoginScreen() {
       setFormError("Please enter your email");
       return;
     }
+    if (!password.trim()) {
+      setFormError("Please enter your password");
+      return;
+    }
     if (password.length < 6) {
       setFormError("Password must be at least 6 characters");
       return;
@@ -61,6 +83,7 @@ export default function LoginScreen() {
         setFormError(friendlyAuthError(result.error));
         return;
       }
+      void applyPendingReferral();
       router.replace(target);
     } catch (e) {
       setFormError(
@@ -79,6 +102,7 @@ export default function LoginScreen() {
       if (result.error) {
         setFormError(result.error);
       } else {
+        void applyPendingReferral();
         router.replace(target);
       }
     } finally {
@@ -94,6 +118,7 @@ export default function LoginScreen() {
       if (result.error) {
         if (!/cancelled/i.test(result.error)) setFormError(result.error);
       } else {
+        void applyPendingReferral();
         router.replace(target);
       }
     } finally {
@@ -114,15 +139,24 @@ export default function LoginScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.logoContainer}>
-            <BrandLogo size={80} />
-            <Text style={styles.tagline}>Know it. Fix it. Grow it.</Text>
-          </View>
+          <AuthBrand />
+          <AuthModeSwitch mode="login" next={next} refCode={ref} />
+          <AuthHeading
+            title="Welcome back"
+            subtitle="Log in to see your financial plan."
+          />
 
+          <AuthSuccess
+            message={
+              notice === "confirm"
+                ? "Account created! Check your email to verify your account, then log in."
+                : null
+            }
+          />
           <View style={styles.form}>
             <Input
-              label="Email"
-              placeholder="you@email.com"
+              label="Email address"
+              placeholder="you@example.com"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -133,7 +167,7 @@ export default function LoginScreen() {
             />
             <PasswordInput
               label="Password"
-              placeholder="Enter password"
+              placeholder="Your password"
               value={password}
               onChangeText={setPassword}
               textContentType="password"
@@ -159,11 +193,7 @@ export default function LoginScreen() {
               disabled={busy}
             />
 
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            <AuthDivider />
 
             <Button
               label={googleLoading ? "Opening Google…" : "Continue with Google"}
@@ -178,30 +208,7 @@ export default function LoginScreen() {
             />
           </View>
 
-          <TouchableOpacity
-            onPress={() => router.replace("/(tabs)")}
-            style={styles.linkWrap}
-          >
-            <Text style={styles.link}>
-              ← Back to <Text style={styles.linkStrong}>home</Text>
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/(auth)/signup",
-                params: next ? { next } : {},
-              })
-            }
-            style={styles.linkWrap}
-          >
-            <Text style={styles.link}>
-              Need an account? <Text style={styles.linkStrong}>Sign up</Text>
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.privacy}>No PAN. No Aadhaar. Free forever.</Text>
+          <AuthSecurityFooter />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

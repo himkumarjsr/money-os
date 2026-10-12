@@ -167,6 +167,7 @@ export function MonthSafetyPulse({
               <Text style={styles.moverName}>{m.label}</Text>
               <Text
                 style={{
+                  fontSize: 12,
                   fontWeight: "700",
                   color: m.delta > 0 ? "#991B1B" : "#1B7A4E",
                 }}
