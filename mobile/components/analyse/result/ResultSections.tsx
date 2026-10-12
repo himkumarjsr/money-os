@@ -13,6 +13,8 @@ import {
   themedStyles,
   tintBg,
   onPrimaryAlpha,
+  lightGradient,
+  WEB_HERO_GRADIENT,
 } from "@/constants/theme";
 import { ResultColors as C, badgeTone, inr } from "./format";
 import type { BucketView, ResultModel } from "./model";
@@ -553,6 +555,7 @@ const styles = themedStyles(() => ({
   hero: {
     borderRadius: 24,
     backgroundColor: Colors.primary,
+    ...lightGradient(WEB_HERO_GRADIENT.report),
     borderWidth: 1,
     borderColor: Colors.primaryDark,
     padding: 20,

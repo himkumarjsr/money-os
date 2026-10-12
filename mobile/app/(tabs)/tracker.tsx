@@ -1875,9 +1875,9 @@ export default function TrackerScreen() {
                           backgroundColor: isTargetBucket
                             ? cat.color
                             : progressPercent >= 100
-                              ? "#E24B4A"
+                              ? Colors.error
                               : progressPercent >= 80
-                                ? "#BA7517"
+                                ? Colors.warning
                                 : cat.color,
                         },
                       ]}

@@ -23,6 +23,8 @@ const lightPalette = {
   error: "#E24B4A",
   errorLight: "#FCEBEB",
   errorText: "#991B1B",
+  /** Web --color-danger fill for solid danger buttons (white text on it). */
+  dangerSolid: "#D13B3A",
   // Web: html/body #F4F2FC (globals.css)
   background: "#F4F2FC",
   backgroundDeep: "#EEF2FF",
@@ -34,6 +36,8 @@ const lightPalette = {
   border: "#E2DFF0",
   borderIndigo: "#C7D2FE",
   borderLight: "#F0EFF8",
+  /** Web border-[#E8E6F0] (input outlines, avatar rings); dark themes use `border`. */
+  borderSoft: "#E8E6F0",
   // Web --color-text / --color-muted (6B6680 is 5.1:1 on #F4F2FC, AA)
   textPrimary: "#1A1824",
   textSecondary: "#6B6680",
@@ -62,20 +66,22 @@ export type Palette = typeof lightPalette;
 const darkPalette: Palette = {
   primary: "#6C63E0",
   primaryDark: "#C9C4FF",
-  primaryLight: "#26234A",
+  // Web maps the light #EEEDFE / #E1F5EE / #FCEBEB tints to --fk-surface.
+  primaryLight: "#1F1E28",
   primaryMedium: "#7B73E3",
   accent: "#8B83F0",
   onPrimary: "#FFFFFF",
   success: "#34C08F",
   successDark: "#6EE7B7",
-  successLight: "#0F2E24",
+  successLight: "#1F1E28",
   successText: "#6EE7B7",
   warning: "#E0A23A",
   warningLight: "#33270F",
   warningText: "#FCD34D",
   error: "#F06A69",
-  errorLight: "#3A1A1A",
+  errorLight: "#1F1E28",
   errorText: "#FCA5A5",
+  dangerSolid: "#D13B3A",
   background: "#0E0E12",
   backgroundDeep: "#15142A",
   card: "#18181F",
@@ -85,6 +91,7 @@ const darkPalette: Palette = {
   border: "#2A2935",
   borderIndigo: "#3B3A66",
   borderLight: "#22212C",
+  borderSoft: "#2A2935",
   textPrimary: "#F2F1EE",
   textSecondary: "#BDBBB5",
   textMuted: "#A09E97",
@@ -100,7 +107,8 @@ const darkPalette: Palette = {
   glassCard: "rgba(255,255,255,0.06)",
   heroWash: "rgba(38,35,74,0.6)",
   heroBorder: "rgba(59,58,102,0.8)",
-  tabIdle: "#B5B3AD",
+  // Web tab label text-[#3D3A5C] -> --fk-primary-text (raised for AA).
+  tabIdle: "#ABA5F7",
   primaryTint: "rgba(139,131,240,0.2)",
   primaryTintBorder: "rgba(139,131,240,0.3)",
   primaryText: "#ABA5F7",
@@ -114,18 +122,18 @@ const premiumPalette: Palette = {
   ...darkPalette,
   primary: "#D4AF37",
   primaryDark: "#FCF6BA",
-  primaryLight: "#1D1910",
+  primaryLight: "#1C1A15",
   primaryMedium: "#B38728",
   accent: "#E8C766",
   onPrimary: "#1A1405",
   success: "#6FCF97",
   successDark: "#6FCF97",
-  successLight: "#0F2A1C",
+  successLight: "#1C1A15",
   successText: "#6FCF97",
   warningLight: "#2E2410",
   warningText: "#F3D27A",
   error: "#EB7A72",
-  errorLight: "#341615",
+  errorLight: "#1C1A15",
   errorText: "#EB7A72",
   background: "#0A0A0A",
   backgroundDeep: "#12100B",
@@ -136,6 +144,7 @@ const premiumPalette: Palette = {
   border: "#2C2616",
   borderIndigo: "#5A4A1E",
   borderLight: "#201D14",
+  borderSoft: "#2C2616",
   textPrimary: "#F5EFDC",
   textSecondary: "#C9C1AE",
   textMuted: "#9E978A",
@@ -202,6 +211,26 @@ export const SATIN_GRADIENT = {
     "linear-gradient(135deg, #463DA6 0%, #7C73DB 40%, #534AB7 60%, #3C3489 100%)",
   dark: "linear-gradient(135deg, #5A51CC 0%, #958DF0 40%, #6C63E0 60%, #4B42B8 100%)",
 } as const;
+
+/**
+ * Light-theme-only gradients the PWA writes literally (fix-plan, optimizer and
+ * report heroes). In dark and Premium the web's theme.css flattens them to the
+ * theme primary / hero, which the themed brand-fill gradient already does.
+ */
+export const WEB_HERO_GRADIENT = {
+  /** app/analyse/fixplan: from-[#534AB7] to-[#6E62D7] (to right) */
+  fixPlan: "linear-gradient(90deg, #534AB7 0%, #6E62D7 100%)",
+  /** app/optimizer: from-[#534AB7] via-[#6B5FD4] to-[#8B7FE8] (to bottom right) */
+  optimizer: "linear-gradient(135deg, #534AB7 0%, #6B5FD4 50%, #8B7FE8 100%)",
+  /** app/analyse/result hero and tracker summary */
+  report: "linear-gradient(135deg, #3C3489 0%, #534AB7 100%)",
+} as const;
+
+export function lightGradient(
+  css: string,
+): { experimental_backgroundImage?: string } {
+  return activeTheme === "light" ? { experimental_backgroundImage: css } : {};
+}
 
 const GOLD_FILLS = new Set(["#d4af37", "#e8c766", "#b38728"]);
 const SATIN_FILLS = {

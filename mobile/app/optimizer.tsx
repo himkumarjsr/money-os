@@ -13,6 +13,8 @@ import {
   Colors,
   onPrimaryAlpha,
   themedStyles,
+  lightGradient,
+  WEB_HERO_GRADIENT,
 } from "@/constants/theme";
 import { useFinancialStore } from "@/store/financialStore";
 import { monthlyTotalIncome } from "@/lib/financialEngine";
@@ -519,6 +521,7 @@ const styles = themedStyles(() => ({
   hero: {
     borderRadius: 24,
     backgroundColor: Colors.primary,
+    ...lightGradient(WEB_HERO_GRADIENT.optimizer),
     padding: 24,
   },
   heroKicker: { fontSize: 14, fontWeight: "500", color: onPrimaryAlpha(0.9) },

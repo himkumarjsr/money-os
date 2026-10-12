@@ -703,7 +703,7 @@ const styles = themedStyles(() => ({
     borderRadius: 10,
     backgroundColor: Colors.errorLight,
     borderWidth: 1,
-    borderColor: "#F5C9C9",
+    borderColor: Colors.border,
   },
   overdueText: { fontSize: 12, lineHeight: 18, color: Colors.errorText },
   cardItem: {

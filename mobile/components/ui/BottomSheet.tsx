@@ -7,7 +7,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, getActiveTheme, themedStyles } from "@/constants/theme";
 import { useKeyboardSheet } from "@/lib/useKeyboardSheet";
 
 /** Slide-up sheet (20px top radius, tap backdrop to close) — matches AddExpenseSheet chrome. */
@@ -84,14 +84,21 @@ const styles = themedStyles(() => ({
     backgroundColor: Colors.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    // Web: shadow-[0_-4px_40px_rgba(0,0,0,0.12)]
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 40,
+    elevation: 16,
   },
   handle: {
     alignSelf: "center",
-    width: 40,
+    // Web: h-1 w-9 rounded-full bg-[#E0DFF8]
+    width: 36,
     height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.border,
-    marginTop: 10,
+    borderRadius: 999,
+    backgroundColor: getActiveTheme() === "light" ? "#E0DFF8" : Colors.border,
+    marginTop: 8,
   },
   body: { paddingHorizontal: 20, paddingTop: 16 },
 }));

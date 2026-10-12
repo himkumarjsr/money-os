@@ -78,7 +78,7 @@ function getRankColor(r: number) {
   if (r === 1) return brand("#534AB7");
   if (r === 2) return brand("#7F77DD");
   if (r === 3) return brand("#AFA9EC");
-  return "#9B9A94";
+  return Colors.textMuted;
 }
 
 function formatTime(ms: number) {

@@ -39,7 +39,6 @@ export function AppHeader({ homeOnLogo = true, root = false }: Props) {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
-      <View style={styles.wash} pointerEvents="none" />
       <View style={styles.bar}>
         <View style={styles.brand}>
           <Pressable
@@ -47,6 +46,7 @@ export function AppHeader({ homeOnLogo = true, root = false }: Props) {
               if (homeOnLogo) router.push("/(tabs)");
             }}
             style={styles.wordmarkBtn}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             accessibilityRole="link"
             accessibilityLabel="Finkoin home"
           >
@@ -101,13 +101,11 @@ export function AppHeader({ homeOnLogo = true, root = false }: Props) {
 }
 
 const styles = themedStyles(() => ({
+  // Web navbar: a soft wash of the page colour with no border or shadow, so
+  // the header is the page background itself.
   safe: {
-    backgroundColor: Colors.glass,
+    backgroundColor: Colors.background,
     zIndex: 40,
-  },
-  wash: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: Colors.glassSoft,
   },
   bar: {
     flexDirection: "row",
@@ -125,7 +123,7 @@ const styles = themedStyles(() => ({
     flexShrink: 1,
   },
   wordmarkBtn: {
-    minHeight: 44,
+    minHeight: 36,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,

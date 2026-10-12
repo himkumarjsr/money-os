@@ -824,7 +824,7 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 10,
     borderRadius: Radius.sm,
     borderWidth: 1,
-    borderColor: "#F5D0D0",
+    borderColor: Colors.borderLight,
     alignItems: "center",
     justifyContent: "center",
   },

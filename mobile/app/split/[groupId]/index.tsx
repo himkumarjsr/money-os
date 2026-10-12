@@ -40,6 +40,7 @@ import {
   Colors,
   tintBg,
   onPrimaryAlpha,
+  readable,
 } from "@/constants/theme";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -48,8 +49,6 @@ type PaymentMethod = "upi" | "cash" | "bank";
 
 const BORDER = () => tintBg("#E8E6F0");
 const SOFT = () => tintBg("#F7F7F4");
-const GREEN = "#1D9E75";
-const RED = "#E24B4A";
 
 const SPLIT_CATEGORY_ICON: Record<string, TrackerIconName> = {
   food: "utensils",
@@ -455,7 +454,7 @@ export default function GroupDetailScreen() {
         ? "You owe"
         : "All settled";
   const netColor =
-    tone === "owed" ? GREEN : tone === "owe" ? RED : Colors.textMuted;
+    tone === "owed" ? readable("#1D9E75") : tone === "owe" ? readable("#E24B4A") : Colors.textMuted;
 
   if (!groupId) {
     return (
@@ -713,7 +712,7 @@ export default function GroupDetailScreen() {
                           <Text
                             style={[
                               styles.balanceAmt,
-                              { color: owed ? GREEN : RED },
+                              { color: owed ? readable("#1D9E75") : readable("#E24B4A") },
                             ]}
                           >
                             {owed ? "gets back" : "owes"}{" "}
@@ -799,7 +798,7 @@ export default function GroupDetailScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Delete expense"
                           >
-                            <AppIcon name="trash" size={15} color={RED} />
+                            <AppIcon name="trash" size={15} color={readable("#E24B4A")} />
                           </TouchableOpacity>
                         </View>
                       ) : null}
@@ -1605,7 +1604,7 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  dangerPillText: { color: RED, fontSize: 11, fontWeight: "700" },
+  dangerPillText: { color: readable("#E24B4A"), fontSize: 11, fontWeight: "700" },
 
   settleEmpty: { paddingHorizontal: 24, paddingVertical: 40 },
   settleEmptyText: {
@@ -1621,9 +1620,9 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkText: { color: GREEN, fontSize: 18 },
+  checkText: { color: readable("#1D9E75"), fontSize: 18 },
   settleTitle: { color: Colors.textPrimary, fontSize: 13, fontWeight: "600" },
-  settleAmt: { color: GREEN, fontSize: 14, fontWeight: "700" },
+  settleAmt: { color: readable("#1D9E75"), fontSize: 14, fontWeight: "700" },
 
   sheetHead: {
     flexDirection: "row",

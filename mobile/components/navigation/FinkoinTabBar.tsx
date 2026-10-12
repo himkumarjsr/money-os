@@ -13,8 +13,23 @@ import {
   StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
-import { Colors, Radius, Shadow, themedStyles, brand } from "@/constants/theme";
+import Svg, {
+  Defs,
+  LinearGradient,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
+import {
+  Colors,
+  Palettes,
+  Radius,
+  Shadow,
+  getActiveTheme,
+  themedStyles,
+  brand,
+} from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
@@ -77,6 +92,85 @@ function ReportSvg({ color }: { color: string }) {
   );
 }
 
+function rgbOf(hex: string): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
+
+/**
+ * The web dock's glass (components/global-navbar.tsx + `.fk-nav-pill`): light
+ * is a white highlight, a violet glow and a lavender 165deg wash; dark and
+ * Premium are a card -> surface wash with a faint top highlight. There is no
+ * backdrop blur on native, so the base stays near-opaque.
+ */
+function DockGlass() {
+  const theme = getActiveTheme();
+  const p = Palettes[theme];
+  const light = theme === "light";
+  return (
+    <View style={styles.glassClip} pointerEvents="none">
+      <Svg width="100%" height="100%" preserveAspectRatio="none">
+        <Defs>
+          <LinearGradient id="dockWash" x1="0.37" y1="0" x2="0.63" y2="1">
+            <Stop
+              offset="0"
+              stopColor={light ? "#FFFFFF" : p.card}
+              stopOpacity={light ? 0.55 : 0.92}
+            />
+            <Stop
+              offset={light ? "0.42" : "0.5"}
+              stopColor={light ? "#E8E6F8" : p.card}
+              stopOpacity={light ? 0.42 : 0.9}
+            />
+            <Stop
+              offset="1"
+              stopColor={light ? "#C4BEF0" : p.surfaceMuted}
+              stopOpacity={light ? 0.48 : 0.88}
+            />
+          </LinearGradient>
+          <RadialGradient
+            id="dockTop"
+            cx="0.5"
+            cy="-0.1"
+            rx="0.66"
+            ry="0.44"
+            fx="0.5"
+            fy="-0.1"
+          >
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.85} />
+            <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient
+            id="dockBottom"
+            cx="0.5"
+            cy="1.2"
+            rx="0.495"
+            ry="0.33"
+            fx="0.5"
+            fy="1.2"
+          >
+            <Stop offset="0" stopColor="#534AB7" stopOpacity={0.22} />
+            <Stop offset="1" stopColor="#534AB7" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#dockWash)" />
+        {light ? (
+          <>
+            <Rect width="100%" height="100%" fill="url(#dockTop)" />
+            <Rect width="100%" height="100%" fill="url(#dockBottom)" />
+          </>
+        ) : null}
+      </Svg>
+      <View
+        style={[
+          styles.glassHighlight,
+          { backgroundColor: `rgba(255,255,255,${light ? 0.9 : 0.06})` },
+        ]}
+      />
+    </View>
+  );
+}
+
 type DockProps = {
   active: DockId | null;
   /** Web: scale 0.96 and a smaller "+" once the page is scrolled 20px. */
@@ -99,6 +193,7 @@ export function FinkoinDock({ active, compact = false, onSelect }: DockProps) {
       style={[styles.wrap, { paddingBottom: bottomPad }]}
     >
       <View style={[styles.dock, compact && styles.dockCompact]}>
+        <DockGlass />
         <View style={styles.row}>
           {ORDER.map((name) => {
             const focused = active === name;
@@ -235,12 +330,34 @@ const styles = themedStyles(() => ({
     maxWidth: 440,
     borderRadius: Radius.dock,
     borderWidth: 1,
-    borderColor: Colors.glassBorder,
+    // Web: border-white/70 (light), var(--fk-border) (dark, Premium)
+    borderColor:
+      getActiveTheme() === "light" ? "rgba(255,255,255,0.7)" : Colors.border,
     backgroundColor: Colors.glass,
     paddingHorizontal: 6,
     paddingTop: 8,
     paddingBottom: 8,
-    ...Shadow.dock,
+    ...(getActiveTheme() === "light"
+      ? Shadow.dock
+      : {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.45,
+          shadowRadius: 40,
+          elevation: 14,
+        }),
+  },
+  glassClip: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: Radius.dock - 1,
+    overflow: "hidden",
+  },
+  glassHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1.5,
   },
   dockCompact: {
     transform: [{ scale: 0.96 }],

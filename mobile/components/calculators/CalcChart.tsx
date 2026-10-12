@@ -30,7 +30,7 @@ type Row = Record<string, number>;
 
 const PAD = { top: 8, right: 8, bottom: 24, left: 52 };
 const GRID = () => tintBg("#F4F2FC");
-const TICK = "#9B9A94";
+
 
 function niceStep(rough: number): number {
   if (rough <= 0) return 1;
@@ -194,7 +194,7 @@ export function CalcChart({
                   x={PAD.left - 6}
                   y={yAt(t) + 4}
                   fontSize={11}
-                  fill={TICK}
+                  fill={Colors.textMuted}
                   textAnchor="end"
                 >
                   {yTickFormat(t)}
@@ -213,7 +213,7 @@ export function CalcChart({
                   x={xAt(i)}
                   y={height - 6}
                   fontSize={11}
-                  fill={TICK}
+                  fill={Colors.textMuted}
                   textAnchor="middle"
                 >
                   {label}

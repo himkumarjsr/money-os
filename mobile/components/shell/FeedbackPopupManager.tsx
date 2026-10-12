@@ -16,7 +16,7 @@ import {
 import { usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path, Polygon } from "react-native-svg";
-import { Colors, themedStyles } from "@/constants/theme";
+import { Colors, brand, themedStyles } from "@/constants/theme";
 import { siteBase } from "@/lib/splitApi";
 import { hydrateSyncKv, syncKv } from "@/lib/syncKv";
 import { supabase } from "@/lib/supabase";
@@ -298,7 +298,7 @@ const styles = themedStyles(() => ({
     borderWidth: 1,
     borderColor: Colors.border,
     overflow: "hidden",
-    shadowColor: "#534AB7",
+    shadowColor: brand("#534AB7"),
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.2,
     shadowRadius: 40,

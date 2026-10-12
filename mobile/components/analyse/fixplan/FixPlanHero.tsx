@@ -5,6 +5,8 @@ import {
   Spacing,
   themedStyles,
   onPrimaryAlpha,
+  lightGradient,
+  WEB_HERO_GRADIENT,
 } from "@/constants/theme";
 
 type Props = {
@@ -54,6 +56,7 @@ export function FixPlanHero({
 const styles = themedStyles(() => ({
   hero: {
     backgroundColor: Colors.primary,
+    ...lightGradient(WEB_HERO_GRADIENT.fixPlan),
     borderRadius: Radius.xl,
     padding: Spacing.xl,
     marginBottom: Spacing.lg,

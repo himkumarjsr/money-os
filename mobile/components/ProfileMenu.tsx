@@ -405,7 +405,7 @@ const styles = themedStyles(() => ({
   },
   dot: {
     fontSize: 11,
-    color: "#CBD5E1",
+    color: Colors.slate300,
     marginHorizontal: 2,
   },
   signOut: {

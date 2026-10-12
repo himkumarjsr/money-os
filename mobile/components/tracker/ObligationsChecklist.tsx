@@ -679,7 +679,7 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  dotClosed: { borderColor: "#D3D1C7", backgroundColor: Colors.border },
+  dotClosed: { borderColor: Colors.border, backgroundColor: Colors.border },
   dotPaid: { borderColor: Colors.success, backgroundColor: Colors.success },
   dotSkipped: { borderColor: Colors.border },
   dotDash: { fontSize: 11, fontWeight: "700", color: Colors.textMuted },

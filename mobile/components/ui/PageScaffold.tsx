@@ -176,7 +176,13 @@ const styles = themedStyles(() => ({
     color: Colors.primaryText,
     marginBottom: 4,
   },
-  h1: { fontSize: 26, fontWeight: "800", color: Colors.textPrimary },
+  // Web h1: text-3xl font-bold (30/36)
+  h1: {
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
   sub: {
     marginTop: 6,
     fontSize: 14,
