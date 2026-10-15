@@ -118,4 +118,239 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
       default: m.TaxRegimeCalculator,
     })),
   ),
+  compound: dyn(() =>
+    import("./compound-interest-calculator").then((m) => ({
+      default: m.CompoundInterestCalculator,
+    })),
+  ),
+  "stepup-sip": dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.StepUpSipCalculator as ComponentType,
+    })),
+  ),
+  lumpsum: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.LumpsumCalculator as ComponentType,
+    })),
+  ),
+  "goal-sip": dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.GoalPlannerCalculator as ComponentType,
+    })),
+  ),
+  "sip-delay": dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.SipDelayCalculator as ComponentType,
+    })),
+  ),
+  stp: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.StpCalculator as ComponentType,
+    })),
+  ),
+  cagr: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.CagrCalculator as ComponentType,
+    })),
+  ),
+  xirr: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.XirrCalculator as ComponentType,
+    })),
+  ),
+  "expense-ratio": dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.ExpenseRatioCalculator as ComponentType,
+    })),
+  ),
+  "asset-allocation": dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.AssetAllocationCalculator as ComponentType,
+    })),
+  ),
+  inflation: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.InflationCalculator as ComponentType,
+    })),
+  ),
+  "money-double": dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.MoneyDoubleCalculator as ComponentType,
+    })),
+  ),
+  fd: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.FdCalculator as ComponentType,
+    })),
+  ),
+  rd: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.RdCalculator as ComponentType,
+    })),
+  ),
+  gold: dyn(() =>
+    import("./advisor/InvestingCalculators").then((m) => ({
+      default: m.GoldCalculator as ComponentType,
+    })),
+  ),
+  retirement: dyn(() =>
+    import("./advisor/RetirementCalculators").then((m) => ({
+      default: m.RetirementCalculator as ComponentType,
+    })),
+  ),
+  nps: dyn(() =>
+    import("./advisor/RetirementCalculators").then((m) => ({
+      default: m.NpsCalculator as ComponentType,
+    })),
+  ),
+  annuity: dyn(() =>
+    import("./advisor/RetirementCalculators").then((m) => ({
+      default: m.AnnuityCalculator as ComponentType,
+    })),
+  ),
+  gratuity: dyn(() =>
+    import("./advisor/RetirementCalculators").then((m) => ({
+      default: m.GratuityCalculator as ComponentType,
+    })),
+  ),
+  "leave-encashment": dyn(() =>
+    import("./advisor/RetirementCalculators").then((m) => ({
+      default: m.LeaveEncashmentCalculator as ComponentType,
+    })),
+  ),
+  "loan-eligibility": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.LoanEligibilityCalculator as ComponentType,
+    })),
+  ),
+  "prepay-vs-invest": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.PrepayVsInvestCalculator as ComponentType,
+    })),
+  ),
+  "balance-transfer": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.BalanceTransferCalculator as ComponentType,
+    })),
+  ),
+  "flat-vs-reducing": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.FlatVsReducingCalculator as ComponentType,
+    })),
+  ),
+  "credit-card": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.CreditCardCalculator as ComponentType,
+    })),
+  ),
+  "debt-payoff": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.DebtPayoffCalculator as ComponentType,
+    })),
+  ),
+  "education-loan": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.EducationLoanCalculator as ComponentType,
+    })),
+  ),
+  "gold-loan": dyn(() =>
+    import("./advisor/LoanCalculators").then((m) => ({
+      default: m.GoldLoanCalculator as ComponentType,
+    })),
+  ),
+  salary: dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.SalaryCalculator as ComponentType,
+    })),
+  ),
+  hra: dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.HraCalculator as ComponentType,
+    })),
+  ),
+  "capital-gains": dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.CapitalGainsCalculator as ComponentType,
+    })),
+  ),
+  "ltcg-harvest": dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.LtcgHarvestCalculator as ComponentType,
+    })),
+  ),
+  deductions: dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.DeductionsCalculator as ComponentType,
+    })),
+  ),
+  "advance-tax": dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.AdvanceTaxCalculator as ComponentType,
+    })),
+  ),
+  "presumptive-tax": dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.PresumptiveTaxCalculator as ComponentType,
+    })),
+  ),
+  "rental-income": dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.RentalIncomeCalculator as ComponentType,
+    })),
+  ),
+  gst: dyn(() =>
+    import("./advisor/TaxCalculators").then((m) => ({
+      default: m.GstCalculator as ComponentType,
+    })),
+  ),
+  "term-cover": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.TermCoverCalculator as ComponentType,
+    })),
+  ),
+  "health-cover": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.HealthCoverCalculator as ComponentType,
+    })),
+  ),
+  "policy-return": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.PolicyReturnCalculator as ComponentType,
+    })),
+  ),
+  "buy-term-invest": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.BuyTermInvestRestCalculator as ComponentType,
+    })),
+  ),
+  "child-education": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.ChildEducationCalculator as ComponentType,
+    })),
+  ),
+  marriage: dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.MarriageCalculator as ComponentType,
+    })),
+  ),
+  "down-payment": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.DownPaymentCalculator as ComponentType,
+    })),
+  ),
+  "salary-hike": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.SalaryHikeCalculator as ComponentType,
+    })),
+  ),
+  "net-worth": dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.NetWorthCalculator as ComponentType,
+    })),
+  ),
+  budget: dyn(() =>
+    import("./advisor/ProtectionGoalCalculators").then((m) => ({
+      default: m.BudgetCalculator as ComponentType,
+    })),
+  ),
 };

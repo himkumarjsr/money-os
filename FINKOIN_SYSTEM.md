@@ -72,8 +72,8 @@ Canonical site: **https://www.finkoin.com**
 
 ## TEST STATUS
 
-Last run: 2026-10-15T12:10:02.230Z
-Unit tests: 1112/1112 passing
+Last run: 2026-10-15T19:59:43.741Z
+Unit tests: failed to complete (see npm test)
 Failed: 0
 
 Living docs:
