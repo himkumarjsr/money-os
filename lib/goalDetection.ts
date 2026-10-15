@@ -4,7 +4,7 @@
  * collected; prompted goals (marriage, baby) only exist once the user opts in
  * after the report. Never an AI guess. Amounts are today's rupees.
  */
-import type { FinancialProfile } from "@/lib/analyse-form-schema";
+import type { CustomGoal, FinancialProfile } from "@/lib/analyse-form-schema";
 import { getUniversalBucketActuals } from "@/lib/universal-buckets";
 
 export type GoalType =
@@ -16,14 +16,15 @@ export type GoalType =
   | "parents_eldercare"
   | "retirement"
   | "marriage"
-  | "baby";
+  | "baby"
+  | "custom";
 
 export type DetectedGoal = {
   /** Stable id, e.g. "kid_education:0", "retirement". */
   id: string;
   type: GoalType;
   label: string;
-  source: "implied" | "prompted";
+  source: "implied" | "prompted" | "custom";
   kidIndex?: number;
   targetAmount: number;
   targetYear: number;
@@ -186,7 +187,8 @@ export function detectGoals(
             ? rent * GOAL_DEFAULTS.homeRentMultiple
             : GOAL_DEFAULTS.homeWithoutRent),
       ),
-      targetYear: positive(p.homePurchaseYear) ?? year + GOAL_DEFAULTS.homeYears,
+      targetYear:
+        positive(p.homePurchaseYear) ?? year + GOAL_DEFAULTS.homeYears,
       isDefaultTarget: own === undefined,
       editable: { amount: true, year: true },
       removable: true,
@@ -284,6 +286,24 @@ export function detectGoals(
     });
   }
 
+  for (const c of p.customGoals ?? []) {
+    const label = String(c?.label ?? "").trim();
+    const amount = positive(c?.targetAmount);
+    if (!c?.id || !label || amount === undefined) continue;
+    add({
+      id: `custom:${c.id}`,
+      type: "custom",
+      label: label.slice(0, 60),
+      source: "custom",
+      targetAmount: Math.round(amount),
+      targetYear: n(c.targetYear) || year + 1,
+      isDefaultTarget: false,
+      editable: { amount: true, year: true },
+      removable: true,
+      reason: "You added this goal.",
+    });
+  }
+
   const age = n(p.selfAge) || 30;
   const retireAge = n(p.retirementAge) || GOAL_DEFAULTS.retirementAge;
   const ownCorpus = positive(p.retirementTargetCorpus);
@@ -317,10 +337,15 @@ export function applyGoalEdit(
   now: Date = new Date(),
 ): FinancialProfile {
   const [type, idx] = goalId.split(":") as [GoalType, string | undefined];
-  const amount = edit.targetAmount != null ? Math.max(0, Math.round(edit.targetAmount)) : undefined;
+  const amount =
+    edit.targetAmount != null
+      ? Math.max(0, Math.round(edit.targetAmount))
+      : undefined;
   const yr = edit.targetYear != null ? Math.round(edit.targetYear) : undefined;
   const next: FinancialProfile = { ...p };
-  const setKid = (key: "kidsEducationFundTargets" | "kidsMarriageFundTargets") => {
+  const setKid = (
+    key: "kidsEducationFundTargets" | "kidsMarriageFundTargets",
+  ) => {
     if (amount == null || idx == null) return;
     const arr = [...(p[key] ?? [])];
     const i = Number(idx);
@@ -351,6 +376,17 @@ export function applyGoalEdit(
       if (amount != null) next.babyFundTarget = amount;
       if (yr != null) next.babyFundYear = yr;
       break;
+    case "custom":
+      next.customGoals = (p.customGoals ?? []).map((c) =>
+        c.id === idx
+          ? {
+              ...c,
+              ...(amount ? { targetAmount: amount } : {}),
+              ...(yr != null ? { targetYear: yr } : {}),
+            }
+          : c,
+      );
+      break;
     case "retirement":
       if (amount != null) next.retirementTargetCorpus = amount;
       if (yr != null) {
@@ -364,8 +400,19 @@ export function applyGoalEdit(
   return next;
 }
 
-export function dismissGoal(p: FinancialProfile, goalId: string): FinancialProfile {
+export function dismissGoal(
+  p: FinancialProfile,
+  goalId: string,
+): FinancialProfile {
   if (goalId === "retirement" || goalId === "debt_free") return p;
+  // A goal the user added is deleted, not hidden.
+  if (goalId.startsWith("custom:")) {
+    const id = goalId.slice("custom:".length);
+    return {
+      ...p,
+      customGoals: (p.customGoals ?? []).filter((c) => c.id !== id),
+    };
+  }
   const set = new Set(p.dismissedGoals ?? []);
   set.add(goalId);
   const next: FinancialProfile = { ...p, dismissedGoals: Array.from(set) };
@@ -399,4 +446,83 @@ export function answerPromptedGoal(
       ? { ...p, planningMarriage: true, dismissedGoals: dismissed }
       : { ...p, planningBaby: true, dismissedGoals: dismissed };
   return yes ? added : dismissGoal(added, offer);
+}
+
+/** Starting points for "Add a goal"; every field stays editable. */
+export const CUSTOM_GOAL_PRESETS: {
+  key: string;
+  label: string;
+  emoji: string;
+  targetAmount: number;
+  years: number;
+}[] = [
+  {
+    key: "travel",
+    label: "Dream vacation",
+    emoji: "✈️",
+    targetAmount: 300_000,
+    years: 2,
+  },
+  {
+    key: "studies",
+    label: "Higher studies",
+    emoji: "📚",
+    targetAmount: 1_500_000,
+    years: 3,
+  },
+  {
+    key: "business",
+    label: "Start a business",
+    emoji: "🚀",
+    targetAmount: 1_000_000,
+    years: 5,
+  },
+  {
+    key: "gadget",
+    label: "Gadget or upgrade",
+    emoji: "💻",
+    targetAmount: 150_000,
+    years: 1,
+  },
+  {
+    key: "sabbatical",
+    label: "Career break",
+    emoji: "🌴",
+    targetAmount: 600_000,
+    years: 3,
+  },
+  {
+    key: "other",
+    label: "Something else",
+    emoji: "🎯",
+    targetAmount: 500_000,
+    years: 3,
+  },
+];
+
+export const MAX_CUSTOM_GOALS = 12;
+
+/** Add a user-defined goal. Returns the profile unchanged when the input is unusable or the list is full. */
+export function addCustomGoal(
+  p: FinancialProfile,
+  goal: Omit<CustomGoal, "id">,
+  id: string = Math.random().toString(36).slice(2, 10),
+): FinancialProfile {
+  const label = goal.label.trim().slice(0, 60);
+  const list = p.customGoals ?? [];
+  if (!label || !(goal.targetAmount > 0) || list.length >= MAX_CUSTOM_GOALS) {
+    return p;
+  }
+  return {
+    ...p,
+    customGoals: [
+      ...list,
+      {
+        id,
+        label,
+        targetAmount: Math.round(goal.targetAmount),
+        targetYear: Math.round(goal.targetYear),
+      },
+    ],
+  };
 }
