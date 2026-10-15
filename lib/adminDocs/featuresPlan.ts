@@ -16,7 +16,7 @@ export const analyseSection: DocSection = {
       kind: "list",
       ordered: true,
       items: [
-        "`/analyse`: login enforced, consent modal (`ConsentModal`), optional risk quiz.",
+        "`/analyse`: login enforced; a user who already has a report (in the store or `user_analyse_snapshots`) goes straight to `/analyse/result`, whose Retake button opens the form at `/analyse?retake=1`. Otherwise the consent modal (`ConsentModal`), optional risk quiz and form.",
         "Form (`components/forms/analyse-onboarding-form.tsx`, React Hook Form + Zod schema `lib/analyse-form-schema.ts`): Personal profile → Income → Fixed obligations (unified loans) → Living expenses → Insurance coverage → Assets and savings → Goals.",
         "Submit → normalise to `FinancialProfile` → `financialStore.setFullAnalysis()` → `analyseFinances(profile)`.",
         "`upsertUserAnalyseSnapshot(userId, { profile, result, submittedAt, version, analysis })` writes `user_analyse_snapshots` (RLS own row). Saving the result to `user_analysis` fires `points_on_analyse` (+20 points, once a week).",

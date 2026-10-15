@@ -50,17 +50,36 @@ async function goToForm(userId: string | undefined, replace = false) {
   else router.push(href);
 }
 
-function Header({ userId }: { userId?: string }) {
+function Header({
+  userId,
+  showRetake = true,
+}: {
+  userId?: string;
+  showRetake?: boolean;
+}) {
   return (
     <View style={styles.header}>
       <TouchableOpacity
-        onPress={() => void goToForm(userId, true)}
+        onPress={() =>
+          router.canGoBack() ? router.back() : router.replace("/(tabs)")
+        }
         hitSlop={12}
         style={styles.back}
         accessibilityRole="button"
       >
-        <Text style={styles.backText}>← Back to form</Text>
+        <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
+      {showRetake ? (
+        <TouchableOpacity
+          onPress={() => void goToForm(userId)}
+          hitSlop={8}
+          style={styles.retake}
+          accessibilityRole="button"
+          accessibilityLabel="Retake health check"
+        >
+          <Text style={styles.retakeText}>↻ Retake</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -153,7 +172,7 @@ function AnalyseResultContent() {
   if (!result || !lastSubmission || !priorityPlan || !model) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        <Header userId={user?.id} />
+        <Header userId={user?.id} showRetake={false} />
         <View style={styles.empty}>
           <AppIcon name="chart" size={44} color={Colors.primaryText} />
           <Text style={styles.emptyTitle}>No analysis found</Text>
@@ -227,7 +246,6 @@ function AnalyseResultContent() {
           onTracker={() => router.push("/(tabs)/tracker")}
           onLearn={() => openContentHref("/learn")}
         />
-
       </ScrollView>
 
       <PaywallSheet
@@ -257,7 +275,7 @@ const styles = themedStyles(() => ({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     minHeight: 52,
@@ -265,6 +283,19 @@ const styles = themedStyles(() => ({
   back: { minHeight: 44, justifyContent: "center", minWidth: 64 },
   backText: {
     fontSize: FontSize.md,
+    fontWeight: "700",
+    color: Colors.primaryText,
+  },
+  retake: {
+    minHeight: 40,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primaryText,
+  },
+  retakeText: {
+    fontSize: FontSize.sm,
     fontWeight: "700",
     color: Colors.primaryText,
   },

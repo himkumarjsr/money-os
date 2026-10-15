@@ -4,8 +4,12 @@ import ConsentModal from "@/components/analyse/ConsentModal";
 import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-form";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
+import { isAnalyseRetake } from "@/lib/analyseRoutes";
+import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { getSupabase, isConfigured } from "@/lib/supabase";
+import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { useAuthStore } from "@/store/authStore";
+import { useFinancialStore } from "@/store/financialStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,10 +18,59 @@ function analyseConsentStorageKey(userId: string) {
   return `finkoin_analyse_consent_v2_${userId}`;
 }
 
-/** Logged-in analyse flow (consent + onboarding form). */
+/**
+ * Logged-in analyse flow. A user who already has a report goes straight to
+ * it (`/analyse/result`, which offers Retake); `?retake=1` opens the form.
+ */
 export default function AnalyseAppClient() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const financialHydrated = useFinancialStore((s) => s.hasHydrated);
+  const [reportChecked, setReportChecked] = useState(false);
+
+  useEffect(() => {
+    const uid = user?.id;
+    if (!uid || !financialHydrated || reportChecked) return;
+    if (isAnalyseRetake(window.location.search)) {
+      setReportChecked(true);
+      return;
+    }
+    const st = useFinancialStore.getState();
+    if (st.result && st.lastSubmission) {
+      router.replace("/analyse/result");
+      return;
+    }
+
+    // The store is per tab, so a new tab looks for the saved report too.
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = isConfigured ? await fetchUserAnalyseSnapshot(uid) : null;
+        if (cancelled) return;
+        if (
+          snap?.lastSubmission &&
+          snap.result &&
+          isValidStoredAnalysis(snap.result)
+        ) {
+          useFinancialStore
+            .getState()
+            .hydrateFromSnapshot(snap.lastSubmission, snap.result, {
+              aiPlan: snap.aiPlan ?? undefined,
+              analysisPatch: snap.analysis ?? undefined,
+            });
+          router.replace("/analyse/result");
+          return;
+        }
+      } catch {
+        // No saved report we can read: show the form.
+      }
+      if (!cancelled) setReportChecked(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, financialHydrated, reportChecked, router]);
 
   const [consentChecked, setConsentChecked] = useState(false);
   const [hasConsent, setHasConsent] = useState(false);
@@ -77,10 +130,10 @@ export default function AnalyseAppClient() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!hasConsent || formStartTrackedRef.current) return;
+    if (!hasConsent || !reportChecked || formStartTrackedRef.current) return;
     Analytics.healthCheckStarted();
     formStartTrackedRef.current = true;
-  }, [hasConsent]);
+  }, [hasConsent, reportChecked]);
 
   const handleAccept = () => {
     const uid = useAuthStore.getState().user?.id;
@@ -116,7 +169,7 @@ export default function AnalyseAppClient() {
     router.replace("/");
   };
 
-  if (!consentChecked) {
+  if (!consentChecked || !reportChecked) {
     return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
