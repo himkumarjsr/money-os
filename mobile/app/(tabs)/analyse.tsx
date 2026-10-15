@@ -9,36 +9,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { hasAnalyseConsent } from "@/lib/analyseConsent";
-import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
-import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
-import { useFinancialStore } from "@/store/financialStore";
+import { syncAnalyseFromCloud } from "@/lib/syncAnalyseFromCloud";
 import { Colors, themedStyles } from "@/constants/theme";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AnalyseMarketingLanding } from "@/components/landing/AnalyseMarketingLanding";
-
-/** A report in the store, or one restored from `user_analyse_snapshots`. */
-async function hasSavedReport(userId: string): Promise<boolean> {
-  const st = useFinancialStore.getState();
-  if (st.result && st.lastSubmission) return true;
-  try {
-    const snap = await fetchUserAnalyseSnapshot(userId);
-    if (
-      snap?.lastSubmission &&
-      snap.result &&
-      isValidStoredAnalysis(snap.result)
-    ) {
-      useFinancialStore
-        .getState()
-        .hydrateFromSnapshot(snap.lastSubmission, snap.result, {
-          analysisPatch: snap.analysis ?? undefined,
-        });
-      return true;
-    }
-  } catch {
-    // No saved report we can read: go to the form.
-  }
-  return false;
-}
 
 export default function AnalyseScreen() {
   const user = useAuthStore((s) => s.user);
@@ -60,7 +34,7 @@ export default function AnalyseScreen() {
       }
       let cancelled = false;
       void (async () => {
-        if (await hasSavedReport(user.id)) {
+        if (await syncAnalyseFromCloud(user.id)) {
           if (cancelled) return;
           pushedRef.current = true;
           router.push("/analyse/result");

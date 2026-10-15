@@ -5,9 +5,8 @@ import { AnalyseOnboardingForm } from "@/components/forms/analyse-onboarding-for
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { Analytics } from "@/lib/analytics";
 import { isAnalyseRetake } from "@/lib/analyseRoutes";
-import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { getSupabase, isConfigured } from "@/lib/supabase";
-import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import { syncAnalyseFromCloud } from "@/lib/syncAnalyseFromCloud";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useRouter } from "next/navigation";
@@ -31,42 +30,20 @@ export default function AnalyseAppClient() {
   useEffect(() => {
     const uid = user?.id;
     if (!uid || !financialHydrated || reportChecked) return;
-    if (isAnalyseRetake(window.location.search)) {
-      setReportChecked(true);
-      return;
-    }
-    const st = useFinancialStore.getState();
-    if (st.result && st.lastSubmission) {
-      router.replace("/analyse/result");
-      return;
-    }
-
-    // The store is per tab, so a new tab looks for the saved report too.
     let cancelled = false;
     void (async () => {
-      try {
-        const snap = isConfigured ? await fetchUserAnalyseSnapshot(uid) : null;
-        if (cancelled) return;
-        if (
-          snap?.lastSubmission &&
-          snap.result &&
-          isValidStoredAnalysis(snap.result)
-        ) {
-          useFinancialStore
-            .getState()
-            .hydrateFromSnapshot(snap.lastSubmission, snap.result, {
-              aiPlan: snap.aiPlan ?? undefined,
-              analysisPatch: snap.analysis ?? undefined,
-            });
-          router.replace("/analyse/result");
-          return;
-        }
-      } catch {
-        // No saved report we can read: show the form.
+      // Picks up Profile edits made in another tab or on the app.
+      const st = useFinancialStore.getState();
+      const hasReport = isConfigured
+        ? await syncAnalyseFromCloud(uid)
+        : !!(st.result && st.lastSubmission);
+      if (cancelled) return;
+      if (hasReport && !isAnalyseRetake(window.location.search)) {
+        router.replace("/analyse/result");
+        return;
       }
-      if (!cancelled) setReportChecked(true);
+      setReportChecked(true);
     })();
-
     return () => {
       cancelled = true;
     };
