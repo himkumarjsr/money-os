@@ -7,6 +7,7 @@ import {
   userNeedSection,
   visionSection,
 } from "./business";
+import { planReviewSection } from "./planReview";
 import { hldSection, lldSection, securitySection } from "./architecture";
 import {
   billsSection,
@@ -40,6 +41,7 @@ export const ADMIN_DOC_SECTIONS: readonly DocSection[] = [
   visionSection,
   userNeedSection,
   phasesSection,
+  planReviewSection,
   competitionSection,
   growthSection,
   revenueSection,
