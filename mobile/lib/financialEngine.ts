@@ -1231,6 +1231,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     savingsVal +
     fdVal +
     (data.liquidMFValue || 0) +
+    n(data.otherLiquidSavings) +
     existingEquityValue(data) +
     (data.ppfBalance || 0) +
     (data.npsBalance || 0) +
