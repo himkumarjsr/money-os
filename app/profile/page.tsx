@@ -8,7 +8,7 @@ import PremiumAvatarRing from "@/components/ui/PremiumAvatarRing";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 import { analyseFinances } from "@/lib/financialEngine";
 import { trackShare } from "@/lib/gtag";
-import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import { syncAnalyseFromCloud } from "@/lib/syncAnalyseFromCloud";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useGamificationStore } from "@/store/gamificationStore";
@@ -22,34 +22,19 @@ export default function ProfilePage() {
   const logoutAction = useAuthStore((s) => s.logout);
   const result = useFinancialStore((s) => s.result);
   const submission = useFinancialStore((s) => s.lastSubmission);
-  const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
   const fkBalance = useGamificationStore((s) => s.fkBalance);
   const isPremium = useThemeStore((s) => s.premium?.unlocked ?? false);
 
   const [referralCopied, setReferralCopied] = useState(false);
 
-  // If local store is empty, pull the latest analysis snapshot from Supabase.
+  // Load the saved analysis, or a newer one edited on another device, so
+  // Profile edits here start from the latest values.
   useEffect(() => {
-    if (!user?.id || submission) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const snap = await fetchUserAnalyseSnapshot(user.id);
-        if (cancelled || !snap?.lastSubmission) return;
-        const engineResult =
-          snap.result ?? analyseFinances(snap.lastSubmission);
-        hydrateFromSnapshot(snap.lastSubmission, engineResult, {
-          analysisPatch: snap.analysis ?? undefined,
-          aiPlan: snap.aiPlan,
-        });
-      } catch (e) {
-        console.warn("Profile assets sync failed:", e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, submission, hydrateFromSnapshot]);
+    if (!user?.id) return;
+    void syncAnalyseFromCloud(user.id).catch((e) =>
+      console.warn("Profile assets sync failed:", e),
+    );
+  }, [user?.id]);
 
   const referralLink = useMemo(() => {
     const code = user?.referralCode ?? "FINK0000";

@@ -37,6 +37,7 @@ import {
 } from "./resultModel";
 import { useAuthStore } from "@/store/authStore";
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
+import { ANALYSE_RETAKE_HREF } from "@/lib/analyseRoutes";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
 import Link from "next/link";
@@ -367,24 +368,21 @@ export default function AnalyseResultPage() {
     <AnalyseResultErrorBoundary>
       <div className="min-h-dvh bg-[#F7F7F4] px-4 py-6">
         <div className="mx-auto max-w-6xl space-y-5">
-          <button
-            onClick={() => router.push("/analyse")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#534AB7",
-              fontSize: 14,
-              fontWeight: 600,
-              padding: "16px 0",
-              marginBottom: 8,
-            }}
-          >
-            ← Back to form
-          </button>
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <Link
+              href="/"
+              className="inline-flex min-h-[44px] items-center text-sm font-semibold text-[#534AB7]"
+            >
+              ← Home
+            </Link>
+            <Link
+              href={ANALYSE_RETAKE_HREF}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[#534AB7] bg-white px-4 text-sm font-semibold text-[#534AB7] hover:bg-[#EEEDFE]"
+            >
+              <AppIcon name="repeat" size={16} color="#534AB7" />
+              Retake health check
+            </Link>
+          </div>
           <section className="rounded-3xl bg-[linear-gradient(135deg,#3C3489_0%,#534AB7_100%)] p-5 text-white">
             <div className="grid items-center gap-6 md:grid-cols-[1.2fr_0.8fr] md:gap-4">
               <div className="text-center md:text-left">

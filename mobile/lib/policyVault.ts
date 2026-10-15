@@ -3,6 +3,11 @@
  * Not a byte-identical mirror: the web file imports `@/lib/supabaseClient` and
  * reads a `NEXT_PUBLIC_*` env var, neither of which exists in the Expo bundle.
  */
+import {
+  analysePolicyCandidates,
+  planAnalysePolicyImport,
+} from "@/lib/analysePolicyImport";
+import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { supabase } from "@/lib/supabase";
 
 /** Use this for RLS-backed tables — must match `auth.uid()`, not a client-generated id. */
@@ -376,6 +381,117 @@ export async function deleteUserPolicy(
     .delete()
     .eq("id", policyId);
   return { error: error ? new Error(error.message) : null };
+}
+
+/**
+ * Analyse profile saved for this user: the latest health-check snapshot
+ * (every submit and Profile edit writes it), else the older `user_analysis`.
+ */
+async function fetchAnalyseProfile(
+  userId: string,
+): Promise<FinancialProfile | null> {
+  const snap = await supabase
+    .from("user_analyse_snapshots")
+    .select("payload")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const pl = snap.data?.payload as Record<string, unknown> | null | undefined;
+  const prof = pl?.profile ?? pl?.lastSubmission;
+  if (isNonEmptyObject(prof)) return prof as unknown as FinancialProfile;
+
+  const { data } = await supabase
+    .from("user_analysis")
+    .select("profile")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return isNonEmptyObject(data?.profile)
+    ? (data.profile as unknown as FinancialProfile)
+    : null;
+}
+
+function isNonEmptyObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && Object.keys(v).length > 0;
+}
+
+/**
+ * Adds the policies the user entered in Analyse to My Policies, once each.
+ * Imported rows carry only what Analyse knows; the vault shows them as
+ * missing details until the user completes them. Best effort: returns
+ * `changed: false` (and does nothing) when the profile is missing or the
+ * import migration has not been applied yet.
+ */
+export async function importAnalysePolicies(
+  userId: string,
+  existing: UserPolicy[],
+): Promise<{ changed: boolean }> {
+  try {
+    const profile = await fetchAnalyseProfile(userId);
+    if (!profile) return { changed: false };
+    const candidates = analysePolicyCandidates(profile);
+    if (candidates.length === 0) return { changed: false };
+
+    // Created by the same migration as `analyse_source_key`; an error here
+    // means it has not run, and importing without the key would duplicate.
+    const dismissed = await supabase
+      .from("user_policy_import_dismissals")
+      .select("analyse_source_key")
+      .eq("user_id", userId);
+    if (dismissed.error) {
+      console.warn("Analyse policy import:", dismissed.error.message);
+      return { changed: false };
+    }
+
+    const plan = planAnalysePolicyImport(
+      candidates,
+      existing,
+      (dismissed.data ?? []).map(
+        (r: { analyse_source_key: string }) => r.analyse_source_key,
+      ),
+    );
+    let changed = false;
+    for (const link of plan.links) {
+      const { error } = await supabase
+        .from("user_policies")
+        .update({ analyse_source_key: link.sourceKey })
+        .eq("id", link.policyId);
+      if (!error) changed = true;
+    }
+    if (plan.inserts.length > 0) {
+      const now = new Date().toISOString();
+      const rows = plan.inserts.map((c) => ({
+        user_id: userId,
+        policy_type: c.policyType,
+        insurer_name: "",
+        plan_name: c.planName,
+        cover_amount: c.coverAmount,
+        premium_amount: c.premiumAmount,
+        premium_frequency: c.premiumFrequency,
+        renewal_date: c.renewalDate,
+        status: "active",
+        analyse_source_key: c.sourceKey,
+        updated_at: now,
+      }));
+      const upsertRows = (r: Record<string, unknown>[]) =>
+        supabase.from("user_policies").upsert(r, {
+          onConflict: "user_id,analyse_source_key",
+          ignoreDuplicates: true,
+        });
+      let { error } = await upsertRows(rows);
+      // Databases without migration 004 have no `status` column (new
+      // policies default to active), as in insertUserPolicy.
+      if (error && looksLikeMissingStatusColumn(error.message)) {
+        ({ error } = await upsertRows(
+          rows.map(({ status: _omit, ...rest }) => rest),
+        ));
+      }
+      if (error) console.warn("Analyse policy import:", error.message);
+      else changed = true;
+    }
+    return { changed };
+  } catch (e) {
+    console.warn("Analyse policy import:", e);
+    return { changed: false };
+  }
 }
 
 export const FINKOIN_AGENT_CODE =

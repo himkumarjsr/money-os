@@ -1,7 +1,7 @@
 /**
  * Report tab — web parity with `/analyse` (AnalyseEntryClient):
- * signed out → marketing landing; signed in → straight to the consent check,
- * then the form (whose resume row offers "View report / Start fresh").
+ * signed out → marketing landing; signed in with a saved report → the report
+ * (which has a Retake button); otherwise the consent check, then the form.
  */
 import { useCallback, useRef } from "react";
 import { View } from "react-native";
@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { hasAnalyseConsent } from "@/lib/analyseConsent";
+import { syncAnalyseFromCloud } from "@/lib/syncAnalyseFromCloud";
 import { Colors, themedStyles } from "@/constants/theme";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AnalyseMarketingLanding } from "@/components/landing/AnalyseMarketingLanding";
@@ -33,6 +34,12 @@ export default function AnalyseScreen() {
       }
       let cancelled = false;
       void (async () => {
+        if (await syncAnalyseFromCloud(user.id)) {
+          if (cancelled) return;
+          pushedRef.current = true;
+          router.push("/analyse/result");
+          return;
+        }
         const ok = await hasAnalyseConsent(user.id);
         if (cancelled) return;
         pushedRef.current = true;

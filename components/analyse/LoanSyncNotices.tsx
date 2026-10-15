@@ -1,5 +1,6 @@
 "use client";
 
+import { ANALYSE_RETAKE_HREF } from "@/lib/analyseRoutes";
 import { LOAN_DRIFT_LABELS } from "@/lib/fixPlanMerge";
 import { loanObligationTitle } from "@/lib/loanObligationSync";
 import type { LoanReportStatus } from "@/store/obligationStore";
@@ -39,7 +40,10 @@ function LoanDetailsForm({
   const [error, setError] = useState("");
   const name = loanObligationTitle(loan).replace(/ EMI\b/, "");
   const submit = async (details: Details) => {
-    if (details !== "skip" && !(details.outstandingAmount && details.outstandingAmount > 0)) {
+    if (
+      details !== "skip" &&
+      !(details.outstandingAmount && details.outstandingAmount > 0)
+    ) {
       setError("Enter the outstanding balance, or skip for now.");
       return;
     }
@@ -133,7 +137,7 @@ export default function LoanSyncNotices({ status, onSaveDetails }: Props) {
             EMI totals, surplus and the debt plan below still use the old loans.
           </p>
           <Link
-            href="/analyse"
+            href={ANALYSE_RETAKE_HREF}
             className="mt-2 inline-flex min-h-[44px] items-center text-sm font-semibold text-[#534AB7]"
           >
             Update your Loans step →
@@ -143,7 +147,8 @@ export default function LoanSyncNotices({ status, onSaveDetails }: Props) {
       {status.needDetails.length > 0 ? (
         <section className="space-y-2 rounded-2xl bg-[#F7F6FE] p-4">
           <h3 className="text-sm font-semibold text-[#534AB7]">
-            Finish {status.needDetails.length === 1 ? "a loan" : "loans"} from Tracker
+            Finish {status.needDetails.length === 1 ? "a loan" : "loans"} from
+            Tracker
           </h3>
           {status.needDetails.map((loan) => (
             <LoanDetailsForm

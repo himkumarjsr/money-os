@@ -46,6 +46,9 @@ const coverageExclude = [
   "lib/trackerProfileIncome.ts",
   // Static blog/content modules — not unit-tested business logic
   "lib/data/**",
+  "lib/adminDocs/**",
+  // Supabase-coupled admin console access check — covered by API/e2e
+  "lib/adminConsole.ts",
   // Re-export barrel only
   "lib/knowledgeBase/index.ts",
   // Large combinatorics — covered by dedicated *.test.ts + tracker/analyse e2e

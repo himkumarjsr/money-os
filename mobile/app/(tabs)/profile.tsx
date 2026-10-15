@@ -18,7 +18,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { analyseFinances } from "@/lib/financialEngine";
-import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
+import { syncAnalyseFromCloud } from "@/lib/syncAnalyseFromCloud";
 import { useGamification } from "@/lib/useGamification";
 import { supabase } from "@/lib/supabase";
 import { uploadAvatar } from "@/lib/avatarUpload";
@@ -57,30 +57,16 @@ export default function ProfileScreen() {
 
   const submission = useFinancialStore((s) => s.lastSubmission);
   const result = useFinancialStore((s) => s.result);
-  const hydrateFromSnapshot = useFinancialStore((s) => s.hydrateFromSnapshot);
   const { stats } = useGamification(user?.id);
 
-  // Same as the PWA: pull the latest analysis if this device has none yet.
+  // Same as the PWA: load the saved analysis, or a newer one edited on
+  // another device, so Profile edits here start from the latest values.
   useEffect(() => {
-    if (!user?.id || submission) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const snap = await fetchUserAnalyseSnapshot(user.id);
-        if (cancelled || !snap?.lastSubmission) return;
-        hydrateFromSnapshot(
-          snap.lastSubmission,
-          snap.result ?? analyseFinances(snap.lastSubmission),
-          { analysisPatch: snap.analysis ?? undefined, aiPlan: snap.aiPlan },
-        );
-      } catch {
-        /* profile still renders without it */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, submission, hydrateFromSnapshot]);
+    if (!user?.id) return;
+    void syncAnalyseFromCloud(user.id).catch(() => {
+      /* profile still renders without it */
+    });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -278,7 +264,9 @@ export default function ProfileScreen() {
             <Text style={styles.name}>{user?.name ?? "Finkoin user"}</Text>
             {premium ? <PremiumBadge size="md" /> : null}
           </View>
-          <Text style={styles.sub}>{user?.phone ?? user?.email ?? "No phone/email"}</Text>
+          <Text style={styles.sub}>
+            {user?.phone ?? user?.email ?? "No phone/email"}
+          </Text>
         </Card>
 
         <View style={[styles.plan, paid && styles.planPaid]}>
@@ -389,9 +377,7 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>
             Refer friends · Earn FK tokens
           </Text>
-          <Text style={styles.refLink}>
-            {referralUrl}
-          </Text>
+          <Text style={styles.refLink}>{referralUrl}</Text>
           <View style={styles.inline}>
             <Pressable
               style={[

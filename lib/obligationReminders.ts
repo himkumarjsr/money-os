@@ -3,12 +3,19 @@
  * Keeps due-day math (incl. month wrap) unit-testable.
  */
 
+import {
+  formatBillDate,
+  nextObligationDueDate,
+  toYmd,
+} from "@/lib/billsCalendar";
+
 export type ObligationReminderInput = {
   title: string;
   amount?: number | null;
   frequency: string;
   due_day?: number | null;
   due_month?: number | null;
+  due_date?: string | null;
   remind_days_before?: number | null;
   category?: string | null;
 };
@@ -51,7 +58,10 @@ function addDays(d: Date, days: number): Date {
  * null for frequencies that never get reminders.
  */
 export function obligationReminderDueDate(
-  ob: Pick<ObligationReminderInput, "frequency" | "due_day" | "due_month">,
+  ob: Pick<
+    ObligationReminderInput,
+    "frequency" | "due_day" | "due_month" | "due_date"
+  >,
   asOf: Date = new Date(),
 ): Date | null {
   const today = startOfLocalDay(asOf);
@@ -70,6 +80,13 @@ export function obligationReminderDueDate(
       return new Date(y, dueMonth - 1, dueDay);
     }
     return addDays(today, daysUntilMonthlyDueDay(ob.due_day || 1, asOf));
+  }
+  if (
+    ob.frequency === "quarterly" ||
+    ob.frequency === "half_yearly" ||
+    ob.frequency === "one_time"
+  ) {
+    return nextObligationDueDate(ob, asOf);
   }
   return null;
 }
@@ -164,13 +181,17 @@ export function obligationReminderEmoji(category?: string | null): string {
 export function buildObligationReminderCopy(
   ob: ObligationReminderInput,
   remindBefore: number,
+  /** The due date the reminder is for; gives "5 Nov" instead of "day 5". */
+  dueDate?: Date | null,
 ): { title: string; content: string } {
   const amount = Number(ob.amount || 0);
-  const dueLabel = ob.due_day
-    ? `day ${ob.due_day}`
-    : ob.due_month
-      ? `month ${ob.due_month}`
-      : "—";
+  const dueLabel = dueDate
+    ? formatBillDate(toYmd(dueDate))
+    : ob.due_day
+      ? `day ${ob.due_day}`
+      : ob.due_month
+        ? `month ${ob.due_month}`
+        : "—";
   const title = `${ob.title} due in ${remindBefore} day${remindBefore === 1 ? "" : "s"}`;
   const content =
     amount > 0
