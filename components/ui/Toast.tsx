@@ -16,9 +16,12 @@ export function Toast() {
   if (!toastMessage) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] rounded-xl bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white shadow-lg">
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed inset-x-4 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-[100] rounded-xl bg-[#534AB7] px-4 py-2 text-center text-sm font-semibold text-white shadow-lg sm:inset-x-auto sm:bottom-4 sm:right-4 sm:text-left"
+    >
       {toastMessage}
     </div>
   );
 }
-

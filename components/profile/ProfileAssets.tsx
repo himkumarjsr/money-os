@@ -31,6 +31,9 @@ import {
   syncProfileAssets,
 } from "@/lib/syncProfileAssets";
 import { useAuthStore } from "@/store/authStore";
+import { useGamificationStore } from "@/store/gamificationStore";
+
+const SAVED_TOAST = "Updated. Your report has been re-analysed.";
 
 type LineItem = {
   id: string;
@@ -320,8 +323,12 @@ function SectionCard({
                 <button
                   type="button"
                   onClick={() => onEdit(item)}
-                  className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] px-3 py-3 text-left transition hover:border-[#534AB7]"
+                  aria-label={`Edit ${item.label}`}
+                  className="relative flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] py-3 pl-3 pr-7 text-left transition hover:border-[#534AB7]"
                 >
+                  <span className="absolute right-2 top-2" aria-hidden>
+                    <AppIcon name="pencil" size={14} color="#534AB7" />
+                  </span>
                   <div className="flex min-w-0 items-center gap-2.5">
                     <AppIcon name={item.icon} size={16} color="#534AB7" />
                     <div className="min-w-0">
@@ -639,7 +646,7 @@ export default function ProfileAssets({
     const res = await syncProfileAssets({ profile: next, userId });
     setBusy(false);
     if (res.error) setMsg(res.error);
-    else setMsg("Saved — synced across your account");
+    else useGamificationStore.getState().showToast(SAVED_TOAST);
     setEdit(null);
     setPickSection(null);
   };

@@ -50,6 +50,9 @@ import {
   syncProfileAssets,
 } from "@/lib/syncProfileAssets";
 import { useAuthStore } from "@/store/authStore";
+import { useChromeStore } from "@/store/chromeStore";
+
+const SAVED_TOAST = "Updated. Your report has been re-analysed.";
 
 /** AppIcon names plus the PWA's "sparkle" (drawn from the tracker set). */
 type LineIconName = AppIconName | "sparkle";
@@ -573,6 +576,9 @@ function SectionCard({
                 </View>
               </View>
               <Text style={styles.itemAmount}>{money(item.amount)}</Text>
+              <View style={styles.itemEdit} pointerEvents="none">
+                <AppIcon name="pencil" size={14} color={Colors.primaryText} />
+              </View>
             </Pressable>
           ))}
 
@@ -696,7 +702,7 @@ export default function ProfileAssets({
     const res = await syncProfileAssets({ profile: next, userId });
     setBusy(false);
     if (res.error) setMsg(res.error);
-    else setMsg("Saved — synced across your account");
+    else useChromeStore.getState().showToast(SAVED_TOAST);
     setEdit(null);
     setPickSection(null);
   };
@@ -1352,8 +1358,10 @@ const styles = themedStyles(() => {
       backgroundColor: Colors.surfaceMuted,
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.md,
+      paddingRight: Spacing.md + 18,
     },
     itemRowPressed: { borderColor: Colors.primary },
+    itemEdit: { position: "absolute", top: 8, right: 8 },
     itemLeft: {
       flexDirection: "row",
       alignItems: "center",
