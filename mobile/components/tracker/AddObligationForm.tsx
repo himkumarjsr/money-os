@@ -1,42 +1,17 @@
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
+import { DateField } from "@/components/tracker/DateField";
 import { Colors, themedStyles } from "@/constants/theme";
-
-const CATEGORIES = [
-  { value: "loan_emi", label: "Loan EMI", emoji: "🏦" },
-  { value: "insurance_life", label: "Life Insurance", emoji: "🛡️" },
-  { value: "insurance_health", label: "Health Insurance", emoji: "🏥" },
-  { value: "insurance_vehicle", label: "Vehicle Insurance", emoji: "🚗" },
-  { value: "insurance_rd", label: "RD for premiums", emoji: "🗓️" },
-  { value: "investment_sip", label: "SIP", emoji: "📈" },
-  { value: "investment_ppf", label: "PPF", emoji: "💰" },
-  { value: "subscription", label: "Subscription", emoji: "📱" },
-  { value: "rent", label: "Rent", emoji: "🏠" },
-  { value: "other", label: "Other", emoji: "📌" },
-] as const;
-
-const FREQUENCIES = [
-  { value: "monthly", label: "Monthly" },
-  { value: "quarterly", label: "Quarterly" },
-  { value: "half_yearly", label: "Half Yearly" },
-  { value: "yearly", label: "Yearly" },
-  { value: "one_time", label: "One Time" },
-] as const;
-
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+import {
+  BILL_CATEGORIES,
+  BILL_CATEGORY_GROUPS,
+  BILL_FREQUENCIES,
+  MONTH_NAMES,
+  REMIND_DAY_CHOICES,
+  defaultRemindDaysFor,
+  isAmountOptionalCategory,
+  toYmd,
+} from "@/lib/billsCalendar";
 
 export type ObligationFormPayload = {
   title: string;
@@ -45,45 +20,90 @@ export type ObligationFormPayload = {
   frequency: string;
   due_day: number | null;
   due_month: number | null;
+  /** One-time only: YYYY-MM-DD. */
+  due_date?: string | null;
   source: string;
   is_active: boolean;
   remind_days_before: number;
 };
 
-/** Add / edit obligation — port of web AddObligationForm. */
+const TITLE_HINTS: Record<string, string> = {
+  bill_electricity: "e.g. BESCOM electricity",
+  bill_internet: "e.g. Airtel broadband",
+  bill_mobile: "e.g. Jio postpaid",
+  vehicle_puc: "e.g. Swift PUC",
+  document_expiry: "e.g. Passport, driving licence",
+  fd_maturity: "e.g. SBI FD maturity",
+  school_fees: "e.g. Riya school fees",
+  tax: "e.g. Advance tax instalment",
+  property_tax: "e.g. BBMP property tax",
+};
+
+/** Add / edit obligation or bill — port of web AddObligationForm. */
 export function AddObligationForm({
   onSave,
   onClose,
   initial,
   submitLabel,
+  defaults,
+  noun = "obligation",
 }: {
   onSave: (data: ObligationFormPayload) => Promise<void>;
   onClose: () => void;
   /** When set, the form opens in edit mode with these values. */
   initial?: Partial<ObligationFormPayload> | null;
   submitLabel?: string;
+  /** Prefill for a new entry (not edit mode). */
+  defaults?: Partial<ObligationFormPayload> | null;
+  /** Word for the heading, e.g. "bill" on the Bills screen. */
+  noun?: string;
 }) {
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [category, setCategory] = useState(initial?.category ?? "loan_emi");
+  const seed = initial ?? defaults ?? null;
+  const [title, setTitle] = useState(seed?.title ?? "");
+  const [category, setCategory] = useState(seed?.category ?? "loan_emi");
   const [amount, setAmount] = useState(
-    initial?.amount != null ? String(initial.amount) : "",
+    seed?.amount != null && seed.amount > 0 ? String(seed.amount) : "",
   );
-  const [frequency, setFrequency] = useState(initial?.frequency ?? "monthly");
+  const [frequency, setFrequency] = useState(seed?.frequency ?? "monthly");
   const [dueDay, setDueDay] = useState(
-    initial?.due_day != null ? String(initial.due_day) : "",
+    seed?.due_day != null ? String(seed.due_day) : "",
   );
   const [dueMonth, setDueMonth] = useState(
-    initial?.due_month != null ? String(initial.due_month) : "",
+    seed?.due_month != null ? String(seed.due_month) : "",
+  );
+  const [dueDate, setDueDate] = useState(
+    seed?.due_date ?? (seed?.frequency === "one_time" ? toYmd(new Date()) : ""),
+  );
+  const [remindDays, setRemindDays] = useState<number>(
+    seed?.remind_days_before ?? defaultRemindDaysFor(seed?.category),
+  );
+  const [remindTouched, setRemindTouched] = useState(
+    seed?.remind_days_before != null,
   );
   const [monthOpen, setMonthOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const isEdit = Boolean(initial);
-  const canSave = Boolean(title.trim() && amount);
-  const showDayGrid =
-    frequency === "monthly" ||
-    frequency === "quarterly" ||
-    frequency === "half_yearly";
+
+  const amountOptional = isAmountOptionalCategory(category);
+  const amountNum = amount ? parseFloat(amount) : 0;
+  const hasAmount = Number.isFinite(amountNum) && amountNum > 0;
+  const needsMonth = frequency === "yearly";
+  const needsDate = frequency === "one_time";
+  const showDayGrid = frequency !== "one_time";
+  const showFirstMonth =
+    frequency === "quarterly" || frequency === "half_yearly";
+  const canSave = Boolean(
+    title.trim() &&
+    (hasAmount || amountOptional) &&
+    (!needsMonth || dueMonth) &&
+    (!needsDate || dueDate),
+  );
+
+  const pickCategory = (value: string) => {
+    setCategory(value);
+    if (!remindTouched) setRemindDays(defaultRemindDaysFor(value));
+  };
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -93,13 +113,17 @@ export function AddObligationForm({
       await onSave({
         title: title.trim(),
         category,
-        amount: parseFloat(amount),
+        amount: hasAmount ? amountNum : 0,
         frequency,
-        due_day: dueDay ? parseInt(dueDay, 10) : null,
-        due_month: dueMonth ? parseInt(dueMonth, 10) : null,
+        due_day: showDayGrid && dueDay ? parseInt(dueDay, 10) : null,
+        due_month:
+          (needsMonth || showFirstMonth) && dueMonth
+            ? parseInt(dueMonth, 10)
+            : null,
+        due_date: needsDate ? dueDate || null : null,
         source: "manual",
         is_active: true,
-        remind_days_before: initial?.remind_days_before ?? 7,
+        remind_days_before: remindDays,
       });
     } catch (err) {
       console.warn("obligation save failed:", err);
@@ -113,7 +137,7 @@ export function AddObligationForm({
     <View>
       <View style={styles.headRow}>
         <Text style={styles.title}>
-          {isEdit ? "Edit obligation" : "Add obligation"}
+          {isEdit ? `Edit ${noun}` : `Add ${noun}`}
         </Text>
         <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button">
           <Text style={styles.close}>Close</Text>
@@ -124,33 +148,48 @@ export function AddObligationForm({
       <TextInput
         value={title}
         onChangeText={setTitle}
-        placeholder="e.g. LIC Premium, HDFC Home Loan"
+        placeholder={
+          TITLE_HINTS[category] ?? "e.g. LIC Premium, HDFC Home Loan"
+        }
         placeholderTextColor={Colors.textMuted}
         autoFocus={!isEdit}
         style={styles.input}
       />
 
       <Text style={[styles.label, styles.labelSpaced]}>Category</Text>
-      <View style={styles.wrap}>
-        {CATEGORIES.map((c) => {
-          const active = category === c.value;
-          return (
-            <Pressable
-              key={c.value}
-              onPress={() => setCategory(c.value)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              style={[styles.pill, active && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, active && styles.pillTextActive]}>
-                {c.emoji} {c.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {BILL_CATEGORY_GROUPS.map((group) => {
+        const items = BILL_CATEGORIES.filter((c) => c.group === group);
+        if (items.length === 0) return null;
+        return (
+          <View key={group} style={styles.group}>
+            <Text style={styles.groupLabel}>{group}</Text>
+            <View style={styles.wrap}>
+              {items.map((c) => {
+                const active = category === c.value;
+                return (
+                  <Pressable
+                    key={c.value}
+                    onPress={() => pickCategory(c.value)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[styles.pill, active && styles.pillActive]}
+                  >
+                    <Text
+                      style={[styles.pillText, active && styles.pillTextActive]}
+                    >
+                      {c.emoji} {c.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
 
-      <Text style={[styles.label, styles.labelSpaced]}>Amount (₹)</Text>
+      <Text style={[styles.label, styles.labelSpaced]}>
+        Amount (₹){amountOptional ? " · optional" : ""}
+      </Text>
       <TextInput
         value={amount}
         onChangeText={(v) => setAmount(v.replace(/[^\d.]/g, ""))}
@@ -162,12 +201,18 @@ export function AddObligationForm({
 
       <Text style={[styles.label, styles.labelSpaced]}>How often?</Text>
       <View style={styles.wrap}>
-        {FREQUENCIES.map((f) => {
+        {BILL_FREQUENCIES.map((f) => {
           const active = frequency === f.value;
           return (
             <Pressable
               key={f.value}
-              onPress={() => setFrequency(f.value)}
+              onPress={() => {
+                setFrequency(f.value);
+                // The native date field shows today until tapped; save that.
+                if (f.value === "one_time" && !dueDate) {
+                  setDueDate(toYmd(new Date()));
+                }
+              }}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               style={[styles.pill, active && styles.pillActive]}
@@ -179,6 +224,74 @@ export function AddObligationForm({
           );
         })}
       </View>
+
+      {needsMonth || showFirstMonth ? (
+        <>
+          <Text style={[styles.label, styles.labelSpaced]}>
+            {needsMonth ? "Which month?" : "First due month"}
+          </Text>
+          <Pressable
+            onPress={() => setMonthOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityLabel={needsMonth ? "Which month?" : "First due month"}
+            accessibilityState={{ expanded: monthOpen }}
+            style={[styles.input, styles.select]}
+          >
+            <Text
+              style={[
+                styles.selectText,
+                !dueMonth && { color: Colors.textMuted },
+              ]}
+            >
+              {dueMonth
+                ? MONTH_NAMES[Number(dueMonth) - 1]
+                : needsMonth
+                  ? "Select month"
+                  : "Mar, Jun, Sep, Dec"}
+            </Text>
+            <Text style={styles.selectChevron}>▼</Text>
+          </Pressable>
+          {monthOpen ? (
+            <View style={styles.monthList}>
+              {MONTH_NAMES.map((m, i) => {
+                const active = dueMonth === String(i + 1);
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => {
+                      setDueMonth(String(i + 1));
+                      setMonthOpen(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[styles.monthRow, active && styles.pillActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.selectText,
+                        active && styles.pillTextActive,
+                      ]}
+                    >
+                      {m}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+        </>
+      ) : null}
+
+      {needsDate ? (
+        <View style={styles.labelSpaced}>
+          <DateField
+            label="Due date"
+            value={dueDate}
+            onChange={setDueDate}
+            max="2099-12-31"
+          />
+        </View>
+      ) : null}
 
       {showDayGrid ? (
         <>
@@ -209,56 +322,28 @@ export function AddObligationForm({
         </>
       ) : null}
 
-      {frequency === "yearly" ? (
-        <>
-          <Text style={[styles.label, styles.labelSpaced]}>Which month?</Text>
-          <Pressable
-            onPress={() => setMonthOpen((o) => !o)}
-            accessibilityRole="button"
-            accessibilityLabel="Which month?"
-            accessibilityState={{ expanded: monthOpen }}
-            style={[styles.input, styles.select]}
-          >
-            <Text
-              style={[
-                styles.selectText,
-                !dueMonth && { color: Colors.textMuted },
-              ]}
+      <Text style={[styles.label, styles.labelSpaced]}>Remind me</Text>
+      <View style={styles.wrap}>
+        {REMIND_DAY_CHOICES.map((d) => {
+          const active = remindDays === d;
+          return (
+            <Pressable
+              key={d}
+              onPress={() => {
+                setRemindDays(d);
+                setRemindTouched(true);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              style={[styles.pill, active && styles.pillActive]}
             >
-              {dueMonth ? MONTHS[Number(dueMonth) - 1] : "Select month"}
-            </Text>
-            <Text style={styles.selectChevron}>▼</Text>
-          </Pressable>
-          {monthOpen ? (
-            <View style={styles.monthList}>
-              {MONTHS.map((m, i) => {
-                const active = dueMonth === String(i + 1);
-                return (
-                  <Pressable
-                    key={m}
-                    onPress={() => {
-                      setDueMonth(String(i + 1));
-                      setMonthOpen(false);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    style={[styles.monthRow, active && styles.pillActive]}
-                  >
-                    <Text
-                      style={[
-                        styles.selectText,
-                        active && styles.pillTextActive,
-                      ]}
-                    >
-                      {m}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-        </>
-      ) : null}
+              <Text style={[styles.pillText, active && styles.pillTextActive]}>
+                {d === 1 ? "1 day" : `${d} days`} before
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       {saveError ? <Text style={styles.error}>{saveError}</Text> : null}
 
@@ -274,9 +359,7 @@ export function AddObligationForm({
             (!canSave || saving) && styles.saveTextDisabled,
           ]}
         >
-          {saving
-            ? "Saving…"
-            : submitLabel || (isEdit ? "Update obligation" : "Save obligation")}
+          {saving ? "Saving…" : submitLabel || (isEdit ? "Update" : "Save")}
         </Text>
       </Pressable>
     </View>
@@ -301,6 +384,13 @@ const styles = themedStyles(() => ({
     marginBottom: 8,
   },
   labelSpaced: { marginTop: 14 },
+  group: { marginBottom: 10 },
+  groupLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.textMuted,
+    marginBottom: 6,
+  },
   input: {
     height: 50,
     borderRadius: 12,

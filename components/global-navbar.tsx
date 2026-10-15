@@ -5,6 +5,7 @@ import PremiumAvatarRing from "@/components/ui/PremiumAvatarRing";
 import NotificationBell from "@/components/NotificationBell";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
+import { CalculatorsNavMenu } from "@/components/CalculatorsNavMenu";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { fadeIn } from "@/lib/animations";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
@@ -239,16 +240,20 @@ export function GlobalNavbar() {
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-[#3D3A5C] lg:flex">
-            {centerNavItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                scroll
-                className="nav-underline transition-colors duration-300 hover:text-[#534AB7]"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {centerNavItems.map((item) =>
+              item.href === "/calculators" ? (
+                <CalculatorsNavMenu key={item.href} />
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  scroll
+                  className="nav-underline transition-colors duration-300 hover:text-[#534AB7]"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
@@ -421,6 +426,7 @@ export function GlobalNavbar() {
                   [
                     ["user", "My Profile", "/profile"],
                     ["notebook", "Expense Tracker", "/tracker"],
+                    ["calendar", "Bills & renewals", "/bills"],
                     ["users", "FK Split", "/split"],
                     ["chart", "My Analysis", "/analyse/result"],
                     ["shield", "My Policies", "/policies"],

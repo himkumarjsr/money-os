@@ -6,40 +6,11 @@ import AddObligationForm, {
 import CollapsiblePanel from "@/components/tracker/CollapsiblePanel";
 import PlannedInvestmentsSection from "@/components/tracker/PlannedInvestmentsSection";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { billCategoryEmoji, describeSchedule } from "@/lib/billsCalendar";
 import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-
-const CATEGORY_ICON: Record<string, string> = {
-  insurance_life: "🛡️",
-  insurance_health: "🏥",
-  insurance_vehicle: "🚗",
-  insurance_rd: "🗓️",
-  loan_emi: "🏦",
-  investment_sip: "📈",
-  investment_ppf: "💰",
-  investment_fd: "🏛️",
-  credit_card: "💳",
-  subscription: "📱",
-  rent: "🏠",
-  tax: "📋",
-  other: "📌",
-};
-
-const MONTH_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
 
 type Learned = {
   title: string;
@@ -124,6 +95,8 @@ export default function ObligationsChecklist({
       frequency: data.frequency,
       due_day: data.due_day,
       due_month: data.due_month,
+      due_date: data.due_date ?? null,
+      remind_days_before: data.remind_days_before,
       source: "manual",
     });
     if (!ok) {
@@ -323,7 +296,7 @@ export default function ObligationsChecklist({
                       ) : null}
                     </span>
                     <div className="shrink-0 text-lg">
-                      {CATEGORY_ICON[ob?.category || "other"] || "📌"}
+                      {billCategoryEmoji(ob?.category)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div
@@ -342,11 +315,7 @@ export default function ObligationsChecklist({
                           <>Closed · won’t show from next month</>
                         ) : (
                           <>
-                            {ob?.frequency === "monthly"
-                              ? `Due on ${ob.due_day ?? "—"}th`
-                              : ob?.frequency === "yearly"
-                                ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
-                                : ob?.frequency}
+                            {ob ? describeSchedule(ob) : null}
                             {isPaid && item.paid_at
                               ? ` · Paid ${new Date(
                                   item.paid_at,
@@ -399,6 +368,7 @@ export default function ObligationsChecklist({
                                     frequency: ob.frequency,
                                     due_day: ob.due_day ?? null,
                                     due_month: ob.due_month ?? null,
+                                    due_date: ob.due_date ?? null,
                                     source: ob.source,
                                     is_active: true,
                                     remind_days_before: ob.remind_days_before,
@@ -483,11 +453,13 @@ export default function ObligationsChecklist({
                 <span className="text-base">+</span>
                 Add obligation
               </button>
-              <div className="text-[11px] text-[#9B9A94]">
-                {loading
-                  ? "Updating…"
-                  : "Mark closed = strike this month · hide from next"}
-              </div>
+              <Link
+                href="/bills"
+                className="flex items-center gap-1 text-[13px] font-semibold text-[#534AB7]"
+              >
+                <AppIcon name="calendar" size={14} color="#534AB7" />
+                {loading ? "Updating…" : "Bills calendar"}
+              </Link>
             </div>
           </div>
         )}

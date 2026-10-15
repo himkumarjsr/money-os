@@ -136,6 +136,9 @@
 :root[data-theme] .bg-\[\#534AB7\]\/40 {
   background-color: color-mix(in srgb, var(--fk-primary) 40%, transparent);
 }
+:root[data-theme] .bg-\[\#D3D1C7\] {
+  background-color: var(--fk-border);
+}
 :root[data-theme] .bg-\[\#D4D2DE\] {
   background-color: var(--fk-border);
 }
@@ -810,6 +813,9 @@
 }
 :root[data-theme] .text-\[\#888780\] {
   color: var(--fk-muted);
+}
+:root[data-theme] .text-\[\#8A6100\] {
+  color: var(--fk-warning-text);
 }
 :root[data-theme] .text-\[\#8C3A3A\] {
   color: var(--fk-danger-text);

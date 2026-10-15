@@ -35,7 +35,10 @@ async function sendPlannedInvestmentReminders(
     return 0;
   }
 
-  const groups = new Map<string, { userId: string; startMonth: string; ids: string[] }>();
+  const groups = new Map<
+    string,
+    { userId: string; startMonth: string; ids: string[] }
+  >();
   for (const r of (rows ?? []) as Array<{
     id: string;
     user_id: string;
@@ -44,7 +47,8 @@ async function sendPlannedInvestmentReminders(
     reminded_at: string | null;
   }>) {
     const startMonth = String(r.start_month).slice(0, 10);
-    if (!isPlannedReminderDue({ ...r, start_month: startMonth }, today)) continue;
+    if (!isPlannedReminderDue({ ...r, start_month: startMonth }, today))
+      continue;
     const key = `${r.user_id}|${startMonth}`;
     const g = groups.get(key) ?? { userId: r.user_id, startMonth, ids: [] };
     g.ids.push(r.id);
@@ -165,6 +169,7 @@ async function handleReminders(req: NextRequest) {
       frequency: string;
       due_day?: number | null;
       due_month?: number | null;
+      due_date?: string | null;
       remind_days_before?: number | null;
       category?: string | null;
     }>) {
@@ -184,7 +189,11 @@ async function handleReminders(req: NextRequest) {
       }
 
       const remindBefore = ob.remind_days_before ?? 7;
-      const { title, content } = buildObligationReminderCopy(ob, remindBefore);
+      const { title, content } = buildObligationReminderCopy(
+        ob,
+        remindBefore,
+        due,
+      );
 
       const { error: insertErr } = await supabaseAdmin
         .from("user_notifications")
