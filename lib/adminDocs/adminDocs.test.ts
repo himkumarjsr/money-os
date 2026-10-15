@@ -18,6 +18,12 @@ describe("admin docs", () => {
       "before-login",
       "after-login",
       "admin-access",
+      "vision",
+      "user-need",
+      "phases",
+      "competition",
+      "growth",
+      "revenue",
     ]) {
       expect(getAdminDocSection(id), id).toBeDefined();
     }
