@@ -7,6 +7,7 @@ import CollapsiblePanel from "@/components/tracker/CollapsiblePanel";
 import PlannedInvestmentsSection from "@/components/tracker/PlannedInvestmentsSection";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { billCategoryEmoji, describeSchedule } from "@/lib/billsCalendar";
+import { premiumRdNoteLines } from "@/lib/premiumRdPlan";
 import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
 import Link from "next/link";
@@ -328,6 +329,13 @@ export default function ObligationsChecklist({
                           </>
                         )}
                       </div>
+                      {!isClosed && premiumRdNoteLines(ob).length > 0 ? (
+                        <ul className="mt-1 space-y-0.5 text-[11px] leading-snug text-[#5F5E5A]">
+                          {premiumRdNoteLines(ob).map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                     <div className="shrink-0 text-right">
                       <div
