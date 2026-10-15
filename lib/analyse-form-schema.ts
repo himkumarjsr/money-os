@@ -146,6 +146,14 @@ export const UNIFIED_LOAN_TYPE_VALUES = [
 
 export type UnifiedLoanType = (typeof UNIFIED_LOAN_TYPE_VALUES)[number];
 
+/** A goal the user added on the Goals page. Amounts are today's rupees. */
+export type CustomGoal = {
+  id: string;
+  label: string;
+  targetAmount: number;
+  targetYear: number;
+};
+
 export interface FinancialProfile {
   lifeStage: "bachelor" | "married" | "kids" | "senior";
   selfAge: number;
@@ -405,6 +413,8 @@ export interface FinancialProfile {
   babyFundYear?: number;
   /** Implied goal ids the user removed from their goal list. */
   dismissedGoals?: string[];
+  /** Goals the user added themselves on the Goals page (travel, studies…). */
+  customGoals?: CustomGoal[];
   /** Risk quiz answers (index = RISK_QUESTIONS index, 0–2 each). */
   riskAnswers?: (number | null)[];
   /** Derived from riskAnswers once all are answered. */
@@ -775,6 +785,17 @@ const formShape = {
   babyFundTarget: optionalMoney,
   babyFundYear: optionalWholeNumber,
   dismissedGoals: z.array(z.string()).max(40).optional(),
+  customGoals: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(24),
+        label: z.string().trim().min(1).max(60),
+        targetAmount: z.number().positive(),
+        targetYear: z.number().int(),
+      }),
+    )
+    .max(12)
+    .optional(),
   riskAnswers: z
     .array(z.number().int().min(0).max(2).nullable())
     .max(3)
@@ -2037,6 +2058,7 @@ export function financialProfileToFormValues(
     babyFundTarget: p.babyFundTarget,
     babyFundYear: p.babyFundYear,
     dismissedGoals: p.dismissedGoals,
+    customGoals: p.customGoals,
     riskAnswers: p.riskAnswers,
     riskTolerance: p.riskTolerance,
   };
@@ -2650,6 +2672,7 @@ export function normalizeAnalyseFormValues(
     babyFundTarget: form.babyFundTarget,
     babyFundYear: form.babyFundYear,
     dismissedGoals: form.dismissedGoals,
+    customGoals: form.customGoals,
     riskAnswers: form.riskAnswers,
     riskTolerance: scoreRiskTolerance(form.riskAnswers) ?? form.riskTolerance,
   };

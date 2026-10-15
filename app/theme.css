@@ -553,6 +553,9 @@
 :root[data-theme] .divide-\[\#F4F3FA\] > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--fk-border-light);
 }
+:root[data-theme] .divide-\[\#F7F7F4\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--fk-border-light);
+}
 :root[data-theme] .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--fk-border);
 }
