@@ -14,6 +14,7 @@ import {
   type NatureReport,
   type NatureRow,
 } from "@/lib/trackerNatureReport";
+import { usePrivacyToggle } from "@/lib/usePrivacyToggle";
 
 const TONE_CLASS = {
   good: "text-[#1D5C3A]",
@@ -195,7 +196,7 @@ export default function MoneyMapCard({
   /** Master "Show all" privacy switch from the tracker. */
   forceVisible?: boolean;
 }) {
-  const [localVisible, setLocalVisible] = useState(false);
+  const [visible, toggleVisible] = usePrivacyToggle(forceVisible);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   const baseId = useId();
@@ -218,7 +219,6 @@ export default function MoneyMapCard({
     el.scrollLeft = target;
   }, [monthCount, locked]);
   if (!report) return null;
-  const visible = localVisible || forceVisible;
 
   if (locked) {
     return (
@@ -277,10 +277,7 @@ export default function MoneyMapCard({
           <p className="text-xs text-[#5F5E5A]">{MONEY_MAP_COPY.subtitle}</p>
         </div>
         <div className="flex items-center gap-1">
-          <EyeToggle
-            visible={visible}
-            onToggle={() => setLocalVisible((v) => !v)}
-          />
+          <EyeToggle visible={visible} onToggle={toggleVisible} />
           <button
             type="button"
             onClick={() => setShowReport(true)}

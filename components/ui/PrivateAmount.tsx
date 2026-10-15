@@ -61,6 +61,8 @@ export default function PrivateAmount({
   align = "center",
   /** Use on purple/dark surfaces so the eye button stays visible. */
   tone = "light",
+  visible: visibleProp,
+  onVisibleChange,
 }: {
   /** The numeric value used to decide whether there's data to protect. */
   value: number;
@@ -75,8 +77,16 @@ export default function PrivateAmount({
   label?: string;
   align?: CSSProperties["alignItems"];
   tone?: "light" | "dark";
+  /** Controlled visibility; omit to let the component manage it. */
+  visible?: boolean;
+  onVisibleChange?: (visible: boolean) => void;
 }) {
-  const [visible, setVisible] = useState(false);
+  const [visibleState, setVisibleState] = useState(false);
+  const visible = visibleProp ?? visibleState;
+  const setVisible = (next: boolean) => {
+    if (visibleProp === undefined) setVisibleState(next);
+    onVisibleChange?.(next);
+  };
   const hasData = Number.isFinite(value) && Math.abs(value) > 0;
 
   if (!hasData) {
@@ -113,7 +123,7 @@ export default function PrivateAmount({
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
-          setVisible((v) => !v);
+          setVisible(!visible);
         }}
         aria-label={visible ? `Hide ${label}` : `Show ${label}`}
         title={visible ? "Hide" : "Show"}

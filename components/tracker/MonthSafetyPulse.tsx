@@ -3,6 +3,7 @@
 import type { SafetyPulseResult, SafetyStatus } from "@/lib/trackerSafetyPulse";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { usePrivacyToggle } from "@/lib/usePrivacyToggle";
 
 const STATUS_STYLE: Record<
   SafetyStatus,
@@ -90,9 +91,7 @@ export default function MonthSafetyPulse({
   children?: ReactNode;
 }) {
   /** Independent of tracker summary eye — hidden by default. */
-  const [localVisible, setLocalVisible] = useState(false);
-  const amountsVisible = localVisible || forceVisible;
-  const setAmountsVisible = setLocalVisible;
+  const [amountsVisible, toggleAmountsVisible] = usePrivacyToggle(forceVisible);
   const style = STATUS_STYLE[pulse.status];
   const showComparison =
     pulse.previous != null &&
@@ -164,7 +163,7 @@ export default function MonthSafetyPulse({
           </span>
           <button
             type="button"
-            onClick={() => setAmountsVisible((v) => !v)}
+            onClick={toggleAmountsVisible}
             aria-label={
               amountsVisible
                 ? "Hide safety pulse amounts"

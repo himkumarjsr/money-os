@@ -15,6 +15,7 @@ import {
   type NatureReport,
   type NatureRow,
 } from "@/lib/trackerNatureReport";
+import { usePrivacyToggle } from "@/lib/usePrivacyToggle";
 
 const FIRST_COL = 116;
 const CELL_W = 84;
@@ -60,11 +61,10 @@ export function MoneyMapCard({
   /** Master "Show all" privacy switch from the tracker. */
   forceVisible?: boolean;
 }) {
-  const [localVisible, setLocalVisible] = useState(false);
+  const [visible, toggleVisible] = usePrivacyToggle(forceVisible);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   if (!report) return null;
-  const visible = localVisible || forceVisible;
 
   if (locked) {
     return (
@@ -125,7 +125,7 @@ export function MoneyMapCard({
         </View>
         <View style={styles.headRight}>
           <Pressable
-            onPress={() => setLocalVisible((v) => !v)}
+            onPress={toggleVisible}
             accessibilityRole="button"
             accessibilityState={{ selected: visible }}
             style={styles.linkBtn}
