@@ -166,10 +166,36 @@ function n(v: unknown): number {
   return Number.isFinite(x) ? Math.max(0, x) : 0;
 }
 
+/**
+ * Equity fields that the engine folds into `totalEquityValue` when that
+ * blended total is set (see `existingEquityValue`).
+ */
+export const EQUITY_PART_FIELDS = [
+  "mfValue",
+  "indianStocksValue",
+  "usStocksValueINR",
+  "usMFValueINR",
+  "rsuValueINR",
+] as const satisfies readonly AssetFieldKey[];
+
+function equityPartsSum(profile: FinancialProfile): number {
+  return EQUITY_PART_FIELDS.reduce((s, f) => s + n(profile[f]), 0);
+}
+
+/**
+ * The "Equity / stocks / RSU" row: the part of the blended equity total not
+ * already listed as mutual funds, stocks or RSU. 0 when there is no blended total.
+ */
+export function equityRemainder(profile: FinancialProfile): number {
+  const total = n(profile.totalEquityValue);
+  return total > 0 ? Math.max(0, total - equityPartsSum(profile)) : 0;
+}
+
 export function getScalarAssetValue(
   profile: FinancialProfile,
   field: AssetFieldKey,
 ): number {
+  if (field === "totalEquityValue") return equityRemainder(profile);
   return n(profile[field]);
 }
 
@@ -187,9 +213,17 @@ export function patchScalarAsset(
   if (field === "carMarketValue") {
     next.ownsCar = amount > 0 ? true : profile.ownsCar;
   }
-  if (field === "totalEquityValue" && amount > 0) {
-    // Prefer blended equity total when user edits the combined field.
-    next.totalEquityValue = amount;
+  if (field === "totalEquityValue") {
+    // The row shows only the remainder, so the blended total is that plus
+    // the listed parts. 0 drops the blend and the engine sums the parts.
+    next.totalEquityValue = amount > 0 ? amount + equityPartsSum(profile) : 0;
+  } else if (
+    (EQUITY_PART_FIELDS as readonly string[]).includes(field) &&
+    n(profile.totalEquityValue) > 0
+  ) {
+    // With a blended total the engine ignores the parts, so keep the total
+    // in step or a newly added fund/stock would never count.
+    next.totalEquityValue = equityRemainder(profile) + equityPartsSum(next);
   }
   return next;
 }
