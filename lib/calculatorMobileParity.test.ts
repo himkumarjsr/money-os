@@ -13,6 +13,7 @@ describe("mobile keeps byte-identical copies of calculator logic", () => {
     "amortisation.ts",
     "amortisationExcel.ts",
     "calculatorInput.ts",
+    "epfCalculator.ts",
     "finance.ts",
     "fireCalculator.ts",
     "formatINR.ts",
@@ -43,10 +44,13 @@ describe("amortisation Excel workbook", () => {
       calculatorName: "home-loan",
     });
     expect(wb.SheetNames).toEqual(["home-loan Schedule"]);
-    const aoa = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]], {
-      header: 1,
-      blankrows: true,
-    });
+    const aoa = XLSX.utils.sheet_to_json<unknown[]>(
+      wb.Sheets[wb.SheetNames[0]],
+      {
+        header: 1,
+        blankrows: true,
+      },
+    );
     expect(aoa[0]).toEqual(["Finkoin — home-loan Schedule"]);
     expect(aoa[3]).toEqual(["Annual interest rate", "10%"]);
     expect(aoa[7]).toEqual([
@@ -76,6 +80,8 @@ describe("amortisation Excel workbook", () => {
       XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer,
     );
     expect(String.fromCharCode(bytes[0], bytes[1])).toBe("PK");
-    expect(amortisationExcelFileName("Car Loan!")).toBe("finkoin-car-loan.xlsx");
+    expect(amortisationExcelFileName("Car Loan!")).toBe(
+      "finkoin-car-loan.xlsx",
+    );
   });
 });
