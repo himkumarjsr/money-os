@@ -31,6 +31,7 @@ interface GamificationState {
   awardBadge: (badgeId: string) => void;
   hasEarnedAction: (key: string) => boolean;
   markEarnedAction: (key: string) => void;
+  showToast: (message: string) => void;
   clearToast: () => void;
 }
 
@@ -102,7 +103,8 @@ export const useGamificationStore = create<GamificationState>()(
             .maybeSingle();
           set({
             rank: (!rankError && Number(rankData?.rank ?? 0)) || null,
-            percentile: (!rankError && Number(rankData?.percentile ?? 0)) || null,
+            percentile:
+              (!rankError && Number(rankData?.percentile ?? 0)) || null,
           });
         } catch (err) {
           console.error("fetchGamification error:", err);
@@ -204,6 +206,7 @@ export const useGamificationStore = create<GamificationState>()(
             ? s.earnedActions
             : [...s.earnedActions, key],
         })),
+      showToast: (message) => set({ toastMessage: message }),
       clearToast: () => set({ toastMessage: null }),
     }),
     {

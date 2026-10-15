@@ -547,6 +547,9 @@
 :root[data-theme] .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--fk-border);
 }
+:root[data-theme] .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
+  border-color: color-mix(in srgb, var(--fk-border-light) 10%, transparent);
+}
 :root[data-theme] .fill-slate-600 {
   fill: var(--fk-text-2);
 }

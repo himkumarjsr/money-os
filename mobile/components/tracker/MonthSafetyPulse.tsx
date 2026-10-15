@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { View, Text } from "react-native";
 import type { SafetyPulseResult } from "@/lib/trackerSafetyPulse";
 import { SectionPrivacyEye } from "@/components/ui/PrivacyEye";
@@ -12,6 +12,7 @@ import {
   getActiveTheme,
 } from "@/constants/theme";
 import { GoldText } from "@/components/ui/GoldMirror";
+import { usePrivacyToggle } from "@/lib/usePrivacyToggle";
 
 const STATUS_STYLE = themed(
   () =>
@@ -64,8 +65,7 @@ export function MonthSafetyPulse({
   forceVisible = false,
   children,
 }: Props) {
-  const [localVisible, setLocalVisible] = useState(false);
-  const amountsVisible = localVisible || forceVisible;
+  const [amountsVisible, toggleAmountsVisible] = usePrivacyToggle(forceVisible);
   const style = STATUS_STYLE[pulse.status];
   const showComparison =
     pulse.previous != null &&
@@ -91,7 +91,7 @@ export function MonthSafetyPulse({
           </View>
           <SectionPrivacyEye
             visible={amountsVisible}
-            onToggle={() => setLocalVisible((v) => !v)}
+            onToggle={toggleAmountsVisible}
             style={styles.eyeBtn}
           />
         </View>
@@ -145,7 +145,10 @@ export function MonthSafetyPulse({
                 style={[
                   styles.delta,
                   {
-                    color: pulse.spentDelta > 0 ? Colors.errorText : Colors.successText,
+                    color:
+                      pulse.spentDelta > 0
+                        ? Colors.errorText
+                        : Colors.successText,
                   },
                 ]}
               >
