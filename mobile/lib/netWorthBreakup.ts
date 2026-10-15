@@ -102,6 +102,11 @@ export function buildNetWorthBreakup(
         amount: n(p.liquidMFValue),
       },
       {
+        id: "other-liquid",
+        label: "Other liquid savings",
+        amount: n(p.otherLiquidSavings),
+      },
+      {
         id: "emergency",
         label: "Emergency fund",
         amount: n(p.emergencyFundCurrent),
@@ -109,33 +114,30 @@ export function buildNetWorthBreakup(
     ]),
     group("investments", "Investments", [
       { id: "fd", label: "Fixed deposits", amount: n(p.fdValue) },
-      blendedEquity
-        ? {
-            id: "equity",
-            label: "Mutual funds, stocks & RSU",
-            amount: existingEquityValue(p),
-          }
-        : { id: "mf", label: "Mutual funds", amount: n(p.mfValue) },
-      ...(blendedEquity
-        ? []
-        : [
-            {
-              id: "stocks-in",
-              label: "Indian stocks",
-              amount: n(p.indianStocksValue),
-            },
-            {
-              id: "stocks-us",
-              label: "US stocks",
-              amount: n(p.usStocksValueINR),
-            },
-            {
-              id: "us-mf",
-              label: "US mutual funds",
-              amount: n(p.usMFValueINR),
-            },
-            { id: "rsu", label: "RSU", amount: n(p.rsuValueINR) },
-          ]),
+      { id: "mf", label: "Mutual funds", amount: n(p.mfValue) },
+      {
+        id: "equity",
+        label: "Equity / stocks / RSU",
+        amount: blendedEquity
+          ? Math.max(
+              0,
+              existingEquityValue(p) -
+                n(p.mfValue) -
+                n(p.indianStocksValue) -
+                n(p.usStocksValueINR) -
+                n(p.usMFValueINR) -
+                n(p.rsuValueINR),
+            )
+          : 0,
+      },
+      {
+        id: "stocks-in",
+        label: "Indian stocks",
+        amount: n(p.indianStocksValue),
+      },
+      { id: "stocks-us", label: "US stocks", amount: n(p.usStocksValueINR) },
+      { id: "us-mf", label: "US mutual funds", amount: n(p.usMFValueINR) },
+      { id: "rsu", label: "RSU / ESOP", amount: n(p.rsuValueINR) },
       { id: "ppf", label: "PPF", amount: n(p.ppfBalance) },
       { id: "epf", label: "EPF", amount: n(p.epfBalance) },
       { id: "nps", label: "NPS", amount: n(p.npsBalance) },

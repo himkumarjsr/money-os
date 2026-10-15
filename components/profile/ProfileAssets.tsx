@@ -16,6 +16,7 @@ import {
 } from "@/lib/netWorthBreakup";
 import {
   catalogForSection,
+  equityRemainder,
   getScalarAssetValue,
   patchScalarAsset,
   removeCustomInvestment,
@@ -55,7 +56,7 @@ function n(v: number | undefined | null) {
   return Math.max(0, Number(v ?? 0));
 }
 
-function buildCashItems(p: FinancialProfile): LineItem[] {
+export function buildCashItems(p: FinancialProfile): LineItem[] {
   return [
     {
       id: "savings",
@@ -84,14 +85,7 @@ function buildCashItems(p: FinancialProfile): LineItem[] {
   ];
 }
 
-function buildInvestmentItems(p: FinancialProfile): LineItem[] {
-  const stocksIn = n(p.indianStocksValue);
-  const stocksUs = n(p.usStocksValueINR);
-  const usMf = n(p.usMFValueINR);
-  const rsu = n(p.rsuValueINR);
-  const blended = n(p.totalEquityValue);
-  const equity = blended > 0 ? blended : stocksIn + stocksUs + usMf + rsu;
-
+export function buildInvestmentItems(p: FinancialProfile): LineItem[] {
   const rows: LineItem[] = [
     {
       id: "mf",
@@ -104,10 +98,42 @@ function buildInvestmentItems(p: FinancialProfile): LineItem[] {
     {
       id: "equity",
       label: "Equity / stocks / RSU",
-      amount: equity,
+      amount: equityRemainder(p),
       icon: "chart",
       kind: "scalar",
       field: "totalEquityValue",
+    },
+    {
+      id: "indian-stocks",
+      label: "Indian stocks",
+      amount: n(p.indianStocksValue),
+      icon: "chart",
+      kind: "scalar",
+      field: "indianStocksValue",
+    },
+    {
+      id: "us-stocks",
+      label: "US stocks (INR)",
+      amount: n(p.usStocksValueINR),
+      icon: "chart",
+      kind: "scalar",
+      field: "usStocksValueINR",
+    },
+    {
+      id: "us-mf",
+      label: "US mutual funds (INR)",
+      amount: n(p.usMFValueINR),
+      icon: "trending",
+      kind: "scalar",
+      field: "usMFValueINR",
+    },
+    {
+      id: "rsu",
+      label: "RSU / ESOP (INR)",
+      amount: n(p.rsuValueINR),
+      icon: "chart",
+      kind: "scalar",
+      field: "rsuValueINR",
     },
     {
       id: "fd",
@@ -158,7 +184,7 @@ function buildInvestmentItems(p: FinancialProfile): LineItem[] {
   return rows;
 }
 
-function buildPhysicalItems(p: FinancialProfile): LineItem[] {
+export function buildPhysicalItems(p: FinancialProfile): LineItem[] {
   return [
     {
       id: "home",
@@ -202,7 +228,7 @@ function loanLabel(type: UnifiedLoanType) {
     .join(" ");
 }
 
-function buildLiabilityItems(p: FinancialProfile): LineItem[] {
+export function buildLiabilityItems(p: FinancialProfile): LineItem[] {
   const unified = p.unifiedLoans ?? [];
   if (unified.length > 0) {
     return unified.map((loan, i) => ({
