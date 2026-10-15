@@ -448,6 +448,9 @@
 :root[data-theme] .border-\[\#EFEDE7\] {
   border-color: var(--fk-border);
 }
+:root[data-theme] .border-\[\#F0D9A8\] {
+  border-color: var(--fk-warning-border);
+}
 :root[data-theme] .border-\[\#F0EFF8\] {
   border-color: var(--fk-border-light);
 }
@@ -540,6 +543,9 @@
 }
 :root[data-theme] .caret-\[\#534AB7\] {
   caret-color: var(--fk-primary-text);
+}
+:root[data-theme] .divide-\[\#F0EFF8\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--fk-border-light);
 }
 :root[data-theme] .divide-\[\#F4F3FA\] > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--fk-border-light);
@@ -676,6 +682,9 @@
 :root[data-theme] .hover\:border-violet-400:hover {
   border-color: var(--fk-primary-text);
 }
+:root[data-theme] .hover\:text-\[\#111110\]:hover {
+  color: var(--fk-text);
+}
 :root[data-theme] .hover\:text-\[\#534AB7\]:hover {
   color: var(--fk-primary-text);
 }
@@ -786,6 +795,9 @@
 }
 :root[data-theme] .text-\[\#791F1F\] {
   color: var(--fk-danger-text);
+}
+:root[data-theme] .text-\[\#7A4D0F\] {
+  color: var(--fk-warning-text);
 }
 :root[data-theme] .text-\[\#7A5A12\] {
   color: var(--fk-warning-text);

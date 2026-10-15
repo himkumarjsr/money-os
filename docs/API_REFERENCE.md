@@ -66,6 +66,18 @@ Vercel cron (see `vercel.json`): typically `0 3 * * *` → deliver-tip (08:30 IS
 
 ---
 
+## Admin console (web only)
+
+| Method | Path                       | Auth                            | Rate limit | Role                                                  |
+| ------ | -------------------------- | ------------------------------- | ---------- | ----------------------------------------------------- |
+| GET    | `/api/admin/admins`        | Session + console admin (`053`) | —          | List admins (non-admins get 404)                      |
+| POST   | `/api/admin/admins`        | Session + console admin         | 30/hr      | `{ email }` invite; access starts on verified sign-in |
+| DELETE | `/api/admin/admins?email=` | Session + console admin         | 30/hr      | Remove an admin (never yourself)                      |
+
+Page: `/admin/[section]` renders the system documentation (HLD, LLD, RADIO, per-feature APIs) on the server for console admins only.
+
+---
+
 ## Client call sites (Split)
 
 `store/splitStore.ts` → create/invite/join/expenses/balances/settle/delete via the routes above. Group list/detail reads often use Supabase user client (RLS) with ~2 min store TTL.
