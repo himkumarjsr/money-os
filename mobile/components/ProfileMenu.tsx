@@ -1,14 +1,7 @@
 /**
  * Profile dropdown — same content as PWA GlobalNavbar profile panel.
  */
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  ScrollView,
-  Image,
-} from "react-native";
+import { View, Text, Modal, Pressable, ScrollView, Image } from "react-native";
 import { useState } from "react";
 import { router, type Href } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
@@ -23,6 +16,7 @@ import { useGamification } from "@/lib/useGamification";
 const MENU: Array<{ icon: AppIconName; label: string; href: Href }> = [
   { icon: "user", label: "My Profile", href: "/(tabs)/profile" },
   { icon: "notebook", label: "Expense Tracker", href: "/(tabs)/tracker" },
+  { icon: "calendar", label: "Bills & renewals", href: "/bills" as Href },
   { icon: "users", label: "FK Split", href: "/(tabs)/split" },
   { icon: "chart", label: "My Analysis", href: "/analyse/result" as Href },
   { icon: "shield", label: "My Policies", href: "/policies" as Href },

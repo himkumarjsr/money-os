@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
+import { router, type Href } from "expo-router";
 import {
   AddObligationForm,
   type ObligationFormPayload,
@@ -16,40 +17,10 @@ import {
   getActiveTheme,
   onPrimaryStatus,
 } from "@/constants/theme";
+import { billCategoryEmoji, describeSchedule } from "@/lib/billsCalendar";
 import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
 import { GoldText } from "@/components/ui/GoldMirror";
-
-const CATEGORY_ICON: Record<string, string> = {
-  insurance_life: "🛡️",
-  insurance_health: "🏥",
-  insurance_vehicle: "🚗",
-  insurance_rd: "🗓️",
-  loan_emi: "🏦",
-  investment_sip: "📈",
-  investment_ppf: "💰",
-  investment_fd: "🏛️",
-  credit_card: "💳",
-  subscription: "📱",
-  rent: "🏠",
-  tax: "📋",
-  other: "📌",
-};
-
-const MONTH_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
@@ -131,6 +102,8 @@ export function ObligationsChecklist({
       frequency: data.frequency,
       due_day: data.due_day,
       due_month: data.due_month,
+      due_date: data.due_date ?? null,
+      remind_days_before: data.remind_days_before,
       source: "manual",
     });
     if (!ok) throw new Error("updateObligation failed");
@@ -338,7 +311,7 @@ export function ObligationsChecklist({
                         ) : null}
                       </View>
                       <Text style={styles.emoji}>
-                        {CATEGORY_ICON[ob?.category || "other"] || "📌"}
+                        {billCategoryEmoji(ob?.category)}
                       </Text>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text
@@ -358,13 +331,7 @@ export function ObligationsChecklist({
                         <Text style={styles.rowMeta}>
                           {isClosed
                             ? "Closed · won’t show from next month"
-                            : `${
-                                ob?.frequency === "monthly"
-                                  ? `Due on ${ob.due_day ?? "—"}th`
-                                  : ob?.frequency === "yearly"
-                                    ? `Due in ${MONTH_SHORT[(ob.due_month || 1) - 1]}`
-                                    : (ob?.frequency ?? "")
-                              }${
+                            : `${ob ? describeSchedule(ob) : ""}${
                                 isPaid && item.paid_at
                                   ? ` · Paid ${new Date(
                                       item.paid_at,
@@ -407,6 +374,7 @@ export function ObligationsChecklist({
                                       frequency: ob.frequency,
                                       due_day: ob.due_day ?? null,
                                       due_month: ob.due_month ?? null,
+                                      due_date: ob.due_date ?? null,
                                       source: ob.source,
                                       is_active: true,
                                       remind_days_before: ob.remind_days_before,
@@ -489,11 +457,15 @@ export function ObligationsChecklist({
               >
                 <Text style={styles.addText}>+ Add obligation</Text>
               </Pressable>
-              <Text style={styles.footerHint}>
-                {loading
-                  ? "Updating…"
-                  : "Mark closed = strike this month · hide from next"}
-              </Text>
+              <Pressable
+                onPress={() => router.push("/bills" as Href)}
+                accessibilityRole="link"
+                style={styles.addBtn}
+              >
+                <Text style={styles.addText}>
+                  {loading ? "Updating…" : "Bills calendar ›"}
+                </Text>
+              </Pressable>
             </View>
           </View>
         )}
@@ -758,12 +730,6 @@ const styles = themedStyles(() => ({
   },
   addBtn: { minHeight: 44, justifyContent: "center" },
   addText: { fontSize: 13, fontWeight: "600", color: Colors.primaryText },
-  footerHint: {
-    flex: 1,
-    textAlign: "right",
-    fontSize: 11,
-    color: Colors.textMuted,
-  },
   resetTitle: {
     fontSize: 16,
     fontWeight: "800",
