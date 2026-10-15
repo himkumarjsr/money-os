@@ -29,6 +29,9 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
   ppf: dyn(() =>
     import("./PPFCalculator").then((m) => ({ default: m.PPFCalculator })),
   ),
+  epf: dyn(() =>
+    import("./EPFCalculator").then((m) => ({ default: m.EPFCalculator })),
+  ),
   nsc: dyn(() =>
     import("./postOffice/schemeCalculators").then((m) => ({
       default: m.PoNscSchemeCalculator,

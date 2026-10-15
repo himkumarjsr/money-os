@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { CarLoanCalculator } from "./CarLoanCalculator";
 import { EMICalculator } from "./EMICalculator";
+import { EPFCalculator } from "./EPFCalculator";
 import { EmergencyFundCalculator } from "./EmergencyFundCalculator";
 import { FIRECalculator } from "./FIRECalculator";
 import { HomeLoanCalculator } from "./HomeLoanCalculator";
@@ -28,6 +29,7 @@ export const calculatorsById: Record<string, ComponentType> = {
   sip: SIPCalculator,
   swp: SWPCalculator,
   ppf: PPFCalculator,
+  epf: EPFCalculator,
   nsc: PoNscSchemeCalculator,
   emergency: EmergencyFundCalculator,
   fire: FIRECalculator,
