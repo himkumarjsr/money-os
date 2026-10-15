@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import type {
@@ -9,6 +9,11 @@ import type {
 } from "@/lib/analyse-form-schema";
 import type { AnalysisResult } from "@/lib/financialEngine";
 import { formatIndian } from "@/lib/formatters";
+import {
+  buildNetWorthBreakup,
+  type BreakupGroup,
+  type NetWorthBreakup,
+} from "@/lib/netWorthBreakup";
 import {
   catalogForSection,
   getScalarAssetValue,
@@ -26,6 +31,9 @@ import {
   syncProfileAssets,
 } from "@/lib/syncProfileAssets";
 import { useAuthStore } from "@/store/authStore";
+import { useGamificationStore } from "@/store/gamificationStore";
+
+const SAVED_TOAST = "Updated. Your report has been re-analysed.";
 
 type LineItem = {
   id: string;
@@ -315,8 +323,12 @@ function SectionCard({
                 <button
                   type="button"
                   onClick={() => onEdit(item)}
-                  className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] px-3 py-3 text-left transition hover:border-[#534AB7]"
+                  aria-label={`Edit ${item.label}`}
+                  className="relative flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#F0EFF8] bg-[#FAFAFE] py-3 pl-3 pr-7 text-left transition hover:border-[#534AB7]"
                 >
+                  <span className="absolute right-2 top-2" aria-hidden>
+                    <AppIcon name="pencil" size={14} color="#534AB7" />
+                  </span>
                   <div className="flex min-w-0 items-center gap-2.5">
                     <AppIcon name={item.icon} size={16} color="#534AB7" />
                     <div className="min-w-0">
@@ -365,6 +377,188 @@ function SectionCard({
   );
 }
 
+type HeroKey = "networth" | "assets" | "liabilities";
+
+const MASK = "₹••••••";
+
+function BreakupLine({
+  label,
+  amount,
+  visible,
+  strong = false,
+  sign = "",
+  sub = false,
+}: {
+  label: string;
+  amount: number;
+  visible: boolean;
+  strong?: boolean;
+  sign?: string;
+  sub?: boolean;
+}) {
+  return (
+    <div
+      className={`flex min-w-0 items-center justify-between gap-3 ${sub ? "py-1 pl-3" : "py-1.5"}`}
+    >
+      <span
+        className={`min-w-0 truncate ${strong ? "text-sm font-bold text-white" : sub ? "text-xs text-white/75" : "text-sm font-semibold text-white/80"}`}
+      >
+        {label}
+      </span>
+      <span
+        className={`shrink-0 whitespace-nowrap tabular-nums ${strong ? "text-sm font-extrabold text-white" : sub ? "text-xs font-semibold text-white/80" : "text-sm font-bold text-white"}`}
+      >
+        {visible
+          ? `${sign}${amount < 0 ? "−" : ""}${money(Math.abs(amount))}`
+          : MASK}
+      </span>
+    </div>
+  );
+}
+
+function BreakupGroups({
+  groups,
+  visible,
+  empty,
+}: {
+  groups: BreakupGroup[];
+  visible: boolean;
+  empty: string;
+}) {
+  if (groups.length === 0) {
+    return <p className="py-2 text-xs text-white/75">{empty}</p>;
+  }
+  return (
+    <div className="divide-y divide-white/10">
+      {groups.map((g) => (
+        <div key={g.id} className="py-1.5">
+          <BreakupLine label={g.label} amount={g.total} visible={visible} />
+          {g.rows.length > 1 || g.rows[0]?.label !== g.label
+            ? g.rows.map((r) => (
+                <BreakupLine
+                  key={r.id}
+                  label={r.label}
+                  amount={r.amount}
+                  visible={visible}
+                  sub
+                />
+              ))
+            : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BreakupPanel({
+  card,
+  breakup,
+  visible,
+  onToggleVisible,
+  className = "",
+}: {
+  card: HeroKey;
+  breakup: NetWorthBreakup;
+  visible: boolean;
+  onToggleVisible: () => void;
+  className?: string;
+}) {
+  const title =
+    card === "networth"
+      ? "Net worth breakup"
+      : card === "assets"
+        ? "Total assets breakup"
+        : "Liabilities breakup";
+  return (
+    <div
+      className={`rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 ${className}`}
+    >
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-white/75">
+          {title}
+        </p>
+        <button
+          type="button"
+          onClick={onToggleVisible}
+          className="rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white ring-1 ring-white/25"
+        >
+          {visible ? "Hide amounts" : "Show amounts"}
+        </button>
+      </div>
+
+      {card === "networth" ? (
+        <>
+          <BreakupLine
+            label="Total assets"
+            amount={breakup.totalAssets}
+            visible={visible}
+            strong
+          />
+          {breakup.assets.map((g) => (
+            <BreakupLine
+              key={g.id}
+              label={g.label}
+              amount={g.total}
+              visible={visible}
+              sub
+            />
+          ))}
+          <div className="mt-1 border-t border-white/15 pt-1">
+            <BreakupLine
+              label="Less: liabilities"
+              amount={breakup.totalLiabilities}
+              visible={visible}
+              strong
+              sign="− "
+            />
+            {breakup.liabilities.map((g) => (
+              <BreakupLine
+                key={g.id}
+                label={g.label}
+                amount={g.total}
+                visible={visible}
+                sub
+              />
+            ))}
+          </div>
+          <div className="mt-1 border-t border-white/25 pt-1">
+            <BreakupLine
+              label="Net worth"
+              amount={breakup.netWorth}
+              visible={visible}
+              strong
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <BreakupGroups
+            groups={card === "assets" ? breakup.assets : breakup.liabilities}
+            visible={visible}
+            empty={
+              card === "assets"
+                ? "No assets added yet. Add them below."
+                : "No loans or card dues added. Nice!"
+            }
+          />
+          <div className="mt-1 border-t border-white/25 pt-1">
+            <BreakupLine
+              label={card === "assets" ? "Total assets" : "Total liabilities"}
+              amount={
+                card === "assets"
+                  ? breakup.totalAssets
+                  : breakup.totalLiabilities
+              }
+              visible={visible}
+              strong
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ProfileAssets({
   profile,
   analysis,
@@ -402,13 +596,57 @@ export default function ProfileAssets({
     analysis?.totalLiabilities ?? liabilityTotalFromLines;
   const netWorth = analysis?.netWorth ?? totalAssets - totalLiabilities;
 
+  const breakup = useMemo(
+    () => buildNetWorthBreakup(working, { totalAssets, totalLiabilities }),
+    [working, totalAssets, totalLiabilities],
+  );
+  const [openCard, setOpenCard] = useState<HeroKey | null>(null);
+  const [shown, setShown] = useState<Record<HeroKey, boolean>>({
+    networth: false,
+    assets: false,
+    liabilities: false,
+  });
+  const toggleShown = (key: HeroKey) =>
+    setShown((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleCard = (key: HeroKey) =>
+    setOpenCard((cur) => (cur === key ? null : key));
+  const heroCards: Array<{
+    key: HeroKey;
+    label: string;
+    value: number;
+    display: string;
+    danger: boolean;
+  }> = [
+    {
+      key: "networth",
+      label: "Net worth",
+      value: Math.abs(netWorth),
+      display: `${netWorth < 0 ? "−" : ""}${money(Math.abs(netWorth))}`,
+      danger: netWorth < 0,
+    },
+    {
+      key: "assets",
+      label: "Total assets",
+      value: totalAssets,
+      display: money(totalAssets),
+      danger: false,
+    },
+    {
+      key: "liabilities",
+      label: "Liabilities",
+      value: totalLiabilities,
+      display: money(totalLiabilities),
+      danger: false,
+    },
+  ];
+
   const persist = async (next: FinancialProfile) => {
     setBusy(true);
     setMsg("");
     const res = await syncProfileAssets({ profile: next, userId });
     setBusy(false);
     if (res.error) setMsg(res.error);
-    else setMsg("Saved — synced across your account");
+    else useGamificationStore.getState().showToast(SAVED_TOAST);
     setEdit(null);
     setPickSection(null);
   };
@@ -570,50 +808,87 @@ export default function ProfileAssets({
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {[
-            {
-              label: "Net worth",
-              value: Math.abs(netWorth),
-              display: `${netWorth < 0 ? "−" : ""}${money(Math.abs(netWorth))}`,
-              danger: netWorth < 0,
-            },
-            {
-              label: "Total assets",
-              value: totalAssets,
-              display: money(totalAssets),
-              danger: false,
-            },
-            {
-              label: "Liabilities",
-              value: totalLiabilities,
-              display: money(totalLiabilities),
-              danger: false,
-            },
-          ].map((card) => (
-            <div
-              key={card.label}
-              className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15"
-            >
-              <div className="text-[11px] font-semibold text-white/75">
-                {card.label}
-              </div>
-              <div className="mt-1">
-                <PrivateAmount
-                  value={card.value}
-                  label={card.label}
-                  tone="dark"
-                  eyeSize={18}
+          {heroCards.map((card) => {
+            const open = openCard === card.key;
+            return (
+              <Fragment key={card.key}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={open}
+                  aria-label={`${card.label} breakup`}
+                  onClick={() => toggleCard(card.key)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleCard(card.key);
+                    }
+                  }}
+                  className={`cursor-pointer rounded-2xl p-4 ring-1 transition ${open ? "bg-white/20 ring-white/25" : "bg-white/10 ring-white/15 hover:bg-white/15"}`}
                 >
-                  <span
-                    className={`text-lg font-extrabold ${card.danger ? "text-[#FFB4B4]" : "text-white"}`}
-                  >
-                    {card.display}
-                  </span>
-                </PrivateAmount>
-              </div>
-            </div>
-          ))}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[11px] font-semibold text-white/75">
+                      {card.label}
+                    </div>
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-white/75"
+                      aria-hidden
+                    >
+                      {open ? "Hide breakup" : "Breakup"}
+                      <span
+                        className="inline-flex transition-transform"
+                        style={{
+                          transform: open ? "rotate(180deg)" : undefined,
+                        }}
+                      >
+                        <AppIcon name="chevronDown" size={14} color="#FFFFFF" />
+                      </span>
+                    </span>
+                  </div>
+                  <div className="mt-1">
+                    <PrivateAmount
+                      value={card.value}
+                      label={card.label}
+                      tone="dark"
+                      eyeSize={18}
+                      visible={shown[card.key]}
+                      onVisibleChange={(v) =>
+                        setShown((prev) => ({ ...prev, [card.key]: v }))
+                      }
+                    >
+                      <span
+                        className={`text-lg font-extrabold ${card.danger ? "text-[#FFB4B4]" : "text-white"}`}
+                      >
+                        {card.display}
+                      </span>
+                    </PrivateAmount>
+                  </div>
+                </div>
+                {open ? (
+                  // Phones: breakup opens right under the tapped card.
+                  <BreakupPanel
+                    card={card.key}
+                    breakup={breakup}
+                    visible={shown[card.key]}
+                    onToggleVisible={() => toggleShown(card.key)}
+                    className="sm:hidden"
+                  />
+                ) : null}
+              </Fragment>
+            );
+          })}
         </div>
+
+        {openCard ? (
+          // Wider screens: cards sit in a row, so the breakup spans below them.
+          <BreakupPanel
+            card={openCard}
+            breakup={breakup}
+            visible={shown[openCard]}
+            onToggleVisible={() => toggleShown(openCard)}
+            className="mt-3 hidden sm:block"
+          />
+        ) : null}
       </div>
 
       {msg ? (
