@@ -238,10 +238,11 @@ function premiumName(item: YearlyPremium): string {
   return `${item.label} premium`;
 }
 
-/** One line per policy for the card's breakdown. */
+/** One line per policy: which premium, when it's due, and how long to save. */
 export function premiumRdLine(item: PremiumRdItem): string {
   const name = premiumName(item);
-  return `${name.charAt(0).toUpperCase()}${name.slice(1)}: ${inr(item.premium)} in ${MONTH_NAMES[item.renewalMonth - 1]} · ${inr(item.monthly)} a month`;
+  const lastMonth = MONTH_NAMES[(item.renewalMonth + 10) % 12];
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)}: ${inr(item.premium)} due in ${MONTH_NAMES[item.renewalMonth - 1]} · ${inr(item.monthly)} a month till ${lastMonth}`;
 }
 
 /** The card's main sentences. Empty when there is nothing to plan yet. */
@@ -322,6 +323,22 @@ export function buildPremiumRdObligations(
     });
   }
   return rows;
+}
+
+/**
+ * The per-policy lines saved on a premium RD / savings obligation, so the
+ * tracker can say which premiums it saves for and until when. Empty for
+ * any other obligation.
+ */
+export function premiumRdNoteLines(
+  ob: { source?: string | null; notes?: string | null } | null | undefined,
+): string[] {
+  if (!ob || ob.source !== PREMIUM_RD_SOURCE || !ob.notes) return [];
+  return ob.notes
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 8);
 }
 
 /**

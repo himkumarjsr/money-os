@@ -18,6 +18,7 @@ import {
   onPrimaryStatus,
 } from "@/constants/theme";
 import { billCategoryEmoji, describeSchedule } from "@/lib/billsCalendar";
+import { premiumRdNoteLines } from "@/lib/premiumRdPlan";
 import { deactivateAllCreditCardObligations } from "@/lib/trackerCreditCards";
 import { useObligationStore } from "@/store/obligationStore";
 import { GoldText } from "@/components/ui/GoldMirror";
@@ -342,6 +343,13 @@ export function ObligationsChecklist({
                                   : ""
                               }${isSkipped ? " · Skipped" : ""}`}
                         </Text>
+                        {!isClosed
+                          ? premiumRdNoteLines(ob).map((line) => (
+                              <Text key={line} style={styles.rowNote}>
+                                {line}
+                              </Text>
+                            ))
+                          : null}
                       </View>
                       <View style={styles.rightCol}>
                         <Text
@@ -665,6 +673,12 @@ const styles = themedStyles(() => ({
   struck: { textDecorationLine: "line-through" },
   struckMuted: { color: Colors.textMuted, textDecorationLine: "line-through" },
   rowMeta: { fontSize: 11, color: Colors.textMuted },
+  rowNote: {
+    marginTop: 2,
+    fontSize: 11,
+    lineHeight: 15,
+    color: Colors.textSecondary,
+  },
   rightCol: { flexShrink: 0, alignItems: "flex-end" },
   rowAmount: {
     fontSize: 15,

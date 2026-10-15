@@ -6,6 +6,7 @@ import {
   listYearlyPremiums,
   monthsUntilRenewal,
   premiumRdHeadline,
+  premiumRdNoteLines,
   PREMIUM_RD_CATEGORY,
   PREMIUM_RD_SOURCE,
   type PremiumRdProfile,
@@ -169,6 +170,13 @@ describe("buildPremiumRdObligations", () => {
       amount: 4000,
     });
     expect(rows[1].notes).toContain("₹1,000 a month after renewal");
+    expect(rows[0].notes).toBe(
+      "Health premium: ₹24,000 due in October · ₹2,000 a month till September",
+    );
+    expect(premiumRdNoteLines(rows[1])).toEqual([
+      "Car premium: ₹12,000 due in January · ₹4,000 a month till December, then ₹1,000 a month after renewal",
+    ]);
+    expect(premiumRdNoteLines({ source: "manual", notes: "x" })).toEqual([]);
   });
 
   it("creates nothing without a plan", () => {
