@@ -62,6 +62,7 @@ export const overviewSection: DocSection = {
       ordered: true,
       items: [
         "Tech stack and RADIO: why each technology was chosen and the system design in the RADIO format (Requirements, Architecture, Data model, Interface, Optimisations).",
+        "Business plan: mission and vision, why users need it, the phase-wise roadmap, competitors, growth and revenue.",
         "HLD and LLD: the big boxes and how a request moves through them, then module-level detail.",
         "Before login and After login: what a visitor and a signed-in user can do, and the exact auth flow.",
         "Features: one page per feature with its routes, modules, tables, every API with payload and response, and the business rules.",

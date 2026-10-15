@@ -47,6 +47,7 @@ export type DocBlock =
 
 export type DocGroup =
   | "Start here"
+  | "Business plan"
   | "Architecture"
   | "User journeys"
   | "Features"

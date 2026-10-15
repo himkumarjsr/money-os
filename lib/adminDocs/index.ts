@@ -1,4 +1,12 @@
 import { adminAccessSection } from "./admin";
+import {
+  competitionSection,
+  growthSection,
+  phasesSection,
+  revenueSection,
+  userNeedSection,
+  visionSection,
+} from "./business";
 import { hldSection, lldSection, securitySection } from "./architecture";
 import {
   billsSection,
@@ -29,6 +37,12 @@ export const ADMIN_DOC_SECTIONS: readonly DocSection[] = [
   overviewSection,
   techStackSection,
   radioSection,
+  visionSection,
+  userNeedSection,
+  phasesSection,
+  competitionSection,
+  growthSection,
+  revenueSection,
   hldSection,
   lldSection,
   securitySection,
