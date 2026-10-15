@@ -16,6 +16,7 @@ import {
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
+import { router } from "expo-router";
 
 const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
   marriage: {
@@ -149,7 +150,11 @@ export function GoalsSection({
                   <Text
                     style={[
                       styles.chipText,
-                      { color: g.isDefaultTarget ? readable("#BA7517") : readable("#1D9E75") },
+                      {
+                        color: g.isDefaultTarget
+                          ? readable("#BA7517")
+                          : readable("#1D9E75"),
+                      },
                     ]}
                   >
                     {g.isDefaultTarget ? "Suggested amount" : "Your amount"}
@@ -203,6 +208,13 @@ export function GoalsSection({
           </Text>
         </Pressable>
       ) : null}
+      <Pressable
+        onPress={() => router.push("/goals" as never)}
+        style={styles.textBtn}
+        accessibilityRole="link"
+      >
+        <Text style={styles.textBtnLabel}>Track SIPs for each goal →</Text>
+      </Pressable>
       {error && !editing ? <Text style={styles.error}>{error}</Text> : null}
 
       <BottomSheet

@@ -16,6 +16,7 @@ import {
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
+import Link from "next/link";
 
 const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
   marriage: {
@@ -52,7 +53,8 @@ export default function GoalsSection({
     setError(null);
     const res = await saveAnalyseProfile(userId, next);
     setSaving(false);
-    if (res.error) setError("Couldn't save — your change is kept on this device.");
+    if (res.error)
+      setError("Couldn't save — your change is kept on this device.");
     return !res.error;
   };
 
@@ -65,9 +67,7 @@ export default function GoalsSection({
 
   const submitEdit = async () => {
     if (!editing) return;
-    const amount = editing.editable.amount
-      ? handleMoneyInput(amountRaw)
-      : null;
+    const amount = editing.editable.amount ? handleMoneyInput(amountRaw) : null;
     const year = editing.editable.year ? Number(yearRaw) : NaN;
     const next = applyGoalEdit(profile, editing.id, {
       targetAmount: amount != null && amount > 0 ? amount : undefined,
@@ -109,7 +109,9 @@ export default function GoalsSection({
             <button
               type="button"
               disabled={saving}
-              onClick={() => void save(answerPromptedGoal(profile, offer, true))}
+              onClick={() =>
+                void save(answerPromptedGoal(profile, offer, true))
+              }
               className="min-h-[44px] rounded-lg bg-[#534AB7] px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
               Yes, add it
@@ -132,10 +134,7 @@ export default function GoalsSection({
         {goals.map((g) => {
           const canEdit = g.editable.amount || g.editable.year;
           return (
-            <div
-              key={g.id}
-              className="rounded-xl border border-[#ECEAF5] p-3"
-            >
+            <div key={g.id} className="rounded-xl border border-[#ECEAF5] p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#111110]">
@@ -198,6 +197,12 @@ export default function GoalsSection({
           Show {hiddenCount} hidden {hiddenCount === 1 ? "goal" : "goals"}
         </button>
       ) : null}
+      <Link
+        href="/goals"
+        className="mt-1 flex min-h-[44px] items-center text-sm font-semibold text-[#534AB7]"
+      >
+        Track SIPs for each goal →
+      </Link>
       {error && !editing ? (
         <p className="mt-2 text-sm text-[#E24B4A]">{error}</p>
       ) : null}

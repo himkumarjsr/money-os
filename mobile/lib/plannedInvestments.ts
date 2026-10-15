@@ -102,7 +102,8 @@ export function plannedProgressBySource(
     const p = (out[r.source_id] ??= { total: 0, started: 0, nextStart: null });
     p.total += 1;
     if (r.status === "pending") {
-      if (!p.nextStart || r.start_month < p.nextStart) p.nextStart = r.start_month;
+      if (!p.nextStart || r.start_month < p.nextStart)
+        p.nextStart = r.start_month;
     } else {
       p.started += 1;
     }
@@ -119,8 +120,14 @@ export function isPlannedReminderDue(
   const [y, m] = row.start_month.split("-").map(Number);
   if (!y || !m) return false;
   const start = new Date(y, m - 1, 1);
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const days = Math.round((start.getTime() - startOfToday.getTime()) / 86_400_000);
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const days = Math.round(
+    (start.getTime() - startOfToday.getTime()) / 86_400_000,
+  );
   return days <= PLANNED_REMIND_DAYS_BEFORE;
 }
 
@@ -220,6 +227,97 @@ export async function deletePlannedInvestment(
   const { error } = await sb
     .from(PLANNED_INVESTMENTS_TABLE)
     .delete()
+    .eq("user_id", userId)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Add one goal's plan without touching any other goal's rows (the Fix Plan's
+ * savePlannedInvestments replaces the whole plan). Existing rows keep their
+ * status and get the new amount.
+ */
+export async function addPlannedInvestments(
+  sb: SupabaseClient,
+  userId: string,
+  drafts: PlannedInvestmentDraft[],
+  now: Date = new Date(),
+): Promise<void> {
+  if (drafts.length === 0) return;
+  const at = now.toISOString();
+  const { error } = await sb.from(PLANNED_INVESTMENTS_TABLE).upsert(
+    drafts.map((d) => ({
+      ...d,
+      user_id: userId,
+      consent_given_at: at,
+      consent_version: PLANNED_CONSENT_VERSION,
+      reminded_at: null,
+      updated_at: at,
+    })),
+    { onConflict: "user_id,source_id,instrument_key" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+/** Prefix of instrument_key for a SIP the user already runs and linked to a goal. */
+export const OWN_SIP_KEY_PREFIX = "own:";
+
+/** Draft for a SIP the user already has, linked to a goal. */
+export function ownSipDraft(
+  goal: { id: string; label: string },
+  name: string,
+  monthly: number,
+  now: Date = new Date(),
+  key: string = Math.random().toString(36).slice(2, 10),
+): PlannedInvestmentDraft | null {
+  const label = name.trim().slice(0, 120);
+  const amount = Math.round(monthly);
+  if (!label || !(amount > 0) || amount > 10_000_000) return null;
+  return {
+    source_kind: "goal",
+    source_id: goal.id.slice(0, 80),
+    source_label: goal.label.slice(0, 120),
+    instrument_key: `${OWN_SIP_KEY_PREFIX}${key}`.slice(0, 40),
+    instrument_label: label,
+    monthly_amount: amount,
+    start_month: monthStart(now),
+  };
+}
+
+/** Save a SIP the user already runs as started, linked to its goal. */
+export async function linkOwnSip(
+  sb: SupabaseClient,
+  userId: string,
+  draft: PlannedInvestmentDraft,
+  now: Date = new Date(),
+): Promise<void> {
+  const at = now.toISOString();
+  const { error } = await sb.from(PLANNED_INVESTMENTS_TABLE).insert({
+    ...draft,
+    user_id: userId,
+    consent_given_at: at,
+    consent_version: PLANNED_CONSENT_VERSION,
+    status: "started",
+    started_at: at,
+    reminded_at: at,
+    updated_at: at,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Change the monthly amount of a linked or planned SIP. */
+export async function setPlannedInvestmentAmount(
+  sb: SupabaseClient,
+  userId: string,
+  id: string,
+  monthly: number,
+  now: Date = new Date(),
+): Promise<void> {
+  const amount = Math.round(monthly);
+  if (!(amount > 0) || amount > 10_000_000) throw new Error("Invalid amount");
+  const { error } = await sb
+    .from(PLANNED_INVESTMENTS_TABLE)
+    .update({ monthly_amount: amount, updated_at: now.toISOString() })
     .eq("user_id", userId)
     .eq("id", id);
   if (error) throw new Error(error.message);
