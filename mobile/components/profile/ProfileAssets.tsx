@@ -29,6 +29,11 @@ import type {
 import type { AnalysisResult } from "@/lib/financialEngine";
 import { formatIndian } from "@/lib/formatters";
 import {
+  buildNetWorthBreakup,
+  type BreakupGroup,
+  type NetWorthBreakup,
+} from "@/lib/netWorthBreakup";
+import {
   catalogForSection,
   getScalarAssetValue,
   patchScalarAsset,
@@ -301,13 +306,16 @@ function HeroAmount({
   label,
   display,
   danger,
+  visible,
+  onToggle,
 }: {
   value: number;
   label: string;
   display: string;
   danger: boolean;
+  visible: boolean;
+  onToggle: () => void;
 }) {
-  const [visible, setVisible] = useState(false);
   const hasData = Number.isFinite(value) && Math.abs(value) > 0;
   const textStyle = [styles.heroValue, danger && styles.heroValueDanger];
   if (!hasData) return <Text style={textStyle}>{display}</Text>;
@@ -318,10 +326,10 @@ function HeroAmount({
         numberOfLines={1}
         adjustsFontSizeToFit
       >
-        {visible ? display : "₹••••••"}
+        {visible ? display : MASK}
       </Text>
       <Pressable
-        onPress={() => setVisible((v) => !v)}
+        onPress={onToggle}
         hitSlop={6}
         accessibilityRole="button"
         accessibilityLabel={visible ? `Hide ${label}` : `Show ${label}`}
@@ -329,6 +337,148 @@ function HeroAmount({
       >
         <EyeIcon open={visible} size={18} color={Colors.onPrimary} />
       </Pressable>
+    </View>
+  );
+}
+
+type HeroKey = "networth" | "assets" | "liabilities";
+
+const MASK = "₹••••••";
+
+function BreakupLine({
+  label,
+  amount,
+  visible,
+  strong = false,
+  sub = false,
+  sign = "",
+}: {
+  label: string;
+  amount: number;
+  visible: boolean;
+  strong?: boolean;
+  sub?: boolean;
+  sign?: string;
+}) {
+  return (
+    <View style={[styles.bLine, sub && styles.bLineSub]}>
+      <Text
+        style={[
+          styles.bLabel,
+          sub && styles.bLabelSub,
+          strong && styles.bStrong,
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[
+          styles.bAmount,
+          sub && styles.bAmountSub,
+          strong && styles.bStrong,
+        ]}
+      >
+        {visible
+          ? `${sign}${amount < 0 ? "−" : ""}${money(Math.abs(amount))}`
+          : MASK}
+      </Text>
+    </View>
+  );
+}
+
+function HeroBreakup({
+  card,
+  breakup,
+  visible,
+}: {
+  card: HeroKey;
+  breakup: NetWorthBreakup;
+  visible: boolean;
+}) {
+  if (card === "networth") {
+    return (
+      <View style={styles.bWrap}>
+        <BreakupLine
+          label="Total assets"
+          amount={breakup.totalAssets}
+          visible={visible}
+          strong
+        />
+        {breakup.assets.map((g) => (
+          <BreakupLine
+            key={g.id}
+            label={g.label}
+            amount={g.total}
+            visible={visible}
+            sub
+          />
+        ))}
+        <View style={styles.bDivider} />
+        <BreakupLine
+          label="Less: liabilities"
+          amount={breakup.totalLiabilities}
+          visible={visible}
+          strong
+          sign="− "
+        />
+        {breakup.liabilities.map((g) => (
+          <BreakupLine
+            key={g.id}
+            label={g.label}
+            amount={g.total}
+            visible={visible}
+            sub
+          />
+        ))}
+        <View style={styles.bDivider} />
+        <BreakupLine
+          label="Net worth"
+          amount={breakup.netWorth}
+          visible={visible}
+          strong
+        />
+      </View>
+    );
+  }
+  const groups: BreakupGroup[] =
+    card === "assets" ? breakup.assets : breakup.liabilities;
+  return (
+    <View style={styles.bWrap}>
+      {groups.length === 0 ? (
+        <Text style={styles.bEmpty}>
+          {card === "assets"
+            ? "No assets added yet. Add them below."
+            : "No loans or card dues added. Nice!"}
+        </Text>
+      ) : (
+        groups.map((g, gi) => (
+          <View key={g.id}>
+            {gi > 0 ? <View style={styles.bDividerSoft} /> : null}
+            <BreakupLine label={g.label} amount={g.total} visible={visible} />
+            {g.rows.length > 1 || g.rows[0]?.label !== g.label
+              ? g.rows.map((r) => (
+                  <BreakupLine
+                    key={r.id}
+                    label={r.label}
+                    amount={r.amount}
+                    visible={visible}
+                    sub
+                  />
+                ))
+              : null}
+          </View>
+        ))
+      )}
+      <View style={styles.bDivider} />
+      <BreakupLine
+        label={card === "assets" ? "Total assets" : "Total liabilities"}
+        amount={
+          card === "assets" ? breakup.totalAssets : breakup.totalLiabilities
+        }
+        visible={visible}
+        strong
+      />
     </View>
   );
 }
@@ -529,6 +679,17 @@ export default function ProfileAssets({
     analysis?.totalLiabilities ?? liabilityTotalFromLines;
   const netWorth = analysis?.netWorth ?? totalAssets - totalLiabilities;
 
+  const breakup = useMemo(
+    () => buildNetWorthBreakup(working, { totalAssets, totalLiabilities }),
+    [working, totalAssets, totalLiabilities],
+  );
+  const [openCard, setOpenCard] = useState<HeroKey | null>(null);
+  const [shown, setShown] = useState<Record<HeroKey, boolean>>({
+    networth: false,
+    assets: false,
+    liabilities: false,
+  });
+
   const persist = async (next: FinancialProfile) => {
     setBusy(true);
     setMsg("");
@@ -675,20 +836,29 @@ export default function ProfileAssets({
     await persist(next);
   };
 
-  const heroTiles = [
+  const heroTiles: Array<{
+    key: HeroKey;
+    label: string;
+    value: number;
+    display: string;
+    danger: boolean;
+  }> = [
     {
+      key: "networth",
       label: "Net worth",
       value: Math.abs(netWorth),
       display: `${netWorth < 0 ? "−" : ""}${money(Math.abs(netWorth))}`,
       danger: netWorth < 0,
     },
     {
+      key: "assets",
       label: "Total assets",
       value: totalAssets,
       display: money(totalAssets),
       danger: false,
     },
     {
+      key: "liabilities",
       label: "Liabilities",
       value: totalLiabilities,
       display: money(totalLiabilities),
@@ -709,17 +879,59 @@ export default function ProfileAssets({
           <AppIcon name="wallet" size={22} color={Colors.onPrimary} />
         </View>
         <View style={styles.heroTiles}>
-          {heroTiles.map((card) => (
-            <View key={card.label} style={styles.heroTile}>
-              <Text style={styles.heroTileLabel}>{card.label}</Text>
-              <HeroAmount
-                value={card.value}
-                label={card.label}
-                display={card.display}
-                danger={card.danger}
-              />
-            </View>
-          ))}
+          {heroTiles.map((card) => {
+            const open = openCard === card.key;
+            return (
+              <Pressable
+                key={card.key}
+                onPress={() => setOpenCard(open ? null : card.key)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: open }}
+                accessibilityLabel={`${card.label} breakup`}
+                style={[styles.heroTile, open && styles.heroTileOpen]}
+              >
+                <View style={styles.heroTileHead}>
+                  <Text style={styles.heroTileLabel}>{card.label}</Text>
+                  <View style={styles.heroTileHint}>
+                    <Text style={styles.heroTileHintText}>
+                      {open ? "Hide breakup" : "Breakup"}
+                    </Text>
+                    <View
+                      style={
+                        open ? { transform: [{ rotate: "180deg" }] } : undefined
+                      }
+                    >
+                      <AppIcon
+                        name="chevronDown"
+                        size={14}
+                        color={Colors.onPrimary}
+                      />
+                    </View>
+                  </View>
+                </View>
+                <HeroAmount
+                  value={card.value}
+                  label={card.label}
+                  display={card.display}
+                  danger={card.danger}
+                  visible={shown[card.key]}
+                  onToggle={() =>
+                    setShown((prev) => ({
+                      ...prev,
+                      [card.key]: !prev[card.key],
+                    }))
+                  }
+                />
+                {open ? (
+                  <HeroBreakup
+                    card={card.key}
+                    breakup={breakup}
+                    visible={shown[card.key]}
+                  />
+                ) : null}
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
@@ -965,6 +1177,69 @@ const styles = themedStyles(() => {
       backgroundColor: `rgba(${veil},${lightOnHero ? 0.1 : 0.08})`,
       borderWidth: 1,
       borderColor: `rgba(${veil},0.15)`,
+    },
+    heroTileOpen: {
+      backgroundColor: `rgba(${veil},${lightOnHero ? 0.16 : 0.12})`,
+      borderColor: `rgba(${veil},0.28)`,
+    },
+    heroTileHead: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: Spacing.sm,
+    },
+    heroTileHint: { flexDirection: "row", alignItems: "center", gap: 2 },
+    heroTileHintText: {
+      fontSize: FontSize.xs,
+      fontWeight: "600",
+      color: Colors.onPrimary,
+      opacity: 0.75,
+    },
+    bWrap: {
+      marginTop: Spacing.md,
+      paddingTop: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: `rgba(${veil},0.18)`,
+    },
+    bLine: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: Spacing.md,
+      paddingVertical: 5,
+    },
+    bLineSub: { paddingVertical: 3, paddingLeft: Spacing.md },
+    bLabel: {
+      flexShrink: 1,
+      fontSize: FontSize.sm,
+      fontWeight: "600",
+      color: Colors.onPrimary,
+      opacity: 0.85,
+    },
+    bLabelSub: { fontSize: FontSize.md, fontWeight: "400", opacity: 0.75 },
+    bAmount: {
+      fontSize: FontSize.sm,
+      fontWeight: "700",
+      color: Colors.onPrimary,
+      fontVariant: ["tabular-nums"],
+    },
+    bAmountSub: { fontSize: FontSize.md, fontWeight: "600", opacity: 0.85 },
+    bStrong: { fontWeight: "800", opacity: 1 },
+    bDivider: {
+      height: 1,
+      marginVertical: 4,
+      backgroundColor: `rgba(${veil},0.25)`,
+    },
+    bDividerSoft: {
+      height: 1,
+      marginVertical: 2,
+      backgroundColor: `rgba(${veil},0.1)`,
+    },
+    bEmpty: {
+      paddingVertical: 4,
+      fontSize: FontSize.sm,
+      color: Colors.onPrimary,
+      opacity: 0.75,
     },
     heroTileLabel: {
       fontSize: FontSize.sm,
