@@ -1,27 +1,15 @@
 "use client";
 
-import { useState } from "react";
-
-const CATEGORIES = [
-  { value: "loan_emi", label: "Loan EMI", emoji: "🏦" },
-  { value: "insurance_life", label: "Life Insurance", emoji: "🛡️" },
-  { value: "insurance_health", label: "Health Insurance", emoji: "🏥" },
-  { value: "insurance_vehicle", label: "Vehicle Insurance", emoji: "🚗" },
-  { value: "insurance_rd", label: "RD for premiums", emoji: "🗓️" },
-  { value: "investment_sip", label: "SIP", emoji: "📈" },
-  { value: "investment_ppf", label: "PPF", emoji: "💰" },
-  { value: "subscription", label: "Subscription", emoji: "📱" },
-  { value: "rent", label: "Rent", emoji: "🏠" },
-  { value: "other", label: "Other", emoji: "📌" },
-] as const;
-
-const FREQUENCIES = [
-  { value: "monthly", label: "Monthly" },
-  { value: "quarterly", label: "Quarterly" },
-  { value: "half_yearly", label: "Half Yearly" },
-  { value: "yearly", label: "Yearly" },
-  { value: "one_time", label: "One Time" },
-] as const;
+import {
+  BILL_CATEGORIES,
+  BILL_CATEGORY_GROUPS,
+  BILL_FREQUENCIES,
+  MONTH_NAMES,
+  REMIND_DAY_CHOICES,
+  defaultRemindDaysFor,
+  isAmountOptionalCategory,
+} from "@/lib/billsCalendar";
+import { useEffect, useRef, useState } from "react";
 
 export type ObligationFormPayload = {
   title: string;
@@ -30,6 +18,8 @@ export type ObligationFormPayload = {
   frequency: string;
   due_day: number | null;
   due_month: number | null;
+  /** One-time only: YYYY-MM-DD. */
+  due_date?: string | null;
   source: string;
   is_active: boolean;
   remind_days_before: number;
@@ -41,6 +31,22 @@ type Props = {
   /** When set, form opens in edit mode with these values. */
   initial?: Partial<ObligationFormPayload> | null;
   submitLabel?: string;
+  /** Prefill for a new entry (not edit mode). */
+  defaults?: Partial<ObligationFormPayload> | null;
+  /** Words for the heading, e.g. "bill" on the Bills page. */
+  noun?: string;
+};
+
+const TITLE_HINTS: Record<string, string> = {
+  bill_electricity: "e.g. BESCOM electricity",
+  bill_internet: "e.g. Airtel broadband",
+  bill_mobile: "e.g. Jio postpaid",
+  vehicle_puc: "e.g. Swift PUC",
+  document_expiry: "e.g. Passport, driving licence",
+  fd_maturity: "e.g. SBI FD maturity",
+  school_fees: "e.g. Riya school fees",
+  tax: "e.g. Advance tax instalment",
+  property_tax: "e.g. BBMP property tax",
 };
 
 export default function AddObligationForm({
@@ -48,24 +54,61 @@ export default function AddObligationForm({
   onClose,
   initial,
   submitLabel,
+  defaults,
+  noun = "obligation",
 }: Props) {
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [category, setCategory] = useState(initial?.category ?? "loan_emi");
+  const seed = initial ?? defaults ?? null;
+  const [title, setTitle] = useState(seed?.title ?? "");
+  const [category, setCategory] = useState(seed?.category ?? "loan_emi");
   const [amount, setAmount] = useState(
-    initial?.amount != null ? String(initial.amount) : "",
+    seed?.amount != null && seed.amount > 0 ? String(seed.amount) : "",
   );
-  const [frequency, setFrequency] = useState(initial?.frequency ?? "monthly");
+  const [frequency, setFrequency] = useState(seed?.frequency ?? "monthly");
   const [dueDay, setDueDay] = useState(
-    initial?.due_day != null ? String(initial.due_day) : "",
+    seed?.due_day != null ? String(seed.due_day) : "",
   );
   const [dueMonth, setDueMonth] = useState(
-    initial?.due_month != null ? String(initial.due_month) : "",
+    seed?.due_month != null ? String(seed.due_month) : "",
+  );
+  const [dueDate, setDueDate] = useState(seed?.due_date ?? "");
+  const [remindDays, setRemindDays] = useState<number>(
+    seed?.remind_days_before ?? defaultRemindDaysFor(seed?.category),
+  );
+  const [remindTouched, setRemindTouched] = useState(
+    seed?.remind_days_before != null,
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const isEdit = Boolean(initial);
+  const categoryBox = useRef<HTMLDivElement>(null);
 
-  const canSave = Boolean(title.trim() && amount);
+  useEffect(() => {
+    // Bring the preselected category chip into view inside its scroll box.
+    const box = categoryBox.current;
+    const active = box?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (box && active)
+      box.scrollTop = Math.max(0, active.offsetTop - box.offsetTop - 24);
+  }, []);
+
+  const amountOptional = isAmountOptionalCategory(category);
+  const amountNum = amount ? parseFloat(amount) : 0;
+  const hasAmount = Number.isFinite(amountNum) && amountNum > 0;
+  const needsMonth = frequency === "yearly";
+  const needsDate = frequency === "one_time";
+  const showDayGrid = frequency !== "one_time";
+  const showFirstMonth =
+    frequency === "quarterly" || frequency === "half_yearly";
+  const canSave = Boolean(
+    title.trim() &&
+    (hasAmount || amountOptional) &&
+    (!needsMonth || dueMonth) &&
+    (!needsDate || dueDate),
+  );
+
+  const pickCategory = (value: string) => {
+    setCategory(value);
+    if (!remindTouched) setRemindDays(defaultRemindDaysFor(value));
+  };
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -75,13 +118,17 @@ export default function AddObligationForm({
       await onSave({
         title: title.trim(),
         category,
-        amount: parseFloat(amount),
+        amount: hasAmount ? amountNum : 0,
         frequency,
-        due_day: dueDay ? parseInt(dueDay, 10) : null,
-        due_month: dueMonth ? parseInt(dueMonth, 10) : null,
+        due_day: showDayGrid && dueDay ? parseInt(dueDay, 10) : null,
+        due_month:
+          (needsMonth || showFirstMonth) && dueMonth
+            ? parseInt(dueMonth, 10)
+            : null,
+        due_date: needsDate ? dueDate || null : null,
         source: "manual",
         is_active: true,
-        remind_days_before: initial?.remind_days_before ?? 7,
+        remind_days_before: remindDays,
       });
     } catch (err) {
       console.error("obligation save failed:", err);
@@ -91,11 +138,20 @@ export default function AddObligationForm({
     }
   };
 
+  const chip = (active: boolean) =>
+    `rounded-full border-[1.5px] px-3 py-1.5 text-xs font-semibold ${
+      active
+        ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
+        : "border-[#E8E6F0] bg-white text-[#5F5E5A]"
+    }`;
+  const label =
+    "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#9B9A94]";
+
   return (
     <div>
       <div className="mb-5 flex items-start justify-between gap-3">
         <h2 className="text-[17px] font-extrabold text-[#111110]">
-          {isEdit ? "Edit obligation" : "Add obligation"}
+          {isEdit ? `Edit ${noun}` : `Add ${noun}`}
         </h2>
         <button
           type="button"
@@ -107,49 +163,61 @@ export default function AddObligationForm({
       </div>
 
       <div className="mb-3.5">
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">
+        <label className={label} htmlFor="obligation-title">
           What is it?
         </label>
         <input
+          id="obligation-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. LIC Premium, HDFC Home Loan"
+          placeholder={
+            TITLE_HINTS[category] ?? "e.g. LIC Premium, HDFC Home Loan"
+          }
           autoFocus
           className="box-border h-[50px] w-full rounded-xl border-[1.5px] border-[#E8E6F0] px-3.5 text-[15px] outline-none"
         />
       </div>
 
       <div className="mb-3.5">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">
-          Category
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => {
-            const active = category === c.value;
+        <span className={label}>Category</span>
+        <div
+          ref={categoryBox}
+          className="max-h-[220px] space-y-2.5 overflow-y-auto pr-1"
+        >
+          {BILL_CATEGORY_GROUPS.map((group) => {
+            const items = BILL_CATEGORIES.filter((c) => c.group === group);
+            if (items.length === 0) return null;
             return (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setCategory(c.value)}
-                className={`flex items-center gap-1 rounded-full border-[1.5px] px-3 py-1.5 text-xs font-semibold ${
-                  active
-                    ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
-                    : "border-[#E8E6F0] bg-white text-[#5F5E5A]"
-                }`}
-              >
-                <span>{c.emoji}</span>
-                <span>{c.label}</span>
-              </button>
+              <div key={group}>
+                <div className="mb-1 text-[11px] font-semibold text-[#9B9A94]">
+                  {group}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {items.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      aria-pressed={category === c.value}
+                      onClick={() => pickCategory(c.value)}
+                      className={`flex items-center gap-1 ${chip(category === c.value)}`}
+                    >
+                      <span aria-hidden>{c.emoji}</span>
+                      <span>{c.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             );
           })}
         </div>
       </div>
 
       <div className="mb-3.5">
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">
-          Amount (₹)
+        <label className={label} htmlFor="obligation-amount">
+          Amount (₹){amountOptional ? " · optional" : ""}
         </label>
         <input
+          id="obligation-amount"
           type="number"
           inputMode="decimal"
           value={amount}
@@ -160,37 +228,63 @@ export default function AddObligationForm({
       </div>
 
       <div className="mb-3.5">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">
-          How often?
-        </label>
+        <span className={label}>How often?</span>
         <div className="flex flex-wrap gap-2">
-          {FREQUENCIES.map((f) => {
-            const active = frequency === f.value;
-            return (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => setFrequency(f.value)}
-                className={`rounded-full border-[1.5px] px-3.5 py-2 text-xs font-semibold ${
-                  active
-                    ? "border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]"
-                    : "border-[#E8E6F0] bg-white text-[#5F5E5A]"
-                }`}
-              >
-                {f.label}
-              </button>
-            );
-          })}
+          {BILL_FREQUENCIES.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              aria-pressed={frequency === f.value}
+              onClick={() => setFrequency(f.value)}
+              className={chip(frequency === f.value)}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {(frequency === "monthly" ||
-        frequency === "quarterly" ||
-        frequency === "half_yearly") && (
+      {needsMonth || showFirstMonth ? (
         <div className="mb-3.5">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">
-            Due date (day of month)
+          <label className={label} htmlFor="obligation-month">
+            {needsMonth ? "Which month?" : "First due month"}
           </label>
+          <select
+            id="obligation-month"
+            value={dueMonth}
+            onChange={(e) => setDueMonth(e.target.value)}
+            className="h-[50px] w-full rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none"
+          >
+            <option value="">
+              {needsMonth ? "Select month" : "Mar, Jun, Sep, Dec"}
+            </option>
+            {MONTH_NAMES.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      {needsDate ? (
+        <div className="mb-3.5">
+          <label className={label} htmlFor="obligation-date">
+            Due date
+          </label>
+          <input
+            id="obligation-date"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="box-border h-[50px] w-full rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none"
+          />
+        </div>
+      ) : null}
+
+      {showDayGrid ? (
+        <div className="mb-3.5">
+          <span className={label}>Due date (day of month)</span>
           <div className="flex flex-wrap gap-1.5">
             {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
               const active = dueDay === String(day);
@@ -198,6 +292,7 @@ export default function AddObligationForm({
                 <button
                   key={day}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setDueDay(String(day))}
                   className={`h-9 w-9 rounded-[10px] border-[1.5px] text-xs font-semibold ${
                     active
@@ -211,40 +306,27 @@ export default function AddObligationForm({
             })}
           </div>
         </div>
-      )}
-
-      {frequency === "yearly" ? (
-        <div className="mb-3.5">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#9B9A94]">
-            Which month?
-          </label>
-          <select
-            value={dueMonth}
-            onChange={(e) => setDueMonth(e.target.value)}
-            className="h-[50px] w-full rounded-xl border-[1.5px] border-[#E8E6F0] bg-white px-3.5 text-[15px] text-[#111110] outline-none"
-          >
-            <option value="">Select month</option>
-            {[
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
-            ].map((m, i) => (
-              <option key={m} value={i + 1}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
       ) : null}
+
+      <div className="mb-4">
+        <span className={label}>Remind me</span>
+        <div className="flex flex-wrap gap-2">
+          {REMIND_DAY_CHOICES.map((d) => (
+            <button
+              key={d}
+              type="button"
+              aria-pressed={remindDays === d}
+              onClick={() => {
+                setRemindDays(d);
+                setRemindTouched(true);
+              }}
+              className={chip(remindDays === d)}
+            >
+              {d === 1 ? "1 day" : `${d} days`} before
+            </button>
+          ))}
+        </div>
+      </div>
 
       {saveError ? (
         <p className="mb-3 text-center text-[13px] font-medium text-[#E24B4A]">
@@ -262,9 +344,7 @@ export default function AddObligationForm({
             : "bg-[#534AB7] text-white"
         }`}
       >
-        {saving
-          ? "Saving…"
-          : submitLabel || (isEdit ? "Update obligation" : "Save obligation")}
+        {saving ? "Saving…" : submitLabel || (isEdit ? "Update" : "Save")}
       </button>
     </div>
   );

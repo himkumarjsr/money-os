@@ -76,8 +76,27 @@ describe("obligation reminder helpers", () => {
         new Date(2026, 6, 26),
       ),
     ).toEqual(new Date(2026, 7, 5));
+    // Quarterly without a first month falls in Mar / Jun / Sep / Dec.
     expect(
-      obligationReminderDueDate({ frequency: "quarterly" }, new Date()),
+      obligationReminderDueDate(
+        { frequency: "quarterly" },
+        new Date(2026, 7, 2),
+      ),
+    ).toEqual(new Date(2026, 8, 1));
+    expect(
+      obligationReminderDueDate(
+        { frequency: "quarterly", due_month: 1, due_day: 10 },
+        new Date(2026, 7, 2),
+      ),
+    ).toEqual(new Date(2026, 9, 10));
+    expect(
+      obligationReminderDueDate(
+        { frequency: "one_time", due_date: "2026-12-20" },
+        new Date(2026, 7, 2),
+      ),
+    ).toEqual(new Date(2026, 11, 20));
+    expect(
+      obligationReminderDueDate({ frequency: "weekly" }, new Date()),
     ).toBeNull();
     expect(checklistMonthFor(new Date(2026, 9, 1))).toBe("2026-10-01");
   });
@@ -321,6 +340,7 @@ describe("mobile keeps byte-identical reminder logic", () => {
     "obligationReminderPopup.ts",
     "trackerObligationSync.ts",
     "loanObligationSync.ts",
+    "billsCalendar.ts",
   ])("%s", (file) => {
     const root = path.resolve(__dirname, "..");
     expect(readFileSync(path.join(root, "mobile/lib", file), "utf8")).toBe(

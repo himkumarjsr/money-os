@@ -426,6 +426,7 @@ export function GlobalNavbar() {
                   [
                     ["user", "My Profile", "/profile"],
                     ["notebook", "Expense Tracker", "/tracker"],
+                    ["calendar", "Bills & renewals", "/bills"],
                     ["users", "FK Split", "/split"],
                     ["chart", "My Analysis", "/analyse/result"],
                     ["shield", "My Policies", "/policies"],
