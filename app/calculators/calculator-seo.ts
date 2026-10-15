@@ -144,6 +144,35 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       },
     ],
   },
+  epf: {
+    path: "/calculators/epf",
+    appName: "PF Calculator India",
+    title: "PF Calculator India — EPF Balance at Retirement | Finkoin",
+    description:
+      "Free PF calculator India. Enter your existing EPF balance, yearly contribution, age and till when you contribute to see your Provident Fund value at 60.",
+    keywords: [
+      "PF calculator India",
+      "EPF calculator",
+      "employee provident fund calculator",
+      "EPF maturity calculator",
+      "PF balance at retirement",
+      "Finkoin PF calculator",
+    ],
+    faq: [
+      {
+        q: "What does the PF calculator show?",
+        a: "It projects your Employee Provident Fund balance at age 60 from your current balance, yearly contribution, current age and the age you stop contributing.",
+      },
+      {
+        q: "What EPF interest rate does it use?",
+        a: "It starts at 8.25% p.a., the EPFO rate for FY 2024-25. The rate is declared every year, so you can change it.",
+      },
+      {
+        q: "What happens after I stop contributing?",
+        a: "The calculator keeps compounding your balance at the same rate until age 60, with no new contributions.",
+      },
+    ],
+  },
   nsc: {
     path: "/calculators/nsc",
     appName: "NSC Calculator India",
@@ -585,6 +614,7 @@ const CALC_OG_IMAGE: Record<string, string> = {
   rentcar: "/og/og-emi.png",
   whencar: "/og/og-emi.png",
   ppf: "/og/og-ppf.png",
+  epf: "/og/og-ppf.png",
   nsc: "/og/og-po.png",
   po: "/og/og-po.png",
   "po-savings": "/og/og-po.png",
@@ -694,7 +724,8 @@ export function getRelatedLinksForCalc(calcId: string) {
     calcId === "po" ||
     calcId.startsWith("po-") ||
     calcId === "nsc" ||
-    calcId === "ppf"
+    calcId === "ppf" ||
+    calcId === "epf"
   ) {
     return [
       {

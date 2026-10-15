@@ -34,6 +34,12 @@ export const CATEGORIES: { id: Cat; label: string; items: CalcItem[] }[] = [
         icon: "bank",
       },
       {
+        id: "epf",
+        title: "PF (EPF)",
+        blurb: "Employee Provident Fund value at 60",
+        icon: "bank",
+      },
+      {
         id: "emergency",
         title: "Emergency fund",
         blurb: "Target vs gap by life stage",

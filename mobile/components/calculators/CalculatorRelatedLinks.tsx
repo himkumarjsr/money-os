@@ -62,7 +62,8 @@ function getRelatedLinksForCalc(calcId: string): RelatedLink[] {
     calcId === "po" ||
     calcId.startsWith("po-") ||
     calcId === "nsc" ||
-    calcId === "ppf"
+    calcId === "ppf" ||
+    calcId === "epf"
   ) {
     return [
       {
@@ -141,7 +142,10 @@ export function CalculatorRelatedLinks({ calcId }: { calcId: string }) {
 const EXPLORE: { label: string; href: string }[] = [
   { label: "Financial health check", href: "/(tabs)/analyse" },
   { label: "Learn personal finance", href: "/learn" },
-  { label: "80C deductions guide 2026", href: "/blog/80c-deductions-guide-2026" },
+  {
+    label: "80C deductions guide 2026",
+    href: "/blog/80c-deductions-guide-2026",
+  },
   { label: "SIP calculator", href: "/calculators/sip" },
 ];
 
@@ -206,6 +210,11 @@ const styles = themedStyles(() => ({
     textTransform: "uppercase",
     color: Colors.textMuted,
   },
-  exploreRow: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 16 },
+  exploreRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
+  },
   exploreLink: { fontSize: 14, fontWeight: "600", color: Colors.primaryText },
 }));
