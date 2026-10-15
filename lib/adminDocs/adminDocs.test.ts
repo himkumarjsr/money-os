@@ -24,6 +24,7 @@ describe("admin docs", () => {
       "competition",
       "growth",
       "revenue",
+      "plan-review",
     ]) {
       expect(getAdminDocSection(id), id).toBeDefined();
     }
