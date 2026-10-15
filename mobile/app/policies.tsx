@@ -27,6 +27,7 @@ import { Colors, themedStyles } from "@/constants/theme";
 import {
   emptyPolicyForm,
   fetchUserPolicies,
+  importAnalysePolicies,
   getSupabaseAuthUserId,
   policyToForm,
   updateUserPolicy,
@@ -77,7 +78,11 @@ export default function PoliciesScreen() {
       return;
     }
     setLoadError(null);
-    const { policies: list, error } = await fetchUserPolicies(uid);
+    let { policies: list, error } = await fetchUserPolicies(uid);
+    // Policies entered in the health check show up here (web parity).
+    if (!error && (await importAnalysePolicies(uid, list)).changed) {
+      ({ policies: list, error } = await fetchUserPolicies(uid));
+    }
     setLoading(false);
     if (error) {
       setLoadError(error.message);

@@ -381,19 +381,14 @@ export async function updateUserPolicy(
   return { policy: fromUserPolicyRow(data as UserPolicyRow), error: null };
 }
 
-/** Analyse profile saved for this user (latest report, else the last snapshot). */
+/**
+ * Analyse profile saved for this user: the latest health-check snapshot
+ * (every submit and Profile edit writes it), else the older `user_analysis`.
+ */
 async function fetchAnalyseProfile(
   userId: string,
 ): Promise<FinancialProfile | null> {
   if (!supabase) return null;
-  const { data } = await supabase
-    .from("user_analysis")
-    .select("profile")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (data?.profile && typeof data.profile === "object") {
-    return data.profile as FinancialProfile;
-  }
   const snap = await supabase
     .from("user_analyse_snapshots")
     .select("payload")
@@ -401,7 +396,20 @@ async function fetchAnalyseProfile(
     .maybeSingle();
   const pl = snap.data?.payload as Record<string, unknown> | null | undefined;
   const prof = pl?.profile ?? pl?.lastSubmission;
-  return prof && typeof prof === "object" ? (prof as FinancialProfile) : null;
+  if (isNonEmptyObject(prof)) return prof as unknown as FinancialProfile;
+
+  const { data } = await supabase
+    .from("user_analysis")
+    .select("profile")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return isNonEmptyObject(data?.profile)
+    ? (data.profile as unknown as FinancialProfile)
+    : null;
+}
+
+function isNonEmptyObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && Object.keys(v).length > 0;
 }
 
 /**
@@ -428,7 +436,10 @@ export async function importAnalysePolicies(
       .from("user_policy_import_dismissals")
       .select("analyse_source_key")
       .eq("user_id", userId);
-    if (dismissed.error) return { changed: false };
+    if (dismissed.error) {
+      console.warn("Analyse policy import:", dismissed.error.message);
+      return { changed: false };
+    }
 
     const plan = planAnalysePolicyImport(
       candidates,
@@ -447,26 +458,38 @@ export async function importAnalysePolicies(
     }
     if (plan.inserts.length > 0) {
       const now = new Date().toISOString();
-      const { error } = await supabase.from("user_policies").upsert(
-        plan.inserts.map((c) => ({
-          user_id: userId,
-          policy_type: c.policyType,
-          insurer_name: "",
-          plan_name: c.planName,
-          cover_amount: c.coverAmount,
-          premium_amount: c.premiumAmount,
-          premium_frequency: c.premiumFrequency,
-          renewal_date: c.renewalDate,
-          status: "active",
-          analyse_source_key: c.sourceKey,
-          updated_at: now,
-        })),
-        { onConflict: "user_id,analyse_source_key", ignoreDuplicates: true },
-      );
-      if (!error) changed = true;
+      const rows = plan.inserts.map((c) => ({
+        user_id: userId,
+        policy_type: c.policyType,
+        insurer_name: "",
+        plan_name: c.planName,
+        cover_amount: c.coverAmount,
+        premium_amount: c.premiumAmount,
+        premium_frequency: c.premiumFrequency,
+        renewal_date: c.renewalDate,
+        status: "active",
+        analyse_source_key: c.sourceKey,
+        updated_at: now,
+      }));
+      const upsertRows = (r: Record<string, unknown>[]) =>
+        supabase!.from("user_policies").upsert(r, {
+          onConflict: "user_id,analyse_source_key",
+          ignoreDuplicates: true,
+        });
+      let { error } = await upsertRows(rows);
+      // Databases without migration 004 have no `status` column (new
+      // policies default to active), as in insertUserPolicy.
+      if (error && looksLikeMissingStatusColumn(error.message)) {
+        ({ error } = await upsertRows(
+          rows.map(({ status: _omit, ...rest }) => rest),
+        ));
+      }
+      if (error) console.warn("Analyse policy import:", error.message);
+      else changed = true;
     }
     return { changed };
-  } catch {
+  } catch (e) {
+    console.warn("Analyse policy import:", e);
     return { changed: false };
   }
 }
