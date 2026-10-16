@@ -8,11 +8,12 @@ import {
   MONTH_NAMES,
   premiumRdHeadline,
   premiumRdLine,
+  rdRowsNotInTracker,
 } from "@/lib/premiumRdPlan";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { useObligationStore } from "@/store/obligationStore";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /** Save a renewal month picked here into the profile, so we never ask twice. */
 function saveRenewalMonth(
@@ -43,6 +44,20 @@ export default function PremiumRdCard({
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const plan = useMemo(() => buildPremiumRdPlan(profile), [profile]);
   const rows = useMemo(() => buildPremiumRdObligations(plan), [plan]);
+  const obligations = useObligationStore((s) => s.obligations);
+  useEffect(() => {
+    if (userId) void useObligationStore.getState().fetchObligations(userId);
+  }, [userId]);
+  // RDs already in Tracker (saved here before, or added by hand) aren't asked again.
+  const notInTracker = useMemo(
+    () => rdRowsNotInTracker(rows, obligations),
+    [rows, obligations],
+  );
+  const allInTracker = rows.length > 0 && notInTracker.length === 0;
+  const addLabel =
+    notInTracker.length < rows.length
+      ? `Add the ${notInTracker.length} missing to my obligations`
+      : "Yes, add to my monthly obligations";
 
   if (plan.items.length === 0 && plan.missing.length === 0) return null;
 
@@ -139,6 +154,14 @@ export default function PremiumRdCard({
           </Link>{" "}
           with reminders.
         </p>
+      ) : userId && allInTracker ? (
+        <p className="mt-3 text-sm font-semibold text-[#1D9E75]">
+          Already in your{" "}
+          <Link href="/tracker" className="underline">
+            Tracker checklist
+          </Link>
+          , one per policy.
+        </p>
       ) : userId && rows.length > 0 ? (
         <div className="mt-3">
           <button
@@ -147,7 +170,7 @@ export default function PremiumRdCard({
             onClick={() => void add()}
             className="rounded-lg bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
           >
-            {saving ? "Adding…" : "Yes, add to my monthly obligations"}
+            {saving ? "Adding…" : addLabel}
           </button>
           {plan.missing.length > 0 ? (
             <p className="mt-1 text-xs text-[#5F5E5A]">
