@@ -2,6 +2,7 @@ import type {
   FinancialProfile,
   PremiumFrequency,
 } from "@/lib/analyse-form-schema";
+import { endMonthAfter } from "@/lib/billsCalendar";
 
 /**
  * Suggest a recurring deposit (RD) that saves up for yearly insurance
@@ -35,6 +36,7 @@ export const PREMIUM_RD_DUE_DAY = 5;
 export const PREMIUM_RD_SOURCE = "analyse_rd";
 /** Obligation category: an `insurance_*` value so it reads as Security. */
 export const PREMIUM_RD_CATEGORY = "insurance_rd";
+/** Titles of the older single combined rows, replaced by one row per policy. */
 export const PREMIUM_RD_TITLE = "RD for insurance premiums";
 export const PREMIUM_SAVINGS_TITLE = "Savings for insurance premiums";
 
@@ -257,7 +259,7 @@ export function premiumRdHeadline(plan: PremiumRdPlan): string[] {
   } else if (rdItems.length > 1) {
     const total = rdItems.reduce((s, i) => s + i.premium, 0);
     lines.push(
-      `You pay ${inr(total)} a year in yearly premiums. One RD of ${inr(plan.rdMonthly)} a month gets them all ready on time.`,
+      `You pay ${inr(total)} a year in yearly premiums, each renewing in its own month. Start one RD per premium, ${inr(plan.rdMonthly)} a month in total, each ending just before its renewal.`,
     );
   }
   if (savingsItems.length === 1) {
@@ -283,46 +285,45 @@ export type PremiumRdObligation = {
   remind_days_before: number;
   is_active: true;
   notes: string;
+  /** Last instalment month (YYYY-MM-01): the month before the renewal. */
+  end_month: string;
 };
 
+/** Obligation title for one policy, e.g. "RD for health premium". */
+export function premiumRdTitle(item: PremiumRdItem): string {
+  return `${item.mode === "rd" ? "RD" : "Savings"} for ${premiumName(item)}`;
+}
+
 /**
- * Monthly obligations for the tracker checklist: one combined RD row and,
- * when a renewal is under 6 months away, one savings row.
+ * Monthly obligations for the tracker checklist: one per policy (an RD, or
+ * savings when the renewal is under 6 months away), each ending the month
+ * before that policy renews, since every premium renews in its own month.
  */
 export function buildPremiumRdObligations(
   plan: PremiumRdPlan,
+  today: Date = new Date(),
 ): PremiumRdObligation[] {
-  const rows: PremiumRdObligation[] = [];
-  const base = {
-    category: PREMIUM_RD_CATEGORY,
-    frequency: "monthly" as const,
-    due_day: PREMIUM_RD_DUE_DAY,
-    source: PREMIUM_RD_SOURCE,
-    remind_days_before: 3,
-    is_active: true as const,
-  };
-  if (plan.rdMonthly > 0) {
-    rows.push({
-      ...base,
-      title: PREMIUM_RD_TITLE,
-      amount: plan.rdMonthly,
-      notes: plan.rdItems.map(premiumRdLine).join("\n"),
+  const seen = new Map<string, number>();
+  return plan.items
+    .filter((item) => item.monthly > 0)
+    .map((item) => {
+      // Two "other" policies can share a name; titles must stay unique.
+      const base = premiumRdTitle(item);
+      const n = (seen.get(base) ?? 0) + 1;
+      seen.set(base, n);
+      return {
+        category: PREMIUM_RD_CATEGORY,
+        frequency: "monthly" as const,
+        due_day: PREMIUM_RD_DUE_DAY,
+        source: PREMIUM_RD_SOURCE,
+        remind_days_before: 3,
+        is_active: true as const,
+        title: n === 1 ? base : `${base} (${n})`,
+        amount: item.monthly,
+        notes: `${premiumRdLine(item)}, then ${inr(item.afterRenewalMonthly)} a month for the next renewal`,
+        end_month: endMonthAfter(item.monthsLeft, today)!,
+      };
     });
-  }
-  if (plan.savingsMonthly > 0) {
-    rows.push({
-      ...base,
-      title: PREMIUM_SAVINGS_TITLE,
-      amount: plan.savingsMonthly,
-      notes: plan.savingsItems
-        .map(
-          (i) =>
-            `${premiumRdLine(i)}, then ${inr(i.afterRenewalMonthly)} a month after renewal`,
-        )
-        .join("\n"),
-    });
-  }
-  return rows;
 }
 
 /**

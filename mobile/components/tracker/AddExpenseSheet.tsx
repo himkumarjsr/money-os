@@ -1020,48 +1020,77 @@ export function AddExpenseSheet({
                     </View>
                   ) : null}
 
-                  {bucket === "security" ? (
-                    <Pressable
-                      onPress={() => {
-                        setPaymentMethod(
-                          isPaidFromSavings({ payment_method: paymentMethod })
-                            ? "upi"
-                            : RD_SAVINGS_PAYMENT_METHOD,
-                        );
-                        setShowAddCard(false);
-                      }}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{
-                        checked: isPaidFromSavings({
-                          payment_method: paymentMethod,
-                        }),
-                      }}
-                      style={styles.rdRow}
-                    >
-                      <View
-                        style={[
-                          styles.rdBox,
-                          isPaidFromSavings({
-                            payment_method: paymentMethod,
-                          }) && styles.rdBoxOn,
-                        ]}
+                  {bucket === "security" && subcategory === "premium_rd" ? (
+                    <Text style={[styles.ccHint, { marginTop: 12 }]}>
+                      Monthly RD deposit: it counts in Security each month you
+                      log it, so the premium is ready at renewal.
+                    </Text>
+                  ) : bucket === "security" ? (
+                    <View>
+                      <Pressable
+                        onPress={() => {
+                          setSubcategory("premium_rd");
+                          if (
+                            isPaidFromSavings({ payment_method: paymentMethod })
+                          )
+                            setPaymentMethod("upi");
+                        }}
+                        accessibilityRole="button"
+                        style={styles.rdRow}
                       >
-                        {isPaidFromSavings({
-                          payment_method: paymentMethod,
-                        }) ? (
-                          <Text style={styles.rdTick}>✓</Text>
-                        ) : null}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.payChipText}>
-                          Paid from my RD savings
-                        </Text>
-                        <Text style={[styles.ccHint, { marginBottom: 0 }]}>
-                          Money you already set aside each month, so it won't
-                          count again.
-                        </Text>
-                      </View>
-                    </Pressable>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.payChipText, styles.payTextOn]}>
+                            This is my monthly RD deposit →
+                          </Text>
+                          <Text style={[styles.ccHint, { marginBottom: 0 }]}>
+                            Saving into an RD each month for a premium? Log it
+                            as an RD deposit so it counts.
+                          </Text>
+                        </View>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setPaymentMethod(
+                            isPaidFromSavings({ payment_method: paymentMethod })
+                              ? "upi"
+                              : RD_SAVINGS_PAYMENT_METHOD,
+                          );
+                          setShowAddCard(false);
+                        }}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{
+                          checked: isPaidFromSavings({
+                            payment_method: paymentMethod,
+                          }),
+                        }}
+                        style={styles.rdRow}
+                      >
+                        <View
+                          style={[
+                            styles.rdBox,
+                            isPaidFromSavings({
+                              payment_method: paymentMethod,
+                            }) && styles.rdBoxOn,
+                          ]}
+                        >
+                          {isPaidFromSavings({
+                            payment_method: paymentMethod,
+                          }) ? (
+                            <Text style={styles.rdTick}>✓</Text>
+                          ) : null}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.payChipText}>
+                            Premium paid out of my RD
+                          </Text>
+                          <Text style={[styles.ccHint, { marginBottom: 0 }]}>
+                            Only for the yearly premium the RD paid. Your
+                            monthly deposits already counted, so this won&apos;t
+                            count again.
+                          </Text>
+                        </View>
+                      </Pressable>
+                    </View>
                   ) : null}
                 </View>
               ) : null}
