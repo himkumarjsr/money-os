@@ -241,6 +241,8 @@ export type BillObligation = {
   due_month?: number | null;
   /** One-time: YYYY-MM-DD. */
   due_date?: string | null;
+  /** Last month it falls due (YYYY-MM-01), e.g. an RD's final instalment. Null = no end. */
+  end_month?: string | null;
   is_active?: boolean;
 };
 
@@ -316,10 +318,12 @@ function validMonth(m: number | null | undefined): number | null {
  * Mar/Jun/Sep/Dec and Jun/Dec.
  */
 export function obligationDueDateInMonth(
-  ob: Pick<BillObligation, "frequency" | "due_day" | "due_month" | "due_date">,
+  ob: Pick<BillObligation, "frequency" | "due_day" | "due_month" | "due_date"> &
+    Pick<Partial<BillObligation>, "end_month">,
   year: number,
   monthIndex: number,
 ): Date | null {
+  if (isPastEndMonth(ob.end_month, year, monthIndex)) return null;
   const month = monthIndex + 1;
   const anchor = validMonth(ob.due_month);
   const day = (d: number | null | undefined) =>
@@ -352,6 +356,46 @@ export function obligationDueDateInMonth(
   }
 }
 
+/** True when `end_month` (YYYY-MM-01) is set and the given month is after it. */
+export function isPastEndMonth(
+  endMonth: string | null | undefined,
+  year: number,
+  monthIndex: number,
+): boolean {
+  const end = endMonth ? parseYmd(endMonth) : null;
+  if (!end) return false;
+  return year * 12 + monthIndex > end.getFullYear() * 12 + end.getMonth();
+}
+
+/**
+ * End month (YYYY-MM-01) for something with `monthsLeft` more monthly
+ * payments, counting the month of `from`. Null when there is no end.
+ */
+export function endMonthAfter(
+  monthsLeft: number | null | undefined,
+  from: Date = new Date(),
+): string | null {
+  const n = Math.round(Number(monthsLeft));
+  if (!Number.isFinite(n) || n < 1) return null;
+  const idx = from.getFullYear() * 12 + from.getMonth() + n - 1;
+  return monthKey(Math.floor(idx / 12), idx % 12);
+}
+
+/** Months left until `end_month`, counting the month of `asOf` (0 once it has ended). */
+export function monthsLeftUntil(
+  endMonth: string | null | undefined,
+  asOf: Date = new Date(),
+): number | null {
+  const end = endMonth ? parseYmd(endMonth) : null;
+  if (!end) return null;
+  const n =
+    end.getFullYear() * 12 +
+    end.getMonth() -
+    (asOf.getFullYear() * 12 + asOf.getMonth()) +
+    1;
+  return Math.max(0, n);
+}
+
 /** True when the obligation can never land on the calendar until it gets a date. */
 export function obligationNeedsDate(
   ob: Pick<BillObligation, "frequency" | "due_month" | "due_date">,
@@ -364,7 +408,8 @@ export function obligationNeedsDate(
 
 /** Next due date on or after `asOf` (looks up to 13 months ahead). */
 export function nextObligationDueDate(
-  ob: Pick<BillObligation, "frequency" | "due_day" | "due_month" | "due_date">,
+  ob: Pick<BillObligation, "frequency" | "due_day" | "due_month" | "due_date"> &
+    Pick<Partial<BillObligation>, "end_month">,
   asOf: Date = new Date(),
 ): Date | null {
   const today = startOfDay(asOf);

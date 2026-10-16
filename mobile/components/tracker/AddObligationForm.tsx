@@ -9,7 +9,10 @@ import {
   MONTH_NAMES,
   REMIND_DAY_CHOICES,
   defaultRemindDaysFor,
+  endMonthAfter,
   isAmountOptionalCategory,
+  monthsLeftUntil,
+  parseYmd,
   toYmd,
 } from "@/lib/billsCalendar";
 
@@ -22,6 +25,8 @@ export type ObligationFormPayload = {
   due_month: number | null;
   /** One-time only: YYYY-MM-DD. */
   due_date?: string | null;
+  /** Last month it falls due (YYYY-MM-01); null = keeps going. */
+  end_month?: string | null;
   source: string;
   is_active: boolean;
   remind_days_before: number;
@@ -80,6 +85,10 @@ export function AddObligationForm({
   const [remindTouched, setRemindTouched] = useState(
     seed?.remind_days_before != null,
   );
+  const [monthsLeft, setMonthsLeft] = useState(() => {
+    const n = monthsLeftUntil(seed?.end_month);
+    return n != null && n > 0 ? String(n) : "";
+  });
   const [monthOpen, setMonthOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -93,6 +102,8 @@ export function AddObligationForm({
   const showDayGrid = frequency !== "one_time";
   const showFirstMonth =
     frequency === "quarterly" || frequency === "half_yearly";
+  const endMonth = needsDate ? null : endMonthAfter(Number(monthsLeft));
+  const endDate = endMonth ? parseYmd(endMonth) : null;
   const canSave = Boolean(
     title.trim() &&
     (hasAmount || amountOptional) &&
@@ -121,6 +132,7 @@ export function AddObligationForm({
             ? parseInt(dueMonth, 10)
             : null,
         due_date: needsDate ? dueDate || null : null,
+        end_month: endMonth,
         source: "manual",
         is_active: true,
         remind_days_before: remindDays,
@@ -322,6 +334,30 @@ export function AddObligationForm({
         </>
       ) : null}
 
+      {!needsDate ? (
+        <>
+          <Text style={[styles.label, styles.labelSpaced]}>
+            Months left · optional
+          </Text>
+          <TextInput
+            value={monthsLeft}
+            onChangeText={(v) =>
+              setMonthsLeft(v.replace(/\D/g, "").slice(0, 3))
+            }
+            placeholder="Keeps going"
+            placeholderTextColor={Colors.textMuted}
+            keyboardType="number-pad"
+            accessibilityLabel="Months left"
+            style={styles.input}
+          />
+          <Text style={styles.hint}>
+            {endDate
+              ? `Last payment in ${MONTH_NAMES[endDate.getMonth()]} ${endDate.getFullYear()}, counting this month. Reminders stop after that.`
+              : "For an RD, loan or anything with a fixed number of instalments. Leave empty if it doesn't end."}
+          </Text>
+        </>
+      ) : null}
+
       <Text style={[styles.label, styles.labelSpaced]}>Remind me</Text>
       <View style={styles.wrap}>
         {REMIND_DAY_CHOICES.map((d) => {
@@ -401,6 +437,12 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
   },
   amountInput: { fontWeight: "700", color: Colors.primaryText },
+  hint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 6,
+    lineHeight: 17,
+  },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   pill: {
     minHeight: 44,
