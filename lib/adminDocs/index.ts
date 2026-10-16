@@ -25,6 +25,7 @@ import {
   policiesSection,
   profileSection,
 } from "./featuresPlan";
+import { healthScoreSection } from "./healthScore";
 import { afterLoginSection, beforeLoginSection } from "./journeys";
 import { overviewSection, radioSection, techStackSection } from "./startHere";
 import type { DocGroup, DocSection } from "./types";
@@ -51,6 +52,7 @@ export const ADMIN_DOC_SECTIONS: readonly DocSection[] = [
   beforeLoginSection,
   afterLoginSection,
   analyseSection,
+  healthScoreSection,
   fixPlanSection,
   trackerSection,
   billsSection,
