@@ -66,12 +66,27 @@ describe("mergeTrackerLoansIntoProfile (Tracker → Analyse)", () => {
   });
 
   it("is a no-op once the loan is already there", () => {
-    const once = mergeTrackerLoansIntoProfile(profileWith([]), [ob({})]).profile;
+    const once = mergeTrackerLoansIntoProfile(profileWith([]), [
+      ob({}),
+    ]).profile;
     expect(mergeTrackerLoansIntoProfile(once, [ob({})]).changed).toBe(false);
   });
 
+  it("drops the loan when its Tracker row is re-filed out of Loan EMI", () => {
+    const row = ob({ title: "Car insurance", amount: 2_500 });
+    const once = mergeTrackerLoansIntoProfile(profileWith([]), [row]).profile;
+    expect(once.unifiedLoans).toHaveLength(1);
+    const { profile, changed } = mergeTrackerLoansIntoProfile(once, [
+      { ...row, category: "insurance_vehicle" },
+    ]);
+    expect(changed).toBe(true);
+    expect(profile.unifiedLoans ?? []).toHaveLength(0);
+  });
+
   it("follows EMI edits made in Tracker", () => {
-    const once = mergeTrackerLoansIntoProfile(profileWith([]), [ob({})]).profile;
+    const once = mergeTrackerLoansIntoProfile(profileWith([]), [
+      ob({}),
+    ]).profile;
     const { profile } = mergeTrackerLoansIntoProfile(once, [
       ob({ amount: 15_000 }),
     ]);
@@ -80,7 +95,12 @@ describe("mergeTrackerLoansIntoProfile (Tracker → Analyse)", () => {
 
   it("drops a loan the user closed in Tracker", () => {
     const start = profileWith([
-      { id: "l1", loanType: "home_loan", lenderName: "HDFC", monthlyEMI: 30_000 },
+      {
+        id: "l1",
+        loanType: "home_loan",
+        lenderName: "HDFC",
+        monthlyEMI: 30_000,
+      },
     ]);
     const { profile } = mergeTrackerLoansIntoProfile(start, [
       ob({ title: "Home Loan EMI · HDFC", amount: 30_000, is_active: false }),
@@ -90,7 +110,12 @@ describe("mergeTrackerLoansIntoProfile (Tracker → Analyse)", () => {
 
   it("ignores loans closed before the report was saved", () => {
     const start = profileWith([
-      { id: "l1", loanType: "home_loan", lenderName: "HDFC", monthlyEMI: 30_000 },
+      {
+        id: "l1",
+        loanType: "home_loan",
+        lenderName: "HDFC",
+        monthlyEMI: 30_000,
+      },
     ]);
     const closed = ob({
       title: "Home Loan EMI · HDFC",
@@ -124,8 +149,18 @@ describe("planLoanObligationSync (Analyse → Tracker)", () => {
   it("creates a row for every loan, not just the first of each type", () => {
     const plan = planLoanObligationSync(
       profileWith([
-        { id: "a", loanType: "personal_loan", lenderName: "BANK A", monthlyEMI: 66_172 },
-        { id: "b", loanType: "personal_loan", lenderName: "BANK B", monthlyEMI: 42_055 },
+        {
+          id: "a",
+          loanType: "personal_loan",
+          lenderName: "BANK A",
+          monthlyEMI: 66_172,
+        },
+        {
+          id: "b",
+          loanType: "personal_loan",
+          lenderName: "BANK B",
+          monthlyEMI: 42_055,
+        },
         { id: "c", loanType: "gold_loan", lenderName: "", monthlyEMI: 5_000 },
       ]),
       [],
@@ -140,9 +175,22 @@ describe("planLoanObligationSync (Analyse → Tracker)", () => {
   it("updates the Tracker row when the EMI changes in Analyse", () => {
     const plan = planLoanObligationSync(
       profileWith([
-        { id: "a", loanType: "home_loan", lenderName: "HDFC", monthlyEMI: 31_000, emiDay: 5 },
+        {
+          id: "a",
+          loanType: "home_loan",
+          lenderName: "HDFC",
+          monthlyEMI: 31_000,
+          emiDay: 5,
+        },
       ]),
-      [ob({ id: "h", title: "Home Loan EMI · HDFC", amount: 30_000, source: "health_check" })],
+      [
+        ob({
+          id: "h",
+          title: "Home Loan EMI · HDFC",
+          amount: 30_000,
+          source: "health_check",
+        }),
+      ],
     );
     expect(plan.inserts).toEqual([]);
     expect(plan.updates).toEqual([
@@ -151,14 +199,23 @@ describe("planLoanObligationSync (Analyse → Tracker)", () => {
   });
 
   it("does not duplicate a Tracker-origin loan", () => {
-    const merged = mergeTrackerLoansIntoProfile(profileWith([]), [ob({})]).profile;
+    const merged = mergeTrackerLoansIntoProfile(profileWith([]), [
+      ob({}),
+    ]).profile;
     const plan = planLoanObligationSync(merged, [ob({})]);
     expect(plan).toEqual({ inserts: [], updates: [], deactivate: [] });
   });
 
   it("closes loans removed in the form, but not unseen manual Tracker loans", () => {
-    const previous = mergeTrackerLoansIntoProfile(profileWith([]), [ob({})]).profile;
-    const hc = ob({ id: "h", title: "Car Loan EMI", amount: 9_000, source: "health_check" });
+    const previous = mergeTrackerLoansIntoProfile(profileWith([]), [
+      ob({}),
+    ]).profile;
+    const hc = ob({
+      id: "h",
+      title: "Car Loan EMI",
+      amount: 9_000,
+      source: "health_check",
+    });
     const unseen = ob({ id: "new", title: "Axis loan EMI", amount: 7_000 });
 
     const plan = planLoanObligationSync(
@@ -173,7 +230,13 @@ describe("planLoanObligationSync (Analyse → Tracker)", () => {
 describe("permanent Tracker link", () => {
   const bf = (extra: Partial<UnifiedLoanRow> = {}) =>
     profileWith([
-      { id: "l1", loanType: "other", lenderName: "BF", monthlyEMI: 2_151, ...extra },
+      {
+        id: "l1",
+        loanType: "other",
+        lenderName: "BF",
+        monthlyEMI: 2_151,
+        ...extra,
+      },
     ]);
   const bfRow = (o: Partial<LoanObligationLike> = {}) =>
     ob({ id: "bf-row", title: "BF EMI", amount: 2_151, ...o });
@@ -189,7 +252,9 @@ describe("permanent Tracker link", () => {
 
   it("the link survives normalise / form round-trips", () => {
     const linked = mergeTrackerLoansIntoProfile(bf(), [bfRow()]).profile;
-    const again = normalizeAnalyseFormValues(financialProfileToFormValues(linked));
+    const again = normalizeAnalyseFormValues(
+      financialProfileToFormValues(linked),
+    );
     expect(loansOf(again)[0]?.trackerObligationId).toBe("bf-row");
   });
 
@@ -225,13 +290,20 @@ describe("loanDrift", () => {
       { id: "l1", loanType: "other", lenderName: "BF", monthlyEMI: 2_151 },
     ]);
     expect(
-      loanDrift(profile, [ob({ title: "BF EMI", amount: 2_151, is_active: false })]),
+      loanDrift(profile, [
+        ob({ title: "BF EMI", amount: 2_151, is_active: false }),
+      ]),
     ).toEqual([{ label: "Loan · BF", kind: "not_active_in_tracker" }]);
   });
 
   it("flags Tracker loans missing from the report and EMI changes", () => {
     const profile = profileWith([
-      { id: "l1", loanType: "home_loan", lenderName: "HDFC", monthlyEMI: 30_000 },
+      {
+        id: "l1",
+        loanType: "home_loan",
+        lenderName: "HDFC",
+        monthlyEMI: 30_000,
+      },
     ]);
     const kinds = loanDrift(profile, [
       ob({ id: "h", title: "Home Loan EMI · HDFC", amount: 31_000 }),
@@ -242,10 +314,17 @@ describe("loanDrift", () => {
 
   it("is quiet when loans match or the user never tracked a loan", () => {
     const profile = profileWith([
-      { id: "l1", loanType: "home_loan", lenderName: "HDFC", monthlyEMI: 30_000 },
+      {
+        id: "l1",
+        loanType: "home_loan",
+        lenderName: "HDFC",
+        monthlyEMI: 30_000,
+      },
     ]);
     expect(
-      loanDrift(profile, [ob({ title: "Home Loan EMI · HDFC", amount: 30_000 })]),
+      loanDrift(profile, [
+        ob({ title: "Home Loan EMI · HDFC", amount: 30_000 }),
+      ]),
     ).toEqual([]);
     expect(loanDrift(profile, [])).toEqual([]);
   });

@@ -189,6 +189,33 @@ export function billCategory(value: string | null | undefined): BillCategory {
   return CATEGORY_BY_VALUE[key] ?? CATEGORY_BY_VALUE.other;
 }
 
+/**
+ * Best-guess category from what the person typed, so "Car insurance" isn't
+ * saved under the Loan EMI default. Null when nothing clearly matches.
+ */
+export function categoryFromTitle(title: string): string | null {
+  const t = title.toLowerCase();
+  if (/insurance|premium|policy|mediclaim|\blic\b/.test(t)) {
+    if (/health|medical|mediclaim|hospital/.test(t)) return "insurance_health";
+    if (/\bcar\b|bike|vehicle|motor|scooter|two[- ]?wheeler/.test(t)) {
+      return "insurance_vehicle";
+    }
+    return "insurance_life";
+  }
+  if (/\bemi\b|\bloan\b|mortgage/.test(t)) return "loan_emi";
+  if (/\bsip\b|mutual fund/.test(t)) return "investment_sip";
+  if (/\bppf\b/.test(t)) return "investment_ppf";
+  if (/\brent\b/.test(t)) return "rent";
+  if (/electric|bescom|power bill/.test(t)) return "bill_electricity";
+  if (/broadband|wi-?fi|internet|fiber|fibre/.test(t)) return "bill_internet";
+  if (/postpaid|prepaid|recharge|mobile bill/.test(t)) return "bill_mobile";
+  if (/school|tuition|college fee/.test(t)) return "school_fees";
+  if (/netflix|prime|hotstar|spotify|subscription|youtube/.test(t)) {
+    return "subscription";
+  }
+  return null;
+}
+
 export function billCategoryEmoji(value: string | null | undefined): string {
   return billCategory(value).emoji;
 }

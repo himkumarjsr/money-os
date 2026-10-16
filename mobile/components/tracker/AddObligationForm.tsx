@@ -6,6 +6,7 @@ import {
   BILL_CATEGORIES,
   BILL_CATEGORY_GROUPS,
   BILL_FREQUENCIES,
+  categoryFromTitle,
   MONTH_NAMES,
   REMIND_DAY_CHOICES,
   defaultRemindDaysFor,
@@ -66,6 +67,9 @@ export function AddObligationForm({
   const seed = initial ?? defaults ?? null;
   const [title, setTitle] = useState(seed?.title ?? "");
   const [category, setCategory] = useState(seed?.category ?? "loan_emi");
+  const [categoryTouched, setCategoryTouched] = useState(
+    initial?.category != null,
+  );
   const [amount, setAmount] = useState(
     seed?.amount != null && seed.amount > 0 ? String(seed.amount) : "",
   );
@@ -111,9 +115,22 @@ export function AddObligationForm({
     (!needsDate || dueDate),
   );
 
-  const pickCategory = (value: string) => {
+  const applyCategory = (value: string) => {
     setCategory(value);
     if (!remindTouched) setRemindDays(defaultRemindDaysFor(value));
+  };
+
+  const pickCategory = (value: string) => {
+    setCategoryTouched(true);
+    applyCategory(value);
+  };
+
+  // Until a chip is tapped, follow the title so "Car insurance" isn't a loan.
+  const changeTitle = (value: string) => {
+    setTitle(value);
+    if (categoryTouched) return;
+    const guess = categoryFromTitle(value) ?? defaults?.category ?? "loan_emi";
+    if (guess !== category) applyCategory(guess);
   };
 
   const handleSave = async () => {
@@ -159,7 +176,7 @@ export function AddObligationForm({
       <Text style={styles.label}>What is it?</Text>
       <TextInput
         value={title}
-        onChangeText={setTitle}
+        onChangeText={changeTitle}
         placeholder={
           TITLE_HINTS[category] ?? "e.g. LIC Premium, HDFC Home Loan"
         }

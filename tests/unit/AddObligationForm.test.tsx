@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import AddObligationForm from "@/components/tracker/AddObligationForm";
-import { endMonthAfter } from "@/lib/billsCalendar";
+import { categoryFromTitle, endMonthAfter } from "@/lib/billsCalendar";
 
 describe("AddObligationForm months left", () => {
   it("saves an end month from the months left", async () => {
@@ -50,5 +50,46 @@ describe("AddObligationForm months left", () => {
     fireEvent.click(screen.getByRole("button", { name: "Update" }));
     await vi.waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0][0].end_month).toBeNull();
+  });
+});
+
+describe("AddObligationForm category from title", () => {
+  it("guesses common categories", () => {
+    expect(categoryFromTitle("Car insurance")).toBe("insurance_vehicle");
+    expect(categoryFromTitle("Star health premium")).toBe("insurance_health");
+    expect(categoryFromTitle("LIC policy")).toBe("insurance_life");
+    expect(categoryFromTitle("HDFC home loan")).toBe("loan_emi");
+    expect(categoryFromTitle("Gym")).toBeNull();
+  });
+
+  it("files a new 'Car insurance' as vehicle insurance, not a loan", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AddObligationForm onSave={onSave} onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/What is it/), {
+      target: { value: "Car insurance" },
+    });
+    fireEvent.change(screen.getByLabelText(/Amount/), {
+      target: { value: "2500" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save|Add/ }));
+    await vi.waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].category).toBe("insurance_vehicle");
+  });
+
+  it("keeps a category the person tapped", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AddObligationForm
+        onSave={onSave}
+        onClose={() => {}}
+        initial={{ title: "Car loan", category: "loan_emi", amount: 9000 }}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/What is it/), {
+      target: { value: "Car loan insurance" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+    await vi.waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].category).toBe("loan_emi");
   });
 });
