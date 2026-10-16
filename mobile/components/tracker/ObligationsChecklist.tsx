@@ -104,6 +104,7 @@ export function ObligationsChecklist({
       due_day: data.due_day,
       due_month: data.due_month,
       due_date: data.due_date ?? null,
+      end_month: data.end_month ?? null,
       remind_days_before: data.remind_days_before,
       source: "manual",
     });
@@ -383,6 +384,7 @@ export function ObligationsChecklist({
                                       due_day: ob.due_day ?? null,
                                       due_month: ob.due_month ?? null,
                                       due_date: ob.due_date ?? null,
+                                      end_month: ob.end_month ?? null,
                                       source: ob.source,
                                       is_active: true,
                                       remind_days_before: ob.remind_days_before,

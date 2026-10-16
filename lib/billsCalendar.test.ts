@@ -5,6 +5,8 @@ import {
   billsByDay,
   buildBillsMonth,
   defaultRemindDaysFor,
+  endMonthAfter,
+  monthsLeftUntil,
   describeSchedule,
   isAmountOptionalCategory,
   monthGrid,
@@ -319,5 +321,31 @@ describe("grid + labels", () => {
     expect(isAmountOptionalCategory("rent")).toBe(false);
     expect(defaultRemindDaysFor("document_expiry")).toBe(30);
     expect(defaultRemindDaysFor("rent")).toBe(7);
+  });
+});
+
+describe("end_month", () => {
+  const rd = {
+    frequency: "monthly",
+    due_day: 5,
+    due_month: null,
+    due_date: null,
+    end_month: "2027-01-01",
+  };
+
+  it("stops an obligation after its last month", () => {
+    expect(obligationDueDateInMonth(rd, 2027, 0)).not.toBeNull();
+    expect(obligationDueDateInMonth(rd, 2027, 1)).toBeNull();
+    expect(nextObligationDueDate(rd, new Date(2027, 0, 20))).toBeNull();
+  });
+
+  it("converts between months left and the end month", () => {
+    const oct = new Date(2026, 9, 16);
+    expect(endMonthAfter(4, oct)).toBe("2027-01-01");
+    expect(endMonthAfter(1, oct)).toBe("2026-10-01");
+    expect(endMonthAfter(0, oct)).toBeNull();
+    expect(monthsLeftUntil("2027-01-01", oct)).toBe(4);
+    expect(monthsLeftUntil("2026-01-01", oct)).toBe(0);
+    expect(monthsLeftUntil(null, oct)).toBeNull();
   });
 });

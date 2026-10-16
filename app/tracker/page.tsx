@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
+import { isPaidFromSavings } from "@/lib/trackerSavingsPayment";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AddExpenseModal from "@/components/tracker/AddExpenseModal";
 import CreditCardBillReminder from "@/components/tracker/CreditCardBillReminder";
@@ -2635,6 +2636,11 @@ function TrackerContent() {
                                       <RowTag
                                         label="Card"
                                         title="Paid by credit card — counts here now; your bank Spent changes when you pay the bill"
+                                      />
+                                    ) : isPaidFromSavings(txn) ? (
+                                      <RowTag
+                                        label="Paid from RD"
+                                        title="Paid out of your RD savings — your monthly RD deposits already counted, so this doesn't count again"
                                       />
                                     ) : null}
                                   </div>

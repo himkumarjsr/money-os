@@ -33,6 +33,8 @@ function toObligation(row: Record<string, unknown>): BillObligation {
     due_day: row.due_day == null ? null : Number(row.due_day),
     due_month: row.due_month == null ? null : Number(row.due_month),
     due_date: row.due_date == null ? null : String(row.due_date).slice(0, 10),
+    end_month:
+      row.end_month == null ? null : String(row.end_month).slice(0, 10),
     is_active: row.is_active !== false,
   };
 }

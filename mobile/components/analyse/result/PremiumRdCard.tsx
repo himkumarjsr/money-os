@@ -15,7 +15,7 @@ import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { useObligationStore } from "@/store/obligationStore";
 
 /**
- * Suggests one RD (or savings, when a renewal is under 6 months away) for
+ * Suggests an RD per policy (or savings, when a renewal is under 6 months away) for
  * yearly insurance premiums, and can add it to the tracker's obligations.
  * Port of web `components/analyse/PremiumRdCard.tsx`.
  */
@@ -114,7 +114,8 @@ export function PremiumRdCard({
 
       {status === "added" ? (
         <Text style={styles.added}>
-          Added. You'll see it in your{" "}
+          Added, one per policy, each ending before its renewal. You'll see them
+          in your{" "}
           <Text
             style={{ textDecorationLine: "underline" }}
             onPress={() => router.push("/(tabs)/tracker")}

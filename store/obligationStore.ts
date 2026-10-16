@@ -17,6 +17,7 @@ import {
   type UnifiedLoan,
 } from "@/lib/loanObligationSync";
 import {
+  PREMIUM_RD_SOURCE,
   PREMIUM_RD_TITLE,
   PREMIUM_SAVINGS_TITLE,
   type PremiumRdObligation,
@@ -39,6 +40,8 @@ export interface FinancialObligation {
   due_day?: number | null;
   due_month?: number | null;
   due_date?: string | null;
+  /** Last month it falls due (YYYY-MM-01); null = no end. */
+  end_month?: string | null;
   source: string;
   is_active: boolean;
   remind_days_before: number;
@@ -203,6 +206,40 @@ export function monthStartIso(month: Date): string {
   return `${y}-${m}-01`;
 }
 
+/**
+ * Runs a write that may carry `end_month`; if the database doesn't have that
+ * column yet (migration 055 not applied), retries once without it.
+ */
+async function withEndMonthFallback<T extends { error: unknown }>(
+  payload: Record<string, unknown>,
+  write: (p: Record<string, unknown>) => PromiseLike<T>,
+): Promise<T> {
+  const res = await write(payload);
+  const err = res.error as { code?: string; message?: string } | null;
+  if (
+    err &&
+    "end_month" in payload &&
+    (err.code === "PGRST204" || err.code === "42703") &&
+    /end_month/.test(err.message ?? "")
+  ) {
+    const rest = { ...payload };
+    delete rest.end_month;
+    return write(rest);
+  }
+  return res;
+}
+
+/** Drop not-yet-paid checklist rows for months after an obligation's last month. */
+async function clearChecklistAfterEnd(id: string, endMonth: string | null) {
+  if (!endMonth) return;
+  await getSupabase()
+    .from("obligation_checklist")
+    .delete()
+    .eq("obligation_id", id)
+    .gt("checklist_month", endMonth)
+    .in("status", ["pending", "skipped"]);
+}
+
 function mapObligation(row: Record<string, unknown>): FinancialObligation {
   return {
     id: String(row.id ?? ""),
@@ -214,6 +251,7 @@ function mapObligation(row: Record<string, unknown>): FinancialObligation {
     due_day: row.due_day == null ? null : Number(row.due_day),
     due_month: row.due_month == null ? null : Number(row.due_month),
     due_date: row.due_date == null ? null : String(row.due_date),
+    end_month: row.end_month == null ? null : String(row.end_month),
     source: String(row.source ?? "manual"),
     is_active: row.is_active !== false,
     remind_days_before: Number(row.remind_days_before ?? 7),
@@ -394,17 +432,21 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     }
     try {
       const supabase = getSupabase();
-      const { data, error } = await supabase
-        .from("financial_obligations")
-        .insert({
+      const { data, error } = await withEndMonthFallback(
+        {
           ...obligation,
           is_active: obligation.is_active ?? true,
           remind_days_before: obligation.remind_days_before ?? 7,
           source: obligation.source ?? "manual",
           frequency: obligation.frequency ?? "monthly",
-        })
-        .select()
-        .single();
+        },
+        (payload) =>
+          supabase
+            .from("financial_obligations")
+            .insert(payload)
+            .select()
+            .single(),
+      );
 
       if (error) throw error;
       const mapped = mapObligation(data as Record<string, unknown>);
@@ -423,20 +465,22 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
   updateObligation: async (id, data) => {
     const supabase = getSupabase();
-    const { error } = await supabase
-      .from("financial_obligations")
-      .update({
+    const { error } = await withEndMonthFallback(
+      {
         ...data,
         // Manual edit wins over analyse sync — don't let health-check overwrite.
         source: "manual",
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+      },
+      (payload) =>
+        supabase.from("financial_obligations").update(payload).eq("id", id),
+    );
 
     if (error) {
       console.error("updateObligation error:", error);
       return false;
     }
+    if (data.end_month) await clearChecklistAfterEnd(id, data.end_month);
 
     // Checklist stores its own expected_amount (generate RPC does ON CONFLICT DO NOTHING),
     // so amount edits must update pending/skipped rows or the UI looks unchanged.
@@ -866,13 +910,23 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
   saveAnalyseRdObligations: async (userId, rows) => {
     const supabase = getSupabase();
     const now = new Date().toISOString();
+    // Rows this card saved before: one per policy now, plus the older single
+    // combined rows (legacy titles), which get closed below.
     const rdTitles = [PREMIUM_RD_TITLE, PREMIUM_SAVINGS_TITLE];
     const { data: existingRows } = await supabase
       .from("financial_obligations")
-      .select("id,title")
-      .eq("user_id", userId)
-      .in("title", rdTitles);
-    const existing = (existingRows ?? []) as { id: string; title: string }[];
+      .select("id,title,source,is_active")
+      .eq("user_id", userId);
+    const existing = (existingRows ?? []) as {
+      id: string;
+      title: string;
+      source: string | null;
+      is_active: boolean | null;
+    }[];
+    const savedByCard = (e: (typeof existing)[number]) =>
+      e.source === PREMIUM_RD_SOURCE ||
+      rdTitles.includes(e.title) ||
+      /^(RD|Savings) for .+ premium( \(\d+\))?$/.test(e.title);
 
     for (const row of rows) {
       // Older databases may reject the newer category/source values with a
@@ -887,18 +941,20 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       let lastError: { code?: string; message?: string } | null = null;
       for (const variant of variants) {
         const payload = { ...variant, user_id: userId, updated_at: now };
-        const res = match
-          ? await supabase
-              .from("financial_obligations")
-              .update(payload)
-              .eq("id", match.id)
-              .select("id")
-              .single()
-          : await supabase
-              .from("financial_obligations")
-              .insert(payload)
-              .select("id")
-              .single();
+        const res = await withEndMonthFallback(payload, (p) =>
+          match
+            ? supabase
+                .from("financial_obligations")
+                .update(p)
+                .eq("id", match.id)
+                .select("id")
+                .single()
+            : supabase
+                .from("financial_obligations")
+                .insert(p)
+                .select("id")
+                .single(),
+        );
         if (!res.error && res.data) {
           savedId = (res.data as { id: string }).id;
           break;
@@ -915,17 +971,14 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         .update({ expected_amount: row.amount })
         .eq("obligation_id", savedId)
         .in("status", ["pending", "skipped"]);
+      await clearChecklistAfterEnd(savedId, row.end_month);
     }
 
     const keep = new Set(rows.map((r) => r.title));
-    const { data: active } = await supabase
-      .from("financial_obligations")
-      .select("id,title")
-      .eq("user_id", userId)
-      .in("title", rdTitles)
-      .eq("is_active", true);
-    for (const ob of (active ?? []) as { id: string; title: string }[]) {
-      if (!keep.has(ob.title)) await get().closeObligation(ob.id);
+    for (const ob of existing) {
+      if (savedByCard(ob) && ob.is_active !== false && !keep.has(ob.title)) {
+        await get().closeObligation(ob.id);
+      }
     }
 
     await get().generateChecklist(userId);

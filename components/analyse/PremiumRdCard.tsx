@@ -28,7 +28,7 @@ function saveRenewalMonth(
 }
 
 /**
- * Suggests one RD (or savings, when a renewal is under 6 months away) for
+ * Suggests an RD per policy (or savings, when a renewal is under 6 months away) for
  * yearly insurance premiums, and can add it to the tracker's obligations.
  */
 export default function PremiumRdCard({
@@ -132,7 +132,8 @@ export default function PremiumRdCard({
 
       {status === "added" ? (
         <p className="mt-3 text-sm font-semibold text-[#1D9E75]">
-          Added. You&apos;ll see it in your{" "}
+          Added, one per policy, each ending before its renewal. You&apos;ll see
+          them in your{" "}
           <Link href="/tracker" className="underline">
             Tracker checklist
           </Link>{" "}

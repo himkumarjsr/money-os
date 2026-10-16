@@ -10,6 +10,7 @@ import {
   AppState,
   StyleSheet,
 } from "react-native";
+import { isPaidFromSavings } from "@/lib/trackerSavingsPayment";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -2021,7 +2022,9 @@ export default function TrackerScreen() {
                                 ? "Refund"
                                 : onCard
                                   ? "Card"
-                                  : null;
+                                  : isPaidFromSavings(txn)
+                                    ? "Paid from RD"
+                                    : null;
                             return (
                               <View key={txn.id} style={styles.txnRow}>
                                 <View style={{ flex: 1, minWidth: 0 }}>
