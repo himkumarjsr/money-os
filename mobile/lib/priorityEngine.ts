@@ -427,16 +427,29 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     );
   }
   const medicalGap = Math.max(0, medicalTarget - medicalCurrent);
+  // Cash already in savings / liquid funds beyond the emergency fund isn't
+  // set aside for anything yet, so it can fill the medical fund today
+  // instead of months of top-ups. (Liquid funds already estimated as the
+  // medical pot above aren't counted twice.)
+  const spareCash = Math.max(
+    0,
+    Math.min(
+      (profile.savingsAccountBalance || 0) + (profile.liquidMFValue || 0),
+      emergencyCurrent - emergencyTarget,
+    ) - (enteredMedical > 0 ? 0 : medicalCurrent),
+  );
+  const medicalFromCash = Math.round(Math.min(spareCash, medicalGap));
+  const medicalGapLeft = Math.max(0, medicalGap - medicalFromCash);
   const medicalStartMonth =
     hardPriorityMode && emergencyMonthsToComplete > 0
       ? emergencyMonthsToComplete + 1
       : 1;
   const medicalSuggested =
-    medicalGap > 0
+    medicalGapLeft > 0
       ? Math.round(
           Math.min(
             Math.max(0, monthlySurplus - emergencyMonthly),
-            Math.ceil(medicalGap / 6),
+            Math.ceil(medicalGapLeft / 6),
           ),
         )
       : 0;
@@ -447,8 +460,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   const medicalSurplusBefore = runningSurplus;
   runningSurplus = Math.max(0, runningSurplus - medicalMonthly);
   const medicalMonthsToComplete =
-    medicalGap > 0 && medicalMonthly > 0
-      ? Math.ceil(medicalGap / medicalMonthly)
+    medicalGapLeft > 0 && medicalMonthly > 0
+      ? Math.ceil(medicalGapLeft / medicalMonthly)
       : 0;
   priorities.push({
     rank: rank++,
@@ -473,11 +486,17 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     monthsToComplete: medicalMonthsToComplete,
     instrument: "Liquid Mutual Fund",
     actionThisWeek:
-      medicalGap > 0
-        ? medicalStartMonth > 1
-          ? `From month ${medicalStartMonth}, invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month for medical fund.`
-          : `Invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month.`
-        : "Medical fund ready.",
+      medicalFromCash > 0
+        ? `Move ₹${medicalFromCash.toLocaleString("en-IN")} of your spare savings into a separate liquid fund today and keep it only for medical bills.${
+            medicalMonthly > 0
+              ? ` Then invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month for the rest.`
+              : ""
+          }`
+        : medicalGap > 0
+          ? medicalStartMonth > 1
+            ? `From month ${medicalStartMonth}, invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month for medical fund.`
+            : `Invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month.`
+          : "Medical fund ready.",
     whyThisMatters:
       "Insurance has waiting periods; you need cash for immediate hospitalization.",
     icon: "🏥",
@@ -530,7 +549,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           ? Math.round((termGap / 10000000) * 1700)
           : Math.round((termGap / 10000000) * 2500);
   const termStartMonth =
-    medicalGap > 0 && medicalMonthsToComplete > 0
+    medicalGapLeft > 0 && medicalMonthsToComplete > 0
       ? medicalStartMonth + medicalMonthsToComplete
       : medicalStartMonth;
   const termPremiumEst = Math.max(
@@ -764,14 +783,14 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   const sipStartMonth =
     termGap > 0
       ? termStartMonth + 1
-      : medicalGap > 0
+      : medicalGapLeft > 0
         ? medicalStartMonth + medicalMonthsToComplete
         : 1;
 
   // Month-wise execution plan (12 months) with hard-priority sequencing.
   const monthlyPlan: PriorityPlan["monthlyPlan"] = [];
   let emRemaining = Math.max(0, Math.round(emergencyGap));
-  let medRemaining = Math.max(0, Math.round(medicalGap));
+  let medRemaining = Math.max(0, Math.round(medicalGapLeft));
   let termRemaining = Math.max(0, Math.round(termYearlyPremium));
   const debtExtraBudgetBase =
     primaryGoal === "clear_debt"
