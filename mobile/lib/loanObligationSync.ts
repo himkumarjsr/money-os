@@ -14,7 +14,9 @@ import {
 /** Analyse loan created from a Tracker row: `tracker:<obligation id>`. */
 export const TRACKER_LOAN_ID_PREFIX = "tracker:";
 
-export type UnifiedLoan = NonNullable<AnalyseFormValues["unifiedLoans"]>[number];
+export type UnifiedLoan = NonNullable<
+  AnalyseFormValues["unifiedLoans"]
+>[number];
 
 export type LoanObligationLike = {
   id: string;
@@ -101,8 +103,7 @@ const strongMatch: MatchFn = (loan, ob, link) => {
 };
 
 const amountMatch: MatchFn = (loan, ob, link) =>
-  !link &&
-  Math.abs(Number(loan.monthlyEMI ?? 0) - Number(ob.amount ?? 0)) < 1;
+  !link && Math.abs(Number(loan.monthlyEMI ?? 0) - Number(ob.amount ?? 0)) < 1;
 
 /**
  * Pair each loan obligation with at most one loan: strong matches first
@@ -221,6 +222,18 @@ export function mergeTrackerLoansIntoProfile(
     }
   }
 
+  // A Tracker row moved out of Loan EMI (e.g. "Car insurance" re-filed as
+  // vehicle insurance) takes the loan it created with it.
+  const categoryById = new Map(allObligations.map((o) => [o.id, o.category]));
+  loans.forEach((loan, i) => {
+    const link = linkedObligationId(loan);
+    const cat = link ? categoryById.get(link) : undefined;
+    if (cat && cat !== "loan_emi" && cat !== "credit_card") {
+      drop.add(i);
+      changed = numbersChanged = true;
+    }
+  });
+
   if (!changed) return { profile, changed: false, numbersChanged: false };
   const next = normalizeAnalyseFormValues({
     ...form,
@@ -256,7 +269,10 @@ export function applyLoanDetails(
     if (details === "skip") return { ...l, detailsSkipped: true };
     return {
       ...l,
-      outstandingAmount: Math.max(0, Math.round(details.outstandingAmount ?? 0)),
+      outstandingAmount: Math.max(
+        0,
+        Math.round(details.outstandingAmount ?? 0),
+      ),
       interestRate: Math.max(0, Number(details.interestRate ?? 0)),
       detailsSkipped: false,
     };
@@ -355,7 +371,12 @@ export function planLoanObligationSync(
         Math.abs(ob.amount - amount) >= 1 ||
         (ob.due_day ?? 0) !== dueDay
       ) {
-        plan.updates.push({ id: ob.id, amount, due_day: dueDay, is_active: true });
+        plan.updates.push({
+          id: ob.id,
+          amount,
+          due_day: dueDay,
+          is_active: true,
+        });
       }
       continue;
     }
