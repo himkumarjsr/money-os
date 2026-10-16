@@ -123,7 +123,7 @@ describe("buildPremiumRdPlan", () => {
     );
     expect(plan.rdMonthly).toBe(3000);
     expect(premiumRdHeadline(plan)).toEqual([
-      "You pay ₹36,000 a year in yearly premiums. One RD of ₹3,000 a month gets them all ready on time.",
+      "You pay ₹36,000 a year in yearly premiums, each renewing in its own month. Start one RD per premium, ₹3,000 a month in total, each ending just before its renewal.",
     ]);
   });
 
@@ -143,7 +143,7 @@ describe("buildPremiumRdPlan", () => {
 });
 
 describe("buildPremiumRdObligations", () => {
-  it("creates a monthly Security obligation for the RD and the savings", () => {
+  it("creates one monthly obligation per premium, ending before its renewal", () => {
     const plan = buildPremiumRdPlan(
       {
         hasHealthInsurance: true,
@@ -156,27 +156,51 @@ describe("buildPremiumRdObligations", () => {
       },
       OCT,
     );
-    const rows = buildPremiumRdObligations(plan);
+    const rows = buildPremiumRdObligations(plan, OCT);
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({
-      title: "RD for insurance premiums",
+    const health = rows.find((r) => r.title === "RD for health premium");
+    const car = rows.find((r) => r.title === "Savings for car premium");
+    expect(health).toMatchObject({
       category: PREMIUM_RD_CATEGORY,
       amount: 2000,
       frequency: "monthly",
       source: PREMIUM_RD_SOURCE,
+      end_month: `${OCT.getFullYear() + 1}-09-01`,
     });
-    expect(rows[1]).toMatchObject({
-      title: "Savings for insurance premiums",
+    expect(car).toMatchObject({
       amount: 4000,
+      end_month: `${OCT.getFullYear()}-12-01`,
     });
-    expect(rows[1].notes).toContain("₹1,000 a month after renewal");
-    expect(rows[0].notes).toBe(
-      "Health premium: ₹24,000 due in October · ₹2,000 a month till September",
-    );
-    expect(premiumRdNoteLines(rows[1])).toEqual([
-      "Car premium: ₹12,000 due in January · ₹4,000 a month till December, then ₹1,000 a month after renewal",
+    expect(premiumRdNoteLines(health)).toEqual([
+      "Health premium: ₹24,000 due in October · ₹2,000 a month till September, then ₹2,000 a month for the next renewal",
     ]);
+    expect(car!.notes).toContain("then ₹1,000 a month for the next renewal");
     expect(premiumRdNoteLines({ source: "manual", notes: "x" })).toEqual([]);
+  });
+
+  it("keeps titles unique when two policies share a name", () => {
+    const plan = buildPremiumRdPlan(
+      {
+        hasOtherInsurance: true,
+        otherInsurancePremiums: [
+          {
+            policyName: "LIC",
+            premiumInput: 6000,
+            frequency: "yearly",
+            renewalMonth: 6,
+          },
+          {
+            policyName: "LIC",
+            premiumInput: 9000,
+            frequency: "yearly",
+            renewalMonth: 8,
+          },
+        ],
+      },
+      OCT,
+    );
+    const titles = buildPremiumRdObligations(plan, OCT).map((r) => r.title);
+    expect(new Set(titles).size).toBe(2);
   });
 
   it("creates nothing without a plan", () => {

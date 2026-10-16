@@ -1292,39 +1292,81 @@ export default function AddExpenseModal({
               </div>
             ) : null}
 
-            {bucket === "security" ? (
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 8,
-                  marginTop: 12,
-                  fontSize: 13,
-                  color: "#111110",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={isPaidFromSavings({ payment_method: paymentMethod })}
-                  onChange={(e) => {
-                    setPaymentMethod(
-                      e.target.checked ? RD_SAVINGS_PAYMENT_METHOD : "upi",
-                    );
-                    setShowAddCard(false);
+            {bucket === "security" && subcategory === "premium_rd" ? (
+              <p style={{ marginTop: 12, fontSize: 12, color: "#5F5E5A" }}>
+                Monthly RD deposit: it counts in Security each month you log it,
+                so the premium is ready at renewal.
+              </p>
+            ) : bucket === "security" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubcategory("premium_rd");
+                    if (isPaidFromSavings({ payment_method: paymentMethod }))
+                      setPaymentMethod("upi");
                   }}
-                  style={{ marginTop: 2 }}
-                />
-                <span>
-                  Paid from my RD savings
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    marginTop: 12,
+                    padding: 0,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "#3C3489" }}>
+                    This is my monthly RD deposit →
+                  </span>
                   <span
                     style={{ display: "block", fontSize: 12, color: "#5F5E5A" }}
                   >
-                    Money you already set aside each month, so it won&apos;t
-                    count again.
+                    Saving into an RD each month for a premium? Log it as an RD
+                    deposit so it counts.
                   </span>
-                </span>
-              </label>
+                </button>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                    marginTop: 12,
+                    fontSize: 13,
+                    color: "#111110",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isPaidFromSavings({
+                      payment_method: paymentMethod,
+                    })}
+                    onChange={(e) => {
+                      setPaymentMethod(
+                        e.target.checked ? RD_SAVINGS_PAYMENT_METHOD : "upi",
+                      );
+                      setShowAddCard(false);
+                    }}
+                    style={{ marginTop: 2 }}
+                  />
+                  <span>
+                    Premium paid out of my RD
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        color: "#5F5E5A",
+                      }}
+                    >
+                      Only for the yearly premium the RD paid. Your monthly
+                      deposits already counted, so this won&apos;t count again.
+                    </span>
+                  </span>
+                </label>
+              </>
             ) : null}
           </div>
         ) : null}

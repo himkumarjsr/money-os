@@ -192,6 +192,7 @@ function BillsCalendar() {
         due_day: ob.due_day ?? null,
         due_month: ob.due_month ?? null,
         due_date: ob.due_date ?? null,
+        end_month: full?.end_month ?? null,
         source: "manual",
         is_active: true,
         remind_days_before: full?.remind_days_before ?? 7,
@@ -223,6 +224,7 @@ function BillsCalendar() {
         due_day: payload.due_day,
         due_month: payload.due_month,
         due_date: payload.due_date ?? null,
+        end_month: payload.end_month ?? null,
         remind_days_before: payload.remind_days_before,
       });
     if (!ok) throw new Error("updateObligation failed");
