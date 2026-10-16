@@ -70,6 +70,8 @@ type SliderFieldProps = {
   prefix?: string;
   format?: (v: number) => string;
   unitType?: "money" | "percent" | "years" | "months" | "number";
+  /** Percent that is a share, not a yearly rate — caption shows "40%" instead of "40% p.a.". */
+  plainPercent?: boolean;
 };
 
 export function SliderField({
@@ -81,6 +83,7 @@ export function SliderField({
   onChange,
   suffix,
   unitType,
+  plainPercent = false,
 }: SliderFieldProps) {
   const detectedType: "money" | "percent" | "years" | "months" | "number" =
     unitType ??
@@ -185,8 +188,11 @@ export function SliderField({
   };
 
   const words = useMemo(
-    () => formatSliderLabel(Math.max(0, value), detectedType, step),
-    [detectedType, step, value],
+    () =>
+      plainPercent && detectedType === "percent"
+        ? `${value}%`
+        : formatSliderLabel(Math.max(0, value), detectedType, step),
+    [detectedType, plainPercent, step, value],
   );
 
   const sliderValue = Math.min(Math.max(value, min), sliderMax);

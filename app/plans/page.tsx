@@ -21,7 +21,7 @@ const plans = [
     period: "forever",
     features: [
       { label: "Financial health score", yes: true },
-      { label: "15+ calculators", yes: true },
+      { label: "65+ calculators", yes: true },
       { label: "Learn finance articles", yes: true },
       { label: "AI fix plan", yes: false },
       { label: "MF portfolio analysis", yes: false },

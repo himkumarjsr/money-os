@@ -1,4 +1,5 @@
 import { CATEGORIES } from "./calculator-config";
+import { ADVISOR_SEO } from "./calculator-seo-advisor";
 import { SITE_URL } from "@/lib/seo";
 
 export type CalculatorSeo = {
@@ -17,6 +18,7 @@ export const INDEXABLE_CALC_IDS = CATEGORIES.flatMap((c) =>
 ).filter((id) => id !== "tax-regime");
 
 export const SEO_COPY: Record<string, CalculatorSeo> = {
+  ...ADVISOR_SEO,
   sip: {
     path: "/calculators/sip",
     appName: "SIP Calculator India",
@@ -628,8 +630,21 @@ const CALC_OG_IMAGE: Record<string, string> = {
   fire: "/og/og-fire.png",
 };
 
+/** Category banner for calculators without their own image. */
+const CATEGORY_OG_IMAGE: Record<string, string> = {
+  investment: "/og/og-sip.png",
+  savings: "/og/og-ppf.png",
+  retirement: "/og/og-fire.png",
+  loans: "/og/og-emi.png",
+  tax: "/og/og-tax-calculator.png",
+  protection: "/og/og-emergency.png",
+  postoffice: "/og/og-po.png",
+};
+
 export function getOgImagePathForCalc(calcId: string): string {
-  return CALC_OG_IMAGE[calcId] ?? "/og/og-home.png";
+  if (CALC_OG_IMAGE[calcId]) return CALC_OG_IMAGE[calcId];
+  const cat = CATEGORIES.find((c) => c.items.some((i) => i.id === calcId));
+  return (cat && CATEGORY_OG_IMAGE[cat.id]) ?? "/og/og-home.png";
 }
 
 export function buildCalculatorJsonLd(seo: CalculatorSeo) {
@@ -680,6 +695,23 @@ export function getRelatedLinksForCalc(calcId: string) {
       desc: "Know it. Fix it. Grow it. — free score",
     },
   ];
+  if (calcId in ADVISOR_SEO) {
+    const cat = CATEGORIES.find((c) => c.items.some((i) => i.id === calcId));
+    const siblings = (cat?.items ?? [])
+      .filter((i) => i.id !== calcId)
+      .slice(0, 3);
+    return [
+      ...siblings.map((i) => ({
+        href:
+          i.id === "tax-regime"
+            ? "/calculators/tax-regime-2026"
+            : `/calculators/${i.id}`,
+        title: `${i.title} calculator`,
+        desc: i.blurb,
+      })),
+      ...common,
+    ];
+  }
   if (calcId === "sip") {
     return [
       {
