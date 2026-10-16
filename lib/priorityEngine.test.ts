@@ -180,9 +180,9 @@ describe("buildPriorityPlan", () => {
     expect(car?.allocation?.horizon).toBe("1-3y");
     expect(car?.allocation?.slices.map((s) => s.key)).toContain("fd_cd");
     expect(car?.allocation?.slices.find((s) => s.key === "gold")?.pct).toBe(5);
-    expect(
-      car?.allocation?.slices.reduce((s, x) => s + x.monthly, 0),
-    ).toBe(car?.monthlyAllocated);
+    expect(car?.allocation?.slices.reduce((s, x) => s + x.monthly, 0)).toBe(
+      car?.monthlyAllocated,
+    );
     expect(car?.instrument).toContain("Bank FD");
     // Big surplus: every goal is fully funded and the rest goes to a general SIP.
     expect(car?.monthlyAllocated).toBe(car?.monthlyRequired);
@@ -207,6 +207,38 @@ describe("buildPriorityPlan", () => {
     expect(medical?.gap).toBe(0);
     expect(medical?.monthlyContribution).toBe(0);
     expect(plan.monthlyPlan?.[0]?.medical).toBe(0);
+  });
+
+  it("fills the medical fund from spare savings today", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        cityTier: "metro",
+        liquidMFValue: 0,
+        medicalEmergencyFund: 0,
+        savingsAccountBalance: 2_000_000,
+      }),
+      { needsActual: 50_000, overallScore: 60 },
+    );
+    const medical = plan.priorities.find((item) => item.id === "medical_fund");
+    expect(medical?.gap).toBeGreaterThan(0);
+    expect(medical?.monthlyContribution).toBe(0);
+    expect(medical?.actionThisWeek).toMatch(
+      /^Move ₹[\d,]+ of your spare savings/,
+    );
+  });
+
+  it("keeps monthly top-ups when savings only cover the emergency fund", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        cityTier: "metro",
+        liquidMFValue: 0,
+        medicalEmergencyFund: 0,
+        savingsAccountBalance: 0,
+      }),
+      { needsActual: 50_000, overallScore: 60 },
+    );
+    const medical = plan.priorities.find((item) => item.id === "medical_fund");
+    expect(medical?.actionThisWeek).not.toMatch(/spare savings/);
   });
 
   it("routes goal funding after safety and SSY in priority order", () => {
