@@ -31,7 +31,6 @@ type Row = Record<string, number>;
 const PAD = { top: 8, right: 8, bottom: 24, left: 52 };
 const GRID = () => tintBg("#F4F2FC");
 
-
 function niceStep(rough: number): number {
   if (rough <= 0) return 1;
   const exp = Math.floor(Math.log10(rough));

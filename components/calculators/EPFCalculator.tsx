@@ -36,6 +36,7 @@ function useClamped(initial: number, min: number, max: number) {
 export function EPFCalculator() {
   const [balance, setBalance] = useClamped(5_00_000, 0, CALCULATOR_MONEY_MAX);
   const [yearly, setYearly] = useClamped(1_20_000, 0, CALCULATOR_MONEY_MAX);
+  const [vpfMonthly, setVpfMonthly] = useClamped(0, 0, CALCULATOR_MONEY_MAX);
   const [age, setAgeRaw] = useClamped(30, 18, EPF_FINAL_AGE - 1);
   const [till, setTill] = useClamped(58, 19, EPF_FINAL_AGE);
   const [rate, setRate] = useClamped(EPF_DEFAULT_RATE_PCT, 0, 15);
@@ -53,12 +54,12 @@ export function EPFCalculator() {
     () =>
       computeEpfProjection({
         currentBalance: balance,
-        yearlyContribution: yearly,
+        yearlyContribution: yearly + vpfMonthly * 12,
         currentAge: age,
         contributeTillAge: stopAge,
         annualRatePct: rate,
       }),
-    [age, balance, rate, stopAge, yearly],
+    [age, balance, rate, stopAge, vpfMonthly, yearly],
   );
 
   const data = useMemo(
@@ -104,6 +105,21 @@ export function EPFCalculator() {
         onChange={setYearly}
         format={(v) => formatCurrency(v, "en-IN", "INR")}
       />
+      <SliderField
+        label="Extra VPF (Voluntary PF) per month"
+        unitType="money"
+        value={vpfMonthly}
+        min={0}
+        max={CALCULATOR_MONEY_MAX}
+        step={500}
+        onChange={setVpfMonthly}
+      />
+      {vpfMonthly > 0 ? (
+        <p className="-mt-2 text-xs text-slate-500">
+          VPF earns the EPF rate. Interest on your own PF + VPF above ₹2.5 lakh
+          a year is taxable.
+        </p>
+      ) : null}
       <SliderField
         label="Current age"
         unitType="years"
