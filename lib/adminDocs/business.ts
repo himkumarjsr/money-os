@@ -44,7 +44,7 @@ export const visionSection: DocSection = {
       kind: "list",
       items: [
         "Numbers from code, words from AI. Every score, gap and amount is computed by deterministic engines (`lib/financialEngine.ts`, `lib/priorityEngine.ts`); the LLM only explains. Advice must be reproducible and auditable.",
-        "Useful before signup. The health check and 15+ calculators work without an account, and the core check needs no PAN or Aadhaar.",
+        "Useful before signup. The health check and 65+ calculators work without an account, and the core check needs no PAN or Aadhaar.",
         "Privacy first. Row Level Security on every table, an encrypted vault for sensitive fields (`user_financial_data`, when `ENCRYPTION_KEY` is set), and no bank-statement scraping.",
         "Plan, then act, then repeat. The product is built around a monthly loop (track, pay bills, review score), not a one-off report.",
         "Unbiased by design. The fix plan never ranks a product because it pays a commission; any future distribution revenue must be disclosed and kept out of the ranking.",
@@ -179,7 +179,7 @@ export const phasesSection: DocSection = {
         [
           "Phase 0: Foundation (built)",
           "'I don't know where I stand.'",
-          "Health check and score, AI fix plan with PDF, 15+ calculators, tracker, bills & EMIs, policy vault, FK Split, rewards, web + PWA + Expo app.",
+          "Health check and score, AI fix plan with PDF, 65+ calculators, tracker, bills & EMIs, policy vault, FK Split, rewards, web + PWA + Expo app.",
           "Core flows stable on web and app; this console and its docs in place.",
         ],
         [
@@ -471,7 +471,7 @@ export const revenueSection: DocSection = {
         [
           "Free",
           "₹0",
-          "Health check and score, 15+ calculators, tracker, bills & EMIs, policy vault with reminders, unlimited FK Split, learn, rewards.",
+          "Health check and score, 65+ calculators, tracker, bills & EMIs, policy vault with reminders, unlimited FK Split, learn, rewards.",
           "The growth engine. Everything that brings users and friends in stays free.",
         ],
         [

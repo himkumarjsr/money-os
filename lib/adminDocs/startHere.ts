@@ -9,7 +9,7 @@ export const overviewSection: DocSection = {
   blocks: [
     {
       kind: "p",
-      text: "Finkoin is a personal-finance app for Indian households. A user enters their money once (income, loans, expenses, insurance, assets, goals), deterministic engines in code score their financial health and build a prioritised fix plan, and an LLM (Groq, grounded by a small RAG knowledge base) explains that plan in plain language. Around that core sit an expense tracker, a bill-splitting product (FK Split), a policy vault, 15+ calculators, learning content and a rewards loop (FK coins and leaderboard points).",
+      text: "Finkoin is a personal-finance app for Indian households. A user enters their money once (income, loans, expenses, insurance, assets, goals), deterministic engines in code score their financial health and build a prioritised fix plan, and an LLM (Groq, grounded by a small RAG knowledge base) explains that plan in plain language. Around that core sit an expense tracker, a bill-splitting product (FK Split), a policy vault, 65+ calculators, learning content and a rewards loop (FK coins and leaderboard points).",
     },
     {
       kind: "table",

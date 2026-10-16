@@ -114,7 +114,7 @@ export function CalculatorsNavMenu() {
                   View all ›
                 </Link>
               </div>
-              <div className="grid grid-cols-5 gap-5">
+              <div className="grid grid-cols-4 gap-x-5 gap-y-6">
                 {CATEGORIES.map((category) => (
                   <div key={category.id} className="min-w-0">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
