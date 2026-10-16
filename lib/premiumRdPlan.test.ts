@@ -10,6 +10,8 @@ import {
   PREMIUM_RD_CATEGORY,
   PREMIUM_RD_SOURCE,
   type PremiumRdProfile,
+  findExistingRdRow,
+  rdRowsNotInTracker,
 } from "./premiumRdPlan";
 
 // 9 October 2026
@@ -220,5 +222,51 @@ describe("applyRenewalMonths", () => {
     expect(next.healthInsuranceRenewalMonth).toBe(3);
     expect(next.otherInsurancePremiums?.[0]?.renewalMonth).toBe(8);
     expect(next.carInsuranceRenewalMonth).toBeUndefined();
+  });
+});
+
+describe("RD rows already in Tracker", () => {
+  const rd = (id: string, title: string, source = "manual") => ({
+    id,
+    title,
+    category: "insurance_rd",
+    source,
+    is_active: true,
+  });
+  const existing = [
+    rd("a", "RD - Himamshu Term inssurance"),
+    rd("b", "Shivani LIC premium"),
+    rd("c", "RD for health premium", "analyse_rd"),
+  ];
+
+  it("matches the same policy under a different title", () => {
+    expect(findExistingRdRow("Savings for term premium", existing)?.id).toBe(
+      "a",
+    );
+    expect(
+      findExistingRdRow("Savings for LIC SHIVANI premium", existing)?.id,
+    ).toBe("b");
+    expect(findExistingRdRow("RD for health premium", existing)?.id).toBe("c");
+    expect(findExistingRdRow("RD for car premium", existing)).toBeUndefined();
+  });
+
+  it("ignores closed rows and other categories", () => {
+    expect(
+      findExistingRdRow("RD for term premium", [
+        { ...rd("x", "Term RD"), is_active: false },
+        { ...rd("y", "Term Insurance Premium"), category: "insurance_life" },
+      ]),
+    ).toBeUndefined();
+  });
+
+  it("lists only the policies still missing", () => {
+    const rows = [
+      { title: "Savings for term premium" },
+      { title: "RD for car premium" },
+      { title: "RD for health premium" },
+    ];
+    expect(rdRowsNotInTracker(rows, existing).map((r) => r.title)).toEqual([
+      "RD for car premium",
+    ]);
   });
 });
