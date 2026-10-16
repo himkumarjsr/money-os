@@ -31,11 +31,11 @@ export const analyseSection: DocSection = {
       rows: [
         [
           "Score",
-          "`100 − 15 × critical − 7 × warning − 2 × info` issues, clamped 0–100",
+          "`100 − 15 × critical − 7 × warning` issues, clamped 0–100. Every rule is on the Health score page",
         ],
         [
           "Bucket caps (% of income)",
-          "Needs 20% (30% with a home loan), Wants 5%, Security 5%, Loans 40%, Investment 30% (20% with a home loan)",
+          "By life stage, then adjusted for income band, parents, home loan and age (see Health score). Single / married: Needs 30%, Wants 5%, Insurance 10%, Loans 30%, Investment 25%",
         ],
         ["Bucket status", "good ≤ cap; warning ≤ cap × 1.15; critical above"],
         [
@@ -44,7 +44,7 @@ export const analyseSection: DocSection = {
         ],
         [
           "Emergency months",
-          "Single 3–6, married 6–12, with kids 9–12 (matrix by stage, parents, kids, age)",
+          "Single 6 (9 if supporting parents), married 9, with kids or senior 12; otherwise 6, or 12 from age 50",
         ],
         [
           "Term cover needed",
