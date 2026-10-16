@@ -19,6 +19,7 @@ import {
   PREMIUM_RD_TITLE,
   PREMIUM_SAVINGS_TITLE,
   type PremiumRdObligation,
+  findExistingRdRow,
 } from "@/lib/premiumRdPlan";
 import { getSupabase } from "@/lib/supabase";
 import {
@@ -913,11 +914,12 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     const rdTitles = [PREMIUM_RD_TITLE, PREMIUM_SAVINGS_TITLE];
     const { data: existingRows } = await supabase
       .from("financial_obligations")
-      .select("id,title,source,is_active")
+      .select("id,title,category,source,is_active")
       .eq("user_id", userId);
     const existing = (existingRows ?? []) as {
       id: string;
       title: string;
+      category: string | null;
       source: string | null;
       is_active: boolean | null;
     }[];
@@ -925,6 +927,9 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       e.source === PREMIUM_RD_SOURCE ||
       rdTitles.includes(e.title) ||
       /^(RD|Savings) for .+ premium( \(\d+\))?$/.test(e.title);
+    // Rows that stay: ones saved or updated now, and RDs the person added
+    // themselves for the same policy (left untouched, never duplicated).
+    const keepIds = new Set<string>();
 
     for (const row of rows) {
       // Older databases may reject the newer category/source values with a
@@ -934,7 +939,9 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         { ...row, source: "health_check" },
         { ...row, category: "other", source: "health_check" },
       ];
-      const match = existing.find((e) => e.title === row.title);
+      const match = findExistingRdRow(row.title, existing, keepIds);
+      if (match) keepIds.add(match.id);
+      if (match && !savedByCard(match)) continue;
       let savedId: string | null = null;
       let lastError: { code?: string; message?: string } | null = null;
       for (const variant of variants) {
@@ -964,6 +971,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         console.error("saveAnalyseRdObligations save error:", lastError);
         return lastError?.message || "Unknown error";
       }
+      keepIds.add(savedId);
       await supabase
         .from("obligation_checklist")
         .update({ expected_amount: row.amount })
@@ -972,9 +980,8 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       await clearChecklistAfterEnd(savedId, row.end_month);
     }
 
-    const keep = new Set(rows.map((r) => r.title));
     for (const ob of existing) {
-      if (savedByCard(ob) && ob.is_active !== false && !keep.has(ob.title)) {
+      if (savedByCard(ob) && ob.is_active !== false && !keepIds.has(ob.id)) {
         await get().closeObligation(ob.id);
       }
     }

@@ -326,6 +326,72 @@ export function buildPremiumRdObligations(
     });
 }
 
+/** Tracker row the premium card compares against. */
+export type ExistingRdRow = {
+  id: string;
+  title: string;
+  category?: string | null;
+  source?: string | null;
+  is_active?: boolean | null;
+};
+
+const RD_STOP_WORDS = new Set([
+  "rd",
+  "savings",
+  "saving",
+  "for",
+  "premium",
+  "premiums",
+  "insurance",
+  "policy",
+  "the",
+  "of",
+]);
+
+function rdWords(s: string): string[] {
+  return s
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w && !RD_STOP_WORDS.has(w));
+}
+
+/**
+ * The Tracker row that already saves for this policy: the same title, else
+ * an active RD row naming the same policy, such as "RD - Term insurance" for
+ * "RD for term premium". Rows in `taken` are already paired.
+ */
+export function findExistingRdRow<T extends ExistingRdRow>(
+  rowTitle: string,
+  existing: T[],
+  taken: Set<string> = new Set(),
+): T | undefined {
+  const free = existing.filter((e) => !taken.has(e.id));
+  const exact = free.find((e) => e.title === rowTitle);
+  if (exact) return exact;
+  const want = rdWords(rowTitle.replace(/ \(\d+\)$/, ""));
+  if (want.length === 0) return undefined;
+  return free.find((e) => {
+    if (e.is_active === false || e.category !== PREMIUM_RD_CATEGORY) {
+      return false;
+    }
+    const have = rdWords(e.title);
+    return want.every((w) => have.includes(w));
+  });
+}
+
+/** Card rows with no matching RD row in Tracker yet. */
+export function rdRowsNotInTracker<R extends { title: string }>(
+  rows: R[],
+  existing: ExistingRdRow[],
+): R[] {
+  const taken = new Set<string>();
+  return rows.filter((row) => {
+    const match = findExistingRdRow(row.title, existing, taken);
+    if (match) taken.add(match.id);
+    return !match;
+  });
+}
+
 /**
  * The per-policy lines saved on a premium RD / savings obligation, so the
  * tracker can say which premiums it saves for and until when. Empty for
