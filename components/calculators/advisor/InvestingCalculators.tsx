@@ -1220,3 +1220,88 @@ export function AssetAllocationCalculator() {
     </div>
   );
 }
+
+export function CompoundInterestCalculator() {
+  const [principal, setPrincipal] = useNum(1_00_000);
+  const [rate, setRate] = useNum(8);
+  const [years, setYears] = useNum(10);
+  const [freq, setFreq] = useState<Compounding>("quarterly");
+  const k = { monthly: 12, quarterly: 4, "half-yearly": 2, yearly: 1 }[freq];
+  const value = (y: number) => principal * Math.pow(1 + rate / 100 / k, k * y);
+  const fv = value(years);
+  const data = Array.from({ length: years }, (_, i) => ({
+    year: i + 1,
+    value: value(i + 1),
+    simple: principal * (1 + (rate / 100) * (i + 1)),
+  }));
+  return (
+    <div className="space-y-6">
+      <Inputs>
+        <SliderField
+          label="Principal"
+          unitType="money"
+          value={principal}
+          min={1_000}
+          max={MAX}
+          step={1_000}
+          onChange={setPrincipal}
+        />
+        <SliderField
+          label="Annual interest rate"
+          unitType="percent"
+          value={rate}
+          min={0.5}
+          max={30}
+          step={0.1}
+          onChange={setRate}
+        />
+        <SliderField
+          label="Period"
+          unitType="years"
+          value={years}
+          min={1}
+          max={50}
+          onChange={setYears}
+        />
+      </Inputs>
+      <Segmented
+        label="Compounding"
+        value={freq}
+        options={[
+          { value: "monthly", label: "Monthly" },
+          { value: "quarterly", label: "Quarterly" },
+          { value: "half-yearly", label: "Half-yearly" },
+          { value: "yearly", label: "Yearly" },
+        ]}
+        onChange={setFreq}
+      />
+      <Hero
+        label="Future value"
+        value={fv}
+        sub={
+          <>
+            Interest earned: <strong>{inr(fv - principal)}</strong>
+          </>
+        }
+      />
+      <Stats>
+        <ResultStat
+          label="With simple interest instead"
+          value={inr(principal * (1 + (rate / 100) * years))}
+        />
+        <Stat
+          label="Effective yearly rate"
+          value={pct((Math.pow(1 + rate / 100 / k, k) - 1) * 100)}
+        />
+      </Stats>
+      <GrowthChart
+        title="Compound vs simple interest"
+        data={data}
+        series={[
+          { key: "value", label: "Compound" },
+          { key: "simple", label: "Simple", dashed: true },
+        ]}
+      />
+    </div>
+  );
+}

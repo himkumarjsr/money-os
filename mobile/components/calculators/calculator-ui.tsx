@@ -34,6 +34,15 @@ export { CALCULATOR_MONEY_MAX };
 
 type UnitType = "money" | "percent" | "years" | "months" | "number";
 
+const MAX_SLIDER_STEPS = 2000;
+
+/** Round a raw step up to 1, 2 or 5 × a power of ten. */
+function niceStep(raw: number) {
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const unit = raw / pow;
+  return (unit <= 1 ? 1 : unit <= 2 ? 2 : unit <= 5 ? 5 : 10) * pow;
+}
+
 function formatFieldValue(value: number, type: UnitType, step: number) {
   return formatCalculatorFieldValue(value, type, step, formatIndian);
 }
@@ -109,6 +118,8 @@ type SliderFieldProps = {
   prefix?: string;
   format?: (v: number) => string;
   unitType?: UnitType;
+  /** Percent that is a share, not a yearly rate — caption shows "40%" instead of "40% p.a.". */
+  plainPercent?: boolean;
 };
 
 /** Typed value box + slider + amount-in-words — native port of the PWA SliderField. */
@@ -121,6 +132,7 @@ export function SliderField({
   onChange,
   suffix,
   unitType,
+  plainPercent = false,
 }: SliderFieldProps) {
   const detectedType: UnitType =
     unitType ??
@@ -202,11 +214,21 @@ export function SliderField({
   };
 
   const words = useMemo(
-    () => formatSliderLabel(Math.max(0, value), detectedType, step),
-    [detectedType, step, value],
+    () =>
+      plainPercent && detectedType === "percent"
+        ? `${value}%`
+        : formatSliderLabel(Math.max(0, value), detectedType, step),
+    [detectedType, plainPercent, step, value],
   );
 
   const sliderValue = Math.min(Math.max(value, min), sliderMax);
+  // The slider allocates one entry per step on every platform, so a wide range
+  // with a fine step (₹1 up to ₹99 Cr) would freeze the app. Coarsen only the
+  // drag step; typed values keep the exact step.
+  const sliderStep =
+    (sliderMax - min) / step > MAX_SLIDER_STEPS
+      ? niceStep((sliderMax - min) / MAX_SLIDER_STEPS)
+      : step;
 
   return (
     <View style={styles.field}>
@@ -245,7 +267,7 @@ export function SliderField({
         style={styles.slider}
         minimumValue={min}
         maximumValue={sliderMax}
-        step={step}
+        step={sliderStep}
         value={sliderValue}
         onValueChange={commitFromSlider}
         minimumTrackTintColor={Colors.primary}

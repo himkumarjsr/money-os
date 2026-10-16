@@ -119,7 +119,7 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
     })),
   ),
   compound: dyn(() =>
-    import("./compound-interest-calculator").then((m) => ({
+    import("./advisor/InvestingCalculators").then((m) => ({
       default: m.CompoundInterestCalculator,
     })),
   ),

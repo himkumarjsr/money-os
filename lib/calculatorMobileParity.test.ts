@@ -10,6 +10,7 @@ import {
 
 describe("mobile keeps byte-identical copies of calculator logic", () => {
   const shared = [
+    "advisorCalculators.ts",
     "amortisation.ts",
     "amortisationExcel.ts",
     "calculatorInput.ts",
