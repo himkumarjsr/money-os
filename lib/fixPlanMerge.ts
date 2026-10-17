@@ -62,7 +62,9 @@ export function isPriorityComplete(p: {
   monthlyContribution?: unknown;
   status?: unknown;
   fromSavings?: unknown;
+  needsAnswer?: unknown;
 }): boolean {
+  if (p.needsAnswer === true) return false;
   if (Number(p.fromSavings || 0) > 0 && p.status !== "complete") return false;
   const monthly = Math.max(0, Number(p.monthlyContribution || 0));
   const gap = Math.max(0, Number(p.gap || 0));
@@ -101,13 +103,15 @@ export function mergeEnginePriorityPlan(
             : monthsFor(String(p.id || ""), gap, monthly),
         surplusBefore: Number(p.surplusBefore || 0),
         surplusAfterThis: Number(p.surplusAfterThis || 0),
-        title: isComplete ? p.title : match.title || p.title,
+        title: isComplete || p.needsAnswer ? p.title : match.title || p.title,
         instrument: isComplete
           ? p.instrument
           : match.instrument || p.instrument,
         actionThisWeek: isComplete
           ? COMPLETE_ACTION
-          : match.actionThisWeek || p.actionThisWeek,
+          : p.needsAnswer || p.fromSavings
+            ? p.actionThisWeek
+            : match.actionThisWeek || p.actionThisWeek,
         whyThisMatters: isComplete
           ? COMPLETE_WHY
           : match.whyThisMatters || p.whyThisMatters,
