@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { AnalysisResult } from "@/lib/financialEngine";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
+import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import {
   FIX_PLAN_RATE_LIMIT_MESSAGE,
   FIX_PLAN_REFRESH_UP_TO_DATE,
@@ -272,5 +273,36 @@ export function useFixPlan({ profile, result, userId, enabled }: Args) {
   /** Initial-load retry when no plan is shown — cache first, network on miss. */
   const retry = useCallback(() => loadRef.current?.(false), []);
 
-  return { aiPlan, aiLoading, aiError, refreshing, notice, retry, refresh };
+  /** Yes/no on a term top-up: show it at once, then save it to the report. */
+  const answerTermTopUp = useCallback(
+    async (yes: boolean) => {
+      if (!profile || !result) return;
+      const next = { ...profile, wantsTermTopUp: yes };
+      setAiPlan((prev) =>
+        prev
+          ? {
+              ...prev,
+              priorityPlan: mergeEnginePriorityPlan(
+                buildPriorityPlan(next, result),
+                prev.priorityPlan || {},
+                monthsForPriority,
+              ),
+            }
+          : prev,
+      );
+      await saveAnalyseProfile(userId, next);
+    },
+    [profile, result, userId],
+  );
+
+  return {
+    aiPlan,
+    aiLoading,
+    aiError,
+    refreshing,
+    notice,
+    retry,
+    refresh,
+    answerTermTopUp,
+  };
 }

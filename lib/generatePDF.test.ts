@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildUserAnalyseScenarioProfile } from "./analyseUserScenarioFixture";
 import { analyseFinances } from "./financialEngine";
-import { COMPLETE_WHY, mergeEnginePriorityPlan } from "./fixPlanMerge";
+import {
+  COMPLETE_WHY,
+  isPriorityComplete,
+  mergeEnginePriorityPlan,
+} from "./fixPlanMerge";
 import { buildFixPlanPdfData } from "./fixPlanPdfData";
 import { buildFixPlanPdf, formatCapPercent } from "./generatePDF";
 import { buildPriorityPlan } from "./priorityEngine";
@@ -147,9 +151,7 @@ describe("Fix Plan PDF text", () => {
   });
 
   it("uses on-track copy for completed priorities", () => {
-    const completed = plan.priorities.filter(
-      (p: any) => p.gap <= 0 || p.monthlyContribution <= 0,
-    );
+    const completed = plan.priorities.filter((p: any) => isPriorityComplete(p));
     expect(completed.length).toBeGreaterThan(0);
     const staleCount = text.split("you need 9 months to recover").length - 1;
     expect(staleCount).toBe(plan.priorities.length - completed.length);
