@@ -1,4 +1,5 @@
 /** Structured long-form content for selected Learn articles (same URLs as lib/learnContent). */
+import { LEARN_RICH_OCT_2026 } from "@/lib/data/learn-oct-2026";
 
 export type RichBlock =
   | { kind: "p"; text: string }
@@ -24,9 +25,14 @@ export type RichArticle = {
   related: { id: string; title: string }[];
   seoTitle: string;
   seoDescription: string;
+  /** Last content update (YYYY-MM-DD); shown as "Last updated". */
+  updatedAt?: string;
+  /** Calculators and tools to try with this guide. */
+  tools?: { href: string; title: string; desc: string }[];
 };
 
 const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
+  ...LEARN_RICH_OCT_2026,
   "how-your-cibil-credit-score-is-calculated": {
     seoTitle: "CIBIL Score: How India’s 300–900 Number Is Calculated",
     seoDescription:

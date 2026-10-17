@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 
 const title = "Financial Health Check — Know Your Score Free | Finkoin";
 const description =
   "Get your personalised Finkoin financial health score out of 100. Analyses emergency fund, term insurance gap, debt ratio, and investment health. Free. 5 minutes.";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: {
     absolute: title,
   },
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
       "Get your personalised financial health score out of 100. Free. 5 minutes.",
     images: [`${SITE_URL}/og/og-analyse.png`],
   },
-};
+});
 
 const jsonLd = {
   "@context": "https://schema.org",

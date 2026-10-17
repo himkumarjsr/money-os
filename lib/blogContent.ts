@@ -1,5 +1,6 @@
 import fireNumberIndia from "./data/blog-fire-number-india";
 import oldVsNewTaxRoi2026 from "./data/blog-old-vs-new-tax-roi-2026";
+import { BLOG_ARTICLES_OCT_2026 } from "./data/blog-oct-2026";
 
 export type BlogArticle = {
   slug: string;
@@ -7,6 +8,8 @@ export type BlogArticle = {
   description: string;
   keywords: string[];
   publishedAt: string;
+  /** Last meaningful content update (YYYY-MM-DD). Falls back to publishedAt. */
+  updatedAt?: string;
   category: string;
   body: string;
   faq?: { q: string; a: string }[];
@@ -14,14 +17,17 @@ export type BlogArticle = {
   metaTitle?: string;
   /** Optional read time shown on article page. */
   readTimeMinutes?: number;
+  /** "Next steps" links under the article. Defaults to health check, tax calculator and tracker. */
+  relatedTools?: { href: string; label: string }[];
 };
 
-export const BLOG_ARTICLES: BlogArticle[] = [
+const ALL_BLOG_ARTICLES: BlogArticle[] = [
+  ...BLOG_ARTICLES_OCT_2026,
   fireNumberIndia as BlogArticle,
   oldVsNewTaxRoi2026 as BlogArticle,
   {
     slug: "know-taxation-in-india",
-    title: "Know Taxation in India: Old vs New Slabs, Interest & ITR Forms",
+    title: "Know Taxation in India: Slabs, Interest & ITR Forms",
     description:
       "Beginner-friendly India taxation guide: old vs new tax regime slabs, Section 87A, cess/surcharge, 234A/234B/234C interest, and ITR form selection.",
     keywords: [
@@ -116,7 +122,11 @@ Need a practical comparison with your numbers? Use the [Tax Regime Calculator](/
     title: "Old vs New Tax Regime 2026: Which Saves More Money?",
     description:
       "Complete guide to choosing between old and new tax regime in FY 2025-26. Includes calculator and examples for different salary levels.",
-    keywords: ["old vs new tax regime 2026", "tax regime calculator 2026", "income tax India 2026"],
+    keywords: [
+      "old vs new tax regime 2026",
+      "tax regime calculator 2026",
+      "income tax India 2026",
+    ],
     publishedAt: "2026-05-01",
     category: "tax",
     body: `Choosing between India's old and new tax regime is not about "which is popular" — it is about **your** deductions and income mix.
@@ -200,7 +210,11 @@ Then explore [free calculators](/calculators) for SIP planning once the buffer e
     title: "Section 80C Deductions 2026: Save ₹46,800 in Tax",
     description:
       "Complete list of 80C investments and deductions for FY 2025-26. ELSS vs PPF vs FD — which is best for your goals?",
-    keywords: ["80C deductions 2026", "section 80C limit 2026", "tax saving investment India 2026"],
+    keywords: [
+      "80C deductions 2026",
+      "section 80C limit 2026",
+      "tax saving investment India 2026",
+    ],
     publishedAt: "2026-05-04",
     category: "tax",
     body: `Section **80C** is the most famous tax-saving bucket in India — and also the most mis-sold.
@@ -220,6 +234,23 @@ Common instruments include EPF (employee contribution), PPF, ELSS, life insuranc
 Use the [old vs new regime article](/blog/old-vs-new-tax-regime-2026) and the [tax regime calculator](/calculators/tax-regime-2026) — 80C matters only if the old regime wins for your profile.`,
   },
 ];
+
+/** Newest first. */
+export const BLOG_ARTICLES: BlogArticle[] = [...ALL_BLOG_ARTICLES].sort(
+  (a, b) => b.publishedAt.localeCompare(a.publishedAt),
+);
+
+/** Up to `limit` other articles, same category first, then newest. */
+export function relatedBlogArticles(
+  article: BlogArticle,
+  limit = 3,
+): BlogArticle[] {
+  const others = BLOG_ARTICLES.filter((a) => a.slug !== article.slug);
+  return [
+    ...others.filter((a) => a.category === article.category),
+    ...others.filter((a) => a.category !== article.category),
+  ].slice(0, limit);
+}
 
 export function getBlogArticle(slug: string): BlogArticle | undefined {
   return BLOG_ARTICLES.find((a) => a.slug === slug);

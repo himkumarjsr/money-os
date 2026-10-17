@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import Breadcrumb from "@/components/Breadcrumb";
 import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 import CalculatorsClient from "../CalculatorsClient";
 import { getRelatedLinksForCalc } from "../calculator-seo";
 import TaxExploreMore from "./TaxExploreMore";
@@ -11,7 +11,7 @@ import TaxExploreMore from "./TaxExploreMore";
 const canonicalPath = "/calculators/tax-regime-2026";
 const pageUrl = `${SITE_URL}${canonicalPath}`;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: {
     absolute:
       "Old vs New Tax Regime Calculator 2025-26 — Which Saves More? | Finkoin",
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     description: "Old vs New tax regime comparison. Free. Instant. Accurate.",
     images: [`${SITE_URL}/og/og-tax-calculator.png`],
   },
-};
+});
 
 const webAppJsonLd = {
   "@context": "https://schema.org",

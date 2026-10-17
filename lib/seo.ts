@@ -42,12 +42,121 @@ export function socialImageTags(
   };
 }
 
+/** Google shows ~60 title characters and ~155 description characters. */
+export const SEO_TITLE_MAX = 60;
+export const SEO_DESCRIPTION_MAX = 155;
+
+/** Drop the " | Finkoin" suffix when it pushes a title past the limit. */
+export function fitTitle(title: string): string {
+  if (title.length <= SEO_TITLE_MAX) return title;
+  const bare = title.replace(/\s*\|\s*Finkoin(\s+Learn)?\s*$/, "");
+  return bare;
+}
+
+/** Trim a description to the limit at a sentence or word boundary. */
+export function fitDescription(description: string): string {
+  if (description.length <= SEO_DESCRIPTION_MAX) return description;
+  const cut = description.slice(0, SEO_DESCRIPTION_MAX);
+  const sentence = cut.lastIndexOf(". ");
+  if (sentence >= 90) return cut.slice(0, sentence + 1);
+  const word = cut.slice(0, SEO_DESCRIPTION_MAX - 1).lastIndexOf(" ");
+  return `${cut.slice(0, word).replace(/[\s,;:—–-]+$/, "")}…`;
+}
+
+type FittableMetadata = {
+  title?: unknown;
+  description?: string | null;
+  openGraph?: object | null;
+  twitter?: object | null;
+};
+
+/** Apply fitTitle / fitDescription to a page's title, description, OG and Twitter tags. */
+export function fitMetadata<T extends FittableMetadata>(meta: T): T {
+  const fitText = (v: unknown, fit: (x: string) => string) =>
+    typeof v === "string" ? fit(v) : v;
+  const t = meta.title;
+  // A plain string title gets the root " | Finkoin" template appended, so a
+  // title that already names Finkoin (or would overflow) becomes absolute.
+  const title =
+    typeof t === "string"
+      ? /Finkoin/.test(t) || t.length + " | Finkoin".length > SEO_TITLE_MAX
+        ? { absolute: fitTitle(t) }
+        : t
+      : t && typeof t === "object" && "absolute" in t
+        ? {
+            ...t,
+            absolute: fitTitle(String((t as { absolute: string }).absolute)),
+          }
+        : t;
+  const social = (o: object | null | undefined) =>
+    o
+      ? {
+          ...o,
+          title: fitText((o as { title?: unknown }).title, fitTitle),
+          description: fitText(
+            (o as { description?: unknown }).description,
+            fitDescription,
+          ),
+        }
+      : o;
+  return {
+    ...meta,
+    title,
+    description:
+      typeof meta.description === "string"
+        ? fitDescription(meta.description)
+        : meta.description,
+    openGraph: social(meta.openGraph),
+    twitter: social(meta.twitter),
+  } as T;
+}
+
+/**
+ * Full metadata for a simple page: its own title, description, canonical and
+ * share card, so nothing falls back to the home page's tags.
+ */
+export function pageMetadata(opts: {
+  title: string;
+  description: string;
+  path: string;
+  image?: string;
+  noindex?: boolean;
+}) {
+  const title = fitTitle(opts.title);
+  const description = fitDescription(opts.description);
+  const { openGraphImages, twitterImages } = socialImageTags(
+    opts.image ?? DEFAULT_OG_IMAGE_PATH,
+    title,
+  );
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical: opts.path },
+    ...(opts.noindex ? { robots: { index: false, follow: true } } : {}),
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}${opts.path === "/" ? "" : opts.path}`,
+      siteName: "Finkoin",
+      type: "website" as const,
+      locale: "en_IN",
+      images: openGraphImages,
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title,
+      description,
+      images: twitterImages,
+    },
+  };
+}
+
 export const SEO_CONFIG = {
   siteName: "Finkoin",
   siteUrl: SITE_URL,
-  defaultTitle: "Finkoin — Know it. Fix it. Grow it. Your complete money life.",
+  defaultTitle: "Finkoin — Free Personal Finance App for India",
   defaultDescription:
-    "Finkoin is India's complete personal finance platform. Know it. Fix it. Grow it. Your complete money life. Free financial health check, SIP calculator, tax calculator (Old vs New regime), home loan EMI, expense tracker, bill splitting. Built for Indians. No PAN needed.",
+    "Free financial health check, SIP, tax and EMI calculators, expense tracker and bill splitting for India. Know it. Fix it. Grow it. No PAN needed.",
   defaultKeywords: [
     "Finkoin",
     "Finkoin app",
@@ -100,30 +209,30 @@ export function generatePageMeta(
   keywords?: string[],
   options?: PageMetaOptions,
 ) {
-  const canonicalPath = options?.canonicalPath ?? "/";
+  // Without a path, emit no canonical: defaulting to "/" would mark the page
+  // as a copy of the home page.
+  const canonicalPath = options?.canonicalPath;
   const ogImagePath = options?.openGraphImagePath ?? DEFAULT_OG_IMAGE_PATH;
-  const titleField =
-    options?.titleMode === "absolute"
-      ? { absolute: title }
-      : `${title} | ${SEO_CONFIG.siteName}`;
-  const displayTitle =
+  const displayTitle = fitTitle(
     options?.titleMode === "absolute"
       ? title
-      : `${title} | ${SEO_CONFIG.siteName}`;
+      : `${title} | ${SEO_CONFIG.siteName}`,
+  );
+  description = fitDescription(description);
   const { openGraphImages, twitterImages } = socialImageTags(
     ogImagePath,
     displayTitle,
   );
 
   return {
-    title: titleField,
+    title: { absolute: displayTitle },
     description,
     keywords: [...(keywords || []), ...SEO_CONFIG.defaultKeywords],
     openGraph: {
       title: displayTitle,
       description,
       siteName: SEO_CONFIG.siteName,
-      url: `${SEO_CONFIG.siteUrl}${canonicalPath === "/" ? "" : canonicalPath}`,
+      url: `${SEO_CONFIG.siteUrl}${!canonicalPath || canonicalPath === "/" ? "" : canonicalPath}`,
       type: options?.openGraphType ?? "website",
       images: openGraphImages,
     },
@@ -134,8 +243,6 @@ export function generatePageMeta(
       images: twitterImages,
     },
     robots: "index, follow" as const,
-    alternates: {
-      canonical: canonicalPath,
-    },
+    ...(canonicalPath ? { alternates: { canonical: canonicalPath } } : {}),
   };
 }

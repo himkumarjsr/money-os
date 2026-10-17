@@ -7,7 +7,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/analyse/fixplan", "/auth/", "/_next/", "/admin"],
+        // /_next/ stays crawlable: Google needs the JS and CSS to render pages.
+        disallow: ["/api/", "/analyse/fixplan", "/auth/", "/admin"],
       },
       {
         userAgent: "GPTBot",

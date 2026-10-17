@@ -9,10 +9,13 @@ import {
   getOgImagePathForCalc,
   getSeoForCalc,
 } from "./calculator-seo";
-import { SITE_URL, socialImageTags } from "@/lib/seo";
+import { SITE_URL, socialImageTags, fitMetadata } from "@/lib/seo";
 
 type PageProps = {
-  searchParams?: Promise<{ calc?: string | string[]; from?: string | string[] }>;
+  searchParams?: Promise<{
+    calc?: string | string[];
+    from?: string | string[];
+  }>;
 };
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
@@ -29,7 +32,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       getOgImagePathForCalc(active.id),
       seo.appName,
     );
-    return {
+    return fitMetadata({
       title: { absolute: seo.title },
       description: seo.description,
       alternates: { canonical: seo.path },
@@ -48,7 +51,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
         description: seo.description,
         images: twitterImages,
       },
-    };
+    });
   }
 
   const seo = getSeoForCalc();
@@ -56,7 +59,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     "/og/og-home.png",
     "Finkoin calculators",
   );
-  return {
+  return fitMetadata({
     title: { absolute: seo.title },
     description: seo.description,
     keywords: seo.keywords,
@@ -75,7 +78,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       description: seo.description,
       images: twitterImages,
     },
-  };
+  });
 }
 
 export default async function CalculatorsPage(props: PageProps) {

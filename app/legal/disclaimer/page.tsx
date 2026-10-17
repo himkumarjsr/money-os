@@ -1,3 +1,13 @@
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Disclaimer | Finkoin",
+  description:
+    "Finkoin provides educational tools and information, not personalised financial, tax or investment advice.",
+  path: "/legal/disclaimer",
+});
+
 export default function DisclaimerPage() {
   return (
     <div
@@ -38,7 +48,9 @@ export default function DisclaimerPage() {
           lineHeight: 1.7,
         }}
       >
-        <strong>Important:</strong> Finkoin is an educational platform. Nothing on this site constitutes professional financial, investment, tax, or legal advice.
+        <strong>Important:</strong> Finkoin is an educational platform. Nothing
+        on this site constitutes professional financial, investment, tax, or
+        legal advice.
       </div>
 
       {[

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 
 const title = "Finkoin Split — Split Expenses with Friends | India";
 const description =
   "Split bills, track shared expenses and settle debts with friends. Free expense splitting app for Indians — a simple Splitwise alternative. Finkoin Split.";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: { absolute: title },
   description,
   keywords: [
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
       "Split expenses with friends. Track group spending. Settle debts easily.",
     images: [`${SITE_URL}/og/og-split.png`],
   },
-};
+});
 
 const jsonLd = {
   "@context": "https://schema.org",
