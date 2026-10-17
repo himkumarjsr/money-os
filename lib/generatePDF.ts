@@ -20,7 +20,11 @@ import {
 } from "@/lib/fixPlanMerge";
 import type { LoanDriftItem } from "@/lib/loanObligationSync";
 import { debtPayoffNumbers } from "@/lib/priorityEngine";
-import { getUniversalBucketRows } from "@/lib/universal-buckets";
+import {
+  getInHandOutflow,
+  getUnallocatedIncome,
+  getUniversalBucketRows,
+} from "@/lib/universal-buckets";
 
 const PURPLE = [83, 74, 183] as const;
 const GREEN = [29, 158, 117] as const;
@@ -392,17 +396,33 @@ export function buildFixPlanPdf(
     (profile.bikeEMI || 0) * 24 +
     (profile.creditCardBillMonthly || 0) * 3 +
     (profile.creditCardCarriedBalance || 0);
-  const calcNetWorth = calcAssets - calcLiabilities;
+  // The report's own numbers win, so the PDF matches the result page.
+  const reportAssets = Number(analysis?.totalAssets);
+  const reportLiabilities = Number(analysis?.totalLiabilities);
+  const useReport =
+    Number.isFinite(reportAssets) &&
+    Number.isFinite(reportLiabilities) &&
+    reportAssets > 0;
+  const netAssets = useReport ? reportAssets : calcAssets;
+  const netLiabilities = useReport ? reportLiabilities : calcLiabilities;
+  const calcNetWorth = netAssets - netLiabilities;
   const monthlyIncome =
     (profile?.monthlySalary || 0) +
     (profile?.spouseIncome || 0) +
     (profile?.otherIncome || 0);
+  // Same as the result page: in-hand outflow (EPF excluded).
   const bucketRowsForSummary = getUniversalBucketRows(profile);
-  const totalOutflow = bucketRowsForSummary.reduce(
-    (sum, row) => sum + (row.actual || 0),
-    0,
+  const totalOutflow = getInHandOutflow(profile);
+  const amountLeftInHand = Math.round(getUnallocatedIncome(profile));
+  const openPriorities = (priorityPlan?.priorities || []).filter(
+    (p: any) => !isPriorityComplete(p),
   );
-  const amountLeftInHand = Math.round(monthlyIncome - totalOutflow);
+  const timeLabel = (p: any) => {
+    const months = Math.round(Number(p.monthsToComplete || 0));
+    if (months <= 0) return "";
+    if (months >= 24 && months % 12 === 0) return `${months / 12} years`;
+    return `${months} ${months === 1 ? "month" : "months"}`;
+  };
   const buildPhases = () => {
     const surplus = priorityPlan?.monthlySurplus || 0;
     const debts = priorityPlan?.debts || [];
@@ -611,7 +631,14 @@ export function buildFixPlanPdf(
     [120, 60],
   );
   addText("Top 3 actions this week", 11, DARK, true);
-  (priorityPlan?.priorities || []).slice(0, 3).forEach((p: any, i: number) => {
+  if (openPriorities.length === 0) {
+    addText(
+      "Your safety buckets are in place. Keep your SIPs and EMIs running.",
+      9,
+      GREY,
+    );
+  }
+  openPriorities.slice(0, 3).forEach((p: any, i: number) => {
     addText(`${i + 1}. ${p.actionThisWeek || p.title}`, 9, GREY);
   });
 
@@ -622,8 +649,8 @@ export function buildFixPlanPdf(
   addSmallTable(
     ["Item", "Amount"],
     [
-      ["Total assets", fmt(calcAssets)],
-      ["Total liabilities", fmt(calcLiabilities)],
+      ["Total assets", fmt(netAssets)],
+      ["Total liabilities", fmt(netLiabilities)],
       ["Net worth", fmt(calcNetWorth)],
     ],
     [100, 80],
@@ -740,10 +767,12 @@ export function buildFixPlanPdf(
   addSmallTable(
     ["Step", "Purpose", "Monthly", "When", "Surplus left"],
     (priorityPlan?.priorities || [])
-      .slice(0, 4)
+      .filter((p: any) => p.monthlyContribution > 0 || p.fromSavings > 0)
       .map((p: any, idx: number) => [
         `Step ${idx + 1}`,
-        p.title,
+        p.fromSavings > 0
+          ? `${p.title} (${fmt(p.fromSavings)} from savings today)`
+          : p.title,
         fmt(p.monthlyContribution || 0),
         `Month ${Math.max(1, Number(p.startMonth) || 1)}+`,
         fmt(p.surplusAfterThis || 0),
@@ -754,7 +783,7 @@ export function buildFixPlanPdf(
   newPage();
   addHeading("PRIORITY STEPS — DETAILED PLAN");
   addText(
-    explanations?.overallSummary || "Follow these priorities in order.",
+    `Your surplus of ${fmt(priorityPlan?.monthlySurplus || 0)}/month goes to these steps in order. Steps marked done need nothing more.`,
     10,
     GREY,
   );
@@ -775,8 +804,21 @@ export function buildFixPlanPdf(
     doc.setFontSize(9);
     doc.setFont(FONT, "normal");
     doc.setTextColor(...GREY);
+    const fromSavings = Number(p.fromSavings || 0);
+    const when = timeLabel(p);
     doc.text(
-      `Gap: ${fmtCr(p.gap || 0)} · Monthly: ${fmt(p.monthlyContribution || 0)} · ${p.monthsToComplete || 0} months`,
+      isPriorityComplete(p)
+        ? "Done · nothing more to put in"
+        : [
+            `Gap: ${fmtCr(p.gap || 0)}`,
+            fromSavings > 0 ? `From savings today: ${fmt(fromSavings)}` : null,
+            fromSavings > 0 && !(p.monthlyContribution > 0)
+              ? null
+              : `Monthly: ${fmt(p.monthlyContribution || 0)}`,
+            when || null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
       M + 6,
       y + 13,
     );
@@ -841,12 +883,15 @@ export function buildFixPlanPdf(
   if (debts.length > 0) {
     newPage();
     addHeading("DEBT CLEARANCE — STEP-BY-STEP STRATEGY");
-    if (explanations?.debtStrategy) {
-      addText(explanations.debtStrategy, 10, GREY);
-      y += 4;
-    }
+    // Built from the same numbers as the table (a saved AI summary can be stale).
+    addText(
+      "Pay every EMI on time, and put any extra on the highest-interest loan first. Once a loan is cleared, move its EMI to the next one.",
+      10,
+      GREY,
+    );
+    y += 4;
     addSmallTable(
-      ["Debt", "Rate", "EMI", "Extra/mo", "Payoff date", "Rank"],
+      ["Debt", "Rate", "EMI", "Extra/mo", "Payoff date", "Months"],
       debts.map((d: any) => {
         const { monthsNow } = debtPayoffNumbers(d);
         return [
@@ -864,7 +909,7 @@ export function buildFixPlanPdf(
                 year: "numeric",
               })}${estSuffix(d)}`
             : "—",
-          String(d.priorityRank),
+          monthsNow > 0 ? String(monthsNow) : "—",
         ];
       }),
       [44, 18, 30, 30, 34, 16],
@@ -1041,20 +1086,18 @@ export function buildFixPlanPdf(
   newPage();
   addHeading("YOUR 12-MONTH CHECKLIST");
   const checklistRows: string[][] = [];
-  (priorityPlan?.priorities || [])
-    .slice(0, 6)
-    .forEach((p: any, idx: number) => {
-      checklistRows.push([
-        String(idx + 1),
-        (Number(p.startMonth) || 1) > 1
-          ? `Month ${Math.min(12, Number(p.startMonth))}`
-          : idx === 0
-            ? "Month 1, Week 1"
-            : "Month 1",
-        p.actionThisWeek || p.title,
-        CHECKBOX_CELL,
-      ]);
-    });
+  openPriorities.slice(0, 6).forEach((p: any, idx: number) => {
+    checklistRows.push([
+      String(idx + 1),
+      (Number(p.startMonth) || 1) > 1
+        ? `Month ${Math.min(12, Number(p.startMonth))}`
+        : idx === 0
+          ? "Month 1, Week 1"
+          : "Month 1",
+      p.actionThisWeek || p.title,
+      CHECKBOX_CELL,
+    ]);
+  });
   if (checklistRows.length > 0) {
     addSmallTable(
       ["#", "When", "Action", "Done?"],
@@ -1073,14 +1116,9 @@ export function buildFixPlanPdf(
     priorityPlan?.priorities?.length > 0
   ) {
     const chartItems = [
-      ...(priorityPlan?.debts?.slice(0, 1).map((d: any) => ({
-        label: "Debt repayment",
-        value: d.emi || 0,
-        color: "#E24B4A",
-      })) || []),
+      // Where this plan's monthly surplus goes (EMIs are paid before it).
       ...(priorityPlan?.priorities
         ?.filter((p: any) => p.monthlyContribution > 0)
-        .slice(0, 4)
         .map((p: any, i: number) => ({
           label: String(p.title || ""),
           value: p.monthlyContribution,
