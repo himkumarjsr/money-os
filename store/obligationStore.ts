@@ -8,6 +8,7 @@ import {
 import { analyseFinances } from "@/lib/financialEngine";
 import {
   applyLoanDetails,
+  linkedObligationId,
   loanDrift,
   loansNeedingDetails,
   mergeTrackerLoansIntoProfile,
@@ -29,6 +30,7 @@ import {
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
+import { syncAnalyseFromCloud } from "@/lib/syncAnalyseFromCloud";
 import { useFinancialStore } from "@/store/financialStore";
 
 export interface FinancialObligation {
@@ -178,14 +180,24 @@ export type LoanReportStatus = {
 const LOAN_COLUMNS =
   "id,title,category,amount,due_day,is_active,source,updated_at";
 
+/**
+ * Loan EMI rows, plus any row a report loan is linked to, so a row that was
+ * re-filed out of Loan EMI (e.g. "Car insurance") still drops its loan.
+ */
 async function fetchLoanObligations(
   userId: string,
+  linkedIds: string[] = [],
 ): Promise<LoanObligationLike[]> {
+  const ids = linkedIds.filter((id) => /^[0-9a-f-]{36}$/i.test(id));
   const { data } = await getSupabase()
     .from("financial_obligations")
     .select(LOAN_COLUMNS)
     .eq("user_id", userId)
-    .eq("category", "loan_emi");
+    .or(
+      ids.length
+        ? `category.eq.loan_emi,id.in.(${ids.join(",")})`
+        : "category.eq.loan_emi",
+    );
   return ((data as Record<string, unknown>[] | null) ?? []).map((r) => ({
     id: String(r.id),
     title: String(r.title ?? ""),
@@ -999,13 +1011,23 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       try {
         const snap = await fetchUserAnalyseSnapshot(userId);
         if (!snap) return;
+        const linkedIds = (
+          financialProfileToFormValues(snap.lastSubmission).unifiedLoans ?? []
+        )
+          .map(linkedObligationId)
+          .filter((id): id is string => !!id);
         const { profile, changed, numbersChanged } =
           mergeTrackerLoansIntoProfile(
             snap.lastSubmission,
-            await fetchLoanObligations(userId),
+            await fetchLoanObligations(userId, linkedIds),
             { closedAfter: snap.submittedAt },
           );
-        if (!changed) return;
+        // Saved report already current: still bring this device's copy in
+        // line, or a report from an earlier visit keeps showing old loans.
+        if (!changed) {
+          await syncAnalyseFromCloud(userId);
+          return;
+        }
         await saveSnapshotProfile(userId, snap, profile, numbersChanged);
       } catch (err) {
         console.warn("syncLoansToAnalyse failed:", err);

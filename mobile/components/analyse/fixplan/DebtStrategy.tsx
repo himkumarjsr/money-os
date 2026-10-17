@@ -53,6 +53,14 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
                   </Text>
                 </View>
               </View>
+              {n.emiTooLow ? (
+                <Text style={styles.emiWarn}>
+                  ₹{n.currentEMI.toLocaleString("en-IN")}/mo barely covers the
+                  interest on ₹{n.outstanding.toLocaleString("en-IN")}, so this
+                  loan would take years to clear. Check the EMI and balance in
+                  Tracker.
+                </Text>
+              ) : null}
               <View style={styles.grid}>
                 {cells.map(([lbl, value]) => (
                   <View key={lbl} style={styles.cell}>
@@ -95,6 +103,7 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
 }
 
 const styles = themedStyles(() => ({
+  emiWarn: { fontSize: 12, color: Colors.error, marginBottom: 8 },
   box: {
     backgroundColor: Colors.card,
     borderRadius: Radius.lg,
