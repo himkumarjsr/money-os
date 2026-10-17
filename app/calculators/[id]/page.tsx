@@ -1,7 +1,7 @@
 import Breadcrumb from "@/components/Breadcrumb";
 import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
-import { socialImageTags } from "@/lib/seo";
+import { socialImageTags, fitMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
@@ -41,7 +41,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     seo.appName,
   );
 
-  return {
+  return fitMetadata({
     title: { absolute: seo.title },
     description: seo.description,
     keywords: seo.keywords,
@@ -61,7 +61,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       description: seo.description,
       images: twitterImages,
     },
-  };
+  });
 }
 
 export default async function CalculatorByIdPage(props: PageProps) {
@@ -91,24 +91,38 @@ export default async function CalculatorByIdPage(props: PageProps) {
           ]}
         />
       </div>
-      {/* SSR-visible copy for crawlers (calculator UI is client-hydrated). */}
-      <section className="sr-only">
-        <h1>{seo.appName}</h1>
-        <p>{seo.description}</p>
-        <ul>
-          {seo.faq.map((f) => (
-            <li key={f.q}>
-              <h2>{f.q}</h2>
-              <p>{f.a}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* The calculator UI hydrates on the client; keep the page heading in the server HTML. */}
+      <h1 className="sr-only">{seo.appName}</h1>
       <Suspense
         fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
       >
         <CalculatorsClient initialCalcId={calcId} />
       </Suspense>
+      {/* Visible, server-rendered explainer and FAQ: the text search engines index for this page. */}
+      <section
+        aria-labelledby="calc-about"
+        className="mx-auto mt-10 max-w-3xl px-4 text-slate-700 sm:px-6"
+      >
+        <h2 id="calc-about" className="text-lg font-semibold text-slate-900">
+          About the {seo.appName}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed sm:text-base">
+          {seo.description}
+        </p>
+        <h2 className="mt-8 text-lg font-semibold text-slate-900">
+          Frequently asked questions
+        </h2>
+        <dl className="mt-4 space-y-5">
+          {seo.faq.map((f) => (
+            <div key={f.q}>
+              <dt className="font-semibold text-slate-900">{f.q}</dt>
+              <dd className="mt-1 text-sm leading-relaxed sm:text-base">
+                {f.a}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
       <div className="px-4 pb-10 sm:px-6">
         <CalculatorRelatedLinks links={getRelatedLinksForCalc(calcId)} />
       </div>

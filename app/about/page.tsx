@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: {
     absolute: "About Finkoin — Financial Health Platform for India",
   },
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
       "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
     images: [`${SITE_URL}/og/og-home.png`],
   },
-};
+});
 
 /** Why Finkoin exists, in the founder's words. Shared with mobile/app/about.tsx. */
 const FOUNDER_NOTE = [

@@ -1,10 +1,12 @@
+import { pageMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Delete Your Account | Finkoin",
   description:
     "How to delete your Finkoin account and data, with or without the app installed.",
-};
+  path: "/legal/delete-account",
+});
 
 export default function DeleteAccountPage() {
   return (

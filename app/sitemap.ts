@@ -80,7 +80,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...learnArticles.map((a) => ({
       url: `${baseUrl}/learn/${a.id}`,
-      lastModified: now,
+      // Only dated guides send lastmod; a fake "now" on every build tells
+      // crawlers nothing and makes them distrust the field.
+      ...(a.updatedAt || a.publishedAt
+        ? { lastModified: new Date((a.updatedAt ?? a.publishedAt) as string) }
+        : {}),
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
@@ -98,7 +102,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...BLOG_ARTICLES.map((a) => ({
       url: `${baseUrl}/blog/${a.slug}`,
-      lastModified: new Date(a.publishedAt),
+      lastModified: new Date(a.updatedAt ?? a.publishedAt),
       changeFrequency: "monthly" as const,
       priority: 0.75,
     })),

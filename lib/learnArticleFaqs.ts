@@ -1,7 +1,9 @@
 import type { LearnArticle } from "@/lib/learnContent";
 import type { LearnFaq } from "@/components/learn/LearnFaqAccordion";
+import { LEARN_FAQS_OCT_2026 } from "@/lib/data/learn-oct-2026";
 
 const FAQS: Record<string, LearnFaq[]> = {
+  ...LEARN_FAQS_OCT_2026,
   "how-your-cibil-credit-score-is-calculated": [
     {
       q: "What is a good CIBIL score in India?",
@@ -367,7 +369,15 @@ function genericFaqs(article: LearnArticle): LearnFaq[] {
   ];
 }
 
-export function getLearnArticleFaqs(articleId: string, article?: LearnArticle): LearnFaq[] {
+/** Hand-written FAQs only (no generic fallback) — safe to publish as FAQPage schema. */
+export function getCuratedLearnFaqs(articleId: string): LearnFaq[] | null {
+  return FAQS[articleId] ?? null;
+}
+
+export function getLearnArticleFaqs(
+  articleId: string,
+  article?: LearnArticle,
+): LearnFaq[] {
   if (FAQS[articleId]) return FAQS[articleId];
   if (article) return genericFaqs(article);
   return genericFaqs({
@@ -380,7 +390,9 @@ export function getLearnArticleFaqs(articleId: string, article?: LearnArticle): 
   });
 }
 
-export function tocWithFaq(toc: { id: string; label: string }[]): { id: string; label: string }[] {
+export function tocWithFaq(
+  toc: { id: string; label: string }[],
+): { id: string; label: string }[] {
   if (toc.some((t) => t.id === "faq")) return toc;
   return [...toc, { id: "faq", label: "FAQs" }];
 }

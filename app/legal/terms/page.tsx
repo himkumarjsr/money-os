@@ -1,11 +1,12 @@
+import { pageMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms of Service | Finkoin",
-  description:
-    "Terms and conditions for using Finkoin financial analysis platform.",
-};
+  description: "Terms and conditions for using Finkoin.",
+  path: "/legal/terms",
+});
 
 export default function TermsPage() {
   return (

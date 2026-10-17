@@ -1,11 +1,13 @@
+import { pageMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import AnalyticsChoicesButton from "@/components/legal/AnalyticsChoicesButton";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy | Finkoin",
-  description: "How Finkoin collects, uses, and protects your financial data.",
-};
+  description: "How Finkoin collects, uses and protects your financial data.",
+  path: "/legal/privacy",
+});
 
 export default function PrivacyPage() {
   return (

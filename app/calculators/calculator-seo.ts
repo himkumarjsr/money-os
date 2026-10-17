@@ -687,7 +687,180 @@ export function buildCalculatorJsonLd(seo: CalculatorSeo) {
 }
 
 /** Related internal links for calculator SEO pages. */
+/** Learn guide that explains each calculator, shown first under "Related tools & guides". */
+export const CALC_LEARN_GUIDES: Record<
+  string,
+  { id: string; title: string; desc: string }
+> = {
+  epf: {
+    id: "epf-pf-explained-contribution-interest-withdrawal",
+    title: "EPF (PF) explained",
+    desc: "Contribution, interest, VPF and tax",
+  },
+  gratuity: {
+    id: "gratuity-calculation-formula-eligibility-tax",
+    title: "Gratuity guide",
+    desc: "Formula, eligibility and ₹20 lakh exemption",
+  },
+  "leave-encashment": {
+    id: "gratuity-calculation-formula-eligibility-tax",
+    title: "Gratuity guide",
+    desc: "Formula, eligibility and tax",
+  },
+  "stepup-sip": {
+    id: "step-up-sip-and-cost-of-delay",
+    title: "Step-up SIP guide",
+    desc: "Why raising your SIP yearly matters",
+  },
+  "sip-delay": {
+    id: "step-up-sip-and-cost-of-delay",
+    title: "Cost of delay guide",
+    desc: "What waiting five years costs",
+  },
+  "goal-sip": {
+    id: "step-up-sip-and-cost-of-delay",
+    title: "Step-up SIP guide",
+    desc: "Reach goals with a rising SIP",
+  },
+  xirr: {
+    id: "xirr-vs-cagr-vs-absolute-return",
+    title: "XIRR vs CAGR explained",
+    desc: "Which return number to trust",
+  },
+  cagr: {
+    id: "xirr-vs-cagr-vs-absolute-return",
+    title: "XIRR vs CAGR explained",
+    desc: "Which return number to trust",
+  },
+  "expense-ratio": {
+    id: "direct-vs-regular-mutual-funds-expense-ratio",
+    title: "Direct vs regular funds",
+    desc: "What the expense ratio costs",
+  },
+  "flat-vs-reducing": {
+    id: "flat-vs-reducing-interest-rate",
+    title: "Flat vs reducing rate guide",
+    desc: "The real cost of a flat-rate loan",
+  },
+  "loan-eligibility": {
+    id: "loan-eligibility-foir-explained",
+    title: "Loan eligibility and FOIR",
+    desc: "How banks decide your limit",
+  },
+  "debt-payoff": {
+    id: "debt-payoff-avalanche-vs-snowball",
+    title: "Avalanche vs snowball",
+    desc: "Fastest way to become debt-free",
+  },
+  "credit-card": {
+    id: "credit-card-minimum-trap",
+    title: "The minimum-due trap",
+    desc: "Why paying the minimum costs so much",
+  },
+  "balance-transfer": {
+    id: "debt-payoff-avalanche-vs-snowball",
+    title: "Avalanche vs snowball",
+    desc: "Clear several debts faster",
+  },
+  fd: {
+    id: "fd-rd-interest-tax-tds-15g-15h",
+    title: "FD and RD interest tax",
+    desc: "TDS limits, 15G/15H, post-tax return",
+  },
+  rd: {
+    id: "fd-rd-interest-tax-tds-15g-15h",
+    title: "FD and RD interest tax",
+    desc: "TDS limits, 15G/15H, post-tax return",
+  },
+  "net-worth": {
+    id: "how-to-calculate-net-worth",
+    title: "How to calculate net worth",
+    desc: "What to count and how to track it",
+  },
+  budget: {
+    id: "what-is-the-50-30-20-budgeting-rule",
+    title: "The 50/30/20 rule",
+    desc: "Budgeting explained simply",
+  },
+  inflation: {
+    id: "understanding-inflation-and-your-real-returns",
+    title: "Inflation and real returns",
+    desc: "What inflation does to savings",
+  },
+  "asset-allocation": {
+    id: "what-is-asset-allocation",
+    title: "Asset allocation guide",
+    desc: "How to split equity, debt and gold",
+  },
+  nps: {
+    id: "nps-vs-epf-for-retirement",
+    title: "NPS vs EPF",
+    desc: "Which is better for retirement",
+  },
+  gold: {
+    id: "gold-as-investment-myths",
+    title: "Gold as an investment",
+    desc: "Myths and facts",
+  },
+  emergency: {
+    id: "emergency-fund-how-much-where-to-keep-it",
+    title: "Emergency fund guide",
+    desc: "How much and where to keep it",
+  },
+  "health-cover": {
+    id: "what-is-health-insurance-floater",
+    title: "Health insurance floater",
+    desc: "How family floaters work",
+  },
+  "term-cover": {
+    id: "term-insurance-vs-endowment-why-most-indians-buy-wrong",
+    title: "Term vs endowment",
+    desc: "Why most Indians buy wrong",
+  },
+  hra: {
+    id: "hra-exemption-complete-guide-india",
+    title: "HRA exemption guide",
+    desc: "How the exemption is worked out",
+  },
+  "capital-gains": {
+    id: "stcg-vs-ltcg-on-equity-india",
+    title: "STCG vs LTCG on equity",
+    desc: "How gains are taxed",
+  },
+  "ltcg-harvest": {
+    id: "stcg-vs-ltcg-on-equity-india",
+    title: "STCG vs LTCG on equity",
+    desc: "How gains are taxed",
+  },
+  deductions: {
+    id: "section-80c-limits-and-beyond",
+    title: "80C and beyond",
+    desc: "Deductions explained",
+  },
+  compound: {
+    id: "what-is-compound-interest-and-why-it-changes-everything",
+    title: "Compound interest explained",
+    desc: "Formula and a rupee example",
+  },
+  "prepay-vs-invest": {
+    id: "prepayment-vs-tenure-reduction-home-loan",
+    title: "Prepay: EMI or tenure?",
+    desc: "Home loan prepayment explained",
+  },
+};
+
 export function getRelatedLinksForCalc(calcId: string) {
+  const guide = CALC_LEARN_GUIDES[calcId];
+  const links = relatedLinksWithoutGuide(calcId);
+  if (!guide) return links;
+  const href = `/learn/${guide.id}`;
+  return [
+    { href, title: guide.title, desc: guide.desc },
+    ...links.filter((l) => l.href !== href),
+  ];
+}
+
+function relatedLinksWithoutGuide(calcId: string) {
   const common = [
     {
       href: "/analyse",
