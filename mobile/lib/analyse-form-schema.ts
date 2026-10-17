@@ -2087,6 +2087,22 @@ export function coalesceInsuranceToggles<T extends Partial<AnalyseFormValues>>(
   return out;
 }
 
+/**
+ * A saved profile whose loans list no longer has a car, bike or personal loan
+ * but still carries that loan's old EMI field (saved before
+ * normalizeAnalyseFormValues stopped falling back to it).
+ */
+export function hasStaleLegacyLoanScalars(p: FinancialProfile): boolean {
+  if (!Array.isArray(p.unifiedLoans)) return false;
+  const has = (type: UnifiedLoanType) =>
+    p.unifiedLoans!.some((l) => l.loanType === type && (l.monthlyEMI ?? 0) > 0);
+  return (
+    ((p.personalLoanEMI ?? 0) > 0 && !has("personal_loan")) ||
+    ((p.carLoanEMI ?? 0) > 0 && !has("car_loan")) ||
+    ((p.bikeEMI ?? 0) > 0 && !has("bike_loan"))
+  );
+}
+
 export function normalizeAnalyseFormValues(
   data: Partial<AnalyseFormValues>,
 ): FinancialProfile {
@@ -2331,33 +2347,33 @@ export function normalizeAnalyseFormValues(
     rentAmount: form.rentAmount ?? 0,
     rentMaintenanceMonthly: form.rentMaintenanceMonthly,
     // Prefer unified row; keep assets-step / legacy scalars unless user cleared all loans.
+    // Car, bike and personal loans only exist in the loans list, so once it
+    // exists a loan removed from it (e.g. a re-filed Tracker row) stays removed.
     homeLoanEMI: clearStaleLegacyLoans
       ? 0
       : (firstHome?.monthlyEMI ?? form.homeLoanEMI ?? 0),
     secondPropertyEMI: clearStaleLegacyLoans
       ? 0
       : (form.secondPropertyEMI ?? 0),
-    carLoanEMI: clearStaleLegacyLoans
-      ? 0
-      : (firstCar?.monthlyEMI ?? form.carLoanEMI),
-    bikeEMI: clearStaleLegacyLoans
-      ? 0
-      : (firstBike?.monthlyEMI ?? form.bikeEMI),
-    personalLoanEMI: clearStaleLegacyLoans
-      ? 0
-      : (firstPersonal?.monthlyEMI ?? form.personalLoanEMI),
-    personalLoanOutstanding: clearStaleLegacyLoans
-      ? 0
-      : (firstPersonal?.outstandingAmount ?? form.personalLoanOutstanding),
-    personalLoanLenderName: clearStaleLegacyLoans
-      ? ""
-      : (firstPersonal?.lenderName ?? form.personalLoanLenderName ?? ""),
-    personalLoanRate: clearStaleLegacyLoans
-      ? 0
-      : (firstPersonal?.interestRate ?? form.personalLoanRate),
-    personalLoanRemainingMonths: clearStaleLegacyLoans
-      ? 0
-      : (firstPersonal?.remainingMonths ?? form.personalLoanRemainingMonths),
+    carLoanEMI: formUnifiedDefined
+      ? (firstCar?.monthlyEMI ?? 0)
+      : form.carLoanEMI,
+    bikeEMI: formUnifiedDefined ? (firstBike?.monthlyEMI ?? 0) : form.bikeEMI,
+    personalLoanEMI: formUnifiedDefined
+      ? (firstPersonal?.monthlyEMI ?? 0)
+      : form.personalLoanEMI,
+    personalLoanOutstanding: formUnifiedDefined
+      ? (firstPersonal?.outstandingAmount ?? 0)
+      : form.personalLoanOutstanding,
+    personalLoanLenderName: formUnifiedDefined
+      ? (firstPersonal?.lenderName ?? "")
+      : (form.personalLoanLenderName ?? ""),
+    personalLoanRate: formUnifiedDefined
+      ? (firstPersonal?.interestRate ?? 0)
+      : form.personalLoanRate,
+    personalLoanRemainingMonths: formUnifiedDefined
+      ? (firstPersonal?.remainingMonths ?? 0)
+      : form.personalLoanRemainingMonths,
     homeLoanLenderName: clearStaleLegacyLoans
       ? ""
       : (firstHome?.lenderName ?? form.homeLoanLenderName ?? ""),
@@ -2367,24 +2383,24 @@ export function normalizeAnalyseFormValues(
     homeLoanRemainingMonths: clearStaleLegacyLoans
       ? 0
       : (firstHome?.remainingMonths ?? form.homeLoanRemainingMonths),
-    carLoanLenderName: clearStaleLegacyLoans
-      ? ""
-      : (firstCar?.lenderName ?? form.carLoanLenderName ?? ""),
-    carLoanRate: clearStaleLegacyLoans
-      ? 0
-      : (firstCar?.interestRate ?? form.carLoanRate),
-    carLoanRemainingMonths: clearStaleLegacyLoans
-      ? 0
-      : (firstCar?.remainingMonths ?? form.carLoanRemainingMonths),
-    bikeLoanLenderName: clearStaleLegacyLoans
-      ? ""
-      : (firstBike?.lenderName ?? form.bikeLoanLenderName ?? ""),
-    bikeLoanRate: clearStaleLegacyLoans
-      ? 0
-      : (firstBike?.interestRate ?? form.bikeLoanRate),
-    bikeLoanRemainingMonths: clearStaleLegacyLoans
-      ? 0
-      : (firstBike?.remainingMonths ?? form.bikeLoanRemainingMonths),
+    carLoanLenderName: formUnifiedDefined
+      ? (firstCar?.lenderName ?? "")
+      : (form.carLoanLenderName ?? ""),
+    carLoanRate: formUnifiedDefined
+      ? (firstCar?.interestRate ?? 0)
+      : form.carLoanRate,
+    carLoanRemainingMonths: formUnifiedDefined
+      ? (firstCar?.remainingMonths ?? 0)
+      : form.carLoanRemainingMonths,
+    bikeLoanLenderName: formUnifiedDefined
+      ? (firstBike?.lenderName ?? "")
+      : (form.bikeLoanLenderName ?? ""),
+    bikeLoanRate: formUnifiedDefined
+      ? (firstBike?.interestRate ?? 0)
+      : form.bikeLoanRate,
+    bikeLoanRemainingMonths: formUnifiedDefined
+      ? (firstBike?.remainingMonths ?? 0)
+      : form.bikeLoanRemainingMonths,
     bikeOutstanding: clearStaleLegacyLoans ? 0 : form.bikeOutstanding,
     creditCardBillMonthly: form.creditCardBillMonthly,
     creditCardEmiMonthly: form.creditCardEmiMonthly ?? 0,
