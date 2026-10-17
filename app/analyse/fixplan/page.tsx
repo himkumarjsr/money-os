@@ -47,6 +47,7 @@ import NetWorthTrajectoryCard from "@/components/analyse/NetWorthTrajectoryCard"
 import NoConflictNote from "@/components/analyse/NoConflictNote";
 import { projectNetWorth } from "@/lib/netWorthTrajectory";
 import LoanSyncNotices from "@/components/analyse/LoanSyncNotices";
+import { groupMonthlyPlan } from "@/lib/monthlyPlanGroups";
 import { useAuthStore } from "@/store/authStore";
 import {
   useObligationStore,
@@ -331,6 +332,7 @@ export default function FixPlanPage() {
   const visiblePriorities = openPriorities(aiPlan?.priorityPlan);
   const attentionCount = visiblePriorities.length;
   const monthlyPlanRows = aiPlan?.priorityPlan?.monthlyPlan || [];
+  const monthlyPlanGroups = groupMonthlyPlan(monthlyPlanRows);
   const showEmergencyCol = monthlyPlanRows.some(
     (m: any) => Number(m?.emergency || 0) > 0,
   );
@@ -464,10 +466,7 @@ export default function FixPlanPage() {
           ) : null}
         </section>
 
-        <LoanSyncNotices
-          status={loanStatus}
-          onSaveDetails={saveLoanDetails}
-        />
+        <LoanSyncNotices status={loanStatus} onSaveDetails={saveLoanDetails} />
 
         {aiPlan.priorityPlan?.surplusBreakdown ? (
           <details className="rounded-xl bg-[#F7F7F4] p-4 text-sm">
@@ -676,8 +675,11 @@ export default function FixPlanPage() {
         {monthlyPlanRows.length > 0 ? (
           <section className="rounded-2xl bg-white p-4 shadow-sm">
             <h3 className="text-lg font-semibold">
-              Month-wise execution plan (12 months)
+              Month-wise plan for the next 12 months
             </h3>
+            <p className="mt-1 text-xs text-slate-600">
+              Months that repeat the same split are shown together.
+            </p>
             <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full min-w-[980px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-600">
@@ -701,12 +703,14 @@ export default function FixPlanPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {monthlyPlanRows.map((m: any) => (
+                  {monthlyPlanGroups.map((m) => (
                     <tr
-                      key={`month-plan-${m.month}`}
+                      key={`month-plan-${m.fromMonth}`}
                       className="border-t border-slate-100"
                     >
-                      <td className="px-3 py-2 font-medium">{m.month}</td>
+                      <td className="whitespace-nowrap px-3 py-2 font-medium">
+                        {m.label}
+                      </td>
                       {showEmergencyCol ? (
                         <td className="px-3 py-2">
                           ₹
@@ -786,6 +790,7 @@ export default function FixPlanPage() {
                       monthsNow,
                       monthsSaved,
                       interestSaved,
+                      emiTooLow,
                     } = debtPayoffNumbers(debt);
                     const label =
                       debt.displayName || debt.label || debt.name || debt.type;
@@ -829,6 +834,21 @@ export default function FixPlanPage() {
                               : `${debt.rate || debt.interestRate || 0}% interest`}
                           </div>
                         </div>
+                        {emiTooLow ? (
+                          <p
+                            style={{
+                              fontSize: 12,
+                              color: "#B4232A",
+                              margin: "0 0 8px",
+                            }}
+                          >
+                            ₹{currentEMI.toLocaleString("en-IN")}/mo barely
+                            covers the interest on ₹
+                            {outstanding.toLocaleString("en-IN")}, so this loan
+                            would take years to clear. Check the EMI and balance
+                            in Tracker.
+                          </p>
+                        ) : null}
                         <div
                           style={{
                             display: "grid",
@@ -1262,7 +1282,11 @@ function GoalSplitCard({
   const budget = goals.reduce((s, g) => s + (g.monthlyAllocated ?? 0), 0);
   const shortfall = goals.reduce(
     (s, g) =>
-      s + Math.max(0, g.monthlyRequired - (g.monthlyAllocated ?? g.monthlyRequired)),
+      s +
+      Math.max(
+        0,
+        g.monthlyRequired - (g.monthlyAllocated ?? g.monthlyRequired),
+      ),
     0,
   );
   return (
@@ -1344,7 +1368,9 @@ function GoalSplitCard({
                   ) : null}
                 </div>
               ) : (
-                <p className="text-xs text-[#7A7871]">Instrument: {g.instrument}</p>
+                <p className="text-xs text-[#7A7871]">
+                  Instrument: {g.instrument}
+                </p>
               )}
               {g.goalId && progress?.[g.goalId] ? (
                 <p className="mt-2 text-xs font-semibold text-[#1D9E75]">
