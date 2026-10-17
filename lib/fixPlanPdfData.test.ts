@@ -43,13 +43,20 @@ describe("buildFixPlanPdfData", () => {
           { type: "car_loan", rate: 9 },
         ],
         priorities: [
-          { id: "sip", rank: 4, title: "Start SIP" },
+          {
+            id: "sip",
+            rank: 4,
+            title: "Start SIP",
+            gap: 1000,
+            monthlyContribution: 1000,
+          },
           {
             id: "term_insurance",
             rank: 2,
             title: "Term cover",
             actionThisWeek: "Buy term plan",
             gap: 10000000,
+            monthlyContribution: 2000,
           },
           {
             id: "emergency_fund",
@@ -57,6 +64,7 @@ describe("buildFixPlanPdfData", () => {
             title: "Emergency fund",
             description: "Park 3 months in liquid fund",
             gap: 150000,
+            monthlyContribution: 5000,
           },
           {
             id: "health_insurance",
@@ -80,18 +88,28 @@ describe("buildFixPlanPdfData", () => {
     expect(phases[0].tasks).toEqual([
       "Emergency fund: Park 3 months in liquid fund",
     ]);
-    expect(phases[0].outcomes).toEqual(["Address top risk: Unranked"]);
+    expect(phases[0].outcomes).toEqual(["Address top risk: Emergency fund"]);
     expect(phases[1].tasks).toEqual([
       "Term cover — Buy term plan",
-      "Health cover",
+      "Start SIP",
     ]);
     expect(phases[1].outcomes).toEqual([longIn12.slice(0, 160)]);
-    expect(phases[2].tasks).toEqual(["Start SIP"]);
+    expect(phases[2].tasks).toEqual(["Grow wealth systematically"]);
   });
 
   it("uses whyThisMatters when a rank-1 priority has no action or description", () => {
     const { phases } = buildFixPlanPdfData(
-      { priorities: [{ rank: 1, title: "Fund", whyThisMatters: "Because" }] },
+      {
+        priorities: [
+          {
+            rank: 1,
+            title: "Fund",
+            whyThisMatters: "Because",
+            gap: 100,
+            monthlyContribution: 10,
+          },
+        ],
+      },
       {},
     );
     expect(phases[0].tasks).toEqual(["Fund: Because"]);
@@ -145,5 +163,37 @@ describe("buildFixPlanPdf (server path)", () => {
       {},
     );
     expect(fileName).toMatch(/^Finkoin-Report-User-\d{4}-\d{2}-\d{2}\.pdf$/);
+  });
+});
+
+describe("buildFixPlanPdfData skips finished steps", () => {
+  it("leaves a done step out and keeps one paid from savings", () => {
+    const { phases } = buildFixPlanPdfData(
+      {
+        priorities: [
+          {
+            id: "emergency_fund",
+            rank: 1,
+            title: "Emergency fund",
+            gap: 0,
+            monthlyContribution: 0,
+            status: "complete",
+          },
+          {
+            id: "medical_fund",
+            rank: 2,
+            title: "Medical emergency fund",
+            gap: 300000,
+            monthlyContribution: 0,
+            fromSavings: 300000,
+            actionThisWeek: "Move ₹3,00,000 of your spare savings",
+          },
+        ],
+      },
+      {},
+    );
+    expect(phases[0].tasks).toEqual([
+      "Medical emergency fund: Move ₹3,00,000 of your spare savings",
+    ]);
   });
 });

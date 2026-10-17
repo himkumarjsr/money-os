@@ -33,6 +33,8 @@ export interface PriorityItem {
   canBuyFromFinkoin: boolean;
   finkoinProductType?: string;
   startMonth?: number;
+  /** Paid in one go from existing savings, on top of any monthly amount. */
+  fromSavings?: number;
 }
 
 export interface DebtItem {
@@ -509,6 +511,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     icon: "🏥",
     canBuyFromFinkoin: false,
     startMonth: medicalStartMonth,
+    ...(medicalFromCash > 0 ? { fromSavings: medicalFromCash } : {}),
   });
 
   const annualIncome = monthlyIncome * 12;
