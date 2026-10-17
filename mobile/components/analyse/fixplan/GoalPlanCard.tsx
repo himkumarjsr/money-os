@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { GoalAdvice } from "@/lib/fixPlanMerge";
 import {
@@ -5,6 +6,7 @@ import {
   type GoalPlanProgress,
 } from "@/lib/plannedInvestments";
 import type { GoalItem } from "@/lib/priorityEngine";
+import { goalTimeline } from "@/lib/goalTimeline";
 import { Colors, Spacing, themedStyles } from "@/constants/theme";
 import { loc, shared } from "./shared";
 
@@ -99,6 +101,7 @@ export function GoalPlanCard({
                   Instrument: {g.instrument}
                 </Text>
               )}
+              <GoalTimeline goal={g} />
               {g.goalId && progress?.[g.goalId] ? (
                 <Text style={styles.progress}>
                   {progress[g.goalId].started >= progress[g.goalId].total
@@ -145,6 +148,53 @@ export function GoalPlanCard({
             Creates reminders and Tracker items only. Nothing is invested
             automatically.
           </Text>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+/** Year-by-year growth of one goal's plan up to its target year (matches web). */
+function GoalTimeline({ goal }: { goal: GoalItem }) {
+  const [open, setOpen] = useState(false);
+  const t = goalTimeline(goal);
+  if (!t) return null;
+  const last = t.rows[t.rows.length - 1];
+  return (
+    <View style={styles.timeline}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((v) => !v)}
+        style={styles.timelineToggle}
+      >
+        <Text style={styles.timelineTitle}>
+          {open ? "▾" : "▸"} Year-by-year plan till {last.year}
+        </Text>
+      </Pressable>
+      {open ? (
+        <>
+          <Text style={styles.timelineNote}>
+            ₹{loc(t.monthly)}/month growing at about {t.realReturnPct}% a year
+            after inflation, in today&apos;s rupees. &quot;On track&quot; is
+            where the full ₹{loc(Math.round(goal.monthlyRequired))}/month would get you.
+          </Text>
+          <View style={styles.tRow}>
+            <Text style={[styles.tCell, styles.tHead, styles.tYear]}>Year</Text>
+            <Text style={[styles.tCell, styles.tHead]}>Put in</Text>
+            <Text style={[styles.tCell, styles.tHead]}>Worth</Text>
+            <Text style={[styles.tCell, styles.tHead]}>On track</Text>
+          </View>
+          {t.rows.map((r) => (
+            <View key={r.year} style={[styles.tRow, styles.tLine]}>
+              <Text style={[styles.tCell, styles.tYear]}>{r.year}</Text>
+              <Text style={styles.tCell}>₹{loc(r.invested)}</Text>
+              <Text style={[styles.tCell, { fontWeight: "700" }]}>
+                ₹{loc(r.expected)}
+              </Text>
+              <Text style={styles.tCell}>₹{loc(r.needed)}</Text>
+            </View>
+          ))}
         </>
       ) : null}
     </View>
@@ -242,4 +292,30 @@ const styles = themedStyles(() => ({
   },
   adviceText: { fontSize: 13, lineHeight: 18, color: Colors.textSecondary },
   watch: { color: Colors.warningText },
+  timeline: {
+    marginTop: Spacing.sm,
+    borderRadius: 8,
+    backgroundColor: Colors.surfaceMuted,
+    padding: Spacing.sm,
+  },
+  timelineToggle: { minHeight: 32, justifyContent: "center" },
+  timelineTitle: { fontSize: 12, fontWeight: "600", color: Colors.primaryText },
+  timelineNote: {
+    marginTop: 4,
+    marginBottom: 4,
+    fontSize: 11,
+    lineHeight: 15,
+    color: Colors.textMuted,
+  },
+  tRow: { flexDirection: "row", paddingVertical: 2 },
+  tLine: { borderTopWidth: 1, borderTopColor: Colors.border },
+  tCell: {
+    flex: 1,
+    fontSize: 11,
+    textAlign: "right",
+    color: Colors.textSecondary,
+    fontVariant: ["tabular-nums"],
+  },
+  tYear: { flex: 0.7, textAlign: "left" },
+  tHead: { fontWeight: "600", color: Colors.textMuted },
 }));

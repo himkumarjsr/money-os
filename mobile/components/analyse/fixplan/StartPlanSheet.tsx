@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 import {
@@ -7,7 +7,10 @@ import {
   formatStartMonth,
   monthStart,
   PLANNED_REMIND_DAYS_BEFORE,
+  plannedDraftKey,
   savePlannedInvestments,
+  START_MONTH_CHOICES,
+  withoutSavingsAccount,
 } from "@/lib/plannedInvestments";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { getSupabase } from "@/lib/supabase";
@@ -29,16 +32,33 @@ export function StartPlanSheet({
   hasExisting: boolean;
   onSaved: () => void;
 }) {
-  const [offset, setOffset] = useState<0 | 1>(1);
+  const [offset, setOffset] = useState(1);
+  const [off, setOff] = useState<Set<string>>(() => new Set());
+  const [hasSavings, setHasSavings] = useState(true);
   const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const startMonth = monthStart(new Date(), offset);
-  const drafts = useMemo(
-    () => buildPlannedDrafts(goals, startMonth),
+  const allDrafts = useMemo(() => {
+    const built = buildPlannedDrafts(goals, startMonth);
+    return hasSavings ? built : withoutSavingsAccount(built);
+  }, [goals, startMonth, hasSavings]);
+  const asksSavings = useMemo(
+    () =>
+      buildPlannedDrafts(goals, startMonth).some(
+        (d) => d.instrument_key === "savings_sweep",
+      ),
     [goals, startMonth],
   );
+  const drafts = allDrafts.filter((d) => !off.has(plannedDraftKey(d)));
+  const toggle = (key: string) =>
+    setOff((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const total = drafts.reduce((s, d) => s + d.monthly_amount, 0);
   const goalCount = new Set(drafts.map((d) => d.source_id)).size;
   const canSave = agreed && !saving && drafts.length > 0;
@@ -90,14 +110,18 @@ export function StartPlanSheet({
       </View>
 
       <Text style={styles.label}>Start from</Text>
-      <View style={styles.choices}>
-        {([0, 1] as const).map((o) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.months}
+      >
+        {Array.from({ length: START_MONTH_CHOICES }, (_, o) => (
           <Pressable
             key={o}
             accessibilityRole="button"
             accessibilityState={{ selected: offset === o }}
             onPress={() => setOffset(o)}
-            style={[styles.choice, offset === o && styles.choiceOn]}
+            style={[styles.month, offset === o && styles.choiceOn]}
           >
             <Text
               style={[
@@ -105,30 +129,83 @@ export function StartPlanSheet({
                 offset === o && { color: Colors.onPrimary },
               ]}
             >
-              {o === 0 ? "This month" : "Next month"} ·{" "}
               {formatStartMonth(monthStart(new Date(), o))}
             </Text>
+            {o < 2 ? (
+              <Text
+                style={[
+                  styles.monthHint,
+                  offset === o && { color: Colors.onPrimary },
+                ]}
+              >
+                {o === 0 ? "This month" : "Next month"}
+              </Text>
+            ) : null}
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
 
-      <View style={styles.preview}>
-        {drafts.map((d) => (
-          <View
-            key={`${d.source_id}|${d.instrument_key}`}
-            style={styles.previewRow}
-          >
-            <Text style={styles.previewLabel}>
-              <Text style={{ fontWeight: "600", color: Colors.textPrimary }}>
-                {d.source_label}
-              </Text>{" "}
-              · {d.instrument_label}
-            </Text>
-            <Text style={styles.previewAmount}>
-              ₹{d.monthly_amount.toLocaleString("en-IN")}
-            </Text>
+      {asksSavings ? (
+        <>
+          <Text style={styles.label}>
+            Do you have a savings account or sweep-in FD to keep short-term goal
+            money in?
+          </Text>
+          <View style={styles.choices}>
+            {([true, false] as const).map((v) => (
+              <Pressable
+                key={String(v)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: hasSavings === v }}
+                onPress={() => setHasSavings(v)}
+                style={[styles.choice, hasSavings === v && styles.choiceOn]}
+              >
+                <Text
+                  style={[
+                    styles.choiceText,
+                    hasSavings === v && { color: Colors.onPrimary },
+                  ]}
+                >
+                  {v ? "Yes" : "No, use a liquid fund"}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-        ))}
+        </>
+      ) : null}
+
+      <Text style={styles.note}>
+        Untick anything you don&apos;t want. The total updates as you go.
+      </Text>
+      <View style={styles.preview}>
+        {allDrafts.map((d) => {
+          const key = plannedDraftKey(d);
+          const on = !off.has(key);
+          return (
+            <Pressable
+              key={key}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: on }}
+              onPress={() => toggle(key)}
+              style={styles.previewRow}
+            >
+              <View style={[styles.smallBox, on && styles.checkboxOn]}>
+                {on ? <Text style={styles.smallTick}>✓</Text> : null}
+              </View>
+              <Text style={[styles.previewLabel, !on && styles.offText]}>
+                <Text style={{ fontWeight: "600" }}>{d.source_label}</Text> ·{" "}
+                {d.instrument_label}
+              </Text>
+              <Text style={[styles.previewAmount, !on && styles.offText]}>
+                ₹{d.monthly_amount.toLocaleString("en-IN")}
+              </Text>
+            </Pressable>
+          );
+        })}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalText}>Total per month</Text>
+          <Text style={styles.totalText}>₹{total.toLocaleString("en-IN")}</Text>
+        </View>
       </View>
 
       {hasExisting ? (
@@ -231,10 +308,49 @@ const styles = themedStyles(() => ({
   },
   previewRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: Spacing.md,
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    minHeight: 36,
   },
-  previewLabel: { flex: 1, fontSize: 13, color: Colors.textSecondary },
+  months: { gap: Spacing.sm, paddingVertical: 2 },
+  month: {
+    minHeight: 48,
+    minWidth: 96,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.md,
+  },
+  monthHint: { fontSize: 11, color: Colors.textMuted },
+  smallBox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  smallTick: { color: Colors.onPrimary, fontSize: 11, fontWeight: "700" },
+  offText: { color: Colors.textMuted, textDecorationLine: "line-through" },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  totalText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    fontVariant: ["tabular-nums"],
+  },
+  previewLabel: { flex: 1, fontSize: 13, color: Colors.textPrimary },
   previewAmount: {
     fontSize: 13,
     color: Colors.textSecondary,

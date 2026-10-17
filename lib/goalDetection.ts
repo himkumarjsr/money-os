@@ -74,8 +74,17 @@ function loansOutstanding(p: Partial<FinancialProfile>) {
     (l) => n(l.monthlyEMI) > 0 && l.loanType !== "credit_card",
   );
   const outstanding = loans.reduce((s, l) => s + n(l.outstandingAmount), 0);
-  const months = loans.reduce((m, l) => Math.max(m, n(l.remainingMonths)), 0);
-  return { count: loans.length, outstanding, months };
+  // A balance smaller than one month of all EMIs can be paid off at once, so
+  // its own (often long) tenure doesn't set the debt-free year.
+  const totalEmi = loans.reduce((s, l) => s + n(l.monthlyEMI), 0);
+  const small = loans.filter(
+    (l) => n(l.outstandingAmount) > 0 && n(l.outstandingAmount) <= totalEmi,
+  );
+  const months = loans
+    .filter((l) => !small.includes(l))
+    .reduce((m, l) => Math.max(m, n(l.remainingMonths)), small.length ? 1 : 0);
+  const smallNames = small.map((l) => l.lenderName?.trim()).filter(Boolean);
+  return { count: loans.length, outstanding, months, smallNames };
 }
 
 function hasLoans(p: Partial<FinancialProfile>): boolean {
@@ -217,7 +226,10 @@ export function detectGoals(
   }
 
   if (hasLoans(p)) {
-    const { count, outstanding, months } = loansOutstanding(p);
+    const { count, outstanding, months, smallNames } = loansOutstanding(p);
+    const payNow = smallNames.length
+      ? ` Pay off ${smallNames.join(", ")} in one go.`
+      : "";
     add({
       id: "debt_free",
       type: "debt_free",
@@ -229,9 +241,10 @@ export function detectGoals(
       editable: { amount: false, year: false },
       removable: false,
       reason:
-        count > 1
+        (count > 1
           ? `${count} loans on file — clear them, highest interest first.`
-          : "You have a loan on file — clearing it frees up your EMI.",
+          : "You have a loan on file — clearing it frees up your EMI.") +
+        payNow,
     });
   }
 
