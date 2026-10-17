@@ -12,6 +12,8 @@ import {
   savePlannedInvestments,
   setPlannedInvestmentStatus,
   type PlannedInvestment,
+  type PlannedInvestmentDraft,
+  withoutSavingsAccount,
 } from "@/lib/plannedInvestments";
 
 function goal(over: Partial<GoalItem>): GoalItem {
@@ -29,7 +31,10 @@ function goal(over: Partial<GoalItem>): GoalItem {
     readyToStart: true,
     blockedBy: null,
     icon: "",
-    allocation: allocateGoalPortfolio({ yearsToGoal: over.yearsToGoal ?? 25, monthly }),
+    allocation: allocateGoalPortfolio({
+      yearsToGoal: over.yearsToGoal ?? 25,
+      monthly,
+    }),
     ...over,
   } as GoalItem;
 }
@@ -66,17 +71,31 @@ describe("monthStart", () => {
 
 describe("buildPlannedDrafts", () => {
   it("creates one draft per instrument slice of each funded goal", () => {
-    const goals = [goal({}), goal({ goalId: "home", label: "Home", yearsToGoal: 5 })];
+    const goals = [
+      goal({}),
+      goal({ goalId: "home", label: "Home", yearsToGoal: 5 }),
+    ];
     const drafts = buildPlannedDrafts(goals, "2026-11-01");
-    const sliceCount = goals.reduce((s, g) => s + (g.allocation?.slices.length ?? 0), 0);
+    const sliceCount = goals.reduce(
+      (s, g) => s + (g.allocation?.slices.length ?? 0),
+      0,
+    );
     expect(drafts).toHaveLength(sliceCount);
     expect(drafts.every((d) => d.start_month === "2026-11-01")).toBe(true);
-    expect(drafts.filter((d) => d.source_id === "home").reduce((s, d) => s + d.monthly_amount, 0)).toBe(10_000);
+    expect(
+      drafts
+        .filter((d) => d.source_id === "home")
+        .reduce((s, d) => s + d.monthly_amount, 0),
+    ).toBe(10_000);
   });
 
   it("skips goals without an id or a split", () => {
-    expect(buildPlannedDrafts([goal({ goalId: undefined })], "2026-11-01")).toEqual([]);
-    expect(buildPlannedDrafts([goal({ allocation: undefined })], "2026-11-01")).toEqual([]);
+    expect(
+      buildPlannedDrafts([goal({ goalId: undefined })], "2026-11-01"),
+    ).toEqual([]);
+    expect(
+      buildPlannedDrafts([goal({ allocation: undefined })], "2026-11-01"),
+    ).toEqual([]);
     expect(buildPlannedDrafts(undefined, "2026-11-01")).toEqual([]);
   });
 });
@@ -90,7 +109,11 @@ describe("plannedProgressBySource", () => {
       row({ id: "d", start_month: "2026-11-01" }),
       row({ id: "e", source_id: "home", status: "started" }),
     ]);
-    expect(p.retirement).toEqual({ total: 4, started: 2, nextStart: "2026-11-01" });
+    expect(p.retirement).toEqual({
+      total: 4,
+      started: 2,
+      nextStart: "2026-11-01",
+    });
     expect(p.home).toEqual({ total: 1, started: 1, nextStart: null });
   });
 });
@@ -104,8 +127,12 @@ describe("isPlannedReminderDue", () => {
   });
   it("never fires twice or for started rows", () => {
     const today = new Date(2026, 10, 1);
-    expect(isPlannedReminderDue({ ...nov, reminded_at: "x" }, today)).toBe(false);
-    expect(isPlannedReminderDue({ ...nov, status: "started" }, today)).toBe(false);
+    expect(isPlannedReminderDue({ ...nov, reminded_at: "x" }, today)).toBe(
+      false,
+    );
+    expect(isPlannedReminderDue({ ...nov, status: "started" }, today)).toBe(
+      false,
+    );
   });
 });
 
@@ -119,7 +146,9 @@ describe("plannedReminderCopy", () => {
 });
 
 /** Minimal chainable Supabase double recording every call. */
-function fakeSupabase(pendingRows: Array<{ id: string; source_id: string; instrument_key: string }>) {
+function fakeSupabase(
+  pendingRows: Array<{ id: string; source_id: string; instrument_key: string }>,
+) {
   const calls: Array<{ op: string; args: unknown[] }> = [];
   const builder = (result: unknown) => {
     const b: any = {
@@ -163,17 +192,30 @@ describe("savePlannedInvestments", () => {
   it("upserts drafts with consent and only deletes stale pending rows, scoped to the user", async () => {
     const drafts = buildPlannedDrafts([goal({})], "2026-11-01");
     const { sb, calls } = fakeSupabase([
-      { id: "keep", source_id: "retirement", instrument_key: drafts[0].instrument_key },
+      {
+        id: "keep",
+        source_id: "retirement",
+        instrument_key: drafts[0].instrument_key,
+      },
       { id: "stale", source_id: "old_goal", instrument_key: "fd_cd" },
     ]);
-    await savePlannedInvestments(sb, "u1", drafts, new Date("2026-10-07T10:00:00Z"));
+    await savePlannedInvestments(
+      sb,
+      "u1",
+      drafts,
+      new Date("2026-10-07T10:00:00Z"),
+    );
 
     const upsert = calls.find((c) => c.op === "upsert")!;
     const rows = upsert.args[0] as Array<Record<string, unknown>>;
     expect(rows.every((r) => r.user_id === "u1")).toBe(true);
-    expect(rows.every((r) => r.consent_given_at === "2026-10-07T10:00:00.000Z")).toBe(true);
+    expect(
+      rows.every((r) => r.consent_given_at === "2026-10-07T10:00:00.000Z"),
+    ).toBe(true);
     expect(rows.every((r) => !("status" in r))).toBe(true);
-    expect(upsert.args[1]).toEqual({ onConflict: "user_id,source_id,instrument_key" });
+    expect(upsert.args[1]).toEqual({
+      onConflict: "user_id,source_id,instrument_key",
+    });
 
     expect(calls).toContainEqual({ op: "eq", args: ["status", "pending"] });
     const delIdx = calls.findIndex((c) => c.op === "delete");
@@ -189,10 +231,17 @@ describe("setPlannedInvestmentStatus", () => {
     const now = new Date("2026-11-02T00:00:00Z");
     await setPlannedInvestmentStatus(sb, "u1", "r1", "started", now);
     await setPlannedInvestmentStatus(sb, "u1", "r1", "pending", now);
-    const updates = calls.filter((c) => c.op === "update").map((c) => c.args[0] as any);
-    expect(updates[0]).toMatchObject({ status: "started", started_at: now.toISOString() });
+    const updates = calls
+      .filter((c) => c.op === "update")
+      .map((c) => c.args[0] as any);
+    expect(updates[0]).toMatchObject({
+      status: "started",
+      started_at: now.toISOString(),
+    });
     expect(updates[1]).toMatchObject({ status: "pending", started_at: null });
-    expect(calls.filter((c) => c.op === "eq" && (c.args as any)[0] === "user_id")).toHaveLength(2);
+    expect(
+      calls.filter((c) => c.op === "eq" && (c.args as any)[0] === "user_id"),
+    ).toHaveLength(2);
   });
 });
 
@@ -202,7 +251,9 @@ describe("migration 040", () => {
     "utf8",
   );
   it("enables owner-only RLS on the new table", () => {
-    expect(sql).toMatch(/ALTER TABLE public\.user_planned_investments ENABLE ROW LEVEL SECURITY/);
+    expect(sql).toMatch(
+      /ALTER TABLE public\.user_planned_investments ENABLE ROW LEVEL SECURITY/,
+    );
     expect(sql).toMatch(/USING \(auth\.uid\(\) = user_id\)/);
     expect(sql).toMatch(/WITH CHECK \(auth\.uid\(\) = user_id\)/);
   });
@@ -211,7 +262,49 @@ describe("migration 040", () => {
     expect(sql).toMatch(/status IN \('pending', 'started', 'done'\)/);
   });
   it("is removed on account deletion", () => {
-    const route = readFileSync(join(__dirname, "../app/api/account/delete/route.ts"), "utf8");
+    const route = readFileSync(
+      join(__dirname, "../app/api/account/delete/route.ts"),
+      "utf8",
+    );
     expect(route).toContain('"user_planned_investments"');
+  });
+});
+
+describe("withoutSavingsAccount", () => {
+  const d = (
+    source_id: string,
+    instrument_key: string,
+    monthly_amount: number,
+  ): PlannedInvestmentDraft => ({
+    source_kind: "goal",
+    source_id,
+    source_label: source_id,
+    instrument_key,
+    instrument_label: instrument_key,
+    monthly_amount,
+    start_month: "2026-11-01",
+  });
+
+  it("moves the savings slice into the same goal's liquid fund", () => {
+    const out = withoutSavingsAccount([
+      d("baby", "savings_sweep", 9_480),
+      d("baby", "liquid_fund", 14_219),
+      d("baby", "gold", 1_247),
+      d("home", "hybrid", 17_252),
+    ]);
+    expect(
+      out.find((x) => x.instrument_key === "savings_sweep"),
+    ).toBeUndefined();
+    expect(
+      out.find((x) => x.instrument_key === "liquid_fund")?.monthly_amount,
+    ).toBe(23_699);
+    expect(out.reduce((s, x) => s + x.monthly_amount, 0)).toBe(42_198);
+  });
+
+  it("turns the slice into a liquid fund when the goal has none", () => {
+    const out = withoutSavingsAccount([d("baby", "savings_sweep", 5_000)]);
+    expect(out).toMatchObject([
+      { instrument_key: "liquid_fund", monthly_amount: 5_000 },
+    ]);
   });
 });
