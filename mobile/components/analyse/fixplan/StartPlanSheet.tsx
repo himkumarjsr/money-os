@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
@@ -8,13 +8,19 @@ import {
   monthStart,
   PLANNED_REMIND_DAYS_BEFORE,
   plannedDraftKey,
+  redistributeUnticked,
   savePlannedInvestments,
   START_MONTH_CHOICES,
   withoutSavingsAccount,
 } from "@/lib/plannedInvestments";
+import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { getSupabase } from "@/lib/supabase";
+import { applyTrackerCover, trackerPlanFit } from "@/lib/trackerPlanFit";
 import { GoldText } from "@/components/ui/GoldMirror";
+import { useObligationStore } from "@/store/obligationStore";
+
+const rs = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 /** Matches web StartPlanSheet: consent before any reminder is created. Nothing is ever invested. */
 export function StartPlanSheet({
@@ -22,6 +28,7 @@ export function StartPlanSheet({
   onClose,
   userId,
   goals,
+  profile,
   hasExisting,
   onSaved,
 }: {
@@ -29,6 +36,7 @@ export function StartPlanSheet({
   onClose: () => void;
   userId: string;
   goals: GoalItem[];
+  profile: FinancialProfile | null;
   hasExisting: boolean;
   onSaved: () => void;
 }) {
@@ -39,11 +47,25 @@ export function StartPlanSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const obligations = useObligationStore((st) => st.obligations);
+  useEffect(() => {
+    if (visible && userId)
+      void useObligationStore.getState().fetchObligations(userId);
+  }, [visible, userId]);
+
   const startMonth = monthStart(new Date(), offset);
-  const allDrafts = useMemo(() => {
+  const fit = useMemo(
+    () => trackerPlanFit(obligations, profile, startMonth),
+    [obligations, profile, startMonth],
+  );
+  const { allDrafts, taken } = useMemo(() => {
     const built = buildPlannedDrafts(goals, startMonth);
-    return hasSavings ? built : withoutSavingsAccount(built);
-  }, [goals, startMonth, hasSavings]);
+    const r = applyTrackerCover(
+      hasSavings ? built : withoutSavingsAccount(built),
+      fit.investmentCover,
+    );
+    return { allDrafts: r.drafts, taken: r.taken };
+  }, [goals, startMonth, hasSavings, fit.investmentCover]);
   const asksSavings = useMemo(
     () =>
       buildPlannedDrafts(goals, startMonth).some(
@@ -51,7 +73,11 @@ export function StartPlanSheet({
       ),
     [goals, startMonth],
   );
-  const drafts = allDrafts.filter((d) => !off.has(plannedDraftKey(d)));
+  const drafts = useMemo(
+    () => redistributeUnticked(allDrafts, off),
+    [allDrafts, off],
+  );
+  const shown = new Map(drafts.map((d) => [plannedDraftKey(d), d]));
   const toggle = (key: string) =>
     setOff((prev) => {
       const next = new Set(prev);
@@ -61,6 +87,7 @@ export function StartPlanSheet({
     });
   const total = drafts.reduce((s, d) => s + d.monthly_amount, 0);
   const goalCount = new Set(drafts.map((d) => d.source_id)).size;
+  const anyOff = allDrafts.some((d) => off.has(plannedDraftKey(d)));
   const canSave = agreed && !saving && drafts.length > 0;
 
   const save = async () => {
@@ -174,8 +201,43 @@ export function StartPlanSheet({
         </>
       ) : null}
 
+      {fit.items.length ? (
+        <View style={styles.preview}>
+          <Text style={styles.boxTitle}>Already in your Tracker</Text>
+          {fit.items.map((it) => (
+            <View key={`${it.kind}|${it.title}`} style={styles.previewRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.previewLabel, { fontWeight: "600" }]}>
+                  {it.title}
+                </Text>
+                <Text style={styles.subNote}>{it.note}</Text>
+              </View>
+              <Text style={styles.previewAmount}>{rs(it.monthly)}</Text>
+            </View>
+          ))}
+          {fit.investmentCover > 0 ? (
+            <Text style={styles.body}>
+              Your running SIPs ({rs(fit.investmentCover)}/month) are taken off
+              the suggestions below, so nothing is suggested twice.
+            </Text>
+          ) : null}
+          {fit.premiumExtra > 0 ? (
+            <Text style={[styles.body, { color: Colors.warningText }]}>
+              Your premium savings need {rs(fit.premiumExtra)}/month more than
+              the plan sets aside for premiums
+              {fit.premiumExtraUntil
+                ? ` until ${formatStartMonth(fit.premiumExtraUntil)}`
+                : ""}
+              . Keep that from your spare cash, or start this plan after they
+              end.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <Text style={styles.note}>
-        Untick anything you don&apos;t want. The total updates as you go.
+        Untick anything you don&apos;t want. Its amount moves to the ticked
+        items of the same goal, so your monthly total stays the same.
       </Text>
       <View style={styles.preview}>
         {allDrafts.map((d) => {
@@ -196,12 +258,24 @@ export function StartPlanSheet({
                 <Text style={{ fontWeight: "600" }}>{d.source_label}</Text> ·{" "}
                 {d.instrument_label}
               </Text>
-              <Text style={[styles.previewAmount, !on && styles.offText]}>
-                ₹{d.monthly_amount.toLocaleString("en-IN")}
-              </Text>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={[styles.previewAmount, !on && styles.offText]}>
+                  {rs(shown.get(key)?.monthly_amount ?? d.monthly_amount)}
+                </Text>
+                {on && taken[key] ? (
+                  <Text style={styles.subNote}>
+                    {rs(taken[key])} already in Tracker
+                  </Text>
+                ) : null}
+              </View>
             </Pressable>
           );
         })}
+        {anyOff ? (
+          <Text style={styles.subNote}>
+            Amounts above include what moved from the items you unticked.
+          </Text>
+        ) : null}
         <View style={styles.totalRow}>
           <Text style={styles.totalText}>Total per month</Text>
           <Text style={styles.totalText}>₹{total.toLocaleString("en-IN")}</Text>
@@ -357,6 +431,7 @@ const styles = themedStyles(() => ({
     fontVariant: ["tabular-nums"],
   },
   note: { marginTop: Spacing.sm, fontSize: 12, color: Colors.textMuted },
+  subNote: { fontSize: 11, color: Colors.textMuted },
   agreeRow: {
     flexDirection: "row",
     alignItems: "flex-start",
