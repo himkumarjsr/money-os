@@ -5,6 +5,7 @@
  */
 import {
   financialProfileToFormValues,
+  hasStaleLegacyLoanScalars,
   normalizeAnalyseFormValues,
   type AnalyseFormValues,
   type FinancialProfile,
@@ -233,6 +234,8 @@ export function mergeTrackerLoansIntoProfile(
       changed = numbersChanged = true;
     }
   });
+
+  if (hasStaleLegacyLoanScalars(profile)) changed = numbersChanged = true;
 
   if (!changed) return { profile, changed: false, numbersChanged: false };
   const next = normalizeAnalyseFormValues({
