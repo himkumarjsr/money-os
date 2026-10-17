@@ -1,3 +1,5 @@
+import { LEARN_ARTICLES_OCT_2026 } from "@/lib/data/learn-oct-2026";
+
 export type LearnCategory =
   | "Basics"
   | "Tax"
@@ -14,9 +16,14 @@ export type LearnArticle = {
   /** Plain paragraphs — rendered as `<p>` in article body */
   content: string[];
   readTime: number;
+  /** First published (YYYY-MM-DD), when known. */
+  publishedAt?: string;
+  /** Last meaningful content update (YYYY-MM-DD), when known. */
+  updatedAt?: string;
 };
 
 export const learnArticles: LearnArticle[] = [
+  ...LEARN_ARTICLES_OCT_2026,
   {
     id: "sip-calculator-1-crore-10-15-20-years",
     title: "SIP calculator — how much SIP for ₹1 crore in 10/15/20 years",

@@ -9,13 +9,17 @@ export const metadata: Metadata = {
     absolute: "Learn Personal Finance — India Guide | Finkoin",
   },
   description:
-    "Learn personal finance the Indian way. Emergency fund, term insurance, SIP investing, tax saving — all explained simply with examples.",
+    "Free personal finance guides for India: tax, PF and gratuity, SIPs and XIRR, loans and debt payoff, insurance and net worth. Simple, with examples.",
   keywords: [
     "personal finance India guide",
     "how to save tax India",
     "term insurance guide India",
     "SIP investment guide India",
     "emergency fund guide India",
+    "EPF explained",
+    "gratuity calculation",
+    "XIRR vs CAGR",
+    "debt avalanche vs snowball",
   ],
   alternates: {
     canonical: "/learn",
@@ -23,24 +27,53 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Learn Personal Finance — India Guide | Finkoin",
     description:
-      "Learn personal finance the Indian way. Emergency fund, term insurance, SIP investing, tax saving — all explained simply with examples.",
+      "Free personal finance guides for India: tax, PF and gratuity, SIPs and XIRR, loans and debt payoff, insurance and net worth. Simple, with examples.",
     url: `${SITE_URL}/learn`,
     siteName: "Finkoin",
     type: "website",
-    images: [{ url: `${SITE_URL}/og/og-home.png`, width: 1200, height: 630, alt: "Finkoin Learn" }],
+    images: [
+      {
+        url: `${SITE_URL}/og/og-home.png`,
+        width: 1200,
+        height: 630,
+        alt: "Finkoin Learn",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Learn Personal Finance — India Guide | Finkoin",
     description:
-      "Learn personal finance the Indian way. Emergency fund, term insurance, SIP investing, tax saving — all explained simply with examples.",
+      "Free personal finance guides for India: tax, PF and gratuity, SIPs and XIRR, loans and debt payoff, insurance and net worth. Simple, with examples.",
     images: [`${SITE_URL}/og/og-home.png`],
+  },
+};
+
+const learnJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Finkoin Learn",
+  url: `${SITE_URL}/learn`,
+  inLanguage: "en-IN",
+  mainEntity: {
+    "@type": "ItemList",
+    numberOfItems: learnArticles.length,
+    itemListElement: learnArticles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${SITE_URL}/learn/${a.id}`,
+      name: a.title,
+    })),
   },
 };
 
 export default function LearnPage() {
   return (
     <div className="min-h-dvh bg-white text-slate-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(learnJsonLd) }}
+      />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
           <div>

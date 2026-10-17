@@ -26,6 +26,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import { getLearnSeoOverride } from "@/lib/learnSeo";
+import { getCuratedLearnFaqs } from "@/lib/learnArticleFaqs";
 import { SITE_URL, socialImageTags } from "@/lib/seo";
 
 const badgeColors: Record<LearnCategory, string> = {
@@ -83,6 +84,11 @@ function withLearnShareImages(
     },
   };
 }
+
+const CUSTOM_FAQ_LAYOUT_IDS = new Set([
+  "know-taxation-in-india-old-vs-new-slabs-interest-rates",
+  "old-vs-new-tax-regime-which-saves-you-more-money",
+]);
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -145,6 +151,10 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
           title: richLearn.seoTitle,
           description: richLearn.seoDescription,
           type: "article",
+          ...(article.publishedAt
+            ? { publishedTime: article.publishedAt }
+            : {}),
+          ...(article.updatedAt ? { modifiedTime: article.updatedAt } : {}),
           url: `${SITE_URL}/learn/${article.id}`,
         },
         twitter: {
@@ -334,9 +344,66 @@ export default async function LearnArticlePage(props: PageProps) {
     .filter((a) => a.category === article.category && a.id !== article.id)
     .slice(0, 3);
 
+  const headline =
+    getLearnSeoOverride(article.id)?.title ??
+    richLearn?.seoTitle ??
+    article.title;
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: headline.replace(/\s*\|\s*Finkoin.*$/, ""),
+    description: richLearn?.seoDescription ?? article.subtitle,
+    image: [`${SITE_URL}${learnOgPath(article.id, article.category)}`],
+    articleSection: article.category,
+    inLanguage: "en-IN",
+    ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
+    ...(article.updatedAt || article.publishedAt
+      ? { dateModified: article.updatedAt ?? article.publishedAt }
+      : {}),
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}/learn/${article.id}`,
+    },
+    author: { "@type": "Organization", name: "Finkoin", url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: "Finkoin",
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/icons/icon-512x512.png`,
+      },
+    },
+  };
+  // The two tax cornerstone guides render their own FAQ component, not the
+  // shared accordion, so only publish FAQ schema where the accordion shows it.
+  const curatedFaqs = CUSTOM_FAQ_LAYOUT_IDS.has(article.id)
+    ? null
+    : getCuratedLearnFaqs(article.id);
+  const faqJsonLd = curatedFaqs
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: curatedFaqs.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      }
+    : null;
+
   return (
     <div className="min-h-dvh min-w-0 bg-white text-slate-900">
       <ArticleTracker articleId={article.id} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      {faqJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      ) : null}
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-3 px-4 py-6 sm:px-6">
           <Breadcrumb
@@ -403,87 +470,11 @@ export default async function LearnArticlePage(props: PageProps) {
         ) : article.id ===
           "know-taxation-in-india-old-vs-new-slabs-interest-rates" ? (
           <>
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "BreadcrumbList",
-                  itemListElement: [
-                    {
-                      "@type": "ListItem",
-                      position: 1,
-                      name: "Learn",
-                      item: `${SITE_URL}/learn`,
-                    },
-                    {
-                      "@type": "ListItem",
-                      position: 2,
-                      name: article.title,
-                      item: `${SITE_URL}/learn/${article.id}`,
-                    },
-                  ],
-                }),
-              }}
-            />
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "Article",
-                  headline:
-                    "Complete Guide to Indian Income Tax FY 2025-26 (AY 2026-27) – ITR, Tax Slabs, Old vs New Regime, Deductions & Filing Explained",
-                  description: article.subtitle,
-                  mainEntityOfPage: `${SITE_URL}/learn/${article.id}`,
-                  author: { "@type": "Organization", name: "Finkoin" },
-                  publisher: { "@type": "Organization", name: "Finkoin" },
-                }),
-              }}
-            />
             <IncomeTaxGuideFY2526 />
           </>
         ) : article.id ===
           "old-vs-new-tax-regime-which-saves-you-more-money" ? (
           <>
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "BreadcrumbList",
-                  itemListElement: [
-                    {
-                      "@type": "ListItem",
-                      position: 1,
-                      name: "Learn",
-                      item: `${SITE_URL}/learn`,
-                    },
-                    {
-                      "@type": "ListItem",
-                      position: 2,
-                      name: article.title,
-                      item: `${SITE_URL}/learn/${article.id}`,
-                    },
-                  ],
-                }),
-              }}
-            />
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "Article",
-                  headline:
-                    "Old vs New Tax Regime FY 2025-26 (AY 2026-27) — Which Saves More? Slabs, Deductions, 87A & Examples",
-                  description: article.subtitle,
-                  mainEntityOfPage: `${SITE_URL}/learn/${article.id}`,
-                  author: { "@type": "Organization", name: "Finkoin" },
-                  publisher: { "@type": "Organization", name: "Finkoin" },
-                }),
-              }}
-            />
             <OldVsNewRegimeGuideFY2526 />
           </>
         ) : article.id ===
@@ -561,87 +552,6 @@ export default async function LearnArticlePage(props: PageProps) {
           </LearnSimpleArticle>
         ) : article.id === "emergency-fund-how-much-where-to-keep-it" ? (
           <>
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "BreadcrumbList",
-                  itemListElement: [
-                    {
-                      "@type": "ListItem",
-                      position: 1,
-                      name: "Learn",
-                      item: `${SITE_URL}/learn`,
-                    },
-                    {
-                      "@type": "ListItem",
-                      position: 2,
-                      name: article.title,
-                      item: `${SITE_URL}/learn/${article.id}`,
-                    },
-                  ],
-                }),
-              }}
-            />
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "Article",
-                  headline:
-                    "Emergency Fund India — How Much (Up to 12 Months), Where to Keep, Life-Stage Examples",
-                  description: article.subtitle,
-                  mainEntityOfPage: `${SITE_URL}/learn/${article.id}`,
-                  author: { "@type": "Organization", name: "Finkoin" },
-                  publisher: { "@type": "Organization", name: "Finkoin" },
-                }),
-              }}
-            />
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "FAQPage",
-                  mainEntity: [
-                    {
-                      "@type": "Question",
-                      name: "How much emergency fund should I have in India?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Count one month as essential expenses only (rent or EMI, groceries, fees, insurance, minimum loan payments). Many people start with a few months and build toward a higher target; Finkoin’s Learn guide caps the planning target at up to 12 months of those essentials, with higher months typical when you have children or dependents.",
-                      },
-                    },
-                    {
-                      "@type": "Question",
-                      name: "Is 12 months of expenses enough for an emergency fund?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Twelve months of essential expenses is a strong ceiling for a cash-only emergency bucket. Beyond that, extra safety usually comes from insurance (term, health) and diversified long-term investments rather than indefinitely increasing idle cash.",
-                      },
-                    },
-                    {
-                      "@type": "Question",
-                      name: "Where should I keep my emergency fund in India?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Use instruments you can access in about one to two business days with stable value: liquid mutual funds, sweep fixed deposits linked to savings, or a separate savings account you do not use for daily spending. Avoid equity and long lock-in deposits for this bucket.",
-                      },
-                    },
-                    {
-                      "@type": "Question",
-                      name: "Should a bachelor build an emergency fund?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Yes. Even with lower fixed costs, a small buffer (for example a few months of essentials) prevents a first job loss or medical bill from turning into debt; you can increase the target as rent, EMIs, or family responsibilities grow.",
-                      },
-                    },
-                  ],
-                }),
-              }}
-            />
             <LearnSimpleArticle
               article={article}
               asideNote={

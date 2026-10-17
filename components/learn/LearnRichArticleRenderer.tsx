@@ -1,12 +1,20 @@
 import Link from "next/link";
-import type { RichArticle, RichBlock, RichSection } from "@/lib/learnRichArticles";
+import type {
+  RichArticle,
+  RichBlock,
+  RichSection,
+} from "@/lib/learnRichArticles";
 import { getLearnArticleFaqs, tocWithFaq } from "@/lib/learnArticleFaqs";
 import { LearnArticleLayout } from "@/components/learn/LearnArticleLayout";
 import LearnFaqAccordion from "@/components/learn/LearnFaqAccordion";
 
 function Block({ block }: { block: RichBlock }) {
   if (block.kind === "p") {
-    return <p className="text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">{block.text}</p>;
+    return (
+      <p className="text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+        {block.text}
+      </p>
+    );
   }
   if (block.kind === "ul") {
     return (
@@ -24,7 +32,9 @@ function Block({ block }: { block: RichBlock }) {
       amber: "border-amber-200 bg-amber-50/90 text-amber-950",
     } as const;
     return (
-      <div className={`rounded-xl border p-4 text-sm leading-relaxed sm:text-base ${tones[block.tone]}`}>
+      <div
+        className={`rounded-xl border p-4 text-sm leading-relaxed sm:text-base ${tones[block.tone]}`}
+      >
         {block.title ? <p className="font-semibold">{block.title}</p> : null}
         <p className={block.title ? "mt-2" : ""}>{block.text}</p>
       </div>
@@ -61,10 +71,34 @@ function Block({ block }: { block: RichBlock }) {
   return null;
 }
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/** "2026-10-17" → "October 2026". */
+function formatUpdated(ymd: string | undefined): string {
+  if (!ymd) return "May 2026";
+  const [y, m] = ymd.split("-").map(Number);
+  return MONTHS[m - 1] ? `${MONTHS[m - 1]} ${y}` : ymd;
+}
+
 function SectionBlock({ section }: { section: RichSection }) {
   return (
     <section id={section.id} className="scroll-mt-24 space-y-4">
-      <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{section.title}</h2>
+      <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+        {section.title}
+      </h2>
       <div className="space-y-4">
         {section.blocks.map((b, i) => (
           <Block key={i} block={b} />
@@ -74,7 +108,13 @@ function SectionBlock({ section }: { section: RichSection }) {
   );
 }
 
-export function LearnRichArticleRenderer({ rich, articleId }: { rich: RichArticle; articleId: string }) {
+export function LearnRichArticleRenderer({
+  rich,
+  articleId,
+}: {
+  rich: RichArticle;
+  articleId: string;
+}) {
   const faqs = getLearnArticleFaqs(articleId);
   const toc = tocWithFaq([{ id: "intro", label: "Introduction" }, ...rich.toc]);
 
@@ -83,12 +123,15 @@ export function LearnRichArticleRenderer({ rich, articleId }: { rich: RichArticl
       toc={toc}
       asideNote={
         <>
-          Last updated: <strong>May 2026</strong>
+          Last updated: <strong>{formatUpdated(rich.updatedAt)}</strong>
         </>
       }
     >
       <div className="min-w-0 space-y-12 pb-8 text-slate-900">
-        <div id="intro" className="scroll-mt-24 space-y-3 border-b border-slate-200 pb-6">
+        <div
+          id="intro"
+          className="scroll-mt-24 space-y-3 border-b border-slate-200 pb-6"
+        >
           <div className="flex flex-wrap gap-2">
             {rich.tags.map((t) => (
               <span
@@ -101,7 +144,10 @@ export function LearnRichArticleRenderer({ rich, articleId }: { rich: RichArticl
           </div>
           <div className="space-y-4">
             {rich.intro.map((text, i) => (
-              <p key={i} className="text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]">
+              <p
+                key={i}
+                className="text-[17px] leading-[1.75] text-slate-800 sm:text-[18px] sm:leading-[1.8]"
+              >
                 {text}
               </p>
             ))}
@@ -114,26 +160,65 @@ export function LearnRichArticleRenderer({ rich, articleId }: { rich: RichArticl
           ))}
         </div>
 
+        {rich.tools && rich.tools.length > 0 ? (
+          <section aria-labelledby="rich-tools" className="space-y-4">
+            <h2
+              id="rich-tools"
+              className="text-lg font-semibold text-slate-900"
+            >
+              Calculators for this guide
+            </h2>
+            <ul className="grid gap-3 sm:grid-cols-3">
+              {rich.tools.map((t) => (
+                <li key={t.href}>
+                  <Link
+                    href={t.href}
+                    className="block h-full rounded-xl border border-slate-200 bg-white p-4 transition hover:border-[#534AB7]/40"
+                  >
+                    <span className="block font-semibold text-[#534AB7]">
+                      {t.title} →
+                    </span>
+                    <span className="mt-1 block text-sm text-slate-600">
+                      {t.desc}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {rich.finkoinTip ? (
           <div className="rounded-xl border border-[#534AB7]/30 bg-[#F7F6FE] p-4 text-sm text-[#3C3489] sm:text-base">
             <p className="font-semibold text-[#534AB7]">Finkoin tip</p>
             <p className="mt-2 leading-relaxed">{rich.finkoinTip}</p>
-            <Link href={rich.finkoinTipHref ?? "/analyse"} className="mt-3 inline-block font-semibold hover:underline">
+            <Link
+              href={rich.finkoinTipHref ?? "/analyse"}
+              className="mt-3 inline-block font-semibold hover:underline"
+            >
               Try it on Finkoin →
             </Link>
           </div>
         ) : null}
 
         <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-950 sm:text-sm">
-          <strong className="font-semibold">Educational only.</strong> Not personalised financial, tax, or investment
-          advice. Finkoin is not a SEBI-registered investment advisor. Verify rates, rules, and product terms with your
-          bank, insurer, or a qualified professional before acting.
+          <strong className="font-semibold">Educational only.</strong> Not
+          personalised financial, tax, or investment advice. Finkoin is not a
+          SEBI-registered investment advisor. Verify rates, rules, and product
+          terms with your bank, insurer, or a qualified professional before
+          acting.
         </div>
 
         <LearnFaqAccordion faqs={faqs} />
 
-        <section aria-labelledby="rich-related" className="border-t border-slate-200 pt-10">
-          <h2 id="rich-related" className="text-lg font-semibold text-slate-900">
+        <section
+          aria-labelledby="rich-related"
+          className="border-t border-slate-200 pt-10"
+        >
+          <h2
+            id="rich-related"
+            className="text-lg font-semibold text-slate-900"
+          >
             Related articles
           </h2>
           <ul className="mt-4 space-y-3">

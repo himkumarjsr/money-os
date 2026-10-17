@@ -5,7 +5,7 @@ export default {
   slug: "old-vs-new-tax-regime-roi-2026",
   title: "Old vs New Tax Regime: Which One Gives Better ROI in 2026?",
   description:
-    "Simple guide for salaried Indians: old vs new tax regime, deductions (80C, 80D, HRA), comparison at ₹5L–₹25L, and how to pick the regime that gives you the best “return on paperwork” in FY 2025-26.",
+    "Old vs new tax regime for salaried Indians in FY 2025-26: 80C, 80D and HRA, a ₹5L–₹25L comparison, and how to pick the regime that saves you more.",
   keywords: [
     "old vs new tax regime 2026",
     "tax saving India",
