@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { BLOG_ARTICLES } from "@/lib/blogContent";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: {
     absolute:
       "Personal Finance Blog India — Tips, Guides, Calculators | Finkoin",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
       "Free personal finance guides for India. Tax saving, insurance planning, investment advice, expense tracking.",
     images: [`${SITE_URL}/og/og-home.png`],
   },
-};
+});
 
 const blogJsonLd = {
   "@context": "https://schema.org",

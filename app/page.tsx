@@ -71,7 +71,7 @@ export const metadata: Metadata = {
   keywords: SEO_CONFIG.defaultKeywords,
   openGraph: {
     title: SEO_CONFIG.defaultTitle,
-    description: `${FINKOIN_TAGLINE_FULL} Free financial health check, tax calculator, SIP calculator, home loan EMI, expense tracker and more. Built for Indians.`,
+    description: SEO_CONFIG.defaultDescription,
     url: SITE_URL,
     siteName: "Finkoin",
     type: "website",
@@ -87,8 +87,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `Finkoin — ${FINKOIN_TAGLINE}`,
-    description: `${FINKOIN_TAGLINE_FULL} Free financial health check for every Indian. No PAN needed.`,
+    title: SEO_CONFIG.defaultTitle,
+    description: SEO_CONFIG.defaultDescription,
     images: [`${SITE_URL}/og/og-home.png`],
   },
   alternates: {

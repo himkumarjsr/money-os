@@ -8,7 +8,7 @@ import {
   relatedBlogArticles,
 } from "@/lib/blogContent";
 import { renderBlogBody } from "@/lib/renderBlogBody";
-import { SITE_URL, socialImageTags } from "@/lib/seo";
+import { SITE_URL, socialImageTags, fitMetadata } from "@/lib/seo";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
@@ -43,7 +43,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     ogPath,
     article.title,
   );
-  return {
+  return fitMetadata({
     title: article.metaTitle ? { absolute: article.metaTitle } : pageTitle,
     description: article.description,
     keywords: article.keywords,
@@ -70,7 +70,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       description: article.description,
       images: twitterImages,
     },
-  };
+  });
 }
 
 export default async function BlogArticlePage(props: Props) {

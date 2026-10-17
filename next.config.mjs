@@ -99,8 +99,21 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      { source: "/.well-known/assetlinks.json", destination: "/api/app-links/assetlinks" },
-      { source: "/.well-known/apple-app-site-association", destination: "/api/app-links/aasa" },
+      {
+        source: "/.well-known/assetlinks.json",
+        destination: "/api/app-links/assetlinks",
+      },
+      {
+        source: "/.well-known/apple-app-site-association",
+        destination: "/api/app-links/aasa",
+      },
+    ];
+  },
+  async redirects() {
+    // Real 308s so search engines merge these into the canonical legal pages.
+    return [
+      { source: "/privacy", destination: "/legal/privacy", permanent: true },
+      { source: "/terms", destination: "/legal/terms", permanent: true },
     ];
   },
   async headers() {
@@ -109,7 +122,10 @@ const nextConfig = {
         source: "/:path*",
         headers: [
           { key: "X-DNS-Prefetch-Control", value: "on" },
-          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -130,11 +146,21 @@ const nextConfig = {
       },
       {
         source: "/icons/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
       },
       {
         source: "/fonts/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
       },
     ];
   },

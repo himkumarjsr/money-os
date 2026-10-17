@@ -2,9 +2,9 @@ import { LearnHub } from "@/components/learn/learn-hub";
 import { learnArticles } from "@/lib/learnContent";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: {
     absolute: "Learn Personal Finance — India Guide | Finkoin",
   },
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
       "Free personal finance guides for India: tax, PF and gratuity, SIPs and XIRR, loans and debt payoff, insurance and net worth. Simple, with examples.",
     images: [`${SITE_URL}/og/og-home.png`],
   },
-};
+});
 
 const learnJsonLd = {
   "@context": "https://schema.org",

@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { ArticleShare } from "@/components/learn/article-share";
 import { ArticleTracker } from "@/components/learn/article-tracker";
 import CompoundInterestGuide from "@/components/learn/CompoundInterestGuide";
@@ -27,7 +29,7 @@ import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import { getLearnSeoOverride } from "@/lib/learnSeo";
 import { getCuratedLearnFaqs } from "@/lib/learnArticleFaqs";
-import { SITE_URL, socialImageTags } from "@/lib/seo";
+import { SITE_URL, socialImageTags, fitMetadata } from "@/lib/seo";
 
 const badgeColors: Record<LearnCategory, string> = {
   Basics: "bg-slate-100 text-slate-800 ring-slate-200",
@@ -54,6 +56,8 @@ const LEARN_OG_BY_ID: Record<string, string> = {
 };
 
 function learnOgPath(articleId: string, category: LearnCategory): string {
+  const own = `/og/learn/${articleId}.png`;
+  if (existsSync(path.join(process.cwd(), "public", own))) return own;
   if (LEARN_OG_BY_ID[articleId]) return LEARN_OG_BY_ID[articleId];
   if (category === "Tax") return "/og/og-tax-calculator.png";
   if (category === "Investment") return "/og/og-sip.png";
@@ -71,7 +75,7 @@ function withLearnShareImages(
     learnOgPath(articleId, category),
     alt,
   );
-  return {
+  return fitMetadata({
     ...meta,
     openGraph: {
       ...meta.openGraph,
@@ -82,7 +86,7 @@ function withLearnShareImages(
       ...meta.twitter,
       images: twitterImages,
     },
-  };
+  });
 }
 
 const CUSTOM_FAQ_LAYOUT_IDS = new Set([
@@ -171,8 +175,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
 
   // Custom SEO metadata for our two tax cornerstone guides.
   if (article.id === "know-taxation-in-india-old-vs-new-slabs-interest-rates") {
-    const seoTitle =
-      "Complete Guide to Indian Income Tax FY 2025-26 (AY 2026-27) – ITR, Tax Slabs, Old vs New Regime, Deductions & Filing Explained";
+    const seoTitle = "Indian Income Tax Guide FY 2025-26 — Slabs, ITR, Regimes";
     const description =
       "Beginner-friendly Indian income tax guide for FY 2025-26 (AY 2026-27): FY vs AY, ITR forms (ITR-1 to ITR-7), tax slabs, 87A rebate, cess/surcharge, TDS (Form 16/AIS/26AS), and old vs new regime explained with examples.";
 

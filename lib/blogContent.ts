@@ -27,7 +27,7 @@ const ALL_BLOG_ARTICLES: BlogArticle[] = [
   oldVsNewTaxRoi2026 as BlogArticle,
   {
     slug: "know-taxation-in-india",
-    title: "Know Taxation in India: Old vs New Slabs, Interest & ITR Forms",
+    title: "Know Taxation in India: Slabs, Interest & ITR Forms",
     description:
       "Beginner-friendly India taxation guide: old vs new tax regime slabs, Section 87A, cess/surcharge, 234A/234B/234C interest, and ITR form selection.",
     keywords: [

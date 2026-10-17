@@ -71,6 +71,7 @@ async function preparePlate() {
  * @param {Buffer} opts.logo
  * @param {Buffer} opts.plate
  * @param {"product"|"home"} [opts.variant]
+ * @param {string} [opts.cta] Call-to-action button text (share previews convert better with one)
  */
 async function writeBanner({
   relPath,
@@ -81,11 +82,9 @@ async function writeBanner({
   logo,
   plate,
   variant = "product",
+  cta = "Try it free",
 }) {
-  const titleLines = escXml(title)
-    .split("\n")
-    .filter(Boolean)
-    .slice(0, 3);
+  const titleLines = escXml(title).split("\n").filter(Boolean).slice(0, 3);
   const titleTspans = titleLines
     .map((line, i) => {
       const y = 250 + i * 62;
@@ -119,10 +118,21 @@ async function writeBanner({
   <text x="396" y="476" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="11" font-weight="500" fill="#FFFFFF" opacity="0.75">SIP &amp; long-term plan</text>`;
   }
 
-  const mainCopy =
+  // CTA pill: under the copy on product banners, bottom-right on the home banner.
+  const ctaText = `${escXml(cta)}  →`;
+  const ctaW = Math.round(cta.length * 13.5 + 76);
+  const ctaH = 58;
+  const ctaX = variant === "home" ? 1128 - ctaW : 72;
+  const ctaY =
     variant === "home"
-      ? bodyExtra
-      : `${titleTspans}\n${subTspans}`;
+      ? 432
+      : Math.min(subY0 + subLines.length * 34 + 6, 540 - ctaH - 18);
+  const ctaSvg = `
+  <rect x="${ctaX}" y="${ctaY}" width="${ctaW}" height="${ctaH}" rx="${ctaH / 2}" fill="#FFFFFF"/>
+  <text x="${ctaX + ctaW / 2}" y="${ctaY + 38}" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="25" font-weight="800" fill="#3C3489">${ctaText}</text>`;
+
+  const mainCopy =
+    (variant === "home" ? bodyExtra : `${titleTspans}\n${subTspans}`) + ctaSvg;
 
   const wordX = 72 + LOGO_SIZE + 16;
   const wordY = 58 + 48;
@@ -165,24 +175,28 @@ async function writeBanner({
 const PRODUCT = [
   {
     relPath: "og/og-home.png",
+    cta: "Get your free score",
     title: "home",
     variant: "home",
     footerLeft: "No PAN • No Aadhaar • Free",
   },
   {
     relPath: "og/og-sip.png",
+    cta: "Calculate your SIP",
     title: "SIP Calculator",
     line1: "See how monthly SIPs can grow.",
     line2: "Free mutual fund SIP planner for India.",
   },
   {
     relPath: "og/og-swp.png",
+    cta: "Plan your withdrawals",
     title: "SWP Calculator",
     line1: "Plan systematic withdrawals.",
     line2: "Free SWP planner for India.",
   },
   {
     relPath: "og/og-analyse.png",
+    cta: "Check your score free",
     title: "Get Your Financial\nHealth Score",
     line1: "Answer a few questions.",
     line2: "Score out of 100. Know exactly what to fix first.",
@@ -190,54 +204,63 @@ const PRODUCT = [
   },
   {
     relPath: "og/og-tax-calculator.png",
+    cta: "Compare both regimes",
     title: "Tax Regime\nCalculator",
     line1: "Old vs new regime for FY 2025-26.",
     line2: "Find which saves you more tax.",
   },
   {
     relPath: "og/og-tracker.png",
+    cta: "Start tracking free",
     title: "Expense Tracker",
     line1: "Track every rupee.",
     line2: "See where money goes — free for India.",
   },
   {
     relPath: "og/og-split.png",
+    cta: "Split a bill free",
     title: "FK Split",
     line1: "Split bills with friends.",
     line2: "Settle up without the awkward math.",
   },
   {
     relPath: "og/og-portfolio.png",
+    cta: "See your portfolio",
     title: "Portfolio",
     line1: "See holdings in one place.",
     line2: "Built for Indian investors.",
   },
   {
     relPath: "og/og-emi.png",
+    cta: "Calculate your EMI",
     title: "EMI & Loan\nCalculators",
     line1: "Home, car, and personal loan EMI.",
     line2: "Affordability checks — free for India.",
   },
   {
     relPath: "og/og-ppf.png",
+    cta: "Calculate PPF maturity",
     title: "PPF Calculator",
     line1: "Project 15-year PPF maturity.",
     line2: "Plan 80C tax-saving with confidence.",
   },
   {
     relPath: "og/og-po.png",
+    cta: "Compare schemes free",
     title: "Post Office\nSchemes",
     line1: "TD, RD, NSC, KVP, MIS, SCSS, SSY.",
     line2: "Notified rates — free India Post calculators.",
   },
   {
     relPath: "og/og-emergency.png",
+    cta: "Find your number",
     title: "Emergency Fund\nCalculator",
     line1: "How much safety buffer do you need?",
     line2: "Life-stage targets for India.",
   },
   {
     relPath: "og/og-fire.png",
+    cta: "Find your FIRE number",
     title: "FIRE Number\nCalculator",
     line1: "When can you retire early?",
     line2: "Corpus estimate adapted for India.",
@@ -265,6 +288,60 @@ const BLOG = [
     slug: "80c-deductions-guide-2026",
     title: "80C Deductions\nGuide 2026",
   },
+  {
+    slug: "your-fire-number-when-can-you-actually-retire-in-india",
+    title: "Your FIRE Number",
+  },
+  {
+    slug: "old-vs-new-tax-regime-roi-2026",
+    title: "Old vs New Regime:\nWhich Pays You More?",
+  },
+  {
+    slug: "free-financial-calculators-india",
+    title: "65+ Free Money\nCalculators",
+  },
+  {
+    slug: "how-much-will-my-pf-be-at-retirement",
+    title: "How Much Will My\nPF Be at Retirement?",
+  },
+  {
+    slug: "bills-and-renewals-calendar-india",
+    title: "Never Miss a\nDue Date",
+  },
+  {
+    slug: "goal-based-investing-link-sips-to-goals",
+    title: "Give Every SIP\na Job",
+  },
+  {
+    slug: "salary-hike-what-to-do-first",
+    title: "Got a Salary Hike?\nDo This First",
+  },
+];
+
+/** Learn guides with their own share banner (others use a topical product banner). */
+const LEARN = [
+  {
+    id: "epf-pf-explained-contribution-interest-withdrawal",
+    title: "EPF (PF)\nExplained",
+  },
+  {
+    id: "gratuity-calculation-formula-eligibility-tax",
+    title: "Gratuity:\nFormula & Tax",
+  },
+  { id: "step-up-sip-and-cost-of-delay", title: "Step-up SIP" },
+  { id: "xirr-vs-cagr-vs-absolute-return", title: "XIRR vs CAGR" },
+  {
+    id: "direct-vs-regular-mutual-funds-expense-ratio",
+    title: "Direct vs Regular\nMutual Funds",
+  },
+  {
+    id: "flat-vs-reducing-interest-rate",
+    title: "Flat vs Reducing\nInterest Rate",
+  },
+  { id: "loan-eligibility-foir-explained", title: "How Much Can\nYou Borrow?" },
+  { id: "debt-payoff-avalanche-vs-snowball", title: "Avalanche vs\nSnowball" },
+  { id: "fd-rd-interest-tax-tds-15g-15h", title: "FD Interest Tax\n& TDS" },
+  { id: "how-to-calculate-net-worth", title: "Your Net Worth" },
 ];
 
 async function main() {
@@ -281,8 +358,20 @@ async function main() {
     await writeBanner({
       relPath: `og/blog/${post.slug}.png`,
       title: post.title,
+      line1: "Finkoin Blog",
+      line2: "Free personal finance guides for India.",
+      cta: "Read the guide",
+      logo,
+      plate,
+    });
+  }
+  for (const guide of LEARN) {
+    await writeBanner({
+      relPath: `og/learn/${guide.id}.png`,
+      title: guide.title,
       line1: "Finkoin Learn",
       line2: "Free personal finance guides for India.",
+      cta: "Read the free guide",
       logo,
       plate,
     });
