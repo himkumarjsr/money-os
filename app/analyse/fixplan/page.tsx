@@ -49,6 +49,7 @@ import NoConflictNote from "@/components/analyse/NoConflictNote";
 import { projectNetWorth } from "@/lib/netWorthTrajectory";
 import LoanSyncNotices from "@/components/analyse/LoanSyncNotices";
 import { groupMonthlyPlan } from "@/lib/monthlyPlanGroups";
+import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { useAuthStore } from "@/store/authStore";
 import {
   useObligationStore,
@@ -329,6 +330,24 @@ export default function FixPlanPage() {
   }, [aiPlan?.isFallback]);
 
   const lastSubmission = profile;
+
+  const answerTermTopUp = async (yes: boolean) => {
+    if (!profile || !result) return;
+    const next = { ...profile, wantsTermTopUp: yes };
+    setAiPlan((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            priorityPlan: mergeEnginePriorityPlan(
+              buildPriorityPlan(next, result),
+              prev.priorityPlan || {},
+              monthsForPriority,
+            ),
+          }
+        : prev,
+    );
+    await saveAnalyseProfile(user?.id, next);
+  };
   const aiData = aiPlan;
   const visiblePriorities = openPriorities(aiPlan?.priorityPlan);
   const attentionCount = visiblePriorities.length;
@@ -605,6 +624,14 @@ export default function FixPlanPage() {
             <p className="mt-2 rounded-xl bg-[#E7F6F4] p-3 text-sm">
               <strong>This week:</strong> {p.actionThisWeek}
             </p>
+            {p.id === "term_insurance" &&
+            (p.needsAnswer || profile?.wantsTermTopUp === true) ? (
+              <TermTopUpChoice
+                asking={!!p.needsAnswer}
+                quote={Number(p.quoteMonthly || p.monthlyContribution || 0)}
+                onAnswer={answerTermTopUp}
+              />
+            ) : null}
             {p.id === "term_insurance" || p.id === "health_insurance" ? (
               <Link
                 href={
@@ -1461,5 +1488,64 @@ function GoalTimelineTable({ goal }: { goal: GoalSplitRow }) {
         </tbody>
       </table>
     </details>
+  );
+}
+
+/** Asks whether a term top-up belongs in the plan; only a yes budgets it. */
+function TermTopUpChoice({
+  asking,
+  quote,
+  onAnswer,
+}: {
+  asking: boolean;
+  quote: number;
+  onAnswer: (yes: boolean) => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+  const answer = async (yes: boolean) => {
+    setSaving(true);
+    try {
+      await onAnswer(yes);
+    } finally {
+      setSaving(false);
+    }
+  };
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        disabled={saving}
+        onClick={() => void answer(false)}
+        className="mt-2 min-h-[44px] text-sm font-semibold text-[#534AB7] disabled:opacity-50"
+      >
+        Remove the top-up from my plan
+      </button>
+    );
+  }
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-semibold text-[#111110]">
+        Add this top-up to your plan
+        {quote > 0 ? ` (about ₹${quote.toLocaleString("en-IN")}/month)` : ""}?
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void answer(true)}
+          className="min-h-[44px] rounded-xl bg-[#534AB7] text-sm font-bold text-white disabled:opacity-50"
+        >
+          Yes, add it
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void answer(false)}
+          className="min-h-[44px] rounded-xl border border-[#E8E6F0] bg-white text-sm font-semibold text-[#454442] disabled:opacity-50"
+        >
+          No, skip it
+        </button>
+      </div>
+    </div>
   );
 }

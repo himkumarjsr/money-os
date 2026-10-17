@@ -328,3 +328,34 @@ describe("buildPriorityPlan", () => {
     );
   });
 });
+
+describe("term top-up for someone who already has cover", () => {
+  const withCover = (wantsTermTopUp?: boolean) =>
+    buildPriorityPlan(
+      profile({
+        hasTermInsurance: true,
+        termInsuranceSumAssured: 10_000_000,
+        wantsTermTopUp,
+      }),
+      { needsActual: 40_000, overallScore: 50 },
+    );
+  const term = (plan: ReturnType<typeof buildPriorityPlan>) =>
+    plan.priorities.find((p) => p.id === "term_insurance");
+
+  it("asks first and budgets nothing until the user says yes", () => {
+    const step = term(withCover());
+    expect(step?.needsAnswer).toBe(true);
+    expect(step?.monthlyContribution).toBe(0);
+    expect(step?.quoteMonthly).toBeGreaterThan(0);
+  });
+
+  it("budgets the premium after a yes", () => {
+    const step = term(withCover(true));
+    expect(step?.needsAnswer).toBeUndefined();
+    expect(step?.monthlyContribution).toBeGreaterThan(0);
+  });
+
+  it("drops the step after a no", () => {
+    expect(term(withCover(false))).toBeUndefined();
+  });
+});

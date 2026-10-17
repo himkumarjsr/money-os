@@ -1,4 +1,8 @@
-import { debtRateLabel, estSuffix } from "@/lib/fixPlanMerge";
+import {
+  debtRateLabel,
+  estSuffix,
+  isPriorityComplete,
+} from "@/lib/fixPlanMerge";
 import { debtPayoffNumbers } from "@/lib/priorityEngine";
 
 export type FixPlanPdfPhase = {
@@ -20,20 +24,20 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
   const pri = [...(pp?.priorities || [])].sort(
     (a: any, b: any) => (a.rank || 0) - (b.rank || 0),
   );
-  const phase1Tasks = pri
-    .filter((p: any) => p.rank === 1)
+  // Finished steps have nothing to do, so phases list only open ones.
+  const open = pri.filter((p: any) => !isPriorityComplete(p));
+  const phase1Tasks = open
+    .slice(0, 1)
     .map((p: any) =>
       `${p.title}: ${p.actionThisWeek || p.description || p.whyThisMatters || ""}`.trim(),
     );
-  const phase2Tasks = pri
-    .filter((p: any) => p.rank === 2 || p.rank === 3)
+  const phase2Tasks = open
+    .slice(1, 3)
     .map(
       (p: any) =>
         `${p.title}${p.actionThisWeek ? ` — ${p.actionThisWeek}` : ""}`,
     );
-  const phase3Tasks = pri
-    .filter((p: any) => (p.rank || 0) > 3)
-    .map((p: any) => p.title);
+  const phase3Tasks = open.slice(3).map((p: any) => p.title);
   const emerg = pri.find((p: any) => p.id === "emergency_fund");
   const term = pri.find((p: any) => p.id === "term_insurance");
   const health = pri.find((p: any) => p.id === "health_insurance");
@@ -67,7 +71,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
           ? phase1Tasks
           : ["Complete your financial review"],
       outcomes: [
-        `Address top risk: ${pri[0]?.title || "safety and liquidity"}`,
+        `Address top risk: ${open[0]?.title || "safety and liquidity"}`,
       ],
     },
     {

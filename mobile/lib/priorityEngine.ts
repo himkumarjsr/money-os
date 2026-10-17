@@ -33,6 +33,12 @@ export interface PriorityItem {
   canBuyFromFinkoin: boolean;
   finkoinProductType?: string;
   startMonth?: number;
+  /** Paid in one go from existing savings, on top of any monthly amount. */
+  fromSavings?: number;
+  /** Waiting on a yes/no from the user (term top-up); costs nothing until then. */
+  needsAnswer?: boolean;
+  /** What the step would cost per month if the user says yes. */
+  quoteMonthly?: number;
 }
 
 export interface DebtItem {
@@ -509,6 +515,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     icon: "🏥",
     canBuyFromFinkoin: false,
     startMonth: medicalStartMonth,
+    ...(medicalFromCash > 0 ? { fromSavings: medicalFromCash } : {}),
   });
 
   const annualIncome = monthlyIncome * 12;
@@ -559,14 +566,20 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     medicalGapLeft > 0 && medicalMonthsToComplete > 0
       ? medicalStartMonth + medicalMonthsToComplete
       : medicalStartMonth;
-  const termPremiumEst = Math.max(
+  // Someone who already has term cover may not want (or be able) to keep
+  // topping it up as income grows: the top-up is only budgeted once they
+  // say yes, and dropped when they say no.
+  const termTopUpAsk = termHave > 0 && termGap > 0;
+  const termIncluded = !termTopUpAsk || profile.wantsTermTopUp === true;
+  const termPremiumQuote = Math.max(
     0,
     Math.min(termPremiumEstRaw, monthlySurplus),
   );
+  const termPremiumEst = termIncluded ? termPremiumQuote : 0;
   const termYearlyPremium =
-    termGap > 0 ? Math.max(termPremiumEstRaw * 12, 12000) : 0;
+    termGap > 0 && termIncluded ? Math.max(termPremiumEstRaw * 12, 12000) : 0;
 
-  if (termGap > 0) {
+  if (termGap > 0 && !(termTopUpAsk && profile.wantsTermTopUp === false)) {
     const termGapCr = (termGap / 10000000).toFixed(1);
     const termHaveCr = (termHave / 10000000).toFixed(1);
     priorities.push({
@@ -575,7 +588,9 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       title:
         termHave === 0
           ? "Close term cover gap"
-          : "Term top-up (keep existing policy)",
+          : termIncluded
+            ? "Term top-up (keep existing policy)"
+            : "Term top-up (your choice)",
       category: "insurance",
       urgency: termHave === 0 ? "critical" : "high",
       status:
@@ -598,8 +613,9 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           : "Separate top-up / additional term from another insurer — do not cancel your ₹" +
             termHaveCr +
             "Cr policy",
-      actionThisWeek:
-        termHave === 0
+      actionThisWeek: !termIncluded
+        ? `You have ₹${termHaveCr}Cr cover. A ₹${termGapCr} crore top-up would cost about ₹${termPremiumQuote.toLocaleString("en-IN")}/month. Tell us if you want it; it's only added to your plan if you say yes.`
+        : termHave === 0
           ? termStartMonth > 1
             ? `From month ${termStartMonth}, compare pure term quotes. Budget ~₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${termGapCr} crore cover.`
             : `Compare 3 term insurance quotes online. Budget ~₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${termGapCr} crore cover.`
@@ -614,6 +630,9 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       canBuyFromFinkoin: false,
       finkoinProductType: "term",
       startMonth: termStartMonth,
+      ...(termIncluded
+        ? {}
+        : { needsAnswer: true, quoteMonthly: termPremiumQuote }),
     });
     runningSurplus = Math.max(0, runningSurplus - termPremiumEst);
   }
