@@ -1,11 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BLOG_ARTICLES, getBlogArticle } from "@/lib/blogContent";
+import Breadcrumb from "@/components/Breadcrumb";
+import {
+  BLOG_ARTICLES,
+  getBlogArticle,
+  relatedBlogArticles,
+} from "@/lib/blogContent";
 import { renderBlogBody } from "@/lib/renderBlogBody";
-import { SITE_URL, socialImageTags } from "@/lib/seo";
+import { SITE_URL, socialImageTags, fitMetadata } from "@/lib/seo";
 import { existsSync } from "node:fs";
 import path from "node:path";
+
+const DEFAULT_NEXT_STEPS = [
+  { href: "/analyse", label: "Run the free financial health check" },
+  { href: "/calculators/tax-regime-2026", label: "Open tax regime calculator" },
+  { href: "/tracker", label: "Track monthly expenses" },
+];
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -32,7 +43,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     ogPath,
     article.title,
   );
-  return {
+  return fitMetadata({
     title: article.metaTitle ? { absolute: article.metaTitle } : pageTitle,
     description: article.description,
     keywords: article.keywords,
@@ -45,6 +56,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       description: article.description,
       type: "article",
       publishedTime: article.publishedAt,
+      modifiedTime: article.updatedAt ?? article.publishedAt,
+      section: article.category,
+      tags: article.keywords,
       authors: ["Himanshu Kumar Gupta"],
       url: `${SITE_URL}/blog/${article.slug}`,
       siteName: "Finkoin",
@@ -56,7 +70,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       description: article.description,
       images: twitterImages,
     },
-  };
+  });
 }
 
 export default async function BlogArticlePage(props: Props) {
@@ -86,7 +100,10 @@ export default async function BlogArticlePage(props: Props) {
       },
     },
     datePublished: article.publishedAt,
-    dateModified: article.publishedAt,
+    dateModified: article.updatedAt ?? article.publishedAt,
+    keywords: article.keywords.join(", "),
+    articleSection: article.category,
+    inLanguage: "en-IN",
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": `${SITE_URL}/blog/${article.slug}`,
@@ -109,10 +126,8 @@ export default async function BlogArticlePage(props: Props) {
         }
       : null;
 
-  const others = BLOG_ARTICLES.filter((a) => a.slug !== article.slug).slice(
-    0,
-    2,
-  );
+  const others = relatedBlogArticles(article);
+  const nextSteps = article.relatedTools ?? DEFAULT_NEXT_STEPS;
 
   return (
     <>
@@ -127,6 +142,12 @@ export default async function BlogArticlePage(props: Props) {
         />
       ) : null}
       <article className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+        <Breadcrumb
+          items={[
+            { label: "Blog", href: "/blog" },
+            { label: article.title, href: `/blog/${article.slug}` },
+          ]}
+        />
         <Link
           href="/blog"
           className="text-sm font-semibold text-[#534AB7] hover:underline"
@@ -140,7 +161,15 @@ export default async function BlogArticlePage(props: Props) {
           {article.title}
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          By Himanshu Kumar Gupta · {article.publishedAt}
+          By Himanshu Kumar Gupta ·{" "}
+          <time dateTime={article.publishedAt}>{article.publishedAt}</time>
+          {article.updatedAt && article.updatedAt !== article.publishedAt ? (
+            <>
+              {" "}
+              · Updated{" "}
+              <time dateTime={article.updatedAt}>{article.updatedAt}</time>
+            </>
+          ) : null}
           {article.readTimeMinutes
             ? ` · ${article.readTimeMinutes} min read`
             : null}
@@ -175,24 +204,13 @@ export default async function BlogArticlePage(props: Props) {
         <section className="mt-12 rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <h2 className="text-sm font-semibold text-slate-900">Next steps</h2>
           <ul className="mt-3 space-y-2 text-sm font-semibold text-[#534AB7]">
-            <li>
-              <Link href="/analyse" className="hover:underline">
-                Run the free financial health check
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/calculators/tax-regime-2026"
-                className="hover:underline"
-              >
-                Open tax regime calculator
-              </Link>
-            </li>
-            <li>
-              <Link href="/tracker" className="hover:underline">
-                Track monthly expenses
-              </Link>
-            </li>
+            {nextSteps.map((step) => (
+              <li key={step.href}>
+                <Link href={step.href} className="hover:underline">
+                  {step.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </section>
         {others.length > 0 ? (

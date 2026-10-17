@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 
 const title = "Portfolio Analysis — Mutual Fund Review | Finkoin";
 const description =
   "Analyse your mutual fund portfolio. See what to continue, watch, or switch. Free portfolio insights for India.";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: { absolute: title },
   description,
   keywords: [
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     description,
     images: [`${SITE_URL}/og/og-portfolio.png`],
   },
-};
+});
 
 export default function PortfolioLayout({
   children,

@@ -140,7 +140,7 @@ const COPY: Record<string, Copy> = {
   },
   "expense-ratio": {
     appName: "Direct vs Regular Mutual Fund Calculator",
-    tagline: "Expense Ratio Impact",
+    tagline: "Fee Impact",
     description:
       "See how much more a direct mutual fund plan earns than a regular plan over time because of its lower expense ratio.",
     faq: [
@@ -364,7 +364,7 @@ const COPY: Record<string, Copy> = {
   },
   "balance-transfer": {
     appName: "Home Loan Balance Transfer Calculator",
-    tagline: "Savings from Switching",
+    tagline: "Your Savings",
     description:
       "Calculate how much you save by moving your home loan to a lower rate, after processing fees and charges.",
     faq: [
@@ -507,7 +507,7 @@ const COPY: Record<string, Copy> = {
     ],
   },
   "ltcg-harvest": {
-    appName: "LTCG Tax Harvesting Calculator",
+    appName: "LTCG Harvesting Calculator",
     tagline: "Use the ₹1.25 Lakh Exemption",
     description:
       "Calculate how much long-term equity gain to book each year to use the ₹1.25 lakh exemption and cut future tax.",
@@ -617,7 +617,7 @@ const COPY: Record<string, Copy> = {
   },
   "health-cover": {
     appName: "Health Insurance Cover Calculator",
-    tagline: "Right Cover for Your Family",
+    tagline: "Right Cover for You",
     description:
       "Find the right health insurance cover for your family based on city, family size, age and employer cover.",
     faq: [
@@ -632,7 +632,7 @@ const COPY: Record<string, Copy> = {
     ],
   },
   "policy-return": {
-    appName: "Insurance Policy Return Calculator",
+    appName: "Policy Return Calculator",
     tagline: "Endowment & Money-back IRR",
     description:
       "Find the real yearly return (IRR) of an endowment or money-back policy and compare it with PPF and mutual funds.",
@@ -649,7 +649,7 @@ const COPY: Record<string, Copy> = {
   },
   "buy-term-invest": {
     appName: "Buy Term & Invest the Rest Calculator",
-    tagline: "Term + Invest vs Endowment",
+    tagline: "vs Endowment",
     description:
       "Compare a traditional insurance plan with buying term insurance and investing the premium difference.",
     faq: [

@@ -7,8 +7,7 @@ export type LearnSeoOverride = {
 
 export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
   "sip-calculator-1-crore-10-15-20-years": {
-    title:
-      "SIP Calculator 1 Crore — How Much SIP for ₹1 Crore in 10/15/20 Years | Finkoin",
+    title: "How Much SIP for ₹1 Crore in 10, 15 or 20 Years? | Finkoin",
     description:
       "Free sip calculator 1 crore tool. See monthly SIP needed for ₹1 crore in 10, 15, or 20 years at different returns. Live calculator + examples for India.",
     keywords: [
@@ -22,7 +21,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
   },
   "form-16-what-to-verify": {
     title:
-      "Free ITR Filing 2025-26 — Form 16 Checklist & Tax Regime Prep | Finkoin",
+      "Free ITR Filing 2025-26 — Form 16 Checklist & Regime Prep | Finkoin",
     description:
       "Free ITR filing 2025-26 prep: verify Form 16, reconcile AIS/26AS, compare old vs new tax regime free on Finkoin, then file with confidence.",
     keywords: [
@@ -72,8 +71,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "what-is-the-50-30-20-budgeting-rule": {
-    title:
-      "Why 50-30-20 Rule Fails Indians — Better 40-20-10-30 Framework | Finkoin",
+    title: "Why the 50-30-20 Rule Fails Indians — Try 40-20-10-30 | Finkoin",
     description:
       "The 50-30-20 budgeting rule was designed for USA. Finkoin's 40-20-10-30 framework works better for Indians with 5-6% inflation and no social security.",
     keywords: [
@@ -142,8 +140,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "old-vs-new-tax-regime-which-saves-you-more-money": {
-    title:
-      "Old vs New Tax Regime 2025-26 — Complete Comparison with Examples | Finkoin",
+    title: "Old vs New Tax Regime 2025-26 — Comparison & Examples | Finkoin",
     description:
       "Old vs new tax regime 2026 complete guide with salary examples, 80C/HRA/24B checklist, and a free embedded tax regime calculator for FY 2025-26.",
     keywords: [

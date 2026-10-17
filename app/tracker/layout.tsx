@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = fitMetadata({
   title: {
     absolute: "Monthly Expense Tracker India — Free | Finkoin",
   },
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       "Track monthly expenses by category. See where your money goes.",
     images: [`${SITE_URL}/og/og-tracker.png`],
   },
-};
+});
 
 export default function TrackerLayout({
   children,

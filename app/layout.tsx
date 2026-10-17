@@ -65,9 +65,8 @@ export const metadata: Metadata = {
   publisher: "Finkoin",
   description: SEO_CONFIG.defaultDescription,
   keywords: SEO_CONFIG.defaultKeywords,
-  alternates: {
-    canonical: "/",
-  },
+  // No default canonical here: a "/" canonical inherited by every page told
+  // Google those pages were copies of the home page. Pages set their own.
   robots: {
     index: true,
     follow: true,
@@ -83,7 +82,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_IN",
     title: defaultTitle,
-    description: `${FINKOIN_TAGLINE_FULL} Free financial health check, tax calculator, SIP calculator, home loan EMI, expense tracker and more. Built for Indians.`,
+    description: SEO_CONFIG.defaultDescription,
     url: siteUrl,
     siteName: "Finkoin",
     images: [
@@ -99,8 +98,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@finkoin",
     creator: "@finkoin",
-    title: `Finkoin — ${FINKOIN_TAGLINE}`,
-    description: `${FINKOIN_TAGLINE_FULL} Free financial health check for every Indian. No PAN needed.`,
+    title: SEO_CONFIG.defaultTitle,
+    description: SEO_CONFIG.defaultDescription,
     images: [`${siteUrl}/og/og-home.png`],
   },
   appleWebApp: {
