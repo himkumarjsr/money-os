@@ -322,3 +322,48 @@ export async function setPlannedInvestmentAmount(
     .eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/** How many months ahead "Start from" offers, this month included. */
+export const START_MONTH_CHOICES = 12;
+
+export function plannedDraftKey(d: PlannedInvestmentDraft): string {
+  return `${d.source_id}|${d.instrument_key}`;
+}
+
+/**
+ * For someone without a savings account (or sweep-in FD) to park goal money
+ * in: each savings slice moves into the same goal's liquid fund, or becomes a
+ * liquid fund slice when the goal has none.
+ */
+export function withoutSavingsAccount(
+  drafts: PlannedInvestmentDraft[],
+): PlannedInvestmentDraft[] {
+  const moved = new Map<string, number>();
+  const rest: PlannedInvestmentDraft[] = [];
+  for (const d of drafts) {
+    if (d.instrument_key === "savings_sweep") {
+      moved.set(d.source_id, (moved.get(d.source_id) ?? 0) + d.monthly_amount);
+    } else {
+      rest.push(d);
+    }
+  }
+  const out = rest.map((d) => {
+    const extra =
+      d.instrument_key === "liquid_fund" ? moved.get(d.source_id) : 0;
+    if (!extra) return d;
+    moved.delete(d.source_id);
+    return { ...d, monthly_amount: d.monthly_amount + extra };
+  });
+  for (const d of drafts) {
+    const extra = moved.get(d.source_id);
+    if (d.instrument_key !== "savings_sweep" || !extra) continue;
+    moved.delete(d.source_id);
+    out.push({
+      ...d,
+      instrument_key: "liquid_fund",
+      instrument_label: "Liquid mutual fund",
+      monthly_amount: extra,
+    });
+  }
+  return out;
+}

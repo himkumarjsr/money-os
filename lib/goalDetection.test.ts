@@ -41,7 +41,9 @@ describe("detectGoals — implied goals", () => {
       NOW,
     );
     const edu = goals.filter((g) => g.type === "kid_education");
-    expect(edu.map((g) => g.yearsToGoal).sort((a, b) => a - b)).toEqual([3, 16]);
+    expect(edu.map((g) => g.yearsToGoal).sort((a, b) => a - b)).toEqual([
+      3, 16,
+    ]);
     expect(goals.filter((g) => g.type === "kid_marriage")).toHaveLength(2);
     expect(edu[0].targetAmount).toBe(GOAL_DEFAULTS.kidEducation);
   });
@@ -63,7 +65,12 @@ describe("detectGoals — implied goals", () => {
 
   it("adds home purchase when renting and vehicle when no car", () => {
     const goals = detectGoals(
-      profile({ lifeStage: "bachelor", ownsHome: false, ownsCar: false, rentAmount: 25_000 }),
+      profile({
+        lifeStage: "bachelor",
+        ownsHome: false,
+        ownsCar: false,
+        rentAmount: 25_000,
+      }),
       NOW,
     );
     const home = goals.find((g) => g.id === "home_purchase");
@@ -90,13 +97,51 @@ describe("detectGoals — implied goals", () => {
       NOW,
     );
     const debt = goals.find((g) => g.id === "debt_free");
-    expect(debt).toMatchObject({ targetAmount: 300_000, yearsToGoal: 3, removable: false });
+    expect(debt).toMatchObject({
+      targetAmount: 300_000,
+      yearsToGoal: 3,
+      removable: false,
+    });
     expect(goals.some((g) => g.id === "parents_eldercare")).toBe(true);
+  });
+
+  it("sets the debt-free year from the big loans, not a tiny balance", () => {
+    const goals = detectGoals(
+      profile({
+        unifiedLoans: [
+          {
+            id: "l1",
+            loanType: "personal_loan",
+            lenderName: "ICICI",
+            monthlyEMI: 42_055,
+            outstandingAmount: 1_599_862,
+            remainingMonths: 47,
+          },
+          {
+            id: "l2",
+            loanType: "other",
+            lenderName: "BF",
+            monthlyEMI: 11,
+            outstandingAmount: 1_000,
+            remainingMonths: 89,
+          },
+        ],
+      }),
+      NOW,
+    );
+    const debt = goals.find((g) => g.id === "debt_free");
+    expect(debt?.yearsToGoal).toBe(4);
+    expect(debt?.reason).toContain("Pay off BF in one go.");
   });
 
   it("sorts nearest goal first", () => {
     const years = detectGoals(
-      profile({ lifeStage: "kids", numberOfKids: 1, kidsAges: [10], ownsCar: false }),
+      profile({
+        lifeStage: "kids",
+        numberOfKids: 1,
+        kidsAges: [10],
+        ownsCar: false,
+      }),
       NOW,
     ).map((g) => g.yearsToGoal);
     expect(years).toEqual([...years].sort((a, b) => a - b));
@@ -105,18 +150,31 @@ describe("detectGoals — implied goals", () => {
 
 describe("prompted goals", () => {
   it("offers the marriage toggle to bachelors and the baby toggle to married-no-kids, once", () => {
-    expect(promptedGoalOffers(profile({ lifeStage: "bachelor" }))).toEqual(["marriage"]);
-    expect(promptedGoalOffers(profile({ lifeStage: "married" }))).toEqual(["baby"]);
+    expect(promptedGoalOffers(profile({ lifeStage: "bachelor" }))).toEqual([
+      "marriage",
+    ]);
+    expect(promptedGoalOffers(profile({ lifeStage: "married" }))).toEqual([
+      "baby",
+    ]);
     expect(
-      promptedGoalOffers(profile({ lifeStage: "kids", numberOfKids: 1, kidsAges: [3] })),
+      promptedGoalOffers(
+        profile({ lifeStage: "kids", numberOfKids: 1, kidsAges: [3] }),
+      ),
     ).toEqual([]);
-    const answered = answerPromptedGoal(profile({ lifeStage: "bachelor" }), "marriage", false);
+    const answered = answerPromptedGoal(
+      profile({ lifeStage: "bachelor" }),
+      "marriage",
+      false,
+    );
     expect(promptedGoalOffers(answered)).toEqual([]);
     expect(ids(answered)).not.toContain("marriage");
   });
 
   it("re-asks when an older build stored a plain 'no' with nothing hidden", () => {
-    const legacy = { ...profile({ lifeStage: "bachelor" }), planningMarriage: false };
+    const legacy = {
+      ...profile({ lifeStage: "bachelor" }),
+      planningMarriage: false,
+    };
     expect(promptedGoalOffers(legacy)).toEqual(["marriage"]);
   });
 
@@ -127,7 +185,9 @@ describe("prompted goals", () => {
     ] as const) {
       const base = profile({ lifeStage });
       const notNow = answerPromptedGoal(base, offer, false);
-      expect(notNow).toEqual(dismissGoal(answerPromptedGoal(base, offer, true), offer));
+      expect(notNow).toEqual(
+        dismissGoal(answerPromptedGoal(base, offer, true), offer),
+      );
       expect(notNow.dismissedGoals).toEqual([offer]);
       expect(ids(notNow)).not.toContain(offer);
       const restored = restoreDismissedGoals(notNow);
@@ -137,15 +197,28 @@ describe("prompted goals", () => {
   });
 
   it("adds the wedding fund only after the user says yes", () => {
-    const yes = answerPromptedGoal(profile({ lifeStage: "bachelor" }), "marriage", true);
+    const yes = answerPromptedGoal(
+      profile({ lifeStage: "bachelor" }),
+      "marriage",
+      true,
+    );
     expect(ids(yes)).toContain("marriage");
   });
 });
 
 describe("editing goals", () => {
   it("writes per-child amounts and survives a normalize round trip", () => {
-    const base = profile({ lifeStage: "kids", numberOfKids: 2, kidsAges: [2, 15] });
-    const edited = applyGoalEdit(base, "kid_education:1", { targetAmount: 3_500_000 }, NOW);
+    const base = profile({
+      lifeStage: "kids",
+      numberOfKids: 2,
+      kidsAges: [2, 15],
+    });
+    const edited = applyGoalEdit(
+      base,
+      "kid_education:1",
+      { targetAmount: 3_500_000 },
+      NOW,
+    );
     const round = normalizeAnalyseFormValues(edited as AnalyseFormValues);
     const g = detectGoals(round, NOW).find((x) => x.id === "kid_education:1");
     expect(g?.targetAmount).toBe(3_500_000);
@@ -153,18 +226,29 @@ describe("editing goals", () => {
   });
 
   it("maps retirement year to retirement age", () => {
-    const edited = applyGoalEdit(profile({ lifeStage: "bachelor" }), "retirement", { targetYear: 2046 }, NOW);
+    const edited = applyGoalEdit(
+      profile({ lifeStage: "bachelor" }),
+      "retirement",
+      { targetYear: 2046 },
+      NOW,
+    );
     expect(edited.retirementAge).toBe(52);
   });
 
   it("removes implied goals but never retirement", () => {
     const base = profile({ lifeStage: "bachelor", ownsCar: false });
-    expect(ids(dismissGoal(base, "vehicle_purchase"))).not.toContain("vehicle_purchase");
+    expect(ids(dismissGoal(base, "vehicle_purchase"))).not.toContain(
+      "vehicle_purchase",
+    );
     expect(ids(dismissGoal(base, "retirement"))).toContain("retirement");
   });
 
   it("restoring a removed wedding goal re-opens the question", () => {
-    const yes = answerPromptedGoal(profile({ lifeStage: "bachelor" }), "marriage", true);
+    const yes = answerPromptedGoal(
+      profile({ lifeStage: "bachelor" }),
+      "marriage",
+      true,
+    );
     const removed = dismissGoal(yes, "marriage");
     expect(promptedGoalOffers(removed)).toEqual([]);
     const restored = restoreDismissedGoals(removed);

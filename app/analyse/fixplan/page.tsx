@@ -28,6 +28,7 @@ import {
 import { Analytics } from "@/lib/analytics";
 import { scoreBand } from "@/lib/financialEngine";
 import { buildPriorityPlan, debtPayoffNumbers } from "@/lib/priorityEngine";
+import { goalTimeline } from "@/lib/goalTimeline";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import PrivateAmount from "@/components/ui/PrivateAmount";
@@ -1372,6 +1373,7 @@ function GoalSplitCard({
                   Instrument: {g.instrument}
                 </p>
               )}
+              <GoalTimelineTable goal={g} />
               {g.goalId && progress?.[g.goalId] ? (
                 <p className="mt-2 text-xs font-semibold text-[#1D9E75]">
                   {progress[g.goalId].started >= progress[g.goalId].total
@@ -1417,5 +1419,47 @@ function GoalSplitCard({
         </>
       ) : null}
     </section>
+  );
+}
+
+/** Year-by-year growth of one goal's plan up to its target year. */
+function GoalTimelineTable({ goal }: { goal: GoalSplitRow }) {
+  const t = goalTimeline(goal);
+  if (!t) return null;
+  const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+  const last = t.rows[t.rows.length - 1];
+  return (
+    <details className="mt-2 rounded-lg bg-[#F7F6FB] p-2">
+      <summary className="cursor-pointer text-xs font-semibold text-[#534AB7]">
+        Year-by-year plan till {last.year}
+      </summary>
+      <p className="mt-1.5 text-[11px] leading-snug text-[#7A7871]">
+        {inr(t.monthly)}/month growing at about {t.realReturnPct}% a year after
+        inflation, in today&apos;s rupees. &quot;On track&quot; is where the
+        full {inr(goal.monthlyRequired)}/month would get you.
+      </p>
+      <table className="mt-1.5 w-full text-[11px] tabular-nums text-[#454442]">
+        <thead>
+          <tr className="text-left text-[#7A7871]">
+            <th className="py-0.5 font-semibold">Year</th>
+            <th className="py-0.5 text-right font-semibold">Put in</th>
+            <th className="py-0.5 text-right font-semibold">Worth</th>
+            <th className="py-0.5 text-right font-semibold">On track</th>
+          </tr>
+        </thead>
+        <tbody>
+          {t.rows.map((r) => (
+            <tr key={r.year} className="border-t border-[#ECEAF5]">
+              <td className="py-0.5">{r.year}</td>
+              <td className="py-0.5 text-right">{inr(r.invested)}</td>
+              <td className="py-0.5 text-right font-semibold">
+                {inr(r.expected)}
+              </td>
+              <td className="py-0.5 text-right">{inr(r.needed)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
   );
 }
