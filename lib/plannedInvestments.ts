@@ -367,3 +367,55 @@ export function withoutSavingsAccount(
   }
   return out;
 }
+
+/**
+ * Moves the money of unticked drafts onto the ticked ones so the monthly
+ * total stays the same: first to ticked drafts of the same goal, in
+ * proportion; a goal with nothing ticked spreads across every ticked draft.
+ */
+export function redistributeUnticked(
+  drafts: PlannedInvestmentDraft[],
+  off: ReadonlySet<string>,
+): PlannedInvestmentDraft[] {
+  const on = drafts.filter((d) => !off.has(plannedDraftKey(d)));
+  if (on.length === 0) return [];
+  const amounts = new Map(
+    on.map((d) => [plannedDraftKey(d), d.monthly_amount]),
+  );
+  const spread = (targets: PlannedInvestmentDraft[], amount: number) => {
+    const base = targets.reduce((s, d) => s + d.monthly_amount, 0);
+    let left = amount;
+    targets.forEach((d, i) => {
+      const add =
+        i === targets.length - 1
+          ? left
+          : Math.round(
+              base > 0
+                ? (amount * d.monthly_amount) / base
+                : amount / targets.length,
+            );
+      left -= add;
+      const k = plannedDraftKey(d);
+      amounts.set(k, (amounts.get(k) ?? 0) + add);
+    });
+  };
+  const unticked = new Map<string, number>();
+  for (const d of drafts) {
+    if (!off.has(plannedDraftKey(d))) continue;
+    unticked.set(
+      d.source_id,
+      (unticked.get(d.source_id) ?? 0) + d.monthly_amount,
+    );
+  }
+  let orphan = 0;
+  for (const [goal, amount] of unticked) {
+    const same = on.filter((d) => d.source_id === goal);
+    if (same.length) spread(same, amount);
+    else orphan += amount;
+  }
+  if (orphan > 0) spread(on, orphan);
+  return on.map((d) => ({
+    ...d,
+    monthly_amount: amounts.get(plannedDraftKey(d)) ?? d.monthly_amount,
+  }));
+}
