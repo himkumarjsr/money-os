@@ -413,6 +413,8 @@ export interface FinancialProfile {
   babyFundYear?: number;
   /** Implied goal ids the user removed from their goal list. */
   dismissedGoals?: string[];
+  /** Already has term cover: add the suggested top-up to the plan? undefined = not asked yet. */
+  wantsTermTopUp?: boolean;
   /** Goals the user added themselves on the Goals page (travel, studies…). */
   customGoals?: CustomGoal[];
   /** Risk quiz answers (index = RISK_QUESTIONS index, 0–2 each). */
@@ -785,6 +787,7 @@ const formShape = {
   babyFundTarget: optionalMoney,
   babyFundYear: optionalWholeNumber,
   dismissedGoals: z.array(z.string()).max(40).optional(),
+  wantsTermTopUp: z.boolean().optional(),
   customGoals: z
     .array(
       z.object({
@@ -2058,6 +2061,7 @@ export function financialProfileToFormValues(
     babyFundTarget: p.babyFundTarget,
     babyFundYear: p.babyFundYear,
     dismissedGoals: p.dismissedGoals,
+    wantsTermTopUp: p.wantsTermTopUp,
     customGoals: p.customGoals,
     riskAnswers: p.riskAnswers,
     riskTolerance: p.riskTolerance,
@@ -2688,6 +2692,7 @@ export function normalizeAnalyseFormValues(
     babyFundTarget: form.babyFundTarget,
     babyFundYear: form.babyFundYear,
     dismissedGoals: form.dismissedGoals,
+    wantsTermTopUp: form.wantsTermTopUp,
     customGoals: form.customGoals,
     riskAnswers: form.riskAnswers,
     riskTolerance: scoreRiskTolerance(form.riskAnswers) ?? form.riskTolerance,

@@ -132,13 +132,20 @@ function FixPlanScreen() {
     if (!hasAccess) router.replace("/analyse/result");
   }, [hasInitialized, isLoggedIn, hasAccess]);
 
-  const { aiPlan, aiLoading, aiError, refreshing, notice, refresh } =
-    useFixPlan({
-      profile,
-      result,
-      userId: user?.id,
-      enabled: allowed && storeHydrated && !!profile && !!result,
-    });
+  const {
+    aiPlan,
+    aiLoading,
+    aiError,
+    refreshing,
+    notice,
+    refresh,
+    answerTermTopUp,
+  } = useFixPlan({
+    profile,
+    result,
+    userId: user?.id,
+    enabled: allowed && storeHydrated && !!profile && !!result,
+  });
   const trajectory = useMemo(
     () =>
       profile && aiPlan?.priorityPlan
@@ -247,6 +254,8 @@ function FixPlanScreen() {
             priority={p}
             monthlySurplus={pp?.monthlySurplus || 0}
             explanation={expl?.priorityExplanations?.[p.id]}
+            termTopUpChosen={profile?.wantsTermTopUp === true}
+            onTermTopUpAnswer={answerTermTopUp}
           />
         ))}
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { PriorityItem } from "@/lib/priorityEngine";
 import { monthsForPriority } from "@/lib/fixPlanMerge";
@@ -16,13 +17,29 @@ type Props = {
   priority: PriorityItem;
   monthlySurplus: number;
   explanation?: string;
+  /** User already said yes to a term top-up (lets them take it back). */
+  termTopUpChosen?: boolean;
+  onTermTopUpAnswer?: (yes: boolean) => Promise<void>;
 };
 
 export function PriorityCard({
   priority: p,
   monthlySurplus,
   explanation,
+  termTopUpChosen,
+  onTermTopUpAnswer,
 }: Props) {
+  const [saving, setSaving] = useState(false);
+  const answer = async (yes: boolean) => {
+    if (!onTermTopUpAnswer) return;
+    setSaving(true);
+    try {
+      await onTermTopUpAnswer(yes);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const quote = Number(p.quoteMonthly || p.monthlyContribution || 0);
   const isTermTopUp = p.id === "term_insurance" && p.status === "partial";
   const urgency = isTermTopUp ? "high" : p.urgency;
   const isInsurance = p.id === "term_insurance" || p.id === "health_insurance";
@@ -98,6 +115,46 @@ export function PriorityCard({
         </Text>
       </View>
 
+      {p.id === "term_insurance" && onTermTopUpAnswer && p.needsAnswer ? (
+        <View style={styles.choiceBox}>
+          <Text style={styles.choiceQ}>
+            Add this top-up to your plan
+            {quote > 0 ? ` (about ₹${loc(quote)}/month)` : ""}?
+          </Text>
+          <View style={styles.choiceRow}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={saving}
+              onPress={() => void answer(true)}
+              style={[styles.choiceYes, saving && { opacity: 0.5 }]}
+            >
+              <Text style={styles.choiceYesText}>Yes, add it</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={saving}
+              onPress={() => void answer(false)}
+              style={[styles.choiceNo, saving && { opacity: 0.5 }]}
+            >
+              <Text style={styles.choiceNoText}>No, skip it</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+      {p.id === "term_insurance" &&
+      onTermTopUpAnswer &&
+      !p.needsAnswer &&
+      termTopUpChosen ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={saving}
+          onPress={() => void answer(false)}
+          style={styles.learn}
+        >
+          <Text style={styles.learnText}>Remove the top-up from my plan</Text>
+        </Pressable>
+      ) : null}
+
       {isInsurance ? (
         <Pressable
           onPress={() => openContentHref(learnPath)}
@@ -113,6 +170,32 @@ export function PriorityCard({
 
 const styles = themedStyles(() => ({
   card: { borderLeftWidth: 4 },
+  choiceBox: { marginTop: Spacing.md, gap: Spacing.sm },
+  choiceQ: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
+  choiceRow: { flexDirection: "row", gap: Spacing.sm },
+  choiceYes: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  choiceYesText: { color: Colors.onPrimary, fontSize: 14, fontWeight: "700" },
+  choiceNo: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  choiceNoText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",

@@ -61,7 +61,11 @@ export function isPriorityComplete(p: {
   gap?: unknown;
   monthlyContribution?: unknown;
   status?: unknown;
+  fromSavings?: unknown;
+  needsAnswer?: unknown;
 }): boolean {
+  if (p.needsAnswer === true) return false;
+  if (Number(p.fromSavings || 0) > 0 && p.status !== "complete") return false;
   const monthly = Math.max(0, Number(p.monthlyContribution || 0));
   const gap = Math.max(0, Number(p.gap || 0));
   return gap <= 0 || monthly <= 0 || p.status === "complete";
@@ -92,16 +96,22 @@ export function mergeEnginePriorityPlan(
         gap,
         monthlyContribution: monthly,
         monthlyRequired: Number(p.monthlyRequired || monthly),
-        monthsToComplete: monthsFor(String(p.id || ""), gap, monthly),
+        // A goal runs until its target year, not until gap / monthly.
+        monthsToComplete:
+          p.category === "goal"
+            ? Number(p.monthsToComplete || 0)
+            : monthsFor(String(p.id || ""), gap, monthly),
         surplusBefore: Number(p.surplusBefore || 0),
         surplusAfterThis: Number(p.surplusAfterThis || 0),
-        title: isComplete ? p.title : match.title || p.title,
+        title: isComplete || p.needsAnswer ? p.title : match.title || p.title,
         instrument: isComplete
           ? p.instrument
           : match.instrument || p.instrument,
         actionThisWeek: isComplete
           ? COMPLETE_ACTION
-          : match.actionThisWeek || p.actionThisWeek,
+          : p.needsAnswer || p.fromSavings
+            ? p.actionThisWeek
+            : match.actionThisWeek || p.actionThisWeek,
         whyThisMatters: isComplete
           ? COMPLETE_WHY
           : match.whyThisMatters || p.whyThisMatters,
@@ -148,7 +158,10 @@ export function debtIsEstimated(d: {
   return !!(d.outstandingEstimated || d.rateEstimated);
 }
 
-export function debtRateLabel(d: { rate?: unknown; rateEstimated?: boolean }): string {
+export function debtRateLabel(d: {
+  rate?: unknown;
+  rateEstimated?: boolean;
+}): string {
   const rate = Number(d.rate || 0);
   if (!d.rateEstimated) return `${rate}%`;
   return rate > 0 ? `${rate}% (est.)` : "Not entered";
