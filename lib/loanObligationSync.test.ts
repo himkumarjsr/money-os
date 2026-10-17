@@ -83,6 +83,38 @@ describe("mergeTrackerLoansIntoProfile (Tracker → Analyse)", () => {
     expect(profile.unifiedLoans ?? []).toHaveLength(0);
   });
 
+  it("keeps no car EMI after the car row is re-filed while other loans stay", () => {
+    const icici = ob({ id: "ob1" });
+    const car = ob({ id: "ob2", title: "Car insurance", amount: 2_500 });
+    const once = mergeTrackerLoansIntoProfile(profileWith([]), [
+      icici,
+      car,
+    ]).profile;
+    expect(once.carLoanEMI).toBe(2_500);
+    const { profile } = mergeTrackerLoansIntoProfile(once, [
+      icici,
+      { ...car, category: "insurance_vehicle" },
+    ]);
+    expect(profile.carLoanEMI).toBe(0);
+    expect(
+      buildPriorityPlan(profile, { needsActual: 40_000 }).debts.some(
+        (d) => d.type === "Car loan",
+      ),
+    ).toBe(false);
+  });
+
+  it("repairs a saved profile still carrying a removed loan's EMI", () => {
+    const stale = {
+      ...mergeTrackerLoansIntoProfile(profileWith([]), [ob({})]).profile,
+      carLoanEMI: 2_500,
+      carLoanLenderName: "insurance",
+    };
+    const { profile, changed } = mergeTrackerLoansIntoProfile(stale, [ob({})]);
+    expect(changed).toBe(true);
+    expect(profile.carLoanEMI).toBe(0);
+    expect(mergeTrackerLoansIntoProfile(profile, [ob({})]).changed).toBe(false);
+  });
+
   it("follows EMI edits made in Tracker", () => {
     const once = mergeTrackerLoansIntoProfile(profileWith([]), [
       ob({}),
