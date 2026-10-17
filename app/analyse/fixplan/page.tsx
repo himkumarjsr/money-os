@@ -1010,6 +1010,7 @@ export default function FixPlanPage() {
             onClose={() => setStartPlanOpen(false)}
             userId={user.id}
             goals={aiPlan.priorityPlan.goals}
+            profile={profile}
             hasExisting={Object.keys(plannedProgress).length > 0}
             onSaved={() => void loadPlannedProgress()}
           />

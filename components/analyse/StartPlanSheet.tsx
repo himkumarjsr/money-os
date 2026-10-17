@@ -7,13 +7,19 @@ import {
   monthStart,
   PLANNED_REMIND_DAYS_BEFORE,
   plannedDraftKey,
+  redistributeUnticked,
   savePlannedInvestments,
   START_MONTH_CHOICES,
   withoutSavingsAccount,
 } from "@/lib/plannedInvestments";
+import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { GoalItem } from "@/lib/priorityEngine";
 import { getSupabase } from "@/lib/supabase";
-import { useMemo, useState } from "react";
+import { applyTrackerCover, trackerPlanFit } from "@/lib/trackerPlanFit";
+import { useObligationStore } from "@/store/obligationStore";
+import { useEffect, useMemo, useState } from "react";
+
+const rs = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 /** Consent step before any planned-investment reminder is created. Nothing is ever invested. */
 export default function StartPlanSheet({
@@ -21,6 +27,7 @@ export default function StartPlanSheet({
   onClose,
   userId,
   goals,
+  profile,
   hasExisting,
   onSaved,
 }: {
@@ -28,6 +35,7 @@ export default function StartPlanSheet({
   onClose: () => void;
   userId: string;
   goals: GoalItem[];
+  profile: FinancialProfile | null;
   hasExisting: boolean;
   onSaved: () => void;
 }) {
@@ -38,11 +46,25 @@ export default function StartPlanSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const obligations = useObligationStore((st) => st.obligations);
+  useEffect(() => {
+    if (isOpen && userId)
+      void useObligationStore.getState().fetchObligations(userId);
+  }, [isOpen, userId]);
+
   const startMonth = monthStart(new Date(), offset);
-  const allDrafts = useMemo(() => {
+  const fit = useMemo(
+    () => trackerPlanFit(obligations, profile, startMonth),
+    [obligations, profile, startMonth],
+  );
+  const { allDrafts, taken } = useMemo(() => {
     const built = buildPlannedDrafts(goals, startMonth);
-    return hasSavings ? built : withoutSavingsAccount(built);
-  }, [goals, startMonth, hasSavings]);
+    const r = applyTrackerCover(
+      hasSavings ? built : withoutSavingsAccount(built),
+      fit.investmentCover,
+    );
+    return { allDrafts: r.drafts, taken: r.taken };
+  }, [goals, startMonth, hasSavings, fit.investmentCover]);
   const asksSavings = useMemo(
     () =>
       buildPlannedDrafts(goals, startMonth).some(
@@ -50,7 +72,11 @@ export default function StartPlanSheet({
       ),
     [goals, startMonth],
   );
-  const drafts = allDrafts.filter((d) => !off.has(plannedDraftKey(d)));
+  const drafts = useMemo(
+    () => redistributeUnticked(allDrafts, off),
+    [allDrafts, off],
+  );
+  const shown = new Map(drafts.map((d) => [plannedDraftKey(d), d]));
   const toggle = (key: string) =>
     setOff((prev) => {
       const next = new Set(prev);
@@ -60,6 +86,7 @@ export default function StartPlanSheet({
     });
   const total = drafts.reduce((s, d) => s + d.monthly_amount, 0);
   const goalCount = new Set(drafts.map((d) => d.source_id)).size;
+  const anyOff = allDrafts.some((d) => off.has(plannedDraftKey(d)));
 
   const save = async () => {
     setSaving(true);
@@ -143,9 +170,50 @@ export default function StartPlanSheet({
           </div>
         ) : null}
 
+        {fit.items.length ? (
+          <div className="rounded-xl border border-[#E8E6F0] p-3 text-[13px]">
+            <p className="font-semibold text-[#111110]">
+              Already in your Tracker
+            </p>
+            <ul className="mt-2 space-y-1">
+              {fit.items.map((it) => (
+                <li key={`${it.kind}|${it.title}`} className="flex gap-2">
+                  <span className="flex-1">
+                    <span className="font-semibold">{it.title}</span>
+                    <span className="block text-[12px] text-[#7A7871]">
+                      {it.note}
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    {rs(it.monthly)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {fit.investmentCover > 0 ? (
+              <p className="mt-2 text-[12px] text-[#454442]">
+                Your running SIPs ({rs(fit.investmentCover)}/month) are taken
+                off the suggestions below, so nothing is suggested twice.
+              </p>
+            ) : null}
+            {fit.premiumExtra > 0 ? (
+              <p className="mt-2 text-[12px] text-[#8C5A0A]">
+                Your premium savings need {rs(fit.premiumExtra)}/month more than
+                the plan sets aside for premiums
+                {fit.premiumExtraUntil
+                  ? ` until ${formatStartMonth(fit.premiumExtraUntil)}`
+                  : ""}
+                . Keep that from your spare cash, or start this plan after they
+                end.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div>
           <p className="mb-2 text-[12px] text-[#7A7871]">
-            Untick anything you don&apos;t want. The total updates as you go.
+            Untick anything you don&apos;t want. Its amount moves to the ticked
+            items of the same goal, so your monthly total stays the same.
           </p>
           <ul className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-[#E8E6F0] p-3 text-[13px]">
             {allDrafts.map((d) => {
@@ -167,15 +235,25 @@ export default function StartPlanSheet({
                       {d.instrument_label}
                     </span>
                     <span
-                      className={`shrink-0 tabular-nums ${on ? "" : "text-[#A3A19B] line-through"}`}
+                      className={`shrink-0 text-right tabular-nums ${on ? "" : "text-[#A3A19B] line-through"}`}
                     >
-                      ₹{d.monthly_amount.toLocaleString("en-IN")}
+                      {rs(shown.get(key)?.monthly_amount ?? d.monthly_amount)}
+                      {on && taken[key] ? (
+                        <span className="block text-[11px] text-[#7A7871]">
+                          {rs(taken[key])} already in Tracker
+                        </span>
+                      ) : null}
                     </span>
                   </label>
                 </li>
               );
             })}
           </ul>
+          {anyOff ? (
+            <p className="mt-2 text-[12px] text-[#7A7871]">
+              Amounts above include what moved from the items you unticked.
+            </p>
+          ) : null}
           <p className="mt-2 flex justify-between text-[14px] font-semibold text-[#111110]">
             <span>Total per month</span>
             <span className="tabular-nums">

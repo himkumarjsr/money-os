@@ -297,6 +297,7 @@ function FixPlanScreen() {
             onClose={() => setStartPlanOpen(false)}
             userId={user.id}
             goals={goals}
+            profile={profile}
             hasExisting={Object.keys(plannedProgress).length > 0}
             onSaved={() => void loadPlannedProgress()}
           />
