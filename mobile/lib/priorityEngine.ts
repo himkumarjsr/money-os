@@ -192,6 +192,8 @@ export type DebtPayoffNumbers = {
   monthsSaved: number;
   /** Interest at current EMI minus interest with the extra payment; 0 when not computable. */
   interestSaved: number;
+  /** EMI barely covers the interest, so the entry is probably wrong. */
+  emiTooLow: boolean;
 };
 
 /** Payoff figures for a debt card / PDF row (accepts engine and AI debt shapes). */
@@ -217,6 +219,10 @@ export function debtPayoffNumbers(debt: any): DebtPayoffNumbers {
       ? Math.max(0, Math.round(base.totalInterest - withExtra.totalInterest))
       : 0;
 
+  const monthlyInterest = (outstanding * rate) / 1200;
+  const emiTooLow =
+    outstanding > 0 && currentEMI > 0 && currentEMI < monthlyInterest * 1.5;
+
   return {
     extraPayment,
     outstanding,
@@ -224,6 +230,7 @@ export function debtPayoffNumbers(debt: any): DebtPayoffNumbers {
     monthsNow,
     monthsSaved,
     interestSaved,
+    emiTooLow,
   };
 }
 
@@ -836,6 +843,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     { safetyNetComplete },
   );
 
+  const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+  let safetyNoted = false;
   for (let month = 1; month <= 12; month += 1) {
     let left = Math.max(0, Math.round(monthlySurplus));
     let emergency = 0;
@@ -859,8 +868,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       left -= medical;
     }
 
-    // Term premium as yearly payment month after emergency focus.
-    if (termRemaining > 0 && month >= 3 && left > 0) {
+    // Yearly term premium as soon as the emergency fund is in place.
+    if (termRemaining > 0 && emRemaining === 0 && left > 0) {
       termYearly = Math.min(left, termRemaining);
       termRemaining = Math.max(0, termRemaining - termYearly);
       left -= termYearly;
@@ -877,7 +886,6 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           goalFunding.totalAllocated + goalFunding.unallocated,
         );
         left -= sip;
-        note = wealthDeploy.noteSafe(month);
       } else {
         sip = Math.min(left, goalFunding.totalAllocated);
         left -= sip;
@@ -888,19 +896,47 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         const generalSip = Math.min(left, goalFunding.unallocated);
         sip += generalSip;
         left -= generalSip;
-        note =
-          goalFunding.items.length > 1
-            ? `Safety complete. Fund your ${goalFunding.items.length} goals in parallel from month ${month}.`
-            : wealthDeploy.noteSafe(month);
       }
-    } else if (emRemaining > 0) {
-      note = "Emergency fund focus month.";
-    } else if (medRemaining > 0) {
-      note = "Medical fund acceleration month.";
-    } else if (termRemaining > 0) {
-      note = "Pay yearly term premium this month.";
+    }
+
+    // Plain notes with the month's own amounts and no month numbers, so
+    // identical months read the same and can be shown as one range.
+    const parts: string[] = [];
+    if (emergency > 0) {
+      parts.push(
+        emRemaining > 0
+          ? `${rupees(emergency)} to the emergency fund (${rupees(emRemaining)} still to go)`
+          : `${rupees(emergency)} to finish the emergency fund`,
+      );
+    }
+    if (medical > 0) {
+      parts.push(
+        medRemaining > 0
+          ? `${rupees(medical)} to the medical fund (${rupees(medRemaining)} still to go)`
+          : `${rupees(medical)} to finish the medical fund`,
+      );
+    }
+    if (termYearly > 0) {
+      parts.push(`pay the ${rupees(termYearly)} yearly term premium`);
+    }
+    if (extraDebt > 0) {
+      parts.push(`${rupees(extraDebt)} extra on your highest-rate loan`);
+    }
+    if (sip > 0) {
+      const goals = goalFunding.items.length;
+      parts.push(
+        `${rupees(sip)} into SIPs${goals > 1 ? ` across your ${goals} goals` : ""}`,
+      );
+    }
+    const plan = parts.join(", ");
+    const sentence = plan
+      ? `${plan.charAt(0).toUpperCase()}${plan.slice(1)}.`
+      : "Keep the same allocation.";
+    if (safetyDone && !safetyNoted) {
+      safetyNoted = true;
+      note = `Safety net done. ${sentence}`;
     } else {
-      note = "Maintain allocation discipline.";
+      note = sentence;
     }
 
     monthlyPlan.push({

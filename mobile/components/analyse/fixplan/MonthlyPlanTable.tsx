@@ -1,5 +1,6 @@
 import { ScrollView, Text, View } from "react-native";
 import type { PriorityPlan } from "@/lib/priorityEngine";
+import { groupMonthlyPlan, type MonthGroup } from "@/lib/monthlyPlanGroups";
 import { Colors, Radius, Spacing, themedStyles } from "@/constants/theme";
 import { inr, shared } from "./shared";
 
@@ -8,7 +9,7 @@ type Col = {
   key: string;
   label: string;
   width: number;
-  render: (m: Row) => string;
+  render: (m: MonthGroup) => string;
   show: boolean;
 };
 
@@ -19,8 +20,8 @@ export function MonthlyPlanTable({ rows }: { rows: Row[] }) {
       {
         key: "month",
         label: "Month",
-        width: 64,
-        render: (m) => String(m.month),
+        width: 72,
+        render: (m) => m.label,
         show: true,
       },
       {
@@ -78,7 +79,10 @@ export function MonthlyPlanTable({ rows }: { rows: Row[] }) {
   return (
     <View style={shared.card}>
       <Text style={shared.cardTitle}>
-        Month-wise execution plan (12 months)
+        Month-wise plan for the next 12 months
+      </Text>
+      <Text style={styles.hint}>
+        Months that repeat the same split are shown together.
       </Text>
       <ScrollView
         horizontal
@@ -94,9 +98,9 @@ export function MonthlyPlanTable({ rows }: { rows: Row[] }) {
               </Text>
             ))}
           </View>
-          {rows.map((m) => (
+          {groupMonthlyPlan(rows).map((m) => (
             <View
-              key={`month-plan-${m.month}`}
+              key={`month-plan-${m.fromMonth}`}
               style={[styles.tr, styles.trBody]}
             >
               {cols.map((c) => (
@@ -128,6 +132,7 @@ const styles = themedStyles(() => ({
     borderColor: Colors.border,
   },
   table: { flexGrow: 1 },
+  hint: { marginTop: 4, fontSize: 12, color: Colors.textSecondary },
   tr: { flexDirection: "row" },
   thead: { backgroundColor: Colors.background },
   trBody: { borderTopWidth: 1, borderTopColor: Colors.surfaceMuted },
