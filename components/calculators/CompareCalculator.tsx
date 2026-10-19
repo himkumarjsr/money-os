@@ -3,21 +3,23 @@
 import { ShareButton } from "@/components/ui/ShareButton";
 import { cn } from "@/lib/cn";
 import {
+  COMPARE_PRESETS,
   KIND_META,
   MAX_SCENARIOS,
+  SCENARIO_LETTERS,
+  bestIndex,
   changeKind,
   chartRows,
+  compareRows,
+  compareVerdicts,
   computeScenario,
   decodeScenarios,
   encodeScenarios,
   kindsInFamily,
   normaliseScenario,
   type CompareFamily,
-  type GrowResult,
-  type LoanResult,
   type Scenario,
   type ScenarioKind,
-  type ScenarioResult,
 } from "@/lib/compareScenarios";
 import { formatIndian, formatIndianCompact } from "@/lib/formatters";
 import { useEffect, useMemo, useState } from "react";
@@ -32,73 +34,9 @@ import {
   YAxis,
 } from "recharts";
 import { Insight, SliderField } from "./calculator-ui";
-import { Note, Segmented, inr } from "./advisor/kit";
+import { Note, Segmented } from "./advisor/kit";
 
-const LETTERS = ["A", "B", "C"];
 const COLORS = ["#534AB7", "#1D9E75", "#D97706"];
-
-type Preset = { label: string; scenarios: Scenario[] };
-
-const sip = (amount: number, rate: number, years: number): Scenario => ({
-  kind: "sip",
-  amount,
-  rate,
-  years,
-  stepUp: 0,
-});
-const loan = (amount: number, rate: number, years: number): Scenario => ({
-  kind: "loan",
-  amount,
-  rate,
-  years,
-  stepUp: 0,
-});
-
-const PRESETS: Record<CompareFamily, Preset[]> = {
-  grow: [
-    {
-      label: "10% vs 12% return",
-      scenarios: [sip(10_000, 10, 15), sip(10_000, 12, 15)],
-    },
-    {
-      label: "15 vs 20 years",
-      scenarios: [sip(10_000, 12, 15), sip(10_000, 12, 20)],
-    },
-    {
-      label: "SIP vs PPF vs RD",
-      scenarios: [
-        sip(12_500, 12, 15),
-        { kind: "ppf", amount: 1_50_000, rate: 7.1, years: 15, stepUp: 0 },
-        { kind: "rd", amount: 12_500, rate: 7, years: 10, stepUp: 0 },
-      ],
-    },
-    {
-      label: "Flat vs step-up SIP",
-      scenarios: [
-        sip(10_000, 12, 15),
-        { kind: "stepup", amount: 10_000, rate: 12, years: 15, stepUp: 10 },
-      ],
-    },
-  ],
-  loan: [
-    {
-      label: "15 vs 20 vs 25 years",
-      scenarios: [
-        loan(50_00_000, 8.5, 15),
-        loan(50_00_000, 8.5, 20),
-        loan(50_00_000, 8.5, 25),
-      ],
-    },
-    {
-      label: "8.5% vs 9.5% rate",
-      scenarios: [loan(50_00_000, 8.5, 20), loan(50_00_000, 9.5, 20)],
-    },
-    {
-      label: "Bigger down payment",
-      scenarios: [loan(50_00_000, 8.5, 20), loan(40_00_000, 8.5, 20)],
-    },
-  ],
-};
 
 function familyOf(list: Scenario[]): CompareFamily {
   return KIND_META[list[0].kind].family;
@@ -111,134 +49,7 @@ function readInitial(): Scenario[] {
     );
     if (fromUrl) return fromUrl;
   }
-  return PRESETS.grow[1].scenarios;
-}
-
-function pctDiff(a: number, b: number) {
-  if (a === 0) return "";
-  const p = ((b - a) / Math.abs(a)) * 100;
-  return ` (${p > 0 ? "+" : ""}${p.toFixed(p > -10 && p < 10 ? 1 : 0)}%)`;
-}
-
-/** Plain-English verdict of each scenario against A. */
-function verdicts(results: ScenarioResult[]): string[] {
-  const base = results[0];
-  return results.slice(1).map((r, i) => {
-    const who = LETTERS[i + 1];
-    if (base.family === "grow" && r.family === "grow") {
-      const d = r.value - base.value;
-      const inv = r.invested - base.invested;
-      if (Math.abs(d) < 1 && Math.abs(inv) < 1) {
-        return `${who} matches A. Change ${who}'s return, amount or tenure to see the difference.`;
-      }
-      const head =
-        d >= 0
-          ? `${who} ends with ${inr(d)} more than A${pctDiff(base.value, r.value)}`
-          : `${who} ends with ${inr(-d)} less than A${pctDiff(base.value, r.value)}`;
-      const tail =
-        Math.abs(inv) < 1
-          ? " for the same money put in."
-          : inv > 0
-            ? `, but you put in ${inr(inv)} more.`
-            : `, and you put in ${inr(-inv)} less.`;
-      return head + tail;
-    }
-    const a = base as LoanResult;
-    const b = r as LoanResult;
-    const di = b.totalInterest - a.totalInterest;
-    const de = b.emi - a.emi;
-    if (Math.abs(di) < 1 && Math.abs(de) < 1) {
-      return `${who} matches A. Change ${who}'s rate, amount or tenure to see the difference.`;
-    }
-    const head =
-      di <= 0
-        ? `${who} saves ${inr(-di)} in interest`
-        : `${who} costs ${inr(di)} more in interest`;
-    const tail =
-      Math.abs(de) < 1
-        ? " at the same EMI."
-        : de > 0
-          ? `, but its EMI is ${inr(de)} higher a month.`
-          : `, and its EMI is ${inr(-de)} lower a month.`;
-    return head + tail;
-  });
-}
-
-type Row = {
-  label: string;
-  values: number[];
-  format: (n: number) => string;
-  better: "high" | "low" | null;
-};
-
-function tableRows(results: ScenarioResult[]): Row[] {
-  if (results[0].family === "grow") {
-    const g = results as GrowResult[];
-    return [
-      {
-        label: "Final value",
-        values: g.map((r) => r.value),
-        format: inr,
-        better: "high",
-      },
-      {
-        label: "You put in",
-        values: g.map((r) => r.invested),
-        format: inr,
-        better: null,
-      },
-      {
-        label: "Wealth gained",
-        values: g.map((r) => r.gain),
-        format: inr,
-        better: "high",
-      },
-      {
-        label: "Money multiplied",
-        values: g.map((r) => r.multiple),
-        format: (n) => `${n.toFixed(2)}×`,
-        better: "high",
-      },
-    ];
-  }
-  const l = results as LoanResult[];
-  return [
-    {
-      label: "Monthly EMI",
-      values: l.map((r) => r.emi),
-      format: inr,
-      better: "low",
-    },
-    {
-      label: "Total interest",
-      values: l.map((r) => r.totalInterest),
-      format: inr,
-      better: "low",
-    },
-    {
-      label: "Total paid",
-      values: l.map((r) => r.totalPaid),
-      format: inr,
-      better: "low",
-    },
-    {
-      label: "Interest per ₹1 borrowed",
-      values: l.map((r) =>
-        r.principal > 0 ? r.totalInterest / r.principal : 0,
-      ),
-      format: (n) => `₹${n.toFixed(2)}`,
-      better: "low",
-    },
-  ];
-}
-
-function bestIndex(row: Row): number | null {
-  if (!row.better) return null;
-  const vals = row.values;
-  const target = row.better === "high" ? Math.max(...vals) : Math.min(...vals);
-  // No "best" when every scenario ties.
-  if (vals.every((v) => Math.abs(v - target) < 0.005)) return null;
-  return vals.findIndex((v) => Math.abs(v - target) < 0.005);
+  return COMPARE_PRESETS.grow[1].scenarios;
 }
 
 function ScenarioCard({
@@ -267,7 +78,7 @@ function ScenarioCard({
 
   return (
     <section
-      aria-label={`Scenario ${LETTERS[index]}`}
+      aria-label={`Scenario ${SCENARIO_LETTERS[index]}`}
       className="min-w-0 rounded-2xl border border-[#F0EFF8] bg-white p-4"
       style={{ borderTop: `4px solid ${COLORS[index]}` }}
     >
@@ -278,9 +89,9 @@ function ScenarioCard({
             style={{ backgroundColor: COLORS[index] }}
             aria-hidden
           >
-            {LETTERS[index]}
+            {SCENARIO_LETTERS[index]}
           </span>
-          Scenario {LETTERS[index]}
+          Scenario {SCENARIO_LETTERS[index]}
         </p>
         <div className="flex gap-1">
           {canDuplicate ? (
@@ -296,7 +107,7 @@ function ScenarioCard({
             <button
               type="button"
               onClick={onRemove}
-              aria-label={`Remove scenario ${LETTERS[index]}`}
+              aria-label={`Remove scenario ${SCENARIO_LETTERS[index]}`}
               className="min-h-[36px] rounded-lg px-2.5 text-xs font-semibold text-slate-500 hover:bg-slate-100"
             >
               Remove
@@ -372,7 +183,7 @@ function ScenarioCard({
 
 export function CompareCalculator() {
   const [scenarios, setScenarios] = useState<Scenario[]>(
-    () => PRESETS.grow[1].scenarios,
+    () => COMPARE_PRESETS.grow[1].scenarios,
   );
   const family = familyOf(scenarios);
 
@@ -394,9 +205,9 @@ export function CompareCalculator() {
   }, [encoded, ready]);
 
   const results = useMemo(() => scenarios.map(computeScenario), [scenarios]);
-  const rows = useMemo(() => tableRows(results), [results]);
+  const rows = useMemo(() => compareRows(results), [results]);
   const data = useMemo(() => chartRows(results), [results]);
-  const lines = useMemo(() => verdicts(results), [results]);
+  const lines = useMemo(() => compareVerdicts(results), [results]);
 
   const update = (i: number, s: Scenario) =>
     setScenarios((prev) => prev.map((p, j) => (j === i ? s : p)));
@@ -414,11 +225,11 @@ export function CompareCalculator() {
     );
   const switchFamily = (f: CompareFamily) => {
     if (f === family) return;
-    setScenarios(PRESETS[f][0].scenarios);
+    setScenarios(COMPARE_PRESETS[f][0].scenarios);
   };
 
   const label = (i: number) =>
-    `${LETTERS[i]} · ${KIND_META[scenarios[i].kind].label}`;
+    `${SCENARIO_LETTERS[i]} · ${KIND_META[scenarios[i].kind].label}`;
 
   return (
     <div className="space-y-6">
@@ -437,7 +248,7 @@ export function CompareCalculator() {
           Quick start
         </span>
         <div className="flex flex-wrap gap-2">
-          {PRESETS[family].map((p) => (
+          {COMPARE_PRESETS[family].map((p) => (
             <button
               key={p.label}
               type="button"

@@ -13,6 +13,7 @@ import {
   todayInputValue,
   type InsightTone,
 } from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 import {
   LoanExcelDownloads,
   YearlyBreakupChart,
@@ -158,6 +159,9 @@ export function HomeLoanCalculator() {
             ? "EMI is workable but leaves limited buffer — keep 6-month EMI in liquid savings."
             : "EMI is within a healthy slice of income."}
       </Insight>
+      <CompareLink
+        scenario={{ kind: "loan", amount: loan, rate, years, stepUp: 0 }}
+      />
     </View>
   );
 }

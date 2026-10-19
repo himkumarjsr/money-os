@@ -14,6 +14,7 @@ import {
   calcStyles,
   type InsightTone,
 } from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 import { themedStyles, Colors, brand } from "@/constants/theme";
 
 function useClamped(initial: number, min: number, max: number) {
@@ -221,6 +222,9 @@ export function PPFCalculator() {
         PPF is EEE for qualifying contributions — extend beyond 15y in blocks of
         5y if you still need tax-free debt-free compounding.
       </Insight>
+      <CompareLink
+        scenario={{ kind: "ppf", amount: yearly, rate, years: 15, stepUp: 0 }}
+      />
     </View>
   );
 }

@@ -13,6 +13,7 @@ import {
   todayInputValue,
   type InsightTone,
 } from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 import {
   LoanExcelDownloads,
   YearlyBreakupChart,
@@ -127,6 +128,15 @@ export function EMICalculator() {
           ? "consider prepayment when possible."
           : "explore shorter tenure or balance transfer if eligible."}
       </Insight>
+      <CompareLink
+        scenario={{
+          kind: "loan",
+          amount: loan,
+          rate,
+          years: Math.max(1, Math.round(tenure / 12)),
+          stepUp: 0,
+        }}
+      />
     </View>
   );
 }

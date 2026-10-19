@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { emiFor, sipFV } from "./advisorCalculators";
 import {
+  COMPARE_PRESETS,
+  SCENARIO_LETTERS,
+  bestIndex,
   changeKind,
   chartRows,
   compareHref,
+  compareRows,
+  compareVerdicts,
   computeScenario,
   decodeScenarios,
   defaultScenario,
@@ -188,5 +193,71 @@ describe("compareHref", () => {
       "/calculators/compare?s=sip-10000-12-15_sip-10000-12-15",
     );
     expect(decodeScenarios("sip-10000-x-15_sip-10000-12-15")).toBeNull();
+  });
+});
+
+describe("side-by-side table and verdicts", () => {
+  const grow = (list: Scenario[]) => list.map(computeScenario);
+
+  it("marks the best row value and says how much more B ends with", () => {
+    const results = grow(COMPARE_PRESETS.grow[0].scenarios);
+    const rows = compareRows(results);
+    expect(rows.map((r) => r.label)).toEqual([
+      "Final value",
+      "You put in",
+      "Wealth gained",
+      "Money multiplied",
+    ]);
+    expect(bestIndex(rows[0])).toBe(1);
+    expect(bestIndex(rows[1])).toBeNull();
+    expect(rows[3].format(2.5)).toBe("2.50×");
+    const [line] = compareVerdicts(results);
+    expect(line).toMatch(
+      /^B ends with ₹[\d,]+ more than A \(\+\d+%\) for the same money put in\.$/,
+    );
+  });
+
+  it("calls out more or less money put in", () => {
+    const more = compareVerdicts(grow([sip(12, 15), sip(12, 20)]))[0];
+    expect(more).toMatch(/but you put in ₹6,00,000 more\.$/);
+    const less = compareVerdicts(grow([sip(12, 20), sip(12, 15)]))[0];
+    expect(less).toMatch(
+      /^B ends with ₹[\d,]+ less than A .*and you put in ₹6,00,000 less\.$/,
+    );
+  });
+
+  it("says when scenarios match and gives no best", () => {
+    const results = grow([sip(12, 15), sip(12, 15)]);
+    expect(compareVerdicts(results)[0]).toMatch(/^B matches A\./);
+    expect(bestIndex(compareRows(results)[0])).toBeNull();
+  });
+
+  it("compares loans by interest and EMI", () => {
+    const results = grow(COMPARE_PRESETS.loan[0].scenarios);
+    const rows = compareRows(results);
+    expect(rows[0].label).toBe("Monthly EMI");
+    expect(bestIndex(rows[0])).toBe(2);
+    expect(bestIndex(rows[1])).toBe(0);
+    expect(rows[3].format(0.771)).toBe("₹0.77");
+    const [b, c] = compareVerdicts(results);
+    expect(b).toMatch(
+      /^B costs ₹[\d,]+ more in interest, and its EMI is ₹[\d,]+ lower a month\.$/,
+    );
+    expect(c).toMatch(/^C costs/);
+    const cheaper = compareVerdicts(
+      grow([...COMPARE_PRESETS.loan[0].scenarios].reverse()),
+    );
+    expect(cheaper[0]).toMatch(
+      /saves ₹[\d,]+ in interest, but its EMI is ₹[\d,]+ higher a month\.$/,
+    );
+    const sameEmi = compareVerdicts(
+      grow(
+        COMPARE_PRESETS.loan[0].scenarios
+          .slice(0, 1)
+          .concat(COMPARE_PRESETS.loan[0].scenarios.slice(0, 1)),
+      ),
+    );
+    expect(sameEmi[0]).toMatch(/^B matches A\. Change B's rate/);
+    expect(SCENARIO_LETTERS).toEqual(["A", "B", "C"]);
   });
 });

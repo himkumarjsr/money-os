@@ -30,6 +30,13 @@ export const CATEGORIES: { id: Cat; label: string; items: CalcItem[] }[] = [
         icon: "trending",
       },
       {
+        id: "compare",
+        title: "Compare calculations",
+        blurb:
+          "Two or three scenarios side by side: return, tenure, SIP vs FD, loans",
+        icon: "trending",
+      },
+      {
         id: "stepup-sip",
         title: "Step-up SIP",
         blurb: "SIP that grows with your salary every year",
