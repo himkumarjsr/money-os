@@ -30,6 +30,19 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
         icon: "trending",
       },
       {
+        id: "compare",
+        title: "Compare calculations",
+        blurb:
+          "Two or three scenarios side by side: return, tenure, SIP vs FD, loans",
+        icon: "trending",
+        keywords: [
+          "compare SIP returns",
+          "SIP vs FD vs PPF calculator",
+          "compare loan tenure EMI",
+          "compare investment options India",
+        ],
+      },
+      {
         id: "stepup-sip",
         title: "Step-up SIP",
         blurb: "SIP that grows with your salary every year",

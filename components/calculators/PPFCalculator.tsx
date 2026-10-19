@@ -14,16 +14,18 @@ import {
   YAxis,
 } from "recharts";
 import { useCallback, useMemo, useState } from "react";
-import { CALCULATOR_MONEY_MAX, Insight, ResultStat, SliderField, type InsightTone } from "./calculator-ui";
+import {
+  CALCULATOR_MONEY_MAX,
+  Insight,
+  ResultStat,
+  SliderField,
+  type InsightTone,
+} from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 
 function useClamped(initial: number, min: number, max: number) {
-  const [v, setV] = useState(() =>
-    Math.min(max, Math.max(min, initial)),
-  );
-  const set = useCallback(
-    (nv: number) => setV(Math.max(min, nv)),
-    [min],
-  );
+  const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
+  const set = useCallback((nv: number) => setV(Math.max(min, nv)), [min]);
   return [v, set] as const;
 }
 
@@ -48,7 +50,8 @@ export function PPFCalculator() {
   const fv = ppfv(yearly, rate);
   const invested = yearly * 15;
   const gain = fv - invested;
-  const tone: InsightTone = gain / Math.max(invested, 1) > 0.85 ? "good" : "warn";
+  const tone: InsightTone =
+    gain / Math.max(invested, 1) > 0.85 ? "good" : "warn";
 
   const chartCard = "rounded-xl border border-[#F0EFF8] bg-white p-5";
   const tooltipStyle = {
@@ -61,11 +64,21 @@ export function PPFCalculator() {
   } as const;
 
   const data = useMemo(() => {
-    const out: Array<{ year: number; invested: number; interest: number; total: number }> = [];
+    const out: Array<{
+      year: number;
+      invested: number;
+      interest: number;
+      total: number;
+    }> = [];
     for (let y = 1; y <= 15; y += 1) {
       const inv = yearly * y;
       const total = ppfvYears(yearly, rate, y);
-      out.push({ year: y, invested: inv, interest: Math.max(0, total - inv), total });
+      out.push({
+        year: y,
+        invested: inv,
+        interest: Math.max(0, total - inv),
+        total,
+      });
     }
     return out;
   }, [rate, yearly]);
@@ -115,17 +128,26 @@ export function PPFCalculator() {
             <AreaChart data={data}>
               <CartesianGrid stroke="#F4F2FC" />
               <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#9B9A94" }} />
-              <YAxis tick={{ fontSize: 12, fill: "#9B9A94" }} tickFormatter={(v) => formatIndianCompact(Number(v))} />
+              <YAxis
+                tick={{ fontSize: 12, fill: "#9B9A94" }}
+                tickFormatter={(v) => formatIndianCompact(Number(v))}
+              />
               <Tooltip
                 contentStyle={tooltipStyle}
                 content={({ active, payload, label }) => {
                   if (!active || !payload || payload.length === 0) return null;
-                  const investedVal = Number(payload.find((x) => x.dataKey === "invested")?.value ?? 0);
-                  const interestVal = Number(payload.find((x) => x.dataKey === "interest")?.value ?? 0);
+                  const investedVal = Number(
+                    payload.find((x) => x.dataKey === "invested")?.value ?? 0,
+                  );
+                  const interestVal = Number(
+                    payload.find((x) => x.dataKey === "interest")?.value ?? 0,
+                  );
                   const totalVal = investedVal + interestVal;
                   return (
                     <div style={tooltipStyle}>
-                      <div style={{ fontWeight: 700, marginBottom: 6 }}>{`Year ${label}`}</div>
+                      <div
+                        style={{ fontWeight: 700, marginBottom: 6 }}
+                      >{`Year ${label}`}</div>
                       <div>Invested: ₹{formatIndian(investedVal)}</div>
                       <div>Interest earned: ₹{formatIndian(interestVal)}</div>
                       <div>Total balance: ₹{formatIndian(totalVal)}</div>
@@ -160,7 +182,12 @@ export function PPFCalculator() {
                 stroke="#534AB7"
                 strokeDasharray="6 6"
                 ifOverflow="extendDomain"
-                label={{ value: "Year 7 (partial withdrawal)", position: "insideTopLeft", fill: "#534AB7", fontSize: 12 }}
+                label={{
+                  value: "Year 7 (partial withdrawal)",
+                  position: "insideTopLeft",
+                  fill: "#534AB7",
+                  fontSize: 12,
+                }}
               />
               <ReferenceDot
                 x={15}
@@ -168,7 +195,12 @@ export function PPFCalculator() {
                 r={4}
                 fill="#534AB7"
                 stroke="none"
-                label={{ value: "Year 15 (maturity)", position: "left", fill: "#534AB7", fontSize: 12 }}
+                label={{
+                  value: "Year 15 (maturity)",
+                  position: "left",
+                  fill: "#534AB7",
+                  fontSize: 12,
+                }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -176,9 +208,13 @@ export function PPFCalculator() {
       </div>
 
       <Insight tone={tone}>
-        PPF is EEE for qualifying contributions — extend beyond 15y in blocks
-        of 5y if you still need tax-free debt-free compounding.
+        PPF is EEE for qualifying contributions — extend beyond 15y in blocks of
+        5y if you still need tax-free debt-free compounding.
       </Insight>
+
+      <CompareLink
+        scenario={{ kind: "ppf", amount: yearly, rate, years: 15, stepUp: 0 }}
+      />
     </div>
   );
 }

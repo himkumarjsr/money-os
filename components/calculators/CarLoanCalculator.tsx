@@ -26,6 +26,7 @@ import {
   todayInputValue,
   type InsightTone,
 } from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -498,6 +499,10 @@ export function CarLoanCalculator() {
             ? "EMI is above 40% of salary — consider a cheaper segment or longer tenure cautiously."
             : "Looks within typical affordability bands."}
       </Insight>
+
+      <CompareLink
+        scenario={{ kind: "loan", amount: loan, rate, years, stepUp: 0 }}
+      />
     </div>
   );
 }

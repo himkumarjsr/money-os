@@ -23,6 +23,11 @@ export const lazyCalculatorsById: Record<string, ComponentType> = {
   sip: dyn(() =>
     import("./SIPCalculator").then((m) => ({ default: m.SIPCalculator })),
   ),
+  compare: dyn(() =>
+    import("./CompareCalculator").then((m) => ({
+      default: m.CompareCalculator,
+    })),
+  ),
   swp: dyn(() =>
     import("./SWPCalculator").then((m) => ({ default: m.SWPCalculator })),
   ),
