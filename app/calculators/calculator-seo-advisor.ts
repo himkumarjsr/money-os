@@ -10,6 +10,26 @@ type Copy = {
 
 /** SEO copy for the advisor calculators (investing, retirement, loans, tax, insurance, goals). */
 const COPY: Record<string, Copy> = {
+  compare: {
+    appName: "Compare Calculations",
+    tagline: "SIP, FD, PPF & Loans Side by Side",
+    description:
+      "Free Finkoin compare calculator. Put two or three scenarios side by side: a different return or tenure, SIP vs PPF vs FD, or loan tenures and rates, and see the final value, interest and EMI difference.",
+    faq: [
+      [
+        "Can I compare the same calculator with a different return or tenure?",
+        "Yes. Set Scenario A, then change only the return or tenure in Scenario B. The table marks the better result and shows the rupee difference.",
+      ],
+      [
+        "Can I compare SIP with FD or PPF?",
+        "Yes. Each scenario can use a different calculator: SIP, step-up SIP, lumpsum, FD, RD or PPF. Loans are compared with loans.",
+      ],
+      [
+        "Can I share a comparison?",
+        "Yes. The page link carries every input, so sharing it opens the same comparison.",
+      ],
+    ],
+  },
   "stepup-sip": {
     appName: "Step-up SIP Calculator",
     tagline: "Top-up SIP Returns",

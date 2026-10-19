@@ -57,6 +57,7 @@ import {
   TermCoverCalculator,
 } from "./advisor/ProtectionGoalCalculators";
 import { CarLoanCalculator } from "./CarLoanCalculator";
+import { CompareCalculator } from "./CompareCalculator";
 import { EMICalculator } from "./EMICalculator";
 import { EPFCalculator } from "./EPFCalculator";
 import { EmergencyFundCalculator } from "./EmergencyFundCalculator";
@@ -84,6 +85,7 @@ import {
 /** Calculator id (from constants/calculator-config) → native calculator body. Mirrors web lazy-calculators. */
 export const calculatorsById: Record<string, ComponentType> = {
   sip: SIPCalculator,
+  compare: CompareCalculator,
   swp: SWPCalculator,
   ppf: PPFCalculator,
   epf: EPFCalculator,
