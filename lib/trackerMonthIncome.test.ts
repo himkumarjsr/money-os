@@ -132,6 +132,7 @@ describe("planMonthIncomeFromPrior", () => {
         amount: 100000,
         description: "Salary",
       },
+      { bucket: "needs", amount: 95000, payment_method: "upi" },
     ];
     const currentTxns = [
       {
@@ -222,6 +223,7 @@ describe("planMonthIncomeFromPrior", () => {
           amount: 356452,
           description: "Salary",
         },
+        { bucket: "needs", amount: 335160, payment_method: "upi" },
       ],
       currentTxns: [
         {
@@ -281,6 +283,104 @@ describe("planMonthIncomeFromPrior", () => {
     expect(plan.displayTotal).toBe(356452 + 21292);
     expect(plan.needsSalaryRow).toBe(true);
     expect(plan.needsSavingsRow).toBe(true);
+  });
+});
+
+describe("planMonthIncomeFromPrior after last month changes", () => {
+  const september = [
+    {
+      bucket: "income",
+      subcategory: "salary",
+      amount: 100000,
+      description: "Salary",
+    },
+    {
+      bucket: "income",
+      subcategory: "other_income",
+      amount: 10000,
+      description: SAVINGS_CARRY_FORWARD_DESC,
+    },
+    { bucket: "needs", amount: 60000, payment_method: "upi" },
+  ];
+
+  it("counts the live leftover when the saved carry-forward is stale", () => {
+    // October's carry-forward was saved when September had ₹40,000 of
+    // spends; a ₹20,000 September edit since then leaves ₹50,000.
+    const october = [
+      {
+        id: "sal",
+        bucket: "income",
+        subcategory: "salary",
+        amount: 100000,
+        description: "Salary",
+      },
+      {
+        id: "cf",
+        bucket: "income",
+        subcategory: "other_income",
+        amount: 70000,
+        description: SAVINGS_CARRY_FORWARD_DESC,
+      },
+      {
+        bucket: "income",
+        subcategory: "other_income",
+        amount: 5000,
+        description: "Bonus",
+      },
+    ];
+    const plan = planMonthIncomeFromPrior({
+      previousTxns: september,
+      currentTxns: october,
+      profileSalary: 100000,
+    });
+    expect(plan.savingsAmount).toBe(50000);
+    expect(plan.displayTotal).toBe(100000 + 50000 + 5000);
+    // The sync rewrites the saved row to the same figure.
+    expect(
+      planAutoIncomeCleanup({
+        currentTxns: october,
+        salaryAmount: plan.salaryAmount,
+        savingsAmount: plan.savingsAmount,
+      }).updateCf,
+    ).toEqual({ id: "cf", amount: 50000 });
+  });
+
+  it("drops a stale carry-forward when last month ended overspent", () => {
+    const plan = planMonthIncomeFromPrior({
+      previousTxns: [
+        ...september,
+        { bucket: "wants", amount: 60000, payment_method: "upi" },
+      ],
+      currentTxns: [
+        {
+          bucket: "income",
+          subcategory: "salary",
+          amount: 100000,
+          description: "Salary",
+        },
+        {
+          bucket: "income",
+          subcategory: "other_income",
+          amount: 50000,
+          description: SAVINGS_CARRY_FORWARD_DESC,
+        },
+      ],
+      profileSalary: 100000,
+    });
+    expect(plan.savingsAmount).toBe(0);
+    expect(plan.displayTotal).toBe(100000);
+  });
+
+  it("uses last month's worked-out carry-forward over its saved row", () => {
+    // September's saved ₹10,000 is stale; August actually left ₹25,000.
+    const plan = planMonthIncomeFromPrior({
+      previousTxns: september,
+      currentTxns: [],
+      profileSalary: 100000,
+      previousCarryForward: 25000,
+    });
+    expect(plan.savingsAmount).toBe(65000);
+    expect(plan.displayTotal).toBe(165000);
   });
 });
 
