@@ -1,4 +1,5 @@
 import Breadcrumb from "@/components/Breadcrumb";
+import CalculatorGuide from "@/components/seo/CalculatorGuide";
 import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { socialImageTags, fitMetadata } from "@/lib/seo";
@@ -6,6 +7,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import CalculatorsClient from "../CalculatorsClient";
+import { getCalcGuide } from "../calculator-guides";
 import {
   INDEXABLE_CALC_IDS,
   absoluteCalcUrl,
@@ -76,6 +78,7 @@ export default async function CalculatorByIdPage(props: PageProps) {
 
   const seo = getSeoForCalc(calcId);
   const jsonLd = buildCalculatorJsonLd(seo);
+  const guide = getCalcGuide(calcId);
 
   return (
     <>
@@ -91,13 +94,21 @@ export default async function CalculatorByIdPage(props: PageProps) {
           ]}
         />
       </div>
-      {/* The calculator UI hydrates on the client; keep the page heading in the server HTML. */}
-      <h1 className="sr-only">{seo.appName}</h1>
+      {/* The calculator UI hydrates on the client; keep the page heading and intro in the server HTML. */}
+      <div className="mx-auto max-w-5xl px-4 pt-2 sm:px-6">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          {seo.appName}
+        </h1>
+        <p className="mt-1 max-w-3xl text-sm text-slate-600 sm:text-base">
+          {guide?.intro ?? seo.description}
+        </p>
+      </div>
       <Suspense
         fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
       >
-        <CalculatorsClient initialCalcId={calcId} />
+        <CalculatorsClient initialCalcId={calcId} serverHeading />
       </Suspense>
+      {guide ? <CalculatorGuide guide={guide} appName={seo.appName} /> : null}
       {/* Visible, server-rendered explainer and FAQ: the text search engines index for this page. */}
       <section
         aria-labelledby="calc-about"
