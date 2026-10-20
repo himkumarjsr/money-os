@@ -22,6 +22,7 @@ import {
   type RiskProfile,
 } from "@/lib/advisorCalculators";
 import { useMemo, useState } from "react";
+import { CompareLink } from "../CompareLink";
 import { GrowthChart } from "./GrowthChart";
 import {
   Bars,
@@ -126,6 +127,9 @@ export function LumpsumCalculator() {
           { key: "invested", label: "Invested", dashed: true },
         ]}
       />
+      <CompareLink
+        scenario={{ kind: "lumpsum", amount, rate, years, stepUp: 0 }}
+      />
     </div>
   );
 }
@@ -209,6 +213,15 @@ export function StepUpSipCalculator() {
         Increase your SIP each year in line with your salary hike — it is the
         single biggest lever after starting early.
       </Note>
+      <CompareLink
+        scenario={{
+          kind: "stepup",
+          amount: monthly,
+          rate,
+          years,
+          stepUp: step,
+        }}
+      />
     </div>
   );
 }
@@ -906,6 +919,15 @@ export function FdCalculator() {
         income is below the taxable limit. Effective yield{" "}
         {pct(fd.effectiveYield)}.
       </Note>
+      <CompareLink
+        scenario={{
+          kind: "fd",
+          amount: principal,
+          rate,
+          years: Math.max(1, Math.round(months / 12)),
+          stepUp: 0,
+        }}
+      />
     </div>
   );
 }
@@ -955,6 +977,15 @@ export function RdCalculator() {
         Bank RDs compound quarterly. RD interest is taxed at your slab and TDS
         rules are the same as FDs.
       </Note>
+      <CompareLink
+        scenario={{
+          kind: "rd",
+          amount: monthly,
+          rate,
+          years: Math.max(1, Math.round(months / 12)),
+          stepUp: 0,
+        }}
+      />
     </div>
   );
 }

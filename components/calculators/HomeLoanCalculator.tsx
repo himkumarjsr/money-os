@@ -26,6 +26,7 @@ import {
   todayInputValue,
   type InsightTone,
 } from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 
 function useClamped(initial: number, min: number, max: number) {
   const [v, setV] = useState(() => Math.min(max, Math.max(min, initial)));
@@ -485,6 +486,10 @@ export function HomeLoanCalculator() {
             ? "EMI is workable but leaves limited buffer — keep 6-month EMI in liquid savings."
             : "EMI is within a healthy slice of income."}
       </Insight>
+
+      <CompareLink
+        scenario={{ kind: "loan", amount: loan, rate, years, stepUp: 0 }}
+      />
     </div>
   );
 }

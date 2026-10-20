@@ -20,6 +20,7 @@ import {
   SliderField,
   type InsightTone,
 } from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 
 function sipMaturity(monthly: number, annualPct: number, years: number) {
   const n = Math.max(1, Math.round(years * 12));
@@ -224,6 +225,10 @@ export function SIPCalculator() {
         Your money grows <strong>{mult.toFixed(1)}×</strong> — roughly ₹
         {mult.toFixed(1)} for every ₹1 put in (at {rate}% p.a.).
       </Insight>
+
+      <CompareLink
+        scenario={{ kind: "sip", amount: monthly, rate, years, stepUp: 0 }}
+      />
     </div>
   );
 }

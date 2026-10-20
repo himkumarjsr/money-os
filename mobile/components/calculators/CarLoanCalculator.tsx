@@ -14,6 +14,7 @@ import {
   todayInputValue,
   type InsightTone,
 } from "./calculator-ui";
+import { CompareLink } from "./CompareLink";
 import {
   LoanExcelDownloads,
   YearlyBreakupChart,
@@ -171,6 +172,9 @@ export function CarLoanCalculator() {
             ? "EMI is above 40% of salary — consider a cheaper segment or longer tenure cautiously."
             : "Looks within typical affordability bands."}
       </Insight>
+      <CompareLink
+        scenario={{ kind: "loan", amount: loan, rate, years, stepUp: 0 }}
+      />
     </View>
   );
 }

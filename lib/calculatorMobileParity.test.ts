@@ -14,6 +14,7 @@ describe("mobile keeps byte-identical copies of calculator logic", () => {
     "amortisation.ts",
     "amortisationExcel.ts",
     "calculatorInput.ts",
+    "compareScenarios.ts",
     "epfCalculator.ts",
     "finance.ts",
     "fireCalculator.ts",
