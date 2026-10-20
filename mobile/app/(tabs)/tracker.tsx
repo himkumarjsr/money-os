@@ -286,6 +286,8 @@ export default function TrackerScreen() {
   const [prev3Transactions, setPrev3Transactions] = useState<TrackerTxn[]>([]);
   /** Card purchases on EMI from the last 5 years (their EMIs run past history). */
   const [emiSources, setEmiSources] = useState<TrackerTxn[]>([]);
+  /** Which month (`year-monthIndex`) the rows above were loaded for. */
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [showCardRulesNote, setShowCardRulesNote] = useState(
     () => syncKv.getItem(CARD_RULES_NOTE_KEY) !== "1",
   );
@@ -545,6 +547,16 @@ export default function TrackerScreen() {
         setPrev2Transactions(prev2Rows);
         setPrev3Transactions(prev3Rows);
         setEmiSources(emiRows);
+        // Income sync writes from these rows, so only arm it on a full load.
+        setLoadedFor(
+          currentRes.error ||
+            prevRes.error ||
+            prev2Res.error ||
+            prev3Res.error ||
+            emiRes.error
+            ? null
+            : `${selectedYear}-${selectedMonth}`,
+        );
         // Learn from the same rows the tracker counts (card EMIs included).
         const historyStart = monthStartIso(selectedYear, selectedMonth, 3);
         const learnRows = (
@@ -581,6 +593,7 @@ export default function TrackerScreen() {
         setPrev2Transactions([]);
         setPrev3Transactions([]);
         setEmiSources([]);
+        setLoadedFor(null);
         setLearnHistory([]);
         setLearnHistoryFor(null);
       } finally {
@@ -835,6 +848,41 @@ export default function TrackerScreen() {
     selectedYear,
     selectedMonth,
   ]);
+  // Last month's own "Saving from last month", worked out from the month
+  // before it. Its saved row is stale when that month was skipped past before
+  // its sync ran, and would carry the wrong leftover into this month.
+  const prevCarryForward = useMemo(() => {
+    const prev = previousCalendarMonth(selectedMonth, selectedYear);
+    if (
+      trackerStart &&
+      prev.year * 12 + prev.monthIndex <
+        trackerStart.year * 12 + trackerStart.month
+    ) {
+      return undefined;
+    }
+    const prev2 = previousCalendarMonth(prev.monthIndex, prev.year);
+    const prev2Rows = buildCardMonthRows({
+      year: prev2.year,
+      monthIndex: prev2.monthIndex,
+      monthRows: prev2Transactions,
+      priorRows: prev3Transactions,
+      emiSources,
+      historyStart: monthStartIso(selectedYear, selectedMonth, 3),
+    }).rows;
+    return planMonthIncomeFromPrior({
+      previousTxns: prev2Rows,
+      currentTxns: prevCountedRows,
+      profileSalary: 0,
+    }).savingsAmount;
+  }, [
+    prevCountedRows,
+    prev2Transactions,
+    prev3Transactions,
+    emiSources,
+    selectedYear,
+    selectedMonth,
+    trackerStart,
+  ]);
   /** "Today" for card dues: now on this month, else the month's last day. */
   const cardAsOf = useMemo(() => {
     const now = new Date();
@@ -860,11 +908,14 @@ export default function TrackerScreen() {
       const selKey = selectedYear * 12 + selectedMonth;
       if (selKey < startKey) return;
     }
+    // Right after a month switch the rows are still last month's.
+    if (loadedFor !== `${selectedYear}-${selectedMonth}`) return;
 
     const plan = planMonthIncomeFromPrior({
       previousTxns: prevCountedRows,
       currentTxns: transactions,
       profileSalary: profileMonthlyFromDb,
+      previousCarryForward: prevCarryForward,
     });
     const cleanupPreview = planAutoIncomeCleanup({
       currentTxns: transactions,
@@ -884,6 +935,8 @@ export default function TrackerScreen() {
     incomeSyncKeyRef.current = key;
 
     let cancelled = false;
+    // Until the writes start, a re-run must be free to redo this sync.
+    let writing = false;
     void (async () => {
       try {
         const monthName = new Date(
@@ -904,12 +957,14 @@ export default function TrackerScreen() {
           return;
         }
         if (cancelled) return;
+        writing = true;
 
         const freshRows = (fresh || []) as TrackerTxn[];
         const freshPlan = planMonthIncomeFromPrior({
           previousTxns: prevCountedRows,
           currentTxns: freshRows,
           profileSalary: profileMonthlyFromDb,
+          previousCarryForward: prevCarryForward,
         });
         const cleanup = planAutoIncomeCleanup({
           currentTxns: freshRows,
@@ -943,6 +998,7 @@ export default function TrackerScreen() {
               : t,
           ),
           profileSalary: profileMonthlyFromDb,
+          previousCarryForward: prevCarryForward,
         });
 
         const rows: Array<Record<string, unknown>> = [];
@@ -983,7 +1039,14 @@ export default function TrackerScreen() {
             return;
           }
         }
-        if (!cancelled && (cleanup.needsWork || rows.length > 0)) {
+        // Reload even if a newer fetch landed mid-write, so the rows on
+        // screen include these writes; skip once the month has moved on.
+        const cal = selectedCalRef.current;
+        if (
+          (cleanup.needsWork || rows.length > 0) &&
+          cal.month === selectedMonth &&
+          cal.year === selectedYear
+        ) {
           void fetchTransactions({ soft: true });
         }
       } catch {
@@ -992,13 +1055,16 @@ export default function TrackerScreen() {
     })();
     return () => {
       cancelled = true;
+      if (!writing) incomeSyncKeyRef.current = null;
     };
   }, [
     hasConsent,
     user?.id,
     selectedMonth,
     selectedYear,
+    loadedFor,
     prevCountedRows,
+    prevCarryForward,
     transactions,
     profileMonthlyFromDb,
     fetchTransactions,
@@ -1175,6 +1241,7 @@ export default function TrackerScreen() {
     previousTxns: prevCountedRows,
     currentTxns: transactions,
     profileSalary: profileMonthlyFromDb,
+    previousCarryForward: prevCarryForward,
   });
   const displayIncome =
     incomePlan.displayTotal > 0
