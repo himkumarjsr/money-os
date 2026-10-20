@@ -185,9 +185,17 @@ export function planMonthIncomeFromPrior(opts: {
   previousTxns: IncomeLikeTxn[];
   currentTxns: IncomeLikeTxn[];
   profileSalary: number;
+  /**
+   * Last month's own "Saving from last month", worked out from the month
+   * before it. Its saved row can be stale when that month was skipped over,
+   * so pass this to keep the chain of leftovers right.
+   */
+  previousCarryForward?: number;
 }): MonthIncomePlan {
   const prevPrimarySalary = primarySalaryAmount(opts.previousTxns);
-  const prevPocket = salaryPocketTotal(opts.previousTxns);
+  const prevCarry =
+    opts.previousCarryForward ?? primarySavingsCarryForward(opts.previousTxns);
+  const prevPocket = Math.round((prevPrimarySalary + prevCarry) * 100) / 100;
   // Leftover only from salary pocket (salary + prior CF), not bonuses.
   const savingsAmount =
     prevPocket > 0 ? computeMonthLeftover(prevPocket, opts.previousTxns) : 0;
@@ -196,17 +204,23 @@ export function planMonthIncomeFromPrior(opts: {
   const salaryAmount =
     prevPrimarySalary > 0 ? prevPrimarySalary : Math.max(0, opts.profileSalary);
 
-  const hasSalaryRow = primarySalaryAmount(opts.currentTxns) > 0;
-  const hasSavingsRow = primarySavingsCarryForward(opts.currentTxns) > 0;
-  const currentCanonical = sumCanonicalMonthIncome(opts.currentTxns);
+  const currentSalary = primarySalaryAmount(opts.currentTxns);
+  const currentCarry = primarySavingsCarryForward(opts.currentTxns);
+  const hasSalaryRow = currentSalary > 0;
+  const hasSavingsRow = currentCarry > 0;
+  const currentOther =
+    sumCanonicalMonthIncome(opts.currentTxns) - currentSalary - currentCarry;
   const needsSalaryRow = !hasSalaryRow && salaryAmount > 0;
   const needsSavingsRow = !hasSavingsRow && savingsAmount > 0;
 
+  // The saved "Saving from last month" row is a copy of last month's
+  // leftover and goes stale whenever last month changes; the sync rewrites
+  // it to `savingsAmount`. Count the live leftover so LEFT is right now.
   const displayTotal =
     Math.round(
-      (currentCanonical +
-        (needsSalaryRow ? salaryAmount : 0) +
-        (needsSavingsRow ? savingsAmount : 0)) *
+      ((hasSalaryRow ? currentSalary : needsSalaryRow ? salaryAmount : 0) +
+        savingsAmount +
+        currentOther) *
         100,
     ) / 100;
 
