@@ -12,9 +12,9 @@ type Copy = {
 const COPY: Record<string, Copy> = {
   compare: {
     appName: "Compare Calculations",
-    tagline: "SIP, FD, PPF & Loans Side by Side",
+    tagline: "Investments & Loans Side by Side",
     description:
-      "Free Finkoin compare calculator. Put two or three scenarios side by side: a different return or tenure, SIP vs PPF vs FD, or loan tenures and rates, and see the final value, interest and EMI difference.",
+      "Free compare calculator for India. Put two or three scenarios side by side, such as monthly investing vs a fixed deposit, and see the rupee gap.",
     faq: [
       [
         "Can I compare the same calculator with a different return or tenure?",
@@ -34,15 +34,19 @@ const COPY: Record<string, Copy> = {
     appName: "Step-up SIP Calculator",
     tagline: "Top-up SIP Returns",
     description:
-      "Free step-up SIP calculator for India. See how raising your SIP every year with your salary grows your corpus versus a flat SIP.",
+      "Free step-up SIP (Systematic Investment Plan) calculator. See how raising your SIP every year with your salary grows your corpus versus a flat SIP.",
     faq: [
       [
         "What is a step-up SIP?",
-        "A SIP where the monthly amount rises by a fixed percentage every year, usually in line with your salary hike.",
+        "A Systematic Investment Plan (SIP) where the monthly amount rises by a fixed percentage every year, usually in line with your salary hike.",
       ],
       [
         "How much more does a 10% step-up give?",
         "Over 15–20 years a 10% yearly step-up typically grows the final corpus by 60–90% compared with a flat SIP of the same starting amount.",
+      ],
+      [
+        "Is a step-up SIP the same as a top-up SIP?",
+        "Yes. Both mean a SIP whose monthly amount rises every year, either by a fixed percentage or by a fixed rupee amount.",
       ],
     ],
   },
@@ -50,7 +54,7 @@ const COPY: Record<string, Copy> = {
     appName: "Lumpsum Calculator",
     tagline: "One-time Investment Returns",
     description:
-      "Free lumpsum calculator for India. Estimate how a one-time mutual fund or stock investment grows, and what it is worth in today's money.",
+      "Free lumpsum calculator for India. Estimate how a one-time mutual fund or stock investment grows, and what it will be worth in today's money.",
     faq: [
       [
         "How is lumpsum return calculated?",
@@ -60,14 +64,22 @@ const COPY: Record<string, Copy> = {
         "Lumpsum or SIP?",
         "Lumpsum works when you already have the money and a long horizon; SIP spreads the risk of investing at a market peak. An STP combines both.",
       ],
+      [
+        "Is the lumpsum return guaranteed?",
+        "No. Mutual fund and stock returns move with the market. The calculator uses the yearly return you enter as a steady average.",
+      ],
     ],
   },
   "goal-sip": {
     appName: "Goal SIP Calculator",
     tagline: "SIP Needed for Any Goal",
     description:
-      "Find the monthly SIP or one-time investment needed for any goal — a car, home, travel or education — after inflation.",
+      "Free goal SIP (Systematic Investment Plan) calculator. Find the monthly SIP or one-time amount needed for a car, home, travel or education goal.",
     faq: [
+      [
+        "What is a goal-based SIP?",
+        "A Systematic Investment Plan sized to reach one goal, such as a car or a child's education, by a set date. The calculator works out the monthly amount after inflation.",
+      ],
       [
         "How is the SIP for a goal calculated?",
         "The goal's cost is inflated to the target year, existing savings are grown, and the remaining gap is converted to a monthly SIP at your expected return.",
@@ -82,7 +94,7 @@ const COPY: Record<string, Copy> = {
     appName: "Cost of Delay Calculator",
     tagline: "What Waiting to Invest Costs",
     description:
-      "See how much corpus you lose by delaying your SIP by a few years, and the bigger SIP needed to catch up.",
+      "Free cost of delay calculator. See how much corpus you lose by starting a Systematic Investment Plan (SIP) late, and the SIP needed to catch up.",
     faq: [
       [
         "Why does delay cost so much?",
@@ -92,13 +104,17 @@ const COPY: Record<string, Copy> = {
         "Can I make up for a late start?",
         "Yes, by investing more each month — the calculator shows the SIP needed to reach the same corpus.",
       ],
+      [
+        "How much does a 5-year delay cost?",
+        "At 12% a year, starting a 20-year SIP 5 years late can leave you with roughly half the corpus. The calculator shows the exact gap for your numbers.",
+      ],
     ],
   },
   stp: {
     appName: "STP Calculator",
     tagline: "Systematic Transfer Plan",
     description:
-      "Free STP calculator. Model moving a lumpsum from a debt or liquid fund into an equity fund in monthly instalments.",
+      "Free STP (Systematic Transfer Plan) calculator. Model moving a lumpsum from a debt or liquid fund into an equity fund in monthly instalments.",
     faq: [
       [
         "What is an STP?",
@@ -108,13 +124,17 @@ const COPY: Record<string, Copy> = {
         "Is STP taxed?",
         "Yes. Each transfer is a redemption from the source fund, so gains on it are taxed as capital gains.",
       ],
+      [
+        "STP or lumpsum: which is better?",
+        "An STP spreads a large equity investment over months, so a market fall right after you invest hurts less. A lumpsum can earn more if markets rise steadily.",
+      ],
     ],
   },
   compound: {
     appName: "Compound Interest Calculator",
     tagline: "Monthly, Quarterly, Yearly",
     description:
-      "Free compound interest calculator for India with monthly, quarterly, half-yearly and yearly compounding.",
+      "Free compound interest calculator for India. See how a one-time amount grows with monthly, quarterly, half-yearly or yearly compounding.",
     faq: [
       [
         "What is compound interest?",
@@ -124,13 +144,17 @@ const COPY: Record<string, Copy> = {
         "Does compounding frequency matter?",
         "Yes, slightly. Monthly compounding gives a little more than yearly at the same rate.",
       ],
+      [
+        "What is the compound interest formula?",
+        "A = P × (1 + r/n)^(n × t), where P is the principal, r the yearly rate, n the number of compounding periods a year and t the years.",
+      ],
     ],
   },
   cagr: {
     appName: "CAGR Calculator",
     tagline: "Compound Annual Growth Rate",
     description:
-      "Free CAGR calculator. Find the yearly growth rate of an investment from its start value, end value and holding period.",
+      "Free CAGR (Compound Annual Growth Rate) calculator. Find the steady yearly growth rate of an investment from its start value, end value and years held.",
     faq: [
       [
         "What is CAGR?",
@@ -140,13 +164,17 @@ const COPY: Record<string, Copy> = {
         "CAGR or XIRR?",
         "Use CAGR for one investment and one exit. Use XIRR for SIPs, top-ups or withdrawals.",
       ],
+      [
+        "What is a good CAGR?",
+        "For Indian equity funds, 10–12% over 10 years or more is reasonable; fixed deposits give about 6–7%. Compare a fund's CAGR with its benchmark over the same period.",
+      ],
     ],
   },
   xirr: {
     appName: "XIRR Calculator",
-    tagline: "Returns on SIP & Irregular Investments",
+    tagline: "Extended Internal Rate of Return",
     description:
-      "Free XIRR calculator for India. Find the real annual return on SIPs, top-ups and withdrawals made on different dates.",
+      "Free XIRR (Extended Internal Rate of Return) calculator. Find the real yearly return on investments, top-ups and withdrawals on different dates.",
     faq: [
       [
         "What is XIRR?",
@@ -156,13 +184,17 @@ const COPY: Record<string, Copy> = {
         "Why is my XIRR different from absolute return?",
         "Absolute return ignores time. Money invested recently has had less time to grow, which XIRR accounts for.",
       ],
+      [
+        "What is a good XIRR for a mutual fund SIP?",
+        "Around 10–12% over 7 years or more is healthy for an equity fund. Over 1–2 years XIRR swings a lot, so judge it over longer periods.",
+      ],
     ],
   },
   "expense-ratio": {
     appName: "Direct vs Regular Mutual Fund Calculator",
     tagline: "Fee Impact",
     description:
-      "See how much more a direct mutual fund plan earns than a regular plan over time because of its lower expense ratio.",
+      "Free direct vs regular mutual fund calculator. See how much more a direct plan earns than a regular plan over time because of its lower expense ratio.",
     faq: [
       [
         "What is the difference between direct and regular plans?",
@@ -171,6 +203,10 @@ const COPY: Record<string, Copy> = {
       [
         "Does 1% really matter?",
         "Over 20 years a 1% higher cost can take 15–20% off your final corpus.",
+      ],
+      [
+        "What is an expense ratio?",
+        "The yearly fee a mutual fund charges as a percentage of your investment. It is taken out of the fund's returns every day, so you never see it as a bill.",
       ],
     ],
   },
@@ -188,6 +224,10 @@ const COPY: Record<string, Copy> = {
         "How often should I rebalance?",
         "Once a year, or when any part drifts more than about 5% from its target.",
       ],
+      [
+        "How much equity suits my age?",
+        "A common rule of thumb is 100 minus your age in equity, adjusted for your goals and how you would react to a market fall. The calculator weighs both.",
+      ],
     ],
   },
   inflation: {
@@ -204,13 +244,17 @@ const COPY: Record<string, Copy> = {
         "What is real return?",
         "Your return after removing inflation: (1 + return) ÷ (1 + inflation) − 1.",
       ],
+      [
+        "How does inflation affect my savings?",
+        "At 6% inflation, money loses about half its buying power in 12 years. Savings that earn less than inflation shrink in real terms.",
+      ],
     ],
   },
   "money-double": {
     appName: "Rule of 72 Calculator",
     tagline: "Years to Double Your Money",
     description:
-      "Find how many years your money takes to double, triple or grow 10× at any interest rate, with the Rule of 72.",
+      "Free Rule of 72 calculator. Find how many years your money takes to double, triple or grow 10× at any interest rate, with the exact answer alongside.",
     faq: [
       [
         "What is the Rule of 72?",
@@ -220,14 +264,22 @@ const COPY: Record<string, Copy> = {
         "How accurate is it?",
         "Very close for returns between 6% and 12%; the calculator also shows the exact figure.",
       ],
+      [
+        "How long does money take to double at 12%?",
+        "About 6 years, because 72 ÷ 12 = 6. The exact figure with yearly compounding is 6.1 years.",
+      ],
     ],
   },
   fd: {
     appName: "FD Calculator",
     tagline: "Fixed Deposit Maturity, TDS & Tax",
     description:
-      "Free FD calculator for India. Calculate fixed deposit maturity, interest, TDS and your post-tax return with monthly or quarterly compounding.",
+      "Free FD (Fixed Deposit) calculator for India. Find maturity value, interest, TDS (Tax Deducted at Source) and your post-tax return with any compounding.",
     faq: [
+      [
+        "What is an FD?",
+        "A Fixed Deposit is a lump sum placed with a bank for a fixed term at a fixed interest rate. Interest is paid out regularly or added to the deposit at maturity.",
+      ],
       [
         "When is TDS deducted on FD interest?",
         "When interest from a bank crosses ₹50,000 in a financial year (₹1 lakh for senior citizens). TDS is 10%, or 20% without PAN.",
@@ -242,8 +294,12 @@ const COPY: Record<string, Copy> = {
     appName: "RD Calculator",
     tagline: "Recurring Deposit Maturity",
     description:
-      "Free recurring deposit calculator for banks. Find RD maturity value and interest with quarterly compounding.",
+      "Free RD (Recurring Deposit) calculator for bank deposits. Find the maturity value and interest on a fixed monthly deposit with quarterly compounding.",
     faq: [
+      [
+        "What is an RD?",
+        "A Recurring Deposit lets you put a fixed amount into a bank every month for a set term and earn a fixed interest rate on it.",
+      ],
       [
         "How is RD interest calculated?",
         "Each monthly instalment earns interest compounded quarterly for the months it stays deposited.",
@@ -258,7 +314,7 @@ const COPY: Record<string, Copy> = {
     appName: "Gold Investment Calculator",
     tagline: "SGB vs Gold ETF vs Jewellery",
     description:
-      "Compare Sovereign Gold Bonds, gold ETFs and physical gold after making charges, GST and tax.",
+      "Free gold investment calculator. Compare Sovereign Gold Bonds (SGB), gold Exchange Traded Funds (ETF) and jewellery after making charges and tax.",
     faq: [
       [
         "Which is the best way to invest in gold?",
@@ -268,13 +324,17 @@ const COPY: Record<string, Copy> = {
         "How is gold taxed?",
         "Physical gold held over 24 months and gold ETFs over 12 months are taxed at 12.5% long-term; shorter holdings at your slab.",
       ],
+      [
+        "What is a gold ETF?",
+        "An Exchange Traded Fund that holds physical gold and trades on the stock exchange like a share. It tracks the gold price with no making charges.",
+      ],
     ],
   },
   retirement: {
     appName: "Retirement Calculator India",
-    tagline: "Corpus & Monthly SIP Needed",
+    tagline: "Corpus & Monthly Saving Needed",
     description:
-      "Free retirement calculator for India. Find the corpus you need to retire and the monthly SIP to build it, after inflation.",
+      "Free retirement calculator for India. Find the corpus you need to retire and the monthly investment that builds it, after inflation and returns.",
     faq: [
       [
         "How much do I need to retire in India?",
@@ -284,14 +344,22 @@ const COPY: Record<string, Copy> = {
         "What counts towards the corpus?",
         "EPF, PPF, NPS, mutual funds and other long-term savings meant for retirement.",
       ],
+      [
+        "What return should I assume for retirement planning?",
+        "About 10–12% a year for equity-heavy savings while you work, and 6–8% after retirement when most money moves to safer debt.",
+      ],
     ],
   },
   nps: {
     appName: "NPS Calculator",
     tagline: "Pension, Lump Sum & Tax Benefit",
     description:
-      "Free NPS calculator. Estimate your National Pension System corpus at 60, tax-free lump sum, annuity and monthly pension.",
+      "Free NPS (National Pension System) calculator. Estimate your corpus at 60, the tax-free lump sum, the annuity and the monthly pension it buys.",
     faq: [
+      [
+        "What is NPS?",
+        "The National Pension System is a government-regulated retirement scheme. You invest in equity and debt funds until 60, then take part as a lump sum and buy a pension with the rest.",
+      ],
       [
         "How much NPS can I withdraw at 60?",
         "Up to 60% as a tax-free lump sum. At least 40% must buy an annuity that pays a pension.",
@@ -306,7 +374,7 @@ const COPY: Record<string, Copy> = {
     appName: "Annuity Calculator",
     tagline: "Monthly Pension from a Corpus",
     description:
-      "Calculate the monthly pension an annuity pays for your corpus, or the corpus needed for a target pension.",
+      "Free annuity calculator for India. See the monthly pension an annuity pays for your corpus, or the corpus you need for a target monthly pension.",
     faq: [
       [
         "What is an annuity?",
@@ -316,13 +384,17 @@ const COPY: Record<string, Copy> = {
         "Is annuity income taxable?",
         "Yes, it is taxed at your slab rate every year.",
       ],
+      [
+        "What annuity rate can I expect in India?",
+        "Roughly 6–8% a year from insurers for a life annuity, and less if the purchase price is returned to your family. The rate is fixed when you buy.",
+      ],
     ],
   },
   gratuity: {
     appName: "Gratuity Calculator",
     tagline: "Amount & Tax Exemption",
     description:
-      "Free gratuity calculator for India. Calculate gratuity from last drawn basic + DA and years of service, and the tax-free part.",
+      "Free gratuity calculator for India. Work out gratuity from your last basic pay plus Dearness Allowance (DA) and years of service, and the tax-free part.",
     faq: [
       [
         "How is gratuity calculated?",
@@ -332,13 +404,17 @@ const COPY: Record<string, Copy> = {
         "How much gratuity is tax-free?",
         "Up to ₹20 lakh for private employees; fully exempt for government employees.",
       ],
+      [
+        "Who is eligible for gratuity?",
+        "Generally employees who complete 5 years of continuous service with a covered employer. The 5-year condition does not apply on death or disability.",
+      ],
     ],
   },
   "leave-encashment": {
     appName: "Leave Encashment Calculator",
     tagline: "Payout & Tax",
     description:
-      "Calculate leave encashment and how much of it is tax-free at retirement or resignation.",
+      "Free leave encashment calculator for India. Calculate the payout for unused leave and how much of it is tax-free at retirement or resignation.",
     faq: [
       [
         "Is leave encashment taxable?",
@@ -348,13 +424,17 @@ const COPY: Record<string, Copy> = {
         "How is it calculated?",
         "Basic + DA ÷ 30 × leave days encashed, as per your employer's policy.",
       ],
+      [
+        "How many leave days count for the tax exemption?",
+        "For private employees the exemption counts at most 30 days of leave for each completed year of service, up to ₹25 lakh in total.",
+      ],
     ],
   },
   "loan-eligibility": {
     appName: "Loan Eligibility Calculator",
     tagline: "How Much Can I Borrow?",
     description:
-      "Free home loan eligibility calculator. Find the loan amount and EMI you qualify for from your income and existing EMIs.",
+      "Free home loan eligibility calculator. Find the loan and Equated Monthly Instalment (EMI) you qualify for from your income and existing loans.",
     faq: [
       [
         "What is FOIR?",
@@ -364,13 +444,17 @@ const COPY: Record<string, Copy> = {
         "How much of the house price will a bank fund?",
         "Up to 90% for loans under ₹30 lakh, 80% up to ₹75 lakh and 75% above, as per RBI.",
       ],
+      [
+        "How can I improve my loan eligibility?",
+        "Clear small loans first, add an earning co-applicant, choose a longer tenure and keep your credit score above 750.",
+      ],
     ],
   },
   "prepay-vs-invest": {
     appName: "Prepay vs Invest Calculator",
     tagline: "Prepay Home Loan or Invest?",
     description:
-      "Should you prepay your home loan or invest the money? Compare interest saved with what the money could earn.",
+      "Free prepay vs invest calculator. Should you prepay your home loan or invest the money? Compare the interest you save with what the money could earn.",
     faq: [
       [
         "Is it better to prepay a home loan or invest?",
@@ -380,13 +464,17 @@ const COPY: Record<string, Copy> = {
         "Is there a penalty for prepaying?",
         "No, RBI does not allow prepayment charges on floating-rate loans to individuals.",
       ],
+      [
+        "Should I cut the EMI or the tenure after prepaying?",
+        "Cutting the tenure saves more interest. Cutting the Equated Monthly Instalment (EMI) eases your monthly cash flow instead.",
+      ],
     ],
   },
   "balance-transfer": {
     appName: "Home Loan Balance Transfer Calculator",
     tagline: "Your Savings",
     description:
-      "Calculate how much you save by moving your home loan to a lower rate, after processing fees and charges.",
+      "Free home loan balance transfer calculator. See how much you save by moving your loan to a lower rate, after processing fees and other charges.",
     faq: [
       [
         "When is a balance transfer worth it?",
@@ -396,13 +484,17 @@ const COPY: Record<string, Copy> = {
         "What does switching cost?",
         "Processing fee (often 0.25–1%), legal and valuation charges, and GST on the fee.",
       ],
+      [
+        "Can I take a top-up loan with a balance transfer?",
+        "Yes. Many lenders offer a top-up loan along with a balance transfer, usually at a slightly higher rate than the home loan.",
+      ],
     ],
   },
   "flat-vs-reducing": {
     appName: "Flat to Reducing Rate Calculator",
     tagline: "Real Loan Interest Rate",
     description:
-      "Convert a flat interest rate to the real reducing-balance rate and see the true cost of a loan.",
+      "Free flat to reducing rate calculator. Convert a flat interest rate quoted on a loan into the real reducing-balance rate and see the true cost.",
     faq: [
       [
         "What is a flat interest rate?",
@@ -412,13 +504,17 @@ const COPY: Record<string, Copy> = {
         "How does flat compare to reducing rate?",
         "A flat rate is roughly 1.8–1.9 times the equivalent reducing rate.",
       ],
+      [
+        "Where are flat rates used?",
+        "Mostly on personal loans, two-wheeler and car loans from dealers, and consumer durable loans. Ask for the reducing-balance rate before you sign.",
+      ],
     ],
   },
   "credit-card": {
     appName: "Credit Card Interest Calculator",
     tagline: "Minimum Due Trap",
     description:
-      "See how long it takes and how much interest you pay if you clear a credit card bill by paying only the minimum due.",
+      "Free credit card interest calculator. See how long a card bill takes to clear and the interest you pay if you pay only the minimum due each month.",
     faq: [
       [
         "How much interest do credit cards charge?",
@@ -428,13 +524,17 @@ const COPY: Record<string, Copy> = {
         "Why is paying the minimum due bad?",
         "Interest keeps running on the full balance, so the debt can take years to clear.",
       ],
+      [
+        "How can I get out of credit card debt faster?",
+        "Pay more than the minimum, stop new spending on the card, or move the balance to a cheaper personal loan and repay that.",
+      ],
     ],
   },
   "debt-payoff": {
     appName: "Debt Payoff Calculator",
     tagline: "Avalanche vs Snowball",
     description:
-      "Plan how to become debt-free. Compare the avalanche and snowball methods for paying off several loans.",
+      "Free debt payoff calculator. Plan how to become debt-free and compare the avalanche and snowball methods for paying off several loans and cards.",
     faq: [
       [
         "What is the avalanche method?",
@@ -444,14 +544,22 @@ const COPY: Record<string, Copy> = {
         "What is the snowball method?",
         "Clear the smallest balance first for quick wins, then roll that payment into the next debt.",
       ],
+      [
+        "Which is better, avalanche or snowball?",
+        "Avalanche saves more interest. Snowball clears loans one by one sooner, which keeps some people motivated. The calculator shows both.",
+      ],
     ],
   },
   "education-loan": {
     appName: "Education Loan EMI Calculator",
     tagline: "EMI, Moratorium & 80E",
     description:
-      "Calculate education loan EMI after the moratorium, interest added during study, and the 80E tax benefit.",
+      "Free education loan EMI (Equated Monthly Instalment) calculator. See the EMI after the moratorium, interest added while you study and the 80E saving.",
     faq: [
+      [
+        "How is the education loan EMI worked out?",
+        "Interest that builds up during the moratorium is added to the loan, and the Equated Monthly Instalment is then worked out on that larger balance over the repayment years.",
+      ],
       [
         "What is the moratorium on an education loan?",
         "Usually the course period plus 6–12 months, when you don't pay EMIs. Interest still accrues.",
@@ -466,7 +574,7 @@ const COPY: Record<string, Copy> = {
     appName: "Gold Loan Calculator",
     tagline: "Loan Amount on Your Gold",
     description:
-      "Find how much loan you can get on your gold jewellery and the interest you will pay.",
+      "Free gold loan calculator for India. Find how much you can borrow on your gold jewellery at today's price, and the interest you will pay on it.",
     faq: [
       [
         "How much loan can I get on gold?",
@@ -476,14 +584,22 @@ const COPY: Record<string, Copy> = {
         "How is gold valued?",
         "By weight and purity at the lender's rate, usually the average of recent 22K prices.",
       ],
+      [
+        "What interest do gold loans charge?",
+        "Roughly 9–18% a year, depending on the lender, the loan-to-value and the repayment scheme. Banks usually charge less than gold loan companies.",
+      ],
     ],
   },
   salary: {
     appName: "Salary Calculator India",
     tagline: "CTC to In-hand",
     description:
-      "Free salary calculator for India. Convert CTC to monthly in-hand salary after PF, professional tax and income tax in the new or old regime.",
+      "Free salary calculator for India. Convert CTC (Cost to Company) to monthly in-hand pay after Provident Fund (PF), professional tax and income tax.",
     faq: [
+      [
+        "What is CTC?",
+        "Cost to Company is the total your employer spends on you in a year: basic pay, allowances, bonus, employer PF and gratuity.",
+      ],
       [
         "Why is in-hand salary lower than CTC?",
         "CTC includes employer PF, gratuity and bonus. PF, professional tax and income tax are deducted from your gross salary.",
@@ -496,10 +612,14 @@ const COPY: Record<string, Copy> = {
   },
   hra: {
     appName: "HRA Calculator",
-    tagline: "HRA Exemption",
+    tagline: "House Rent Allowance Exemption",
     description:
-      "Free HRA exemption calculator. Find the tax-free part of your house rent allowance in the old regime.",
+      "Free HRA (House Rent Allowance) exemption calculator. Find the tax-free part of your HRA in the old regime from your basic pay, rent and city.",
     faq: [
+      [
+        "What is HRA?",
+        "House Rent Allowance is the part of your salary meant for rent. If you pay rent, some or all of it is tax-free under Section 10(13A) in the old regime.",
+      ],
       [
         "How is HRA exemption calculated?",
         "The lowest of actual HRA, rent minus 10% of basic, and 50% (metro) or 40% of basic.",
@@ -514,7 +634,7 @@ const COPY: Record<string, Copy> = {
     appName: "Capital Gains Tax Calculator",
     tagline: "Shares, Funds, Property, Gold",
     description:
-      "Free capital gains tax calculator for India. Calculate STCG and LTCG tax on shares, mutual funds, property and gold as per Budget 2024 rules.",
+      "Free capital gains calculator. Find Short-Term Capital Gains (STCG) and Long-Term Capital Gains (LTCG) tax on shares, funds, property and gold.",
     faq: [
       [
         "What is the LTCG tax on shares?",
@@ -524,14 +644,22 @@ const COPY: Record<string, Copy> = {
         "Is indexation still available on property?",
         "For land or buildings bought before 23 July 2024, resident individuals can pay the lower of 12.5% without or 20% with indexation.",
       ],
+      [
+        "What is the STCG tax on shares?",
+        "20% on gains from listed shares and equity funds held for 12 months or less, for sales made on or after 23 July 2024.",
+      ],
     ],
   },
   "ltcg-harvest": {
     appName: "LTCG Harvesting Calculator",
     tagline: "Use the ₹1.25 Lakh Exemption",
     description:
-      "Calculate how much long-term equity gain to book each year to use the ₹1.25 lakh exemption and cut future tax.",
+      "Free LTCG (Long-Term Capital Gains) harvesting calculator. Book equity gains each year within the ₹1.25 lakh exemption to cut your future tax.",
     faq: [
+      [
+        "What is LTCG?",
+        "Long-Term Capital Gains are profits on listed shares and equity funds held over 12 months. Gains above ₹1.25 lakh a year are taxed at 12.5%.",
+      ],
       [
         "What is tax harvesting?",
         "Selling and buying back equity units to book gains up to the yearly exemption, raising your cost and lowering future tax.",
@@ -543,7 +671,7 @@ const COPY: Record<string, Copy> = {
     appName: "80C & 80D Deduction Calculator",
     tagline: "Tax Saving Planner",
     description:
-      "See how much of 80C, 80CCD(1B), 80D and home loan interest you have used, the room left and the tax you save.",
+      "Free 80C and 80D deduction calculator. See how much of 80C, 80CCD(1B), 80D and home loan interest you have used, the room left and the tax saved.",
     faq: [
       [
         "What is the 80C limit?",
@@ -553,13 +681,17 @@ const COPY: Record<string, Copy> = {
         "How much is 80D?",
         "₹25,000 for self and family (₹50,000 if 60+), plus ₹25,000 or ₹50,000 for parents.",
       ],
+      [
+        "Are 80C and 80D allowed in the new regime?",
+        "No. Most deductions, including 80C and 80D, apply only in the old regime. Employer pension contributions under 80CCD(2) are allowed in both.",
+      ],
     ],
   },
   "advance-tax": {
     appName: "Advance Tax Calculator",
     tagline: "Instalments & Due Dates",
     description:
-      "Calculate advance tax instalments and due dates, and the interest if you miss them.",
+      "Free advance tax calculator for India. Split the tax you owe into quarterly instalments with due dates, and see the interest if you pay late.",
     faq: [
       [
         "Who must pay advance tax?",
@@ -569,13 +701,17 @@ const COPY: Record<string, Copy> = {
         "What are the due dates?",
         "15% by 15 June, 45% by 15 September, 75% by 15 December and 100% by 15 March.",
       ],
+      [
+        "What interest applies if I miss advance tax?",
+        "1% a month under Section 234C on each short instalment, and 1% a month under Section 234B if you paid less than 90% of your tax by 31 March.",
+      ],
     ],
   },
   "presumptive-tax": {
     appName: "Freelancer Tax Calculator (44ADA)",
     tagline: "Presumptive Taxation",
     description:
-      "Free tax calculator for freelancers and small businesses under Section 44ADA and 44AD presumptive taxation.",
+      "Free tax calculator for freelancers and small businesses. Compare presumptive tax under Section 44ADA and 44AD with keeping full books of accounts.",
     faq: [
       [
         "What is Section 44ADA?",
@@ -585,13 +721,17 @@ const COPY: Record<string, Copy> = {
         "What is Section 44AD?",
         "Small businesses can declare 6% of digital and 8% of cash turnover as income, up to ₹3 crore turnover.",
       ],
+      [
+        "Do I pay advance tax under 44ADA?",
+        "Yes, but in a single instalment: the full advance tax is due by 15 March.",
+      ],
     ],
   },
   "rental-income": {
     appName: "Rental Income Tax Calculator",
     tagline: "Tax on Rent & Rental Yield",
     description:
-      "Calculate tax on rental income after municipal tax, 30% standard deduction and home loan interest, plus net rental yield.",
+      "Free rental income tax calculator. Find tax on rent after municipal tax, the 30% standard deduction and home loan interest, plus your net rental yield.",
     faq: [
       [
         "How is rental income taxed?",
@@ -601,14 +741,22 @@ const COPY: Record<string, Copy> = {
         "Can a rental loss reduce other income?",
         "Up to ₹2 lakh a year in the old regime; the rest carries forward for 8 years.",
       ],
+      [
+        "What is a good rental yield in India?",
+        "Homes in big cities usually yield 2–4% a year before tax. Commercial property often yields 6–9%.",
+      ],
     ],
   },
   gst: {
     appName: "GST Calculator",
     tagline: "Add or Remove GST",
     description:
-      "Free GST calculator for India. Add GST to a price or remove it, with CGST, SGST and IGST split.",
+      "Free GST (Goods and Services Tax) calculator for India. Add GST to a price or remove it from a GST-inclusive price, with the central and state split.",
     faq: [
+      [
+        "What is GST?",
+        "Goods and Services Tax is India's single indirect tax on most goods and services. Within a state it is split equally into CGST and SGST; between states IGST applies.",
+      ],
       [
         "What are the GST rates?",
         "Since September 2025 most goods and services are taxed at 5% or 18%, with 40% for luxury and sin goods.",
@@ -623,7 +771,7 @@ const COPY: Record<string, Copy> = {
     appName: "Term Insurance Calculator",
     tagline: "How Much Life Cover",
     description:
-      "Free term insurance calculator for India. Find the life cover you need using income replacement and family needs.",
+      "Free term insurance calculator for India. Find the life cover your family needs using income replacement, loans, future goals and existing savings.",
     faq: [
       [
         "How much term insurance do I need?",
@@ -633,13 +781,17 @@ const COPY: Record<string, Copy> = {
         "Till what age should cover run?",
         "Until your retirement age, typically 60–65, when your dependants no longer rely on your income.",
       ],
+      [
+        "Is the term insurance premium tax-deductible?",
+        "Yes, under Section 80C in the old regime, within the overall ₹1.5 lakh limit.",
+      ],
     ],
   },
   "health-cover": {
     appName: "Health Insurance Cover Calculator",
     tagline: "Right Cover for You",
     description:
-      "Find the right health insurance cover for your family based on city, family size, age and employer cover.",
+      "Free health insurance cover calculator. Find the right cover for your family by city, family size, age and employer cover, plus a super top-up.",
     faq: [
       [
         "How much health cover is enough?",
@@ -649,13 +801,17 @@ const COPY: Record<string, Copy> = {
         "Is employer health cover enough?",
         "No. It ends with the job and is often too small. Keep a personal policy.",
       ],
+      [
+        "What is a super top-up?",
+        "A low-cost policy that pays once your total hospital bills in a year cross a set deductible, such as ₹5 lakh. It stretches a base policy cheaply.",
+      ],
     ],
   },
   "policy-return": {
     appName: "Policy Return Calculator",
-    tagline: "Endowment & Money-back IRR",
+    tagline: "Endowment & Money-back Returns",
     description:
-      "Find the real yearly return (IRR) of an endowment or money-back policy and compare it with PPF and mutual funds.",
+      "Free policy return calculator. Find the real Internal Rate of Return (IRR) of an endowment or money-back policy and compare it with mutual funds.",
     faq: [
       [
         "What return do endowment plans give?",
@@ -663,7 +819,11 @@ const COPY: Record<string, Copy> = {
       ],
       [
         "What is IRR?",
-        "The yearly return that equates all premiums paid with the maturity amount received.",
+        "Internal Rate of Return: the yearly return that equates all premiums paid with the maturity amount received.",
+      ],
+      [
+        "Should I surrender a low-return policy?",
+        "Compare the surrender value invested elsewhere with what the policy pays at maturity. Surrendering in the first few years often loses money, so check before you decide.",
       ],
     ],
   },
@@ -671,7 +831,7 @@ const COPY: Record<string, Copy> = {
     appName: "Buy Term & Invest the Rest Calculator",
     tagline: "vs Endowment",
     description:
-      "Compare a traditional insurance plan with buying term insurance and investing the premium difference.",
+      "Free buy term and invest the rest calculator. Compare a traditional endowment plan with term insurance plus investing the premium you save.",
     faq: [
       [
         "What does 'buy term and invest the rest' mean?",
@@ -681,13 +841,17 @@ const COPY: Record<string, Copy> = {
         "Is it always better?",
         "Usually, if you actually invest the difference every year with discipline.",
       ],
+      [
+        "What return should I assume on the money I invest?",
+        "About 10–12% a year for an equity fund held 15 years or more, or about 7% for a safe government savings scheme.",
+      ],
     ],
   },
   "child-education": {
     appName: "Child Education Calculator",
     tagline: "Plan for College",
     description:
-      "Plan your child's higher education. Find the future cost of a course and the monthly SIP needed, with education inflation.",
+      "Free child education calculator. Find what a college course will cost by the time your child is ready, and the monthly investment needed to fund it.",
     faq: [
       [
         "What inflation should I use for education?",
@@ -697,13 +861,17 @@ const COPY: Record<string, Copy> = {
         "Where should I invest for a child's education?",
         "Equity funds for 7+ years away, moving to debt in the last 2–3 years. Sukanya Samriddhi suits a daughter.",
       ],
+      [
+        "How much will higher education cost in 15 years?",
+        "At 10% education inflation, costs roughly quadruple in 15 years: a ₹10 lakh course today could cost about ₹42 lakh.",
+      ],
     ],
   },
   marriage: {
     appName: "Marriage Planning Calculator",
     tagline: "Save for a Wedding",
     description:
-      "Plan a wedding budget. Find the future cost and the monthly SIP needed to save for it.",
+      "Free marriage planning calculator for India. Find what a wedding budget set in today's money will cost on the day, and the monthly saving needed.",
     faq: [
       [
         "How early should I start saving for a wedding?",
@@ -713,13 +881,17 @@ const COPY: Record<string, Copy> = {
         "Where should wedding savings go?",
         "Equity funds if 5+ years away; FDs or debt funds for the last 2–3 years.",
       ],
+      [
+        "What inflation should I use for wedding costs?",
+        "About 6–8% a year. Gold, venue and catering costs often rise faster than general inflation.",
+      ],
     ],
   },
   "down-payment": {
     appName: "Home Down Payment Calculator",
     tagline: "Save for a House",
     description:
-      "Find how much to save every month for a home down payment, stamp duty and registration.",
+      "Free home down payment calculator. Find how much to save every month for a home's down payment, stamp duty and registration, with price growth.",
     faq: [
       [
         "How much down payment is needed for a home?",
@@ -729,13 +901,17 @@ const COPY: Record<string, Copy> = {
         "Does a home loan cover stamp duty?",
         "No, stamp duty and registration must be paid from your own money.",
       ],
+      [
+        "Where should I keep down payment savings?",
+        "Equity or hybrid funds if the purchase is 5 years or more away; move the money to fixed deposits or debt funds in the last 2–3 years.",
+      ],
     ],
   },
   "salary-hike": {
     appName: "Salary Hike Calculator",
     tagline: "Hike %, Real Hike & In-hand",
     description:
-      "Calculate your salary hike percentage, real hike after inflation and extra in-hand salary each month.",
+      "Free salary hike calculator. Work out your hike percentage, your real hike after inflation and the extra in-hand salary you get each month.",
     faq: [
       [
         "What is a real salary hike?",
@@ -745,18 +921,26 @@ const COPY: Record<string, Copy> = {
         "Why is my in-hand increase smaller than my hike?",
         "Part of the extra salary goes to tax and PF.",
       ],
+      [
+        "What is a good salary hike in India?",
+        "Average yearly hikes are around 8–10%. Anything above inflation is a real hike; a job switch often brings 20–30%.",
+      ],
     ],
   },
   "net-worth": {
     appName: "Net Worth Calculator India",
     tagline: "Assets Minus Liabilities",
     description:
-      "Free net worth calculator. Add what you own and what you owe to see your net worth, liquid assets and debt ratio.",
+      "Free net worth calculator for India. Add what you own and what you owe to see your net worth, liquid assets and debt ratio in one place.",
     faq: [
       ["What is net worth?", "Everything you own minus everything you owe."],
       [
         "What is a healthy debt ratio?",
         "Loans under 30% of total assets is healthy; above 50% is high.",
+      ],
+      [
+        "How often should I check my net worth?",
+        "Every 6–12 months is enough. Watch the trend over years rather than any single number.",
       ],
     ],
   },
@@ -764,7 +948,7 @@ const COPY: Record<string, Copy> = {
     appName: "50/30/20 Budget Calculator",
     tagline: "Needs, Wants & Savings",
     description:
-      "Split your take-home pay into needs, wants and savings with the 50/30/20 rule, and compare with what you actually spend.",
+      "Free 50/30/20 budget calculator. Split your take-home pay into needs, wants and savings with the 50/30/20 rule, and compare with what you spend.",
     faq: [
       [
         "What is the 50/30/20 rule?",
@@ -773,6 +957,10 @@ const COPY: Record<string, Copy> = {
       [
         "Should I save more than 20%?",
         "If you can, yes — especially for early retirement or big goals.",
+      ],
+      [
+        "What counts as needs and what counts as wants?",
+        "Needs are rent, loan payments, groceries, bills and insurance. Wants are eating out, shopping, travel and subscriptions.",
       ],
     ],
   },
