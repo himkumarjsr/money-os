@@ -37,6 +37,7 @@ import {
   step5Schema,
   step6Schema,
   step7Schema,
+  toMonthlyEquivalent,
   type AnalyseFormValues,
   type AnalyseSubmitIssue,
   type FinancialProfile,
@@ -153,7 +154,8 @@ function detectLastStep(profile: Partial<AnalyseFormValues> | null): number {
     (p.emergencyFundTarget ?? 0) > 0 ||
     (p.kidsEducationFundTarget ?? 0) > 0 ||
     (p.kidsMarriageFundTarget ?? 0) > 0 ||
-    (p.homePurchaseTarget ?? 0) > 0
+    (p.homePurchaseTarget ?? 0) > 0 ||
+    (p.homePurchasePrice ?? 0) > 0
   ) {
     return 6;
   }
@@ -996,9 +998,19 @@ export function AnalyseOnboardingForm() {
           watchedValues.shopping,
           watchedValues.personalCare,
         ]),
+    toMonthlyEquivalent(
+      watchedValues.travelInput,
+      watchedValues.travelFrequency,
+    ),
     lifeStage === "kids" ? watchedValues.kidsSchoolFees : 0,
     lifeStage === "kids" ? watchedValues.kidsActivities : 0,
     watchedValues.parentsSupport,
+    parentsSupport > 0 && hasParentsInsurance
+      ? toMonthlyEquivalent(
+          watchedValues.parentsHealthInsurancePremiumInput,
+          watchedValues.parentsHealthInsurancePremiumFrequency,
+        )
+      : 0,
   ]);
   const emergencyMonthsNeeded = emergencyFundMonthsNeeded(watchedValues);
   const emergencyFundSuggestion = computeEmergencyFundSuggestion(
@@ -2003,6 +2015,22 @@ export function AnalyseOnboardingForm() {
                       error={errors.otherIncome?.message}
                       {...bindMoneyField("otherIncome")}
                     />
+                    <NumberInput
+                      label="Expected yearly salary increase"
+                      error={errors.annualSalaryIncreasePct?.message}
+                      value={watch("annualSalaryIncreasePct") || 0}
+                      onChange={(val: number) =>
+                        setValue("annualSalaryIncreasePct", val, {
+                          shouldDirty: true,
+                        })
+                      }
+                      suffix="%"
+                      placeholder="e.g. 8"
+                      min={0}
+                      max={50}
+                      step={0.5}
+                      helper="Optional. Your goal SIPs can grow with your salary, so the starting amount is lower."
+                    />
                     <div className="mt-4 flex items-center justify-between rounded-[10px] bg-[#EEEDFE] px-4 py-3">
                       <span className="text-sm font-medium text-[#3C3489]">
                         Total monthly income
@@ -2756,6 +2784,23 @@ export function AnalyseOnboardingForm() {
                           error={errors.lifestyleTotal?.message}
                           {...bindMoneyField("lifestyleTotal")}
                         />
+                        <PremiumField
+                          inputId="travelInput"
+                          label="Travel and holidays"
+                          amountError={errors.travelInput?.message}
+                          frequency={watch("travelFrequency") ?? "yearly"}
+                          onFrequencyChange={(value) =>
+                            setValue("travelFrequency", value)
+                          }
+                        >
+                          <MoneyInput
+                            id="travelInput"
+                            label="Travel and holidays"
+                            hideLabel
+                            helper="(trips + flights + hotels) · Enter what you spend a month or a year"
+                            {...bindMoneyField("travelInput")}
+                          />
+                        </PremiumField>
                       </div>
                     </div>
                     <div className="space-y-4">
@@ -2814,7 +2859,14 @@ export function AnalyseOnboardingForm() {
                               </p>
                             ) : null}
                           </div>
-                          <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                          <MoneyInput
+                            id="parentsEmergencyCash"
+                            label="Liquid cash set aside specifically for parents medical needs (₹)"
+                            helper="Separate from your emergency fund. Senior medical costs can be sudden and large."
+                            error={errors.parentsEmergencyCash?.message}
+                            {...bindMoneyField("parentsEmergencyCash")}
+                          />
+                          <div className="min-w-0 space-y-3 rounded-2xl border border-slate-200 p-4 sm:col-span-2">
                             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <p className="text-sm font-medium text-slate-800">
                                 Do your parents have health insurance?
@@ -2855,14 +2907,37 @@ export function AnalyseOnboardingForm() {
                                 )}
                               />
                             ) : null}
+                            {hasParentsInsurance ? (
+                              <PremiumField
+                                inputId="parentsHealthInsurancePremiumInput"
+                                label="Premium you pay (₹)"
+                                amountError={
+                                  errors.parentsHealthInsurancePremiumInput
+                                    ?.message
+                                }
+                                frequency={
+                                  watch(
+                                    "parentsHealthInsurancePremiumFrequency",
+                                  ) ?? "yearly"
+                                }
+                                onFrequencyChange={(value) =>
+                                  setValue(
+                                    "parentsHealthInsurancePremiumFrequency",
+                                    value,
+                                  )
+                                }
+                              >
+                                <MoneyInput
+                                  id="parentsHealthInsurancePremiumInput"
+                                  label="Premium you pay (₹)"
+                                  hideLabel
+                                  {...bindMoneyField(
+                                    "parentsHealthInsurancePremiumInput",
+                                  )}
+                                />
+                              </PremiumField>
+                            ) : null}
                           </div>
-                          <MoneyInput
-                            id="parentsEmergencyCash"
-                            label="Liquid cash set aside specifically for parents medical needs (₹)"
-                            helper="Separate from your emergency fund. Senior medical costs can be sudden and large."
-                            error={errors.parentsEmergencyCash?.message}
-                            {...bindMoneyField("parentsEmergencyCash")}
-                          />
                         </div>
                       </div>
                     ) : null}
@@ -4274,10 +4349,10 @@ export function AnalyseOnboardingForm() {
                         {primaryGoal === "buy_home" ? (
                           <>
                             <MoneyInput
-                              id="homePurchaseTarget"
-                              label="Home purchase target"
-                              error={errors.homePurchaseTarget?.message}
-                              {...bindMoneyField("homePurchaseTarget")}
+                              id="homePurchasePrice"
+                              label="Price of the home you want"
+                              error={errors.homePurchasePrice?.message}
+                              {...bindMoneyField("homePurchasePrice")}
                             />
                             <YearInput
                               id="homePurchaseYear"
@@ -4292,7 +4367,9 @@ export function AnalyseOnboardingForm() {
                               error={errors.homePurchaseYear?.message}
                             />
                             <p className="sm:col-span-2 text-xs text-[#534AB7]">
-                              Rule: Save 60% as down payment first.
+                              You&apos;ll need about 40% of the price as cash
+                              upfront: 20% downpayment, 10% stamp duty and
+                              registration, 10% interiors.
                             </p>
                           </>
                         ) : null}

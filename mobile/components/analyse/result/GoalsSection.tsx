@@ -136,6 +136,14 @@ export function GoalsSection({
                     left
                   </Text>
                   <Text style={styles.reason}>{g.reason}</Text>
+                  {g.calculation ? (
+                    <Text style={styles.reason}>
+                      <Text style={{ fontWeight: "700" }}>
+                        How it&apos;s worked out:{" "}
+                      </Text>
+                      {g.calculation}
+                    </Text>
+                  ) : null}
                 </View>
                 <View
                   style={[

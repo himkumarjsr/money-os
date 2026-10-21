@@ -4,6 +4,8 @@ import {
   billCategoryEmoji,
   billsByDay,
   buildBillsMonth,
+  clampBillsMonth,
+  monthOf,
   defaultRemindDaysFor,
   endMonthAfter,
   monthsLeftUntil,
@@ -26,6 +28,7 @@ const ob = (o: Partial<BillObligation>): BillObligation => ({
   due_month: o.due_month ?? null,
   due_date: o.due_date ?? null,
   is_active: o.is_active ?? true,
+  start_month: o.start_month ?? null,
 });
 
 describe("obligationDueDateInMonth", () => {
@@ -347,5 +350,54 @@ describe("end_month", () => {
     expect(monthsLeftUntil("2027-01-01", oct)).toBe(4);
     expect(monthsLeftUntil("2026-01-01", oct)).toBe(0);
     expect(monthsLeftUntil(null, oct)).toBeNull();
+  });
+});
+
+describe("start month and join limit", () => {
+  it("doesn't show a bill in months before it was added", () => {
+    const emi = ob({
+      frequency: "monthly",
+      due_day: 5,
+      start_month: "2026-10-01",
+    });
+    expect(obligationDueDateInMonth(emi, 2026, 8)).toBeNull();
+    expect(obligationDueDateInMonth(emi, 2026, 9)).not.toBeNull();
+    const month = buildBillsMonth({
+      year: 2026,
+      monthIndex: 8,
+      today: new Date(2026, 9, 21),
+      obligations: [emi],
+    });
+    expect(month.items).toHaveLength(0);
+  });
+
+  it("keeps a one-time bill on its own date", () => {
+    const once = ob({
+      frequency: "one_time",
+      due_date: "2026-08-10",
+      start_month: "2026-10-01",
+    });
+    expect(obligationDueDateInMonth(once, 2026, 7)).not.toBeNull();
+  });
+
+  it("clamps the calendar to the join month", () => {
+    const today = new Date(2026, 9, 21);
+    expect(clampBillsMonth(2025, 0, "2026-03-01", today)).toEqual({
+      year: 2026,
+      monthIndex: 2,
+    });
+    expect(clampBillsMonth(2026, 5, "2026-03-01", today)).toEqual({
+      year: 2026,
+      monthIndex: 5,
+    });
+    expect(clampBillsMonth(2024, 0, null, today)).toEqual({
+      year: 2024,
+      monthIndex: 0,
+    });
+  });
+
+  it("reads the month from a timestamp", () => {
+    expect(monthOf("2026-03-15T10:00:00Z")).toBe("2026-03-01");
+    expect(monthOf(null)).toBeNull();
   });
 });

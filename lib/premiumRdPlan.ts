@@ -169,6 +169,16 @@ export function listYearlyPremiums(p: PremiumRdProfile): YearlyPremium[] {
       );
     });
   }
+  push(
+    "parents",
+    "parents' health",
+    yearlyAmount(
+      p.parentsHealthInsurancePremiumInput,
+      p.parentsHealthInsurancePremiumMonthly,
+      p.parentsHealthInsurancePremiumFrequency,
+    ),
+    undefined,
+  );
   return out;
 }
 

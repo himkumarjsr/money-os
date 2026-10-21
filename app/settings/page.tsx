@@ -1,5 +1,6 @@
 "use client";
 
+import BackLink from "@/components/ui/BackLink";
 import { apiFetch } from "@/lib/apiFetch";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -301,7 +302,8 @@ function SettingsInner() {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-10 pb-16 sm:px-6">
-      <h1 className="text-3xl font-bold text-[#111110]">Settings</h1>
+      <BackLink fallbackHref="/profile" label="Back" />
+      <h1 className="mt-3 text-3xl font-bold text-[#111110]">Settings</h1>
       <p className="mt-2 text-sm text-[#5F5E5A]">
         Profile, security, and data preferences.
       </p>

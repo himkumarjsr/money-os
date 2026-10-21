@@ -1,5 +1,6 @@
 "use client";
 
+import BackLink from "@/components/ui/BackLink";
 import BottomSheet from "@/components/ui/BottomSheet";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import MoneyInput from "@/components/ui/MoneyInput";
@@ -392,6 +393,7 @@ export default function PolicyVaultClient() {
   return (
     <div className="min-h-dvh bg-[#F7F7F4] pb-16 pt-6">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <BackLink fallbackHref="/profile" label="Back" className="mb-3" />
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[#111110] sm:text-3xl">

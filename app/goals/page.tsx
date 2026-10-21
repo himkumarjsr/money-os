@@ -17,10 +17,12 @@ import {
   applyGoalEdit,
   CUSTOM_GOAL_PRESETS,
   dismissGoal,
+  homeUpfrontShare,
   MAX_CUSTOM_GOALS,
   promptedGoalOffers,
   restoreDismissedGoals,
   type DetectedGoal,
+  type GoalEdit,
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
 import {
@@ -498,6 +500,12 @@ function GoalCard({
             {goal.yearsToGoal} {goal.yearsToGoal === 1 ? "year" : "years"} left
             {goal.isDefaultTarget ? " · suggested amount" : ""}
           </p>
+          {goal.calculation ? (
+            <p className="mt-1 text-xs leading-snug text-[#5F5E5A]">
+              <span className="font-semibold">How it&apos;s worked out: </span>
+              {goal.calculation}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -780,20 +788,26 @@ function EditGoalSheet({
   onClose: () => void;
   saving: boolean;
   error: string;
-  onSave: (
-    goalId: string,
-    edit: { targetAmount?: number; targetYear?: number },
-  ) => Promise<void>;
+  onSave: (goalId: string, edit: GoalEdit) => Promise<void>;
 }) {
   const [amountRaw, setAmountRaw] = useState("");
   const [yearRaw, setYearRaw] = useState("");
+  const [priceRaw, setPriceRaw] = useState("");
+  const [interiors, setInteriors] = useState(true);
   useEffect(() => {
     if (!goal) return;
     setAmountRaw(String(goal.targetAmount));
     setYearRaw(String(goal.targetYear));
+    setPriceRaw(String(goal.home?.price ?? ""));
+    setInteriors(goal.home?.includeInteriors ?? true);
   }, [goal]);
 
   const amount = handleMoneyInput(amountRaw);
+  const price = handleMoneyInput(priceRaw);
+  const upfront =
+    price != null && price > 0
+      ? Math.round(price * homeUpfrontShare(interiors))
+      : 0;
   const yearValid = !goal?.editable.year || yearOk(yearRaw);
 
   return (
@@ -804,7 +818,51 @@ function EditGoalSheet({
     >
       {goal ? (
         <div className="pt-1">
-          {goal.editable.amount ? (
+          {goal.home ? (
+            <div className="mb-5">
+              <MoneyInput
+                key={`${goal.id}-price`}
+                id="goal-edit-home-price"
+                label="Price of the home you want"
+                helper={
+                  goal.home.priceIsEstimate
+                    ? "Our estimate from your rent - change it to your real budget."
+                    : undefined
+                }
+                defaultValue={formatIndian(goal.home.price)}
+                onChange={(e) => setPriceRaw(e.target.value)}
+              />
+              <label className="mb-3 flex min-h-11 items-center gap-3 text-sm font-medium text-[#2C2C2A]">
+                <input
+                  type="checkbox"
+                  checked={interiors}
+                  onChange={(e) => setInteriors(e.target.checked)}
+                  className="h-5 w-5 accent-[#534AB7]"
+                />
+                Include interiors (10% of price)
+              </label>
+              <div className="rounded-xl bg-[#EEEDFE] px-4 py-3 text-sm text-[#3C3489]">
+                <div className="flex justify-between">
+                  <span>Downpayment (20%)</span>
+                  <span>₹{formatIndian(Math.round((price ?? 0) * 0.2))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Stamp duty and registration (10%)</span>
+                  <span>₹{formatIndian(Math.round((price ?? 0) * 0.1))}</span>
+                </div>
+                {interiors ? (
+                  <div className="flex justify-between">
+                    <span>Interiors (10%)</span>
+                    <span>₹{formatIndian(Math.round((price ?? 0) * 0.1))}</span>
+                  </div>
+                ) : null}
+                <div className="mt-1 flex justify-between font-bold text-[#534AB7]">
+                  <span>Upfront cash goal</span>
+                  <span>₹{formatIndian(upfront)}</span>
+                </div>
+              </div>
+            </div>
+          ) : goal.editable.amount ? (
             <MoneyInput
               key={`${goal.id}-amount`}
               id="goal-edit-amount"
@@ -832,8 +890,17 @@ function EditGoalSheet({
             disabled={saving || !yearValid}
             onClick={() =>
               void onSave(goal.id, {
+                ...(goal.home
+                  ? {
+                      homePrice: price != null && price > 0 ? price : undefined,
+                      homeIncludeInteriors: interiors,
+                    }
+                  : {}),
                 targetAmount:
-                  goal.editable.amount && amount != null && amount > 0
+                  !goal.home &&
+                  goal.editable.amount &&
+                  amount != null &&
+                  amount > 0
                     ? amount
                     : undefined,
                 targetYear: goal.editable.year ? Number(yearRaw) : undefined,

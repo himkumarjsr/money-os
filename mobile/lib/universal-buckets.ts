@@ -100,6 +100,31 @@ function otherInsurancePremiumMonthly(data: BucketProfileInput): number {
   return 0;
 }
 
+/** Parents' health insurance premium paid by the user (monthly equivalent). */
+export function parentsPremiumMonthly(data: BucketProfileInput): number {
+  if (typeof data.parentsHealthInsurancePremiumMonthly === "number") {
+    return n(data.parentsHealthInsurancePremiumMonthly);
+  }
+  if (
+    n(data.parentsSupport) > 0 &&
+    n(data.parentsHealthInsuranceSumInsured) > 0
+  ) {
+    return n(
+      toMonthlyEquivalent(
+        data.parentsHealthInsurancePremiumInput,
+        data.parentsHealthInsurancePremiumFrequency,
+      ),
+    );
+  }
+  return 0;
+}
+
+/** Travel / holidays spread to a monthly figure. */
+export function travelMonthly(data: BucketProfileInput): number {
+  if (typeof data.travelMonthly === "number") return n(data.travelMonthly);
+  return n(toMonthlyEquivalent(data.travelInput, data.travelFrequency));
+}
+
 /**
  * LIC / endowment premiums with a maturity value, marked in Analyse to count
  * under Investment instead of Security.
@@ -112,14 +137,15 @@ export function licEndowmentPremiumMonthly(data: BucketProfileInput): number {
   return otherPremiumRowsMonthly(data.otherInsurancePremiums ?? [], true);
 }
 
-/** Monthly insurance premiums only (health, term, motor, other; not LIC / endowment marked as investment). */
+/** Monthly insurance premiums only (health, term, motor, other, parents; not LIC / endowment marked as investment). */
 export function getInsurancePremiumsMonthly(data: BucketProfileInput): number {
   return (
     healthPremiumMonthly(data) +
     termPremiumMonthly(data) +
     carPremiumMonthly(data) +
     bikePremiumMonthly(data) +
-    otherInsurancePremiumMonthly(data)
+    otherInsurancePremiumMonthly(data) +
+    parentsPremiumMonthly(data)
   );
 }
 
@@ -371,7 +397,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
 
   needsActual += (kids ? n(data.kidsActivities) : 0) + domesticActual;
 
-  const wantsActual = lifestyleActual;
+  const wantsActual = lifestyleActual + travelMonthly(data);
 
   // Security = insurance premiums only (health + term + motor + other policies).
   // NOT EPF/PF/NPS or SSY - those belong in the investment bucket as monthly contributions.
@@ -380,7 +406,8 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     termPremiumMonthly(data) +
     carPremiumMonthly(data) +
     bikePremiumMonthly(data) +
-    otherInsurancePremiumMonthly(data);
+    otherInsurancePremiumMonthly(data) +
+    parentsPremiumMonthly(data);
 
   const dedupedAdditionalRows = Array.from(
     new Map(

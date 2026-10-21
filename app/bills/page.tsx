@@ -10,6 +10,7 @@ import {
   MONTH_NAMES,
   billsByDay,
   buildBillsMonth,
+  clampBillsMonth,
   describeSchedule,
   monthGrid,
   parseYmd,
@@ -98,12 +99,20 @@ function BillsCalendar() {
   const [showAmounts, setShowAmounts] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [joinedMonth, setJoinedMonth] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
 
   const reload = useCallback(async () => {
     if (!userId) return;
     try {
       setLoadError(null);
-      setData(await loadBillsData(userId, cursor.year, cursor.monthIndex));
+      const loaded = await loadBillsData(
+        userId,
+        cursor.year,
+        cursor.monthIndex,
+      );
+      setData(loaded);
+      if (loaded.joinedMonth) setJoinedMonth(loaded.joinedMonth);
     } catch (err) {
       console.error("bills load failed:", err);
       setLoadError("Couldn't load your bills. Pull to refresh or try again.");
@@ -138,11 +147,25 @@ function BillsCalendar() {
     cursor.year === today.getFullYear() &&
     cursor.monthIndex === today.getMonth();
 
+  const goTo = (year: number, monthIndex: number) => {
+    setPicking(false);
+    setCursor(clampBillsMonth(year, monthIndex, joinedMonth, today));
+  };
   const shiftMonth = (delta: number) =>
-    setCursor((c) => {
-      const d = new Date(c.year, c.monthIndex + delta, 1);
-      return { year: d.getFullYear(), monthIndex: d.getMonth() };
-    });
+    goTo(cursor.year, cursor.monthIndex + delta);
+  const minCursor = clampBillsMonth(0, 0, joinedMonth, today);
+  const maxCursor = clampBillsMonth(9999, 0, joinedMonth, today);
+  const atMin =
+    cursor.year * 12 + cursor.monthIndex <=
+    minCursor.year * 12 + minCursor.monthIndex;
+  const atMax =
+    cursor.year * 12 + cursor.monthIndex >=
+    maxCursor.year * 12 + maxCursor.monthIndex;
+  const pickerYears: number[] = [];
+  for (let y = minCursor.year; y <= maxCursor.year; y += 1) pickerYears.push(y);
+  const monthInRange = (y: number, m: number) =>
+    clampBillsMonth(y, m, joinedMonth, today).monthIndex === m &&
+    clampBillsMonth(y, m, joinedMonth, today).year === y;
 
   const visible = month
     ? selectedDay == null
@@ -268,42 +291,86 @@ function BillsCalendar() {
         </button>
       </div>
 
-      <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#E8E6F0] bg-white px-2 py-1.5">
-        <button
-          type="button"
-          aria-label="Previous month"
-          onClick={() => shiftMonth(-1)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-[#534AB7]"
-        >
-          ‹
-        </button>
-        <div className="text-center">
-          <div className="text-[15px] font-bold text-[#111110]">
-            {MONTH_NAMES[cursor.monthIndex]} {cursor.year}
-          </div>
-          {!isThisMonth ? (
+      <div className="mb-4 rounded-2xl border border-[#E8E6F0] bg-white px-2 py-1.5">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            aria-label="Previous month"
+            disabled={atMin}
+            onClick={() => shiftMonth(-1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-[#534AB7] disabled:opacity-30"
+          >
+            ‹
+          </button>
+          <div className="text-center">
             <button
               type="button"
-              onClick={() =>
-                setCursor({
-                  year: today.getFullYear(),
-                  monthIndex: today.getMonth(),
-                })
-              }
-              className="text-[11px] font-semibold text-[#534AB7] underline"
+              aria-expanded={picking}
+              onClick={() => setPicking((v) => !v)}
+              className="text-[15px] font-bold text-[#111110]"
             >
-              Back to this month
+              {MONTH_NAMES[cursor.monthIndex]} {cursor.year}{" "}
+              <span className="text-xs text-[#534AB7]">▾</span>
             </button>
-          ) : null}
+            {!isThisMonth ? (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => goTo(today.getFullYear(), today.getMonth())}
+                  className="text-[11px] font-semibold text-[#534AB7] underline"
+                >
+                  Back to this month
+                </button>
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            aria-label="Next month"
+            disabled={atMax}
+            onClick={() => shiftMonth(1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-[#534AB7] disabled:opacity-30"
+          >
+            ›
+          </button>
         </div>
-        <button
-          type="button"
-          aria-label="Next month"
-          onClick={() => shiftMonth(1)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-[#534AB7]"
-        >
-          ›
-        </button>
+        {picking ? (
+          <div className="border-t border-[#F1EFE8] px-2 pb-2 pt-3">
+            <div className="mb-3 flex flex-wrap gap-2">
+              {pickerYears.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => goTo(y, cursor.monthIndex)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${y === cursor.year ? "bg-[#534AB7] text-white" : "bg-[#F7F7F4] text-[#5F5E5A]"}`}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {MONTH_NAMES.map((name, m) => {
+                const ok = monthInRange(cursor.year, m);
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    disabled={!ok}
+                    onClick={() => goTo(cursor.year, m)}
+                    className={`rounded-lg py-1.5 text-xs font-semibold disabled:opacity-30 ${m === cursor.monthIndex ? "bg-[#EEEDFE] text-[#534AB7]" : "text-[#111110]"}`}
+                  >
+                    {name.slice(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+            {joinedMonth ? (
+              <p className="mt-2 text-[11px] text-[#888780]">
+                Goes back to the month you joined Finkoin.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {loadError ? (

@@ -88,18 +88,68 @@ export function PriorityCard({
             {inr(p.surplusAfterThis)} left after this step
           </Text>
         </View>
-        <View style={styles.cell}>
-          <Text style={styles.cellText}>
-            Timeline{" "}
-            {monthsForPriority(
-              String(p.id || ""),
-              Number(p.gap || 0),
-              Number(p.monthlyContribution || 0),
-            )}{" "}
-            months
-          </Text>
-        </View>
+        {p.reach ? (
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>
+              By {p.reach.targetYear}: ₹{loc(p.reach.projected)} of ₹
+              {loc(p.reach.targetAmount)}
+            </Text>
+            <Text
+              style={[
+                styles.cellSub,
+                {
+                  fontWeight: "700",
+                  color: p.reach.onTrack ? Colors.success : Colors.error,
+                },
+              ]}
+            >
+              {p.reach.onTrack
+                ? "On track"
+                : `₹${loc(p.reach.shortfall)} short (${p.reach.reachPct}%)`}
+            </Text>
+            {p.reach.counted ? (
+              <Text style={styles.cellSub}>{p.reach.counted}</Text>
+            ) : null}
+          </View>
+        ) : (
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>
+              Timeline{" "}
+              {monthsForPriority(
+                String(p.id || ""),
+                Number(p.gap || 0),
+                Number(p.monthlyContribution || 0),
+              )}{" "}
+              months
+            </Text>
+          </View>
+        )}
       </View>
+
+      {p.reach && !p.reach.onTrack ? (
+        <View style={styles.reachBox}>
+          <Text style={[styles.bold, { color: Colors.error }]}>
+            You can&apos;t reach this by {p.reach.targetYear} with your current
+            surplus.
+          </Text>
+          <Text style={[styles.thisWeekText, { marginTop: 4 }]}>
+            At {p.reach.nominalReturnPct}% a year (about {p.reach.realReturnPct}
+            % after inflation), ₹{loc(p.reach.monthly)}
+            /month
+            {p.reach.startMonth > 1
+              ? ` from month ${p.reach.startMonth}`
+              : ""}{" "}
+            grows to ₹{loc(p.reach.projected)} in today&apos;s money by{" "}
+            {p.reach.targetYear}.
+          </Text>
+          <Text style={[styles.bold, { marginTop: 8 }]}>What you can do</Text>
+          {p.reach.suggestions.map((s: string) => (
+            <Text key={s} style={[styles.thisWeekText, { marginTop: 4 }]}>
+              • {s}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       <Text style={styles.instrument}>
         Where to invest: {p.instrument || "As recommended in your plan"}
@@ -253,6 +303,14 @@ const styles = themedStyles(() => ({
   },
   thisWeekText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
   bold: { fontWeight: "700" },
+  reachBox: {
+    marginTop: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: tintBg("#F3C9C9"),
+    backgroundColor: tintBg("#FFF8F8"),
+    padding: Spacing.md,
+  },
   learn: {
     marginTop: Spacing.md,
     alignSelf: "flex-start",

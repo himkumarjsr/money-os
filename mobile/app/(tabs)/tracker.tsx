@@ -100,7 +100,7 @@ import {
   localISODate,
   msUntilNextLocalMidnight,
 } from "@/lib/localDate";
-import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
+import { getProfileIncomeCached } from "@/lib/trackerProfileIncome";
 import {
   computeMonthSafetyPulse,
   previousCalendarMonth,
@@ -128,6 +128,7 @@ import { CreditCardDues } from "@/components/tracker/CreditCardDues";
 import {
   EXPENSE_SUBCATEGORY_TO_OBLIGATION,
   SAVINGS_CARRY_FORWARD_DESC,
+  PROFILE_OTHER_INCOME_DESC,
   listSavingsCarryForward,
   monthHasStarted,
   planAutoIncomeCleanup,
@@ -334,6 +335,7 @@ export default function TrackerScreen() {
     year: number;
   } | null>(null);
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
+  const [profileOtherIncome, setProfileOtherIncome] = useState(0);
 
   const [amountsVisible, setAmountsVisible] = useState(false);
   const flip = useRef(new Animated.Value(0)).current;
@@ -727,8 +729,10 @@ export default function TrackerScreen() {
     if (!hasConsent || !user?.id) return;
     let cancelled = false;
     void (async () => {
-      const v = await getProfileMonthlySalaryCached(getSupabase(), user.id);
-      if (!cancelled) setProfileMonthlyFromDb(v);
+      const v = await getProfileIncomeCached(getSupabase(), user.id);
+      if (cancelled) return;
+      setProfileMonthlyFromDb(v.salary);
+      setProfileOtherIncome(v.otherIncome);
     })();
     return () => {
       cancelled = true;
@@ -916,6 +920,7 @@ export default function TrackerScreen() {
       currentTxns: transactions,
       profileSalary: profileMonthlyFromDb,
       previousCarryForward: prevCarryForward,
+      profileOtherIncome,
     });
     const cleanupPreview = planAutoIncomeCleanup({
       currentTxns: transactions,
@@ -925,12 +930,13 @@ export default function TrackerScreen() {
     if (
       !plan.needsSalaryRow &&
       !plan.needsSavingsRow &&
+      !plan.needsOtherIncomeRow &&
       !cleanupPreview.needsWork
     ) {
       return;
     }
 
-    const key = `${user.id}:${selectedYear}-${selectedMonth}:sal${plan.needsSalaryRow}:cf${plan.needsSavingsRow}:clean${cleanupPreview.dropIds.join(",")}:${cleanupPreview.updateCf?.amount ?? ""}:${plan.salaryAmount}:${plan.savingsAmount}`;
+    const key = `${user.id}:${selectedYear}-${selectedMonth}:sal${plan.needsSalaryRow}:cf${plan.needsSavingsRow}:oi${plan.needsOtherIncomeRow}:clean${cleanupPreview.dropIds.join(",")}:${cleanupPreview.updateCf?.amount ?? ""}:${plan.salaryAmount}:${plan.savingsAmount}`;
     if (incomeSyncKeyRef.current === key) return;
     incomeSyncKeyRef.current = key;
 
@@ -965,6 +971,7 @@ export default function TrackerScreen() {
           currentTxns: freshRows,
           profileSalary: profileMonthlyFromDb,
           previousCarryForward: prevCarryForward,
+          profileOtherIncome,
         });
         const cleanup = planAutoIncomeCleanup({
           currentTxns: freshRows,
@@ -999,6 +1006,7 @@ export default function TrackerScreen() {
           ),
           profileSalary: profileMonthlyFromDb,
           previousCarryForward: prevCarryForward,
+          profileOtherIncome,
         });
 
         const rows: Array<Record<string, unknown>> = [];
@@ -1024,6 +1032,20 @@ export default function TrackerScreen() {
             category: "other_income",
             subcategory: "other_income",
             description: SAVINGS_CARRY_FORWARD_DESC,
+            bucket: "income",
+            payment_method: null,
+            month: monthName,
+            year: selectedYear,
+          });
+        }
+        if (afterPlan.needsOtherIncomeRow) {
+          rows.push({
+            user_id: user.id,
+            date,
+            amount: afterPlan.otherIncomeAmount,
+            category: "other_income",
+            subcategory: "other_income",
+            description: PROFILE_OTHER_INCOME_DESC,
             bucket: "income",
             payment_method: null,
             month: monthName,
@@ -1067,6 +1089,7 @@ export default function TrackerScreen() {
     prevCarryForward,
     transactions,
     profileMonthlyFromDb,
+    profileOtherIncome,
     fetchTransactions,
     trackerStart,
   ]);
@@ -1242,11 +1265,12 @@ export default function TrackerScreen() {
     currentTxns: transactions,
     profileSalary: profileMonthlyFromDb,
     previousCarryForward: prevCarryForward,
+    profileOtherIncome,
   });
   const displayIncome =
     incomePlan.displayTotal > 0
       ? incomePlan.displayTotal
-      : monthlyIncome || profileMonthlyFromDb;
+      : monthlyIncome || profileMonthlyFromDb + profileOtherIncome;
 
   // Lower Needs / Wants when the last 3 months stayed under them; the freed
   // share goes to Investment. A budget never drops below the monthly amount
