@@ -57,6 +57,8 @@ import {
 } from "@/store/obligationStore";
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
+import AdvisorReviewSection from "@/components/analyse/AdvisorReviewSection";
+import { buildAdvisorReview } from "@/lib/advisorReview";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -616,6 +618,17 @@ export default function FixPlanPage() {
                       ? "On track"
                       : `₹${Math.round(p.reach.shortfall).toLocaleString("en-IN")} short (${p.reach.reachPct}%)`}
                   </p>
+                  {p.reach.fromExisting > 0 ? (
+                    <p className="mt-0.5 text-xs text-[#5F5E5A]">
+                      ₹
+                      {Math.round(p.reach.fromExisting).toLocaleString("en-IN")}{" "}
+                      from what you have today + ₹
+                      {Math.round(p.reach.fromNewSaving).toLocaleString(
+                        "en-IN",
+                      )}{" "}
+                      from monthly saving
+                    </p>
+                  ) : null}
                   {p.reach.counted ? (
                     <p className="mt-0.5 text-xs text-[#5F5E5A]">
                       {p.reach.counted}
@@ -1268,6 +1281,12 @@ export default function FixPlanPage() {
               );
             })()
           : null}
+
+        {aiPlan.priorityPlan && profile ? (
+          <AdvisorReviewSection
+            review={buildAdvisorReview(profile, aiPlan.priorityPlan)}
+          />
+        ) : null}
 
         {aiPlan.priorityPlan?.fdSuggestion ? (
           <section className="rounded-2xl border border-[#E8E6F0] bg-white p-4 shadow-sm">

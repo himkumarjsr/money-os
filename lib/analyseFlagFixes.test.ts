@@ -390,6 +390,7 @@ describe("Fix Plan PDF fonts", () => {
 
 describe("mobile keeps byte-identical copies of shared logic", () => {
   const shared = [
+    "advisorReview.ts",
     "aiPlanCache.ts",
     "analyse-form-schema.ts",
     "analyseResultModel.ts",
@@ -397,6 +398,7 @@ describe("mobile keeps byte-identical copies of shared logic", () => {
     "fixPlanMerge.ts",
     "goalDetection.ts",
     "goalFunding.ts",
+    "goalReach.ts",
     "netWorthTrajectory.ts",
     "paywallCopy.ts",
     "plannedInvestments.ts",
