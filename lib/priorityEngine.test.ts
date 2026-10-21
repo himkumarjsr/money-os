@@ -125,7 +125,7 @@ describe("buildPriorityPlan", () => {
       currentRate: 5,
     });
     expect(plan.monthlyPlan).toHaveLength(12);
-    expect(plan.topAction).toContain("Transfer");
+    expect(plan.topAction).toContain("Use what you already have");
   });
 
   it("supports complete coverage, explicit totals, car and FIRE goals", () => {
@@ -357,5 +357,51 @@ describe("term top-up for someone who already has cover", () => {
 
   it("drops the step after a no", () => {
     expect(term(withCover(false))).toBeUndefined();
+  });
+});
+
+describe("existing savings fill the safety funds", () => {
+  const ids = (plan: ReturnType<typeof buildPriorityPlan>, id: string) =>
+    plan.priorities.find((p) => p.id === id);
+
+  it("moves funds / stocks into the emergency fund instead of months of saving", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        savingsAccountBalance: 0,
+        liquidMFValue: 0,
+        fdValue: 0,
+        otherLiquidSavings: 0,
+        mfValue: 2_000_000,
+      }),
+      { needsActual: 50_000, overallScore: 60 },
+    );
+    const ef = ids(plan, "emergency_fund");
+    expect(ef?.fromSavings).toBeGreaterThan(0);
+    expect(ef?.monthlyContribution).toBe(0);
+    expect(ef?.actionThisWeek).toMatch(/mutual funds \/ stocks/);
+    const med = ids(plan, "medical_fund");
+    expect(med?.actionThisWeek).toMatch(/^Move ₹[\d,]+ from mutual funds/);
+  });
+
+  it("asks for monthly saving when there is nothing to move", () => {
+    const plan = buildPriorityPlan(
+      profile({
+        savingsAccountBalance: 0,
+        liquidMFValue: 0,
+        fdValue: 0,
+        otherLiquidSavings: 0,
+        mfValue: 0,
+        indianStocksValue: 0,
+        goldValue: 0,
+        totalEquityValue: 0,
+        usStocksValueINR: 0,
+        usMFValueINR: 0,
+        rsuValueINR: 0,
+      }),
+      { needsActual: 50_000, overallScore: 60 },
+    );
+    const ef = ids(plan, "emergency_fund");
+    expect(ef?.fromSavings).toBeUndefined();
+    expect(ef?.monthlyContribution).toBeGreaterThan(0);
   });
 });

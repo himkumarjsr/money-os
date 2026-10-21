@@ -12,6 +12,7 @@ import {
   HORIZON_ASSUMPTIONS,
   realSalaryStepUpPct,
   type GoalFundingItem,
+  type SafetyReserve,
 } from "@/lib/goalFunding";
 import {
   allocateGoalPortfolio,
@@ -237,7 +238,7 @@ export function buildUrgentGoalItems(
   available: number,
   startMonth: number,
   now: Date = new Date(),
-  opts: { fdNeededForEmergency?: number } = {},
+  opts: SafetyReserve = {},
 ): GoalFundingItem[] {
   const earmarks = earmarkExistingSavings(profile, now, opts);
   const goals = detectGoals(profile, now)

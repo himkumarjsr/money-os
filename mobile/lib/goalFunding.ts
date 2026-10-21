@@ -207,6 +207,19 @@ const n0 = (v: unknown) => {
 };
 
 /**
+ * Existing savings the plan already uses for the emergency and medical
+ * funds, so goals don't count them again.
+ */
+export type SafetyReserve = {
+  /** FD kept for the emergency and medical funds. */
+  fdNeededForEmergency?: number;
+  /** Mutual funds / stocks moved into the emergency or medical fund. */
+  equityUsedForSafety?: number;
+  /** Gold sold for the emergency or medical fund. */
+  goldUsedForSafety?: number;
+};
+
+/**
  * Sets the user's existing savings against their goals, nearest date first,
  * so a goal only asks the surplus for what is still missing:
  * - FDs, NSC / post office (less what the emergency fund still leans on),
@@ -219,7 +232,7 @@ const n0 = (v: unknown) => {
 export function earmarkExistingSavings(
   profile: FinancialProfile,
   now: Date = new Date(),
-  opts: { fdNeededForEmergency?: number } = {},
+  opts: SafetyReserve = {},
 ): Map<string, GoalEarmark> {
   const p = profile as FinancialProfile & {
     postOfficeSchemes?: Array<{ amount?: number }>;
@@ -232,8 +245,11 @@ export function earmarkExistingSavings(
       0,
       n0(p.fdValue) - n0(opts.fdNeededForEmergency) + postOffice,
     ),
-    gold: n0(p.goldValue),
-    equity: existingEquityValue(profile),
+    gold: Math.max(0, n0(p.goldValue) - n0(opts.goldUsedForSafety)),
+    equity: Math.max(
+      0,
+      existingEquityValue(profile) - n0(opts.equityUsedForSafety),
+    ),
   };
   let monthlyPool =
     n0(p.monthlySIP) +
@@ -296,8 +312,7 @@ export function buildGoalFundingPlan(
   opts: {
     safetyNetComplete?: boolean;
     excludeGoalIds?: string[];
-    fdNeededForEmergency?: number;
-  } = {},
+  } & SafetyReserve = {},
 ): GoalFundingPlan {
   const realEstateEligible =
     !!opts.safetyNetComplete &&
@@ -312,6 +327,8 @@ export function buildGoalFundingPlan(
   );
   const earmarks = earmarkExistingSavings(profile, now, {
     fdNeededForEmergency: opts.fdNeededForEmergency,
+    equityUsedForSafety: opts.equityUsedForSafety,
+    goldUsedForSafety: opts.goldUsedForSafety,
   });
 
   const sized = goals.map((g) => {
