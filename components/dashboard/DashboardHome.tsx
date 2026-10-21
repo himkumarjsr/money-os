@@ -290,7 +290,7 @@ function RewardsCard() {
       />
       <div className="grid grid-cols-3 gap-2 text-center">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-xl bg-[#F7F6FD] px-1 py-3">
+          <div key={s.label} className="rounded-xl bg-[#F4F2FC] px-1 py-3">
             <p className="flex items-center justify-center gap-1 text-lg font-bold text-[#111110]">
               {s.value}
             </p>
