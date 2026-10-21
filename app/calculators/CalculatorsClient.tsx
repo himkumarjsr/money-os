@@ -25,10 +25,13 @@ function findCategoryForCalc(calcId: string): Cat {
 export default function CalculatorsClient({
   initialCalcId,
   urlBaseForTaxCanonical,
+  serverHeading = false,
 }: {
   initialCalcId: string;
   /** When set, keeps tax-regime on this path. */
   urlBaseForTaxCanonical?: string;
+  /** The page renders its own H1 on the server, so the header title must not be a second H1. */
+  serverHeading?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -263,9 +266,15 @@ export default function CalculatorsClient({
               </span>
               <span>Back</span>
             </button>
-            <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
-              Calculators
-            </h1>
+            {serverHeading ? (
+              <p className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                Calculators
+              </p>
+            ) : (
+              <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                Calculators
+              </h1>
+            )}
             <p className="mt-1 text-sm text-slate-600">
               Sliders update results instantly — illustrative, not advice.
             </p>

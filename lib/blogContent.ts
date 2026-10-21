@@ -1,6 +1,8 @@
 import fireNumberIndia from "./data/blog-fire-number-india";
 import oldVsNewTaxRoi2026 from "./data/blog-old-vs-new-tax-roi-2026";
 import { BLOG_ARTICLES_OCT_2026 } from "./data/blog-oct-2026";
+import { BLOG_ARTICLES_CALCULATOR_GUIDES } from "./data/blog-calculator-guides-oct-2026";
+import { BLOG_ARTICLES_MORE_GUIDES } from "./data/blog-more-guides-oct-2026";
 
 export type BlogArticle = {
   slug: string;
@@ -22,6 +24,8 @@ export type BlogArticle = {
 };
 
 const ALL_BLOG_ARTICLES: BlogArticle[] = [
+  ...BLOG_ARTICLES_MORE_GUIDES,
+  ...BLOG_ARTICLES_CALCULATOR_GUIDES,
   ...BLOG_ARTICLES_OCT_2026,
   fireNumberIndia as BlogArticle,
   oldVsNewTaxRoi2026 as BlogArticle,
