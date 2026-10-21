@@ -1,3 +1,7 @@
+import {
+  expandAbbreviations,
+  findAbbreviations,
+} from "./calculator-abbreviations";
 import { CATEGORIES } from "./calculator-config";
 import { ADVISOR_SEO } from "./calculator-seo-advisor";
 import { SITE_URL } from "@/lib/seo";
@@ -22,9 +26,9 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   sip: {
     path: "/calculators/sip",
     appName: "SIP Calculator India",
-    title: "SIP Calculator India — Monthly SIP Returns Calculator | Finkoin",
+    title: "SIP Calculator — Systematic Investment Plan Returns | Finkoin",
     description:
-      "Free SIP calculator India. Calculate monthly SIP returns, final corpus and wealth created. Compare SIP amounts and durations. Best SIP calculator India 2026.",
+      "Free SIP (Systematic Investment Plan) calculator for India. See the final corpus, amount invested and wealth gained from a monthly mutual fund SIP.",
     keywords: [
       "SIP calculator India",
       "SIP returns calculator",
@@ -38,6 +42,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       "best SIP calculator India 2026",
     ],
     faq: [
+      {
+        q: "What is a SIP?",
+        a: "A Systematic Investment Plan invests a fixed amount in a mutual fund every month, usually by auto-debit. It builds the habit and averages out the price you pay.",
+      },
       {
         q: "What is a SIP calculator?",
         a: "A SIP calculator estimates the future value of monthly mutual fund investments based on amount, expected return rate, and tenure.",
@@ -61,7 +69,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "SWP Calculator India",
     title: "SWP Calculator India — Systematic Withdrawal Plan | Finkoin",
     description:
-      "Free SWP calculator India. Plan systematic withdrawals from mutual funds, estimate how long your corpus lasts, and model retirement cash flow.",
+      "Free SWP (Systematic Withdrawal Plan) calculator. Plan monthly withdrawals from mutual funds, see how long your corpus lasts and model retirement income.",
     keywords: [
       "SWP calculator India",
       "systematic withdrawal plan calculator",
@@ -88,9 +96,9 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   emi: {
     path: "/calculators/emi",
     appName: "EMI Calculator India",
-    title: "EMI Calculator India — Loan EMI Calculator Online | Finkoin",
+    title: "EMI Calculator — Equated Monthly Instalment for Loans | Finkoin",
     description:
-      "Free EMI calculator India. Estimate monthly loan EMI, total interest, and repayment for home, car, or personal loans. Instant and accurate.",
+      "Free EMI (Equated Monthly Instalment) calculator. See the monthly payment, total interest and total repayment for a home, car or personal loan.",
     keywords: [
       "EMI calculator",
       "EMI calculator India",
@@ -103,6 +111,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       "reducing balance EMI calculator",
     ],
     faq: [
+      {
+        q: "What is an EMI?",
+        a: "An Equated Monthly Instalment is the fixed amount you pay your lender every month. Each EMI covers that month's interest and repays part of the principal.",
+      },
       {
         q: "What is an EMI calculator?",
         a: "An EMI calculator estimates monthly loan installments from principal, interest rate, and tenure.",
@@ -126,7 +138,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "PPF Calculator India",
     title: "PPF Calculator India — Public Provident Fund Maturity | Finkoin",
     description:
-      "Free PPF calculator India. Project 15-year Public Provident Fund maturity with yearly contributions. Plan 80C tax-saving with PPF.",
+      "Free PPF (Public Provident Fund) calculator for India. Project the 15-year maturity of yearly deposits, the interest earned and your 80C tax saving.",
     keywords: [
       "PPF calculator India",
       "public provident fund calculator",
@@ -136,6 +148,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       "Finkoin PPF calculator",
     ],
     faq: [
+      {
+        q: "What is PPF?",
+        a: "The Public Provident Fund is a 15-year government savings scheme with tax-free interest and maturity. You can deposit ₹500 to ₹1.5 lakh a year.",
+      },
       {
         q: "What is PPF calculator?",
         a: "A PPF calculator estimates maturity value of Public Provident Fund contributions over the 15-year tenure.",
@@ -151,7 +167,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "PF Calculator India",
     title: "PF Calculator India — EPF Balance at Retirement | Finkoin",
     description:
-      "Free PF calculator India. Enter your existing EPF balance, yearly contribution, age and till when you contribute to see your Provident Fund value at 60.",
+      "Free PF calculator. Project your Employees' Provident Fund (EPF) balance at 60 from your current balance, yearly contribution, age and interest rate.",
     keywords: [
       "PF calculator India",
       "EPF calculator",
@@ -197,6 +213,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "What is the current NSC interest rate?",
         a: "For Jul–Sep 2026 the notified NSC rate is 7.7% p.a. Rates are reviewed every quarter by the government.",
       },
+      {
+        q: "Does NSC save tax?",
+        a: "Yes. Deposits qualify for Section 80C in the old regime, and each year's interest is treated as reinvested and also counts for 80C, except in the final year.",
+      },
     ],
   },
   emergency: {
@@ -222,6 +242,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "Where should I keep my emergency fund?",
         a: "Prefer liquid or overnight mutual funds and a savings buffer — not equity SIPs or locked FDs for the core emergency amount.",
       },
+      {
+        q: "How long should building an emergency fund take?",
+        a: "Aim for 6–12 months by setting aside a fixed amount every month. The calculator shows the timeline for what you can add.",
+      },
     ],
   },
   fire: {
@@ -230,7 +254,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     title:
       "FIRE Number Calculator India — When Can You Retire Early? | Finkoin",
     description:
-      "Free FIRE number calculator India. Estimate corpus to retire early using expenses, loans, and the 25× rule adapted for Indian inflation.",
+      "Free FIRE (Financial Independence, Retire Early) calculator. Estimate the corpus to retire early from your expenses and loans, using the 25× rule.",
     keywords: [
       "FIRE number calculator India",
       "FIRE calculator India",
@@ -241,6 +265,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       "4 percent rule India",
     ],
     faq: [
+      {
+        q: "What does FIRE stand for?",
+        a: "Financial Independence, Retire Early: building enough investments that their returns cover your expenses, so work becomes optional.",
+      },
       {
         q: "What is a FIRE number?",
         a: "Your FIRE number estimates investable wealth needed for financial independence — often around 25× annual expenses (4% rule), adjusted for Indian costs and loans.",
@@ -256,7 +284,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Home Loan Calculator India",
     title: "Home Loan EMI Calculator 2026 — Affordability & Planning | Finkoin",
     description:
-      "Free home loan EMI calculator India. Calculate monthly EMI, affordability, and planning stress-tests for property cost and income. Best home loan calculator 2026.",
+      "Free home loan EMI (Equated Monthly Instalment) calculator for India. See your monthly EMI, total interest and how much home loan you can afford.",
     keywords: [
       "home loan EMI calculator",
       "home loan calculator India 2026",
@@ -285,9 +313,9 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   car: {
     path: "/calculators/car",
     appName: "Car Loan Calculator India",
-    title: "Car Loan Calculator India - EMI & Affordability | Finkoin",
+    title: "Car Loan Calculator India — EMI & Affordability | Finkoin",
     description:
-      "Free Finkoin car loan calculator for EMI estimates and simple affordability checks.",
+      "Free car loan calculator for India. See your Equated Monthly Instalment (EMI), the total interest and whether the car fits your monthly salary.",
     keywords: [
       "car loan calculator India",
       "Finkoin car loan calculator",
@@ -298,14 +326,22 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "How is car loan EMI calculated?",
         a: "Car loan EMI uses principal, interest rate, and tenure on a reducing-balance schedule.",
       },
+      {
+        q: "How much car can I afford on my salary?",
+        a: "A common rule is to keep the car EMI under 10–15% of take-home pay and the car's price under about half of your yearly income.",
+      },
+      {
+        q: "Should I pick a longer car loan tenure?",
+        a: "A longer tenure lowers the EMI but raises the total interest, and cars lose value fast. 3–5 years is usual.",
+      },
     ],
   },
   rentbuy: {
     path: "/calculators/rentbuy",
     appName: "Rent vs Buy Calculator India",
-    title: "Rent vs Buy Calculator India | Finkoin",
+    title: "Rent vs Buy Calculator India — Should You Buy a Home? | Finkoin",
     description:
-      "Free Finkoin rent vs buy calculator to compare home ownership cash outflows against renting.",
+      "Free rent vs buy calculator for India. Compare the cash you pay to own a home, including the loan and down payment, with renting a similar home.",
     keywords: [
       "rent vs buy calculator India",
       "Finkoin rent vs buy",
@@ -316,14 +352,22 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "Is buying always better than renting?",
         a: "Not always — it depends on rent, property price, loan costs, tenure, and opportunity cost of down payment.",
       },
+      {
+        q: "What is the price-to-rent ratio?",
+        a: "The property price divided by a year's rent. In Indian metros it is often 30–40, which usually makes renting cheaper in the short run.",
+      },
+      {
+        q: "How long should I stay for buying to pay off?",
+        a: "Usually 7–10 years or more, so that price growth and saved rent can make up for stamp duty, interest and maintenance.",
+      },
     ],
   },
   rentcar: {
     path: "/calculators/rentcar",
     appName: "Rent vs Own Car Calculator",
-    title: "Rent vs Own Car Calculator India | Finkoin",
+    title: "Rent vs Own Car Calculator India — Cab or Car? | Finkoin",
     description:
-      "Compare cab/rent costs versus owning a car with Finkoin's free calculator.",
+      "Free rent vs own car calculator. Compare your monthly cab or rental cost with the full cost of owning a car: loan, fuel, insurance and upkeep.",
     keywords: [
       "rent vs own car calculator",
       "Finkoin car ownership calculator",
@@ -333,19 +377,35 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "When does owning a car make sense?",
         a: "When frequent travel makes cab costs higher than EMI, fuel, insurance, and maintenance combined.",
       },
+      {
+        q: "What does owning a car really cost?",
+        a: "The loan or down payment, fuel, insurance, servicing, parking and the value the car loses each year.",
+      },
+      {
+        q: "Is a cab cheaper than owning a car in India?",
+        a: "Often yes for light use. The more you drive each month, the more owning pays off; the calculator compares both at your monthly distance.",
+      },
     ],
   },
   whencar: {
     path: "/calculators/whencar",
     appName: "When to Buy Car Calculator",
-    title: "When to Buy a Car Calculator India | Finkoin",
+    title: "When to Buy a Car Calculator — Down Payment Plan | Finkoin",
     description:
-      "Plan your car down payment timeline and affordability with Finkoin's free calculator.",
+      "Free when to buy a car calculator. See how many months it takes to save a 20% down payment and whether the car fits your monthly income.",
     keywords: ["when to buy car calculator", "car down payment planner India"],
     faq: [
       {
         q: "How much down payment should I keep for a car?",
         a: "A larger down payment lowers EMI stress. This tool helps you plan when savings reach a comfortable down payment.",
+      },
+      {
+        q: "How is the waiting time worked out?",
+        a: "The calculator divides the down payment you still need by what you can save each month.",
+      },
+      {
+        q: "What share of salary should a car loan take?",
+        a: "Keep the monthly car loan payment under about 10–15% of your take-home pay.",
       },
     ],
   },
@@ -354,7 +414,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Post Office Calculator India",
     title: "Post Office Schemes Calculator India — All Rates 2026 | Finkoin",
     description:
-      "Free India Post calculators for Savings Account, TD, RD, NSC, KVP, MIS, SCSS and Sukanya Samriddhi with Jul–Sep 2026 notified rates.",
+      "Free Post Office scheme calculators: Savings Account, Time Deposit, Recurring Deposit, Monthly Income Scheme, Senior Citizen Savings and Sukanya.",
     keywords: [
       "post office calculator India",
       "Finkoin post office schemes",
@@ -371,6 +431,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "Are the interest rates up to date?",
         a: "Defaults use MoF/DoP notified rates for Jul–Sep 2026. Always confirm the live circular before investing — rates can change quarterly.",
       },
+      {
+        q: "Are Post Office schemes safe?",
+        a: "Yes. They are small savings schemes backed by the Government of India, so your deposit and interest are guaranteed.",
+      },
     ],
   },
   "po-savings": {
@@ -378,7 +442,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Post Office Savings Account Calculator",
     title: "Post Office Savings Account Calculator — 4% Interest | Finkoin",
     description:
-      "Estimate yearly and monthly interest on a Post Office Savings Account at the notified 4% p.a. rate.",
+      "Free Post Office Savings Account calculator. Estimate yearly and monthly interest on your balance at the notified 4% p.a. rate, and the tax on it.",
     keywords: [
       "post office savings account calculator",
       "POSA interest calculator",
@@ -389,14 +453,22 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "What is the Post Office Savings Account interest rate?",
         a: "The notified rate for Jul–Sep 2026 is 4% p.a. Interest is taxable subject to §80TTA/80TTB limits.",
       },
+      {
+        q: "What is the minimum balance?",
+        a: "₹500. An account below it can be charged a maintenance fee.",
+      },
+      {
+        q: "Is Post Office savings interest tax-free?",
+        a: "It is taxable, but savings interest up to ₹10,000 a year can be deducted under Section 80TTA in the old regime (₹50,000 under 80TTB for senior citizens).",
+      },
     ],
   },
   "po-td": {
     path: "/calculators/po-td",
     appName: "Post Office Time Deposit Calculator",
-    title: "Post Office TD / FD Calculator India — 1 to 5 Year | Finkoin",
+    title: "Post Office Time Deposit Calculator — 1 to 5 Years | Finkoin",
     description:
-      "Calculate Post Office Time Deposit maturity for 1, 2, 3 or 5 years at notified rates (6.9%–7.5% for Jul–Sep 2026).",
+      "Free Post Office Time Deposit (TD) calculator. Find the maturity value and interest for a 1, 2, 3 or 5-year deposit at notified rates of 6.9%–7.5%.",
     keywords: [
       "post office TD calculator",
       "post office FD calculator",
@@ -408,6 +480,14 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "What are current Post Office TD rates?",
         a: "For Jul–Sep 2026: 1-year 6.9%, 2-year 7.0%, 3-year 7.1%, 5-year 7.5% — compounded quarterly.",
       },
+      {
+        q: "Does a Post Office Time Deposit save tax?",
+        a: "Only the 5-year deposit qualifies for Section 80C in the old regime, up to ₹1.5 lakh a year.",
+      },
+      {
+        q: "Can I close a Post Office Time Deposit early?",
+        a: "Yes, after 6 months. Closing before 1 year pays savings account interest; later closures pay a reduced rate.",
+      },
     ],
   },
   "po-rd": {
@@ -415,7 +495,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Post Office RD Calculator",
     title: "Post Office RD Calculator India — 6.7% Recurring Deposit | Finkoin",
     description:
-      "Free Post Office Recurring Deposit calculator. Estimate 5-year RD maturity at the notified 6.7% p.a. rate.",
+      "Free Post Office RD (Recurring Deposit) calculator. Estimate the 5-year maturity value and interest on a monthly deposit at the notified 6.7% p.a. rate.",
     keywords: [
       "post office RD calculator",
       "recurring deposit calculator India Post",
@@ -426,6 +506,14 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "What is the Post Office RD interest rate?",
         a: "The 5-year National Savings Recurring Deposit rate for Jul–Sep 2026 is 6.7% p.a.",
       },
+      {
+        q: "What is the minimum Post Office RD deposit?",
+        a: "₹100 a month, in multiples of ₹10, with no upper limit.",
+      },
+      {
+        q: "What happens if I miss an RD instalment?",
+        a: "A small default fee is charged for each missed month. After 4 missed instalments the account is discontinued, though it can be revived within 2 months.",
+      },
     ],
   },
   "po-kvp": {
@@ -433,7 +521,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Kisan Vikas Patra Calculator",
     title: "KVP Calculator India — Doubles in 115 Months | Finkoin",
     description:
-      "Free Kisan Vikas Patra calculator. See when your money doubles at 7.5% p.a. (115 months as of Jul–Sep 2026).",
+      "Free KVP (Kisan Vikas Patra) calculator. See when your money doubles at the notified 7.5% p.a. rate (115 months as of Jul–Sep 2026) and the maturity.",
     keywords: [
       "KVP calculator",
       "kisan vikas patra calculator",
@@ -442,8 +530,16 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     ],
     faq: [
       {
+        q: "What is Kisan Vikas Patra?",
+        a: "A Post Office savings certificate that doubles a one-time deposit over a fixed period. The minimum is ₹1,000 and there is no upper limit.",
+      },
+      {
         q: "How long does KVP take to double?",
         a: "At the Jul–Sep 2026 notified 7.5% rate, KVP doubles in 115 months.",
+      },
+      {
+        q: "Is KVP interest taxable?",
+        a: "Yes. The gain is taxed at your slab rate, and KVP does not qualify for Section 80C.",
       },
     ],
   },
@@ -452,7 +548,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Post Office MIS Calculator",
     title: "Post Office MIS Calculator — Monthly Income Scheme 7.4% | Finkoin",
     description:
-      "Calculate monthly income from Post Office Monthly Income Scheme (MIS) at 7.4% p.a. Max ₹9L single / ₹15L joint.",
+      "Free Post Office MIS (Monthly Income Scheme) calculator. See the monthly income at 7.4% p.a. on up to ₹9 lakh single or ₹15 lakh joint for 5 years.",
     keywords: [
       "post office MIS calculator",
       "POMIS calculator",
@@ -461,8 +557,16 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     ],
     faq: [
       {
+        q: "What is the Post Office MIS?",
+        a: "The Monthly Income Scheme is a 5-year Post Office deposit that pays interest every month. The principal is returned at maturity.",
+      },
+      {
         q: "How much monthly income does MIS give?",
         a: "At 7.4% p.a., ₹10,000 deposit pays about ₹62 per month. Principal returns after 5 years.",
+      },
+      {
+        q: "Is MIS interest taxable?",
+        a: "Yes, at your slab rate, and the deposit does not qualify for Section 80C.",
       },
     ],
   },
@@ -471,7 +575,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "SCSS Calculator India",
     title: "SCSS Calculator India — Senior Citizen Savings 8.2% | Finkoin",
     description:
-      "Free Senior Citizen Savings Scheme calculator. Estimate quarterly interest at 8.2% p.a. (age 60+, max ₹30 lakh).",
+      "Free SCSS (Senior Citizens' Savings Scheme) calculator. Estimate the quarterly interest at 8.2% p.a. for depositors aged 60+, up to ₹30 lakh.",
     keywords: [
       "SCSS calculator",
       "senior citizen savings scheme calculator",
@@ -480,8 +584,16 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     ],
     faq: [
       {
+        q: "What is SCSS?",
+        a: "The Senior Citizens' Savings Scheme is a 5-year government deposit for people aged 60 and above that pays interest every quarter.",
+      },
+      {
         q: "Who can invest in SCSS?",
         a: "Generally individuals aged 60 or above (with limited early-retirement exceptions). Maximum deposit is ₹30 lakh.",
+      },
+      {
+        q: "Does SCSS give a tax benefit?",
+        a: "Deposits qualify for Section 80C in the old regime. The interest is taxable, with TDS once it crosses ₹1 lakh a year.",
       },
     ],
   },
@@ -490,7 +602,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Sukanya Samriddhi Calculator",
     title: "Sukanya Samriddhi Yojana Calculator — 8.2% SSY | Finkoin",
     description:
-      "Free Sukanya Samriddhi (SSY) calculator. Project girl-child account maturity at 8.2% p.a. with 15 years of deposits.",
+      "Free Sukanya Samriddhi Yojana (SSY) calculator. Project your daughter's account maturity at 8.2% p.a. with 15 years of deposits and tax-free interest.",
     keywords: [
       "sukanya samriddhi calculator",
       "SSY calculator India",
@@ -502,6 +614,14 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "What is the SSY interest rate?",
         a: "For Jul–Sep 2026 the notified Sukanya Samriddhi rate is 8.2% p.a. Interest is EEE (tax-free) under current rules.",
       },
+      {
+        q: "Who can open an SSY account?",
+        a: "A parent or guardian of a girl under 10, for up to two daughters. Deposits run for 15 years and the account matures when it turns 21.",
+      },
+      {
+        q: "How much can I deposit in SSY?",
+        a: "₹250 to ₹1.5 lakh a year, and deposits qualify for Section 80C in the old regime.",
+      },
     ],
   },
   "tax-regime": {
@@ -510,7 +630,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     title:
       "Old vs New Tax Regime Calculator 2025-26 — Which Saves More? | Finkoin",
     description:
-      "Free tax regime calculator for FY 2025-26. Compare old vs new tax regime with all deductions — 80C, HRA, NPS, home loan. Find which regime saves you more tax instantly.",
+      "Free old vs new tax regime calculator for 2025-26. Compare both regimes with 80C, rent, pension and home loan deductions and see which saves more.",
     keywords: [
       "old vs new tax regime calculator",
       "tax regime calculator 2025-26",
@@ -542,6 +662,10 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
         q: "What deductions are available in old tax regime?",
         a: "Old regime allows Section 80C (₹1.5 lakh), 80D health insurance, HRA exemption, Section 24B home loan interest (up to ₹2 lakh for self-occupied), NPS 80CCD(1B) (₹50,000 extra), and more.",
       },
+      {
+        q: "Is income up to ₹12 lakh tax-free in 2025-26?",
+        a: "Under the new regime, if taxable income is up to ₹12 lakh, the Section 87A rebate brings tax to zero. For salaried people that means a salary up to ₹12.75 lakh after the ₹75,000 standard deduction.",
+      },
     ],
   },
   default: {
@@ -549,7 +673,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     appName: "Finkoin Financial Calculators",
     title: "Free Financial Calculators for India 2026 | Finkoin",
     description:
-      "Free calculators for India: tax regime comparison, SIP returns, SWP, EMI, emergency fund, FIRE number, home loan. Know it. Fix it. Grow it. Updated for FY 2025-26.",
+      "Free financial calculators for India: investments, loans, tax, retirement, insurance and Post Office schemes. Know it. Fix it. Grow it.",
     keywords: [
       "financial calculator India free",
       "tax calculator India 2026",
@@ -579,7 +703,30 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
 
 export function getSeoForCalc(calcId?: string): CalculatorSeo {
   if (!calcId) return SEO_COPY.default;
-  return SEO_COPY[calcId] ?? SEO_COPY.default;
+  const seo = SEO_COPY[calcId];
+  if (!seo) return SEO_COPY.default;
+  return { ...seo, keywords: withFullFormKeyword(seo) };
+}
+
+/** Name with abbreviations spelled out: "Systematic Transfer Plan Calculator". */
+export function fullFormName(appName: string): string | null {
+  if (findAbbreviations(appName).length === 0) return null;
+  return expandAbbreviations(appName);
+}
+
+/** Adds the spelled-out search phrase, e.g. "systematic transfer plan calculator", and drops case-only repeats. */
+function withFullFormKeyword(seo: CalculatorSeo): string[] {
+  const full = fullFormName(seo.appName)?.toLowerCase();
+  const keywords = full
+    ? [seo.keywords[0], full, ...seo.keywords.slice(1)]
+    : seo.keywords;
+  const seen = new Set<string>();
+  return keywords.filter((k) => {
+    const key = k.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /** Map URL segment → internal calc id used by CalculatorsClient. */
@@ -647,15 +794,20 @@ export function getOgImagePathForCalc(calcId: string): string {
   return (cat && CATEGORY_OG_IMAGE[cat.id]) ?? "/og/og-home.png";
 }
 
-export function buildCalculatorJsonLd(seo: CalculatorSeo) {
+export function buildCalculatorJsonLd(seo: CalculatorSeo, calcId?: string) {
   const pageUrl = absoluteCalcUrl(seo.path);
+  const item = CATEGORIES.flatMap((c) => c.items).find((i) => i.id === calcId);
+  const alternateName = fullFormName(seo.appName);
   return {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebApplication",
         name: seo.appName,
+        ...(alternateName ? { alternateName } : {}),
         description: seo.description,
+        inLanguage: "en-IN",
+        isAccessibleForFree: true,
         url: pageUrl,
         applicationCategory: "FinanceApplication",
         operatingSystem: "Any",
@@ -669,7 +821,7 @@ export function buildCalculatorJsonLd(seo: CalculatorSeo) {
           name: "Finkoin",
           url: SITE_URL,
         },
-        featureList: seo.faq.map((f) => f.q),
+        ...(item ? { featureList: item.blurb } : {}),
       },
       {
         "@type": "FAQPage",

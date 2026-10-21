@@ -178,7 +178,7 @@ function stpGuide(): CalcGuide {
   const spans = [3, 6, 12, 24];
   return {
     intro:
-      "The STP calculator models moving a lumpsum from a debt or liquid fund into an equity fund in monthly instalments. Enter the amount, the transfer period, both expected returns and how long you hold the money.",
+      "The STP (Systematic Transfer Plan) calculator models moving a lumpsum from a debt or liquid fund into an equity fund in monthly instalments. Enter the amount, the transfer period, both expected returns and how long you hold the money.",
     howItWorks: [
       "The whole amount starts in the debt fund and earns the debt return. Each month a slice moves to equity, sized to empty the debt fund by the last transfer, including the interest it earned.",
       "After the transfers end, everything stays in equity until the end of the holding period. The calculator compares this with putting everything in equity on day one and with leaving it all in debt.",
@@ -305,7 +305,7 @@ function cagrGuide(): CalcGuide {
   const spans = [3, 5, 10];
   return {
     intro:
-      "The CAGR calculator finds the steady yearly growth rate between a starting value and an ending value. Enter both values and the holding period in years.",
+      "The CAGR (Compound Annual Growth Rate) calculator finds the steady yearly growth rate between a starting value and an ending value. Enter both values and the holding period in years.",
     howItWorks: [
       "CAGR answers one question: what constant yearly rate would turn the starting value into the ending value over this period? The real path may have had good and bad years in between.",
       "The calculator also shows the absolute return, the real CAGR after 6% inflation, and what a 7% fixed deposit would have grown to.",
@@ -358,7 +358,7 @@ function xirrGuide(): CalcGuide {
   const values = [3_30_000, 3_60_000, 3_90_000, 4_20_000];
   return {
     intro:
-      "The XIRR calculator finds the yearly return on investments made on different dates, such as SIPs, top-ups and withdrawals. Enter each amount with its date, then today's value and the date it is valued on.",
+      "The XIRR (Extended Internal Rate of Return) calculator finds the yearly return on investments made on different dates, such as SIPs, top-ups and withdrawals. Enter each amount with its date, then today's value and the date it is valued on.",
     howItWorks: [
       "Money you invest counts as negative and money you receive, including today's value, counts as positive. XIRR is the yearly rate at which all these dated amounts net to zero.",
       "Because it uses actual dates, money invested recently gets credit for only a short time. That is why XIRR is the right return figure for a SIP, while absolute return can mislead.",

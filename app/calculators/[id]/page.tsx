@@ -77,7 +77,7 @@ export default async function CalculatorByIdPage(props: PageProps) {
   }
 
   const seo = getSeoForCalc(calcId);
-  const jsonLd = buildCalculatorJsonLd(seo);
+  const jsonLd = buildCalculatorJsonLd(seo, calcId);
   const guide = getCalcGuide(calcId);
 
   return (

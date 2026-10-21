@@ -60,7 +60,7 @@ function sipGuide(): CalcGuide {
   const spans = [10, 15, 20, 25];
   return {
     intro:
-      "A SIP calculator shows what a fixed monthly investment in a mutual fund can grow to. Enter the monthly amount, the expected yearly return and the number of years to see the total invested, the estimated returns and the final value.",
+      "A SIP (Systematic Investment Plan) calculator shows what a fixed monthly investment in a mutual fund can grow to. Enter the monthly amount, the expected yearly return and the number of years to see the total invested, the estimated returns and the final value.",
     howItWorks: [
       "Each monthly instalment is invested and compounds every month until the end of the period. Early instalments compound for longer, which is why the last few years of a long SIP add the most money.",
       "The calculator assumes the same return every year. Real equity returns swing from year to year, so treat the result as an estimate, not a promise.",
@@ -152,7 +152,7 @@ function stepUpGuide(): CalcGuide {
   const res = stepUpSip(monthly, step, rate, years);
   return {
     intro:
-      "A step-up SIP calculator shows how raising your SIP by a fixed percentage every year grows your corpus compared with a flat SIP. It is the simplest way to match investing to a rising salary.",
+      "A step-up SIP (Systematic Investment Plan) calculator shows how raising your SIP by a fixed percentage every year grows your corpus compared with a flat SIP. It is the simplest way to match investing to a rising salary.",
     howItWorks: [
       "In year one you invest the starting amount every month. Each new year the monthly amount rises by the step-up percentage, and every instalment compounds monthly until the end.",
       "The calculator shows both the step-up corpus and the corpus from a flat SIP of the starting amount, so you can see what the yearly increase is worth.",
@@ -194,7 +194,7 @@ function goalSipGuide(): CalcGuide {
   const targets = [25_00_000, 50_00_000, 1_00_00_000];
   return {
     intro:
-      "A goal SIP calculator works backwards from a target amount. Tell it how much you need and by when, and it shows the monthly SIP that gets you there.",
+      "A goal SIP (Systematic Investment Plan) calculator works backwards from a target amount. Tell it how much you need and by when, and it shows the monthly SIP that gets you there.",
     howItWorks: [
       "It solves the SIP formula for the monthly amount: the target is the future value, and the calculator finds the instalment that reaches it at your expected return.",
       "For goals years away, first inflate today's cost to the future cost, then plan the SIP for that number.",
@@ -239,7 +239,7 @@ function swpGuide(): CalcGuide {
   const withdrawals = [20_000, 30_000, 40_000];
   return {
     intro:
-      "An SWP calculator shows how long a corpus lasts when you withdraw a fixed amount every month while the rest stays invested. It is how many retirees turn savings into a monthly income.",
+      "An SWP (Systematic Withdrawal Plan) calculator shows how long a corpus lasts when you withdraw a fixed amount every month while the rest stays invested. It is how many retirees turn savings into a monthly income.",
     howItWorks: [
       "Each month the remaining balance earns the expected return, then your withdrawal is paid out. If the return covers the withdrawal, the corpus can last indefinitely; if not, it runs down.",
       "Withdrawals from mutual funds are partly your own capital, so only the gain portion is taxed, which often makes SWP more tax-efficient than interest income.",
@@ -284,7 +284,7 @@ function emiGuide(): CalcGuide {
   const tenures = [3, 5, 10, 20];
   return {
     intro:
-      "An EMI calculator shows the monthly instalment for a loan, plus the total interest and total amount you will repay. It works for home, car, personal and education loans.",
+      "An EMI (Equated Monthly Instalment) calculator shows the monthly instalment for a loan, plus the total interest and total amount you will repay. It works for home, car, personal and education loans.",
     howItWorks: [
       "Indian banks use the reducing-balance method: each month interest is charged only on the amount still owed. Early EMIs are mostly interest; later EMIs are mostly principal.",
       "A longer tenure lowers the EMI but raises the total interest, often by a lot.",
