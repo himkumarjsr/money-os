@@ -144,7 +144,7 @@ export function trackerPlanFit(
       counted,
       note:
         counted === 0
-          ? "Already counted in your form"
+          ? "Already counted in your plan"
           : "Counted toward this plan",
     });
   }
@@ -259,5 +259,37 @@ export function applyTrackerCover(
       .map((d, i) => ({ ...d, monthly_amount: amounts[i] }))
       .filter((d) => d.monthly_amount > 0),
     taken,
+  };
+}
+
+/**
+ * Brings running Tracker SIPs the profile doesn't know about into
+ * `monthlySIP`, so the report, Fix Plan and PDF budget around them.
+ * `trackerSipMonthly` records the part that came from Tracker, so it is
+ * replaced (not added again) on the next sync and drops when the SIP ends.
+ */
+export function mergeTrackerInvestmentsIntoProfile(
+  profile: FinancialProfile,
+  rows: TrackerRowLike[],
+  month: string,
+): { profile: FinancialProfile; changed: boolean } {
+  const prior = Math.max(0, profile.trackerSipMonthly || 0);
+  const own = {
+    ...profile,
+    monthlySIP: Math.max(0, (profile.monthlySIP || 0) - prior),
+    trackerSipMonthly: 0,
+  };
+  // Once Tracker SIPs were merged, the rest of monthlySIP is the user's own
+  // extra money, so it must not absorb them a second time.
+  const fitWith = prior > 0 ? { ...own, monthlySIP: 0 } : own;
+  const next = Math.round(trackerPlanFit(rows, fitWith, month).investmentCover);
+  if (next === prior) return { profile, changed: false };
+  return {
+    profile: {
+      ...own,
+      monthlySIP: own.monthlySIP + next,
+      trackerSipMonthly: next,
+    },
+    changed: true,
   };
 }

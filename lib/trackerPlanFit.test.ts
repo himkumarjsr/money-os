@@ -5,7 +5,11 @@ import {
   redistributeUnticked,
   type PlannedInvestmentDraft,
 } from "@/lib/plannedInvestments";
-import { applyTrackerCover, trackerPlanFit } from "@/lib/trackerPlanFit";
+import {
+  applyTrackerCover,
+  mergeTrackerInvestmentsIntoProfile,
+  trackerPlanFit,
+} from "@/lib/trackerPlanFit";
 
 const profile = {
   monthlySIP: 0,
@@ -186,5 +190,50 @@ describe("redistributeUnticked", () => {
     expect(
       redistributeUnticked(all, new Set(all.map(plannedDraftKey))),
     ).toEqual([]);
+  });
+});
+
+describe("mergeTrackerInvestmentsIntoProfile", () => {
+  it("adds a running Tracker SIP to monthlySIP once", () => {
+    const first = mergeTrackerInvestmentsIntoProfile(
+      profile,
+      rows,
+      "2026-11-01",
+    );
+    expect(first.changed).toBe(true);
+    expect(first.profile.monthlySIP).toBe(5000);
+    expect(first.profile.trackerSipMonthly).toBe(5000);
+    const again = mergeTrackerInvestmentsIntoProfile(
+      first.profile,
+      rows,
+      "2026-11-01",
+    );
+    expect(again.changed).toBe(false);
+    expect(
+      trackerPlanFit(rows, first.profile, "2026-11-01").investmentCover,
+    ).toBe(0);
+  });
+
+  it("keeps the user's own extra SIP and drops the Tracker part when it ends", () => {
+    const merged = { ...profile, monthlySIP: 8000, trackerSipMonthly: 5000 };
+    expect(
+      mergeTrackerInvestmentsIntoProfile(merged, rows, "2026-11-01").changed,
+    ).toBe(false);
+    const ended = mergeTrackerInvestmentsIntoProfile(
+      merged,
+      rows.filter((r) => r.title !== "Nippon large cap"),
+      "2026-11-01",
+    );
+    expect(ended.profile.monthlySIP).toBe(3000);
+    expect(ended.profile.trackerSipMonthly).toBe(0);
+  });
+
+  it("doesn't add a SIP the user already typed in the form", () => {
+    const out = mergeTrackerInvestmentsIntoProfile(
+      { ...profile, monthlySIP: 5000 },
+      rows,
+      "2026-11-01",
+    );
+    expect(out.changed).toBe(false);
   });
 });
