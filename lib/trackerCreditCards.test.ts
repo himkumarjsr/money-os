@@ -123,7 +123,7 @@ describe("credit card payment method encoding", () => {
     expect(displayPaymentMethod("cash")).toBe("Cash");
     expect(displayPaymentMethod("wallet")).toBe("Wallet");
     expect(displayPaymentMethod("cheque")).toBe("Cheque");
-    expect(displayPaymentMethod(null)).toBe("—");
+    expect(displayPaymentMethod(null)).toBe("-");
   });
 });
 
@@ -401,7 +401,7 @@ describe("unpaid statement after the due date", () => {
       payment_method: method,
       date: "2026-09-15",
     },
-    // Next statement — not part of the Sep 15 bill.
+    // Next statement - not part of the Sep 15 bill.
     {
       amount: 4000,
       bucket: "wants",
@@ -841,7 +841,7 @@ describe("credit card bill payment + carry-forward status", () => {
     };
 
     const due = buildCreditCardBillStatuses({
-      asOf: new Date(2026, 7, 10), // Aug 10 — past Aug 5 due
+      asOf: new Date(2026, 7, 10), // Aug 10 - past Aug 5 due
       cards: [card],
       transactions: [
         {

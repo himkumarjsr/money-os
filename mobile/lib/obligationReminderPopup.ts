@@ -14,7 +14,7 @@ export const OBLIGATION_REMINDER_CATEGORY = "obligation_reminder";
 type PopupCandidate = { title: string; category: string; created_at: string };
 
 /**
- * A tracker expense around the due date whose note names the obligation —
+ * A tracker expense around the due date whose note names the obligation -
  * counts as paid even when the amount changed (e.g. renewed premium).
  */
 export async function hasNamedPaymentForCycle(

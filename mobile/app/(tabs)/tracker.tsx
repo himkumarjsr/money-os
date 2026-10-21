@@ -279,9 +279,9 @@ export default function TrackerScreen() {
   const [previousTransactions, setPreviousTransactions] = useState<
     TrackerTxn[]
   >([]);
-  /** prev-2 + prev months — CC carry-forward + obligation learning only (never Safety Pulse). */
+  /** prev-2 + prev months - CC carry-forward + obligation learning only (never Safety Pulse). */
   const [ccBillHistory, setCcBillHistory] = useState<TrackerTxn[]>([]);
-  /** Two and three months back — card ledger history for the previous month. */
+  /** Two and three months back - card ledger history for the previous month. */
   const [prev2Transactions, setPrev2Transactions] = useState<TrackerTxn[]>([]);
   const [prev3Transactions, setPrev3Transactions] = useState<TrackerTxn[]>([]);
   /** Card purchases on EMI from the last 5 years (their EMIs run past history). */
@@ -790,7 +790,7 @@ export default function TrackerScreen() {
           };
         setTrackerStart(start);
       } catch {
-        /* ignore — nav stays unbounded */
+        /* ignore - nav stays unbounded */
       }
     })();
     return () => {
@@ -1647,7 +1647,7 @@ export default function TrackerScreen() {
           locked={!moneyMapUnlocked}
           forceVisible={allVisible}
         />
-        {/* Summary card — flips like a coin to reveal amounts (PWA parity). */}
+        {/* Summary card - flips like a coin to reveal amounts (PWA parity). */}
         <View>
           <Animated.View
             pointerEvents={amountsVisible ? "none" : "auto"}
@@ -1840,7 +1840,7 @@ export default function TrackerScreen() {
                     </View>
                   ) : null}
                   <Text style={styles.incomeNote}>
-                    Use Add income for bonus / freelance / other — leftover
+                    Use Add income for bonus / freelance / other - leftover
                     savings still auto-sync on the 1st if missing.
                   </Text>
                 </View>
@@ -1911,7 +1911,7 @@ export default function TrackerScreen() {
               : cat.cap;
           const budgetAmount =
             displayIncome > 0 ? displayIncome * (capPct / 100) : 0;
-          // Investment is a target to reach, not a limit — going over is good.
+          // Investment is a target to reach, not a limit - going over is good.
           const isTargetBucket = bucketKey === "investment";
           const overBudget =
             !isTargetBucket && budgetAmount > 0 && bucketTotal > budgetAmount;

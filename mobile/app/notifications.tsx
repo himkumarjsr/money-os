@@ -1,5 +1,5 @@
 /**
- * Notifications inbox — port of web components/notifications/NotificationsClient.tsx.
+ * Notifications inbox - port of web components/notifications/NotificationsClient.tsx.
  * `?id=` (from a push tap) spotlights that message and marks it read.
  */
 import { useEffect, useMemo, useState } from "react";

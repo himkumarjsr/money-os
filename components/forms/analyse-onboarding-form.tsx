@@ -942,7 +942,7 @@ export function AnalyseOnboardingForm() {
     watchedValues.creditCardCarriedBalance,
   ]);
 
-  /** Hidden fields keep react-hook-form values from a prior run — only sum what the current step UI collects. */
+  /** Hidden fields keep react-hook-form values from a prior run - only sum what the current step UI collects. */
   const totalIncome: number = sum([
     watchedValues.monthlySalary,
     lifeStage !== "bachelor" ? watchedValues.spouseIncome : 0,
@@ -1191,7 +1191,7 @@ export function AnalyseOnboardingForm() {
 
   useEffect(() => {
     const prev = prevLifeStageRef.current;
-    // Only clear spouse fields when the user switches TO bachelor — not on
+    // Only clear spouse fields when the user switches TO bachelor - not on
     // initial mount with default lifeStage (that was wiping restored drafts).
     if (prev !== null && prev !== "bachelor" && lifeStage === "bachelor") {
       setValue("spouseIncome", 0, {
@@ -1544,7 +1544,7 @@ export function AnalyseOnboardingForm() {
             })
           : null;
 
-      // Navigate immediately — AI + cloud save must not block the report.
+      // Navigate immediately - AI + cloud save must not block the report.
       router.push("/analyse/result");
 
       void (async () => {
@@ -1641,8 +1641,8 @@ export function AnalyseOnboardingForm() {
         tone: "green" as const,
         text:
           secondProperty > 0 && homeLoan === 0
-            ? `Second property EMI — ${formatCurrency(housingTotal, "en-IN", "INR")}/month`
-            : `Home loan EMI — ${formatCurrency(housingTotal, "en-IN", "INR")}/month`,
+            ? `Second property EMI - ${formatCurrency(housingTotal, "en-IN", "INR")}/month`
+            : `Home loan EMI - ${formatCurrency(housingTotal, "en-IN", "INR")}/month`,
       };
     }
     return null;
@@ -1999,7 +1999,7 @@ export function AnalyseOnboardingForm() {
                     ) : null}
                     <MoneyInput
                       id="otherIncome"
-                      label="Other income — freelance, rental, business"
+                      label="Other income - freelance, rental, business"
                       error={errors.otherIncome?.message}
                       {...bindMoneyField("otherIncome")}
                     />
@@ -2052,7 +2052,7 @@ export function AnalyseOnboardingForm() {
                             <MoneyInput
                               id="rentAmount"
                               label="Rent you pay monthly"
-                              helper="Enter your monthly rent if you live in a rented house. If you have a home loan (own house), enter 0 here — your EMI goes in the Loans section below."
+                              helper="Enter your monthly rent if you live in a rented house. If you have a home loan (own house), enter 0 here - your EMI goes in the Loans section below."
                               error={errors.rentAmount?.message}
                               {...bindMoneyField("rentAmount")}
                             />
@@ -2161,7 +2161,7 @@ export function AnalyseOnboardingForm() {
                                             : ""}
                                         </div>
                                         <div className="mt-1 text-[11px] text-[#1D9E75]">
-                                          Saved — add another loan below if
+                                          Saved - add another loan below if
                                           needed
                                         </div>
                                       </div>
@@ -2320,7 +2320,7 @@ export function AnalyseOnboardingForm() {
                                     ) ?? 0) > 0 ? (
                                       <DayOfMonthPicker
                                         label="Which date is this EMI debited? (optional)"
-                                        hint="We'll remind you a few days before. Pick month and day only — no year."
+                                        hint="We'll remind you a few days before. Pick month and day only - no year."
                                         error={
                                           loanErrors?.emiDay?.message ??
                                           loanErrors?.emiMonth?.message
@@ -2391,7 +2391,7 @@ export function AnalyseOnboardingForm() {
                                             }
                                             helper={
                                               isOd
-                                                ? "How much of your OD limit is drawn today — this drives your analysis"
+                                                ? "How much of your OD limit is drawn today - this drives your analysis"
                                                 : "Total principal still owed"
                                             }
                                             value={field.value ?? 0}
@@ -2495,7 +2495,7 @@ export function AnalyseOnboardingForm() {
                                       <p className="text-[12px] text-[#9B9A94]">
                                         Use <strong>Outstanding amount</strong>{" "}
                                         above for how much of the OD is
-                                        currently used — that value drives your
+                                        currently used - that value drives your
                                         analysis.
                                       </p>
                                       <NumberInput
@@ -2633,7 +2633,7 @@ export function AnalyseOnboardingForm() {
                         <div className="rounded-xl border border-slate-200 bg-white p-4">
                           <MoneyInput
                             id="creditCardBillMonthly"
-                            label="Credit card — typical monthly payment"
+                            label="Credit card - typical monthly payment"
                             helper="What you usually pay each month across cards (full pay-off or part of balance). Counts toward loan/debt pressure in your meter."
                             error={errors.creditCardBillMonthly?.message}
                             {...bindMoneyField("creditCardBillMonthly")}
@@ -2661,7 +2661,7 @@ export function AnalyseOnboardingForm() {
                             <MoneyInput
                               id="creditCardCarriedBalance"
                               label="Card balance carried forward"
-                              helper="Bill amount you didn't pay in full and carried to next month. Counts as a debt — cards charge about 36–45% a year on it."
+                              helper="Bill amount you didn't pay in full and carried to next month. Counts as a debt - cards charge about 36–45% a year on it."
                               error={errors.creditCardCarriedBalance?.message}
                               {...bindMoneyField("creditCardCarriedBalance")}
                             />
@@ -2771,7 +2771,7 @@ export function AnalyseOnboardingForm() {
                             />
                             <MoneyInput
                               id="kidsActivities"
-                              label="Kids activities — sports, hobby classes"
+                              label="Kids activities - sports, hobby classes"
                               error={errors.kidsActivities?.message}
                               {...bindMoneyField("kidsActivities")}
                             />
@@ -3044,7 +3044,7 @@ export function AnalyseOnboardingForm() {
                                 onDay={(d) =>
                                   persistValue("termInsuranceRenewalDay", d)
                                 }
-                                hint="Optional renewal reminder — calendar day/month when premium is due, not health waiting-period days"
+                                hint="Optional renewal reminder - calendar day/month when premium is due, not health waiting-period days"
                                 yearlyLabel="Term premium renewal month & day (optional)"
                                 error={
                                   errors.termInsuranceRenewalDay?.message ??
@@ -3583,7 +3583,7 @@ export function AnalyseOnboardingForm() {
                           </p>
                           <p className="text-sm text-slate-600">
                             Same as &quot;Fixed Deposit total value&quot; above
-                            — enter it once. We weight FD at 70% as emergency
+                            - enter it once. We weight FD at 70% as emergency
                             money (penalty + time to break).
                           </p>
                           <p className="text-sm text-slate-800">
@@ -3605,7 +3605,7 @@ export function AnalyseOnboardingForm() {
                         <MoneyInput
                           id="medicalEmergencyFund"
                           label="Medical emergency fund"
-                          helper="Cash set aside only for medical use — separate from the general emergency pot above. Suggested minimum about ₹2–3 lakh depending on city and family. Used in your report checklist."
+                          helper="Cash set aside only for medical use - separate from the general emergency pot above. Suggested minimum about ₹2–3 lakh depending on city and family. Used in your report checklist."
                           optional
                           error={errors.medicalEmergencyFund?.message}
                           {...bindMoneyField("medicalEmergencyFund")}
@@ -3687,7 +3687,7 @@ export function AnalyseOnboardingForm() {
                       <SectionTitle>Bereavement / demise fund</SectionTitle>
                       <p className="text-sm text-slate-600">
                         Liquid money for last rites, travel, and immediate
-                        expenses — not invested. Many families keep at least ₹2L
+                        expenses - not invested. Many families keep at least ₹2L
                         aside; adjust to what feels right for your family.
                       </p>
                       <MoneyInput
@@ -3708,21 +3708,21 @@ export function AnalyseOnboardingForm() {
                           <MoneyInput
                             id="ppfBalance"
                             label="PPF current balance"
-                            helper="PPF balance — Existing investment cache"
+                            helper="PPF balance - Existing investment cache"
                             error={errors.ppfBalance?.message}
                             {...bindMoneyField("ppfBalance")}
                           />
                           <MoneyInput
                             id="npsBalance"
                             label="NPS current balance"
-                            helper="NPS balance — Existing investment cache"
+                            helper="NPS balance - Existing investment cache"
                             error={errors.npsBalance?.message}
                             {...bindMoneyField("npsBalance")}
                           />
                           <MoneyInput
                             id="epfBalance"
                             label="EPF / PF current balance"
-                            helper="EPF / PF balance — Existing investment cache"
+                            helper="EPF / PF balance - Existing investment cache"
                             error={errors.epfBalance?.message}
                             {...bindMoneyField("epfBalance")}
                           />
@@ -4002,28 +4002,28 @@ export function AnalyseOnboardingForm() {
                         <MoneyInput
                           id="monthlyRD"
                           label="Monthly RD amount currently running"
-                          helper="RD — Investment cache · Emergency / short term"
+                          helper="RD - Investment cache · Emergency / short term"
                           error={errors.monthlyRD?.message}
                           {...bindMoneyField("monthlyRD")}
                         />
                         <MoneyInput
                           id="monthlyPPFContribution"
                           label="Monthly PPF contribution"
-                          helper="PPF — Tax-free long term savings"
+                          helper="PPF - Tax-free long term savings"
                           error={errors.monthlyPPFContribution?.message}
                           {...bindMoneyField("monthlyPPFContribution")}
                         />
                         <MoneyInput
                           id="monthlyNPSContribution"
                           label="Monthly NPS contribution"
-                          helper="NPS — Investment cache · Retirement"
+                          helper="NPS - Investment cache · Retirement"
                           error={errors.monthlyNPSContribution?.message}
                           {...bindMoneyField("monthlyNPSContribution")}
                         />
                         <MoneyInput
                           id="monthlyEPFContribution"
-                          label="Monthly EPF contribution — employee side only"
-                          helper="EPF — Retirement deduction already reflected in take-home salary"
+                          label="Monthly EPF contribution - employee side only"
+                          helper="EPF - Retirement deduction already reflected in take-home salary"
                           error={errors.monthlyEPFContribution?.message}
                           {...bindMoneyField("monthlyEPFContribution")}
                         />
@@ -4032,11 +4032,11 @@ export function AnalyseOnboardingForm() {
                             id="ssy"
                             label="Monthly SSY deposit (girl child under 10)"
                             helper={mergeHelpers(
-                              "Sukanya Samriddhi — open before she turns 10",
+                              "Sukanya Samriddhi - open before she turns 10",
                               "Max ₹1,50,000/year",
                               "Matures when girl turns 21",
                               "Interest rate 8.2% p.a.",
-                              "SSY — Investment cache · Girl child · 8.2% guaranteed",
+                              "SSY - Investment cache · Girl child · 8.2% guaranteed",
                             )}
                             error={errors.ssy?.message}
                             {...bindMoneyField("ssy")}
@@ -4051,7 +4051,7 @@ export function AnalyseOnboardingForm() {
                               </p>
                               <p className="mt-0.5 text-[13px] text-[#9B9A94]">
                                 NSC, KVP, MIS, SCSS, RD, time deposits, and
-                                similar — holdings count toward net worth.
+                                similar - holdings count toward net worth.
                               </p>
                             </div>
                             <div className="w-full sm:w-[180px]">

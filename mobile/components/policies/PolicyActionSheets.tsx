@@ -120,7 +120,7 @@ export function RenewOptionsSheet({
               We will redirect you to {policy.insurerName} website
             </Text>
             <Text style={styles.cardMeta}>
-              Commission: None — this is for your convenience
+              Commission: None - this is for your convenience
             </Text>
             <ActionButton
               label={`Go to ${policy.insurerName} →`}
@@ -143,7 +143,7 @@ export function RenewOptionsSheet({
               {MOCK_ALTS.map((a) => (
                 <View key={a.name} style={styles.alt}>
                   <Text style={styles.altText}>
-                    <Text style={{ fontWeight: "700" }}>{a.name}</Text> —{" "}
+                    <Text style={{ fontWeight: "700" }}>{a.name}</Text> -{" "}
                     {a.blurb}
                   </Text>
                 </View>

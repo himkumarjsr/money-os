@@ -3,7 +3,7 @@ import Link from "next/link";
 const FAQS = [
   {
     q: "What is the Finkoin financial health check?",
-    a: "A free 5-minute assessment that scores your emergency fund, insurance cover, debt load, and investing habits — built for Indian salaries, EMIs, and goals.",
+    a: "A free 5-minute assessment that scores your emergency fund, insurance cover, debt load, and investing habits - built for Indian salaries, EMIs, and goals.",
   },
   {
     q: "Do I need PAN or Aadhaar?",
@@ -23,7 +23,7 @@ const STEPS = [
   {
     n: "1",
     title: "Answer simple money questions",
-    body: "Income, EMIs, insurance, and investments — no jargon wall.",
+    body: "Income, EMIs, insurance, and investments - no jargon wall.",
   },
   {
     n: "2",
@@ -60,7 +60,7 @@ export default function AnalyseMarketingLanding() {
           Know your financial health score in 5 minutes
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-          Free check for India — emergency fund, term insurance, debt, and
+          Free check for India - emergency fund, term insurance, debt, and
           investments. No PAN. No Aadhaar. Clear next steps, not a lecture.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -97,11 +97,11 @@ export default function AnalyseMarketingLanding() {
             },
             {
               t: "Term insurance",
-              d: "Is your cover enough for dependents — or is there a silent gap?",
+              d: "Is your cover enough for dependents - or is there a silent gap?",
             },
             {
               t: "Debt load",
-              d: "EMIs and credit stress vs income — what is sustainable.",
+              d: "EMIs and credit stress vs income - what is sustainable.",
             },
             {
               t: "Investing habits",

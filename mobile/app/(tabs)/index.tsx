@@ -61,7 +61,7 @@ export default function HomeScreen() {
           <Text style={styles.h1Main}>{FINKOIN_TAGLINE}</Text>
           <Text style={styles.h2}>
             Check your financial health score, calculate tax savings, plan
-            investments — everything in one place. No PAN needed.
+            investments - everything in one place. No PAN needed.
           </Text>
 
           <View style={styles.carouselWrap}>

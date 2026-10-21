@@ -11,7 +11,7 @@ import {
   hasHomeLoan,
 } from "@/lib/universal-buckets";
 
-/** Caps as fractions of monthly income — same as monthly allocation table (`getUniversalCaps`). */
+/** Caps as fractions of monthly income - same as monthly allocation table (`getUniversalCaps`). */
 export type SpeedoMeterCaps = {
   needs: number;
   wants: number;

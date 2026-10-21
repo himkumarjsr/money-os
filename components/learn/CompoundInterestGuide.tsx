@@ -31,7 +31,7 @@ export default function CompoundInterestGuide() {
         </strong>{" "}
         pays only on the original principal each year.{" "}
         <strong className="font-semibold text-slate-800">Compound</strong> pays
-        on principal <em>and</em> on gains already added — that is the snowball.
+        on principal <em>and</em> on gains already added - that is the snowball.
       </p>
 
       <Card id="formula" title="The formula (lump sum, easy version)">
@@ -74,7 +74,7 @@ export default function CompoundInterestGuide() {
           <strong className="font-semibold text-slate-900">₹10,000</strong>{" "}
           once. Return{" "}
           <strong className="font-semibold text-slate-900">10% per year</strong>{" "}
-          (just for maths — not a promise).
+          (just for maths - not a promise).
         </p>
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full min-w-[280px] text-left text-sm">
@@ -118,14 +118,14 @@ export default function CompoundInterestGuide() {
           Check with the formula: ₹10,000 × (1.1)<sup>3</sup> ={" "}
           <strong className="font-semibold text-slate-900">₹13,310</strong>.
           With <em>simple</em> interest you would get only ₹10,000 + 3×₹1,000 ={" "}
-          <strong className="font-semibold">₹13,000</strong> — the extra ₹310 is
+          <strong className="font-semibold">₹13,000</strong> - the extra ₹310 is
           from compounding.
         </p>
       </Card>
 
       <Card
         id="mutual-funds"
-        title="How this helps with mutual funds (MFs) — simple picture"
+        title="How this helps with mutual funds (MFs) - simple picture"
       >
         <ul className="list-disc space-y-3 pl-5">
           <li>
@@ -135,7 +135,7 @@ export default function CompoundInterestGuide() {
             <strong className="font-semibold text-slate-900">
               NAV (price per unit)
             </strong>{" "}
-            tends to rise over long periods (not every year — markets go up and
+            tends to rise over long periods (not every year - markets go up and
             down).
           </li>
           <li>
@@ -143,7 +143,7 @@ export default function CompoundInterestGuide() {
             <strong className="font-semibold text-slate-900">
               whole current value
             </strong>{" "}
-            — units × NAV — not only on the first SIP instalment. That is the
+            - units × NAV - not only on the first SIP instalment. That is the
             same “growth on growth” idea as compound interest, but we usually
             say{" "}
             <strong className="font-semibold text-slate-900">
@@ -164,7 +164,7 @@ export default function CompoundInterestGuide() {
               growth option
             </strong>{" "}
             (instead of taking payouts) keeps gains inside the fund so the full
-            corpus can participate in future NAV movement — mentally similar to
+            corpus can participate in future NAV movement - mentally similar to
             “interest reinvested” in a deposit.
           </li>
         </ul>
@@ -195,7 +195,7 @@ export default function CompoundInterestGuide() {
               or cash situation really changed).
             </li>
             <li>
-              Keep costs low — high fees quietly eat the same compounding math
+              Keep costs low - high fees quietly eat the same compounding math
               in reverse.
             </li>
           </ul>

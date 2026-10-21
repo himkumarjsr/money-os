@@ -1,5 +1,5 @@
 /**
- * FK Split store — mobile parity with PWA store/splitStore.ts.
+ * FK Split store - mobile parity with PWA store/splitStore.ts.
  * Reads via Supabase with the user session; writes go through the web
  * /api/split/* routes (server checks + notifications), falling back to direct
  * Supabase writes only when the server can't take the request.

@@ -1,6 +1,6 @@
 /**
  * FY 2025-26 / AY 2026-27 illustrative comparison (old vs new regime).
- * Equity STCG/LTCG uses flat illustrative rates — not filing advice.
+ * Equity STCG/LTCG uses flat illustrative rates - not filing advice.
  */
 
 export type RegimeKind = "old" | "new";
@@ -53,11 +53,11 @@ export type ComparisonInputs = {
   dividendIncome: number;
   /** Savings-interest-only slice for 80TTA nudges (0 = use total interestIncome). */
   interestSavingsPortion: number;
-  /** Property STCG, debt MF STCG/LTCG & similar — modelled as slab-taxed ordinary income. */
+  /** Property STCG, debt MF STCG/LTCG & similar - modelled as slab-taxed ordinary income. */
   slabTaxedOtherGains: number;
-  /** Listed property LTCG — illustrative 12.5% without indexation in this tool. */
+  /** Listed property LTCG - illustrative 12.5% without indexation in this tool. */
   propertyLtcgGains: number;
-  /** Lottery / gambling — illustrative 30% flat in this tool. */
+  /** Lottery / gambling - illustrative 30% flat in this tool. */
   lotteryGamblingIncome: number;
   agriculturalIncome: number;
   excludeAgriculturalFromTax: boolean;
@@ -307,7 +307,7 @@ function capDeductionsOld(
       ? calculate80GGIllustrative(ordinaryGross, i.rentPaidNoHra)
       : 0;
   if (gg > 0)
-    lines.push({ label: "80GG (rent, no HRA — illustrative)", amount: gg });
+    lines.push({ label: "80GG (rent, no HRA - illustrative)", amount: gg });
 
   const c80 = Math.min(Math.max(0, i.deductions80C), 150_000);
   if (c80 > 0) lines.push({ label: "80C (combined)", amount: c80 });

@@ -3,7 +3,7 @@
  * deterministic split of its monthly amount across instrument categories.
  * Money is bucketed by when it's needed; every bucket spans more than one
  * instrument, and gold is a constant 5–10% hedge across all of them. The AI
- * layer explains this split — it never decides it. Categories only, never
+ * layer explains this split - it never decides it. Categories only, never
  * brands (Finkoin doesn't sell any product).
  */
 import type { RiskTolerance } from "@/lib/riskProfile";
@@ -183,7 +183,7 @@ export function allocateGoalPortfolio(input: AllocateGoalInput): PortfolioAlloca
     slices,
     realEstateNote:
       horizon === "7y+" && input.realEstateEligible
-        ? "With your safety net closed and liquid investments past ₹50 lakh, real estate can be considered for part of this goal — as a lump-sum decision, not a monthly SIP, and only if it won't stretch your EMIs."
+        ? "With your safety net closed and liquid investments past ₹50 lakh, real estate can be considered for part of this goal - as a lump-sum decision, not a monthly SIP, and only if it won't stretch your EMIs."
         : null,
   };
 }

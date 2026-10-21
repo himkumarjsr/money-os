@@ -54,7 +54,7 @@ export default function GoalsSection({
     const res = await saveAnalyseProfile(userId, next);
     setSaving(false);
     if (res.error)
-      setError("Couldn't save — your change is kept on this device.");
+      setError("Couldn't save - your change is kept on this device.");
     return !res.error;
   };
 
@@ -90,7 +90,7 @@ export default function GoalsSection({
     <section className="rounded-2xl bg-white p-5">
       <h2 className="text-xl font-semibold">Your goals</h2>
       <p className="text-sm font-medium leading-relaxed text-[#454442]">
-        Picked up from your answers — no extra questions. Edit anything
+        Picked up from your answers - no extra questions. Edit anything
         that&apos;s off.
       </p>
 

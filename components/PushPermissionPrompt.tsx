@@ -30,7 +30,7 @@ export default function PushPermissionPrompt() {
     // Already enabled on this device
     if (localStorage.getItem(ENABLED_KEY) === "1") return;
     if (Notification.permission === "granted") {
-      // Permission already granted — try silent re-subscribe once
+      // Permission already granted - try silent re-subscribe once
       void enableWebPush().then((r) => {
         if (r.ok) localStorage.setItem(ENABLED_KEY, "1");
       });
@@ -97,7 +97,7 @@ export default function PushPermissionPrompt() {
             </h2>
             <p className="mt-1.5 text-sm leading-relaxed text-[#5F5E5A]">
               Allow notifications and we’ll send one short finance tip every
-              morning at 8:30 AM — even when Finkoin is closed.
+              morning at 8:30 AM - even when Finkoin is closed.
             </p>
           </div>
         </div>

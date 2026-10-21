@@ -1,6 +1,6 @@
 /**
  * Planned investments: reminders + Tracker line items created from the Fix Plan
- * after explicit consent. Nothing is ever invested, debited or moved — the user
+ * after explicit consent. Nothing is ever invested, debited or moved - the user
  * starts each SIP themselves and marks it started. Rows live only in
  * `user_planned_investments` (owner-only RLS); nothing is cached on-device.
  */
@@ -135,7 +135,7 @@ export function isPlannedReminderDue(
 export function plannedReminderCopy(count: number, startMonth: string) {
   return {
     title: "Time to start your planned investments",
-    body: `${count} planned ${count === 1 ? "investment starts" : "investments start"} in ${formatStartMonth(startMonth)}. Nothing is invested automatically — open Tracker to see them and mark each one started.`,
+    body: `${count} planned ${count === 1 ? "investment starts" : "investments start"} in ${formatStartMonth(startMonth)}. Nothing is invested automatically - open Tracker to see them and mark each one started.`,
   };
 }
 

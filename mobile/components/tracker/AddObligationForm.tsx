@@ -45,7 +45,7 @@ const TITLE_HINTS: Record<string, string> = {
   property_tax: "e.g. BBMP property tax",
 };
 
-/** Add / edit obligation or bill — port of web AddObligationForm. */
+/** Add / edit obligation or bill - port of web AddObligationForm. */
 export function AddObligationForm({
   onSave,
   onClose,

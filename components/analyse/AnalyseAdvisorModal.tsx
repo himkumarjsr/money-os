@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 /**
  * Modal shell for the analyse flow.
- * Renders the full 7-step form as children — does not strip fields.
+ * Renders the full 7-step form as children - does not strip fields.
  * When `open` is false, children render inline on the page.
  */
 export default function AnalyseAdvisorModal({

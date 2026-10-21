@@ -90,7 +90,7 @@ describe("buildFixPlanPdfData", () => {
     ]);
     expect(phases[0].outcomes).toEqual(["Address top risk: Emergency fund"]);
     expect(phases[1].tasks).toEqual([
-      "Term cover — Buy term plan",
+      "Term cover - Buy term plan",
       "Start SIP",
     ]);
     expect(phases[1].outcomes).toEqual([longIn12.slice(0, 160)]);

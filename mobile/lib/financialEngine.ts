@@ -50,7 +50,7 @@ export type RealEmergencyFundBreakdown = {
   fdCounted: number;
   otherRaw: number;
   otherCounted: number;
-  /** Legacy “emergency fund set aside” field from older forms — counted at 100%. */
+  /** Legacy “emergency fund set aside” field from older forms - counted at 100%. */
   legacyCounted: number;
   monthlyExpenses: number;
   /** Months of `needs` covered; 0 if no expenses line. */
@@ -377,7 +377,7 @@ export type TermCoverStatus =
   | "baseline_ok"
   | "complete";
 
-/** How we judge existing term vs today's income — not "buy another full policy". */
+/** How we judge existing term vs today's income - not "buy another full policy". */
 export function assessTermCover(params: {
   hasTermInsurance: boolean;
   termCover: number;
@@ -418,7 +418,7 @@ export function assessTermCover(params: {
       gap,
       adequacyFloor,
       infoText:
-        "Your existing policy is valuable — premiums rise with age, so keep it. If income has grown, add a separate top-up for the gap only; do not cancel and rebuy.",
+        "Your existing policy is valuable - premiums rise with age, so keep it. If income has grown, add a separate top-up for the gap only; do not cancel and rebuy.",
       safetyNetOk: true,
     };
   }
@@ -427,7 +427,7 @@ export function assessTermCover(params: {
     gap,
     adequacyFloor,
     infoText:
-      "Your existing policy helps, but cover is still low for your income. Add a top-up for the gap only — no need to replace the old policy.",
+      "Your existing policy helps, but cover is still low for your income. Add a top-up for the gap only - no need to replace the old policy.",
     safetyNetOk: false,
   };
 }
@@ -546,14 +546,14 @@ function buildIssues(params: {
       severityScore: emergencySeverity === "critical" ? 80 : 55,
       severity: emergencySeverity,
       code: "emergency_fund_short",
-      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} (~${monthsCoveredEmergency.toFixed(1)} mo of needs). Target buffer ${fmt(emergencyFundTargetMax)} — short by about ${fmt(emergencyFundGap)}.`,
+      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} (~${monthsCoveredEmergency.toFixed(1)} mo of needs). Target buffer ${fmt(emergencyFundTargetMax)} - short by about ${fmt(emergencyFundGap)}.`,
     });
   } else {
     issues.push({
       severityScore: 20,
       severity: "good",
       code: "emergency_fund_ok",
-      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} covers about ${monthsCoveredEmergency.toFixed(1)} months of needs — on track for your target buffer.`,
+      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} covers about ${monthsCoveredEmergency.toFixed(1)} months of needs - on track for your target buffer.`,
     });
   }
 
@@ -617,7 +617,7 @@ function buildIssues(params: {
         severityScore: 58,
         severity: "warning",
         code: "term_underinsured",
-        message: `You have ₹${(termCover / 10000000).toFixed(1)}Cr. Recommended at today's income: ₹${(termNeeded / 10000000).toFixed(1)}Cr — top-up the gap only; keep your existing policy.`,
+        message: `You have ₹${(termCover / 10000000).toFixed(1)}Cr. Recommended at today's income: ₹${(termNeeded / 10000000).toFixed(1)}Cr - top-up the gap only; keep your existing policy.`,
       });
     } else if (termAssessment.status === "baseline_ok") {
       issues.push({
@@ -626,7 +626,7 @@ function buildIssues(params: {
         code: "term_cover_baseline_ok",
         message:
           termAssessment.gap > 0
-            ? `You have ₹${(termCover / 10000000).toFixed(1)}Cr pure term — strong baseline. Reference at today's income is ~₹${(termNeeded / 10000000).toFixed(1)}Cr; optional top-up for the gap, not a second full policy.`
+            ? `You have ₹${(termCover / 10000000).toFixed(1)}Cr pure term - strong baseline. Reference at today's income is ~₹${(termNeeded / 10000000).toFixed(1)}Cr; optional top-up for the gap, not a second full policy.`
             : "You have strong term cover for your current profile.",
       });
     }
@@ -682,7 +682,7 @@ function buildPlanSteps(
 
   if (emergencyFundGap > 0) {
     push(
-      `Best place for emergency fund: savings account for the first ₹50,000, then liquid mutual fund for the rest. Avoid FD for emergency fund — penalty if you need money urgently. Then build toward ${fmt(emergencyFundTarget)} (~${fmt(Math.ceil(emergencyFundGap / 12))}/mo for ~12 months closes the gap).`,
+      `Best place for emergency fund: savings account for the first ₹50,000, then liquid mutual fund for the rest. Avoid FD for emergency fund - penalty if you need money urgently. Then build toward ${fmt(emergencyFundTarget)} (~${fmt(Math.ceil(emergencyFundGap / 12))}/mo for ~12 months closes the gap).`,
     );
   } else {
     push(
@@ -915,14 +915,14 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     efAction = `Target ${efMonthsNeeded} months of expenses = ${fmt(efTarget)}`;
   } else if (monthsCov < efMonthsNeeded) {
     efStatus = "warning";
-    efDetail = `${monthsCov.toFixed(1)} months covered — good start`;
+    efDetail = `${monthsCov.toFixed(1)} months covered - good start`;
     efAction =
       efGap > 0
-        ? `Build to ${efMonthsNeeded} months — need ${fmt(efGap)} more`
+        ? `Build to ${efMonthsNeeded} months - need ${fmt(efGap)} more`
         : undefined;
   } else {
     efStatus = "ok";
-    efDetail = `${monthsCov.toFixed(1)} months covered — excellent. Well done — this is fully funded`;
+    efDetail = `${monthsCov.toFixed(1)} months covered - excellent. Well done - this is fully funded`;
     efAction = undefined;
   }
   const efBreakdownParts = [
@@ -975,7 +975,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         : undefined,
   });
 
-  // 4. Term insurance — ₹1Cr+ is treated as a strong baseline (rebuying after income/age jumps is often costly)
+  // 4. Term insurance - ₹1Cr+ is treated as a strong baseline (rebuying after income/age jumps is often costly)
   const termCover = n(data.termInsuranceSumAssured);
   const termCoverOneCrOrMore = termCover >= 10_000_000;
   securityChecklist.push({
@@ -987,11 +987,11 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         : "warning",
     detail: data.hasTermInsurance
       ? termCoverOneCrOrMore
-        ? `₹${(termCover / 10000000).toFixed(2)}Cr cover — strong baseline. Reference at today’s income: ~₹${(termNeeded / 10000000).toFixed(2)}Cr. Premiums rise sharply with age; keeping an early policy after a salary jump is often wiser than cancel-and-rebuy.`
+        ? `₹${(termCover / 10000000).toFixed(2)}Cr cover - strong baseline. Reference at today’s income: ~₹${(termNeeded / 10000000).toFixed(2)}Cr. Premiums rise sharply with age; keeping an early policy after a salary jump is often wiser than cancel-and-rebuy.`
         : `₹${(termCover / 10000000).toFixed(2)}Cr cover · ~${fmt(n(data.termInsurancePremiumMonthly))}/mo · Reference need: ₹${(termNeeded / 10000000).toFixed(2)}Cr`
       : `Recommended cover about ₹${(termNeeded / 10000000).toFixed(2)}Cr (income ×10 + loans − assets, adjusted for age)`,
     actionNeeded: !data.hasTermInsurance
-      ? `Buy ~₹${(termNeeded / 10000000).toFixed(2)}Cr pure term — often ~${fmt(Math.round(termNeeded * 0.000008))}/mo at your age band`
+      ? `Buy ~₹${(termNeeded / 10000000).toFixed(2)}Cr pure term - often ~${fmt(Math.round(termNeeded * 0.000008))}/mo at your age band`
       : termCoverOneCrOrMore
         ? undefined
         : termCover < termAdequacyFloor
@@ -999,7 +999,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
           : undefined,
   });
 
-  // 5. Insurance premium reserve (~12 months in liquid cash — financial freedom habit)
+  // 5. Insurance premium reserve (~12 months in liquid cash - financial freedom habit)
   if (!hasAnyInsuranceProduct) {
     securityChecklist.push({
       label: "Insurance premium reserve (~12 months)",
@@ -1012,7 +1012,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       label: "Insurance premium reserve (~12 months)",
       status: "warning",
       detail:
-        "Policies are on but premium amounts look incomplete — enter premiums to target a 12-month cushion in savings / liquid MF.",
+        "Policies are on but premium amounts look incomplete - enter premiums to target a 12-month cushion in savings / liquid MF.",
       actionNeeded:
         "Update premium fields in the analyse flow so we can calculate your reserve target.",
     });
@@ -1033,7 +1033,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     });
   }
 
-  // 6. SSY — girl child under 10
+  // 6. SSY - girl child under 10
   const hasGirlChild =
     data.kidsGenders?.includes("girl") &&
     data.kidsAges?.some(
@@ -1041,12 +1041,12 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     );
   if (hasGirlChild) {
     securityChecklist.push({
-      label: "SSY — girl child under 10",
+      label: "SSY - girl child under 10",
       status: n(data.ssy) > 0 ? "ok" : "warning",
       detail:
         n(data.ssy) > 0
           ? `${fmt(n(data.ssy))}/mo toward Sukanya Samriddhi (education / marriage)`
-          : "Eligible now — SSY is a strong guaranteed option before she turns 10",
+          : "Eligible now - SSY is a strong guaranteed option before she turns 10",
       actionNeeded:
         n(data.ssy) === 0
           ? "Open SSY (min ₹250/mo; max ₹1.5L/year) at an authorised bank or post office."
@@ -1054,7 +1054,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     });
   }
 
-  // 7. Post office / NSC holdings (lump-sum — not monthly SIP)
+  // 7. Post office / NSC holdings (lump-sum - not monthly SIP)
   const postOfficeRows = (
     data as FinancialProfile & {
       postOfficeSchemes?: Array<{
@@ -1090,7 +1090,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       detail:
         schemeTotal > 0
           ? `${fmt(schemeTotal)} held in post office / national savings schemes`
-          : "You marked post office schemes — add the amounts you hold.",
+          : "You marked post office schemes - add the amounts you hold.",
       actionNeeded:
         schemeTotal === 0
           ? "Enter your post office scheme holdings in the Assets step."
@@ -1106,7 +1106,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       detail:
         n(data.kidsEducationFundTarget) > 0
           ? `Target: ${fmt(n(data.kidsEducationFundTarget))}`
-          : "Not planned — set a corpus target in Goals",
+          : "Not planned - set a corpus target in Goals",
       actionNeeded:
         n(data.kidsEducationFundTarget) === 0
           ? "Set kids education fund target in the Goals step."
@@ -1180,7 +1180,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         : "Not enough set aside · Many families aim for at least ₹2L liquid for last rites and urgent expenses",
     actionNeeded:
       bereavementFund < bereavementNeeded
-        ? 'Keep ₹2,00,000 in a separate savings account labelled "bereavement / demise fund". Keep it in cash or savings — same-day access.'
+        ? 'Keep ₹2,00,000 in a separate savings account labelled "bereavement / demise fund". Keep it in cash or savings - same-day access.'
         : undefined,
   });
 

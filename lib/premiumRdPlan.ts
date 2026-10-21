@@ -410,7 +410,7 @@ export function premiumRdNoteLines(
 
 /**
  * Copy renewal months picked on the result card back into a profile (or
- * Analyse form values — same field names), so the card stops asking.
+ * Analyse form values - same field names), so the card stops asking.
  */
 export function applyRenewalMonths<T extends RenewalFields>(
   profile: T,

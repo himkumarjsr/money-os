@@ -1,5 +1,5 @@
 /**
- * Background chain run after the health check is submitted — web parity with
+ * Background chain run after the health check is submitted - web parity with
  * `analyse-onboarding-form.tsx` handleFinalSubmit: AI plan → store →
  * encrypted snapshot save → obligation sync → `/api/financial-data`.
  * Also warms the Fix Plan cache from the same response so that screen does

@@ -1,5 +1,5 @@
 /**
- * Report tab — web parity with `/analyse` (AnalyseEntryClient):
+ * Report tab - web parity with `/analyse` (AnalyseEntryClient):
  * signed out → marketing landing; signed in with a saved report → the report
  * (which has a Retake button); otherwise the consent check, then the form.
  */

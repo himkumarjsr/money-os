@@ -117,7 +117,7 @@ function initialPaymentKind(method: string | null | undefined) {
   return method || "upi";
 }
 
-/** Add / edit sheet — field-for-field port of PWA AddExpenseModal. */
+/** Add / edit sheet - field-for-field port of PWA AddExpenseModal. */
 export function AddExpenseSheet({
   visible,
   onClose,
@@ -256,7 +256,7 @@ export function AddExpenseSheet({
     };
   }, [visible, user?.id, editExpense, defaultPaymentMethod]);
 
-  // Loans → Credit card payment is a cash bill settle — "Paid via" can't be a card.
+  // Loans → Credit card payment is a cash bill settle - "Paid via" can't be a card.
   useEffect(() => {
     if (
       bucket === "loans" &&
@@ -438,7 +438,7 @@ export function AddExpenseSheet({
     setSaving(true);
     setError("");
 
-    // Local calendar date — avoid UTC shift from `new Date("yyyy-mm-dd")`.
+    // Local calendar date - avoid UTC shift from `new Date("yyyy-mm-dd")`.
     const [yStr, mStr, dStr] = date.split("-");
     const dateObj = new Date(Number(yStr), Number(mStr) - 1, Number(dStr));
 
@@ -701,7 +701,7 @@ export function AddExpenseSheet({
                         counts only the part above
                       </Text>{" "}
                       this card&apos;s spends you logged last month and this
-                      month — those already counted in their sections.
+                      month - those already counted in their sections.
                     </Text>
                   ) : null}
                   {isCcBillPay &&

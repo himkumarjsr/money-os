@@ -9,7 +9,7 @@ const viewports = [
 ];
 
 for (const viewport of viewports) {
-  test.describe(`Responsive — ${viewport.name}`, () => {
+  test.describe(`Responsive - ${viewport.name}`, () => {
     test.use({
       viewport: { width: viewport.width, height: viewport.height },
     });

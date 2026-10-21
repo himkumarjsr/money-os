@@ -44,7 +44,7 @@ export function ToggleSection({
   icon?: AppIconName;
   title: string;
   subtitle: string;
-  /** Extra grey helper line under the subtitle (desktop: full; phone: clamped — tap ? inside row for detail). */
+  /** Extra grey helper line under the subtitle (desktop: full; phone: clamped - tap ? inside row for detail). */
   oneLiner?: string;
   isOn: boolean;
   onToggle: (val: boolean) => void;

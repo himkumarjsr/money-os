@@ -11,7 +11,7 @@ type ExpoTicket = {
 
 /**
  * Send a native push (Expo) to every app device a user registered; prune tokens
- * Expo reports as `DeviceNotRegistered`. Never throws — push is best-effort.
+ * Expo reports as `DeviceNotRegistered`. Never throws - push is best-effort.
  */
 export async function sendExpoPushToUser(
   supabaseAdmin: SupabaseClient,

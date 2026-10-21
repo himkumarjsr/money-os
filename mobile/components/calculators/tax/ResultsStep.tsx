@@ -18,7 +18,7 @@ import { GoldText } from "@/components/ui/GoldMirror";
 const LEARN_TAX_LINKS = [
   {
     href: "/learn/old-vs-new-tax-regime-which-saves-you-more-money",
-    label: "Old vs new regime — complete guide",
+    label: "Old vs new regime - complete guide",
   },
   {
     href: "/learn/80c-complete-guide-tax-saving-india",
@@ -265,7 +265,7 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
     <StepCard
       title="Step 5 · Results"
       teach={TEACH.sections.deductions}
-      blurb="Side-by-side slab math with surcharge & cess flags — exportable PDF mirrors these rounded totals."
+      blurb="Side-by-side slab math with surcharge & cess flags - exportable PDF mirrors these rounded totals."
       defaultOpen
     >
       <ComparisonTable oldR={oldR} newR={newR} />
@@ -273,13 +273,13 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
       {winner === "new" ? (
         <View style={[styles.winner, styles.winnerNew]}>
           <Text style={[styles.winnerText, { color: tintFg("#022C22") }]}>
-            Winner: New regime — about {rupees(saveAmount)} / year
+            Winner: New regime - about {rupees(saveAmount)} / year
           </Text>
         </View>
       ) : winner === "old" ? (
         <View style={[styles.winner, styles.winnerOld]}>
           <Text style={[styles.winnerText, { color: tintFg("#082F49") }]}>
-            Winner: Old regime — about {rupees(saveAmount)} / year
+            Winner: Old regime - about {rupees(saveAmount)} / year
           </Text>
         </View>
       ) : (
@@ -292,12 +292,12 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
 
       <View style={styles.takeGrid}>
         <TakeHomeCard
-          label="Old — monthly take-home"
+          label="Old - monthly take-home"
           value={s.oldMonthly}
           privateLabel="old regime take-home"
         />
         <TakeHomeCard
-          label="New — monthly take-home"
+          label="New - monthly take-home"
           value={s.newMonthly}
           privateLabel="new regime take-home"
         />
@@ -351,7 +351,7 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
             ))}
           </View>
           <Text style={styles.guideFoot}>
-            Educational guide only — eligibility rules change; confirm on the
+            Educational guide only - eligibility rules change; confirm on the
             Income Tax portal / with a CA before filing.
           </Text>
         </Disclosure>
@@ -399,7 +399,7 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
             ariaLabel="Tax glossary context"
           />
         </View>
-        <SectionBlurb text="Quick clarifiers only — use deeper guides or your CA for filing-grade nuance." />
+        <SectionBlurb text="Quick clarifiers only - use deeper guides or your CA for filing-grade nuance." />
         <View style={{ marginTop: 12, gap: 8 }}>
           <Disclosure
             summary="How are RSU vest and sale taxed differently?"
@@ -408,7 +408,7 @@ export function ResultsStep({ s }: { s: TaxCalcState }) {
           >
             <Text style={styles.faqA}>
               Vesting is generally salary perquisite; sales later pick up
-              capital gains — verify broker statements.
+              capital gains - verify broker statements.
             </Text>
           </Disclosure>
           <Disclosure

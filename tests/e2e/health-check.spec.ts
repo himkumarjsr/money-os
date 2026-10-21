@@ -14,7 +14,7 @@ test.describe("Health Check Flow", () => {
   });
 
   test("CTA navigates toward analyse", async ({ page }) => {
-    // Prefer an explicit analyse href — generic "start/check" names can match
+    // Prefer an explicit analyse href - generic "start/check" names can match
     // other home cards and leave the URL unchanged.
     const analyseHref = page.locator('a[href^="/analyse"]').first();
     if (await analyseHref.isVisible().catch(() => false)) {

@@ -263,7 +263,7 @@ describe("useObligationStore", () => {
 
   it("monthStartIso uses local calendar month (not UTC)", async () => {
     const { monthStartIso } = await import("@/store/obligationStore");
-    // IST evening of Jul 1 is still Jun 30 in UTC — local format must stay July
+    // IST evening of Jul 1 is still Jun 30 in UTC - local format must stay July
     expect(monthStartIso(new Date(2026, 6, 1))).toBe("2026-07-01");
     expect(monthStartIso(new Date(2026, 0, 15))).toBe("2026-01-01");
   });

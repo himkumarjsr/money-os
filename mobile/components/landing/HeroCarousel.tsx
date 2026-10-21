@@ -29,7 +29,7 @@ const SLIDES: Slide[] = [
     key: "score",
     title: "Start your financial freedom journey",
     subtitle:
-      "Meet your Finkoin advisor—interactive, step-by-step guidance on emergency fund, insurance, and your fix plan in minutes.",
+      "Meet your Finkoin advisor - interactive, step-by-step guidance on emergency fund, insurance, and your fix plan in minutes.",
     cta: "Meet your advisor",
     route: "/(tabs)/analyse",
     needsAuth: true,
@@ -38,7 +38,7 @@ const SLIDES: Slide[] = [
     key: "tax",
     title: "New vs old tax regime",
     subtitle:
-      "Compare regimes with HRA, 80C, NPS — built for FY 2025-26 planning.",
+      "Compare regimes with HRA, 80C, NPS - built for FY 2025-26 planning.",
     cta: "Open calculator",
     route: "/calculators/tax-regime",
   },
@@ -46,7 +46,7 @@ const SLIDES: Slide[] = [
     key: "portfolio",
     title: "Portfolio analysis",
     subtitle:
-      "Review holdings and allocation in one workspace — built for Indian investors.",
+      "Review holdings and allocation in one workspace - built for Indian investors.",
     comingSoon: true,
   },
   {
@@ -116,7 +116,7 @@ export function HeroCarousel() {
             </View>
           ) : null}
           <Text style={styles.title}>{slide.title}</Text>
-          {/* PWA hides subtitle on xs (hidden sm:block) — keep carousel compact */}
+          {/* PWA hides subtitle on xs (hidden sm:block) - keep carousel compact */}
           {"comingSoon" in slide && slide.comingSoon ? (
             <View style={styles.ctaDisabled}>
               <Text style={styles.ctaDisabledText}>Coming soon</Text>

@@ -109,7 +109,7 @@ export function PushPermissionPrompt() {
               </Text>
               <Text style={styles.body}>
                 Allow notifications and we’ll send one short finance tip every
-                morning at 8:30 AM — even when Finkoin is closed.
+                morning at 8:30 AM - even when Finkoin is closed.
               </Text>
             </View>
           </View>

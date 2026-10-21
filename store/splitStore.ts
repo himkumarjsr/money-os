@@ -334,7 +334,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       if (groupRes.error) throw groupRes.error;
       if (membersRes.error) throw membersRes.error;
       if (expensesRes.error) throw expensesRes.error;
-      // Settlements are optional for older schemas — don't fail the whole page.
+      // Settlements are optional for older schemas - don't fail the whole page.
       if (settlementsRes.error) {
         console.warn("settlements fetch:", settlementsRes.error);
       }
@@ -354,7 +354,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
           { p_group_id: groupId },
         );
         if (!rpcErr && Array.isArray(rpcResult) && rpcResult.length >= 0) {
-          // RPC may return edges or nets depending on SQL — normalize both shapes.
+          // RPC may return edges or nets depending on SQL - normalize both shapes.
           const rows = rpcResult as Array<Record<string, unknown>>;
           const looksLikeEdges = rows.some(
             (r) => "from_email" in r && "to_email" in r,
@@ -522,7 +522,7 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       } else {
         set({ lastFetched: {} });
       }
-      // Refresh balances in the background — don't block success navigation.
+      // Refresh balances in the background - don't block success navigation.
       void get()
         .fetchGroupDetail(input.groupId)
         .catch((err: unknown) => {

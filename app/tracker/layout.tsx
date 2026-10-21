@@ -3,7 +3,7 @@ import { SITE_URL, fitMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = fitMetadata({
   title: {
-    absolute: "Monthly Expense Tracker India — Free | Finkoin",
+    absolute: "Monthly Expense Tracker India - Free | Finkoin",
   },
   description:
     "Track monthly expenses by category. See where your money goes. Get insights on tea, coffee, EMIs, groceries. Free expense tracker for India.",
@@ -17,7 +17,7 @@ export const metadata: Metadata = fitMetadata({
     canonical: "/tracker",
   },
   openGraph: {
-    title: "Monthly Expense Tracker India — Free | Finkoin",
+    title: "Monthly Expense Tracker India - Free | Finkoin",
     description:
       "Track monthly expenses by category. See where your money goes. Free expense tracker for India.",
     url: `${SITE_URL}/tracker`,
@@ -34,7 +34,7 @@ export const metadata: Metadata = fitMetadata({
   },
   twitter: {
     card: "summary_large_image",
-    title: "Monthly Expense Tracker India — Free | Finkoin",
+    title: "Monthly Expense Tracker India - Free | Finkoin",
     description:
       "Track monthly expenses by category. See where your money goes.",
     images: [`${SITE_URL}/og/og-tracker.png`],

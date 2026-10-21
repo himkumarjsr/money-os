@@ -1,5 +1,5 @@
 /**
- * Analyse result — web parity with `app/analyse/result/page.tsx`: hero gauge,
+ * Analyse result - web parity with `app/analyse/result/page.tsx`: hero gauge,
  * monthly summary, net worth, category caps, gauges, safety net, issues,
  * fix-plan teaser + paywall, cross-sell links.
  */

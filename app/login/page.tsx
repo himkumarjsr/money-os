@@ -42,7 +42,7 @@ function LoginContent() {
   useEffect(() => {
     if (!hasInitialized) return;
 
-    // Peek only — never clear invite localStorage until join succeeds.
+    // Peek only - never clear invite localStorage until join succeeds.
     const destination = peekPostLoginPath(window.location.search);
 
     if (isLoggedIn) {

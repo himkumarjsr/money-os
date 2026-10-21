@@ -88,7 +88,7 @@ export default function AnimateOnScroll({
   variant = "fadeUp",
   delay = 0,
   className = "",
-  /** Hero / first screen: no observers or geometry reads — avoids forced reflow on LCP path. */
+  /** Hero / first screen: no observers or geometry reads - avoids forced reflow on LCP path. */
   aboveFold = false,
 }: {
   children: React.ReactNode;

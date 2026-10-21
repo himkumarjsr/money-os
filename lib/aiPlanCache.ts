@@ -12,7 +12,7 @@ export const FORCED_REFRESH_MIN_INTERVAL_MS = 2 * 60 * 1000;
 
 export const FIX_PLAN_REFRESH_UP_TO_DATE = "Your plan is already up to date.";
 export const FIX_PLAN_RATE_LIMIT_MESSAGE =
-  "You've hit the refresh limit for now. Your current plan is still accurate — try again in about an hour.";
+  "You've hit the refresh limit for now. Your current plan is still accurate - try again in about an hour.";
 
 export interface CachedPlan {
   profileHash: string;
@@ -76,7 +76,7 @@ export function hashProfile(profile: any, analysis?: any): string {
   return djb2Hash(stableStringify(relevant));
 }
 
-/** Compact fingerprint of engine gaps — detects stale AI text after rule/engine fixes. */
+/** Compact fingerprint of engine gaps - detects stale AI text after rule/engine fixes. */
 export function enginePlanFingerprint(plan: any): string {
   const rows = (plan?.priorities || []).map(
     (p: {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-const title = "Financial Health Check — Know Your Score Free | Finkoin";
+const title = "Financial Health Check - Know Your Score Free | Finkoin";
 const description =
   "Get your personalised Finkoin financial health score out of 100. Analyses emergency fund, term insurance gap, debt ratio, and investment health. Free. 5 minutes.";
 

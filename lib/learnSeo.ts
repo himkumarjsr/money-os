@@ -21,7 +21,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
   },
   "form-16-what-to-verify": {
     title:
-      "Free ITR Filing 2025-26 — Form 16 Checklist & Regime Prep | Finkoin",
+      "Free ITR Filing 2025-26 - Form 16 Checklist & Regime Prep | Finkoin",
     description:
       "Free ITR filing 2025-26 prep: verify Form 16, reconcile AIS/26AS, compare old vs new tax regime free on Finkoin, then file with confidence.",
     keywords: [
@@ -34,7 +34,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "prepayment-vs-tenure-reduction-home-loan": {
-    title: "Home Loan Prepayment Calculator — Reduce EMI or Tenure? | Finkoin",
+    title: "Home Loan Prepayment Calculator - Reduce EMI or Tenure? | Finkoin",
     description:
       "Home loan prepayment calculator India: should you reduce EMI or cut tenure? Live comparison + illustrative math. Save more interest the smart way.",
     keywords: [
@@ -46,7 +46,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "how-your-cibil-credit-score-is-calculated": {
-    title: "How CIBIL Score Is Calculated — Complete Guide 2026 | Finkoin",
+    title: "How CIBIL Score Is Calculated - Complete Guide 2026 | Finkoin",
     description:
       "Learn exactly how CIBIL credit score is calculated. Payment history (35%), credit utilisation (30%), credit mix (25%), new credit (10%). Tips to improve score fast.",
     keywords: [
@@ -59,9 +59,9 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "sip-vs-lumpsum-when-to-use-which": {
-    title: "SIP vs Lump Sum Investment — When to Use Which? | Finkoin",
+    title: "SIP vs Lump Sum Investment - When to Use Which? | Finkoin",
     description:
-      "SIP or lump sum — which is better for you? Complete comparison with real Indian market examples. When market is at high vs low. Which gives more returns.",
+      "SIP or lump sum - which is better for you? Complete comparison with real Indian market examples. When market is at high vs low. Which gives more returns.",
     keywords: [
       "SIP vs lumpsum",
       "SIP or lumpsum which is better",
@@ -71,7 +71,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "what-is-the-50-30-20-budgeting-rule": {
-    title: "Why the 50-30-20 Rule Fails Indians — Try 40-20-10-30 | Finkoin",
+    title: "Why the 50-30-20 Rule Fails Indians - Try 40-20-10-30 | Finkoin",
     description:
       "The 50-30-20 budgeting rule was designed for USA. Finkoin's 40-20-10-30 framework works better for Indians with 5-6% inflation and no social security.",
     keywords: [
@@ -95,7 +95,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "emergency-fund-how-much-where-to-keep-it": {
-    title: "Emergency Fund Calculator India — How Much Do I Need? | Finkoin",
+    title: "Emergency Fund Calculator India - How Much Do I Need? | Finkoin",
     description:
       "Emergency fund calculator India: how many months of expenses you need, where to keep it liquid, plus a free interactive calculator for your exact target.",
     keywords: [
@@ -108,7 +108,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "how-home-loan-tax-benefits-work-80c-24b": {
-    title: "Home Loan Tax Benefits — Section 80C & 24B Explained | Finkoin",
+    title: "Home Loan Tax Benefits - Section 80C & 24B Explained | Finkoin",
     description:
       "How home loan principal (80C) and interest (24B) tax benefits work in India. Limits, self-occupied vs let-out, and old vs new regime impact.",
     keywords: [
@@ -119,7 +119,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "section-80c-limits-and-beyond": {
-    title: "Section 80C Limits & Beyond — Tax Saving Guide India | Finkoin",
+    title: "Section 80C Limits & Beyond - Tax Saving Guide India | Finkoin",
     description:
       "Complete Section 80C guide: ₹1.5 lakh limit, ELSS, PPF, EPF, life insurance, and what to do after you max 80C.",
     keywords: [
@@ -130,7 +130,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "ppf-vs-elss-which-is-better-for-tax-saving": {
-    title: "PPF vs ELSS — Which Is Better for Tax Saving? | Finkoin",
+    title: "PPF vs ELSS - Which Is Better for Tax Saving? | Finkoin",
     description:
       "PPF vs ELSS comparison for Indian tax savers: lock-in, returns, risk, and who should choose which under Section 80C.",
     keywords: [
@@ -140,7 +140,7 @@ export const LEARN_SEO_OVERRIDES: Record<string, LearnSeoOverride> = {
     ],
   },
   "old-vs-new-tax-regime-which-saves-you-more-money": {
-    title: "Old vs New Tax Regime 2025-26 — Comparison & Examples | Finkoin",
+    title: "Old vs New Tax Regime 2025-26 - Comparison & Examples | Finkoin",
     description:
       "Old vs new tax regime 2026 complete guide with salary examples, 80C/HRA/24B checklist, and a free embedded tax regime calculator for FY 2025-26.",
     keywords: [

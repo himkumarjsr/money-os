@@ -156,7 +156,7 @@ export function detectGoals(
         isDefaultTarget: own === undefined,
         editable: { amount: true, year: false },
         removable: true,
-        reason: `Age ${age} — college around age ${GOAL_DEFAULTS.kidEducationAge}.`,
+        reason: `Age ${age} - college around age ${GOAL_DEFAULTS.kidEducationAge}.`,
       });
     }
 
@@ -177,7 +177,7 @@ export function detectGoals(
         isDefaultTarget: own === undefined,
         editable: { amount: true, year: false },
         removable: true,
-        reason: `Age ${age} — planned around age ${GOAL_DEFAULTS.kidMarriageAge}.`,
+        reason: `Age ${age} - planned around age ${GOAL_DEFAULTS.kidMarriageAge}.`,
       });
     }
   }
@@ -203,7 +203,7 @@ export function detectGoals(
       removable: true,
       reason:
         rent > 0
-          ? "You rent today — a downpayment fund gets you to ownership."
+          ? "You rent today - a downpayment fund gets you to ownership."
           : "You don't own a home yet.",
     });
   }
@@ -221,7 +221,7 @@ export function detectGoals(
       isDefaultTarget: own === undefined,
       editable: { amount: true, year: true },
       removable: true,
-      reason: "No car on file — buy it with savings, not a loan.",
+      reason: "No car on file - buy it with savings, not a loan.",
     });
   }
 
@@ -242,8 +242,8 @@ export function detectGoals(
       removable: false,
       reason:
         (count > 1
-          ? `${count} loans on file — clear them, highest interest first.`
-          : "You have a loan on file — clearing it frees up your EMI.") +
+          ? `${count} loans on file - clear them, highest interest first.`
+          : "You have a loan on file - clearing it frees up your EMI.") +
         payNow,
     });
   }
@@ -262,7 +262,7 @@ export function detectGoals(
       isDefaultTarget: true,
       editable: { amount: false, year: false },
       removable: true,
-      reason: `You support your parents — ${GOAL_DEFAULTS.eldercareYears} years of support plus a medical buffer.`,
+      reason: `You support your parents - ${GOAL_DEFAULTS.eldercareYears} years of support plus a medical buffer.`,
     });
   }
 
@@ -334,7 +334,7 @@ export function detectGoals(
     isDefaultTarget: ownCorpus === undefined,
     editable: { amount: true, year: true },
     removable: false,
-    reason: `Runs for everyone — ${GOAL_DEFAULTS.retirementExpenseMultiple}× your yearly needs by age ${retireAge}.`,
+    reason: `Runs for everyone - ${GOAL_DEFAULTS.retirementExpenseMultiple}× your yearly needs by age ${retireAge}.`,
   });
 
   return goals.sort((a, b) => a.yearsToGoal - b.yearsToGoal);

@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 
 /**
  * If a Split invite is pending in localStorage/cookies (same browser/PWA
- * storage), route to join — or to login with ?next= when signed out.
+ * storage), route to join - or to login with ?next= when signed out.
  *
  * Note: iOS Safari/WhatsApp storage is siloed from the home-screen PWA, so
  * invites opened in those browsers must complete join in-browser; this
@@ -32,7 +32,7 @@ export function SplitInviteResume() {
     if (!pending.startsWith("/split/join")) return;
 
     attempted.current = true;
-    // Keep invite storage until join succeeds — clearing here dropped tokens when
+    // Keep invite storage until join succeeds - clearing here dropped tokens when
     // auth was still settling and left users stuck on a bare join URL / home.
     if (isLoggedIn) {
       router.replace(pending);

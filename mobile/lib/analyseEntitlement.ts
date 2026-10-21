@@ -1,5 +1,5 @@
 /**
- * Who can open the Fix Plan — mirrors web result/fixplan checks
+ * Who can open the Fix Plan - mirrors web result/fixplan checks
  * (pro / promax / admin, or the skip-payment dev flag).
  *
  * Mobile payments are not live yet: the paywall shows the ₹99 button but

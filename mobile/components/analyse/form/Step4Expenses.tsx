@@ -82,7 +82,7 @@ export function Step4Expenses({ live }: Pick<StepProps, "live">) {
             />
             <MoneyField
               name="kidsActivities"
-              label="Kids activities — sports, hobby classes"
+              label="Kids activities - sports, hobby classes"
             />
           </>
         ) : null}

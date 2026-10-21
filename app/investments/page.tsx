@@ -97,7 +97,7 @@ export default function InvestmentsPage() {
         )}
 
         <p className="mt-10 text-center text-xs text-[#9B9A94]">
-          Illustrative totals from your inputs — not live broker sync.{" "}
+          Illustrative totals from your inputs - not live broker sync.{" "}
           <Link href="/portfolio" className="font-semibold text-[#534AB7]">
             Portfolio tracker
           </Link>

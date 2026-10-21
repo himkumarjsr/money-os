@@ -113,7 +113,7 @@ function itemAmountMatches(amount: number, item: ChecklistLike): boolean {
 
   // After obligation edits, checklist.expected_amount can stay stale
   // (generate_monthly_checklist uses ON CONFLICT DO NOTHING). UI shows
-  // obligation.amount — matching must use that too.
+  // obligation.amount - matching must use that too.
   const live = Number(item.obligation?.amount);
   if (Number.isFinite(live) && live > 0 && amountsMatch(live, expense)) {
     return true;
@@ -140,7 +140,7 @@ function matchScore(expense: ExpenseLike, item: ChecklistLike): number | null {
   );
 }
 
-/** Credit card bill pays live in CC dues UI — never touch obligations. */
+/** Credit card bill pays live in CC dues UI - never touch obligations. */
 export function isCreditCardObligationExpense(e: {
   bucket?: string | null;
   subcategory?: string | null;
@@ -156,7 +156,7 @@ export function isCreditCardObligationExpense(e: {
 function isEligibleExpense(e: ExpenseLike): boolean {
   if ((e.bucket || "").trim() === "income") return false;
   if (isCreditCardObligationExpense(e)) return false;
-  // Card refunds / cashback give money back — they never pay an obligation.
+  // Card refunds / cashback give money back - they never pay an obligation.
   if ((e.subcategory || e.category) === "card_refund") return false;
   const n = Number(e.amount);
   return Number.isFinite(n) && n > 0;
@@ -210,7 +210,7 @@ export function expenseCoversChecklistItem(
   );
 }
 
-/** Best pending row for a new expense — amount match first, then name, then soft score. */
+/** Best pending row for a new expense - amount match first, then name, then soft score. */
 export function findPendingChecklistForExpense(
   checklist: ChecklistLike[],
   expense: ExpenseLike,

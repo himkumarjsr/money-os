@@ -120,7 +120,7 @@ export function formatKnowledgeForPrompt(entries: KnowledgeEntry[]): string {
   );
 
   return `
-RELEVANT FINANCIAL KNOWLEDGE (verified snippets — cite rates/limits only as stated below; user profile numbers override illustrations):
+RELEVANT FINANCIAL KNOWLEDGE (verified snippets - cite rates/limits only as stated below; user profile numbers override illustrations):
 ${blocks.join("\n\n---\n\n")}
 `;
 }

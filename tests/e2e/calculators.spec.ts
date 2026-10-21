@@ -138,7 +138,7 @@ test.describe("Calculators", () => {
     });
   });
 
-  test("hub from mobile stays on list — Loans does not open EMI", async ({
+  test("hub from mobile stays on list - Loans does not open EMI", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });

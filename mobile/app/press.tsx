@@ -1,4 +1,4 @@
-/** Native Press — port of web app/press/page.tsx. */
+/** Native Press - port of web app/press/page.tsx. */
 import { ComingSoon } from "@/components/content/ComingSoon";
 
 export default function PressScreen() {

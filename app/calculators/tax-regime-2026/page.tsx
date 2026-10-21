@@ -20,7 +20,7 @@ const seo = getSeoForCalc("tax-regime");
 export const metadata: Metadata = fitMetadata({
   title: {
     absolute:
-      "Old vs New Tax Regime Calculator 2025-26 — Which Saves More? | Finkoin",
+      "Old vs New Tax Regime Calculator 2025-26 - Which Saves More? | Finkoin",
   },
   description: seo.description,
   keywords: [

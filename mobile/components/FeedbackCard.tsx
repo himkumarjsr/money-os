@@ -1,5 +1,5 @@
 /**
- * Inline feedback card — port of web components/FeedbackWidget.tsx.
+ * Inline feedback card - port of web components/FeedbackWidget.tsx.
  * Posts to /api/feedback (same endpoint as FeedbackSheet).
  */
 import { useState } from "react";

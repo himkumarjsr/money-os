@@ -4,11 +4,11 @@ import { getAuthedUser, rateLimit, tooManyRequests } from "@/lib/apiGuard";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 
 /**
- * Account deletion — required by Google Play's User Data policy and Apple
+ * Account deletion - required by Google Play's User Data policy and Apple
  * App Store Review Guideline 5.1.1(v): any app that supports account
  * creation must support real in-app account deletion, not just sign-out.
  *
- * Supports both the web (cookie session) and mobile (no cookies — send
+ * Supports both the web (cookie session) and mobile (no cookies - send
  * `Authorization: Bearer <access_token>` from the client's current Supabase
  * session instead).
  *
@@ -16,7 +16,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseServer";
  * history, tracker, obligations, gamification, notifications, feedback,
  * etc.) and the auth account itself. Shared multi-user data (Split groups/
  * expenses this user created or is a member of) is intentionally left
- * alone beyond removing this user's own membership rows — a group a
+ * alone beyond removing this user's own membership rows - a group a
  * user created may still have other members relying on its expense
  * history, so cascading a full delete there risks destroying other
  * people's records. That's a product decision, not an oversight; revisit
@@ -40,7 +40,7 @@ async function getUserFromRequest(req: NextRequest): Promise<User | null> {
   return getAuthedUser();
 }
 
-// Single-owner tables — safe to hard-delete outright (see audit notes at
+// Single-owner tables - safe to hard-delete outright (see audit notes at
 // supabase/USER_DATA_AUDIT_NOTES.sql for the full table map).
 const OWNED_TABLES = [
   "user_analysis",

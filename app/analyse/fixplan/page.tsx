@@ -190,7 +190,7 @@ export default function FixPlanPage() {
         }
 
         if (cached && !cacheUsable) {
-          console.log("AI cache stale vs engine — re-evaluating…");
+          console.log("AI cache stale vs engine - re-evaluating…");
         }
 
         console.log("Calling AI (cache miss / refresh)...");
@@ -321,7 +321,7 @@ export default function FixPlanPage() {
   ]);
 
   useEffect(() => {
-    // Silent background retry for fallback plans — do not remount the loading screen.
+    // Silent background retry for fallback plans - do not remount the loading screen.
     if (!aiPlan?.isFallback) return;
     const timer = setTimeout(() => {
       void loadFixPlanRef.current?.(true);
@@ -478,7 +478,7 @@ export default function FixPlanPage() {
           </p>
           <p className="mt-1 text-xs text-white/90">
             {aiPlan?.isFallback
-              ? "ℹ️ Showing estimated plan — AI analysis will load shortly"
+              ? "ℹ️ Showing estimated plan - AI analysis will load shortly"
               : "✓ AI personalised analysis"}
           </p>
           {refreshNotice ? (
@@ -672,7 +672,7 @@ export default function FixPlanPage() {
                   className="flex justify-between"
                 >
                   <span>
-                    Step {idx + 1} — {p.title}
+                    Step {idx + 1} - {p.title}
                     {stepStartLabel(p)}
                   </span>
                   <span>
@@ -1234,7 +1234,7 @@ export default function FixPlanPage() {
 
         <section className="rounded-2xl border border-[#E7D7A7] bg-[#FFF4D8] p-4">
           <p className="text-xs font-semibold uppercase text-[#BA7517]">
-            Do this first — this week
+            Do this first - this week
           </p>
           <p className="mt-1 text-sm text-[#5F5E5A]">
             {aiPlan.explanations?.thisWeekAction ||
@@ -1324,7 +1324,7 @@ function GoalSplitCard({
       {parallel ? (
         <p className="mt-1 text-sm font-medium text-[#454442]">
           {inr(budget)}/month, split across {goals.length}{" "}
-          {goals.length === 1 ? "goal" : "goals"} at the same time — nearer
+          {goals.length === 1 ? "goal" : "goals"} at the same time - nearer
           deadlines get more, long-horizon goals are never left at zero.
         </p>
       ) : null}

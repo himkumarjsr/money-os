@@ -35,7 +35,7 @@ export function installCrashReporter(): void {
         JSON.stringify({ at: new Date().toISOString(), isFatal, text }),
       );
     } catch {
-      // Storage unavailable — still show the alert.
+      // Storage unavailable - still show the alert.
     }
     if (!isFatal) {
       previous(error, isFatal);

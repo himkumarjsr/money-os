@@ -72,7 +72,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Admin only" }, { status: 403 });
     }
 
-    // Creator cannot leave via this path — soft-delete the group instead.
+    // Creator cannot leave via this path - soft-delete the group instead.
     if (emailToRemove === userEmail && group?.created_by === user.id) {
       return NextResponse.json(
         {

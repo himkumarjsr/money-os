@@ -70,7 +70,7 @@ function TrackerMonthContent() {
   const [editingExpense, setEditingExpense] =
     useState<TrackerTransactionRow | null>(null);
   const fetchReqId = useRef(0);
-  /** Hard fetches that are still in flight — soft must not clear the spinner early. */
+  /** Hard fetches that are still in flight - soft must not clear the spinner early. */
   const hardInFlight = useRef(0);
 
   useEffect(() => {

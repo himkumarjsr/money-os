@@ -1,5 +1,5 @@
 /**
- * Basic four-function calculator — port of web `app/calculator/page.tsx`.
+ * Basic four-function calculator - port of web `app/calculator/page.tsx`.
  */
 import { useCallback, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
@@ -157,7 +157,7 @@ export default function CalculatorScreen() {
 
       <View style={styles.wrap}>
         <Text style={styles.heading}>Calculator</Text>
-        <Text style={styles.sub}>Quick sums — not tax or SIP tools</Text>
+        <Text style={styles.sub}>Quick sums - not tax or SIP tools</Text>
 
         <View style={styles.panel}>
           <Text style={styles.display} numberOfLines={1} adjustsFontSizeToFit>

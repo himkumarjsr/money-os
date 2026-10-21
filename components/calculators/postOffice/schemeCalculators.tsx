@@ -82,7 +82,7 @@ export function PoSavingsCalculator() {
       </div>
       <Insight tone="warn">
         Post Office Savings Account pays {PO_RATES.savings}% p.a. Best for
-        parking cash with withdrawal flexibility — not for long-term growth. (
+        parking cash with withdrawal flexibility - not for long-term growth. (
         {PO_RATES_SOURCE})
       </Insight>
     </div>
@@ -363,7 +363,7 @@ export function PoScssCalculator() {
       </div>
       <Insight tone={tone}>
         {eligible
-          ? `SCSS at ${PO_RATES.scss}% — among the highest small-savings rates. 5-year tenure (extendable). Interest taxable; §80TTB may help seniors.`
+          ? `SCSS at ${PO_RATES.scss}% - among the highest small-savings rates. 5-year tenure (extendable). Interest taxable; §80TTB may help seniors.`
           : "SCSS generally needs age ≥ 60 (or special early-retirement rules). Shown for planning only."}
       </Insight>
     </div>
@@ -428,7 +428,7 @@ export function PoSsyCalculator() {
         />
       </div>
       <Insight tone="good">
-        Sukanya Samriddhi at {PO_RATES.ssy}% — open before she turns 10. Model
+        Sukanya Samriddhi at {PO_RATES.ssy}% - open before she turns 10. Model
         assumes 15 years of deposits then compounding to year 21 (girl ~
         {maturityGirlAge}). Confirm eligibility and withdrawal rules at India
         Post.

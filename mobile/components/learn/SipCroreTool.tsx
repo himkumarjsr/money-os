@@ -30,7 +30,7 @@ export function SipCroreTool() {
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
-        <Text style={styles.title}>SIP for your goal — live calculator</Text>
+        <Text style={styles.title}>SIP for your goal - live calculator</Text>
         <Text style={styles.sub}>
           Target keyword: sip calculator 1 crore. Change years and return to see
           the monthly SIP you need.
@@ -108,7 +108,7 @@ export function SipCroreTool() {
       </View>
       <View style={styles.foot}>
         <Text style={styles.footText}>
-          Educational estimate — not investment advice. Know it. Fix it. Grow
+          Educational estimate - not investment advice. Know it. Fix it. Grow
           it.
         </Text>
         <ContentBlocks

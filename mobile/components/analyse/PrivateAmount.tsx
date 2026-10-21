@@ -1,5 +1,5 @@
 /**
- * Privacy-aware amount — port of web `components/ui/PrivateAmount.tsx`.
+ * Privacy-aware amount - port of web `components/ui/PrivateAmount.tsx`.
  * Hidden ("₹••••••") by default; an eye button reveals it. When there is no
  * data (value 0 / not finite) the text is shown as-is with no toggle.
  */

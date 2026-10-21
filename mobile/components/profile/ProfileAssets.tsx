@@ -905,7 +905,7 @@ export default function ProfileAssets({
           <View style={styles.flexShrink}>
             <Text style={styles.heroEyebrow}>YOUR ASSETS</Text>
             <Text style={styles.heroSub}>
-              Edit anytime — syncs across Finkoin
+              Edit anytime - syncs across Finkoin
             </Text>
           </View>
           <AppIcon name="wallet" size={22} color={Colors.onPrimary} />

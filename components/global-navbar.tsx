@@ -211,7 +211,7 @@ export function GlobalNavbar() {
         className="relative sticky top-0 z-50 w-full"
         style={{ paddingTop: "max(4px, env(safe-area-inset-top))" }}
       >
-        {/* Soft wash only — no border, shadow, or hard bottom edge */}
+        {/* Soft wash only - no border, shadow, or hard bottom edge */}
         <div
           aria-hidden
           className="fk-nav-wash pointer-events-none absolute inset-x-0 top-0 h-[88px] transition-opacity duration-300"
@@ -666,7 +666,7 @@ export function GlobalNavbar() {
                   activeBottomNav === "calculators" ? "page" : undefined
                 }
                 onClick={(e) => {
-                  // Always land on the hub list — never keep a deep-linked SIP/EMI sheet open.
+                  // Always land on the hub list - never keep a deep-linked SIP/EMI sheet open.
                   const path = pathname ?? "";
                   if (
                     path === "/calculators" ||

@@ -30,7 +30,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
         },
         {
           kind: "p",
-          text: "An **index fund** copies a market benchmark like Nifty 50 instead of trying to beat it. Most active managers fail to outperform after fees — SPIVA data makes that hard to ignore. Below: the cricket analogy, how indices work, fee math, where active still has a role, and how to start sensibly.",
+          text: "An **index fund** copies a market benchmark like Nifty 50 instead of trying to beat it. Most active managers fail to outperform after fees - SPIVA data makes that hard to ignore. Below: the cricket analogy, how indices work, fee math, where active still has a role, and how to start sensibly.",
         },
         { kind: "p", small: true, muted: true, text: "Last updated: May 2026" },
       ],
@@ -45,14 +45,14 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
           kind: "ul",
           spaced: true,
           items: [
-            "**Option A — the expert:** Hire someone who watches every match, studies every player, picks the best 11, and charges you **₹15,000 per year** for that expertise (like an active mutual fund).",
-            "**Option B — the BCCI ranking:** Copy whoever is in the official top 50 list automatically. Cost: **₹200 per year** (like an index fund).",
+            "**Option A - the expert:** Hire someone who watches every match, studies every player, picks the best 11, and charges you **₹15,000 per year** for that expertise (like an active mutual fund).",
+            "**Option B - the BCCI ranking:** Copy whoever is in the official top 50 list automatically. Cost: **₹200 per year** (like an index fund).",
           ],
         },
         {
           kind: "callout",
           tone: "violet",
-          text: "**SPIVA India 2024:** **81.5%** of active fund managers (the “experts”) picked a worse portfolio than simply copying the benchmark index over the period studied. That is exactly the bet index investors are making — own the ranking, not the guru.",
+          text: "**SPIVA India 2024:** **81.5%** of active fund managers (the “experts”) picked a worse portfolio than simply copying the benchmark index over the period studied. That is exactly the bet index investors are making - own the ranking, not the guru.",
         },
       ],
     },
@@ -63,7 +63,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
       blocks: [
         {
           kind: "p",
-          text: "An index is just a **list**. **Nifty 50** = the top 50 companies on the National Stock Exchange of India by free-float market cap. The list changes as companies grow or shrink — TCS replaced a weaker name; Zomato entered when it was big enough. No committee “picks winners”; the index is always the current top 50.",
+          text: "An index is just a **list**. **Nifty 50** = the top 50 companies on the National Stock Exchange of India by free-float market cap. The list changes as companies grow or shrink - TCS replaced a weaker name; Zomato entered when it was big enough. No committee “picks winners”; the index is always the current top 50.",
         },
         { kind: "p", text: "**Sample weights in Nifty 50 (illustrative):**" },
         {
@@ -86,7 +86,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
       blocks: [
         {
           kind: "p",
-          text: "An index fund **copies the index** — same stocks, same proportions. No fund manager picking names; the fund’s job is to track the benchmark as closely as costs allow.",
+          text: "An index fund **copies the index** - same stocks, same proportions. No fund manager picking names; the fund’s job is to track the benchmark as closely as costs allow.",
         },
         {
           kind: "p",
@@ -106,7 +106,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
     },
     {
       id: "fee-example",
-      title: "The chai stall example — fees compound",
+      title: "The chai stall example - fees compound",
       card: true,
       blocks: [
         {
@@ -117,21 +117,21 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
           kind: "ul",
           spaced: true,
           items: [
-            "**Rohan** — popular large-cap active fund, expense ratio **1.5%/year**. Net ~10.5% after fees → corpus about **₹38.8 lakh**.",
-            "**Priya** — UTI Nifty 50 Index Fund, expense ratio **0.20%/year**. Net ~11.8% after fees → corpus about **₹46.3 lakh**.",
+            "**Rohan** - popular large-cap active fund, expense ratio **1.5%/year**. Net ~10.5% after fees → corpus about **₹38.8 lakh**.",
+            "**Priya** - UTI Nifty 50 Index Fund, expense ratio **0.20%/year**. Net ~11.8% after fees → corpus about **₹46.3 lakh**.",
           ],
         },
         {
           kind: "callout",
           tone: "emerald",
           title: "Difference: ₹7.5 lakh",
-          text: "Same market, same monthly amount, same 20 years — only fees differ. That gap is what a small expense ratio costs you when it compounds for decades (the “chai” the active team drinks every day, metaphorically).",
+          text: "Same market, same monthly amount, same 20 years - only fees differ. That gap is what a small expense ratio costs you when it compounds for decades (the “chai” the active team drinks every day, metaphorically).",
         },
       ],
     },
     {
       id: "spiva",
-      title: "SPIVA — the shocking data",
+      title: "SPIVA - the shocking data",
       card: true,
       blocks: [
         {
@@ -147,20 +147,20 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
               items: [
                 "**81.5%** of large-cap active managers failed to beat the Nifty 50 benchmark in 2024.",
                 "Over **5 years**, **92.9%** of large-cap active funds underperformed their benchmark.",
-                "Translation: only about **7 out of 100** active managers beat the index over that horizon — and you do not know in advance which seven.",
+                "Translation: only about **7 out of 100** active managers beat the index over that horizon - and you do not know in advance which seven.",
               ],
             },
           ],
         },
         {
           kind: "p",
-          text: "Last year’s chart-topper rarely repeats. Large caps like Reliance, TCS, and HDFC Bank are covered by hundreds of analysts globally — “hidden” information is scarce. Index funds ride the market; active funds pay to fight it.",
+          text: "Last year’s chart-topper rarely repeats. Large caps like Reliance, TCS, and HDFC Bank are covered by hundreds of analysts globally - “hidden” information is scarce. Index funds ride the market; active funds pay to fight it.",
         },
       ],
     },
     {
       id: "expense-ratio",
-      title: "Expense ratio — the silent killer",
+      title: "Expense ratio - the silent killer",
       card: true,
       blocks: [
         {
@@ -191,12 +191,12 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
         {
           kind: "callout",
           tone: "violet",
-          text: "**81.5%** of large-cap active funds underperformed the index in 2024 (SPIVA) — paying more does not buy you a better odds of winning.",
+          text: "**81.5%** of large-cap active funds underperformed the index in 2024 (SPIVA) - paying more does not buy you a better odds of winning.",
         },
         {
           kind: "callout",
           tone: "amber",
-          text: "**~₹70 lakh lost to fees** in this 30-year illustration — same market return assumption, only expense ratio differs. Over a working lifetime, that gap is enormous for no guaranteed extra return.",
+          text: "**~₹70 lakh lost to fees** in this 30-year illustration - same market return assumption, only expense ratio differs. Over a working lifetime, that gap is enormous for no guaranteed extra return.",
         },
       ],
     },
@@ -207,7 +207,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
       blocks: [
         {
           kind: "p",
-          text: "Index funds are not perfect for every pocket of the market. SPIVA India **Mid-Year 2025**: in mid and small cap, only **34.5%** of active funds underperformed in that window — skilled managers can sometimes find less-researched names.",
+          text: "Index funds are not perfect for every pocket of the market. SPIVA India **Mid-Year 2025**: in mid and small cap, only **34.5%** of active funds underperformed in that window - skilled managers can sometimes find less-researched names.",
         },
         {
           kind: "p",
@@ -217,7 +217,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
           kind: "ul",
           spaced: true,
           items: [
-            "**Core (60–70% of equity):** Nifty 50 or broader index (e.g. Nifty 500) — boring, low cost, hard to beat in large cap.",
+            "**Core (60–70% of equity):** Nifty 50 or broader index (e.g. Nifty 500) - boring, low cost, hard to beat in large cap.",
             "**Satellite (30–40%):** carefully chosen mid/small-cap active funds only if you accept higher volatility and can judge a long track record.",
           ],
         },
@@ -234,7 +234,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
           items: [
             "Minimum: many index funds allow SIP from about **₹500/month** (scheme rules vary).",
             "**Examples to research** (educational, not a recommendation): UTI Nifty 50 Index Fund Direct (~0.20% expense, large AUM); HDFC Nifty 50 Index Fund Direct (~0.20%, min SIP can be as low as ₹100 on some platforms).",
-            "Platforms: **Groww**, **Zerodha Coin**, **Kuvera** — use **DIRECT** plans only.",
+            "Platforms: **Groww**, **Zerodha Coin**, **Kuvera** - use **DIRECT** plans only.",
             "**Regular** plans pay distributor commission (~0.5–1% extra from your returns every year). Over 20 years that is lakhs lost vs direct.",
           ],
         },
@@ -253,8 +253,8 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
           kind: "ul",
           spaced: true,
           items: [
-            "Held **less than 1 year** — STCG: **20%**",
-            "Held **more than 1 year** — LTCG: **12.5%**",
+            "Held **less than 1 year** - STCG: **20%**",
+            "Held **more than 1 year** - LTCG: **12.5%**",
             "First **₹1.25 lakh** of LTCG in a year: **tax-free** (subject to current law)",
           ],
         },
@@ -275,10 +275,10 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
           plain: true,
           spaced: true,
           items: [
-            "**Myth 1: “Index funds only give average returns.”**\n“Average” here means the top 50 Indian companies compounding for decades — Nifty 50 has delivered roughly **~12% CAGR** since inception in many long-window studies (not a promise for the future).",
+            "**Myth 1: “Index funds only give average returns.”**\n“Average” here means the top 50 Indian companies compounding for decades - Nifty 50 has delivered roughly **~12% CAGR** since inception in many long-window studies (not a promise for the future).",
             "**Myth 2: “Wait for a crash, then buy.”**\nTime in the market usually beats timing. Start SIP today; you automatically buy more units when prices dip.",
             "**Myth 3: “Active funds protect you in crashes.”**\nMost active large-cap funds fall as much or more than the index in sharp selloffs, then lag on the recovery because of fees.",
-            "**Myth 4: “My fund manager is different.”**\nSPIVA 2024: **81.5%** of managers underperformed — many families heard the same story.",
+            "**Myth 4: “My fund manager is different.”**\nSPIVA 2024: **81.5%** of managers underperformed - many families heard the same story.",
           ],
         },
       ],
@@ -332,7 +332,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
           title: "Related articles",
           items: [
             {
-              label: "SIP vs lumpsum — when to use which →",
+              label: "SIP vs lumpsum - when to use which →",
               href: "/learn/sip-vs-lumpsum-when-to-use-which",
             },
             { label: "What is asset allocation? →", href: "/learn/what-is-asset-allocation" },
@@ -345,7 +345,7 @@ export const INDEX_FUND_GUIDE: LearnGuideBody = {
         {
           kind: "callout",
           tone: "amber",
-          text: "**Educational only.** This is not investment advice. Finkoin is not a SEBI-registered investment advisor. Consult a qualified financial advisor before investing. Past performance does not guarantee future results. Data referenced from SPIVA India 2024, AMFI, and fund factsheets as of 2026 — verify current expense ratios and tax rules before you act.",
+          text: "**Educational only.** This is not investment advice. Finkoin is not a SEBI-registered investment advisor. Consult a qualified financial advisor before investing. Past performance does not guarantee future results. Data referenced from SPIVA India 2024, AMFI, and fund factsheets as of 2026 - verify current expense ratios and tax rules before you act.",
         },
       ],
     },

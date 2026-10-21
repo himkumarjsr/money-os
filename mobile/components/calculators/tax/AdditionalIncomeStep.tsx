@@ -10,7 +10,7 @@ export function AdditionalIncomeStep({ s }: { s: TaxCalcState }) {
     <StepCard
       title="Step 3 · Additional income"
       teach={TEACH.sections.income}
-      blurb="Enable each strip only when it applies — unused toggles stay closed so the worksheet stays readable."
+      blurb="Enable each strip only when it applies - unused toggles stay closed so the worksheet stays readable."
     >
       <View style={{ marginTop: 16 }}>
         <SalaryExtrasSections s={s} />

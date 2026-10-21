@@ -101,7 +101,7 @@ function AddSplitExpenseInner() {
     .join("|");
 
   const [amountRaw, setAmountRaw] = useState<number>(0);
-  /** Keep typed decimals (e.g. 11.) — Number() alone drops the trailing point. */
+  /** Keep typed decimals (e.g. 11.) - Number() alone drops the trailing point. */
   const [amountText, setAmountText] = useState("");
   const [title, setTitle] = useState("");
   const [paidByEmail, setPaidByEmail] = useState("");
@@ -179,7 +179,7 @@ function AddSplitExpenseInner() {
     };
   }, [editExpenseId]);
 
-  // Init included members / default payer only when the member set changes —
+  // Init included members / default payer only when the member set changes -
   // do NOT depend on `splittableMembers` array identity (new every render),
   // or Paid by keeps resetting after the user changes it.
   useEffect(() => {
@@ -264,7 +264,7 @@ function AddSplitExpenseInner() {
     return out;
   }, [exactMap]);
 
-  /** Live share preview — same engine as the API (esp. equal). */
+  /** Live share preview - same engine as the API (esp. equal). */
   const previewShares = useMemo(() => {
     if (!amountRaw || amountRaw <= 0 || includedMembers.length === 0) {
       return null;

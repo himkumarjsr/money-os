@@ -81,7 +81,7 @@ export async function POST() {
     await resend.emails.send({
       from: `Finkoin Tips <${process.env.EMAIL_FROM}>`,
       to: toEmail,
-      subject: `You're subscribed — 💰 ${title}`,
+      subject: `You're subscribed - 💰 ${title}`,
       html: `
           <!DOCTYPE html>
           <html>

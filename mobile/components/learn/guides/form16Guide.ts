@@ -15,12 +15,12 @@ export const FORM16_GUIDE: LearnGuideBody = {
       blocks: [
         {
           kind: "p",
-          text: "Looking for **free ITR filing 2025-26** help? Finkoin’s angle is simple: start from your **Form 16 / salary numbers**, compare old vs new regime, and walk into filing with clarity — without paying for a basic comparison.",
+          text: "Looking for **free ITR filing 2025-26** help? Finkoin’s angle is simple: start from your **Form 16 / salary numbers**, compare old vs new regime, and walk into filing with clarity - without paying for a basic comparison.",
         },
         {
           kind: "actions",
           title: "Use Finkoin’s free tax tool (FY 2025-26)",
-          text: "Enter salary / Form 16 style numbers, deductions (80C, HRA, NPS, home loan), and see which regime saves more — before you open the income-tax portal.",
+          text: "Enter salary / Form 16 style numbers, deductions (80C, HRA, NPS, home loan), and see which regime saves more - before you open the income-tax portal.",
           actions: [
             {
               label: "Open tax regime calculator →",
@@ -57,7 +57,7 @@ export const FORM16_GUIDE: LearnGuideBody = {
           items: [
             "Gross salary and exemptions match salary slips / CTC letters.",
             "HRA exemption matches rent proofs and metro vs non-metro rules.",
-            "80C shows PF correctly — don’t double-count ELSS you never declared.",
+            "80C shows PF correctly - don’t double-count ELSS you never declared.",
             "Two employers → two Form 16s; merge incomes carefully.",
             "Download AIS / Form 26AS and match TDS credits.",
           ],
@@ -66,7 +66,7 @@ export const FORM16_GUIDE: LearnGuideBody = {
     },
     {
       id: "free-filing",
-      title: "“Free ITR filing” — what Finkoin helps with",
+      title: "“Free ITR filing” - what Finkoin helps with",
       card: true,
       blocks: [
         {
@@ -104,7 +104,7 @@ export const FORM16_GUIDE: LearnGuideBody = {
       blocks: [
         {
           kind: "p",
-          text: "Finkoin is educational software — not a CA firm or authorised e-filing intermediary. Complex cases (capital gains schedules, business income, NRI) need a qualified professional.",
+          text: "Finkoin is educational software - not a CA firm or authorised e-filing intermediary. Complex cases (capital gains schedules, business income, NRI) need a qualified professional.",
         },
       ],
     },

@@ -3,7 +3,7 @@ import FeaturesShowcase from "@/components/landing/FeaturesShowcase";
 import { FINKOIN_FEATURES } from "@/lib/featuresContent";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-const TITLE = "Finkoin Features — Health Check, Tracker, Split, Calculators";
+const TITLE = "Finkoin Features - Health Check, Tracker, Split, Calculators";
 const DESCRIPTION =
   "Everything Finkoin does in one place: a free financial health check, 20+ India-ready calculators, a monthly tracker, FK Split and more. No PAN needed.";
 

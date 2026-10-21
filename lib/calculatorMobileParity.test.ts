@@ -53,7 +53,7 @@ describe("amortisation Excel workbook", () => {
         blankrows: true,
       },
     );
-    expect(aoa[0]).toEqual(["Finkoin — home-loan Schedule"]);
+    expect(aoa[0]).toEqual(["Finkoin - home-loan Schedule"]);
     expect(aoa[3]).toEqual(["Annual interest rate", "10%"]);
     expect(aoa[7]).toEqual([
       "#",

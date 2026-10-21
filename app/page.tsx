@@ -17,7 +17,7 @@ const homeFaqJsonLd = {
       name: "What is Finkoin?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `Finkoin is India's free personal finance platform. ${FINKOIN_TAGLINE_FULL} Check your financial health score, compare old vs new tax regime, plan SIPs, track expenses, and split bills — no PAN or Aadhaar needed.`,
+        text: `Finkoin is India's free personal finance platform. ${FINKOIN_TAGLINE_FULL} Check your financial health score, compare old vs new tax regime, plan SIPs, track expenses, and split bills - no PAN or Aadhaar needed.`,
       },
     },
     {
@@ -81,7 +81,7 @@ export const metadata: Metadata = {
         url: `${SITE_URL}/og/og-home.png`,
         width: 1200,
         height: 630,
-        alt: `Finkoin — ${FINKOIN_TAGLINE_FULL}`,
+        alt: `Finkoin - ${FINKOIN_TAGLINE_FULL}`,
       },
     ],
   },
@@ -114,7 +114,7 @@ export default function HomePage() {
         </h1>
         <h2 className="mx-auto mt-3 max-w-2xl text-pretty text-center text-[13px] font-normal leading-relaxed text-slate-600 sm:mt-4 sm:text-base">
           Check your financial health score, calculate tax savings, plan
-          investments — everything in one place. No PAN needed.
+          investments - everything in one place. No PAN needed.
         </h2>
       </HomePageClient>
     </>

@@ -15,7 +15,7 @@ import { GoldText } from "@/components/ui/GoldMirror";
 
 /** Step 1 (checklist): only screen with voice. Spaced for clearer TTS. */
 const PERSONAL_CA_STEP1_WELCOME_TTS =
-  "Welcome to Finkoin — your Personal CA. Please have your documents ready before we start.";
+  "Welcome to Finkoin - your Personal CA. Please have your documents ready before we start.";
 
 function SpeakerGlyph({ muted }: { muted: boolean }) {
   return (

@@ -295,7 +295,7 @@ export function AmortisationSchedule({
                         formatINR(entry.principal),
                         formatINR(entry.interest),
                         formatINR(entry.emi),
-                        "—",
+                        "-",
                       ]}
                     />
                   </View>

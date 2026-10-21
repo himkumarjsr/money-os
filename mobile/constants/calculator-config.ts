@@ -165,7 +165,7 @@ export const CATEGORIES: { id: Cat; label: string; items: CalcItem[] }[] = [
       {
         id: "fire",
         title: "FIRE number",
-        blurb: "Financial independence target — 25× expenses + loans",
+        blurb: "Financial independence target - 25× expenses + loans",
         icon: "flame",
       },
       {
@@ -273,7 +273,7 @@ export const CATEGORIES: { id: Cat; label: string; items: CalcItem[] }[] = [
       {
         id: "tax-regime",
         title: "Tax Regime Comparison",
-        blurb: "Old vs New regime — which saves more tax in 2026",
+        blurb: "Old vs New regime - which saves more tax in 2026",
         icon: "receipt",
       },
       {

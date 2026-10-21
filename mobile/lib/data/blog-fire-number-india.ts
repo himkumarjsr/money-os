@@ -1,10 +1,10 @@
 /**
- * FIRE number India — long-form blog article (imported by lib/blogContent.ts)
+ * FIRE number India - long-form blog article (imported by lib/blogContent.ts)
  */
 export default {
   slug: "your-fire-number-when-can-you-actually-retire-in-india",
-  metaTitle: "Your FIRE Number — When Can You Retire in India?",
-  title: "Your FIRE Number — When Can You Actually Retire in India?",
+  metaTitle: "Your FIRE Number - When Can You Retire in India?",
+  title: "Your FIRE Number - When Can You Actually Retire in India?",
   description:
     "Most Indians think retirement needs ₹10Cr. It does not. Your real FIRE number, why zero debt matters, and how to retire earlier than you think.",
   keywords: [
@@ -23,17 +23,17 @@ export default {
   readTimeMinutes: 10,
   body: `Rajesh is 42 years old. He earns ₹3 lakh/month, has ₹80 lakh in investments, and **no loans**.
 
-His colleague Priya is also 42. She earns ₹5 lakh/month, has ₹1.5 crore in investments — but pays ₹65,000/month on a home loan and ₹22,000/month on a car loan.
+His colleague Priya is also 42. She earns ₹5 lakh/month, has ₹1.5 crore in investments - but pays ₹65,000/month on a home loan and ₹22,000/month on a car loan.
 
 Who is closer to financial independence?
 
-Most people say Priya. **The answer is Rajesh — by a very large margin.**
+Most people say Priya. **The answer is Rajesh - by a very large margin.**
 
 This article explains why, and how to calculate **your** real FIRE number in India.
 
 ## What FIRE actually means
 
-**FIRE** stands for Financial Independence, Retire Early — but the word “retire” misleads people.
+**FIRE** stands for Financial Independence, Retire Early - but the word “retire” misleads people.
 
 FIRE does **not** mean you must stop working. FIRE means **work becomes optional**:
 
@@ -64,11 +64,11 @@ If 4% of the portfolio = annual expenses, then:
 - Annual expenses: ₹9,60,000  
 - FIRE number: ₹9,60,000 × 25 = **₹2.4 crore**
 
-Not ₹10 crore — **₹2.4 crore** if your lifestyle truly costs ₹80,000/month (after loans are gone).
+Not ₹10 crore - **₹2.4 crore** if your lifestyle truly costs ₹80,000/month (after loans are gone).
 
 ## Why zero loans change everything
 
-Most FIRE calculators use **current** expenses — but current expenses often include **EMIs**.
+Most FIRE calculators use **current** expenses - but current expenses often include **EMIs**.
 
 EMIs are not permanent. Loans end. That is one of the most powerful insights in Indian FIRE planning.
 
@@ -77,12 +77,12 @@ EMIs are not permanent. Loans end. That is one of the most powerful insights in 
 - Monthly expenses: ₹1,50,000 (includes ₹65,000 home loan EMI)  
 - FIRE number: ₹1,50,000 × 12 × 25 = **₹4.5 crore**
 
-### Person B — same lifestyle, loan cleared
+### Person B - same lifestyle, loan cleared
 
 - Monthly expenses: ₹85,000 (same life, no EMI)  
 - FIRE number: ₹85,000 × 12 × 25 = **₹2.55 crore**
 
-**Same person. Same lifestyle. FIRE number drops by ₹1.95 crore** — just by clearing the loan.
+**Same person. Same lifestyle. FIRE number drops by ₹1.95 crore** - just by clearing the loan.
 
 That is why Rajesh (₹80L corpus, no loans) can be closer to freedom than Priya (₹1.5Cr corpus, ~₹87K/month in EMIs).
 
@@ -90,27 +90,27 @@ That is why Rajesh (₹80L corpus, no loans) can be closer to freedom than Priya
 
 **Priya (illustrative):** expenses still loan-heavy → FIRE ~₹4.5 crore → gap ~₹3 crore → perhaps 10–12 years at similar pace.
 
-## The Finkoin framework — FIRE number without loans first
+## The Finkoin framework - FIRE number without loans first
 
 A more honest method than “multiply my current bank outflow by 25”:
 
-### Step 1 — list all loans
+### Step 1 - list all loans
 
 Home loan outstanding + car loan + personal loan = **total debt**
 
-### Step 2 — true monthly expenses
+### Step 2 - true monthly expenses
 
 Current monthly expenses **minus all EMIs** = **true lifestyle expenses**
 
-### Step 3 — true FIRE number
+### Step 3 - true FIRE number
 
 True FIRE number = true lifestyle expenses × 12 × 25
 
-### Step 4 — add debt back
+### Step 4 - add debt back
 
 **Total FIRE corpus needed** = true FIRE number + total debt outstanding
 
-### Step 5 — compare to current corpus
+### Step 5 - compare to current corpus
 
 Gap = total target − current investments
 
@@ -127,9 +127,9 @@ Add debt: ₹1.8Cr + ₹40L = **₹2.2Cr**
 Current corpus: ₹80L  
 **Gap: ₹1.4Cr**
 
-At ₹20,000/month SIP at ~12% (illustrative), ₹1.4Cr might be reachable in roughly **5 years** — financial independence was closer than it felt.
+At ₹20,000/month SIP at ~12% (illustrative), ₹1.4Cr might be reachable in roughly **5 years** - financial independence was closer than it felt.
 
-**Finkoin tip:** Run the [free financial health check](/analyse) to see income, expenses, loans, and investments in one place — then stress-test your gap with real numbers, not fear.
+**Finkoin tip:** Run the [free financial health check](/analyse) to see income, expenses, loans, and investments in one place - then stress-test your gap with real numbers, not fear.
 
 ## The Rule of 72 and why it overstates what you need
 
@@ -144,23 +144,23 @@ Many people misapply it: “I need my money to double every six years, so I dela
 Once active income is optional, the corpus can still grow:
 
 - Withdraw ~4% for living.  
-- If the portfolio earns ~12% in a long-run average, **net growth can continue** after withdrawal (sequence-of-returns risk is real in bad years — see India adjustments below).
+- If the portfolio earns ~12% in a long-run average, **net growth can continue** after withdrawal (sequence-of-returns risk is real in bad years - see India adjustments below).
 
-Illustrative: 4% of ₹1Cr = ₹4L/year out; if the portfolio grows 12% gross, the corpus may still expand over time in favourable periods. That is why the **25× expenses** framework has historical support — with caveats.
+Illustrative: 4% of ₹1Cr = ₹4L/year out; if the portfolio grows 12% gross, the corpus may still expand over time in favourable periods. That is why the **25× expenses** framework has historical support - with caveats.
 
 ## Two conditions for FIRE in India
 
-1. **Zero consumer debt** — no personal loan, no car loan, no revolving credit card balance. (A controlled home loan can be acceptable if it is in your plan and you know when it ends.)
+1. **Zero consumer debt** - no personal loan, no car loan, no revolving credit card balance. (A controlled home loan can be acceptable if it is in your plan and you know when it ends.)
 
-2. **Corpus covers 25× annual lifestyle expenses** — expenses **excluding** EMIs that will end.
+2. **Corpus covers 25× annual lifestyle expenses** - expenses **excluding** EMIs that will end.
 
 ### Why these two matter
 
-Consumer debt forces you to work for **past** spending. A car bought on EMI in 2020 can keep you employed in 2026 — not just costing EMIs, but costing **freedom**.
+Consumer debt forces you to work for **past** spending. A car bought on EMI in 2020 can keep you employed in 2026 - not just costing EMIs, but costing **freedom**.
 
 Every rupee of consumer debt you clear can **lower your FIRE number** and pull freedom closer by months.
 
-## FIRE variations — which type are you?
+## FIRE variations - which type are you?
 
 ### Lean FIRE (~₹50,000/month or less)
 
@@ -179,9 +179,9 @@ Every rupee of consumer debt you clear can **lower your FIRE number** and pull f
 
 ### Coast FIRE (often the most achievable)
 
-Invest enough early that **compounding alone** hits your FIRE number by 60 — then you only need to cover **current** expenses from salary.
+Invest enough early that **compounding alone** hits your FIRE number by 60 - then you only need to cover **current** expenses from salary.
 
-**Example:** At 35, ₹50L invested at ~12% for 25 years → ~₹8.5Cr (illustrative). If your FIRE target is ~₹4Cr, you may already be on track — work covers today; the portfolio coasts to tomorrow.
+**Example:** At 35, ₹50L invested at ~12% for 25 years → ~₹8.5Cr (illustrative). If your FIRE target is ~₹4Cr, you may already be on track - work covers today; the portfolio coasts to tomorrow.
 
 ## India-specific adjustments
 
@@ -193,13 +193,13 @@ Keep **~2 years of expenses** in FD or liquid funds. Do not withdraw only from e
 
 ### 2) Healthcare inflation
 
-Medical costs often rise **12–14%/year** — well above headline CPI. Review health insurance every few years; at retirement plan for **₹25–50L** health cover plus a **₹10–20L** medical buffer **outside** the main FIRE corpus.
+Medical costs often rise **12–14%/year** - well above headline CPI. Review health insurance every few years; at retirement plan for **₹25–50L** health cover plus a **₹10–20L** medical buffer **outside** the main FIRE corpus.
 
 Related: [Understanding inflation and your real returns](/learn/understanding-inflation-and-your-real-returns).
 
 ### 3) Family obligations (separate buckets)
 
-Children’s education, marriage, and parents’ care are often **separate goals** — not drawn from the lifestyle FIRE corpus.
+Children’s education, marriage, and parents’ care are often **separate goals** - not drawn from the lifestyle FIRE corpus.
 
 ### 4) No broad social security
 
@@ -211,7 +211,7 @@ Related: [NPS vs EPF for retirement](/learn/nps-vs-epf-for-retirement).
 
 Consulting, teaching, or rental income of even **₹30,000–50,000/month** reduces withdrawals and extends sustainability.
 
-**Example:** ₹2Cr corpus, need ~₹1L/month lifestyle → 4% withdrawal = ₹8L/year from corpus; gap ~₹4L/year. ₹35,000/month side income (~₹4.2L/year) can cover the gap — corpus barely touched.
+**Example:** ₹2Cr corpus, need ~₹1L/month lifestyle → 4% withdrawal = ₹8L/year from corpus; gap ~₹4L/year. ₹35,000/month side income (~₹4.2L/year) can cover the gap - corpus barely touched.
 
 ## Action plan by age
 
@@ -220,14 +220,14 @@ Consulting, teaching, or rental income of even **₹30,000–50,000/month** redu
 - Kill **all** consumer debt first.  
 - Build emergency fund.  
 - Invest aggressively (often 30–40% of income if sustainable).  
-- ₹10,000/month SIP from 25 at ~12% (illustrative) can compound to crores by 60 — start early.
+- ₹10,000/month SIP from 25 at ~12% (illustrative) can compound to crores by 60 - start early.
 
 ### In your 30s
 
 - Clear all loans except home loan if needed.  
 - Increase SIP ~10% yearly.  
 - Check if you already have **Coast FIRE**.  
-- Calculate FIRE number now — many are **8–15 years** away, not forever.
+- Calculate FIRE number now - many are **8–15 years** away, not forever.
 
 ### In your 40s
 
@@ -269,7 +269,7 @@ Fill this in:
 
 Most Indians think: **“I need ₹10 crore to retire.”**
 
-That often comes from fear, lifestyle inflation, and headlines about ultra-wealthy FIRE — not from calculation.
+That often comes from fear, lifestyle inflation, and headlines about ultra-wealthy FIRE - not from calculation.
 
 The math says:
 
@@ -285,13 +285,13 @@ None of these are impossible for someone who starts in their 20s or 30s with con
 
 Protect your gap. Eliminate consumer loans. Let time work.
 
-Financial independence is not a fantasy — it is a **calculation**. And the calculation usually shows you are **closer than you feared**.
+Financial independence is not a fantasy - it is a **calculation**. And the calculation usually shows you are **closer than you feared**.
 
 ## Check your FIRE gap on Finkoin
 
 Do you know your FIRE number?
 
-Finkoin’s [financial health check](/analyse) scores your overall picture using **actual income, expenses, loans, and investments** — so you can see how far you are from independence without PAN or Aadhaar. About five minutes. Free.
+Finkoin’s [financial health check](/analyse) scores your overall picture using **actual income, expenses, loans, and investments** - so you can see how far you are from independence without PAN or Aadhaar. About five minutes. Free.
 
 You can also model SIP paths on our [calculators hub](/calculators) and read more on tax-efficient investing in [PPF vs ELSS](/learn/ppf-vs-elss-which-is-better-for-tax-saving).
 
@@ -303,7 +303,7 @@ This article is **educational** and for informational purposes only. It is **not
   faq: [
     {
       q: "What is a FIRE number in India?",
-      a: "Your FIRE number is roughly 25 times your annual lifestyle expenses (after removing EMIs that will end), plus any loan balances you still need to clear. For ₹80,000/month true spending, that is about ₹2.4 crore — not necessarily ₹10 crore.",
+      a: "Your FIRE number is roughly 25 times your annual lifestyle expenses (after removing EMIs that will end), plus any loan balances you still need to clear. For ₹80,000/month true spending, that is about ₹2.4 crore - not necessarily ₹10 crore.",
     },
     {
       q: "Does the 4% rule work in India?",
@@ -311,11 +311,11 @@ This article is **educational** and for informational purposes only. It is **not
     },
     {
       q: "Why does clearing loans lower my FIRE number?",
-      a: "EMIs inflate your current monthly outflow. FIRE is based on the lifestyle you will fund after loans end. Clearing debt can cut the 25× expense base dramatically — the same lifestyle may need crores less in corpus.",
+      a: "EMIs inflate your current monthly outflow. FIRE is based on the lifestyle you will fund after loans end. Clearing debt can cut the 25× expense base dramatically - the same lifestyle may need crores less in corpus.",
     },
     {
       q: "What is Coast FIRE?",
-      a: "Coast FIRE means you have invested enough that compounding alone could reach your retirement target by a set age, so you only need earned income to cover today's bills — not additional long-term investing pressure.",
+      a: "Coast FIRE means you have invested enough that compounding alone could reach your retirement target by a set age, so you only need earned income to cover today's bills - not additional long-term investing pressure.",
     },
     {
       q: "How can I calculate my FIRE gap quickly?",

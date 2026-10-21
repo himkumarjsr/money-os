@@ -53,7 +53,7 @@ const pricing = [
     period: "/mo",
     description:
       "AI fix plan plus optional chat with a qualified advisor for clarifications.",
-    cta: { label: "Get Pro — ₹49/mo", href: "/plans", highlight: true },
+    cta: { label: "Get Pro - ₹49/mo", href: "/plans", highlight: true },
     popular: true,
     planId: "pro",
   },
@@ -63,7 +63,7 @@ const pricing = [
     period: "/mo",
     description:
       "Full workspace: goals, automations, exports, and priority support.",
-    cta: { label: "Get Pro Max — ₹99/mo", href: "/plans", highlight: false },
+    cta: { label: "Get Pro Max - ₹99/mo", href: "/plans", highlight: false },
     planId: "promax",
   },
 ] as const;
@@ -79,7 +79,7 @@ export default function HomePageBelowFold() {
               Start here
             </p>
             <p className="mx-auto mt-2 max-w-xl text-center text-lg font-semibold text-slate-900 sm:text-xl">
-              Top picks on Finkoin — advisor, tax, portfolio, and tracking
+              Top picks on Finkoin - advisor, tax, portfolio, and tracking
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Link
@@ -101,7 +101,7 @@ export default function HomePageBelowFold() {
                 </span>
                 <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
                   Start your financial independence journey with interactive
-                  guidance — not just form filling.
+                  guidance - not just form filling.
                 </span>
                 <span className="mt-4 text-sm font-semibold text-indigo-700 group-hover:underline">
                   Start guided checkup →
@@ -125,7 +125,7 @@ export default function HomePageBelowFold() {
                   New vs old tax regime
                 </span>
                 <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
-                  Compare regimes with HRA, 80C, NPS, and equity gains — built
+                  Compare regimes with HRA, 80C, NPS, and equity gains - built
                   for FY 2025-26 planning.
                 </span>
                 <span className="mt-4 text-sm font-semibold text-violet-700 group-hover:underline">
@@ -134,7 +134,7 @@ export default function HomePageBelowFold() {
               </Link>
               <div
                 className="relative flex flex-col rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm"
-                aria-label="Portfolio analysis — coming soon"
+                aria-label="Portfolio analysis - coming soon"
               >
                 <span className="absolute right-4 top-4 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-800">
                   Coming soon
@@ -146,7 +146,7 @@ export default function HomePageBelowFold() {
                   Portfolio analysis
                 </span>
                 <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
-                  Review holdings and allocation in one workspace — built for
+                  Review holdings and allocation in one workspace - built for
                   Indian investors.
                 </span>
                 <span className="mt-4 text-sm font-semibold text-slate-500">
@@ -200,7 +200,7 @@ export default function HomePageBelowFold() {
                   FK Split
                 </span>
                 <span className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
-                  Split bills, track shared expenses, and settle up — ₹ first.
+                  Split bills, track shared expenses, and settle up - ₹ first.
                   No ads.
                 </span>
                 <span className="mt-4 text-sm font-semibold text-violet-700 group-hover:underline">
@@ -264,7 +264,7 @@ export default function HomePageBelowFold() {
                   ? planPriceDisplay(tier.planId, billing)
                   : null;
               const ctaLabel = shown
-                ? `Get ${tier.name} — ${shown.price}${shown.periodShort}`
+                ? `Get ${tier.name} - ${shown.price}${shown.periodShort}`
                 : tier.cta.label;
               return (
                 <AnimateOnScroll

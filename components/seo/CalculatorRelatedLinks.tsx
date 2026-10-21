@@ -20,7 +20,7 @@ const DEFAULT_LINKS: RelatedLink[] = [
   {
     href: "/analyse",
     title: "Financial Health Check",
-    desc: "Free score — Know it. Fix it. Grow it.",
+    desc: "Free score - Know it. Fix it. Grow it.",
   },
   {
     href: "/learn/section-80c-limits-and-beyond",

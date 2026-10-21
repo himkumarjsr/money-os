@@ -6,7 +6,7 @@ import { SITE_URL, fitMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = fitMetadata({
   title: {
-    absolute: "About Finkoin — Financial Health Platform for India",
+    absolute: "About Finkoin - Financial Health Platform for India",
   },
   description:
     "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
@@ -14,7 +14,7 @@ export const metadata: Metadata = fitMetadata({
     canonical: "/about",
   },
   openGraph: {
-    title: "About Finkoin — Financial Health Platform for India",
+    title: "About Finkoin - Financial Health Platform for India",
     description:
       "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
     url: `${SITE_URL}/about`,
@@ -31,7 +31,7 @@ export const metadata: Metadata = fitMetadata({
   },
   twitter: {
     card: "summary_large_image",
-    title: "About Finkoin — Financial Health Platform for India",
+    title: "About Finkoin - Financial Health Platform for India",
     description:
       "Finkoin helps Indians understand their financial health. Free tool. No PAN needed. Built by Indians for India.",
     images: [`${SITE_URL}/og/og-home.png`],
@@ -385,7 +385,7 @@ export default function AboutPage() {
               icon: "notebook" as AppIconName | null,
               flag: null,
               title: "Education over selling",
-              desc: "We explain every concept so you learn while you plan. Not just results — understanding.",
+              desc: "We explain every concept so you learn while you plan. Not just results - understanding.",
             },
             {
               icon: null,
@@ -397,7 +397,7 @@ export default function AboutPage() {
               icon: "coin" as AppIconName | null,
               flag: null,
               title: "Affordable always",
-              desc: "Core features free forever. Premium features at ₹99 — not ₹5,000/year like advisors.",
+              desc: "Core features free forever. Premium features at ₹99 - not ₹5,000/year like advisors.",
             },
             {
               icon: "robot" as AppIconName | null,

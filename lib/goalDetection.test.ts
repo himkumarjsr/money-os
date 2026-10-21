@@ -30,7 +30,7 @@ function profile(over: Partial<AnalyseFormValues>): FinancialProfile {
 
 const ids = (p: FinancialProfile) => detectGoals(p, NOW).map((g) => g.id);
 
-describe("detectGoals — implied goals", () => {
+describe("detectGoals - implied goals", () => {
   it("always includes retirement, even with nothing else", () => {
     expect(ids(profile({ lifeStage: "bachelor" }))).toEqual(["retirement"]);
   });

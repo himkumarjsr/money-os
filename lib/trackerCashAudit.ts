@@ -92,17 +92,17 @@ export function reasonLabel(reason: CashAuditReason): string {
     case "included":
       return "In purple SPENT";
     case "included_loan_emi":
-      return "In purple SPENT — loan EMI";
+      return "In purple SPENT - loan EMI";
     case "included_loan_repayment":
-      return "In purple SPENT — loan repayment";
+      return "In purple SPENT - loan repayment";
     case "included_cc_bill_pay":
-      return "In purple SPENT — credit card bill pay (cash out)";
+      return "In purple SPENT - credit card bill pay (cash out)";
     case "cc_purchase":
-      return "Excluded — paid with credit card (counts when the bill is paid)";
+      return "Excluded - paid with credit card (counts when the bill is paid)";
     case "paid_from_savings":
-      return "Excluded — paid from RD savings (counted monthly)";
+      return "Excluded - paid from RD savings (counted monthly)";
     case "invalid_amount":
-      return "Excluded — invalid amount";
+      return "Excluded - invalid amount";
   }
 }
 
@@ -141,10 +141,10 @@ export function buildCashAudit(opts: {
     });
     return {
       id: t.id || `row-${i}`,
-      date: t.date || "—",
+      date: t.date || "-",
       description: (t.description || "").trim() || "(no description)",
-      bucket: t.bucket || "—",
-      subcategory: t.subcategory || t.category || "—",
+      bucket: t.bucket || "-",
+      subcategory: t.subcategory || t.category || "-",
       paymentMethod: displayPaymentMethod(t.payment_method),
       amount,
       reason,

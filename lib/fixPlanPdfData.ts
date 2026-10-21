@@ -35,7 +35,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
     .slice(1, 3)
     .map(
       (p: any) =>
-        `${p.title}${p.actionThisWeek ? ` — ${p.actionThisWeek}` : ""}`,
+        `${p.title}${p.actionThisWeek ? ` - ${p.actionThisWeek}` : ""}`,
     );
   const phase3Tasks = open.slice(3).map((p: any) => p.title);
   const emerg = pri.find((p: any) => p.id === "emergency_fund");
@@ -63,7 +63,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
   const phases = [
     {
       phase: 1,
-      title: "Phase 1 — Immediate (This Week)",
+      title: "Phase 1 - Immediate (This Week)",
       subtitle: "Highest-ranked actions",
       color: [226, 75, 74] as [number, number, number],
       tasks:
@@ -76,7 +76,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
     },
     {
       phase: 2,
-      title: "Phase 2 — Short term (1–3 months)",
+      title: "Phase 2 - Short term (1–3 months)",
       subtitle: "Protection and foundation",
       color: [186, 117, 23] as [number, number, number],
       tasks:
@@ -89,7 +89,7 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
     },
     {
       phase: 3,
-      title: "Phase 3 — Medium term (3–12 months)",
+      title: "Phase 3 - Medium term (3–12 months)",
       subtitle: "Wealth and consistency",
       color: [29, 158, 117] as [number, number, number],
       tasks:
@@ -98,11 +98,11 @@ export function buildFixPlanPdfData(pp: any, expl: any): FixPlanPdfData {
     },
     {
       phase: 4,
-      title: "Phase 4 — Year end",
+      title: "Phase 4 - Year end",
       subtitle: "Review and upgrade",
       color: [83, 74, 183] as [number, number, number],
       tasks: [
-        "80C / tax-saving check — use actual salary and 80C numbers next run",
+        "80C / tax-saving check - use actual salary and 80C numbers next run",
         "Re-analyse on Finkoin with updated balances",
         "Review insurance covers vs income",
       ],

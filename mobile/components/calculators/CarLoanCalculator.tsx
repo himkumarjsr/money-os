@@ -167,9 +167,9 @@ export function CarLoanCalculator() {
 
       <Insight tone={tone}>
         {breachCar
-          ? "Car price exceeds 6× monthly salary — stretch target or add down payment."
+          ? "Car price exceeds 6× monthly salary - stretch target or add down payment."
           : breachEmi
-            ? "EMI is above 40% of salary — consider a cheaper segment or longer tenure cautiously."
+            ? "EMI is above 40% of salary - consider a cheaper segment or longer tenure cautiously."
             : "Looks within typical affordability bands."}
       </Insight>
       <CompareLink

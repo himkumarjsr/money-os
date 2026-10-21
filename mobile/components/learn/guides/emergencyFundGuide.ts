@@ -24,7 +24,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
         },
         {
           kind: "tool",
-          title: "Emergency fund calculator — India",
+          title: "Emergency fund calculator - India",
           subtitle:
             "How much buffer do you need? Adjust expenses and life stage for your number.",
           href: "/calculators/emergency",
@@ -32,7 +32,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
         },
         {
           kind: "p",
-          text: "On this page we use one clear rule: build toward **up to 12 months** of your family’s **essential** (must-pay) expenses — not holidays or discretionary spends. That is the **maximum target** we recommend planning around; many people start lower and increase as life gets heavier.",
+          text: "On this page we use one clear rule: build toward **up to 12 months** of your family’s **essential** (must-pay) expenses - not holidays or discretionary spends. That is the **maximum target** we recommend planning around; many people start lower and increase as life gets heavier.",
         },
       ],
     },
@@ -43,7 +43,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
       blocks: [
         {
           kind: "p",
-          text: "Job loss, health shocks, urgent travel, or a broken laptop should not force you to sell long-term investments in a bad market or swipe a credit card at 30–40% APR. Emergency cash is **cash-flow insurance** — boring, liquid, and separate from SIPs and property.",
+          text: "Job loss, health shocks, urgent travel, or a broken laptop should not force you to sell long-term investments in a bad market or swipe a credit card at 30–40% APR. Emergency cash is **cash-flow insurance** - boring, liquid, and separate from SIPs and property.",
         },
         {
           kind: "p",
@@ -100,7 +100,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
             ],
             [
               "Married + 1 child",
-              "School fees and childcare are non-negotiable each month. A layoff cannot mean ‘we will figure fees later’ — they build closer to the top half of the scale.",
+              "School fees and childcare are non-negotiable each month. A layoff cannot mean ‘we will figure fees later’ - they build closer to the top half of the scale.",
               "7–10 months",
             ],
             [
@@ -110,7 +110,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
             ],
             [
               "… + dependents you support (e.g. parents)",
-              "Neha’s parents rely on her for rent supplements and medicines. That is a fixed monthly obligation on top of her own family — she uses the same 12-month cap but aims at the top of her life-stage band.",
+              "Neha’s parents rely on her for rent supplements and medicines. That is a fixed monthly obligation on top of her own family - she uses the same 12-month cap but aims at the top of her life-stage band.",
               "9–12 months",
             ],
           ],
@@ -145,7 +145,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
         {
           kind: "p",
           muted: true,
-          text: "If essentials are ₹80,000/month, 12 months = ₹9,60,000. The multiple is the same idea — only your monthly number changes.",
+          text: "If essentials are ₹80,000/month, 12 months = ₹9,60,000. The multiple is the same idea - only your monthly number changes.",
         },
       ],
     },
@@ -158,9 +158,9 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
           kind: "ul",
           spaced: true,
           items: [
-            "**Liquid mutual funds** or **overnight / money-market style** funds — usually redeem in a business day or as per scheme; read the SID for cut-off rules.",
-            "**Sweep FD** linked to savings — auto moves surplus to FD-like interest with sweep back when needed.",
-            "A **separate savings account** you do not use for UPI shopping — mental accounting helps.",
+            "**Liquid mutual funds** or **overnight / money-market style** funds - usually redeem in a business day or as per scheme; read the SID for cut-off rules.",
+            "**Sweep FD** linked to savings - auto moves surplus to FD-like interest with sweep back when needed.",
+            "A **separate savings account** you do not use for UPI shopping - mental accounting helps.",
           ],
         },
         {
@@ -177,7 +177,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
       blocks: [
         {
           kind: "p",
-          text: "Keep at least **three home loan EMIs** in absolutely liquid form even if you prepay aggressively — banks do not pause EMIs because your net worth is in property or ELSS.",
+          text: "Keep at least **three home loan EMIs** in absolutely liquid form even if you prepay aggressively - banks do not pause EMIs because your net worth is in property or ELSS.",
         },
       ],
     },
@@ -192,7 +192,7 @@ export const EMERGENCY_FUND_GUIDE: LearnGuideBody = {
           items: [
             "Automate a fixed transfer every month until you hit your stage target (up to the 12-month cap).",
             "After any withdrawal (medical, job gap), **refill** before raising SIPs again.",
-            "Once a year, bump the target if rent, fees, or family size changed — your “month” is not static for 10 years.",
+            "Once a year, bump the target if rent, fees, or family size changed - your “month” is not static for 10 years.",
           ],
         },
         {

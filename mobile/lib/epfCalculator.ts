@@ -1,4 +1,4 @@
-/** EPF (Provident Fund) projection — existing balance + yearly contributions, grown to age 60. */
+/** EPF (Provident Fund) projection - existing balance + yearly contributions, grown to age 60. */
 
 /** EPFO notified rate for FY 2024-25 (% p.a.). */
 export const EPF_DEFAULT_RATE_PCT = 8.25;

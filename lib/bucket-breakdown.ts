@@ -304,7 +304,7 @@ export function getBucketBreakdown(
     if (n(profile.monthlyEPFContribution) > 0) {
       items.push({
         label:
-          "EPF contribution (employee) — deducted at source, not from in-hand",
+          "EPF contribution (employee) - deducted at source, not from in-hand",
         value: n(profile.monthlyEPFContribution),
       });
     }

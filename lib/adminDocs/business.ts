@@ -552,7 +552,7 @@ export const revenueSection: DocSection = {
         [
           "People: support, content, compliance",
           "The real cost. Budget it from revenue, not from infra savings.",
-          "—",
+          "-",
         ],
       ],
     },
@@ -588,8 +588,8 @@ export const revenueSection: DocSection = {
         ],
         [
           "Employer plans (₹400 per employee)",
-          "—",
-          "—",
+          "-",
+          "-",
           "10 firms × 500 → ₹20 lakh",
         ],
         ["Total", "≈ ₹2.2 lakh", "≈ ₹38 lakh", "≈ ₹2.1 crore"],

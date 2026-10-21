@@ -1,4 +1,4 @@
-/** FIRE number math — lifestyle 25× rule, debt add-back, SIP + corpus projection. */
+/** FIRE number math - lifestyle 25× rule, debt add-back, SIP + corpus projection. */
 
 export const FIRE_WITHDRAWAL_RATE = 0.04;
 export const FIRE_MULTIPLIER = 1 / FIRE_WITHDRAWAL_RATE; // 25

@@ -191,7 +191,7 @@ export function buildObligationReminderCopy(
       ? `day ${ob.due_day}`
       : ob.due_month
         ? `month ${ob.due_month}`
-        : "—";
+        : "-";
   const title = `${ob.title} due in ${remindBefore} day${remindBefore === 1 ? "" : "s"}`;
   const content =
     amount > 0

@@ -51,7 +51,7 @@ export default function TaxRegimeToggle() {
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <h2 id="regime-toggle" className="text-xl font-semibold text-slate-900">
-            Old vs New regime — quick decision helper (FY 2025-26)
+            Old vs New regime - quick decision helper (FY 2025-26)
           </h2>
           <p className="mt-1 text-sm text-slate-600">
             This is an educational guide. For the exact tax number, use the calculator and verify with current Finance Act rules.

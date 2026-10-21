@@ -238,7 +238,7 @@ describe("Loans raised for fixed EMIs (up to 40%)", () => {
     expect(res.caps.investment).toBeCloseTo(0.35);
   });
 
-  it("only uses freed points — Investment never goes down", () => {
+  it("only uses freed points - Investment never goes down", () => {
     // Needs freed just 2 points (30 → 28); Loans wanted 40.
     const res = learnCapsFromSpending(BUCKET_CAPS, income, [
       month(25000, 5000, true, 45000),

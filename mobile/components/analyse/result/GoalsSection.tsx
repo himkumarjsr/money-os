@@ -54,7 +54,7 @@ export function GoalsSection({
     const res = await saveAnalyseProfile(userId, next);
     setSaving(false);
     if (res.error)
-      setError("Couldn't save — your change is kept on this device.");
+      setError("Couldn't save - your change is kept on this device.");
     return !res.error;
   };
 
@@ -89,7 +89,7 @@ export function GoalsSection({
     <View style={styles.card}>
       <Text style={styles.h2}>Your goals</Text>
       <Text style={styles.sub}>
-        Picked up from your answers — no extra questions. Edit anything
+        Picked up from your answers - no extra questions. Edit anything
         that&apos;s off.
       </Text>
 
