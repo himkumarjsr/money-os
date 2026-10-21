@@ -2858,7 +2858,14 @@ export function AnalyseOnboardingForm() {
                               </p>
                             ) : null}
                           </div>
-                          <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                          <MoneyInput
+                            id="parentsEmergencyCash"
+                            label="Liquid cash set aside specifically for parents medical needs (₹)"
+                            helper="Separate from your emergency fund. Senior medical costs can be sudden and large."
+                            error={errors.parentsEmergencyCash?.message}
+                            {...bindMoneyField("parentsEmergencyCash")}
+                          />
+                          <div className="min-w-0 space-y-3 rounded-2xl border border-slate-200 p-4 sm:col-span-2">
                             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <p className="text-sm font-medium text-slate-800">
                                 Do your parents have health insurance?
@@ -2930,13 +2937,6 @@ export function AnalyseOnboardingForm() {
                               </PremiumField>
                             ) : null}
                           </div>
-                          <MoneyInput
-                            id="parentsEmergencyCash"
-                            label="Liquid cash set aside specifically for parents medical needs (₹)"
-                            helper="Separate from your emergency fund. Senior medical costs can be sudden and large."
-                            error={errors.parentsEmergencyCash?.message}
-                            {...bindMoneyField("parentsEmergencyCash")}
-                          />
                         </div>
                       </div>
                     ) : null}
