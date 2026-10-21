@@ -8,6 +8,7 @@ import {
   type GoalFundingItem,
   type GoalFundingPlan,
 } from "@/lib/goalFunding";
+import { goalReach, type GoalReach } from "@/lib/goalReach";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 import {
   licEndowmentPremiumMonthly,
@@ -43,6 +44,8 @@ export interface PriorityItem {
   needsAnswer?: boolean;
   /** What the step would cost per month if the user says yes. */
   quoteMonthly?: number;
+  /** Goals only: what the SIP reaches by the goal's own year. */
+  reach?: GoalReach;
 }
 
 export interface DebtItem {
@@ -1079,6 +1082,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       icon: GOAL_ICONS[item.type] ?? "🎯",
       canBuyFromFinkoin: false,
       startMonth: sipStartMonth,
+      reach: goalReach(item, { profile, startMonth: sipStartMonth }),
     });
   }
 
