@@ -70,8 +70,8 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
         {primaryGoal === "buy_home" ? (
           <>
             <MoneyField
-              name="homePurchaseTarget"
-              label="Home purchase target"
+              name="homePurchasePrice"
+              label="Price of the home you want"
             />
             <ClampNumberField
               label="Target year"
@@ -85,7 +85,8 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
               name="homePurchaseYear"
             />
             <Text style={styles.purpleNote}>
-              Rule: Save 60% as down payment first.
+              You&apos;ll need about 40% of the price as cash upfront: 20%
+              downpayment, 10% stamp duty and registration, 10% interiors.
             </Text>
           </>
         ) : null}

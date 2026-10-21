@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CRORE, monthlySipForGoal, sipMaturityAmount } from "./sipGoal";
+import {
+  CRORE,
+  monthlySipForGoal,
+  monthlyStepUpSipForGoal,
+  sipMaturityAmount,
+} from "./sipGoal";
 
 describe("sipGoal", () => {
   it("sipMaturityAmount compounds monthly SIPs", () => {
@@ -29,5 +34,28 @@ describe("sipGoal", () => {
     expect(monthlySipForGoal(0, 12, 10)).toBe(0);
     expect(monthlySipForGoal(-1, 12, 10)).toBe(0);
     expect(monthlySipForGoal(1_20_000, 0, 10)).toBe(1_000);
+  });
+});
+
+describe("monthlyStepUpSipForGoal", () => {
+  it("matches the flat SIP with no step-up", () => {
+    expect(monthlyStepUpSipForGoal(10_00_000, 12, 10, 0)).toBeCloseTo(
+      monthlySipForGoal(10_00_000, 12, 10),
+      6,
+    );
+  });
+
+  it("needs a lower starting SIP when it grows every year", () => {
+    const flat = monthlySipForGoal(10_00_000, 12, 10);
+    const stepped = monthlyStepUpSipForGoal(10_00_000, 12, 10, 10);
+    expect(stepped).toBeLessThan(flat);
+    // The stepped plan still reaches the goal.
+    let fv = 0;
+    const r = 0.12 / 12;
+    for (let m = 0; m < 120; m++) {
+      fv +=
+        stepped * Math.pow(1.1, Math.floor(m / 12)) * Math.pow(1 + r, 119 - m);
+    }
+    expect(fv).toBeCloseTo(10_00_000, 0);
   });
 });

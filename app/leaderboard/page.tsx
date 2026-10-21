@@ -1,5 +1,6 @@
 "use client";
 
+import BackLink from "@/components/ui/BackLink";
 import {
   FK_EARN_ACTIONS,
   MONTHLY_PRIZES_FK,
@@ -230,6 +231,7 @@ function LeaderboardContent() {
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 80px" }}>
+      <BackLink fallbackHref="/rewards" label="Back" className="mb-3" />
       <div
         style={{
           display: "flex",

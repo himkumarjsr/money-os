@@ -1,5 +1,7 @@
 import {
   licEndowmentPremiumMonthly,
+  parentsPremiumMonthly,
+  travelMonthly,
   type BucketProfileInput,
   type UniversalBucketKey,
 } from "@/lib/universal-buckets";
@@ -172,6 +174,10 @@ export function getBucketBreakdown(
         }
       }
     }
+    const travel = travelMonthly(profile);
+    if (travel > 0) {
+      items.push({ label: "Travel / holidays", value: travel });
+    }
   }
 
   if (category === "security") {
@@ -209,6 +215,10 @@ export function getBucketBreakdown(
           });
         }
       });
+    }
+    const pp = parentsPremiumMonthly(profile);
+    if (pp > 0) {
+      items.push({ label: "Parents health insurance premium", value: pp });
     }
   }
 

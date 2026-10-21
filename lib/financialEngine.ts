@@ -304,7 +304,8 @@ export function monthlyInsuranceTotal(p: FinancialProfile): number {
     n(p.termInsurancePremiumMonthly) +
     n(p.carInsurancePremiumMonthly) +
     n(p.bikeInsurancePremiumMonthly) +
-    n(p.otherInsurancePremiumMonthly)
+    n(p.otherInsurancePremiumMonthly) +
+    n(p.parentsHealthInsurancePremiumMonthly)
   );
 }
 

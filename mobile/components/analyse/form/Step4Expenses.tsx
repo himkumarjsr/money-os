@@ -10,6 +10,7 @@ import {
   Card,
   MoneyField,
   Note,
+  PremiumField,
   SectionTitle,
   SelectField,
   TotalPanel,
@@ -24,7 +25,11 @@ const CITY_OPTIONS = CITY_TIER_VALUES.map((value) => ({
 }));
 
 export function Step4Expenses({ live }: Pick<StepProps, "live">) {
-  const { watch, setValue } = useFormContext<AnalyseFormValues>();
+  const {
+    watch,
+    setValue,
+    formState: { errors },
+  } = useFormContext<AnalyseFormValues>();
   const lifeStage = watch("lifeStage");
   const parentsSupport = watch("parentsSupport") ?? 0;
   const hasParentsInsurance =
@@ -71,6 +76,19 @@ export function Step4Expenses({ live }: Pick<StepProps, "live">) {
           label="Lifestyle and personal"
           helper="(dining out + OTT + shopping + salon + gym)"
         />
+        <PremiumField
+          label="Travel and holidays"
+          amountError={errors.travelInput?.message}
+          frequency={watch("travelFrequency") ?? "yearly"}
+          onFrequencyChange={(v) => setValue("travelFrequency", v)}
+        >
+          <MoneyField
+            name="travelInput"
+            label="Travel and holidays"
+            helper="(trips + flights + hotels) · Enter what you spend a month or a year"
+            hideLabel
+          />
+        </PremiumField>
       </View>
       <View style={formStyles.group}>
         <SectionTitle>Family</SectionTitle>
@@ -122,6 +140,24 @@ export function Step4Expenses({ live }: Pick<StepProps, "live">) {
                 name="parentsHealthInsuranceSumInsured"
                 label="Sum insured (₹)"
               />
+            ) : null}
+            {hasParentsInsurance ? (
+              <PremiumField
+                label="Premium you pay (₹)"
+                amountError={errors.parentsHealthInsurancePremiumInput?.message}
+                frequency={
+                  watch("parentsHealthInsurancePremiumFrequency") ?? "yearly"
+                }
+                onFrequencyChange={(v) =>
+                  setValue("parentsHealthInsurancePremiumFrequency", v)
+                }
+              >
+                <MoneyField
+                  name="parentsHealthInsurancePremiumInput"
+                  label="Premium you pay (₹)"
+                  hideLabel
+                />
+              </PremiumField>
             ) : null}
           </Card>
           <MoneyField

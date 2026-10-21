@@ -1,5 +1,6 @@
 "use client";
 
+import BackLink from "@/components/ui/BackLink";
 import { AppIcon } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { getSupabase } from "@/lib/supabase";
@@ -174,6 +175,7 @@ export default function NotificationsClient() {
         padding: "16px 16px 120px",
       }}
     >
+      <BackLink fallbackHref="/" label="Back" className="mb-3" />
       <div
         style={{
           display: "flex",

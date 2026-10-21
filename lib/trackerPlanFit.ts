@@ -162,6 +162,9 @@ export function trackerPlanFit(
     (p.bikeInsurancePremiumFrequency === "monthly"
       ? 0
       : p.bikeInsurancePremiumMonthly || 0) +
+    (p.parentsHealthInsurancePremiumFrequency === "monthly"
+      ? 0
+      : p.parentsHealthInsurancePremiumMonthly || 0) +
     (p.otherInsurancePremiums ?? []).reduce(
       (s, pol) =>
         s +
