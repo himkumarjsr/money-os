@@ -24,15 +24,31 @@ import { Footer } from "@/components/landing/Footer";
 import { WhatYouGet } from "@/components/home/WhatYouGet";
 import { Pricing } from "@/components/home/Pricing";
 import { GoldText } from "@/components/ui/GoldMirror";
+import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useAuthStore } from "@/store/authStore";
 import { reportScrollY } from "@/store/chromeStore";
 
 /**
- * Public home = PWA landing (`app/page.tsx` + HomePageClient + HomePageBelowFold).
- * Order, signed in or out: H1/H2, hero carousel, quick tools, top picks,
- * "What you get", "Pricing", then the global Footer. The header and dock come
- * from GlobalChrome.
+ * Home tab: the dashboard when signed in, the public landing otherwise. Waits
+ * for auth to initialise so a persisted (possibly expired) login doesn't
+ * flash the wrong screen.
  */
 export default function HomeScreen() {
+  const hasInitialized = useAuthStore((s) => s.hasInitialized);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+
+  if (!hasInitialized) return <LoadingSpinner full />;
+  return isLoggedIn ? <DashboardHome /> : <LandingScreen />;
+}
+
+/**
+ * Public home = PWA landing (`app/page.tsx` + HomePageClient + HomePageBelowFold).
+ * Order: H1/H2, hero carousel, quick tools, top picks, "What you get",
+ * "Pricing", then the global Footer. The header and dock come from
+ * GlobalChrome.
+ */
+function LandingScreen() {
   const progress = useRef(new Animated.Value(0)).current;
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -87,7 +103,12 @@ export default function HomeScreen() {
         pointerEvents="none"
         style={[styles.progress, { transform: [{ scaleX: progress }] }]}
       >
-        <Svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 4">
+        <Svg
+          width="100%"
+          height="100%"
+          preserveAspectRatio="none"
+          viewBox="0 0 100 4"
+        >
           <Defs>
             <LinearGradient id="fkHomeProgress" x1="0" y1="0" x2="1" y2="0">
               <Stop offset="0" stopColor={brand("#4F46E5")} />
