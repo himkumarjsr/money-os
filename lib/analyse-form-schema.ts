@@ -408,7 +408,12 @@ export interface FinancialProfile {
   emergencyFundTarget?: number;
   medicalEmergencyFund?: number;
   bereavementFund?: number;
+  /** @deprecated Raw downpayment amount; prefer `homePurchasePrice`. */
   homePurchaseTarget?: number;
+  /** Price of the home the user wants; the goal is the upfront cash on it. */
+  homePurchasePrice?: number;
+  /** Count ~10% for interiors in the upfront cash (default true). */
+  homeIncludeInteriors?: boolean;
   homePurchaseYear?: number;
   carPurchaseTarget?: number;
   carPurchaseYear?: number;
@@ -802,6 +807,8 @@ const formShape = {
   medicalEmergencyFund: optionalMoney,
   bereavementFund: optionalMoney,
   homePurchaseTarget: optionalMoney,
+  homePurchasePrice: optionalMoney,
+  homeIncludeInteriors: z.boolean().optional(),
   homePurchaseYear: optionalWholeNumber,
   carPurchaseTarget: optionalMoney,
   carPurchaseYear: optionalWholeNumber,
@@ -1252,6 +1259,8 @@ export const step7Schema = baseFormSchema
     emergencyFundTarget: true,
     medicalEmergencyFund: true,
     homePurchaseTarget: true,
+    homePurchasePrice: true,
+    homeIncludeInteriors: true,
     homePurchaseYear: true,
     carPurchaseTarget: true,
     carPurchaseYear: true,
@@ -2089,6 +2098,8 @@ export function financialProfileToFormValues(
     medicalEmergencyFund: p.medicalEmergencyFund ?? 0,
     bereavementFund: p.bereavementFund,
     homePurchaseTarget: p.homePurchaseTarget,
+    homePurchasePrice: p.homePurchasePrice,
+    homeIncludeInteriors: p.homeIncludeInteriors,
     homePurchaseYear: p.homePurchaseYear,
     carPurchaseTarget: p.carPurchaseTarget,
     carPurchaseYear: p.carPurchaseYear,
@@ -2739,8 +2750,9 @@ export function normalizeAnalyseFormValues(
     bereavementFund: form.bereavementFund,
     homePurchaseTarget:
       (form.rentAmount ?? 0) > 0 ? form.homePurchaseTarget : undefined,
-    homePurchaseYear:
-      (form.rentAmount ?? 0) > 0 ? form.homePurchaseYear : undefined,
+    homePurchasePrice: form.ownsHome ? undefined : form.homePurchasePrice,
+    homeIncludeInteriors: form.ownsHome ? undefined : form.homeIncludeInteriors,
+    homePurchaseYear: form.ownsHome ? undefined : form.homePurchaseYear,
     carPurchaseTarget: form.ownsCar ? undefined : form.carPurchaseTarget,
     carPurchaseYear: form.ownsCar ? undefined : form.carPurchaseYear,
     kidsEducationFundTargets:
@@ -2916,6 +2928,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   medicalEmergencyFund: 0,
   bereavementFund: 0,
   homePurchaseTarget: 0,
+  homePurchasePrice: 0,
   homePurchaseYear: 0,
   carPurchaseTarget: 0,
   carPurchaseYear: 0,

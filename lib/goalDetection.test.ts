@@ -74,8 +74,42 @@ describe("detectGoals - implied goals", () => {
       NOW,
     );
     const home = goals.find((g) => g.id === "home_purchase");
-    expect(home?.targetAmount).toBe(25_000 * GOAL_DEFAULTS.homeRentMultiple);
+    // ₹1 Cr estimated home (400× rent) → 40% upfront.
+    expect(home?.targetAmount).toBe(
+      25_000 * GOAL_DEFAULTS.homePriceRentMultiple * 0.4,
+    );
+    expect(home?.home).toMatchObject({ priceIsEstimate: true });
     expect(goals.some((g) => g.id === "vehicle_purchase")).toBe(true);
+  });
+
+  it("sizes the home goal from the user's price, with or without interiors", () => {
+    const base = { ownsHome: false, rentAmount: 25_000 };
+    const find = (extra: object) =>
+      detectGoals(profile({ ...base, ...extra }), NOW).find(
+        (g) => g.id === "home_purchase",
+      );
+    expect(find({ homePurchasePrice: 1_00_00_000 })?.targetAmount).toBe(
+      40_00_000,
+    );
+    expect(
+      find({ homePurchasePrice: 1_00_00_000, homeIncludeInteriors: false })
+        ?.targetAmount,
+    ).toBe(30_00_000);
+  });
+
+  it("writes a home price edit back over an old downpayment figure", () => {
+    const next = applyGoalEdit(
+      profile({ ownsHome: false, homePurchaseTarget: 8_40_000 }),
+      "home_purchase",
+      { homePrice: 80_00_000, homeIncludeInteriors: false, targetYear: 2030 },
+      NOW,
+    );
+    expect(next).toMatchObject({
+      homePurchasePrice: 80_00_000,
+      homeIncludeInteriors: false,
+      homePurchaseYear: 2030,
+    });
+    expect(next.homePurchaseTarget).toBeUndefined();
   });
 
   it("adds debt-free when there are loans and eldercare when supporting parents", () => {

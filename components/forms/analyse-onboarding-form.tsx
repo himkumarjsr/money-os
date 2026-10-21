@@ -154,7 +154,8 @@ function detectLastStep(profile: Partial<AnalyseFormValues> | null): number {
     (p.emergencyFundTarget ?? 0) > 0 ||
     (p.kidsEducationFundTarget ?? 0) > 0 ||
     (p.kidsMarriageFundTarget ?? 0) > 0 ||
-    (p.homePurchaseTarget ?? 0) > 0
+    (p.homePurchaseTarget ?? 0) > 0 ||
+    (p.homePurchasePrice ?? 0) > 0
   ) {
     return 6;
   }
@@ -4348,10 +4349,10 @@ export function AnalyseOnboardingForm() {
                         {primaryGoal === "buy_home" ? (
                           <>
                             <MoneyInput
-                              id="homePurchaseTarget"
-                              label="Home purchase target"
-                              error={errors.homePurchaseTarget?.message}
-                              {...bindMoneyField("homePurchaseTarget")}
+                              id="homePurchasePrice"
+                              label="Price of the home you want"
+                              error={errors.homePurchasePrice?.message}
+                              {...bindMoneyField("homePurchasePrice")}
                             />
                             <YearInput
                               id="homePurchaseYear"
@@ -4366,7 +4367,9 @@ export function AnalyseOnboardingForm() {
                               error={errors.homePurchaseYear?.message}
                             />
                             <p className="sm:col-span-2 text-xs text-[#534AB7]">
-                              Rule: Save 60% as down payment first.
+                              You&apos;ll need about 40% of the price as cash
+                              upfront: 20% downpayment, 10% stamp duty and
+                              registration, 10% interiors.
                             </p>
                           </>
                         ) : null}
