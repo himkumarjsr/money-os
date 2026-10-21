@@ -127,27 +127,31 @@ export function Step3Obligations({
       </View>
 
       <View style={formStyles.group}>
-        <YesNoQuestion
-          question="Do you have any loan EMIs?"
-          value={ui.hasLoans}
-          onChange={(next) => {
-            patchUi(
-              next ? { hasLoans: true } : { hasLoans: false, savedLoanIds: [] },
-            );
-            writeLoansCleared(syncKv, !next);
-            if (!next) {
-              const patch = loansOffPatch();
-              replaceUnifiedLoans([]);
-              for (const [key, value] of Object.entries(patch)) {
-                if (key === "unifiedLoans") continue;
-                setValue(key as keyof AnalyseFormValues, value as never, {
-                  shouldDirty: true,
-                });
+        <Card>
+          <YesNoQuestion
+            question="Do you have any loan EMIs?"
+            value={ui.hasLoans}
+            onChange={(next) => {
+              patchUi(
+                next
+                  ? { hasLoans: true }
+                  : { hasLoans: false, savedLoanIds: [] },
+              );
+              writeLoansCleared(syncKv, !next);
+              if (!next) {
+                const patch = loansOffPatch();
+                replaceUnifiedLoans([]);
+                for (const [key, value] of Object.entries(patch)) {
+                  if (key === "unifiedLoans") continue;
+                  setValue(key as keyof AnalyseFormValues, value as never, {
+                    shouldDirty: true,
+                  });
+                }
+                setAnalysis({ ...getValues(), ...patch });
               }
-              setAnalysis({ ...getValues(), ...patch });
-            }
-          }}
-        />
+            }}
+          />
+        </Card>
 
         {ui.hasLoans ? (
           <>
@@ -479,18 +483,20 @@ export function Step3Obligations({
       </View>
 
       <View style={formStyles.group}>
-        <YesNoQuestion
-          question="Do you have credit card outstanding?"
-          value={ui.hasCreditCardOutstanding}
-          onChange={(next) => {
-            patchUi({ hasCreditCardOutstanding: next });
-            if (!next) {
-              setValue("creditCardBillMonthly", 0);
-              setValue("creditCardEmiMonthly", 0);
-              setValue("creditCardCarriedBalance", 0);
-            }
-          }}
-        />
+        <Card>
+          <YesNoQuestion
+            question="Do you have credit card outstanding?"
+            value={ui.hasCreditCardOutstanding}
+            onChange={(next) => {
+              patchUi({ hasCreditCardOutstanding: next });
+              if (!next) {
+                setValue("creditCardBillMonthly", 0);
+                setValue("creditCardEmiMonthly", 0);
+                setValue("creditCardCarriedBalance", 0);
+              }
+            }}
+          />
+        </Card>
         {ui.hasCreditCardOutstanding ? (
           <Card>
             <MoneyField
