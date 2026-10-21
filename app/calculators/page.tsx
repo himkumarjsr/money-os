@@ -117,7 +117,7 @@ export default async function CalculatorsPage(props: PageProps) {
       <Suspense
         fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
       >
-        <CalculatorsClient initialCalcId="sip" />
+        <CalculatorsClient initialCalcId="sip" serverHeading />
       </Suspense>
     </>
   );
