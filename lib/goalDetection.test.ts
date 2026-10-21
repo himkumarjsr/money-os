@@ -105,6 +105,27 @@ describe("detectGoals - implied goals", () => {
     expect(goals.some((g) => g.id === "parents_eldercare")).toBe(true);
   });
 
+  it("sizes the parents goal to the uncovered medical gap only", () => {
+    const gap = detectGoals(
+      profile({
+        parentsSupport: 70_000,
+        parentsHealthInsuranceSumInsured: 300_000,
+        parentsEmergencyCash: 50_000,
+      }),
+      NOW,
+    ).find((g) => g.id === "parents_eldercare");
+    expect(gap?.targetAmount).toBe(150_000);
+
+    const covered = detectGoals(
+      profile({
+        parentsSupport: 70_000,
+        parentsHealthInsuranceSumInsured: 500_000,
+      }),
+      NOW,
+    );
+    expect(covered.some((g) => g.id === "parents_eldercare")).toBe(false);
+  });
+
   it("sets the debt-free year from the big loans, not a tiny balance", () => {
     const goals = detectGoals(
       profile({

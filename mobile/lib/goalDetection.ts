@@ -51,8 +51,9 @@ export const GOAL_DEFAULTS = {
   homeWithoutRent: 1_500_000,
   /** Downpayment ≈ 20% of a home whose rent yields ~3% a year → 80× rent. */
   homeRentMultiple: 80,
-  eldercareYears: 5,
+  /** Medical cash parents should be able to reach, before insurance. */
   eldercareMedicalBuffer: 500_000,
+  eldercareMedicalYears: 2,
   marriage: 1_500_000,
   marriageYears: 2,
   baby: 300_000,
@@ -248,21 +249,25 @@ export function detectGoals(
     });
   }
 
-  if (n(p.parentsSupport) > 0) {
+  // Monthly support is already paid from income (Needs), so only the
+  // medical shortfall their insurance and set-aside cash don't cover is a goal.
+  const parentsMedicalGap =
+    GOAL_DEFAULTS.eldercareMedicalBuffer -
+    n(p.parentsHealthInsuranceSumInsured) -
+    n(p.parentsEmergencyCash);
+  if (n(p.parentsSupport) > 0 && parentsMedicalGap > 0) {
     add({
       id: "parents_eldercare",
       type: "parents_eldercare",
-      label: "Parents' eldercare fund",
+      label: "Parents' medical fund",
       source: "implied",
-      targetAmount: Math.round(
-        n(p.parentsSupport) * 12 * GOAL_DEFAULTS.eldercareYears +
-          GOAL_DEFAULTS.eldercareMedicalBuffer,
-      ),
-      targetYear: year + GOAL_DEFAULTS.eldercareYears,
+      targetAmount: Math.round(parentsMedicalGap),
+      targetYear: year + GOAL_DEFAULTS.eldercareMedicalYears,
       isDefaultTarget: true,
       editable: { amount: false, year: false },
       removable: true,
-      reason: `You support your parents - ${GOAL_DEFAULTS.eldercareYears} years of support plus a medical buffer.`,
+      reason:
+        "Your parents' health cover and set-aside cash fall short of a ₹5L medical buffer - this fills the gap.",
     });
   }
 
