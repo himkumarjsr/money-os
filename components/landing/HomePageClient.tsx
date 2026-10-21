@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
 import HomeMobileQuickTools from "@/components/landing/HomeMobileQuickTools";
+import SignedInRedirect from "@/components/landing/SignedInRedirect";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { TrackImpression } from "@/components/TrackImpression";
 import { m, useScroll, useSpring, useTransform } from "framer-motion";
@@ -35,6 +36,7 @@ export default function HomePageClient({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative min-h-dvh overflow-x-clip bg-gradient-to-b from-indigo-50 via-[#F4F2FC] to-violet-50/70 text-slate-900 antialiased">
+      <SignedInRedirect />
       <m.div
         aria-hidden
         className="pointer-events-none fixed left-0 right-0 top-0 z-[70] h-1 origin-left bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500"
