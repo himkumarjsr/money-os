@@ -216,7 +216,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     faq: [
       {
         q: "How much emergency fund do I need in India?",
-        a: "Common guidance: 6 months of expenses if single, 9 months if married, 12 months with kids — adjusted for job stability.",
+        a: "The calculator uses 3 months of expenses if single, 6 if married, 9 with children and 12 if you are over 50. Add more if your income is irregular.",
       },
       {
         q: "Where should I keep my emergency fund?",

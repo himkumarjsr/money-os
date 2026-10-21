@@ -29,8 +29,13 @@ describe("calculator guides", () => {
     expect(getCalcGuide("emi")!.example.steps[1]).toContain("₹21,247");
   });
 
-  it("returns null for calculators without a guide", () => {
-    expect(getCalcGuide("gst")).toBeNull();
+  it("covers every calculator page", () => {
+    const missing = INDEXABLE_CALC_IDS.filter((id) => !getCalcGuide(id));
+    expect(missing).toEqual([]);
+  });
+
+  it("returns null for an unknown calculator", () => {
+    expect(getCalcGuide("not-a-calculator")).toBeNull();
   });
 
   it("formats rupees the Indian way", () => {

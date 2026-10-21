@@ -1,5 +1,5 @@
 /**
- * Long-form, server-rendered guides for the most searched calculators: how
+ * Long-form, server-rendered guides for every calculator: how
  * the maths works, the formula, a worked example and a ready-reckoner table.
  * Every number is computed from the same engines the calculators use, so the
  * guide can never disagree with the tool. Illustrative only, not advice.
@@ -16,29 +16,14 @@ import {
   stepUpSip,
 } from "@/lib/advisorCalculators";
 
-export type CalcGuide = {
-  /** Opening paragraph under the H1: what the calculator answers. */
-  intro: string;
-  howItWorks: string[];
-  formula?: { expression: string; legend: string[] };
-  example: { title: string; steps: string[] };
-  table?: { caption: string; head: string[]; rows: string[][] };
-  tips: string[];
-};
+import { INVESTING_GUIDES } from "./guides/investing";
+import { LOAN_GUIDES } from "./guides/loans";
+import { POST_OFFICE_GUIDES } from "./guides/postoffice";
+import { RETIREMENT_GUIDES } from "./guides/retirement";
+import { type CalcGuide, inr, inrShort } from "./guides/shared";
+import { TAX_GUIDES } from "./guides/tax";
 
-/** ₹ in Indian digit grouping, no paise. */
-export function inr(n: number): string {
-  return `₹${Math.round(n).toLocaleString("en-IN")}`;
-}
-
-/** Short lakh / crore form for tables and prose, e.g. ₹11.6 lakh, ₹1.02 crore. */
-export function inrShort(n: number): string {
-  const v = Math.round(n);
-  const trim = (x: string) => x.replace(/\.?0+$/, "");
-  if (v >= 1_00_00_000) return `₹${trim((v / 1_00_00_000).toFixed(2))} crore`;
-  if (v >= 1_00_000) return `₹${trim((v / 1_00_000).toFixed(1))} lakh`;
-  return inr(v);
-}
+export { type CalcGuide, inr, inrShort };
 
 /** Corpus left after monthly withdrawals (withdraw at month end, monthly compounding). */
 function swpBalance(
@@ -590,6 +575,11 @@ const BUILDERS: Record<string, () => CalcGuide> = {
   rd: rdGuide,
   ppf: ppfGuide,
   hra: hraGuide,
+  ...INVESTING_GUIDES,
+  ...RETIREMENT_GUIDES,
+  ...LOAN_GUIDES,
+  ...TAX_GUIDES,
+  ...POST_OFFICE_GUIDES,
 };
 
 export const GUIDED_CALC_IDS = Object.keys(BUILDERS);
