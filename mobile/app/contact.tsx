@@ -1,4 +1,4 @@
-/** Native Contact — port of web app/contact/page.tsx. */
+/** Native Contact - port of web app/contact/page.tsx. */
 import { Pressable, Text, View } from "react-native";
 import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";

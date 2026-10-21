@@ -98,7 +98,7 @@ export function TaxRegimeToggle() {
   return (
     <View style={styles.wrap}>
       <Text style={styles.h2}>
-        Old vs New regime — quick decision helper (FY 2025-26)
+        Old vs New regime - quick decision helper (FY 2025-26)
       </Text>
       <Text style={styles.sub}>
         This is an educational guide. For the exact tax number, use the

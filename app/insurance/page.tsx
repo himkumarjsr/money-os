@@ -42,10 +42,10 @@ export default function InsuranceComparePage() {
           <h2 className="text-sm font-semibold text-slate-900">Pre-filled from your policy</h2>
           <ul className="mt-3 space-y-1 text-sm text-slate-700">
             <li>
-              <span className="text-slate-500">Insurer:</span> {prefill.insurerName ?? "—"}
+              <span className="text-slate-500">Insurer:</span> {prefill.insurerName ?? "-"}
             </li>
             <li>
-              <span className="text-slate-500">Type:</span> {prefill.policyType?.replace(/_/g, " ") ?? "—"}
+              <span className="text-slate-500">Type:</span> {prefill.policyType?.replace(/_/g, " ") ?? "-"}
             </li>
             {prefill.planName ? (
               <li>
@@ -54,13 +54,13 @@ export default function InsuranceComparePage() {
             ) : null}
             <li>
               <span className="text-slate-500">Cover (₹):</span>{" "}
-              {prefill.coverAmount != null ? prefill.coverAmount.toLocaleString("en-IN") : "—"}
+              {prefill.coverAmount != null ? prefill.coverAmount.toLocaleString("en-IN") : "-"}
             </li>
             <li>
               <span className="text-slate-500">Premium:</span>{" "}
               {prefill.premiumAmount != null
                 ? `₹${prefill.premiumAmount.toLocaleString("en-IN")} / ${prefill.premiumFrequency ?? "month"}`
-                : "—"}
+                : "-"}
             </li>
           </ul>
         </section>

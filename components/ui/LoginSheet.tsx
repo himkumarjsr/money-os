@@ -145,7 +145,7 @@ export default function LoginSheet({
   };
 
   const finishName = () => {
-    // Keep Supabase auth user id from OTP — do not generate a fake id (breaks DB RLS).
+    // Keep Supabase auth user id from OTP - do not generate a fake id (breaks DB RLS).
     updateUser({ name: name || "User" });
     onClose();
   };

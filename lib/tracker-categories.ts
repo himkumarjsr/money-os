@@ -69,7 +69,7 @@ export type TrackerSubcategory = {
 
 export type TrackerBucket = {
   label: string;
-  /** Accent for progress / borders — soft brand-aligned */
+  /** Accent for progress / borders - soft brand-aligned */
   color: string;
   icon: TrackerIconName;
   cap: number;
@@ -117,7 +117,7 @@ export const TRACKER_CATEGORIES = {
       { id: "cab", label: "Cab / taxi", icon: "cab" as const },
       { id: "auto", label: "Auto rickshaw", icon: "auto" as const },
       { id: "metro_bus", label: "Metro / bus", icon: "transit" as const },
-      /** Legacy combined transport — kept so old entries still resolve */
+      /** Legacy combined transport - kept so old entries still resolve */
       {
         id: "transport_essential",
         label: "Transport to work / fuel",
@@ -127,7 +127,7 @@ export const TRACKER_CATEGORIES = {
     ],
   },
   wants: {
-    /** Lifestyle / discretionary — can be cut first. Internal id stays `wants`. */
+    /** Lifestyle / discretionary - can be cut first. Internal id stays `wants`. */
     label: "Wants / non-mandatory expenses",
     color: "#6B63C9",
     icon: "party" as const,
@@ -188,7 +188,7 @@ export const TRACKER_CATEGORIES = {
     ],
   },
   security: {
-    /** Insurance premiums — mirrors Analyse's 5% Security bucket. */
+    /** Insurance premiums - mirrors Analyse's 5% Security bucket. */
     label: "Security / insurance",
     color: "#6359BF",
     icon: "shield" as const,
@@ -362,11 +362,11 @@ type TotalsTxn = {
  * - Card purchases count in their own bucket in the month they are made.
  * - Card bill payments count too (money left the bank), but only the part
  *   above the same card's purchases already counted last month and this month
- *   up to the payment date — see `applyCardBillCoverage`.
+ *   up to the payment date - see `applyCardBillCoverage`.
  * - A card purchase converted to EMI does not; its monthly EMI rows do.
  * - Legacy generated `card_extra` / `card_overdue` rows never count: unpaid
  *   bills live only in the Card bills section.
- * - Refunds / cashback return false here because they *subtract* — sum with
+ * - Refunds / cashback return false here because they *subtract* - sum with
  *   `trackerTotalAmount`, which handles them.
  */
 export function countsTowardTrackerTotals(txn: TotalsTxn): boolean {

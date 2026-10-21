@@ -630,7 +630,7 @@ export default function AnalyseFormScreen() {
         return;
       }
 
-      // Navigate immediately — cloud save must not block the report.
+      // Navigate immediately - cloud save must not block the report.
       router.push("/analyse/result");
 
       void (async () => {

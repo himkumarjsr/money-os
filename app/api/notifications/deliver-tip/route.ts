@@ -142,7 +142,7 @@ async function handleDeliverTip(req: NextRequest) {
             }
 
             const notifId = inserted?.id ? String(inserted.id) : "";
-            // Open the in-app notification detail — not the marketing home page.
+            // Open the in-app notification detail - not the marketing home page.
             const openUrl = notifId
               ? `/notifications?id=${encodeURIComponent(notifId)}`
               : "/notifications";

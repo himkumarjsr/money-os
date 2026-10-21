@@ -346,7 +346,7 @@ function GaugeSvg({
           fill={needleCol}
           style={{ fontSize: compact ? 13 : 16 }}
         >
-          {income > 0 ? `${actualPct.toFixed(0)}%` : "—"}
+          {income > 0 ? `${actualPct.toFixed(0)}%` : "-"}
         </text>
       </svg>
     </div>
@@ -447,7 +447,7 @@ function GaugesBlock({
         labelColor={COLORS.needs}
         amount={needs}
         chipClass={CHIP[stN]}
-        chipText={`${income > 0 ? pct.needs.toFixed(0) : "—"}% · ${chipLabelSpend(stN)}`}
+        chipText={`${income > 0 ? pct.needs.toFixed(0) : "-"}% · ${chipLabelSpend(stN)}`}
         compact={compact}
       >
         <GaugeSvg
@@ -466,7 +466,7 @@ function GaugesBlock({
         labelColor={COLORS.wants}
         amount={wants}
         chipClass={CHIP[stW]}
-        chipText={`${income > 0 ? pct.wants.toFixed(0) : "—"}% · ${chipLabelSpend(stW)}`}
+        chipText={`${income > 0 ? pct.wants.toFixed(0) : "-"}% · ${chipLabelSpend(stW)}`}
         compact={compact}
       >
         <GaugeSvg
@@ -485,7 +485,7 @@ function GaugesBlock({
         labelColor={COLORS.security}
         amount={security}
         chipClass={CHIP[stS]}
-        chipText={`${income > 0 ? pct.security.toFixed(0) : "—"}% · ${chipLabelSpend(stS)}`}
+        chipText={`${income > 0 ? pct.security.toFixed(0) : "-"}% · ${chipLabelSpend(stS)}`}
         compact={compact}
       >
         <GaugeSvg
@@ -504,7 +504,7 @@ function GaugesBlock({
         labelColor={COLORS.loans}
         amount={loans}
         chipClass={CHIP[stL]}
-        chipText={`${income > 0 ? pct.loans.toFixed(0) : "—"}% · ${chipLabelSpend(stL)}`}
+        chipText={`${income > 0 ? pct.loans.toFixed(0) : "-"}% · ${chipLabelSpend(stL)}`}
         compact={compact}
       >
         <GaugeSvg
@@ -523,7 +523,7 @@ function GaugesBlock({
         labelColor={COLORS.investment}
         amount={investment}
         chipClass={CHIP[stI]}
-        chipText={`${income > 0 ? pct.investment.toFixed(0) : "—"}% · ${chipLabelInvest(stI)}`}
+        chipText={`${income > 0 ? pct.investment.toFixed(0) : "-"}% · ${chipLabelInvest(stI)}`}
         compact={compact}
       >
         <GaugeSvg
@@ -580,7 +580,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
           CHIP[stN],
         )}
       >
-        Needs {income > 0 ? `${pct.n.toFixed(0)}%` : "—"} ·{" "}
+        Needs {income > 0 ? `${pct.n.toFixed(0)}%` : "-"} ·{" "}
         {chipLabelSpend(stN)}
       </span>
       <span
@@ -589,7 +589,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
           CHIP[stW],
         )}
       >
-        Wants {income > 0 ? `${pct.w.toFixed(0)}%` : "—"} ·{" "}
+        Wants {income > 0 ? `${pct.w.toFixed(0)}%` : "-"} ·{" "}
         {chipLabelSpend(stW)}
       </span>
       <span
@@ -598,7 +598,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
           CHIP[stS],
         )}
       >
-        Insurance {income > 0 ? `${pct.s.toFixed(0)}%` : "—"} ·{" "}
+        Insurance {income > 0 ? `${pct.s.toFixed(0)}%` : "-"} ·{" "}
         {chipLabelSpend(stS)}
       </span>
       <span
@@ -607,7 +607,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
           CHIP[stL],
         )}
       >
-        Loans {income > 0 ? `${pct.l.toFixed(0)}%` : "—"} ·{" "}
+        Loans {income > 0 ? `${pct.l.toFixed(0)}%` : "-"} ·{" "}
         {chipLabelSpend(stL)}
       </span>
       <span
@@ -616,7 +616,7 @@ function ChipsRow({ props }: { props: SpeedoMeterProps }) {
           CHIP[stI],
         )}
       >
-        Investment {income > 0 ? `${pct.i.toFixed(0)}%` : "—"} ·{" "}
+        Investment {income > 0 ? `${pct.i.toFixed(0)}%` : "-"} ·{" "}
         {chipLabelInvest(stI)}
       </span>
     </div>
@@ -658,21 +658,21 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
     issues.push(
       spendStatus(pct.n, needsCapPct) === "critical"
         ? `Needs are critically above the ${needsCapPct}% guide.`
-        : `Needs are above the ${needsCapPct}% guide — review core spending.`,
+        : `Needs are above the ${needsCapPct}% guide - review core spending.`,
     );
   }
   if (spendStatus(pct.w, wantsCapPct) !== "good") {
     issues.push(
-      `Wants are over the ${wantsCapPct}% cap — ease discretionary spend.`,
+      `Wants are over the ${wantsCapPct}% cap - ease discretionary spend.`,
     );
   }
   if (income > 0 && security <= 0) {
     issues.push(
-      "No insurance premiums on file — health and term cover protect everything else.",
+      "No insurance premiums on file - health and term cover protect everything else.",
     );
   } else if (spendStatus(pct.s, securityCapPct) !== "good") {
     issues.push(
-      `Insurance premiums are above the ${securityCapPct}% guide — review overlapping or investment-linked policies.`,
+      `Insurance premiums are above the ${securityCapPct}% guide - review overlapping or investment-linked policies.`,
     );
   }
   if (spendStatus(pct.l, loansCapPct) !== "good") {
@@ -682,13 +682,13 @@ function InsightBlock({ props }: { props: SpeedoMeterProps }) {
   if (investSt !== "good") {
     issues.push(
       investSt === "critical"
-        ? `Investment flow is below 15% of income — increase long-term contributions when possible.`
-        : `Investment flow is under your ${investTarget}% target — try to step up toward it.`,
+        ? `Investment flow is below 15% of income - increase long-term contributions when possible.`
+        : `Investment flow is under your ${investTarget}% target - try to step up toward it.`,
     );
   }
   const t = needs + wants + security + loans + investment;
   if (income > 0 && t > income + 1e-6) {
-    issues.push("Total allocations exceed take-home — recheck inputs.");
+    issues.push("Total allocations exceed take-home - recheck inputs.");
   }
 
   return (

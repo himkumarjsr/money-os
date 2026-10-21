@@ -16,7 +16,7 @@ export default function AnalyseEntryClient({
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
 
-  // Persist may already know the user before init finishes — open the app.
+  // Persist may already know the user before init finishes - open the app.
   if (isLoggedIn && user?.id) {
     return <AnalyseAppClient />;
   }

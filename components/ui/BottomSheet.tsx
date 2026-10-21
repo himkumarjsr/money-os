@@ -20,7 +20,7 @@ export default function BottomSheet({
   fullscreen?: boolean;
   /** Default true. Calculators pass false so only the header X closes the sheet. */
   closeOnBackdrop?: boolean;
-  /** Default true. Drag uses the header strip only — content scroll never dismisses. Calculators pass false — X only. */
+  /** Default true. Drag uses the header strip only - content scroll never dismisses. Calculators pass false - X only. */
   closeOnDrag?: boolean;
 }) {
   const [dragY, setDragY] = useState(0);
@@ -108,7 +108,7 @@ export default function BottomSheet({
         aria-hidden={!isOpen}
         aria-labelledby="bottom-sheet-title"
       >
-        {/* Drag-to-dismiss attaches only here — scrolling the body never fires these handlers. */}
+        {/* Drag-to-dismiss attaches only here - scrolling the body never fires these handlers. */}
         <div
           className={cn(
             "shrink-0 bg-white",

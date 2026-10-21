@@ -54,7 +54,7 @@ export async function getCurrentPushSubscription(): Promise<PushSubscription | n
 
 /**
  * Request permission, subscribe, and POST subscription to the API.
- * Never throws — callers get `{ ok, reason }` on failure.
+ * Never throws - callers get `{ ok, reason }` on failure.
  */
 export async function enableWebPush(): Promise<{
   ok: boolean;

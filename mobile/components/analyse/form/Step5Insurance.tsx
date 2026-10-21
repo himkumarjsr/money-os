@@ -152,7 +152,7 @@ export function Step5Insurance() {
                 onDay={(d) => persistValue("termInsuranceRenewalDay", d)}
                 monthName="termInsuranceRenewalMonth"
                 dayName="termInsuranceRenewalDay"
-                hint="Optional renewal reminder — calendar day/month when premium is due, not health waiting-period days"
+                hint="Optional renewal reminder - calendar day/month when premium is due, not health waiting-period days"
                 yearlyLabel="Term premium renewal month & day (optional)"
                 monthlyLabel="Term premium debit date each month (optional)"
               />

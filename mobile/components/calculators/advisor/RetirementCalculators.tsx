@@ -261,7 +261,7 @@ export function NpsCalculator() {
         <ResultStat label="Used for annuity" value={inr(n.annuityCorpus)} />
         <ResultStat label="Total contributed" value={inr(n.invested)} />
         <ResultStat
-          label="Tax saved yearly — 80CCD(1B)"
+          label="Tax saved yearly - 80CCD(1B)"
           value={inr(n.taxSaved80CCD1B)}
         />
       </Stats>

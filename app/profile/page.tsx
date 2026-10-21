@@ -129,7 +129,7 @@ export default function ProfilePage() {
           <div>
             <p className="text-xs text-slate-500">Health score</p>
             <p className="text-xl font-bold text-slate-900">
-              {healthScore ?? "—"}
+              {healthScore ?? "-"}
             </p>
           </div>
           <div>

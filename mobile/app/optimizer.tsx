@@ -1,5 +1,5 @@
 /**
- * Money optimizer — port of web app/optimizer/page.tsx. Built from the saved
+ * Money optimizer - port of web app/optimizer/page.tsx. Built from the saved
  * analysis (redirects to Analyse when there is none): summary, income split,
  * where every rupee goes, surplus allocation, debt payoff, goal timeline, FD
  * alert and the AI plan from the last fix plan.
@@ -270,7 +270,7 @@ export default function OptimizerScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.h3}>SECTION 2 — Where Every Rupee Goes</Text>
+          <Text style={styles.h3}>SECTION 2 - Where Every Rupee Goes</Text>
           <View style={{ marginTop: 12, gap: 10 }}>
             {rows.map(([label, v, color]) => {
               const pct =
@@ -298,7 +298,7 @@ export default function OptimizerScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.h3}>SECTION 3 — Your Surplus Allocation</Text>
+          <Text style={styles.h3}>SECTION 3 - Your Surplus Allocation</Text>
           <Text style={[styles.muted, { marginTop: 4 }]}>
             You have {fmt(Math.max(0, left))} left each month. Here is the
             optimal way to use it:
@@ -334,7 +334,7 @@ export default function OptimizerScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.h3}>SECTION 4 — Debt Payoff Calculator</Text>
+          <Text style={styles.h3}>SECTION 4 - Debt Payoff Calculator</Text>
           <View style={{ marginTop: 12, gap: 8 }}>
             {((plan?.debts ?? []) as any[]).map((d) => {
               const current =
@@ -359,7 +359,7 @@ export default function OptimizerScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.h3}>SECTION 5 — Goal Timeline</Text>
+          <Text style={styles.h3}>SECTION 5 - Goal Timeline</Text>
           {plan?.goals?.[0] ? (
             <>
               <Text style={[styles.muted, { marginTop: 4 }]}>
@@ -397,7 +397,7 @@ export default function OptimizerScreen() {
 
         {plan?.fdSuggestion ? (
           <View style={styles.card}>
-            <Text style={styles.h3}>SECTION 6 — FD Rate Alert</Text>
+            <Text style={styles.h3}>SECTION 6 - FD Rate Alert</Text>
             <Text style={[styles.muted, { marginTop: 8 }]}>
               {plan.fdSuggestion.message}
             </Text>

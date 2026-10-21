@@ -130,7 +130,7 @@ describe("buildGoalFundingPlan", () => {
     expect(plan.items.find((i) => i.goalId === "home_purchase")?.isPrimary).toBe(true);
   });
 
-  it("leaves debt-free out of the pool — EMIs already fund it", () => {
+  it("leaves debt-free out of the pool - EMIs already fund it", () => {
     const withLoan = profile({
       lifeStage: "bachelor",
       unifiedLoans: [

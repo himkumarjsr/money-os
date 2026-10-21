@@ -53,7 +53,7 @@ const TAX_CALC_SCHEMA_VERSION = 3;
 
 /** Step 1 (checklist): only screen with voice. Spaced for clearer TTS. */
 const PERSONAL_CA_STEP1_WELCOME_TTS =
-  "Welcome to Finkoin — your Personal CA. Please have your documents ready before we start.";
+  "Welcome to Finkoin - your Personal CA. Please have your documents ready before we start.";
 
 function pickPersonalCAFemaleVoice(
   synth: SpeechSynthesis,
@@ -1331,27 +1331,27 @@ export function TaxRegimeCalculator() {
         "Old regime likely wins because deductions (80C stack, 80D split, HRA/80GG, loan interest) compress taxable income more than new slabs offset.",
       );
       out.push(
-        "Share Form 16 drafts with payroll early — regime switches affect TDS cash-flow.",
+        "Share Form 16 drafts with payroll early - regime switches affect TDS cash-flow.",
       );
     } else if (winner === "new") {
       out.push(
-        "New regime can win when deductions are thin — fewer proofs and ₹75k standard deduction (modelled here) help simplicity.",
+        "New regime can win when deductions are thin - fewer proofs and ₹75k standard deduction (modelled here) help simplicity.",
       );
       out.push(
         `Approx annual advantage vs old at these inputs: ${rupees(saveAmount)}.`,
       );
     } else {
       out.push(
-        "Nearly tied — choose based on proof workload and expected income trajectory.",
+        "Nearly tied - choose based on proof workload and expected income trajectory.",
       );
     }
     if (nri)
       out.push(
-        "NRIs: validate residency and DTAA — this model is domestic illustrative.",
+        "NRIs: validate residency and DTAA - this model is domestic illustrative.",
       );
     if (secJobSwitch) {
       out.push(
-        "Mid-year switch: sum both Form 16s (salary + F&F taxable bits) and claim all TDS — AIS/26AS should match before you file.",
+        "Mid-year switch: sum both Form 16s (salary + F&F taxable bits) and claim all TDS - AIS/26AS should match before you file.",
       );
     }
     return out.slice(0, 4);
@@ -1385,11 +1385,11 @@ export function TaxRegimeCalculator() {
     const guide = [
       {
         form: "ITR-1 (Sahaj)",
-        when: "Resident individual with salary/pension, one house property, and other income (interest etc.) — no business, no capital gains (except exempt), no foreign assets.",
+        when: "Resident individual with salary/pension, one house property, and other income (interest etc.) - no business, no capital gains (except exempt), no foreign assets.",
       },
       {
         form: "ITR-2",
-        when: "Capital gains, more than one house property, foreign income/assets, or director/unlisted equity — still no business/profession income.",
+        when: "Capital gains, more than one house property, foreign income/assets, or director/unlisted equity - still no business/profession income.",
       },
       {
         form: "ITR-3",
@@ -1412,7 +1412,7 @@ export function TaxRegimeCalculator() {
           ? "Business/profession entered with presumptive mode (44AD/44ADA)."
           : "Business/professional income entered.",
         note: midYearSwitch
-          ? "Job switch does not change this — still report all salary Form 16s inside the business ITR."
+          ? "Job switch does not change this - still report all salary Form 16s inside the business ITR."
           : "Confirm turnover/eligibility conditions before filing.",
         guide,
       };
@@ -1427,7 +1427,7 @@ export function TaxRegimeCalculator() {
       return {
         form: "ITR-1 (Sahaj) likely",
         why: midYearSwitch
-          ? "Salary-only profile with a mid-year job switch — still usually ITR-1 if you only have salary (+ allowed other income). Report both employers’ Form 16s."
+          ? "Salary-only profile with a mid-year job switch - still usually ITR-1 if you only have salary (+ allowed other income). Report both employers’ Form 16s."
           : "No business/profession and no complex income flags detected.",
         note: midYearSwitch
           ? "Carry forward TDS from both employers in the return so AIS/26AS matches. Leave/gratuity taxable portions stay under salary."
@@ -1439,7 +1439,7 @@ export function TaxRegimeCalculator() {
     return {
       form: "ITR-2 likely",
       why: midYearSwitch
-        ? "Complex income flags (e.g. capital gains / foreign) — job switch alone does not force ITR-2, but your other incomes do."
+        ? "Complex income flags (e.g. capital gains / foreign) - job switch alone does not force ITR-2, but your other incomes do."
         : "Capital gains / foreign-linked / other non-business complexities detected.",
       note: "Recheck with your CA if any business-profession income exists.",
       guide,
@@ -1663,7 +1663,7 @@ export function TaxRegimeCalculator() {
   const learnTaxLinks = [
     {
       href: "/learn/old-vs-new-tax-regime-which-saves-you-more-money",
-      label: "Old vs new regime — complete guide",
+      label: "Old vs new regime - complete guide",
     },
     {
       href: "/learn/80c-complete-guide-tax-saving-india",
@@ -1701,14 +1701,14 @@ export function TaxRegimeCalculator() {
       rows.push({
         emoji: "🏠",
         title: "80GG rent (no HRA)",
-        body: `Illustrative deduction ₹${Math.round(ggPreview).toLocaleString("en-IN")} — keep rent proofs.`,
+        body: `Illustrative deduction ₹${Math.round(ggPreview).toLocaleString("en-IN")} - keep rent proofs.`,
       });
     }
     if (secLTA && (derived.ltaExemptRec > 0 || derived.ltaTaxable > 0)) {
       rows.push({
         emoji: "✈️",
         title: "LTA",
-        body: `Exempt ₹${derived.ltaExemptRec.toLocaleString("en-IN")} · taxable ₹${derived.ltaTaxable.toLocaleString("en-IN")}. Blocks apply — verify with payroll.`,
+        body: `Exempt ₹${derived.ltaExemptRec.toLocaleString("en-IN")} · taxable ₹${derived.ltaTaxable.toLocaleString("en-IN")}. Blocks apply - verify with payroll.`,
       });
     }
     if (secRSU && derived.rsuVestingAnnual > 0) {
@@ -1783,8 +1783,8 @@ export function TaxRegimeCalculator() {
         emoji: "🌾",
         title: "Agricultural income",
         body: excludeAgriculturalFromTax
-          ? "Excluded from ordinary gross in this run — partial integration not modeled."
-          : "Included in ordinary gross — confirm exemption vs integration with a CA.",
+          ? "Excluded from ordinary gross in this run - partial integration not modeled."
+          : "Included in ordinary gross - confirm exemption vs integration with a CA.",
       });
     }
     if (
@@ -1894,7 +1894,7 @@ export function TaxRegimeCalculator() {
             FY 2025-26 (AY 2026-27) planner. Tap{" "}
             <span className="font-semibold text-[#534AB7]">?</span> on any row
             for context. Equity CG uses illustrative 20% STCG / 12.5% LTCG after
-            ₹1.25L — verify with a CA.
+            ₹1.25L - verify with a CA.
           </p>
 
           <div className="min-w-0 space-y-6">
@@ -1912,7 +1912,7 @@ export function TaxRegimeCalculator() {
                     Work / income style
                   </p>
                   <p className="mb-2 text-xs text-[#9B9A94]">
-                    Pick all that apply — you can have more than one source of
+                    Pick all that apply - you can have more than one source of
                     income.
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1996,7 +1996,7 @@ export function TaxRegimeCalculator() {
                     className="h-2 w-full cursor-pointer accent-[#534AB7]"
                   />
                   <p className="mt-1 text-right text-xs text-[#9B9A94]">
-                    {age} yrs —{" "}
+                    {age} yrs -{" "}
                     {age >= 80
                       ? "super senior"
                       : age >= 60
@@ -2013,7 +2013,7 @@ export function TaxRegimeCalculator() {
                 TEACH.sections.income,
               )}
               {sectionBlurb(
-                "Enter current employer recurring payslip salary here — turn on Step 3 for HRA, job-switch / F&F, or side income.",
+                "Enter current employer recurring payslip salary here - turn on Step 3 for HRA, job-switch / F&F, or side income.",
               )}
               <div className="mt-4 space-y-1">
                 <p className="mb-2 text-xs text-[#7A7871]">
@@ -2030,7 +2030,7 @@ export function TaxRegimeCalculator() {
                   id="tax-basic-m"
                   label={
                     secJobSwitch
-                      ? "Current employer — basic salary (monthly)"
+                      ? "Current employer - basic salary (monthly)"
                       : "Basic salary (monthly)"
                   }
                   teach={TEACH.income.basicMonthly}
@@ -2045,7 +2045,7 @@ export function TaxRegimeCalculator() {
                   id="tax-special-m"
                   label={
                     secJobSwitch
-                      ? "Current employer — special allowance (monthly)"
+                      ? "Current employer - special allowance (monthly)"
                       : "Special allowance (monthly)"
                   }
                   teach={TEACH.income.allowancesMonthly}
@@ -2128,14 +2128,14 @@ export function TaxRegimeCalculator() {
                 TEACH.sections.income,
               )}
               {sectionBlurb(
-                "Enable each strip only when it applies — unused toggles stay closed so the worksheet stays readable.",
+                "Enable each strip only when it applies - unused toggles stay closed so the worksheet stays readable.",
               )}
 
               <ToggleSection
                 id="job-switch"
                 emoji="🔁"
                 title="Job switch / Full & Final (mid-year)"
-                subtitle="Changed employers this FY — Form 16 from both"
+                subtitle="Changed employers this FY - Form 16 from both"
                 oneLiner="Add previous employer taxable salary, F&F extras, and TDS already deducted so total tax and balance due stay accurate."
                 isOn={secJobSwitch}
                 onToggle={setSecJobSwitch}
@@ -2216,9 +2216,9 @@ export function TaxRegimeCalculator() {
               <ToggleSection
                 id="hra"
                 emoji="🏠"
-                title="HRA — House Rent Allowance"
+                title="HRA - House Rent Allowance"
                 subtitle="I receive HRA and pay rent"
-                oneLiner="Uses rent paid, metro vs non-metro, and salary base for the 10% test — opens old-regime exemption math."
+                oneLiner="Uses rent paid, metro vs non-metro, and salary base for the 10% test - opens old-regime exemption math."
                 isOn={secHRA}
                 onToggle={(v) => {
                   setSecHRA(v);
@@ -2292,7 +2292,7 @@ export function TaxRegimeCalculator() {
                 emoji="🏠"
                 title="Rent without HRA (80GG)"
                 subtitle="I pay rent but don’t get HRA"
-                oneLiner="Illustrative ₹60k / rent−10% income cap — only matters when old regime wins on deductions."
+                oneLiner="Illustrative ₹60k / rent−10% income cap - only matters when old regime wins on deductions."
                 isOn={sec80GG}
                 onToggle={(v) => {
                   setSec80GG(v);
@@ -2318,9 +2318,9 @@ export function TaxRegimeCalculator() {
               <ToggleSection
                 id="lta"
                 emoji="✈️"
-                title="LTA — Leave Travel Allowance"
+                title="LTA - Leave Travel Allowance"
                 subtitle="I receive LTA from employer"
-                oneLiner="Exemption tracks eligible domestic travel spend up to the allowance — payroll blocks still apply."
+                oneLiner="Exemption tracks eligible domestic travel spend up to the allowance - payroll blocks still apply."
                 isOn={secLTA}
                 onToggle={setSecLTA}
               >
@@ -2365,7 +2365,7 @@ export function TaxRegimeCalculator() {
                 ) : null}
                 <p className="text-xs text-[#7A7871]">
                   LTA exemption needs domestic travel proofs; blocks are
-                  claim-limited — verify with payroll.
+                  claim-limited - verify with payroll.
                 </p>
                 <div className="mt-2 text-sm text-[#5F5E5A]">
                   Exempt ₹{derived.ltaExemptRec.toLocaleString("en-IN")} ·
@@ -2376,7 +2376,7 @@ export function TaxRegimeCalculator() {
               <ToggleSection
                 id="rsu"
                 emoji="📈"
-                title="RSU / ESOP — Company shares"
+                title="RSU / ESOP - Company shares"
                 subtitle="RSUs or ESOPs vesting this year"
                 oneLiner="FMV at vest flows like salary; later sales map into equity STCG/LTCG buckets in this model."
                 isOn={secRSU}
@@ -2584,7 +2584,7 @@ export function TaxRegimeCalculator() {
                   Taxable ₹{derived.gratuityTaxable.toLocaleString("en-IN")}
                 </div>
                 <p className="text-xs text-[#7A7871]">
-                  Private employees: ₹20L cumulative exemption ceiling applies —
+                  Private employees: ₹20L cumulative exemption ceiling applies -
                   confirm notifications with payroll.
                 </p>
               </ToggleSection>
@@ -2594,7 +2594,7 @@ export function TaxRegimeCalculator() {
                 emoji="🌴"
                 title="Leave encashment"
                 subtitle="Encashed leave this year"
-                oneLiner="Retirement vs in-service paths change exemption sketches — confirm HR worksheets."
+                oneLiner="Retirement vs in-service paths change exemption sketches - confirm HR worksheets."
                 isOn={secLeave}
                 onToggle={setSecLeave}
               >
@@ -2665,7 +2665,7 @@ export function TaxRegimeCalculator() {
                   Taxable ₹{derived.leaveTaxable.toLocaleString("en-IN")}
                 </div>
                 <p className="text-xs text-[#7A7871]">
-                  Section 10(10AA) — illustrative split only.
+                  Section 10(10AA) - illustrative split only.
                 </p>
               </ToggleSection>
 
@@ -2674,7 +2674,7 @@ export function TaxRegimeCalculator() {
                 emoji="💼"
                 title="Business income"
                 subtitle="Business / profession"
-                oneLiner="Pick actual books or presumptive (44AD/44ADA) — you generally shouldn’t mix expense claims with presumptive."
+                oneLiner="Pick actual books or presumptive (44AD/44ADA) - you generally shouldn’t mix expense claims with presumptive."
                 isOn={secBusiness}
                 onToggle={setSecBusiness}
               >
@@ -2770,7 +2770,7 @@ export function TaxRegimeCalculator() {
                   Net / presumptive income ≈ {rupees(derived.businessProfit)}
                 </div>
                 <p className="text-xs text-[#7A7871]">
-                  Presumptive schemes limit expense claims — confirm
+                  Presumptive schemes limit expense claims - confirm
                   eligibility.
                 </p>
               </ToggleSection>
@@ -2941,7 +2941,7 @@ export function TaxRegimeCalculator() {
                 )}
                 <p className="text-xs text-[#7A7871]">
                   Tool applies simple exemption sketches on commuted / family
-                  pension — confirm Form 16 treatment.
+                  pension - confirm Form 16 treatment.
                 </p>
               </ToggleSection>
 
@@ -3153,7 +3153,7 @@ export function TaxRegimeCalculator() {
                 emoji="🌾"
                 title="Agricultural income"
                 subtitle="Farming / agri (planning toggle)"
-                oneLiner="Section 10(1) exempt in principle — we optionally exclude it from ordinary gross; integration not modeled."
+                oneLiner="Section 10(1) exempt in principle - we optionally exclude it from ordinary gross; integration not modeled."
                 isOn={secAgri}
                 onToggle={setSecAgri}
               >
@@ -3258,7 +3258,7 @@ export function TaxRegimeCalculator() {
                 TEACH.sections.deductions,
               )}
               {sectionBlurb(
-                "Turn these on only when comparing old regime savings — Chapter VI-A (except employer NPS) largely disappears under new.",
+                "Turn these on only when comparing old regime savings - Chapter VI-A (except employer NPS) largely disappears under new.",
               )}
 
               <ToggleSection
@@ -3266,7 +3266,7 @@ export function TaxRegimeCalculator() {
                 emoji="📒"
                 title="80C basket & NPS 80CCD(1B)"
                 subtitle="Tax-saving investments"
-                oneLiner="Shared ₹1.5L 80C bucket plus optional ₹50k extra NPS — relevant only when old regime wins."
+                oneLiner="Shared ₹1.5L 80C bucket plus optional ₹50k extra NPS - relevant only when old regime wins."
                 isOn={secDed80c}
                 onToggle={setSecDed80c}
               >
@@ -3375,13 +3375,13 @@ export function TaxRegimeCalculator() {
                 emoji="🩺"
                 title="80D medical insurance"
                 subtitle="Self & parents premiums"
-                oneLiner="Self cap follows your age (₹25k / ₹50k). Parents cap needs parents’ age — ₹50k if 60+."
+                oneLiner="Self cap follows your age (₹25k / ₹50k). Parents cap needs parents’ age - ₹50k if 60+."
                 isOn={secDed80d}
                 onToggle={setSecDed80d}
               >
                 <Mt
                   id="tax-80d-self"
-                  label={`80D — self / spouse / kids (cap ₹${formatIndian(self80DCap)})`}
+                  label={`80D - self / spouse / kids (cap ₹${formatIndian(self80DCap)})`}
                   teach={TEACH.deductions.eightyDSelf}
                   max={self80DCap}
                   defaultValue={
@@ -3411,11 +3411,11 @@ export function TaxRegimeCalculator() {
                     ? parentsSeniorEffective
                       ? " (senior parents)"
                       : " (parents under 60)"
-                    : " — enter parent age above for the right cap"}
+                    : " - enter parent age above for the right cap"}
                 </p>
                 <Mt
                   id="tax-80d-par"
-                  label={`80D — parents (cap ₹${formatIndian(parents80DCap)})`}
+                  label={`80D - parents (cap ₹${formatIndian(parents80DCap)})`}
                   teach={TEACH.deductions.eightyDParents}
                   max={parents80DCap}
                   optional
@@ -3626,7 +3626,7 @@ export function TaxRegimeCalculator() {
             >
               {sectionSummary("Step 5 · Results", TEACH.sections.deductions)}
               {sectionBlurb(
-                "Side-by-side slab math with surcharge & cess flags — exportable PDF mirrors these rounded totals.",
+                "Side-by-side slab math with surcharge & cess flags - exportable PDF mirrors these rounded totals.",
               )}
               <div className="overflow-hidden bg-white md:rounded-xl md:border md:border-[#E8E6F0]">
                 {mobileComparisonTable(oldR, newR)}
@@ -3639,13 +3639,13 @@ export function TaxRegimeCalculator() {
                 <div className="hidden snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:gap-4 md:overflow-visible md:p-4 md:pb-4 md:pt-4">
                   <div className="w-[min(88vw,340px)] shrink-0 snap-center md:w-auto md:min-w-0 md:shrink">
                     <p className="mb-2 hidden text-xs font-semibold text-[#534AB7] md:block">
-                      Old regime — detail
+                      Old regime - detail
                     </p>
                     {regimeColumn(oldR, "Total deductions", true)}
                   </div>
                   <div className="w-[min(88vw,340px)] shrink-0 snap-center md:w-auto md:min-w-0 md:shrink">
                     <p className="mb-2 hidden text-xs font-semibold text-[#534AB7] md:block">
-                      New regime — detail
+                      New regime - detail
                     </p>
                     {regimeColumn(newR, "Standard deduction (₹75k)", true)}
                   </div>
@@ -3655,13 +3655,13 @@ export function TaxRegimeCalculator() {
               {winner === "new" ? (
                 <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-950">
                   <p className="text-lg font-bold">
-                    Winner: New regime — about {rupees(saveAmount)} / year
+                    Winner: New regime - about {rupees(saveAmount)} / year
                   </p>
                 </div>
               ) : winner === "old" ? (
                 <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-sky-950">
                   <p className="text-lg font-bold">
-                    Winner: Old regime — about {rupees(saveAmount)} / year
+                    Winner: Old regime - about {rupees(saveAmount)} / year
                   </p>
                 </div>
               ) : (
@@ -3673,7 +3673,7 @@ export function TaxRegimeCalculator() {
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Old — monthly take-home
+                    Old - monthly take-home
                   </p>
                   <PrivateAmount
                     value={oldMonthly}
@@ -3685,7 +3685,7 @@ export function TaxRegimeCalculator() {
                 </div>
                 <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    New — monthly take-home
+                    New - monthly take-home
                   </p>
                   <PrivateAmount
                     value={newMonthly}
@@ -3753,7 +3753,7 @@ export function TaxRegimeCalculator() {
                     ))}
                   </ul>
                   <p className="mt-2 text-[11px] text-[#9B9A94]">
-                    Educational guide only — eligibility rules change; confirm
+                    Educational guide only - eligibility rules change; confirm
                     on the Income Tax portal / with a CA before filing.
                   </p>
                 </details>
@@ -3810,7 +3810,7 @@ export function TaxRegimeCalculator() {
                   />
                 </div>
                 {sectionBlurb(
-                  "Quick clarifiers only — use deeper guides or your CA for filing-grade nuance.",
+                  "Quick clarifiers only - use deeper guides or your CA for filing-grade nuance.",
                 )}
                 <div className="mt-3 space-y-2">
                   <details className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
@@ -3819,7 +3819,7 @@ export function TaxRegimeCalculator() {
                     </summary>
                     <p className="mt-2 text-sm leading-relaxed text-[#5F5E5A]">
                       Vesting is generally salary perquisite; sales later pick
-                      up capital gains — verify broker statements.
+                      up capital gains - verify broker statements.
                     </p>
                   </details>
                   <details className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
@@ -3999,7 +3999,7 @@ export function TaxRegimeCalculator() {
                     What best describes you?
                   </p>
                   <p className="-mt-2 text-xs text-[#9B9A94]">
-                    Select one or more — many people have multiple sources of
+                    Select one or more - many people have multiple sources of
                     income.
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -4891,7 +4891,7 @@ export function TaxRegimeCalculator() {
                       ? parentsSeniorEffective
                         ? " (senior parents)"
                         : " (parents under 60)"
-                      : " — enter age for the correct cap"}
+                      : " - enter age for the correct cap"}
                   </p>
                   <Mt
                     id="ca-80d-parent"
@@ -5206,7 +5206,7 @@ export function TaxRegimeCalculator() {
 
       {!personalCAOpen ? (
         <p className="text-xs text-[#9B9A94]">
-          Educational only — verify against notified law and Form 16.
+          Educational only - verify against notified law and Form 16.
         </p>
       ) : null}
     </div>

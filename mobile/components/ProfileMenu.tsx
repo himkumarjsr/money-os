@@ -1,5 +1,5 @@
 /**
- * Profile dropdown — same content as PWA GlobalNavbar profile panel.
+ * Profile dropdown - same content as PWA GlobalNavbar profile panel.
  */
 import { View, Text, Modal, Pressable, ScrollView, Image } from "react-native";
 import { useState } from "react";

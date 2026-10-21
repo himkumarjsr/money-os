@@ -1,5 +1,5 @@
 /**
- * Floating glass dock — matches the PWA's mobile bottom nav exactly:
+ * Floating glass dock - matches the PWA's mobile bottom nav exactly:
  * Home · Report · Track(+) · Calculators · Profile
  *
  * Rendered once by the root layout (components/navigation/GlobalChrome.tsx) so

@@ -41,7 +41,7 @@ describe("last Friday next-month unlock", () => {
   });
 
   it("keeps next month locked before last Friday", () => {
-    // 4 Aug 2026 — well before last Friday (28 Aug)
+    // 4 Aug 2026 - well before last Friday (28 Aug)
     expect(isNextTrackerMonthUnlocked(new Date(2026, 7, 4))).toBe(false);
     expect(trackerForwardLimit(new Date(2026, 7, 4))).toEqual({
       month: 7,
@@ -247,7 +247,7 @@ describe("planMonthIncomeFromPrior", () => {
       ],
       profileSalary: 270000,
     });
-    // One salary (max) + one CF — not 282460+270000+21292.
+    // One salary (max) + one CF - not 282460+270000+21292.
     expect(plan.displayTotal).toBe(282460 + 21292);
     expect(plan.needsSalaryRow).toBe(false);
     expect(plan.needsSavingsRow).toBe(false);

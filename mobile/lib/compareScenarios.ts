@@ -2,7 +2,7 @@
  * Side-by-side scenario maths for the Compare calculator.
  * Each scenario is one calculator (SIP, FD, loan, …) with its own inputs;
  * scenarios in the same family share metrics so they can sit in one table.
- * Illustrative only — pre-tax, constant rates.
+ * Illustrative only - pre-tax, constant rates.
  */
 
 import {
@@ -32,7 +32,7 @@ export type Scenario = {
   amount: number;
   rate: number;
   years: number;
-  /** Yearly SIP increase — step-up only. */
+  /** Yearly SIP increase - step-up only. */
   stepUp: number;
 };
 
@@ -331,7 +331,7 @@ export function compareHref(s: Scenario): string {
 // ─── Side-by-side table and verdicts (shared by web and mobile) ─────────────
 
 function inr(n: number) {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   const r = Math.round(n);
   return `${r < 0 ? "−" : ""}₹${formatIndian(Math.abs(r))}`;
 }

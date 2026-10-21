@@ -1,7 +1,7 @@
 export const FINKOIN_SPLIT_TOKEN_KEY = "finkoin_split_token";
 export const FINKOIN_SPLIT_REDIRECT_KEY = "finkoin_split_redirect";
 
-const INVITE_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days — matches open invites
+const INVITE_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days - matches open invites
 
 function canUseDom() {
   return typeof window !== "undefined" && typeof document !== "undefined";

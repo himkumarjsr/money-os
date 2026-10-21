@@ -827,7 +827,7 @@ export default function ProfileAssets({
               Your assets
             </p>
             <p className="mt-1 text-sm text-white/80">
-              Edit anytime — syncs across Finkoin
+              Edit anytime - syncs across Finkoin
             </p>
           </div>
           <AppIcon name="wallet" size={22} color="#FFFFFF" />

@@ -6,7 +6,7 @@ import { SITE_URL, fitMetadata } from "@/lib/seo";
 export const metadata: Metadata = fitMetadata({
   title: {
     absolute:
-      "Personal Finance Blog India — Tips, Guides, Calculators | Finkoin",
+      "Personal Finance Blog India - Tips, Guides, Calculators | Finkoin",
   },
   description:
     "Free personal finance guides for India: tax, PF and gratuity, SIPs, loans and debt payoff, insurance and budgeting. Plain language, with free calculators.",
@@ -20,7 +20,7 @@ export const metadata: Metadata = fitMetadata({
     canonical: "/blog",
   },
   openGraph: {
-    title: "Personal Finance Blog India — Tips, Guides, Calculators | Finkoin",
+    title: "Personal Finance Blog India - Tips, Guides, Calculators | Finkoin",
     description:
       "Free personal finance guides for India. Tax saving, insurance planning, investment advice, expense tracking.",
     url: `${SITE_URL}/blog`,
@@ -37,7 +37,7 @@ export const metadata: Metadata = fitMetadata({
   },
   twitter: {
     card: "summary_large_image",
-    title: "Personal Finance Blog India — Tips, Guides, Calculators | Finkoin",
+    title: "Personal Finance Blog India - Tips, Guides, Calculators | Finkoin",
     description:
       "Free personal finance guides for India. Tax saving, insurance planning, investment advice, expense tracking.",
     images: [`${SITE_URL}/og/og-home.png`],
@@ -76,7 +76,7 @@ export default function BlogIndexPage() {
         Money guides for India
       </h1>
       <p className="mt-4 text-slate-600">
-        Plain-language articles on tax, insurance, saving, and investing — with
+        Plain-language articles on tax, insurance, saving, and investing - with
         links to free calculators and tools.
       </p>
       <ul className="mt-10 space-y-6">

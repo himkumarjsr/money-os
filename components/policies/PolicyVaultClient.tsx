@@ -201,7 +201,7 @@ export default function PolicyVaultClient() {
       setLoading(false);
       setLoadError(
         isLoggedIn || canAccessVault
-          ? "No Supabase session — policies need a real login (Google or email). Phone login must complete OTP so a session exists. Sign out and sign in again if this persists."
+          ? "No Supabase session - policies need a real login (Google or email). Phone login must complete OTP so a session exists. Sign out and sign in again if this persists."
           : null,
       );
       return;
@@ -310,7 +310,7 @@ export default function PolicyVaultClient() {
       ) {
         if (!nextForm.insurerName.trim()) {
           setFormError(
-            "Enter insurer name (company), not only the plan name — scroll up to the Insurer field.",
+            "Enter insurer name (company), not only the plan name - scroll up to the Insurer field.",
           );
           document.getElementById("insurer-name")?.focus();
         } else if (!nextForm.renewalDate) setFormError("Select renewal date");
@@ -510,7 +510,7 @@ export default function PolicyVaultClient() {
                         </span>
                         <p className="mt-2 text-lg font-bold text-slate-900">
                           {p.insurerName ||
-                            (p.analyseSourceKey ? "Insurer not added" : "—")}
+                            (p.analyseSourceKey ? "Insurer not added" : "-")}
                         </p>
                         <p className="text-sm text-slate-500">
                           {p.planName?.trim() || "Plan not specified"}
@@ -638,7 +638,7 @@ export default function PolicyVaultClient() {
             Insurer name <span className="font-normal text-red-600">*</span>
           </label>
           <p className="mb-1.5 text-xs text-slate-500">
-            e.g. Max Life, HDFC Life — required (plan name goes below)
+            e.g. Max Life, HDFC Life - required (plan name goes below)
           </p>
           <input
             id="insurer-name"
@@ -821,7 +821,7 @@ export default function PolicyVaultClient() {
                 We will redirect you to {renewFor.insurerName} website
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                Commission: None — this is for your convenience
+                Commission: None - this is for your convenience
               </p>
               <Button
                 type="button"
@@ -853,7 +853,7 @@ export default function PolicyVaultClient() {
                     key={a.name}
                     className="rounded-lg bg-white/80 px-2 py-1.5"
                   >
-                    <span className="font-medium">{a.name}</span> — {a.blurb}
+                    <span className="font-medium">{a.name}</span> - {a.blurb}
                   </li>
                 ))}
               </ul>

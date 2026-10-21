@@ -65,7 +65,7 @@ export default function EmergencyFundGuide() {
         </strong>{" "}
         of your family’s{" "}
         <strong className="font-semibold text-slate-800">essential</strong>{" "}
-        (must-pay) expenses — not holidays or discretionary spends. That is the{" "}
+        (must-pay) expenses - not holidays or discretionary spends. That is the{" "}
         <strong className="font-semibold text-slate-800">maximum target</strong>{" "}
         we recommend planning around; many people start lower and increase as
         life gets heavier.
@@ -82,7 +82,7 @@ export default function EmergencyFundGuide() {
           <strong className="font-semibold text-slate-900">
             cash-flow insurance
           </strong>{" "}
-          — boring, liquid, and separate from SIPs and property.
+          - boring, liquid, and separate from SIPs and property.
         </p>
         <p>
           Think of it as the foundation: only after a real buffer exists does it
@@ -157,7 +157,7 @@ export default function EmergencyFundGuide() {
               />
               <StageRow
                 stage="Married + 1 child"
-                story="School fees and childcare are non-negotiable each month. A layoff cannot mean ‘we will figure fees later’ — they build closer to the top half of the scale."
+                story="School fees and childcare are non-negotiable each month. A layoff cannot mean ‘we will figure fees later’ - they build closer to the top half of the scale."
                 months="7–10 months"
               />
               <StageRow
@@ -167,7 +167,7 @@ export default function EmergencyFundGuide() {
               />
               <StageRow
                 stage="… + dependents you support (e.g. parents)"
-                story="Neha’s parents rely on her for rent supplements and medicines. That is a fixed monthly obligation on top of her own family — she uses the same 12-month cap but aims at the top of her life-stage band."
+                story="Neha’s parents rely on her for rent supplements and medicines. That is a fixed monthly obligation on top of her own family - she uses the same 12-month cap but aims at the top of her life-stage band."
                 months="9–12 months"
               />
             </tbody>
@@ -214,7 +214,7 @@ export default function EmergencyFundGuide() {
         </ul>
         <p className="mt-4 text-slate-600">
           If essentials are ₹80,000/month, 12 months = ₹9,60,000. The multiple
-          is the same idea — only your monthly number changes.
+          is the same idea - only your monthly number changes.
         </p>
       </Card>
 
@@ -228,12 +228,12 @@ export default function EmergencyFundGuide() {
             <strong className="font-semibold text-slate-900">
               overnight / money-market style
             </strong>{" "}
-            funds — usually redeem in a business day or as per scheme; read the
+            funds - usually redeem in a business day or as per scheme; read the
             SID for cut-off rules.
           </li>
           <li>
             <strong className="font-semibold text-slate-900">Sweep FD</strong>{" "}
-            linked to savings — auto moves surplus to FD-like interest with
+            linked to savings - auto moves surplus to FD-like interest with
             sweep back when needed.
           </li>
           <li>
@@ -241,7 +241,7 @@ export default function EmergencyFundGuide() {
             <strong className="font-semibold text-slate-900">
               separate savings account
             </strong>{" "}
-            you do not use for UPI shopping — mental accounting helps.
+            you do not use for UPI shopping - mental accounting helps.
           </li>
         </ul>
         <p className="mt-4 text-amber-900">
@@ -257,7 +257,7 @@ export default function EmergencyFundGuide() {
           <strong className="font-semibold text-slate-900">
             three home loan EMIs
           </strong>{" "}
-          in absolutely liquid form even if you prepay aggressively — banks do
+          in absolutely liquid form even if you prepay aggressively - banks do
           not pause EMIs because your net worth is in property or ELSS.
         </p>
       </Card>
@@ -274,7 +274,7 @@ export default function EmergencyFundGuide() {
             before raising SIPs again.
           </li>
           <li>
-            Once a year, bump the target if rent, fees, or family size changed —
+            Once a year, bump the target if rent, fees, or family size changed -
             your “month” is not static for 10 years.
           </li>
         </ul>

@@ -1,5 +1,5 @@
 /**
- * Policy vault — port of web components/policies/PolicyVaultClient.tsx.
+ * Policy vault - port of web components/policies/PolicyVaultClient.tsx.
  * `?add=term|health&cover=&premium=&freq=` opens the add sheet prefilled
  * (same contract as the PWA, used by Analyse / calculators).
  */
@@ -72,7 +72,7 @@ export default function PoliciesScreen() {
       setLoading(false);
       setLoadError(
         isLoggedIn
-          ? "No Supabase session — policies need a real login (Google or email). Phone login must complete OTP so a session exists. Sign out and sign in again if this persists."
+          ? "No Supabase session - policies need a real login (Google or email). Phone login must complete OTP so a session exists. Sign out and sign in again if this persists."
           : null,
       );
       return;

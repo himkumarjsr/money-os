@@ -2,7 +2,7 @@ import { Colors, tintBg, tintFg, themed } from "@/constants/theme";
 import type { BandLabel } from "./bandLabel";
 
 export type { BandLabel };
-/** `₹12,34,567` — same as web's `₹{Math.round(v).toLocaleString("en-IN")}`. */
+/** `₹12,34,567` - same as web's `₹{Math.round(v).toLocaleString("en-IN")}`. */
 export function inr(v: number): string {
   return `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
 }

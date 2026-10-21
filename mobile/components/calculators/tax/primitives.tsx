@@ -23,7 +23,7 @@ import { TaxTeachTooltip, useLazySheet } from "../TaxTeachTooltip";
 import { themedStyles, Colors, getActiveTheme } from "@/constants/theme";
 import { GoldText } from "@/components/ui/GoldMirror";
 
-/** Small `i` helper chip (PWA FieldTooltip) — opens the helper text in a sheet. */
+/** Small `i` helper chip (PWA FieldTooltip) - opens the helper text in a sheet. */
 export function FieldTooltip({
   text,
   label = "More info",
@@ -58,7 +58,7 @@ function formatMoneyText(n: number, min: number, max: number) {
   return c > 0 ? formatIndian(c) : "";
 }
 
-/** ₹ input with teach `?` — native port of the PWA MoneyInput + labelAction. */
+/** ₹ input with teach `?` - native port of the PWA MoneyInput + labelAction. */
 export function Mt({
   id,
   label,
@@ -165,7 +165,7 @@ export function Mt({
   );
 }
 
-/** Plain numeric input — native port of the PWA NumberInput. */
+/** Plain numeric input - native port of the PWA NumberInput. */
 export function TaxNumberInput({
   label,
   value,
@@ -316,7 +316,7 @@ export function SectionBlurb({ text }: { text: string }) {
   );
 }
 
-/** Collapsible step card — PWA `<details>` with uppercase summary, `?` and chevron. */
+/** Collapsible step card - PWA `<details>` with uppercase summary, `?` and chevron. */
 export function StepCard({
   title,
   teach,

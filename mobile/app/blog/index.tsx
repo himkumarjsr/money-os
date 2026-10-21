@@ -1,4 +1,4 @@
-/** Native Blog index — port of web app/blog/page.tsx. */
+/** Native Blog index - port of web app/blog/page.tsx. */
 import { Pressable, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
 import { Colors, themedStyles } from "@/constants/theme";
@@ -23,7 +23,7 @@ export default function BlogIndexScreen() {
       <GoldText style={styles.eyebrow}>BLOG</GoldText>
       <Text style={styles.h1}>Money guides for India</Text>
       <Text style={styles.lead}>
-        Plain-language articles on tax, insurance, saving, and investing — with
+        Plain-language articles on tax, insurance, saving, and investing - with
         links to free calculators and tools.
       </Text>
 

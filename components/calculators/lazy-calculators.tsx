@@ -18,7 +18,7 @@ function CalculatorSkeleton() {
 const dyn = (loader: () => Promise<{ default: ComponentType }>) =>
   dynamic(loader, { loading: CalculatorSkeleton, ssr: false });
 
-/** One dynamic chunk per calculator — only the active tool is downloaded. */
+/** One dynamic chunk per calculator - only the active tool is downloaded. */
 export const lazyCalculatorsById: Record<string, ComponentType> = {
   sip: dyn(() =>
     import("./SIPCalculator").then((m) => ({ default: m.SIPCalculator })),

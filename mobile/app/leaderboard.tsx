@@ -1,5 +1,5 @@
 /**
- * Leaderboard — port of web app/leaderboard/page.tsx.
+ * Leaderboard - port of web app/leaderboard/page.tsx.
  * Ranks by points: `leaderboard_view` (this month) or `leaderboard_all_view`
  * (all time). Refetches on `gamification` updates.
  */

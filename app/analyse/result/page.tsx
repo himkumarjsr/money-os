@@ -184,7 +184,7 @@ export default function AnalyseResultPage() {
 
   const totalIncome = income;
   const epfMonthly = getEpfContributionMonthly(profile);
-  // EPF is deducted at source — not paid from in-hand, so exclude from surplus/outflow.
+  // EPF is deducted at source - not paid from in-hand, so exclude from surplus/outflow.
   const totalOutflow = getInHandOutflow(profile);
   const amountLeftInHand = getUnallocatedIncome(profile);
   const caps = getUniversalCaps(profile);
@@ -784,12 +784,12 @@ export default function AnalyseResultPage() {
                     <td className="px-3 py-2 font-semibold text-[#111110]">
                       Total income
                     </td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
                     <td className="px-3 py-2 font-semibold tabular-nums text-[#111110]">
                       ₹{Math.round(totalIncome).toLocaleString("en-IN")}
                     </td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
                   </tr>
                   <tr className="border-t border-[#EFEDE7] bg-[#F7F7F4]">
                     <td className="px-3 py-2 font-semibold text-[#111110]">
@@ -800,25 +800,25 @@ export default function AnalyseResultPage() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
                     <td className="px-3 py-2 font-semibold tabular-nums text-[#B42323]">
                       ₹{Math.round(totalOutflow).toLocaleString("en-IN")}
                     </td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
                   </tr>
                   <tr className="border-t border-[#EFEDE7] bg-[#EEEDFE]">
                     <td className="px-3 py-2 font-semibold text-[#111110]">
                       Amount left
                     </td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
                     <td
                       className={`px-3 py-2 font-bold tabular-nums ${amountLeftInHand >= 0 ? "text-[#0F766E]" : "text-[#B42323]"}`}
                     >
                       ₹{Math.round(amountLeftInHand).toLocaleString("en-IN")}
                     </td>
-                    <td className="px-3 py-2 text-[#5F5E5A]">—</td>
+                    <td className="px-3 py-2 text-[#5F5E5A]">-</td>
                   </tr>
                 </tbody>
               </table>
@@ -826,7 +826,7 @@ export default function AnalyseResultPage() {
                 <p className="border-t border-[#E8E6F0] bg-white px-3 py-2 text-xs font-medium text-[#5F5E5A]">
                   EPF ₹{Math.round(epfMonthly).toLocaleString("en-IN")}/mo still
                   shows under Investment for savings tracking, but is deducted
-                  at source — not counted in total outflow or amount left.
+                  at source - not counted in total outflow or amount left.
                 </p>
               ) : null}
             </div>
@@ -854,7 +854,7 @@ export default function AnalyseResultPage() {
 
           <section className="rounded-2xl bg-white p-5">
             <h2 className="text-xl font-semibold">
-              {`Your financial safety net — ${safetyItems.length} checks`}
+              {`Your financial safety net - ${safetyItems.length} checks`}
             </h2>
             <p className="text-sm font-medium leading-relaxed text-[#454442]">
               {safetyNetSubtitle}
@@ -953,7 +953,7 @@ export default function AnalyseResultPage() {
                 </>
               ) : (
                 <p className="font-medium">
-                  ✓ No open gaps right now — keep your current plan on track.
+                  ✓ No open gaps right now - keep your current plan on track.
                 </p>
               )}
               {planTeaser.teaserTitles.map((title, i) => (
@@ -963,7 +963,7 @@ export default function AnalyseResultPage() {
                 >
                   <span className="inline-flex items-center gap-2">
                     <AppIcon name="lock" size={14} color="currentColor" />
-                    Step {i + 2}: {title} — unlock to see
+                    Step {i + 2}: {title} - unlock to see
                   </span>
                 </p>
               ))}
@@ -982,7 +982,7 @@ export default function AnalyseResultPage() {
                 ₹99 one-time · Yours forever
               </p>
               <p className="mt-2 text-sm text-[#534AB7]">
-                Pay ₹99 · Earn Finkoin Keys (FK) for activity on Finkoin — use
+                Pay ₹99 · Earn Finkoin Keys (FK) for activity on Finkoin - use
                 them on partner perks where available. FK do not reduce this
                 unlock price.
               </p>

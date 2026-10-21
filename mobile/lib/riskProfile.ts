@@ -1,6 +1,6 @@
 /**
  * Short risk-tolerance questionnaire (folded into the Goals step). Age and
- * horizon alone don't decide an equity/debt split — two people the same age
+ * horizon alone don't decide an equity/debt split - two people the same age
  * can react very differently to a bad month. Deterministic scoring, no AI.
  */
 export const RISK_TOLERANCE_VALUES = [

@@ -21,7 +21,7 @@ export function snapToStep(value: number, min: number, step: number): number {
   return Number(snapped.toFixed(decimals));
 }
 
-/** Min/max only — keeps exact typed amounts (no step rounding). */
+/** Min/max only - keeps exact typed amounts (no step rounding). */
 export function clampToRange(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   const upper = Math.max(min, max);

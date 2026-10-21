@@ -1,5 +1,5 @@
 /**
- * Shared privacy eye icons — match PWA tracker (open = amounts visible).
+ * Shared privacy eye icons - match PWA tracker (open = amounts visible).
  */
 import Svg, { Circle, Path } from "react-native-svg";
 import { Pressable, type ViewStyle } from "react-native";
@@ -15,7 +15,7 @@ export function EyeIcon({
   color?: string;
 }) {
   if (open) {
-    // Eye open — amounts visible
+    // Eye open - amounts visible
     return (
       <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Path
@@ -29,7 +29,7 @@ export function EyeIcon({
       </Svg>
     );
   }
-  // Eye off — amounts hidden
+  // Eye off - amounts hidden
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -50,7 +50,7 @@ export function EyeIcon({
   );
 }
 
-/** Section privacy control — 32×32, border #E8E6F0, bg #F9F9FC */
+/** Section privacy control - 32×32, border #E8E6F0, bg #F9F9FC */
 export function SectionPrivacyEye({
   visible,
   onToggle,

@@ -26,13 +26,13 @@ export function useNum(initial: number) {
 
 /** ₹ with Indian grouping, no paise. */
 export function inr(n: number) {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   const r = Math.round(n);
   return `${r < 0 ? "−" : ""}₹${formatIndian(Math.abs(r))}`;
 }
 
 export function pct(n: number | null, digits = 2) {
-  if (n === null || !Number.isFinite(n)) return "—";
+  if (n === null || !Number.isFinite(n)) return "-";
   return `${n.toFixed(digits)}%`;
 }
 
@@ -177,7 +177,7 @@ export function SlabField({
 }
 
 /**
- * Compact ₹ field without a slider — for lists (net worth, debts, cash flows).
+ * Compact ₹ field without a slider - for lists (net worth, debts, cash flows).
  * Accepts shorthand like 5L, 2.5cr, 40k.
  */
 export function MoneyField({
@@ -352,7 +352,7 @@ export function Rows({
   );
 }
 
-/** Horizontal bars comparing a few amounts — light, no chart library. */
+/** Horizontal bars comparing a few amounts - light, no chart library. */
 export function Bars({
   title,
   items,

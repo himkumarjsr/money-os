@@ -17,7 +17,7 @@ export function OtherIncomeSections({ s }: { s: TaxCalcState }) {
         emoji="💼"
         title="Business income"
         subtitle="Business / profession"
-        oneLiner="Pick actual books or presumptive (44AD/44ADA) — you generally shouldn’t mix expense claims with presumptive."
+        oneLiner="Pick actual books or presumptive (44AD/44ADA) - you generally shouldn’t mix expense claims with presumptive."
         isOn={i.secBusiness}
         onToggle={(v) => update({ secBusiness: v })}
       >
@@ -93,7 +93,7 @@ export function OtherIncomeSections({ s }: { s: TaxCalcState }) {
           Net / presumptive income ≈ {rupees(derived.businessProfit)}
         </Text>
         <Text style={tx.xsMuted}>
-          Presumptive schemes limit expense claims — confirm eligibility.
+          Presumptive schemes limit expense claims - confirm eligibility.
         </Text>
       </ToggleSection>
 
@@ -206,7 +206,7 @@ export function OtherIncomeSections({ s }: { s: TaxCalcState }) {
           </>
         )}
         <Text style={tx.xsMuted}>
-          Tool applies simple exemption sketches on commuted / family pension —
+          Tool applies simple exemption sketches on commuted / family pension -
           confirm Form 16 treatment.
         </Text>
       </ToggleSection>
@@ -370,7 +370,7 @@ export function OtherIncomeSections({ s }: { s: TaxCalcState }) {
         emoji="🌾"
         title="Agricultural income"
         subtitle="Farming / agri (planning toggle)"
-        oneLiner="Section 10(1) exempt in principle — we optionally exclude it from ordinary gross; integration not modeled."
+        oneLiner="Section 10(1) exempt in principle - we optionally exclude it from ordinary gross; integration not modeled."
         isOn={i.secAgri}
         onToggle={(v) => update({ secAgri: v })}
       >

@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
-/** Never commit real passwords — set these in `.env.local` (gitignored). */
+/** Never commit real passwords - set these in `.env.local` (gitignored). */
 export function getE2ECredentials(): {
   email: string;
   password: string;

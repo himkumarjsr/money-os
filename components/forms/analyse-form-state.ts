@@ -95,7 +95,7 @@ type VehicleSource = Pick<
   | "bikeInsurancePremiumInput"
 >;
 
-/** Vehicle facts entered on other steps (loans / assets) — the toggle cannot override these. */
+/** Vehicle facts entered on other steps (loans / assets) - the toggle cannot override these. */
 export function vehicleFromAssets(values: Partial<VehicleSource>): boolean {
   if ((values.carLoanEMI ?? 0) > 0) return true;
   if ((values.carMarketValue ?? 0) > 0) return true;
@@ -137,7 +137,7 @@ export function vehicleOffPatch(): Partial<AnalyseFormValues> {
   };
 }
 
-/** Fields cleared when "Do you own a car?" flips to No — the car purchase goal is untouched. */
+/** Fields cleared when "Do you own a car?" flips to No - the car purchase goal is untouched. */
 export function ownsCarOffPatch(): Partial<AnalyseFormValues> {
   return { carMarketValue: 0, carLoanOutstanding: 0 };
 }

@@ -55,7 +55,7 @@ function baseProfile(
   };
 }
 
-describe("Financial Engine — Unit Tests (real APIs)", () => {
+describe("Financial Engine - Unit Tests (real APIs)", () => {
   describe("buildNetWorth", () => {
     it("calculates positive net worth", () => {
       const result = buildNetWorth({
@@ -174,7 +174,7 @@ describe("Financial Engine — Unit Tests (real APIs)", () => {
     });
   });
 
-  describe("analyseFinances — integration", () => {
+  describe("analyseFinances - integration", () => {
     it("returns score between 0 and 100", () => {
       const result = analyseFinances(baseProfile());
       expect(result.overallScore).toBeGreaterThanOrEqual(0);

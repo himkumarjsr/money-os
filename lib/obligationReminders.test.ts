@@ -43,7 +43,7 @@ describe("shouldSendObligationReminder", () => {
           due_day: 5,
           remind_days_before: 3,
         },
-        new Date(2026, 6, 26), // Jul 26 — 10 days out
+        new Date(2026, 6, 26), // Jul 26 - 10 days out
       ),
     ).toBe(false);
   });
@@ -141,7 +141,7 @@ describe("shouldSendObligationReminder", () => {
           remind_days_before: 14,
         },
         new Date(2026, 11, 18), // Dec 18 → Jan 15 next year = 28 days?
-        // Dec 18 to Jan 15 = 28 days — not 14
+        // Dec 18 to Jan 15 = 28 days - not 14
       ),
     ).toBe(false);
     expect(
@@ -212,6 +212,6 @@ describe("reminder copy + emoji", () => {
         { title: "X", frequency: "monthly", amount: 0 },
         2,
       ).content,
-    ).toContain("due on —");
+    ).toContain("due on -");
   });
 });

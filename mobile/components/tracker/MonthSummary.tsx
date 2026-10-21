@@ -6,7 +6,7 @@ import { buildMonthSummaryRows } from "@/lib/trackerMonthSummary";
 import type { UniversalBucketKey } from "@/lib/universal-buckets";
 import { GoldText } from "@/components/ui/GoldMirror";
 
-/** Per-bucket spend against the user's budget — port of web MonthSummary. */
+/** Per-bucket spend against the user's budget - port of web MonthSummary. */
 export function MonthSummary({
   title,
   bucketTotals,

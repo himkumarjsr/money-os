@@ -60,7 +60,7 @@ function draftFromCard(card: SavedCreditCard): CardDraft {
   };
 }
 
-/** Card bills panel — port of web CreditCardBillReminder. */
+/** Card bills panel - port of web CreditCardBillReminder. */
 export function CreditCardDues({
   previousTransactions,
   currentTransactions = [],
@@ -357,7 +357,7 @@ export function CreditCardDues({
                 <View style={{ marginTop: 6, gap: 6 }}>
                   {last.unsure ? (
                     <Text style={styles.meta}>
-                      Couldn&apos;t match a payment to this bill — mark as paid?
+                      Couldn&apos;t match a payment to this bill - mark as paid?
                     </Text>
                   ) : last.clearlyUnpaid ? (
                     <View style={styles.overdueBox} accessibilityRole="alert">

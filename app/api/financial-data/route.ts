@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!process.env.ENCRYPTION_KEY) {
-      // Optional encrypted vault — analyse snapshot is the source of truth.
+      // Optional encrypted vault - analyse snapshot is the source of truth.
       console.warn(
         "Financial data save skipped: ENCRYPTION_KEY not set in env",
       );

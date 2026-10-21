@@ -37,7 +37,7 @@ export default function ObligationsChecklist({
   checklistMonth?: Date;
   learnedSuggestion?: Learned | null;
   onDismissLearn?: () => void;
-  /** True when health check already submitted — hide "set up calendar" empty CTA. */
+  /** True when health check already submitted - hide "set up calendar" empty CTA. */
   analyseCompleted?: boolean;
   defaultOpen?: boolean;
 }) {
@@ -274,7 +274,7 @@ export default function ObligationsChecklist({
                       aria-hidden
                       title={
                         isClosed
-                          ? "Closed — will not appear from next month"
+                          ? "Closed - will not appear from next month"
                           : isPaid
                             ? "Paid via logged expense"
                             : "Checks automatically when you log the expense"
@@ -293,7 +293,7 @@ export default function ObligationsChecklist({
                         <AppIcon name="check" size={14} color="#FFFFFF" />
                       ) : isClosed ? (
                         <span className="text-[11px] font-bold text-[#9B9A94]">
-                          —
+                          -
                         </span>
                       ) : null}
                     </span>
@@ -408,7 +408,7 @@ export default function ObligationsChecklist({
                               type="button"
                               onClick={() => void markSkipped(item.id)}
                               className="bg-transparent p-0 text-[10px] text-[#9B9A94] underline"
-                              title="Skip this month only — comes back next month"
+                              title="Skip this month only - comes back next month"
                             >
                               Skip
                             </button>
@@ -417,7 +417,7 @@ export default function ObligationsChecklist({
                             <button
                               type="button"
                               aria-label={`Mark ${ob.title} as closed`}
-                              title="EMI paid off / stop forever — stays struck out this month"
+                              title="EMI paid off / stop forever - stays struck out this month"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (
@@ -449,7 +449,7 @@ export default function ObligationsChecklist({
             ) : (
               <div className="px-3.5 py-3 text-[13px] leading-relaxed text-[#5F5E5A]">
                 {obligations.length > 0
-                  ? `${obligations.length} obligation${obligations.length === 1 ? "" : "s"} saved — none due on this month’s checklist yet.`
+                  ? `${obligations.length} obligation${obligations.length === 1 ? "" : "s"} saved - none due on this month’s checklist yet.`
                   : "No obligations due this month yet."}
               </div>
             )}

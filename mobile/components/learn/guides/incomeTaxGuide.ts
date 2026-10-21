@@ -11,7 +11,7 @@ const FAQS: Faq[] = [
   },
   {
     q: "I invest in US stocks (via an Indian broker or LRS). Which ITR?",
-    a: "US equity sales typically create capital gains schedules (and may involve foreign income/asset reporting depending on your case). That is usually not an ITR-1-only situation—most salaried people end up on ITR-2 (subject to eligibility). If you also have business income, ITR-3 may apply. Verify with AIS/broker statements and the official ITR wizard.",
+    a: "US equity sales typically create capital gains schedules (and may involve foreign income/asset reporting depending on your case). That is usually not an ITR-1-only situation - most salaried people end up on ITR-2 (subject to eligibility). If you also have business income, ITR-3 may apply. Verify with AIS/broker statements and the official ITR wizard.",
   },
   { q: "Is ITR filing mandatory if my tax is zero?", a: "It can be mandatory in specific cases (high-value transactions, foreign assets, etc.). Even when not mandatory, filing helps with refunds, visa/income proof, and continuity." },
   { q: "How much income is tax-free in India?", a: "It depends on the regime and the rebate rules (e.g., Section 87A) for that year. Always compute taxable income first, then apply rebate/cess." },
@@ -129,7 +129,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
     },
     {
       id: "fy-ay",
-      title: "Financial Year (FY) vs Assessment Year (AY) — the simplest way to remember",
+      title: "Financial Year (FY) vs Assessment Year (AY) - the simplest way to remember",
       subtitle: "Beginners get stuck here. This clears it in 20 seconds.",
       blocks: [
         {
@@ -142,7 +142,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
             },
             {
               title: "AY 2026-27",
-              text: "You typically file the return for FY 2025-26 in **2026** — that filing year is AY 2026-27.",
+              text: "You typically file the return for FY 2025-26 in **2026** - that filing year is AY 2026-27.",
             },
           ],
         },
@@ -198,7 +198,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
       id: "itr-forms",
       title: "Which ITR should I file? (ITR-1 to ITR-7 explained with examples)",
       subtitle:
-        "Use this as a map — the final form must match the Income Tax Department’s eligibility rules for that year.",
+        "Use this as a map - the final form must match the Income Tax Department’s eligibility rules for that year.",
       blocks: [
         {
           kind: "p",
@@ -264,19 +264,19 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
           kind: "cards",
           items: [
             {
-              title: "Example A — Only salary + bank interest",
+              title: "Example A - Only salary + bank interest",
               text: "**Rahul** has Form 16, ₹8,000 savings-account interest, no MF sales, no rent income. This is the classic “simple” profile that often maps to **ITR-1** if all eligibility conditions are met.",
             },
             {
-              title: "Example B — US stocks / global MF / RSU sales",
+              title: "Example B - US stocks / global MF / RSU sales",
               text: "**Neha** is salaried and also sold US stocks (capital gains) and received RSU-related perquisite/gain entries. Even if salary is simple, capital gains reporting usually pushes you away from a pure **ITR-1** path towards **ITR-2** (and you must reconcile broker statements with AIS). If she also runs a freelance practice with books, consider **ITR-3**.",
             },
             {
-              title: "Example C — Crypto / frequent trading",
+              title: "Example C - Crypto / frequent trading",
               text: "If you treat activity as investing (capital gains) vs business (trading) can change the return shape. Many retail investors need detailed schedules; do not assume ITR-1. When in doubt, use official guidance / a CA.",
             },
             {
-              title: "Example D — Freelancer with invoices + expenses",
+              title: "Example D - Freelancer with invoices + expenses",
               text: "If you are not eligible for presumptive schemes (or exceed limits), you may need **ITR-3** with proper books. If you qualify for presumptive taxation, **ITR-4** may apply.",
             },
           ],
@@ -289,7 +289,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
         {
           kind: "p",
           muted: true,
-          text: "Next: regime math and deduction caps → [Old vs new tax regime — complete guide](/learn/old-vs-new-tax-regime-which-saves-you-more-money).",
+          text: "Next: regime math and deduction caps → [Old vs new tax regime - complete guide](/learn/old-vs-new-tax-regime-which-saves-you-more-money).",
         },
       ],
     },
@@ -315,7 +315,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
     },
     {
       id: "slabs",
-      title: "Latest tax slabs FY 2025-26 — what else matters besides slabs?",
+      title: "Latest tax slabs FY 2025-26 - what else matters besides slabs?",
       blocks: [
         {
           kind: "cards",
@@ -347,7 +347,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
         {
           kind: "callout",
           tone: "emerald",
-          text: "**Regime note:** deductions like 80C/80D/HRA/24(b) mostly matter under the **old regime** in typical salaried planning. The new regime in Finkoin currently models a higher **standard deduction** and generally fewer Chapter VI-A levers — compare both in the [tax regime calculator](/calculators?calc=tax-regime).",
+          text: "**Regime note:** deductions like 80C/80D/HRA/24(b) mostly matter under the **old regime** in typical salaried planning. The new regime in Finkoin currently models a higher **standard deduction** and generally fewer Chapter VI-A levers - compare both in the [tax regime calculator](/calculators?calc=tax-regime).",
         },
         {
           kind: "table",
@@ -362,25 +362,25 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
               "Standard deduction (salary)",
               "Flat deduction from salary/pension in computations (auto benefit in payslip thinking).",
               "Old regime: **₹50,000**\nNew regime: **₹75,000**",
-              "Don’t mentally double-count — good tools include this automatically.",
+              "Don’t mentally double-count - good tools include this automatically.",
             ],
             [
               "HRA exemption",
               "Rent-related exemption when employer pays HRA (least-of tests).",
-              "No single fixed rupee cap in the formula — depends on rent, salary structure, metro/non-metro.",
+              "No single fixed rupee cap in the formula - depends on rent, salary structure, metro/non-metro.",
               "Keep rent agreement + receipts + bank transfers aligned; landlord PAN rules may apply for higher rents.",
             ],
             [
               "80GG (no HRA rent)",
               "If you pay rent but don’t get HRA, an old-regime style rent relief can exist subject to conditions.",
               "Finkoin uses an **illustrative** model capped at **₹60,000** (verify eligibility).",
-              "Not a substitute for real HRA documentation rules — confirm on official utility.",
+              "Not a substitute for real HRA documentation rules - confirm on official utility.",
             ],
             [
               "80C (combined basket)",
               "EPF/VPF (eligible portion), PPF, ELSS, life insurance premium, principal repayment (eligible part), tuition fees, etc.",
               "**₹1,50,000** combined cap (extra items don’t create extra 80C room beyond the basket).",
-              "If EPF is large, you may “fill” 80C without ELSS — check your payslip + 80C proofs.",
+              "If EPF is large, you may “fill” 80C without ELSS - check your payslip + 80C proofs.",
             ],
             [
               "80CCD(1B) (NPS)",
@@ -392,7 +392,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
               "80D (medical insurance)",
               "Premium for self/family and parents (separate buckets in law).",
               "Self/family bucket (as modelled in Finkoin): **₹25,000** if your age is below 60, else **₹50,000**.\nParents’ premium bucket (as modelled): **₹25,000** if parents are not marked senior, else **₹50,000**.",
-              "Parents’ senior status can materially change the cap — keep policy PDFs.",
+              "Parents’ senior status can materially change the cap - keep policy PDFs.",
             ],
             [
               "24(b) (home loan interest)",
@@ -404,12 +404,12 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
               "80EEA (affordable housing interest)",
               "Additional interest deduction for eligible affordable housing loans (conditions apply).",
               "**₹1,50,000** cap in tool (only if eligible in your facts)",
-              "Eligibility is strict — verify sanction date/stamp duty rules for your year.",
+              "Eligibility is strict - verify sanction date/stamp duty rules for your year.",
             ],
             [
               "80E (education loan interest)",
               "Interest on loan taken for higher education (eligible lender/conditions).",
-              "No fixed “₹ cap” in the calculator line — you enter eligible interest; law governs the allowed amount.",
+              "No fixed “₹ cap” in the calculator line - you enter eligible interest; law governs the allowed amount.",
               "Keep lender interest statements; note the “8 years” style rule in law (verify current wording).",
             ],
             [
@@ -422,7 +422,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
               "80TTA (savings interest)",
               "Savings account interest (resident individuals, conditions apply).",
               "**₹10,000** for non-seniors in tool (seniors usually use 80TTB instead)",
-              "FD/RD interest is generally **not** 80TTA — it’s taxable “other sources”.",
+              "FD/RD interest is generally **not** 80TTA - it’s taxable “other sources”.",
             ],
             [
               "80TTB (senior interest)",
@@ -446,7 +446,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
               "80RRB (royalty)",
               "Royalty income for authors/inventors (eligibility applies).",
               "Illustrative cap **₹3,00,000** in tool",
-              "Rare for typical salaried employees — ignore unless it truly applies.",
+              "Rare for typical salaried employees - ignore unless it truly applies.",
             ],
           ],
           boldFirstCol: true,
@@ -457,11 +457,11 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
           items: [
             {
               title: "LTA (Leave Travel Allowance)",
-              text: "LTA is an **allowance/exemption** story (not a fixed “80C-style” line item in the calculator table). If your employer pays LTA, exemption depends on actual eligible travel bills and employer policy — keep tickets/invoices as per rules.",
+              text: "LTA is an **allowance/exemption** story (not a fixed “80C-style” line item in the calculator table). If your employer pays LTA, exemption depends on actual eligible travel bills and employer policy - keep tickets/invoices as per rules.",
             },
             {
               title: "“Super deductions” mistake to avoid",
-              text: "You cannot “stack” two laws to claim the same expense twice. Example: home loan interest belongs in the house-property logic (24(b)/related) — don’t confuse with unrelated sections.",
+              text: "You cannot “stack” two laws to claim the same expense twice. Example: home loan interest belongs in the house-property logic (24(b)/related) - don’t confuse with unrelated sections.",
             },
           ],
         },
@@ -469,7 +469,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
     },
     {
       id: "tds",
-      title: "TDS explained (salary) — Form 16, 26AS, AIS/TIS",
+      title: "TDS explained (salary) - Form 16, 26AS, AIS/TIS",
       blocks: [
         {
           kind: "cards",
@@ -549,7 +549,7 @@ export const INCOME_TAX_GUIDE: LearnGuideBody = {
         {
           kind: "callout",
           tone: "grey",
-          text: "Next: [Old vs new tax regime — complete guide →](/learn/old-vs-new-tax-regime-which-saves-you-more-money)",
+          text: "Next: [Old vs new tax regime - complete guide →](/learn/old-vs-new-tax-regime-which-saves-you-more-money)",
         },
       ],
     },

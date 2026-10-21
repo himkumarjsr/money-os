@@ -28,7 +28,7 @@ export default function Form16ItrGuide() {
         Looking for <strong>free ITR filing 2025-26</strong> help? Finkoin’s
         angle is simple: start from your{" "}
         <strong>Form 16 / salary numbers</strong>, compare old vs new regime,
-        and walk into filing with clarity — without paying for a basic
+        and walk into filing with clarity - without paying for a basic
         comparison.
       </p>
 
@@ -38,7 +38,7 @@ export default function Form16ItrGuide() {
         </div>
         <p className="mt-2 text-sm text-[#5F5E5A]">
           Enter salary / Form 16 style numbers, deductions (80C, HRA, NPS, home
-          loan), and see which regime saves more — before you open the
+          loan), and see which regime saves more - before you open the
           income-tax portal.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -77,7 +77,7 @@ export default function Form16ItrGuide() {
             HRA exemption matches rent proofs and metro vs non-metro rules.
           </li>
           <li>
-            80C shows PF correctly — don’t double-count ELSS you never declared.
+            80C shows PF correctly - don’t double-count ELSS you never declared.
           </li>
           <li>Two employers → two Form 16s; merge incomes carefully.</li>
           <li>Download AIS / Form 26AS and match TDS credits.</li>
@@ -86,7 +86,7 @@ export default function Form16ItrGuide() {
 
       <Card
         id="free-filing"
-        title="“Free ITR filing” — what Finkoin helps with"
+        title="“Free ITR filing” - what Finkoin helps with"
       >
         <p>
           Many sites promise free e-filing in June–July. Finkoin’s unique early
@@ -140,7 +140,7 @@ export default function Form16ItrGuide() {
 
       <Card id="disclaimer" title="Important">
         <p>
-          Finkoin is educational software — not a CA firm or authorised e-filing
+          Finkoin is educational software - not a CA firm or authorised e-filing
           intermediary. Complex cases (capital gains schedules, business income,
           NRI) need a qualified professional.
         </p>

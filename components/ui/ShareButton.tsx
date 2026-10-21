@@ -9,7 +9,7 @@ type ShareButtonProps = {
   title: string;
   /** Absolute URL or path starting with `/`. */
   url?: string;
-  /** Path starting with `/` — resolved against origin / SITE_URL. */
+  /** Path starting with `/` - resolved against origin / SITE_URL. */
   path?: string;
   contentType?: string;
   contentId?: string;

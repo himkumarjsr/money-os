@@ -13,7 +13,7 @@ const COMMON: RelatedLink[] = [
   {
     href: "/analyse",
     title: "Financial Health Check",
-    desc: "Know it. Fix it. Grow it. — free score",
+    desc: "Know it. Fix it. Grow it. - free score",
   },
 ];
 
@@ -98,7 +98,7 @@ function getRelatedLinksForCalc(calcId: string): RelatedLink[] {
     {
       href: "/calculators/tax-regime-2026",
       title: "Tax Regime Calculator",
-      desc: "Old vs new — which saves more",
+      desc: "Old vs new - which saves more",
     },
     {
       href: "/learn/section-80c-limits-and-beyond",

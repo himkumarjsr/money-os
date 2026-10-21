@@ -73,12 +73,12 @@ function ProtectedGateInner({ children }: { children: ReactNode }) {
     };
   }, [mounted, hasInitialized, isLoggedIn, router, pathname, searchParams]);
 
-  // Until mounted, always spinner — matches SSR and avoids hydration mismatch.
+  // Until mounted, always spinner - matches SSR and avoids hydration mismatch.
   if (!mounted) {
     return <BrandPageLoader fullScreen={false} label="Loading…" />;
   }
 
-  // Already logged in from persist / session — never gate behind a spinner.
+  // Already logged in from persist / session - never gate behind a spinner.
   if (isLoggedIn || accessGranted) {
     return <>{children}</>;
   }

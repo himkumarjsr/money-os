@@ -386,7 +386,7 @@ function LockedStep({ n, title }: { n: number; title: string }) {
     <View style={styles.lockedRow} accessibilityLabel={`Step ${n} locked`}>
       <AppIcon name="lock" size={14} color={C.body} />
       <Text style={styles.lockedText}>
-        Step {n}: {title} — unlock to see
+        Step {n}: {title} - unlock to see
       </Text>
     </View>
   );
@@ -415,7 +415,7 @@ export function PlanTeaserSection({
           </>
         ) : (
           <Text style={styles.teaserAction}>
-            ✓ No open gaps right now — keep your current plan on track.
+            ✓ No open gaps right now - keep your current plan on track.
           </Text>
         )}
         {teaserTitles.length > 0 ? (
@@ -443,7 +443,7 @@ export function PlanTeaserSection({
         </Text>
         <Text style={styles.paywallFk}>
           {PAYMENTS_ENABLED ? `Pay ₹${FIX_PLAN_PRICE_INR} · ` : ""}Earn Finkoin
-          Keys (FK) for activity on Finkoin — use them on partner perks where
+          Keys (FK) for activity on Finkoin - use them on partner perks where
           available. FK do not reduce this unlock price.
         </Text>
         {surplusBreakdown ? (

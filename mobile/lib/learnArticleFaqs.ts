@@ -9,7 +9,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "What hurts my CIBIL score the fastest?",
-      a: "Late or missed EMI/credit-card payments (35% weight) and high credit utilisation (30%) — using most of your card limit every month.",
+      a: "Late or missed EMI/credit-card payments (35% weight) and high credit utilisation (30%) - using most of your card limit every month.",
     },
     {
       q: "How can I improve my score in 90 days?",
@@ -17,21 +17,21 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "Why is a “settled” loan dangerous?",
-      a: "Settled (not fully paid) accounts stay on your report for years and signal lenders you did not honour the full obligation — worse than a clean closure.",
+      a: "Settled (not fully paid) accounts stay on your report for years and signal lenders you did not honour the full obligation - worse than a clean closure.",
     },
   ],
   "sip-vs-lumpsum-when-to-use-which": [
     {
       q: "Is SIP always better than lumpsum?",
-      a: "No. SIP smooths entry when markets are high; lumpsum can win after deep corrections. Many investors use STP — lumpsum into liquid, then systematic transfer to equity.",
+      a: "No. SIP smooths entry when markets are high; lumpsum can win after deep corrections. Many investors use STP - lumpsum into liquid, then systematic transfer to equity.",
     },
     {
       q: "When should I use lumpsum?",
-      a: "When you have a large amount, a long horizon, and can tolerate short-term volatility — or when deploying a bonus with a clear goal date far away.",
+      a: "When you have a large amount, a long horizon, and can tolerate short-term volatility - or when deploying a bonus with a clear goal date far away.",
     },
     {
       q: "What is STP?",
-      a: "Systematic Transfer Plan: park money in a liquid fund and move fixed amounts to equity monthly — a hybrid between lumpsum and SIP discipline.",
+      a: "Systematic Transfer Plan: park money in a liquid fund and move fixed amounts to equity monthly - a hybrid between lumpsum and SIP discipline.",
     },
     {
       q: "Does SIP remove market risk?",
@@ -45,7 +45,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "Do under-construction loans get 24(b) benefit?",
-      a: "Interest during construction is treated differently — often aggregated and claimed in limited instalments after possession. Pre-possession EMIs may disappoint if you assumed full yearly deduction.",
+      a: "Interest during construction is treated differently - often aggregated and claimed in limited instalments after possession. Pre-possession EMIs may disappoint if you assumed full yearly deduction.",
     },
     {
       q: "Does the new tax regime allow home loan deductions?",
@@ -53,7 +53,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "Can joint owners both claim benefits?",
-      a: "Yes, if co-owners are also co-borrowers and each pays their share — benefits split per ownership and payment proof.",
+      a: "Yes, if co-owners are also co-borrowers and each pays their share - benefits split per ownership and payment proof.",
     },
   ],
   "what-is-the-50-30-20-budgeting-rule": [
@@ -63,7 +63,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "What is Finkoin’s 40-20-10-30 framework?",
-      a: "40% essentials, 20% investing, 10% insurance/health buffer, 30% lifestyle — prioritising wealth building and protection before discretionary spend.",
+      a: "40% essentials, 20% investing, 10% insurance/health buffer, 30% lifestyle - prioritising wealth building and protection before discretionary spend.",
     },
     {
       q: "Should I follow percentages exactly?",
@@ -76,16 +76,16 @@ const FAQS: Record<string, LearnFaq[]> = {
   ],
   "ppf-vs-elss-which-is-better-for-tax-saving": [
     {
-      q: "PPF or ELSS — which saves more tax?",
+      q: "PPF or ELSS - which saves more tax?",
       a: "Both use the same ₹1.5L Section 80C cap. Tax saved is identical for the same amount; the difference is risk, lock-in, and long-term wealth.",
     },
     {
       q: "How long is ELSS locked?",
-      a: "Each ELSS instalment has a three-year lock-in. PPF has a 15-year horizon with extension options — much longer but government-backed.",
+      a: "Each ELSS instalment has a three-year lock-in. PPF has a 15-year horizon with extension options - much longer but government-backed.",
     },
     {
       q: "Is ELSS safe like PPF?",
-      a: "No. ELSS is equity — NAV can fall 30–50% in bad years. Use ELSS only for goals 7–10+ years away, not for money you need soon.",
+      a: "No. ELSS is equity - NAV can fall 30–50% in bad years. Use ELSS only for goals 7–10+ years away, not for money you need soon.",
     },
     {
       q: "Can I do both PPF and ELSS?",
@@ -99,7 +99,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "Should I trust headline CPI only?",
-      a: "CPI is an average basket. Your personal inflation (school fees, rent, medical) may run higher — model your own expenses.",
+      a: "CPI is an average basket. Your personal inflation (school fees, rent, medical) may run higher - model your own expenses.",
     },
     {
       q: "What is the Rule of 72?",
@@ -107,7 +107,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "How does inflation affect long-term goals?",
-      a: "A ₹50L goal today may need ₹1.2Cr+ in 15 years at 6% inflation — SIP targets must rise over time, not stay flat.",
+      a: "A ₹50L goal today may need ₹1.2Cr+ in 15 years at 6% inflation - SIP targets must rise over time, not stay flat.",
     },
   ],
   "section-80c-limits-and-beyond": [
@@ -117,15 +117,15 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "What counts inside the ₹1.5L 80C limit?",
-      a: "EPF, PPF, ELSS, life insurance premium, home-loan principal (eligible portion), tuition fees, and more — all share one combined cap.",
+      a: "EPF, PPF, ELSS, life insurance premium, home-loan principal (eligible portion), tuition fees, and more - all share one combined cap.",
     },
     {
       q: "Does new regime allow 80C?",
-      a: "Most Chapter VI-A deductions including 80C matter under the old regime. New regime has fewer levers — compare both each year.",
+      a: "Most Chapter VI-A deductions including 80C matter under the old regime. New regime has fewer levers - compare both each year.",
     },
     {
       q: "What should I prioritise after maxing 80C?",
-      a: "Often 80D for family health cover, then 80CCD(1B) if you want NPS, then home-loan interest if applicable — subject to eligibility.",
+      a: "Often 80D for family health cover, then 80CCD(1B) if you want NPS, then home-loan interest if applicable - subject to eligibility.",
     },
   ],
   "what-is-health-insurance-floater": [
@@ -139,7 +139,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "Should parents be on the same floater?",
-      a: "Often no — senior parents’ claims can wipe the family limit. Separate senior policies or super top-ups are common.",
+      a: "Often no - senior parents’ claims can wipe the family limit. Separate senior policies or super top-ups are common.",
     },
     {
       q: "What is a super top-up?",
@@ -149,7 +149,7 @@ const FAQS: Record<string, LearnFaq[]> = {
   "fixed-vs-floating-home-loan": [
     {
       q: "Is fixed rate always safer?",
-      a: "Teaser fixed rates often reset to floating after a few years. Read the sanction letter — “fixed” marketing ≠ lifetime fixed rate.",
+      a: "Teaser fixed rates often reset to floating after a few years. Read the sanction letter - “fixed” marketing ≠ lifetime fixed rate.",
     },
     {
       q: "When does floating win?",
@@ -161,13 +161,13 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "What matters more than fixed vs floating?",
-      a: "Prepayment flexibility, spread over repo, processing fees, and your cashflow buffer — often beat the label on day one.",
+      a: "Prepayment flexibility, spread over repo, processing fees, and your cashflow buffer - often beat the label on day one.",
     },
   ],
   "rera-basics-for-homebuyers": [
     {
       q: "What does RERA protect?",
-      a: "Registered projects must meet disclosure norms, use escrow for collections, and give buyers complaint routes for delays and misrepresentation — when enforced.",
+      a: "Registered projects must meet disclosure norms, use escrow for collections, and give buyers complaint routes for delays and misrepresentation - when enforced.",
     },
     {
       q: "Is every project under RERA?",
@@ -175,7 +175,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "What is carpet area?",
-      a: "Usable floor area inside walls — RERA mandates quoting carpet area, not inflated super-built-up numbers.",
+      a: "Usable floor area inside walls - RERA mandates quoting carpet area, not inflated super-built-up numbers.",
     },
     {
       q: "Can RERA fix a bad builder?",
@@ -185,7 +185,7 @@ const FAQS: Record<string, LearnFaq[]> = {
   "what-is-asset-allocation": [
     {
       q: "What is asset allocation?",
-      a: "How you split money across equity, debt, gold, and cash before picking individual funds — the biggest driver of long-term risk and return.",
+      a: "How you split money across equity, debt, gold, and cash before picking individual funds - the biggest driver of long-term risk and return.",
     },
     {
       q: "Why not just pick the best fund?",
@@ -193,7 +193,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "How much equity should I hold?",
-      a: "Rough heuristic: 100 minus age for equity % — tune for job stability, goals, and temperament. Younger/longer horizon → more equity.",
+      a: "Rough heuristic: 100 minus age for equity % - tune for job stability, goals, and temperament. Younger/longer horizon → more equity.",
     },
     {
       q: "How often should I rebalance?",
@@ -207,7 +207,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "Do I lose grace period after one miss?",
-      a: "Often yes — new purchases may accrue interest from day one until the full statement balance is cleared.",
+      a: "Often yes - new purchases may accrue interest from day one until the full statement balance is cleared.",
     },
     {
       q: "How do I escape the trap?",
@@ -220,7 +220,7 @@ const FAQS: Record<string, LearnFaq[]> = {
   ],
   "nps-vs-epf-for-retirement": [
     {
-      q: "NPS or EPF — which is better?",
+      q: "NPS or EPF - which is better?",
       a: "EPF offers employer match and familiar accrual; NPS adds market-linked growth and extra 80CCD(1B) deduction. Many salaried use both.",
     },
     {
@@ -229,21 +229,21 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "What is the NPS ₹50k extra deduction?",
-      a: "Section 80CCD(1B) allows up to ₹50,000 additional deduction for voluntary Tier-I NPS — outside the ₹1.5L 80C basket.",
+      a: "Section 80CCD(1B) allows up to ₹50,000 additional deduction for voluntary Tier-I NPS - outside the ₹1.5L 80C basket.",
     },
     {
       q: "Is NPS fully tax-free at maturity?",
-      a: "No. A portion must be annuitised and taxation rules apply on lump-sum and pension — verify current law before planning withdrawals.",
+      a: "No. A portion must be annuitised and taxation rules apply on lump-sum and pension - verify current law before planning withdrawals.",
     },
   ],
   "gold-as-investment-myths": [
     {
       q: "Is gold jewellery a good investment?",
-      a: "Jewellery has making charges and GST — you lose 15–25% on day one. SGB, ETF, or digital gold are better for investment intent.",
+      a: "Jewellery has making charges and GST - you lose 15–25% on day one. SGB, ETF, or digital gold are better for investment intent.",
     },
     {
       q: "How much gold should I own?",
-      a: "Many planners suggest 5–10% of net worth as a diversifier — not the core retirement engine.",
+      a: "Many planners suggest 5–10% of net worth as a diversifier - not the core retirement engine.",
     },
     {
       q: "SGB vs gold ETF?",
@@ -257,15 +257,15 @@ const FAQS: Record<string, LearnFaq[]> = {
   "prepayment-vs-tenure-reduction-home-loan": [
     {
       q: "Should I reduce EMI or tenure when prepaying?",
-      a: "Tenure reduction usually saves more total interest. EMI reduction helps cashflow if you need lower monthly outgo — maths vs psychology.",
+      a: "Tenure reduction usually saves more total interest. EMI reduction helps cashflow if you need lower monthly outgo - maths vs psychology.",
     },
     {
       q: "When does prepayment not make sense?",
-      a: "When you lack emergency fund, have high-cost unsecured debt, or could earn more after-tax by investing — case-by-case.",
+      a: "When you lack emergency fund, have high-cost unsecured debt, or could earn more after-tax by investing - case-by-case.",
     },
     {
       q: "Does prepayment affect 24(b) tax benefit?",
-      a: "Yes — less outstanding interest means smaller 24(b) deductions over time, especially late in the loan when interest dominates EMI.",
+      a: "Yes - less outstanding interest means smaller 24(b) deductions over time, especially late in the loan when interest dominates EMI.",
     },
     {
       q: "Is there a prepayment penalty?",
@@ -275,7 +275,7 @@ const FAQS: Record<string, LearnFaq[]> = {
   "what-is-compound-interest-and-why-it-changes-everything": [
     {
       q: "What is compound interest in simple terms?",
-      a: "Earning returns on your original money plus on past returns — a snowball. The formula A = P × (1 + r)^n captures lump-sum growth.",
+      a: "Earning returns on your original money plus on past returns - a snowball. The formula A = P × (1 + r)^n captures lump-sum growth.",
     },
     {
       q: "How does compounding work in mutual funds?",
@@ -283,7 +283,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "What is the Rule of 72?",
-      a: "Divide 72 by your annual return % to estimate years to double. At 8%, ~9 years — an approximation, not a promise.",
+      a: "Divide 72 by your annual return % to estimate years to double. At 8%, ~9 years - an approximation, not a promise.",
     },
     {
       q: "Why start early?",
@@ -292,26 +292,26 @@ const FAQS: Record<string, LearnFaq[]> = {
   ],
   "term-insurance-vs-endowment-why-most-indians-buy-wrong": [
     {
-      q: "Term vs endowment — which should I buy?",
-      a: "For pure protection, term insurance gives large cover at low premium. Endowment bundles small cover with savings — families often end up underinsured.",
+      q: "Term vs endowment - which should I buy?",
+      a: "For pure protection, term insurance gives large cover at low premium. Endowment bundles small cover with savings - families often end up underinsured.",
     },
     {
       q: "How much term cover do I need?",
-      a: "Roughly 10–15× annual income, adjusted for loans, children’s goals, and years of income replacement — minus existing assets.",
+      a: "Roughly 10–15× annual income, adjusted for loans, children’s goals, and years of income replacement - minus existing assets.",
     },
     {
       q: "Why do people lapse policies?",
-      a: "Premium too high relative to income. Buy cover you can pay for 20–30 years — a lapsed term policy means zero benefit.",
+      a: "Premium too high relative to income. Buy cover you can pay for 20–30 years - a lapsed term policy means zero benefit.",
     },
     {
       q: "Is endowment ever useful?",
-      a: "Rarely for protection. Some use it for forced savings with low return expectations — but separate term + SIP often beats bundled products.",
+      a: "Rarely for protection. Some use it for forced savings with low return expectations - but separate term + SIP often beats bundled products.",
     },
   ],
   "what-is-an-index-fund-and-why-it-beats-most-mutual-funds": [
     {
       q: "What is an index fund?",
-      a: "A mutual fund that copies a benchmark (e.g. Nifty 50) with minimal trading — low cost, broad diversification.",
+      a: "A mutual fund that copies a benchmark (e.g. Nifty 50) with minimal trading - low cost, broad diversification.",
     },
     {
       q: "Why do index funds beat most active funds?",
@@ -329,11 +329,11 @@ const FAQS: Record<string, LearnFaq[]> = {
   "emergency-fund-how-much-where-to-keep-it": [
     {
       q: "How much emergency fund should I have in India?",
-      a: "Count one month as essential expenses only (rent, EMIs, groceries, fees, insurance). Build toward up to 12 months — higher if you have dependents or volatile income.",
+      a: "Count one month as essential expenses only (rent, EMIs, groceries, fees, insurance). Build toward up to 12 months - higher if you have dependents or volatile income.",
     },
     {
       q: "Where should I keep emergency money?",
-      a: "Liquid mutual funds, sweep FDs, or a dedicated savings account — accessible in 1–2 business days. Avoid equity and long lock-ins.",
+      a: "Liquid mutual funds, sweep FDs, or a dedicated savings account - accessible in 1–2 business days. Avoid equity and long lock-ins.",
     },
     {
       q: "Is 12 months too much?",
@@ -341,7 +341,7 @@ const FAQS: Record<string, LearnFaq[]> = {
     },
     {
       q: "Should I rebuild after using it?",
-      a: "Yes. Pause discretionary SIP increases if needed, but refill the bucket before taking new risks — otherwise the next shock hits debt or investments.",
+      a: "Yes. Pause discretionary SIP increases if needed, but refill the bucket before taking new risks - otherwise the next shock hits debt or investments.",
     },
   ],
 };
@@ -358,11 +358,11 @@ function genericFaqs(article: LearnArticle): LearnFaq[] {
     },
     {
       q: "How often is this updated?",
-      a: "We refresh guides when rules or market norms shift materially. Tax and regulatory topics may change each Finance Act — always cross-check the current year.",
+      a: "We refresh guides when rules or market norms shift materially. Tax and regulatory topics may change each Finance Act - always cross-check the current year.",
     },
     {
       q: "Can I use Finkoin tools with this article?",
-      a: "Yes. Calculators and the financial health check on Finkoin help you model numbers discussed here — use them alongside official sources.",
+      a: "Yes. Calculators and the financial health check on Finkoin help you model numbers discussed here - use them alongside official sources.",
     },
   ];
 }

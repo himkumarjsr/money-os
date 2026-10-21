@@ -1,5 +1,5 @@
 /**
- * Rewards — port of web app/rewards/page.tsx.
+ * Rewards - port of web app/rewards/page.tsx.
  */
 import {
   FK_PER_RUPEE,
@@ -79,7 +79,7 @@ export default function RewardsScreen() {
             label="Badges"
             value={
               <Text style={styles.statValue}>
-                {stats?.badges.length ? stats.badges.join(", ") : "—"}
+                {stats?.badges.length ? stats.badges.join(", ") : "-"}
               </Text>
             }
           />

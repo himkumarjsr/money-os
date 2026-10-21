@@ -184,7 +184,7 @@ export function OptimizerStopPayingInsuranceSection({
             Go to your nearest post office. Invest {fmt(misInvestment)} from
             your FD or savings. Post office pays you {fmt(misMonthlyInterest)}{" "}
             every month directly to your bank account. Your money is 100% safe
-            here — government backed.
+            here - government backed.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <div style={metricBox}>
@@ -335,7 +335,7 @@ export function OptimizerYearByYearSection({
       </h3>
       <div className="grid gap-3 md:grid-cols-3">
         <div style={box("#FCEBEB", "#F7C1C1")}>
-          <p className="font-bold text-[#791F1F]">Year 1 — Getting started</p>
+          <p className="font-bold text-[#791F1F]">Year 1 - Getting started</p>
           <p className="mt-2 text-xs font-semibold text-[#791F1F]">
             What you do:
           </p>
@@ -354,7 +354,7 @@ export function OptimizerYearByYearSection({
           </ul>
         </div>
         <div style={box("#FEF9E8", "#F5E0A8")}>
-          <p className="font-bold text-amber-900">Year 2 — Salary is free</p>
+          <p className="font-bold text-amber-900">Year 2 - Salary is free</p>
           <p className="mt-2 text-xs font-semibold text-amber-900">
             What you do:
           </p>
@@ -374,7 +374,7 @@ export function OptimizerYearByYearSection({
         </div>
         <div style={box("#E1F5EE", "#B8E0D0")}>
           <p className="font-bold text-emerald-900">
-            Year 3 onwards — Autopilot
+            Year 3 onwards - Autopilot
           </p>
           <p className="mt-2 text-xs text-emerald-900">
             Everything runs itself:
@@ -562,7 +562,7 @@ export function OptimizerTwelveMonthPhasesSection({
   const phases: PhaseDef[] = [
     {
       phaseLabel: "Phase 1",
-      phaseTitle: "Month 1 — Foundation",
+      phaseTitle: "Month 1 - Foundation",
       phaseSub: "Do these in the first 2 weekends",
       phaseColor: "#E24B4A",
       phaseColorLight: "#FCEBEB",
@@ -598,7 +598,7 @@ export function OptimizerTwelveMonthPhasesSection({
     },
     {
       phaseLabel: "Phase 2",
-      phaseTitle: "Month 2-3 — Protection",
+      phaseTitle: "Month 2-3 - Protection",
       phaseSub: "Complete your protection layer",
       phaseColor: "#BA7517",
       phaseColorLight: "#FEF9E8",
@@ -614,7 +614,7 @@ export function OptimizerTwelveMonthPhasesSection({
         },
         {
           title: "MIS interest arriving? ✓",
-          detail: `Check bank account — ${fmt(ladder.misInterest)} should be there`,
+          detail: `Check bank account - ${fmt(ladder.misInterest)} should be there`,
         },
         {
           title: "RD auto-debit working? ✓",
@@ -625,8 +625,8 @@ export function OptimizerTwelveMonthPhasesSection({
     },
     {
       phaseLabel: "Phase 3",
-      phaseTitle: "Month 4-9 — Build wealth",
-      phaseSub: "Safety is set — now grow",
+      phaseTitle: "Month 4-9 - Build wealth",
+      phaseSub: "Safety is set - now grow",
       phaseColor: "#0D9488",
       phaseColorLight: "#E0F2F1",
       phaseIcon: "trending",
@@ -641,7 +641,7 @@ export function OptimizerTwelveMonthPhasesSection({
         },
         {
           title: "RD and MIS running on autopilot ✓",
-          detail: "No action needed — just check once",
+          detail: "No action needed - just check once",
         },
         {
           title: "Month 6: Review spending",
@@ -656,7 +656,7 @@ export function OptimizerTwelveMonthPhasesSection({
     },
     {
       phaseLabel: "Phase 4",
-      phaseTitle: "Month 10-12 — Year end review",
+      phaseTitle: "Month 10-12 - Year end review",
       phaseSub: "Prepare for year 2",
       phaseColor: "#534AB7",
       phaseColorLight: "#EEEDFE",
@@ -668,7 +668,7 @@ export function OptimizerTwelveMonthPhasesSection({
         },
         {
           title: "Pay all insurance premiums",
-          detail: "From RD maturity — not salary ✓ First time salary is FREE",
+          detail: "From RD maturity - not salary ✓ First time salary is FREE",
         },
         {
           title: "Restart RD immediately",

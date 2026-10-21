@@ -1,4 +1,4 @@
-/** Native KYC — port of the web stub app/kyc/page.tsx. */
+/** Native KYC - port of the web stub app/kyc/page.tsx. */
 import { Text } from "react-native";
 import { Colors, themedStyles } from "@/constants/theme";
 import { ContentScreen } from "@/components/content/ContentScreen";

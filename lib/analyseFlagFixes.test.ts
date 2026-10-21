@@ -140,7 +140,7 @@ describe("final submit uses the full schema", () => {
   });
 });
 
-describe("emergency fund months — one source", () => {
+describe("emergency fund months - one source", () => {
   it("is life-stage aware between 6 and 12 months", () => {
     expect(emergencyFundMonthsNeeded({ lifeStage: "bachelor" })).toBe(6);
     expect(

@@ -58,7 +58,7 @@ export default function PrivacyPage() {
           style={{ fontSize: 15, color: "#3C3489", lineHeight: 1.7, margin: 0 }}
         >
           <strong>Plain language summary:</strong> Finkoin collects only
-          financial numbers — your income, expenses, loans, and savings amounts.
+          financial numbers - your income, expenses, loans, and savings amounts.
           We never ask for PAN, Aadhaar, bank account numbers, or passwords.
           Your data is encrypted, never sold, and you can delete it anytime.
         </p>
@@ -167,7 +167,7 @@ export default function PrivacyPage() {
           <li>Generate your personalised financial plan</li>
           <li>
             Share with our AI system (Groq) to generate personalised
-            explanations — only financial numbers, never identity data
+            explanations - only financial numbers, never identity data
           </li>
           <li>Send you important account notifications and updates</li>
           <li>Process payments for paid features</li>
@@ -192,7 +192,7 @@ export default function PrivacyPage() {
             to generate personalised explanations.
           </li>
           <li>
-            Only numerical financial data is shared — never your name, email,
+            Only numerical financial data is shared - never your name, email,
             PAN, Aadhaar, or any identity information.
           </li>
           <li>
@@ -218,7 +218,7 @@ export default function PrivacyPage() {
         <ul>
           <li>
             <strong>Database:</strong> Supabase (PostgreSQL) hosted on AWS
-            Singapore region — data stays within Asia Pacific.
+            Singapore region - data stays within Asia Pacific.
           </li>
           <li>
             <strong>Encryption at rest:</strong> All data is encrypted using

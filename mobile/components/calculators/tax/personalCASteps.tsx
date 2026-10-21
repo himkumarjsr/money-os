@@ -121,7 +121,7 @@ export function PersonalCAStepBody({
         <View>
           <Q>What best describes you?</Q>
           <Text style={[tx.hint, styles.block]}>
-            Select one or more — many people have multiple sources of income.
+            Select one or more - many people have multiple sources of income.
           </Text>
           <ChipRow style={styles.blockLg}>
             {EMPLOYMENT_OPTIONS.map((opt) => (
@@ -766,7 +766,7 @@ export function PersonalCAStepBody({
               ? s.parentsSeniorEffective
                 ? " (senior parents)"
                 : " (parents under 60)"
-              : " — enter age for the correct cap"}
+              : " - enter age for the correct cap"}
           </Text>
           <Mt
             id="ca-80d-parent"

@@ -12,7 +12,7 @@ export const TRACKER_CONSENT_STORAGE_KEY = "finkoin_tracker_consent";
 export type SavedCreditCard = {
   id: string;
   nickname: string;
-  /** Optional last 4 digits only — never full PAN. */
+  /** Optional last 4 digits only - never full PAN. */
   last4?: string;
   /** Statement generation day of month (1–31). */
   billingDay?: number;
@@ -133,7 +133,7 @@ export type CreditCardBillStatus = CreditCardBillLine & {
   charged: number;
   /** Cash bill payments (loans → credit_card) matched to this card. */
   paid: number;
-  /** max(0, charged − paid) — what still needs to leave the bank account. */
+  /** max(0, charged − paid) - what still needs to leave the bank account. */
   remaining: number;
   status: "due" | "paid" | "clear";
   overdue: boolean;
@@ -330,7 +330,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 export function displayPaymentMethod(
   method: string | null | undefined,
 ): string {
-  if (!method) return "—";
+  if (!method) return "-";
   if (isCreditCardPaymentMethod(method)) {
     const { label } = parseCreditCardPaymentMethod(method);
     return label || "Credit card";
@@ -396,7 +396,7 @@ export function cardBillAmount(
  * - income
  * - anything paid with a credit card: purchases, card EMI instalments (paid
  *   through the card bill), purchases converted to EMI, card refunds /
- *   cashback — those move the card bill, not the bank balance
+ *   cashback - those move the card bill, not the bank balance
  * - premiums paid from RD savings (the monthly RD already counted)
  * - generated `card_extra` / `card_overdue` rows from older builds
  */
@@ -718,7 +718,7 @@ export function buildCreditCardPaySuggestions(opts: {
     seen.add(card.id);
   }
 
-  // Orphan spend on unknown / generic cards — previous calendar month fallback
+  // Orphan spend on unknown / generic cards - previous calendar month fallback
   const prevMonthStart = new Date(asOf.getFullYear(), asOf.getMonth() - 1, 1);
   const prevMonthEnd = new Date(asOf.getFullYear(), asOf.getMonth(), 0);
   const orphans = summarizeCreditCardBills(opts.transactions, {
@@ -891,7 +891,7 @@ function sumPaymentsForOrphan(
  * Paid bills show status "paid"; unpaid stay "due" across months until cleared.
  *
  * When `previousMonthChargesOnly` is true (default for tracker dues), only the
- * previous calendar month's card purchases count as charges — so a bill paid
+ * previous calendar month's card purchases count as charges - so a bill paid
  * last month does not keep appearing as due this month.
  */
 export function buildCreditCardBillStatuses(opts: {
@@ -964,7 +964,7 @@ export function buildCreditCardBillStatuses(opts: {
     };
   });
 
-  // Orphan spend (no saved card id) — still track paid vs charged so Pay can tick.
+  // Orphan spend (no saved card id) - still track paid vs charged so Pay can tick.
   const orphanSuggestions = suggestions.filter(
     (sug) => !opts.cards.some((c) => c.id === sug.cardId),
   );
@@ -1154,7 +1154,7 @@ function statementFor(
     win.start.getMonth(),
     win.start.getDate() - 1,
   );
-  // Payments after the previous bill's due date go to this bill — including
+  // Payments after the previous bill's due date go to this bill - including
   // ones made before this statement closed.
   const afterPrevDue = dayAfter(getStatementDueDate(prevEnd, dueDay));
   const afterClose = dayAfter(win.end);
@@ -1206,7 +1206,7 @@ function applyPayment(s: StatementCalc, p: PaymentCalc, take: number): void {
  *
  * 1. Payments that name a card pay that card's bill.
  * 2. Payments without a card go first to a bill of (about) the same amount,
- *    then to the oldest due date first — so "Credit card payment" rows
+ *    then to the oldest due date first - so "Credit card payment" rows
  *    logged without choosing a card still clear the right bills.
  *
  * Returns what is left of each named payment, per card, so an early payment
@@ -1306,7 +1306,7 @@ export function buildCreditCardOverdue(opts: {
     const dueDay = dueDayFor(card, billingDay);
     let win = getLastStatementWindow(billingDay, asOf);
     let due = win ? getStatementDueDate(win.end, dueDay) : null;
-    // The latest closed statement may not be due yet — use the one before.
+    // The latest closed statement may not be due yet - use the one before.
     if (win && due && due >= asOfDay) {
       const before = new Date(win.start);
       before.setDate(before.getDate() - 1);
@@ -1363,7 +1363,7 @@ export type CardLastBill = {
   overdue: boolean;
   /**
    * A bill payment without a card (or for a card we can't match) was logged
-   * in this bill's window — ask "mark as paid?" rather than warn.
+   * in this bill's window - ask "mark as paid?" rather than warn.
    */
   unsure: boolean;
   /** Overdue with no logged payment that could cover it: interest warning. */
@@ -1587,18 +1587,18 @@ export function cardBillCycleText(c: CardBillSummary): string {
   return parts.join(" · ");
 }
 
-/** "₹Y due 1 Oct — Paid ✓" / "— ₹Z of ₹Y paid" / "— Not paid yet". */
+/** "₹Y due 1 Oct - Paid ✓" / "- ₹Z of ₹Y paid" / "- Not paid yet". */
 export function cardLastBillText(c: CardBillSummary): string | null {
   const b = c.lastBill;
   if (!b) return null;
   const head = `${billInr(b.amount)} due ${billShortDate(b.dueDate)}`;
   if (b.status === "paid" || b.status === "marked_paid") {
-    return `${head} — Paid ✓`;
+    return `${head} - Paid ✓`;
   }
   if (b.status === "partial") {
-    return `${head} — ${billInr(b.paid)} of ${billInr(b.amount)} paid`;
+    return `${head} - ${billInr(b.paid)} of ${billInr(b.amount)} paid`;
   }
-  return `${head} — Not paid yet`;
+  return `${head} - Not paid yet`;
 }
 
 export function normalizeCreditLimit(raw: unknown): number | undefined {
@@ -1829,7 +1829,7 @@ function rowToCard(row: Record<string, unknown>): SavedCreditCard | null {
     last4: row.last4,
     billing_day: row.billing_day,
     due_day: row.due_day,
-    // Missing until migration 041 runs — the local cache keeps it meanwhile.
+    // Missing until migration 041 runs - the local cache keeps it meanwhile.
     credit_limit: row.credit_limit,
     created_at: row.created_at,
   });
@@ -1946,7 +1946,7 @@ export function creditCardObligationTitle(nickname: string): string {
 }
 
 /**
- * Credit card bills live only in the Credit card dues UI — do not upsert
+ * Credit card bills live only in the Credit card dues UI - do not upsert
  * obligations. Kept as a no-op so older call sites stay safe.
  */
 export async function syncCreditCardBillObligation(

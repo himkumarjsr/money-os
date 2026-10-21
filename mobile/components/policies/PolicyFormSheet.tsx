@@ -114,7 +114,7 @@ export function PolicyFormSheet({
       setForm(nextForm);
       if (!nextForm.insurerName.trim()) {
         setFormError(
-          "Enter insurer name (company), not only the plan name — scroll up to the Insurer field.",
+          "Enter insurer name (company), not only the plan name - scroll up to the Insurer field.",
         );
         return;
       }
@@ -220,7 +220,7 @@ export function PolicyFormSheet({
 
       <Label text="Insurer name" required />
       <Text style={styles.hint}>
-        e.g. Max Life, HDFC Life — required (plan name goes below)
+        e.g. Max Life, HDFC Life - required (plan name goes below)
       </Text>
       <TextInput
         style={styles.input}

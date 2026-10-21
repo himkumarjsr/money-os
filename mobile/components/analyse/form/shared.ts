@@ -314,8 +314,8 @@ export function computeLiveTotals(v: Partial<AnalyseFormValues>) {
         tone: "green",
         text:
           secondProperty > 0 && homeLoan === 0
-            ? `Second property EMI — ${formatCurrencyINR(housingTotal)}/month`
-            : `Home loan EMI — ${formatCurrencyINR(housingTotal)}/month`,
+            ? `Second property EMI - ${formatCurrencyINR(housingTotal)}/month`
+            : `Home loan EMI - ${formatCurrencyINR(housingTotal)}/month`,
       };
     }
     return null;

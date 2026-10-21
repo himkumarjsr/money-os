@@ -143,7 +143,7 @@ export function TermCoverCalculator() {
         />
       </Stats>
       <Note>
-        Buy pure term insurance — not endowment or ULIP — for protection.
+        Buy pure term insurance - not endowment or ULIP - for protection.
         Assumes 6% income growth and inflation, 8% discount rate. Review after
         marriage, a child or a new loan.
       </Note>
@@ -406,7 +406,7 @@ export function BuyTermInvestRestCalculator() {
         value={b.corpus}
         sub={
           <>
-            Investing {inr(b.yearlyInvested)} a year — the premium difference.
+            Investing {inr(b.yearlyInvested)} a year - the premium difference.
           </>
         }
       />
@@ -447,7 +447,7 @@ export function ChildEducationCalculator() {
         maxYears={25}
       />
       <Note>
-        Education costs in India rise about 10% a year — faster than general
+        Education costs in India rise about 10% a year - faster than general
         inflation. Sukanya Samriddhi suits a daughter&apos;s education; equity
         funds suit 7+ year horizons.
       </Note>
@@ -578,7 +578,7 @@ export function DownPaymentCalculator() {
       </Stats>
       <Note>
         Banks fund at most 75–90% of the price (RBI limits), and never stamp
-        duty or registration — those come from your pocket.
+        duty or registration - those come from your pocket.
       </Note>
     </div>
   );
@@ -649,7 +649,7 @@ export function SalaryHikeCalculator() {
         value={s.monthlyGain}
         sub={
           <>
-            New CTC {inr(newCtc)} — a {pct(s.hikePct, 1)} hike.
+            New CTC {inr(newCtc)} - a {pct(s.hikePct, 1)} hike.
           </>
         }
       />
@@ -660,7 +660,7 @@ export function SalaryHikeCalculator() {
       </Stats>
       {s.realPct < 0 ? (
         <Insight tone="bad">
-          This hike is below inflation — your buying power falls.
+          This hike is below inflation - your buying power falls.
         </Insight>
       ) : null}
       <Note>
@@ -748,8 +748,8 @@ export function NetWorthCalculator() {
         {n.debtRatio < 30
           ? "Healthy."
           : n.debtRatio < 50
-            ? "Manageable — avoid new loans."
-            : "High — focus on paying down debt."}
+            ? "Manageable - avoid new loans."
+            : "High - focus on paying down debt."}
       </Insight>
       <Note>Track this every month automatically in Finkoin Tracker.</Note>
     </div>
@@ -834,16 +834,16 @@ export function BudgetCalculator() {
       <Bars
         items={[
           {
-            label: `Needs — plan ${inr(b.needs)}`,
+            label: `Needs - plan ${inr(b.needs)}`,
             value: actualNeeds,
             highlight: actualNeeds > b.needs,
           },
           {
-            label: `Wants — plan ${inr(b.wants)}`,
+            label: `Wants - plan ${inr(b.wants)}`,
             value: actualWants,
             highlight: actualWants > b.wants,
           },
-          { label: `Left to save — plan ${inr(b.savings)}`, value: actualSave },
+          { label: `Left to save - plan ${inr(b.savings)}`, value: actualSave },
         ]}
       />
       <Insight tone={actualSave >= b.savings ? "good" : "warn"}>

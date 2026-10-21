@@ -1,5 +1,5 @@
 /**
- * Supabase reads/writes for the Bills screen — port of web
+ * Supabase reads/writes for the Bills screen - port of web
  * lib/billsCalendarData.ts. The date logic lives in lib/billsCalendar.ts;
  * this file only loads its inputs and records paid / skipped for a month.
  */

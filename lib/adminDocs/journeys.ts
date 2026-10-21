@@ -81,7 +81,7 @@ export const beforeLoginSection: DocSection = {
           "`signInWithOAuth({ provider: 'google', redirectTo: /auth/callback?next=… })` → PKCE exchange in `/auth/callback`",
           "`mobile/lib/googleAuth.ts`; Supabase redirects to `/auth/mobile-bridge?app=<deep link>` which bounces the code back to the app (the verifier lives in the app)",
         ],
-        ["Apple", "—", "`mobile/lib/appleAuth.ts` (Sign in with Apple)"],
+        ["Apple", "-", "`mobile/lib/appleAuth.ts` (Sign in with Apple)"],
         [
           "Forgot password",
           "`resetPasswordForEmail` → `/auth/callback?type=recovery` → `/auth/update-password` → `updateUser({ password })`",
@@ -209,7 +209,7 @@ export const afterLoginSection: DocSection = {
           "Yes",
         ],
         ["Fix Plan PDF (`/api/analyse/pdf`)", "With Fix Plan access", "Yes"],
-        ["Money Map in Tracker", "—", "Yes (`canViewMoneyMap`)"],
+        ["Money Map in Tracker", "-", "Yes (`canViewMoneyMap`)"],
         [
           "Premium (24k) theme",
           "Earned: top 10 on the leaderboard, or a report + 90-day streak",

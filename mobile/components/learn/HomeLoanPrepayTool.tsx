@@ -130,7 +130,7 @@ export function HomeLoanPrepayTool() {
         />
 
         <View style={[styles.option, !tenureWins && styles.optionOn]}>
-          <Text style={styles.optionLabel}>OPTION A — REDUCE EMI</Text>
+          <Text style={styles.optionLabel}>OPTION A - REDUCE EMI</Text>
           <Text style={styles.optionMain}>
             New EMI ≈ ₹{formatIndian(Math.round(result.emiAfter))}
           </Text>
@@ -140,7 +140,7 @@ export function HomeLoanPrepayTool() {
           </Text>
         </View>
         <View style={[styles.option, tenureWins && styles.optionOn]}>
-          <Text style={styles.optionLabel}>OPTION B — CUT TENURE</Text>
+          <Text style={styles.optionLabel}>OPTION B - CUT TENURE</Text>
           <Text style={styles.optionMain}>
             Tenure ≈ {result.monthsCutTenure} months (
             {(result.monthsCutTenure / 12).toFixed(1)} yrs)
@@ -153,14 +153,14 @@ export function HomeLoanPrepayTool() {
 
         <Text style={styles.verdict}>
           {tenureWins
-            ? "Usually better: keep EMI, cut tenure — if cashflow allows."
+            ? "Usually better: keep EMI, cut tenure - if cashflow allows."
             : "Reduce EMI if you need monthly breathing room."}
         </Text>
       </View>
 
       <View style={styles.foot}>
         <Text style={styles.footText}>
-          Educational estimate — not investment advice. Know it. Fix it. Grow
+          Educational estimate - not investment advice. Know it. Fix it. Grow
           it.
         </Text>
         <ContentBlocks

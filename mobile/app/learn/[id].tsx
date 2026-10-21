@@ -1,5 +1,5 @@
 /**
- * Native Learn article — port of web app/learn/[id]/page.tsx: bespoke guides,
+ * Native Learn article - port of web app/learn/[id]/page.tsx: bespoke guides,
  * the data-driven rich renderer (lib/learnRichArticles), and the plain fallback.
  */
 import { useCallback, useMemo, useRef } from "react";

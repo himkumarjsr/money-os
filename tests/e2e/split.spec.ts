@@ -34,7 +34,7 @@ test.describe("FK Split", () => {
     await page.goto("/split/join?token=e2e-open-invite-token");
     await page.waitForTimeout(2000);
     await expect(page.locator("body")).toBeVisible();
-    // Smoke: stay on join / login / joined group — not a bare home bounce.
+    // Smoke: stay on join / login / joined group - not a bare home bounce.
     const path = new URL(page.url()).pathname;
     expect(path).toMatch(/^\/(split\/join|login|split\/[0-9a-f-]{36})$/);
   });

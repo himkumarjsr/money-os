@@ -175,7 +175,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
 
   // Custom SEO metadata for our two tax cornerstone guides.
   if (article.id === "know-taxation-in-india-old-vs-new-slabs-interest-rates") {
-    const seoTitle = "Indian Income Tax Guide FY 2025-26 — Slabs, ITR, Regimes";
+    const seoTitle = "Indian Income Tax Guide FY 2025-26 - Slabs, ITR, Regimes";
     const description =
       "Beginner-friendly Indian income tax guide for FY 2025-26 (AY 2026-27): FY vs AY, ITR forms (ITR-1 to ITR-7), tax slabs, 87A rebate, cess/surcharge, TDS (Form 16/AIS/26AS), and old vs new regime explained with examples.";
 
@@ -218,7 +218,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
 
   if (article.id === "old-vs-new-tax-regime-which-saves-you-more-money") {
     const seoTitle =
-      "Old vs New Tax Regime FY 2025-26 (AY 2026-27) — Which Saves More? Slabs, Deductions, 87A & Examples";
+      "Old vs New Tax Regime FY 2025-26 (AY 2026-27) - Which Saves More? Slabs, Deductions, 87A & Examples";
     const description =
       "A simple, practical old vs new tax regime guide for FY 2025-26: what deductions matter (80C, 80D, HRA, home loan 24(b), NPS), how to decide, proof checklist, and when each regime usually wins.";
 
@@ -258,7 +258,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
 
   if (article.id === "emergency-fund-how-much-where-to-keep-it") {
     const seoTitle =
-      "Emergency Fund India 2026 — How Much (Up to 12 Months), Where to Keep, Examples by Life Stage | Finkoin";
+      "Emergency Fund India 2026 - How Much (Up to 12 Months), Where to Keep, Examples by Life Stage | Finkoin";
     const description =
       "Emergency fund guide for India: why it matters first, how to count essential monthly expenses, life-stage targets from bachelor to married with two kids and dependent parents (max 12 months), rupee example, liquid funds vs sweep FD, and how to rebuild after use.";
 

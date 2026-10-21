@@ -15,7 +15,7 @@ const UPDATED = "2026-10-17";
 export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   {
     id: "epf-pf-explained-contribution-interest-withdrawal",
-    title: "EPF (PF) explained — contribution, interest, VPF and withdrawal",
+    title: "EPF (PF) explained - contribution, interest, VPF and withdrawal",
     subtitle:
       "Where your 12% goes, how EPFO interest is credited, when PF is taxed, and how to estimate your balance at retirement.",
     category: "Investment",
@@ -28,7 +28,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   },
   {
     id: "gratuity-calculation-formula-eligibility-tax",
-    title: "Gratuity in India — formula, eligibility and tax exemption",
+    title: "Gratuity in India - formula, eligibility and tax exemption",
     subtitle:
       "The 15/26 formula, the five-year rule, how years are rounded, and the ₹20 lakh tax-free limit, with worked examples.",
     category: "Basics",
@@ -41,7 +41,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   },
   {
     id: "step-up-sip-and-cost-of-delay",
-    title: "Step-up SIP — why raising your SIP every year matters so much",
+    title: "Step-up SIP - why raising your SIP every year matters so much",
     subtitle:
       "A 10% yearly step-up can double your final corpus. Plus what a five-year delay really costs, in rupees.",
     category: "Investment",
@@ -54,7 +54,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   },
   {
     id: "xirr-vs-cagr-vs-absolute-return",
-    title: "XIRR vs CAGR vs absolute return — which number to trust",
+    title: "XIRR vs CAGR vs absolute return - which number to trust",
     subtitle:
       "Why your SIP app shows XIRR, when CAGR is right, and how absolute return misleads over long periods.",
     category: "Investment",
@@ -67,7 +67,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   },
   {
     id: "direct-vs-regular-mutual-funds-expense-ratio",
-    title: "Direct vs regular mutual funds — what the expense ratio costs you",
+    title: "Direct vs regular mutual funds - what the expense ratio costs you",
     subtitle:
       "A 1% higher expense ratio can take ₹12 lakh out of a 20-year SIP. How to check your plan and switch sensibly.",
     category: "Investment",
@@ -81,7 +81,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   {
     id: "flat-vs-reducing-interest-rate",
     title:
-      "Flat vs reducing interest rate — the real cost of a ‘10% flat’ loan",
+      "Flat vs reducing interest rate - the real cost of a ‘10% flat’ loan",
     subtitle:
       "A 10% flat rate is close to 18% on a reducing balance. How to convert, and which loans quote flat rates.",
     category: "Loans",
@@ -94,7 +94,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   },
   {
     id: "loan-eligibility-foir-explained",
-    title: "Loan eligibility and FOIR — how much can you really borrow?",
+    title: "Loan eligibility and FOIR - how much can you really borrow?",
     subtitle:
       "How banks use FOIR, EMI per lakh and your existing EMIs to decide your limit, and why you should borrow less than that.",
     category: "Loans",
@@ -107,7 +107,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   },
   {
     id: "debt-payoff-avalanche-vs-snowball",
-    title: "Debt avalanche vs snowball — the fastest way to become debt-free",
+    title: "Debt avalanche vs snowball - the fastest way to become debt-free",
     subtitle:
       "Pay the costliest debt first or the smallest first? The rupee difference, and how to pick the method you will stick to.",
     category: "Loans",
@@ -121,7 +121,7 @@ export const LEARN_ARTICLES_OCT_2026: LearnArticle[] = [
   {
     id: "fd-rd-interest-tax-tds-15g-15h",
     title:
-      "FD and RD interest tax — TDS limits, Form 15G/15H and what you actually earn",
+      "FD and RD interest tax - TDS limits, Form 15G/15H and what you actually earn",
     subtitle:
       "How bank deposit interest is taxed, when TDS is cut (₹50,000 / ₹1 lakh for seniors), and the post-tax return.",
     category: "Tax",
@@ -298,7 +298,7 @@ export const LEARN_RICH_OCT_2026: Record<string, RichArticle> = {
       { id: "nps-vs-epf-for-retirement", title: "NPS vs EPF for retirement" },
       {
         id: "gratuity-calculation-formula-eligibility-tax",
-        title: "Gratuity — formula, eligibility and tax",
+        title: "Gratuity - formula, eligibility and tax",
       },
       {
         id: "hidden-tax-savings-salary-india",
@@ -435,7 +435,7 @@ export const LEARN_RICH_OCT_2026: Record<string, RichArticle> = {
         id: "hidden-tax-savings-salary-india",
         title: "Hidden tax savings in your salary",
       },
-      { id: "form-16-what-to-verify", title: "Form 16 — what to verify" },
+      { id: "form-16-what-to-verify", title: "Form 16 - what to verify" },
     ],
   },
 
@@ -1414,7 +1414,7 @@ export const LEARN_RICH_OCT_2026: Record<string, RichArticle> = {
       },
       {
         id: "emergency-fund-how-much-where-to-keep-it",
-        title: "Emergency fund — how much and where",
+        title: "Emergency fund - how much and where",
       },
     ],
   },

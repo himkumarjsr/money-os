@@ -11,7 +11,7 @@ export default function ScrollSection({ children }: { children: React.ReactNode 
   });
 
   // Opacity was 0 while scrollYProgress stayed near 0 (sections below the fold),
-  // so most of the homepage stayed invisible until the user scrolled — looked
+  // so most of the homepage stayed invisible until the user scrolled - looked
   // like a broken first paint. Keep sections readable; light motion only.
   const y = useTransform(scrollYProgress, [0, 0.25, 0.75, 1], [28, 0, 0, -28]);
 

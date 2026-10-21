@@ -6,7 +6,7 @@ import { SITE_URL, fitMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = fitMetadata({
   title: {
-    absolute: "Learn Personal Finance — India Guide | Finkoin",
+    absolute: "Learn Personal Finance - India Guide | Finkoin",
   },
   description:
     "Free personal finance guides for India: tax, PF and gratuity, SIPs and XIRR, loans and debt payoff, insurance and net worth. Simple, with examples.",
@@ -25,7 +25,7 @@ export const metadata: Metadata = fitMetadata({
     canonical: "/learn",
   },
   openGraph: {
-    title: "Learn Personal Finance — India Guide | Finkoin",
+    title: "Learn Personal Finance - India Guide | Finkoin",
     description:
       "Free personal finance guides for India: tax, PF and gratuity, SIPs and XIRR, loans and debt payoff, insurance and net worth. Simple, with examples.",
     url: `${SITE_URL}/learn`,
@@ -42,7 +42,7 @@ export const metadata: Metadata = fitMetadata({
   },
   twitter: {
     card: "summary_large_image",
-    title: "Learn Personal Finance — India Guide | Finkoin",
+    title: "Learn Personal Finance - India Guide | Finkoin",
     description:
       "Free personal finance guides for India: tax, PF and gratuity, SIPs and XIRR, loans and debt payoff, insurance and net worth. Simple, with examples.",
     images: [`${SITE_URL}/og/og-home.png`],
@@ -87,7 +87,7 @@ export default function LearnPage() {
               Learn finance
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-              Short, India-relevant guides — no paywall, no fluff. Pick a
+              Short, India-relevant guides - no paywall, no fluff. Pick a
               category or browse everything.
             </p>
           </div>

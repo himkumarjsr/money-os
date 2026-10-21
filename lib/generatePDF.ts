@@ -103,7 +103,7 @@ function labelOrDash(
   labels: Record<string, string>,
   value: string | null | undefined,
 ): string {
-  if (!value) return "—";
+  if (!value) return "-";
   return labels[value] ?? humaniseEnum(value);
 }
 
@@ -120,11 +120,11 @@ const BUCKET_STATUS_LABELS: Record<string, string> = {
   ok: "On track",
   warning: "Near cap",
   critical: "Over cap",
-  na: "—",
+  na: "-",
 };
 
 function bucketStatusLabel(status: unknown): string {
-  if (typeof status !== "string" || !status) return "—";
+  if (typeof status !== "string" || !status) return "-";
   return BUCKET_STATUS_LABELS[status] ?? humaniseEnum(status);
 }
 
@@ -433,7 +433,7 @@ export function buildFixPlanPdf(
     return [
       {
         phase: 1,
-        title: "Month 1 — Foundation",
+        title: "Month 1 - Foundation",
         subtitle: "First two weekends",
         tasks: [
           criticals[0]?.actionThisWeek || "Open liquid mutual fund account",
@@ -446,11 +446,11 @@ export function buildFixPlanPdf(
       },
       {
         phase: 2,
-        title: "Month 2-3 — Protection",
+        title: "Month 2-3 - Protection",
         subtitle: "Close critical gaps",
         tasks: [
           criticals[1]?.actionThisWeek || "Buy term insurance this month",
-          "Check health insurance — upgrade if needed",
+          "Check health insurance - upgrade if needed",
           surplus > 5000
             ? `Start SIP ₹${Math.round(surplus * 0.15).toLocaleString("en-IN")}/month`
             : "Build 3-month emergency fund",
@@ -459,11 +459,11 @@ export function buildFixPlanPdf(
       },
       {
         phase: 3,
-        title: "Month 4-9 — Build Wealth",
-        subtitle: "Safety set — now grow",
+        title: "Month 4-9 - Build Wealth",
+        subtitle: "Safety set - now grow",
         tasks: [
           `Increase SIP to ₹${Math.round(surplus * 0.2).toLocaleString("en-IN")}/month`,
-          "Emergency fund — top up to target",
+          "Emergency fund - top up to target",
           debts.length > 0
             ? `Pay extra ₹${(debts[0].extraEMIRecommended || 0).toLocaleString("en-IN")} on ${debts[0].displayName || humaniseEnum(debts[0].type)}`
             : "Max PPF contribution ₹1.5L/year",
@@ -473,13 +473,13 @@ export function buildFixPlanPdf(
       },
       {
         phase: 4,
-        title: "Month 10-12 — Year End",
+        title: "Month 10-12 - Year End",
         subtitle: "Consolidate and upgrade",
         tasks: [
-          "80C tax saving — check balance used",
+          "80C tax saving - check balance used",
           "Increase SIP by 10-15% if salary grew",
-          "Re-analyse on Finkoin — update numbers",
-          "Review insurance cover — increase if needed",
+          "Re-analyse on Finkoin - update numbers",
+          "Review insurance cover - increase if needed",
         ],
         outcomes: ["Year 1 complete", "Year 2 plan ready"],
       },
@@ -643,7 +643,7 @@ export function buildFixPlanPdf(
   });
 
   newPage();
-  addHeading("FINANCIAL SNAPSHOT — CORRECTED NUMBERS");
+  addHeading("FINANCIAL SNAPSHOT - CORRECTED NUMBERS");
   addText("Net Worth Summary", 11, DARK, true);
   y += 2;
   addSmallTable(
@@ -713,7 +713,7 @@ export function buildFixPlanPdf(
   }
 
   newPage();
-  addHeading("YOUR MONEY MAP — WHERE EVERY RUPEE GOES");
+  addHeading("YOUR MONEY MAP - WHERE EVERY RUPEE GOES");
   addText(
     `This page answers one question: where does the money come from for each recommendation? Every step is funded from your surplus of ${fmt(priorityPlan?.monthlySurplus || 0)}.`,
     9,
@@ -781,7 +781,7 @@ export function buildFixPlanPdf(
   );
 
   newPage();
-  addHeading("PRIORITY STEPS — DETAILED PLAN");
+  addHeading("PRIORITY STEPS - DETAILED PLAN");
   addText(
     `Your surplus of ${fmt(priorityPlan?.monthlySurplus || 0)}/month goes to these steps in order. Steps marked done need nothing more.`,
     10,
@@ -882,7 +882,7 @@ export function buildFixPlanPdf(
   const debts = priorityPlan?.debts || [];
   if (debts.length > 0) {
     newPage();
-    addHeading("DEBT CLEARANCE — STEP-BY-STEP STRATEGY");
+    addHeading("DEBT CLEARANCE - STEP-BY-STEP STRATEGY");
     // Built from the same numbers as the table (a saved AI summary can be stale).
     addText(
       "Pay every EMI on time, and put any extra on the highest-interest loan first. Once a loan is cleared, move its EMI to the next one.",
@@ -908,8 +908,8 @@ export function buildFixPlanPdf(
                 month: "short",
                 year: "numeric",
               })}${estSuffix(d)}`
-            : "—",
-          monthsNow > 0 ? String(monthsNow) : "—",
+            : "-",
+          monthsNow > 0 ? String(monthsNow) : "-",
         ];
       }),
       [44, 18, 30, 30, 34, 16],
@@ -1038,7 +1038,7 @@ export function buildFixPlanPdf(
             ? slices
                 .map((s) => `${s.label} ${fmt(s.monthly)}/mo (${s.pct}%)`)
                 .join(", ")
-            : g.instrument || "—"
+            : g.instrument || "-"
         }`,
         9,
         DARK,
@@ -1063,7 +1063,7 @@ export function buildFixPlanPdf(
       ["When", "Age", "Assets", "Loans", "Net worth"],
       trajectory.points.map((p) => [
         p.year === 0 ? "Today" : `In ${p.year} years`,
-        p.age != null ? String(p.age) : "—",
+        p.age != null ? String(p.age) : "-",
         formatLakhCrore(p.assets),
         formatLakhCrore(p.liabilities),
         formatLakhCrore(p.netWorth),
@@ -1155,8 +1155,8 @@ export function buildFixPlanPdf(
         String(i + 1),
         a.category,
         fmt(a.amount),
-        a.where || "—",
-        a.why || "—",
+        a.where || "-",
+        a.why || "-",
       ]),
       [8, 45, 25, 45, 55],
     );

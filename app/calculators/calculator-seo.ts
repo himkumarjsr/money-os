@@ -26,7 +26,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   sip: {
     path: "/calculators/sip",
     appName: "SIP Calculator India",
-    title: "SIP Calculator — Systematic Investment Plan Returns | Finkoin",
+    title: "SIP Calculator - Systematic Investment Plan Returns | Finkoin",
     description:
       "Free SIP (Systematic Investment Plan) calculator for India. See the final corpus, amount invested and wealth gained from a monthly mutual fund SIP.",
     keywords: [
@@ -67,7 +67,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   swp: {
     path: "/calculators/swp",
     appName: "SWP Calculator India",
-    title: "SWP Calculator India — Systematic Withdrawal Plan | Finkoin",
+    title: "SWP Calculator India - Systematic Withdrawal Plan | Finkoin",
     description:
       "Free SWP (Systematic Withdrawal Plan) calculator. Plan monthly withdrawals from mutual funds, see how long your corpus lasts and model retirement income.",
     keywords: [
@@ -96,7 +96,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   emi: {
     path: "/calculators/emi",
     appName: "EMI Calculator India",
-    title: "EMI Calculator — Equated Monthly Instalment for Loans | Finkoin",
+    title: "EMI Calculator - Equated Monthly Instalment for Loans | Finkoin",
     description:
       "Free EMI (Equated Monthly Instalment) calculator. See the monthly payment, total interest and total repayment for a home, car or personal loan.",
     keywords: [
@@ -125,7 +125,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       },
       {
         q: "Can I compare loan options with an EMI calculator?",
-        a: "Yes — vary interest rate and tenure to compare affordability and total interest outgo.",
+        a: "Yes - vary interest rate and tenure to compare affordability and total interest outgo.",
       },
       {
         q: "Does a lower EMI always mean a cheaper loan?",
@@ -136,7 +136,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   ppf: {
     path: "/calculators/ppf",
     appName: "PPF Calculator India",
-    title: "PPF Calculator India — Public Provident Fund Maturity | Finkoin",
+    title: "PPF Calculator India - Public Provident Fund Maturity | Finkoin",
     description:
       "Free PPF (Public Provident Fund) calculator for India. Project the 15-year maturity of yearly deposits, the interest earned and your 80C tax saving.",
     keywords: [
@@ -165,7 +165,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   epf: {
     path: "/calculators/epf",
     appName: "PF Calculator India",
-    title: "PF Calculator India — EPF Balance at Retirement | Finkoin",
+    title: "PF Calculator India - EPF Balance at Retirement | Finkoin",
     description:
       "Free PF calculator. Project your Employees' Provident Fund (EPF) balance at 60 from your current balance, yearly contribution, age and interest rate.",
     keywords: [
@@ -194,7 +194,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   nsc: {
     path: "/calculators/nsc",
     appName: "NSC Calculator India",
-    title: "NSC Calculator India — 7.7% National Savings Certificate | Finkoin",
+    title: "NSC Calculator India - 7.7% National Savings Certificate | Finkoin",
     description:
       "Free NSC calculator India. Estimate 5-year National Savings Certificate maturity at the notified 7.7% p.a. rate (Jul–Sep 2026).",
     keywords: [
@@ -222,7 +222,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   emergency: {
     path: "/calculators/emergency",
     appName: "Emergency Fund Calculator India",
-    title: "Emergency Fund Calculator India — How Much Do You Need? | Finkoin",
+    title: "Emergency Fund Calculator India - How Much Do You Need? | Finkoin",
     description:
       "Free emergency fund calculator India. Find your target corpus by life stage and monthly expenses. Know how much safety buffer to keep liquid.",
     keywords: [
@@ -240,7 +240,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       },
       {
         q: "Where should I keep my emergency fund?",
-        a: "Prefer liquid or overnight mutual funds and a savings buffer — not equity SIPs or locked FDs for the core emergency amount.",
+        a: "Prefer liquid or overnight mutual funds and a savings buffer - not equity SIPs or locked FDs for the core emergency amount.",
       },
       {
         q: "How long should building an emergency fund take?",
@@ -252,7 +252,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     path: "/calculators/fire",
     appName: "FIRE Number Calculator India",
     title:
-      "FIRE Number Calculator India — When Can You Retire Early? | Finkoin",
+      "FIRE Number Calculator India - When Can You Retire Early? | Finkoin",
     description:
       "Free FIRE (Financial Independence, Retire Early) calculator. Estimate the corpus to retire early from your expenses and loans, using the 25× rule.",
     keywords: [
@@ -271,7 +271,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       },
       {
         q: "What is a FIRE number?",
-        a: "Your FIRE number estimates investable wealth needed for financial independence — often around 25× annual expenses (4% rule), adjusted for Indian costs and loans.",
+        a: "Your FIRE number estimates investable wealth needed for financial independence - often around 25× annual expenses (4% rule), adjusted for Indian costs and loans.",
       },
       {
         q: "Does a home loan change my FIRE number?",
@@ -282,7 +282,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   home: {
     path: "/calculators/home",
     appName: "Home Loan Calculator India",
-    title: "Home Loan EMI Calculator 2026 — Affordability & Planning | Finkoin",
+    title: "Home Loan EMI Calculator 2026 - Affordability & Planning | Finkoin",
     description:
       "Free home loan EMI (Equated Monthly Instalment) calculator for India. See your monthly EMI, total interest and how much home loan you can afford.",
     keywords: [
@@ -313,7 +313,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   car: {
     path: "/calculators/car",
     appName: "Car Loan Calculator India",
-    title: "Car Loan Calculator India — EMI & Affordability | Finkoin",
+    title: "Car Loan Calculator India - EMI & Affordability | Finkoin",
     description:
       "Free car loan calculator for India. See your Equated Monthly Instalment (EMI), the total interest and whether the car fits your monthly salary.",
     keywords: [
@@ -339,7 +339,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   rentbuy: {
     path: "/calculators/rentbuy",
     appName: "Rent vs Buy Calculator India",
-    title: "Rent vs Buy Calculator India — Should You Buy a Home? | Finkoin",
+    title: "Rent vs Buy Calculator India - Should You Buy a Home? | Finkoin",
     description:
       "Free rent vs buy calculator for India. Compare the cash you pay to own a home, including the loan and down payment, with renting a similar home.",
     keywords: [
@@ -350,7 +350,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     faq: [
       {
         q: "Is buying always better than renting?",
-        a: "Not always — it depends on rent, property price, loan costs, tenure, and opportunity cost of down payment.",
+        a: "Not always - it depends on rent, property price, loan costs, tenure, and opportunity cost of down payment.",
       },
       {
         q: "What is the price-to-rent ratio?",
@@ -365,7 +365,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   rentcar: {
     path: "/calculators/rentcar",
     appName: "Rent vs Own Car Calculator",
-    title: "Rent vs Own Car Calculator India — Cab or Car? | Finkoin",
+    title: "Rent vs Own Car Calculator India - Cab or Car? | Finkoin",
     description:
       "Free rent vs own car calculator. Compare your monthly cab or rental cost with the full cost of owning a car: loan, fuel, insurance and upkeep.",
     keywords: [
@@ -390,7 +390,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   whencar: {
     path: "/calculators/whencar",
     appName: "When to Buy Car Calculator",
-    title: "When to Buy a Car Calculator — Down Payment Plan | Finkoin",
+    title: "When to Buy a Car Calculator - Down Payment Plan | Finkoin",
     description:
       "Free when to buy a car calculator. See how many months it takes to save a 20% down payment and whether the car fits your monthly income.",
     keywords: ["when to buy car calculator", "car down payment planner India"],
@@ -412,7 +412,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   po: {
     path: "/calculators/po",
     appName: "Post Office Calculator India",
-    title: "Post Office Schemes Calculator India — All Rates 2026 | Finkoin",
+    title: "Post Office Schemes Calculator India - All Rates 2026 | Finkoin",
     description:
       "Free Post Office scheme calculators: Savings Account, Time Deposit, Recurring Deposit, Monthly Income Scheme, Senior Citizen Savings and Sukanya.",
     keywords: [
@@ -429,7 +429,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
       },
       {
         q: "Are the interest rates up to date?",
-        a: "Defaults use MoF/DoP notified rates for Jul–Sep 2026. Always confirm the live circular before investing — rates can change quarterly.",
+        a: "Defaults use MoF/DoP notified rates for Jul–Sep 2026. Always confirm the live circular before investing - rates can change quarterly.",
       },
       {
         q: "Are Post Office schemes safe?",
@@ -440,7 +440,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   "po-savings": {
     path: "/calculators/po-savings",
     appName: "Post Office Savings Account Calculator",
-    title: "Post Office Savings Account Calculator — 4% Interest | Finkoin",
+    title: "Post Office Savings Account Calculator - 4% Interest | Finkoin",
     description:
       "Free Post Office Savings Account calculator. Estimate yearly and monthly interest on your balance at the notified 4% p.a. rate, and the tax on it.",
     keywords: [
@@ -466,7 +466,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   "po-td": {
     path: "/calculators/po-td",
     appName: "Post Office Time Deposit Calculator",
-    title: "Post Office Time Deposit Calculator — 1 to 5 Years | Finkoin",
+    title: "Post Office Time Deposit Calculator - 1 to 5 Years | Finkoin",
     description:
       "Free Post Office Time Deposit (TD) calculator. Find the maturity value and interest for a 1, 2, 3 or 5-year deposit at notified rates of 6.9%–7.5%.",
     keywords: [
@@ -478,7 +478,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     faq: [
       {
         q: "What are current Post Office TD rates?",
-        a: "For Jul–Sep 2026: 1-year 6.9%, 2-year 7.0%, 3-year 7.1%, 5-year 7.5% — compounded quarterly.",
+        a: "For Jul–Sep 2026: 1-year 6.9%, 2-year 7.0%, 3-year 7.1%, 5-year 7.5% - compounded quarterly.",
       },
       {
         q: "Does a Post Office Time Deposit save tax?",
@@ -493,7 +493,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   "po-rd": {
     path: "/calculators/po-rd",
     appName: "Post Office RD Calculator",
-    title: "Post Office RD Calculator India — 6.7% Recurring Deposit | Finkoin",
+    title: "Post Office RD Calculator India - 6.7% Recurring Deposit | Finkoin",
     description:
       "Free Post Office RD (Recurring Deposit) calculator. Estimate the 5-year maturity value and interest on a monthly deposit at the notified 6.7% p.a. rate.",
     keywords: [
@@ -519,7 +519,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   "po-kvp": {
     path: "/calculators/po-kvp",
     appName: "Kisan Vikas Patra Calculator",
-    title: "KVP Calculator India — Doubles in 115 Months | Finkoin",
+    title: "KVP Calculator India - Doubles in 115 Months | Finkoin",
     description:
       "Free KVP (Kisan Vikas Patra) calculator. See when your money doubles at the notified 7.5% p.a. rate (115 months as of Jul–Sep 2026) and the maturity.",
     keywords: [
@@ -546,7 +546,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   "po-mis": {
     path: "/calculators/po-mis",
     appName: "Post Office MIS Calculator",
-    title: "Post Office MIS Calculator — Monthly Income Scheme 7.4% | Finkoin",
+    title: "Post Office MIS Calculator - Monthly Income Scheme 7.4% | Finkoin",
     description:
       "Free Post Office MIS (Monthly Income Scheme) calculator. See the monthly income at 7.4% p.a. on up to ₹9 lakh single or ₹15 lakh joint for 5 years.",
     keywords: [
@@ -573,7 +573,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   "po-scss": {
     path: "/calculators/po-scss",
     appName: "SCSS Calculator India",
-    title: "SCSS Calculator India — Senior Citizen Savings 8.2% | Finkoin",
+    title: "SCSS Calculator India - Senior Citizen Savings 8.2% | Finkoin",
     description:
       "Free SCSS (Senior Citizens' Savings Scheme) calculator. Estimate the quarterly interest at 8.2% p.a. for depositors aged 60+, up to ₹30 lakh.",
     keywords: [
@@ -600,7 +600,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
   "po-ssy": {
     path: "/calculators/po-ssy",
     appName: "Sukanya Samriddhi Calculator",
-    title: "Sukanya Samriddhi Yojana Calculator — 8.2% SSY | Finkoin",
+    title: "Sukanya Samriddhi Yojana Calculator - 8.2% SSY | Finkoin",
     description:
       "Free Sukanya Samriddhi Yojana (SSY) calculator. Project your daughter's account maturity at 8.2% p.a. with 15 years of deposits and tax-free interest.",
     keywords: [
@@ -628,7 +628,7 @@ export const SEO_COPY: Record<string, CalculatorSeo> = {
     path: "/calculators/tax-regime-2026",
     appName: "Tax Regime Calculator 2025-26",
     title:
-      "Old vs New Tax Regime Calculator 2025-26 — Which Saves More? | Finkoin",
+      "Old vs New Tax Regime Calculator 2025-26 - Which Saves More? | Finkoin",
     description:
       "Free old vs new tax regime calculator for 2025-26. Compare both regimes with 80C, rent, pension and home loan deductions and see which saves more.",
     keywords: [
@@ -1017,7 +1017,7 @@ function relatedLinksWithoutGuide(calcId: string) {
     {
       href: "/analyse",
       title: "Financial Health Check",
-      desc: "Know it. Fix it. Grow it. — free score",
+      desc: "Know it. Fix it. Grow it. - free score",
     },
   ];
   if (calcId in ADVISOR_SEO) {
@@ -1117,7 +1117,7 @@ function relatedLinksWithoutGuide(calcId: string) {
     {
       href: "/calculators/tax-regime-2026",
       title: "Tax Regime Calculator",
-      desc: "Old vs new — which saves more",
+      desc: "Old vs new - which saves more",
     },
     {
       href: "/learn/section-80c-limits-and-beyond",

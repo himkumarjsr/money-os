@@ -1,4 +1,4 @@
-/** "What you get" home section — web HomePageBelowFold + FeatureCardsCarousel. */
+/** "What you get" home section - web HomePageBelowFold + FeatureCardsCarousel. */
 import { useRef, useState } from "react";
 import {
   Pressable,

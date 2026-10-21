@@ -23,7 +23,7 @@ export default function TermInsuranceVsEndowmentGuide() {
         cover amount.
       </p>
 
-      <Card id="why-matters" title="Why this matters — money for obligations, then survival">
+      <Card id="why-matters" title="Why this matters - money for obligations, then survival">
         <p className="mb-4">
           If the main earner dies early, the family still faces the same world:{" "}
           <strong className="font-semibold text-slate-900">loan EMIs</strong>,{" "}
@@ -37,7 +37,7 @@ export default function TermInsuranceVsEndowmentGuide() {
           <strong className="font-semibold text-slate-900">pay off or sharply reduce big debts you choose to include</strong>{" "}
           (for example home loan), <strong className="font-semibold text-slate-900">fund non-negotiable goals</strong> you
           had planned (education), set aside a <strong className="font-semibold text-slate-900">medical / liquidity buffer</strong>,{" "}
-          and rebuild an <strong className="font-semibold text-slate-900">emergency runway</strong> — and{" "}
+          and rebuild an <strong className="font-semibold text-slate-900">emergency runway</strong> - and{" "}
           <strong className="font-semibold text-slate-900">still leave enough corpus</strong> so dependents can live
           without your income for many years, not just survive the first 12 months.
         </p>
@@ -45,7 +45,7 @@ export default function TermInsuranceVsEndowmentGuide() {
           Many families plan an emergency fund of <strong className="font-semibold text-slate-900">several months up to
           about 12 months</strong> of must-pay expenses (see our emergency fund guide). If income is volatile or you are
           the only earner, you usually steer toward the <strong className="font-semibold text-slate-900">upper end</strong>{" "}
-          of that range. Term insurance does not replace that fund while you are alive — but the{" "}
+          of that range. Term insurance does not replace that fund while you are alive - but the{" "}
           <strong className="font-semibold text-slate-900">sum assured</strong> should reflect that the family may need
           to recreate buffers <em>and</em> replace lost income after big one-time uses.
         </p>
@@ -54,7 +54,7 @@ export default function TermInsuranceVsEndowmentGuide() {
             href="/learn/emergency-fund-how-much-where-to-keep-it"
             className="font-semibold text-[#534AB7] hover:underline"
           >
-            Emergency fund — how much, where to keep it →
+            Emergency fund - how much, where to keep it →
           </Link>
         </p>
       </Card>
@@ -87,11 +87,11 @@ export default function TermInsuranceVsEndowmentGuide() {
                 <td className="px-3 py-2 font-medium text-slate-900">₹10,00,000</td>
               </tr>
               <tr>
-                <td className="px-3 py-2">Emergency fund to recreate (e.g. ~12 months essential costs — see emergency fund guide)</td>
+                <td className="px-3 py-2">Emergency fund to recreate (e.g. ~12 months essential costs - see emergency fund guide)</td>
                 <td className="px-3 py-2 font-medium text-slate-900">₹5,40,000</td>
               </tr>
               <tr>
-                <td className="px-3 py-2">Income replacement — essential household costs for several years</td>
+                <td className="px-3 py-2">Income replacement - essential household costs for several years</td>
                 <td className="px-3 py-2 font-medium text-slate-900">₹35,00,000</td>
               </tr>
               <tr className="bg-slate-50 font-semibold text-slate-900">
@@ -103,12 +103,12 @@ export default function TermInsuranceVsEndowmentGuide() {
         </div>
         <p className="mt-4 text-slate-600">
           Shortcut checks people use: <strong className="font-semibold text-slate-800">10–15× annual income</strong>{" "}
-          (sometimes + loan outstanding). Use that as a cross-check to your needs list — city, lifestyle, number of
+          (sometimes + loan outstanding). Use that as a cross-check to your needs list - city, lifestyle, number of
           dependents, and existing assets change everything.
         </p>
       </Card>
 
-      <Card id="buying-wrong" title="Buying wrong — what to avoid">
+      <Card id="buying-wrong" title="Buying wrong - what to avoid">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong className="font-semibold text-slate-900">Endowment / money-back as “main protection”:</strong> the
@@ -117,7 +117,7 @@ export default function TermInsuranceVsEndowmentGuide() {
           </li>
           <li>
             <strong className="font-semibold text-slate-900">Confusing savings with life cover:</strong> keep
-            investments in transparent products (MFs, PPF, etc.) and life cover as term — same message as mixing goals
+            investments in transparent products (MFs, PPF, etc.) and life cover as term - same message as mixing goals
             in one opaque bundle.
           </li>
           <li>
@@ -136,12 +136,12 @@ export default function TermInsuranceVsEndowmentGuide() {
         <p className="mb-4">
           The <strong className="font-semibold text-slate-900">right</strong> term plan is one your family can rely on
           for <strong className="font-semibold text-slate-900">the full term</strong>. That means you must be able to pay
-          the premium after a bad year too — <strong className="font-semibold text-slate-900">job loss</strong>,{" "}
+          the premium after a bad year too - <strong className="font-semibold text-slate-900">job loss</strong>,{" "}
           <strong className="font-semibold text-slate-900">business dip</strong>, or{" "}
           <strong className="font-semibold text-slate-900">income shock</strong>. If the premium is too large a share of
           take-home, people often <strong className="font-semibold text-slate-900">stop paying</strong>; a lapsed term
           policy leaves you with <strong className="font-semibold text-slate-900">no cover</strong> when you restart
-          later (and you will be older — new cover may cost more or have health underwriting hurdles).
+          later (and you will be older - new cover may cost more or have health underwriting hurdles).
         </p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
@@ -159,7 +159,7 @@ export default function TermInsuranceVsEndowmentGuide() {
           <li>
             Revisit cover every few years: as <strong className="font-semibold text-slate-900">loans shrink</strong> and{" "}
             <strong className="font-semibold text-slate-900">investments grow</strong>, you may need less pure risk
-            cover — but don’t cut blindly; dependents and goals matter.
+            cover - but don’t cut blindly; dependents and goals matter.
           </li>
         </ul>
       </Card>
@@ -167,7 +167,7 @@ export default function TermInsuranceVsEndowmentGuide() {
       <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-950 sm:text-sm">
         <strong className="font-semibold">Educational only.</strong> This is not personalised insurance advice, not a
         recommendation to buy or skip any product, and not a solicitation. Sum assured, riders, and tax treatment depend
-        on insurer terms and current law — verify with a{" "}
+        on insurer terms and current law - verify with a{" "}
         <strong className="font-semibold">registered insurance advisor / financial planner</strong> and official
         policy documents before you commit.
       </div>

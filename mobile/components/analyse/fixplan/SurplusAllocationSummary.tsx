@@ -29,7 +29,7 @@ export function SurplusAllocationSummary({
         {priorities.map((p, idx) => (
           <View key={`surplus-line-${p.id}-${idx}`} style={shared.row}>
             <Text style={shared.rowLabel}>
-              Step {idx + 1} — {p.title}
+              Step {idx + 1} - {p.title}
               {stepStartLabel(p)}
             </Text>
             <Text style={shared.rowValue}>-₹{inr(p.monthlyContribution)}</Text>

@@ -105,7 +105,7 @@ function LoanDetailsForm({
           onClick={() => void submit("skip")}
           className="min-h-[44px] rounded-lg px-4 text-sm font-semibold text-[#534AB7]"
         >
-          Skip — keep estimate
+          Skip - keep estimate
         </button>
       </div>
     </div>
@@ -129,7 +129,7 @@ export default function LoanSyncNotices({ status, onSaveDetails }: Props) {
           <ul className="mt-1 list-disc pl-5 text-sm text-[#7A5A12]">
             {status.drift.map((d, i) => (
               <li key={`${d.label}-${i}`}>
-                {d.label} — {LOAN_DRIFT_LABELS[d.kind]}
+                {d.label} - {LOAN_DRIFT_LABELS[d.kind]}
               </li>
             ))}
           </ul>

@@ -219,7 +219,7 @@ export default function JoinSplitGroupClient() {
         clearSplitInviteRedirect();
         setStatus("success");
 
-        // Refresh groups in the background — don't block leaving the join screen.
+        // Refresh groups in the background - don't block leaving the join screen.
         const authUser = useAuthStore.getState().user;
         const userEmail = (authUser?.email ?? "").toLowerCase();
         if (authUser?.id && userEmail) {
@@ -275,7 +275,7 @@ export default function JoinSplitGroupClient() {
             </div>
             <div className="mt-2 text-sm leading-relaxed text-[#5F5E5A]">
               If you already use Finkoin on this phone, open the app to join
-              with your existing login. New here? Continue in the browser —
+              with your existing login. New here? Continue in the browser -
               after you join, the group shows up in the app too.
             </div>
             <button

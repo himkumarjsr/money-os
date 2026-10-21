@@ -1,5 +1,5 @@
 /**
- * Feedback wizard — port of web components/feedback/FeedbackModal.tsx
+ * Feedback wizard - port of web components/feedback/FeedbackModal.tsx
  * (in-app wizard path), shown as a bottom sheet. Posts to /api/feedback.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -21,7 +21,7 @@ import { GoldText } from "@/components/ui/GoldMirror";
 const STEPS = [
   {
     title: "Help us improve",
-    subtitle: "A few short steps — like our guided checkup.",
+    subtitle: "A few short steps - like our guided checkup.",
   },
   {
     title: "Step 1 · Overall experience",
@@ -33,11 +33,11 @@ const STEPS = [
   },
   {
     title: "Step 3 · What worked well?",
-    subtitle: "Optional — tell us what you liked.",
+    subtitle: "Optional - tell us what you liked.",
   },
   {
     title: "Step 4 · What should improve?",
-    subtitle: "Optional — bugs, confusion, or missing features.",
+    subtitle: "Optional - bugs, confusion, or missing features.",
   },
   {
     title: "Step 5 · Recommendation",
@@ -191,7 +191,7 @@ export function FeedbackSheet({
         ) : step === 0 ? (
           <View style={{ gap: 8 }}>
             {[
-              "Five quick questions — tap Next to begin.",
+              "Five quick questions - tap Next to begin.",
               "Takes under a minute.",
               "You can skip optional text fields.",
             ].map((t) => (
@@ -253,7 +253,7 @@ export function FeedbackSheet({
                 <Text style={styles.bold}>Rating:</Text> {rating}/5
               </Text>
               <Text style={styles.summaryText}>
-                <Text style={styles.bold}>Area:</Text> {areaLabel || "—"}
+                <Text style={styles.bold}>Area:</Text> {areaLabel || "-"}
               </Text>
               {highlights.trim() ? (
                 <Text style={styles.summaryText}>

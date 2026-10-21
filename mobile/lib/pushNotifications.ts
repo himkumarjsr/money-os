@@ -1,5 +1,5 @@
 /**
- * Native push for the app — mobile counterpart of web `lib/webPushClient.ts`.
+ * Native push for the app - mobile counterpart of web `lib/webPushClient.ts`.
  * Tokens live in `expo_push_tokens`; the server sends to them alongside Web Push
  * (daily tip, split expense) with `data.url` = the same deep link the PWA uses.
  */

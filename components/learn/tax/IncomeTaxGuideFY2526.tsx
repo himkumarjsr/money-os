@@ -35,7 +35,7 @@ const FAQS: TaxFaq[] = [
   },
   {
     q: "I invest in US stocks (via an Indian broker or LRS). Which ITR?",
-    a: "US equity sales typically create capital gains schedules (and may involve foreign income/asset reporting depending on your case). That is usually not an ITR-1-only situation—most salaried people end up on ITR-2 (subject to eligibility). If you also have business income, ITR-3 may apply. Verify with AIS/broker statements and the official ITR wizard.",
+    a: "US equity sales typically create capital gains schedules (and may involve foreign income/asset reporting depending on your case). That is usually not an ITR-1-only situation - most salaried people end up on ITR-2 (subject to eligibility). If you also have business income, ITR-3 may apply. Verify with AIS/broker statements and the official ITR wizard.",
   },
   { q: "Is ITR filing mandatory if my tax is zero?", a: "It can be mandatory in specific cases (high-value transactions, foreign assets, etc.). Even when not mandatory, filing helps with refunds, visa/income proof, and continuity." },
   { q: "How much income is tax-free in India?", a: "It depends on the regime and the rebate rules (e.g., Section 87A) for that year. Always compute taxable income first, then apply rebate/cess." },
@@ -142,7 +142,7 @@ export default function IncomeTaxGuideFY2526() {
 
         <Section
           id="fy-ay"
-          title="Financial Year (FY) vs Assessment Year (AY) — the simplest way to remember"
+          title="Financial Year (FY) vs Assessment Year (AY) - the simplest way to remember"
           subtitle="Beginners get stuck here. This clears it in 20 seconds."
         >
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -153,7 +153,7 @@ export default function IncomeTaxGuideFY2526() {
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-sm font-semibold text-slate-900">AY 2026-27</div>
-                <p className="mt-2 text-sm text-slate-700">You typically file the return for FY 2025-26 in <strong>2026</strong> — that filing year is AY 2026-27.</p>
+                <p className="mt-2 text-sm text-slate-700">You typically file the return for FY 2025-26 in <strong>2026</strong> - that filing year is AY 2026-27.</p>
               </div>
             </div>
             <div className="mt-5">
@@ -231,7 +231,7 @@ export default function IncomeTaxGuideFY2526() {
         <Section
           id="itr-forms"
           title="Which ITR should I file? (ITR-1 to ITR-7 explained with examples)"
-          subtitle="Use this as a map — the final form must match the Income Tax Department’s eligibility rules for that year."
+          subtitle="Use this as a map - the final form must match the Income Tax Department’s eligibility rules for that year."
         >
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <p className="text-sm text-slate-700">
@@ -300,20 +300,20 @@ export default function IncomeTaxGuideFY2526() {
             <div className="mt-6">
               <h3 className="text-base font-semibold text-slate-900">Quick “story” examples (beginner-friendly)</h3>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <Card title="Example A — Only salary + bank interest">
+                <Card title="Example A - Only salary + bank interest">
                   <strong className="font-semibold">Rahul</strong> has Form 16, ₹8,000 savings-account interest, no MF sales, no rent income. This is the classic “simple” profile that often maps to{" "}
                   <strong className="font-semibold">ITR-1</strong> if all eligibility conditions are met.
                 </Card>
-                <Card title="Example B — US stocks / global MF / RSU sales">
+                <Card title="Example B - US stocks / global MF / RSU sales">
                   <strong className="font-semibold">Neha</strong> is salaried and also sold US stocks (capital gains) and received RSU-related perquisite/gain entries. Even if salary is simple, capital gains reporting usually pushes you away from a pure{" "}
                   <strong className="font-semibold">ITR-1</strong> path towards{" "}
                   <strong className="font-semibold">ITR-2</strong> (and you must reconcile broker statements with AIS). If she also runs a freelance practice with books, consider{" "}
                   <strong className="font-semibold">ITR-3</strong>.
                 </Card>
-                <Card title="Example C — Crypto / frequent trading">
+                <Card title="Example C - Crypto / frequent trading">
                   If you treat activity as investing (capital gains) vs business (trading) can change the return shape. Many retail investors need detailed schedules; do not assume ITR-1. When in doubt, use official guidance / a CA.
                 </Card>
-                <Card title="Example D — Freelancer with invoices + expenses">
+                <Card title="Example D - Freelancer with invoices + expenses">
                   If you are not eligible for presumptive schemes (or exceed limits), you may need{" "}
                   <strong className="font-semibold">ITR-3</strong> with proper books. If you qualify for presumptive taxation,{" "}
                   <strong className="font-semibold">ITR-4</strong> may apply.
@@ -332,7 +332,7 @@ export default function IncomeTaxGuideFY2526() {
             <p className="mt-5 text-sm text-slate-600">
               Next: regime math and deduction caps →{" "}
               <Link href="/learn/old-vs-new-tax-regime-which-saves-you-more-money" className="font-semibold text-[#534AB7] hover:underline">
-                Old vs new tax regime — complete guide
+                Old vs new tax regime - complete guide
               </Link>
               .
             </p>
@@ -351,7 +351,7 @@ export default function IncomeTaxGuideFY2526() {
           <TaxRegimeToggle />
         </Section>
 
-        <Section id="slabs" title="Latest tax slabs FY 2025-26 — what else matters besides slabs?">
+        <Section id="slabs" title="Latest tax slabs FY 2025-26 - what else matters besides slabs?">
           <div className="grid gap-4 md:grid-cols-2">
             <Card title="87A rebate">
               A rebate (not a deduction) that can reduce tax sharply when taxable income is within the notified limits. The exact thresholds/rules can change.
@@ -377,7 +377,7 @@ export default function IncomeTaxGuideFY2526() {
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
             <strong className="font-semibold">Regime note:</strong> deductions like 80C/80D/HRA/24(b) mostly matter under the{" "}
             <strong className="font-semibold">old regime</strong> in typical salaried planning. The new regime in Finkoin currently models a higher{" "}
-            <strong className="font-semibold">standard deduction</strong> and generally fewer Chapter VI-A levers — compare both in the{" "}
+            <strong className="font-semibold">standard deduction</strong> and generally fewer Chapter VI-A levers - compare both in the{" "}
             <Link href="/calculators?calc=tax-regime" className="font-semibold text-[#534AB7] underline">
               tax regime calculator
             </Link>
@@ -403,12 +403,12 @@ export default function IncomeTaxGuideFY2526() {
                     <br />
                     New regime: <strong className="font-semibold">₹75,000</strong>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">Don’t mentally double-count — good tools include this automatically.</td>
+                  <td className="px-4 py-3 text-slate-700">Don’t mentally double-count - good tools include this automatically.</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-900">HRA exemption</td>
                   <td className="px-4 py-3 text-slate-700">Rent-related exemption when employer pays HRA (least-of tests).</td>
-                  <td className="px-4 py-3 text-slate-700">No single fixed rupee cap in the formula — depends on rent, salary structure, metro/non-metro.</td>
+                  <td className="px-4 py-3 text-slate-700">No single fixed rupee cap in the formula - depends on rent, salary structure, metro/non-metro.</td>
                   <td className="px-4 py-3 text-slate-700">Keep rent agreement + receipts + bank transfers aligned; landlord PAN rules may apply for higher rents.</td>
                 </tr>
                 <tr>
@@ -417,7 +417,7 @@ export default function IncomeTaxGuideFY2526() {
                   <td className="px-4 py-3 text-slate-700">
                     Finkoin uses an <strong className="font-semibold">illustrative</strong> model capped at <strong className="font-semibold">₹60,000</strong> (verify eligibility).
                   </td>
-                  <td className="px-4 py-3 text-slate-700">Not a substitute for real HRA documentation rules — confirm on official utility.</td>
+                  <td className="px-4 py-3 text-slate-700">Not a substitute for real HRA documentation rules - confirm on official utility.</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-900">80C (combined basket)</td>
@@ -425,7 +425,7 @@ export default function IncomeTaxGuideFY2526() {
                   <td className="px-4 py-3 text-slate-700">
                     <strong className="font-semibold">₹1,50,000</strong> combined cap (extra items don’t create extra 80C room beyond the basket).
                   </td>
-                  <td className="px-4 py-3 text-slate-700">If EPF is large, you may “fill” 80C without ELSS — check your payslip + 80C proofs.</td>
+                  <td className="px-4 py-3 text-slate-700">If EPF is large, you may “fill” 80C without ELSS - check your payslip + 80C proofs.</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-900">80CCD(1B) (NPS)</td>
@@ -445,7 +445,7 @@ export default function IncomeTaxGuideFY2526() {
                     Parents’ premium bucket (as modelled): <strong className="font-semibold">₹25,000</strong> if parents are not marked senior, else{" "}
                     <strong className="font-semibold">₹50,000</strong>.
                   </td>
-                  <td className="px-4 py-3 text-slate-700">Parents’ senior status can materially change the cap — keep policy PDFs.</td>
+                  <td className="px-4 py-3 text-slate-700">Parents’ senior status can materially change the cap - keep policy PDFs.</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-900">24(b) (home loan interest)</td>
@@ -461,12 +461,12 @@ export default function IncomeTaxGuideFY2526() {
                   <td className="px-4 py-3 text-slate-700">
                     <strong className="font-semibold">₹1,50,000</strong> cap in tool (only if eligible in your facts)
                   </td>
-                  <td className="px-4 py-3 text-slate-700">Eligibility is strict — verify sanction date/stamp duty rules for your year.</td>
+                  <td className="px-4 py-3 text-slate-700">Eligibility is strict - verify sanction date/stamp duty rules for your year.</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-900">80E (education loan interest)</td>
                   <td className="px-4 py-3 text-slate-700">Interest on loan taken for higher education (eligible lender/conditions).</td>
-                  <td className="px-4 py-3 text-slate-700">No fixed “₹ cap” in the calculator line — you enter eligible interest; law governs the allowed amount.</td>
+                  <td className="px-4 py-3 text-slate-700">No fixed “₹ cap” in the calculator line - you enter eligible interest; law governs the allowed amount.</td>
                   <td className="px-4 py-3 text-slate-700">Keep lender interest statements; note the “8 years” style rule in law (verify current wording).</td>
                 </tr>
                 <tr>
@@ -481,7 +481,7 @@ export default function IncomeTaxGuideFY2526() {
                   <td className="px-4 py-3 text-slate-700">
                     <strong className="font-semibold">₹10,000</strong> for non-seniors in tool (seniors usually use 80TTB instead)
                   </td>
-                  <td className="px-4 py-3 text-slate-700">FD/RD interest is generally <strong className="font-semibold">not</strong> 80TTA — it’s taxable “other sources”.</td>
+                  <td className="px-4 py-3 text-slate-700">FD/RD interest is generally <strong className="font-semibold">not</strong> 80TTA - it’s taxable “other sources”.</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-900">80TTB (senior interest)</td>
@@ -517,7 +517,7 @@ export default function IncomeTaxGuideFY2526() {
                   <td className="px-4 py-3 text-slate-700">
                     Illustrative cap <strong className="font-semibold">₹3,00,000</strong> in tool
                   </td>
-                  <td className="px-4 py-3 text-slate-700">Rare for typical salaried employees — ignore unless it truly applies.</td>
+                  <td className="px-4 py-3 text-slate-700">Rare for typical salaried employees - ignore unless it truly applies.</td>
                 </tr>
               </tbody>
             </table>
@@ -525,15 +525,15 @@ export default function IncomeTaxGuideFY2526() {
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <Card title="LTA (Leave Travel Allowance)">
-              LTA is an <strong className="font-semibold">allowance/exemption</strong> story (not a fixed “80C-style” line item in the calculator table). If your employer pays LTA, exemption depends on actual eligible travel bills and employer policy — keep tickets/invoices as per rules.
+              LTA is an <strong className="font-semibold">allowance/exemption</strong> story (not a fixed “80C-style” line item in the calculator table). If your employer pays LTA, exemption depends on actual eligible travel bills and employer policy - keep tickets/invoices as per rules.
             </Card>
             <Card title="“Super deductions” mistake to avoid">
-              You cannot “stack” two laws to claim the same expense twice. Example: home loan interest belongs in the house-property logic (24(b)/related) — don’t confuse with unrelated sections.
+              You cannot “stack” two laws to claim the same expense twice. Example: home loan interest belongs in the house-property logic (24(b)/related) - don’t confuse with unrelated sections.
             </Card>
           </div>
         </Section>
 
-        <Section id="tds" title="TDS explained (salary) — Form 16, 26AS, AIS/TIS">
+        <Section id="tds" title="TDS explained (salary) - Form 16, 26AS, AIS/TIS">
           <div className="grid gap-4 md:grid-cols-3">
             <Card title="TDS on salary">
               Employer estimates annual tax and deducts monthly. Filing reconciles estimated TDS with final tax.
@@ -576,7 +576,7 @@ export default function IncomeTaxGuideFY2526() {
         <section className="mt-10 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
           Next:{" "}
           <Link href="/learn/old-vs-new-tax-regime-which-saves-you-more-money" className="font-semibold text-[#534AB7] hover:underline">
-            Old vs new tax regime — complete guide →
+            Old vs new tax regime - complete guide →
           </Link>
         </section>
       </div>

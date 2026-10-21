@@ -78,7 +78,7 @@ describe("user analyse scenario fixture", () => {
       buckets.security +
       buckets.loans +
       buckets.investment;
-    // EPF is deducted at source — surplus excludes it from outflow
+    // EPF is deducted at source - surplus excludes it from outflow
     expect(getUnallocatedIncome(profile)).toBeCloseTo(
       income - (totalExpenses - 19_000),
       0,
@@ -94,7 +94,7 @@ describe("user analyse scenario fixture", () => {
     expect(result.netWorth).toBe(6_493_000);
     expect(result.netWorth).toBe(result.totalAssets - result.totalLiabilities);
 
-    // Report safety checklist — debt ratio & savings rate
+    // Report safety checklist - debt ratio & savings rate
     expect(result.scores.debtRatio).toBeCloseTo(
       (buckets.loans / income) * 100,
       1,

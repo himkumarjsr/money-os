@@ -56,7 +56,7 @@ export function deriveCtaCopy(input: {
   if (openCount === 0 || !topPriorityTitle) {
     return {
       title: "Get my complete financial plan →",
-      subText: "No open gaps right now — see how to keep it that way",
+      subText: "No open gaps right now - see how to keep it that way",
     };
   }
   const subText =

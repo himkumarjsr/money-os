@@ -13,7 +13,7 @@ import {
 } from "@/lib/finkoinAiPlan";
 
 export type { FinkoinAIPlan };
-/** @deprecated Use FinkoinAIPlan — kept for imports that still say AIFixPlan */
+/** @deprecated Use FinkoinAIPlan - kept for imports that still say AIFixPlan */
 export type AIFixPlan = FinkoinAIPlan;
 
 export type AiCalculatedNumbers = {
@@ -122,7 +122,7 @@ export async function getAIFixPlan(
       if (shouldLogAiClient()) {
         console.warn("[getAIFixPlan] API error", response.status, rawText.slice(0, 500));
       } else {
-        console.warn("AI API returned", response.status, "— using fallback plan");
+        console.warn("AI API returned", response.status, "- using fallback plan");
       }
 
       const err = data as ApiErrorJson;
@@ -142,7 +142,7 @@ export async function getAIFixPlan(
       if (shouldLogAiClient()) {
         console.warn("[getAIFixPlan] invalid or missing plan", data);
       } else {
-        console.warn("Invalid AI plan shape — using fallback", data.error);
+        console.warn("Invalid AI plan shape - using fallback", data.error);
       }
       return {
         plan: fallback,

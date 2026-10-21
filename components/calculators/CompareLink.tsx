@@ -3,7 +3,7 @@
 import { compareHref, type Scenario } from "@/lib/compareScenarios";
 import Link from "next/link";
 
-/** "Compare with another scenario" — opens the Compare calculator prefilled with these inputs. */
+/** "Compare with another scenario" - opens the Compare calculator prefilled with these inputs. */
 export function CompareLink({ scenario }: { scenario: Scenario }) {
   return (
     <Link

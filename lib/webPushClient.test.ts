@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 function installPushApis() {
-  // jsdom lacks PushManager / full Notification — stub what isWebPushSupported checks.
+  // jsdom lacks PushManager / full Notification - stub what isWebPushSupported checks.
   Object.defineProperty(window, "PushManager", {
     configurable: true,
     writable: true,

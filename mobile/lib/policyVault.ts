@@ -10,7 +10,7 @@ import {
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { supabase } from "@/lib/supabase";
 
-/** Use this for RLS-backed tables — must match `auth.uid()`, not a client-generated id. */
+/** Use this for RLS-backed tables - must match `auth.uid()`, not a client-generated id. */
 export async function getSupabaseAuthUserId(): Promise<string | null> {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user?.id) return null;
@@ -167,7 +167,7 @@ export function insurerFormDownloadUrl(insurerName: string): string {
 
 /** Human-readable cover (lakh / crore) for cards. */
 export function formatPolicyCover(rupees: number): string {
-  if (!Number.isFinite(rupees) || rupees <= 0) return "—";
+  if (!Number.isFinite(rupees) || rupees <= 0) return "-";
   const cr = 1_00_00_000;
   const lk = 1_00_000;
   if (rupees >= cr) {

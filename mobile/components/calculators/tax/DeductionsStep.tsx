@@ -17,7 +17,7 @@ export function DeductionsStep({ s }: { s: TaxCalcState }) {
     <StepCard
       title="Step 4 · Deductions (old regime)"
       teach={TEACH.sections.deductions}
-      blurb="Turn these on only when comparing old regime savings — Chapter VI-A (except employer NPS) largely disappears under new."
+      blurb="Turn these on only when comparing old regime savings - Chapter VI-A (except employer NPS) largely disappears under new."
     >
       <View style={{ marginTop: 16 }}>
         <ToggleSection
@@ -25,7 +25,7 @@ export function DeductionsStep({ s }: { s: TaxCalcState }) {
           emoji="📒"
           title="80C basket & NPS 80CCD(1B)"
           subtitle="Tax-saving investments"
-          oneLiner="Shared ₹1.5L 80C bucket plus optional ₹50k extra NPS — relevant only when old regime wins."
+          oneLiner="Shared ₹1.5L 80C bucket plus optional ₹50k extra NPS - relevant only when old regime wins."
           isOn={i.secDed80c}
           onToggle={(v) => update({ secDed80c: v })}
         >
@@ -105,13 +105,13 @@ export function DeductionsStep({ s }: { s: TaxCalcState }) {
           emoji="🩺"
           title="80D medical insurance"
           subtitle="Self & parents premiums"
-          oneLiner="Self cap follows your age (₹25k / ₹50k). Parents cap needs parents’ age — ₹50k if 60+."
+          oneLiner="Self cap follows your age (₹25k / ₹50k). Parents cap needs parents’ age - ₹50k if 60+."
           isOn={i.secDed80d}
           onToggle={(v) => update({ secDed80d: v })}
         >
           <Mt
             id="tax-80d-self"
-            label={`80D — self / spouse / kids (cap ₹${formatIndian(s.self80DCap)})`}
+            label={`80D - self / spouse / kids (cap ₹${formatIndian(s.self80DCap)})`}
             teach={TEACH.deductions.eightyDSelf}
             max={s.self80DCap}
             value={i.deductions80DSelf}
@@ -133,11 +133,11 @@ export function DeductionsStep({ s }: { s: TaxCalcState }) {
               ? s.parentsSeniorEffective
                 ? " (senior parents)"
                 : " (parents under 60)"
-              : " — enter parent age above for the right cap"}
+              : " - enter parent age above for the right cap"}
           </Text>
           <Mt
             id="tax-80d-par"
-            label={`80D — parents (cap ₹${formatIndian(s.parents80DCap)})`}
+            label={`80D - parents (cap ₹${formatIndian(s.parents80DCap)})`}
             teach={TEACH.deductions.eightyDParents}
             max={s.parents80DCap}
             optional

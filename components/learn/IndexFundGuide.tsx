@@ -47,7 +47,7 @@ export default function IndexFundGuide() {
 
       <p className="text-sm text-slate-600 sm:text-base">
         An <strong className="font-semibold text-slate-800">index fund</strong> copies a market benchmark like Nifty 50
-        instead of trying to beat it. Most active managers fail to outperform after fees — SPIVA data makes that hard to
+        instead of trying to beat it. Most active managers fail to outperform after fees - SPIVA data makes that hard to
         ignore. Below: the cricket analogy, how indices work, fee math, where active still has a role, and how to start
         sensibly.
       </p>
@@ -59,13 +59,13 @@ export default function IndexFundGuide() {
         </p>
         <ul className="mb-4 list-disc space-y-2 pl-5">
           <li>
-            <strong className="font-semibold text-slate-900">Option A — the expert:</strong> Hire someone who watches
+            <strong className="font-semibold text-slate-900">Option A - the expert:</strong> Hire someone who watches
             every match, studies every player, picks the best 11, and charges you{" "}
             <strong className="font-semibold text-slate-900">₹15,000 per year</strong> for that expertise (like an active
             mutual fund).
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">Option B — the BCCI ranking:</strong> Copy whoever is in the
+            <strong className="font-semibold text-slate-900">Option B - the BCCI ranking:</strong> Copy whoever is in the
             official top 50 list automatically. Cost:{" "}
             <strong className="font-semibold text-slate-900">₹200 per year</strong> (like an index fund).
           </li>
@@ -74,7 +74,7 @@ export default function IndexFundGuide() {
           <strong className="font-semibold">SPIVA India 2024:</strong>{" "}
           <strong className="font-semibold">81.5%</strong> of active fund managers (the “experts”) picked a worse
           portfolio than simply copying the benchmark index over the period studied. That is exactly the bet index
-          investors are making — own the ranking, not the guru.
+          investors are making - own the ranking, not the guru.
         </StatHighlight>
       </Card>
 
@@ -82,7 +82,7 @@ export default function IndexFundGuide() {
         <p className="mb-4">
           An index is just a <strong className="font-semibold text-slate-900">list</strong>.{" "}
           <strong className="font-semibold text-slate-900">Nifty 50</strong> = the top 50 companies on the National Stock
-          Exchange of India by free-float market cap. The list changes as companies grow or shrink — TCS replaced a weaker
+          Exchange of India by free-float market cap. The list changes as companies grow or shrink - TCS replaced a weaker
           name; Zomato entered when it was big enough. No committee “picks winners”; the index is always the current top
           50.
         </p>
@@ -123,7 +123,7 @@ export default function IndexFundGuide() {
 
       <Card id="what-is-index-fund" title="What is an index fund?">
         <p className="mb-4">
-          An index fund <strong className="font-semibold text-slate-900">copies the index</strong> — same stocks, same
+          An index fund <strong className="font-semibold text-slate-900">copies the index</strong> - same stocks, same
           proportions. No fund manager picking names; the fund’s job is to track the benchmark as closely as costs allow.
         </p>
         <p className="mb-3">
@@ -145,7 +145,7 @@ export default function IndexFundGuide() {
         <p className="mt-4 text-slate-600">No research team. No stock-picking mandate. Just copy.</p>
       </Card>
 
-      <Card id="fee-example" title="The chai stall example — fees compound">
+      <Card id="fee-example" title="The chai stall example - fees compound">
         <p className="mb-4">
           <strong className="font-semibold text-slate-900">Rohan</strong> and{" "}
           <strong className="font-semibold text-slate-900">Priya</strong> each invest{" "}
@@ -154,12 +154,12 @@ export default function IndexFundGuide() {
         </p>
         <ul className="mb-4 list-disc space-y-2 pl-5">
           <li>
-            <strong className="font-semibold text-slate-900">Rohan</strong> — popular large-cap active fund, expense ratio{" "}
+            <strong className="font-semibold text-slate-900">Rohan</strong> - popular large-cap active fund, expense ratio{" "}
             <strong className="font-semibold text-slate-900">1.5%/year</strong>. Net ~10.5% after fees → corpus about{" "}
             <strong className="font-semibold text-slate-900">₹38.8 lakh</strong>.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">Priya</strong> — UTI Nifty 50 Index Fund, expense ratio{" "}
+            <strong className="font-semibold text-slate-900">Priya</strong> - UTI Nifty 50 Index Fund, expense ratio{" "}
             <strong className="font-semibold text-slate-900">0.20%/year</strong>. Net ~11.8% after fees → corpus about{" "}
             <strong className="font-semibold text-slate-900">₹46.3 lakh</strong>.
           </li>
@@ -167,13 +167,13 @@ export default function IndexFundGuide() {
         <StatHighlight tone="emerald">
           <strong className="text-base font-semibold">Difference: ₹7.5 lakh</strong>
           <p className="mt-2">
-            Same market, same monthly amount, same 20 years — only fees differ. That gap is what a small expense ratio
+            Same market, same monthly amount, same 20 years - only fees differ. That gap is what a small expense ratio
             costs you when it compounds for decades (the “chai” the active team drinks every day, metaphorically).
           </p>
         </StatHighlight>
       </Card>
 
-      <Card id="spiva" title="SPIVA — the shocking data">
+      <Card id="spiva" title="SPIVA - the shocking data">
         <p className="mb-4">
           This is not theory. <strong className="font-semibold text-slate-900">SPIVA India Year-End 2024</strong> is among
           the most cited studies on active vs passive performance in India.
@@ -190,17 +190,17 @@ export default function IndexFundGuide() {
             </li>
             <li>
               Translation: only about <strong className="font-semibold">7 out of 100</strong> active managers beat the
-              index over that horizon — and you do not know in advance which seven.
+              index over that horizon - and you do not know in advance which seven.
             </li>
           </ul>
         </StatHighlight>
         <p className="mt-4">
           Last year’s chart-topper rarely repeats. Large caps like Reliance, TCS, and HDFC Bank are covered by hundreds of
-          analysts globally — “hidden” information is scarce. Index funds ride the market; active funds pay to fight it.
+          analysts globally - “hidden” information is scarce. Index funds ride the market; active funds pay to fight it.
         </p>
       </Card>
 
-      <Card id="expense-ratio" title="Expense ratio — the silent killer">
+      <Card id="expense-ratio" title="Expense ratio - the silent killer">
         <p className="mb-4">
           Every mutual fund charges an annual <strong className="font-semibold text-slate-900">expense ratio</strong>. You
           never write a separate cheque; it is deducted from NAV and quietly reduces your compounding.
@@ -250,10 +250,10 @@ export default function IndexFundGuide() {
         <div className="space-y-3">
           <StatHighlight tone="violet">
             <strong className="font-semibold">81.5%</strong> of large-cap active funds underperformed the index in 2024
-            (SPIVA) — paying more does not buy you a better odds of winning.
+            (SPIVA) - paying more does not buy you a better odds of winning.
           </StatHighlight>
           <StatHighlight tone="amber">
-            <strong className="font-semibold">~₹70 lakh lost to fees</strong> in this 30-year illustration — same market
+            <strong className="font-semibold">~₹70 lakh lost to fees</strong> in this 30-year illustration - same market
             return assumption, only expense ratio differs. Over a working lifetime, that gap is enormous for no guaranteed
             extra return.
           </StatHighlight>
@@ -264,7 +264,7 @@ export default function IndexFundGuide() {
         <p className="mb-4">
           Index funds are not perfect for every pocket of the market. SPIVA India{" "}
           <strong className="font-semibold text-slate-900">Mid-Year 2025</strong>: in mid and small cap, only{" "}
-          <strong className="font-semibold text-slate-900">34.5%</strong> of active funds underperformed in that window —
+          <strong className="font-semibold text-slate-900">34.5%</strong> of active funds underperformed in that window -
           skilled managers can sometimes find less-researched names.
         </p>
         <p className="mb-3">
@@ -274,7 +274,7 @@ export default function IndexFundGuide() {
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong className="font-semibold text-slate-900">Core (60–70% of equity):</strong> Nifty 50 or broader index
-            (e.g. Nifty 500) — boring, low cost, hard to beat in large cap.
+            (e.g. Nifty 500) - boring, low cost, hard to beat in large cap.
           </li>
           <li>
             <strong className="font-semibold text-slate-900">Satellite (30–40%):</strong> carefully chosen mid/small-cap
@@ -297,7 +297,7 @@ export default function IndexFundGuide() {
           <li>
             Platforms: <strong className="font-semibold text-slate-900">Groww</strong>,{" "}
             <strong className="font-semibold text-slate-900">Zerodha Coin</strong>,{" "}
-            <strong className="font-semibold text-slate-900">Kuvera</strong> — use{" "}
+            <strong className="font-semibold text-slate-900">Kuvera</strong> - use{" "}
             <strong className="font-semibold text-slate-900">DIRECT</strong> plans only.
           </li>
           <li>
@@ -311,11 +311,11 @@ export default function IndexFundGuide() {
         <p className="mb-3">Index funds are taxed like other equity mutual funds (rules as commonly understood in 2026):</p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            Held <strong className="font-semibold text-slate-900">less than 1 year</strong> — STCG:{" "}
+            Held <strong className="font-semibold text-slate-900">less than 1 year</strong> - STCG:{" "}
             <strong className="font-semibold text-slate-900">20%</strong>
           </li>
           <li>
-            Held <strong className="font-semibold text-slate-900">more than 1 year</strong> — LTCG:{" "}
+            Held <strong className="font-semibold text-slate-900">more than 1 year</strong> - LTCG:{" "}
             <strong className="font-semibold text-slate-900">12.5%</strong>
           </li>
           <li>
@@ -331,7 +331,7 @@ export default function IndexFundGuide() {
           <li>
             <strong className="font-semibold text-slate-900">Myth 1: “Index funds only give average returns.”</strong>
             <p className="mt-1 text-slate-700">
-              “Average” here means the top 50 Indian companies compounding for decades — Nifty 50 has delivered roughly{" "}
+              “Average” here means the top 50 Indian companies compounding for decades - Nifty 50 has delivered roughly{" "}
               <strong className="font-semibold text-slate-900">~12% CAGR</strong> since inception in many long-window
               studies (not a promise for the future).
             </p>
@@ -352,7 +352,7 @@ export default function IndexFundGuide() {
           <li>
             <strong className="font-semibold text-slate-900">Myth 4: “My fund manager is different.”</strong>
             <p className="mt-1 text-slate-700">
-              SPIVA 2024: <strong className="font-semibold text-slate-900">81.5%</strong> of managers underperformed — many
+              SPIVA 2024: <strong className="font-semibold text-slate-900">81.5%</strong> of managers underperformed - many
               families heard the same story.
             </p>
           </li>
@@ -393,7 +393,7 @@ export default function IndexFundGuide() {
               href="/learn/sip-vs-lumpsum-when-to-use-which"
               className="block rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm font-semibold text-[#534AB7] hover:border-[#534AB7]/40 hover:underline"
             >
-              SIP vs lumpsum — when to use which →
+              SIP vs lumpsum - when to use which →
             </Link>
           </li>
           <li>
@@ -418,7 +418,7 @@ export default function IndexFundGuide() {
       <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-950 sm:text-sm">
         <strong className="font-semibold">Educational only.</strong> This is not investment advice. Finkoin is not a SEBI-
         registered investment advisor. Consult a qualified financial advisor before investing. Past performance does not
-        guarantee future results. Data referenced from SPIVA India 2024, AMFI, and fund factsheets as of 2026 — verify
+        guarantee future results. Data referenced from SPIVA India 2024, AMFI, and fund factsheets as of 2026 - verify
         current expense ratios and tax rules before you act.
       </div>
     </div>

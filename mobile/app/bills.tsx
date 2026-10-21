@@ -1,5 +1,5 @@
 /**
- * Bills & renewals calendar — port of web app/bills/page.tsx.
+ * Bills & renewals calendar - port of web app/bills/page.tsx.
  * Obligations, card due days and policy renewals for one month, with
  * Mark paid / Skip / Edit and an add-bill sheet.
  */
@@ -638,7 +638,7 @@ function BillRow({
           item.status === "overdue" && { color: Colors.error },
         ]}
       >
-        {item.amount != null ? amountText(item.amount) : "—"}
+        {item.amount != null ? amountText(item.amount) : "-"}
       </Text>
     </View>
   );

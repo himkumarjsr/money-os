@@ -1,5 +1,5 @@
 /**
- * Tracker category/subcategory icons — ports web `components/tracker/TrackerIcons.tsx`
+ * Tracker category/subcategory icons - ports web `components/tracker/TrackerIcons.tsx`
  * shapes 1:1 onto react-native-svg so bucket + subcategory rows match the PWA visually.
  */
 import { brand, readableIcon } from "@/constants/theme";

@@ -4,7 +4,7 @@
  *
  * Card spends count in their bucket (Needs, Wants, …) the day they are made.
  * The bank SPENT / LEFT on the top card only moves when money leaves the
- * bank — a card bill payment the day it is paid. A card bill payment counts
+ * bank - a card bill payment the day it is paid. A card bill payment counts
  * in its bucket (Loans & Credit) only above the same card's purchases already
  * counted (see `applyCardBillCoverage`), so nothing is counted twice. Nothing
  * is generated for interest or unpaid bills: those live in the Card bills
@@ -148,7 +148,7 @@ export type CardLedgerResult = {
  * Walk card rows in date order, all cards pooled. Spends add to what is owed;
  * a bill payment first settles that, and anything above it is `excess`
  * (interest, fees, a balance from before tracking). Same-day spends are
- * settled before the payment. Informational only — nothing here is counted
+ * settled before the payment. Informational only - nothing here is counted
  * in bucket totals or the bank SPENT.
  */
 export function runCardLedger(
@@ -213,7 +213,7 @@ function cardKeyOf(method: string | null | undefined): string {
  * Rule: a bill payment counts at its amount minus the purchases on the SAME
  * card that the tracker already counts in a bucket (net of refunds; card EMI
  * instalments included), dated from the 1st of the calendar month before the
- * payment month up to the payment date — never below 0. A purchase offsets
+ * payment month up to the payment date - never below 0. A purchase offsets
  * only one payment (earlier payments use it up first).
  *
  * The card comes from the payment's note ("Pay bill · <card>", `[#id]`),

@@ -1,7 +1,7 @@
 /**
  * India Post / National Small Savings rates.
  * Source: MoF DEA notifications + DoP SB Orders (unchanged through Jul–Sep 2026).
- * Confirm on India Post / nsiindia.gov.in before investing — rates can change quarterly.
+ * Confirm on India Post / nsiindia.gov.in before investing - rates can change quarterly.
  */
 export const PO_RATES_PERIOD = "Jul–Sep 2026";
 export const PO_RATES_SOURCE =
@@ -32,7 +32,7 @@ export function poTdRate(years: PoTdYears): number {
   return PO_RATES.td5;
 }
 
-/** Post Office Time Deposit — interest compounded quarterly. */
+/** Post Office Time Deposit - interest compounded quarterly. */
 export function poTdMaturity(
   principal: number,
   years: PoTdYears,
@@ -57,7 +57,7 @@ export function poRdMaturity(
   return monthly * factor;
 }
 
-/** NSC VIII — compounded annually, 5 years. */
+/** NSC VIII - compounded annually, 5 years. */
 export function poNscMaturity(
   principal: number,
   annualPct: number = PO_RATES.nsc,
@@ -65,7 +65,7 @@ export function poNscMaturity(
   return principal * Math.pow(1 + annualPct / 100, 5);
 }
 
-/** KVP — currently doubles in 115 months at notified rate. */
+/** KVP - currently doubles in 115 months at notified rate. */
 export function poKvpMaturity(
   principal: number,
   months: number = PO_RATES.kvpMonths,

@@ -151,7 +151,7 @@ export default function HomeLoanPrepayEmbed() {
           }`}
         >
           <div className="text-[11px] font-bold uppercase tracking-wide text-[#9B9A94]">
-            Option A — reduce EMI
+            Option A - reduce EMI
           </div>
           <div className="mt-2 text-sm font-semibold text-[#111110]">
             New EMI ≈ ₹{formatIndian(Math.round(result.emiAfter))}
@@ -169,7 +169,7 @@ export default function HomeLoanPrepayEmbed() {
           }`}
         >
           <div className="text-[11px] font-bold uppercase tracking-wide text-[#9B9A94]">
-            Option B — cut tenure
+            Option B - cut tenure
           </div>
           <div className="mt-2 text-sm font-semibold text-[#111110]">
             Tenure ≈ {result.monthsCutTenure} months (
@@ -184,7 +184,7 @@ export default function HomeLoanPrepayEmbed() {
 
       <p className="mt-4 text-sm font-semibold text-[#534AB7]">
         {tenureWins
-          ? "Usually better: keep EMI, cut tenure — if cashflow allows."
+          ? "Usually better: keep EMI, cut tenure - if cashflow allows."
           : "Reduce EMI if you need monthly breathing room."}
       </p>
     </LearnToolEmbed>

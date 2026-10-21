@@ -44,7 +44,7 @@ export const EMPLOYMENT_OPTIONS: { id: EmploymentKind; label: string }[] = [
 ];
 
 // Single primary classification for the engine (ITR hints / missed-deduction
-// alerts, not tax math) — the source that unlocks the most guidance wins.
+// alerts, not tax math) - the source that unlocks the most guidance wins.
 const EMPLOYMENT_PRIORITY: EmploymentKind[] = [
   "salaried",
   "freelancer",
@@ -638,27 +638,27 @@ export function useTaxCalculatorState() {
         "Old regime likely wins because deductions (80C stack, 80D split, HRA/80GG, loan interest) compress taxable income more than new slabs offset.",
       );
       out.push(
-        "Share Form 16 drafts with payroll early — regime switches affect TDS cash-flow.",
+        "Share Form 16 drafts with payroll early - regime switches affect TDS cash-flow.",
       );
     } else if (winner === "new") {
       out.push(
-        "New regime can win when deductions are thin — fewer proofs and ₹75k standard deduction (modelled here) help simplicity.",
+        "New regime can win when deductions are thin - fewer proofs and ₹75k standard deduction (modelled here) help simplicity.",
       );
       out.push(
         `Approx annual advantage vs old at these inputs: ${rupees(saveAmount)}.`,
       );
     } else {
       out.push(
-        "Nearly tied — choose based on proof workload and expected income trajectory.",
+        "Nearly tied - choose based on proof workload and expected income trajectory.",
       );
     }
     if (i.nri)
       out.push(
-        "NRIs: validate residency and DTAA — this model is domestic illustrative.",
+        "NRIs: validate residency and DTAA - this model is domestic illustrative.",
       );
     if (i.secJobSwitch) {
       out.push(
-        "Mid-year switch: sum both Form 16s (salary + F&F taxable bits) and claim all TDS — AIS/26AS should match before you file.",
+        "Mid-year switch: sum both Form 16s (salary + F&F taxable bits) and claim all TDS - AIS/26AS should match before you file.",
       );
     }
     return out.slice(0, 4);
@@ -692,11 +692,11 @@ export function useTaxCalculatorState() {
     const guide = [
       {
         form: "ITR-1 (Sahaj)",
-        when: "Resident individual with salary/pension, one house property, and other income (interest etc.) — no business, no capital gains (except exempt), no foreign assets.",
+        when: "Resident individual with salary/pension, one house property, and other income (interest etc.) - no business, no capital gains (except exempt), no foreign assets.",
       },
       {
         form: "ITR-2",
-        when: "Capital gains, more than one house property, foreign income/assets, or director/unlisted equity — still no business/profession income.",
+        when: "Capital gains, more than one house property, foreign income/assets, or director/unlisted equity - still no business/profession income.",
       },
       {
         form: "ITR-3",
@@ -719,7 +719,7 @@ export function useTaxCalculatorState() {
           ? "Business/profession entered with presumptive mode (44AD/44ADA)."
           : "Business/professional income entered.",
         note: midYearSwitch
-          ? "Job switch does not change this — still report all salary Form 16s inside the business ITR."
+          ? "Job switch does not change this - still report all salary Form 16s inside the business ITR."
           : "Confirm turnover/eligibility conditions before filing.",
         guide,
       };
@@ -734,7 +734,7 @@ export function useTaxCalculatorState() {
       return {
         form: "ITR-1 (Sahaj) likely",
         why: midYearSwitch
-          ? "Salary-only profile with a mid-year job switch — still usually ITR-1 if you only have salary (+ allowed other income). Report both employers’ Form 16s."
+          ? "Salary-only profile with a mid-year job switch - still usually ITR-1 if you only have salary (+ allowed other income). Report both employers’ Form 16s."
           : "No business/profession and no complex income flags detected.",
         note: midYearSwitch
           ? "Carry forward TDS from both employers in the return so AIS/26AS matches. Leave/gratuity taxable portions stay under salary."
@@ -746,7 +746,7 @@ export function useTaxCalculatorState() {
     return {
       form: "ITR-2 likely",
       why: midYearSwitch
-        ? "Complex income flags (e.g. capital gains / foreign) — job switch alone does not force ITR-2, but your other incomes do."
+        ? "Complex income flags (e.g. capital gains / foreign) - job switch alone does not force ITR-2, but your other incomes do."
         : "Capital gains / foreign-linked / other non-business complexities detected.",
       note: "Recheck with your CA if any business-profession income exists.",
       guide,
@@ -772,14 +772,14 @@ export function useTaxCalculatorState() {
       rows.push({
         emoji: "🏠",
         title: "80GG rent (no HRA)",
-        body: `Illustrative deduction ₹${Math.round(ggPreview).toLocaleString("en-IN")} — keep rent proofs.`,
+        body: `Illustrative deduction ₹${Math.round(ggPreview).toLocaleString("en-IN")} - keep rent proofs.`,
       });
     }
     if (i.secLTA && (derived.ltaExemptRec > 0 || derived.ltaTaxable > 0)) {
       rows.push({
         emoji: "✈️",
         title: "LTA",
-        body: `Exempt ₹${derived.ltaExemptRec.toLocaleString("en-IN")} · taxable ₹${derived.ltaTaxable.toLocaleString("en-IN")}. Blocks apply — verify with payroll.`,
+        body: `Exempt ₹${derived.ltaExemptRec.toLocaleString("en-IN")} · taxable ₹${derived.ltaTaxable.toLocaleString("en-IN")}. Blocks apply - verify with payroll.`,
       });
     }
     if (i.secRSU && derived.rsuVestingAnnual > 0) {
@@ -854,8 +854,8 @@ export function useTaxCalculatorState() {
         emoji: "🌾",
         title: "Agricultural income",
         body: i.excludeAgriculturalFromTax
-          ? "Excluded from ordinary gross in this run — partial integration not modeled."
-          : "Included in ordinary gross — confirm exemption vs integration with a CA.",
+          ? "Excluded from ordinary gross in this run - partial integration not modeled."
+          : "Included in ordinary gross - confirm exemption vs integration with a CA.",
       });
     }
     if (

@@ -10,7 +10,7 @@ const PUBLISHED = "2026-10-17";
 export const BLOG_ARTICLES_OCT_2026: BlogArticle[] = [
   {
     slug: "free-financial-calculators-india",
-    metaTitle: "Free Financial Calculators India — 65+ Tools | Finkoin",
+    metaTitle: "Free Financial Calculators India - 65+ Tools | Finkoin",
     title: "65+ Free Financial Calculators for India, and When to Use Each",
     description:
       "A guide to Finkoin's free money calculators: SIP, step-up SIP, XIRR, PF, gratuity, FD with TDS, loan eligibility, debt payoff, tax and more.",

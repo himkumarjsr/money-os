@@ -65,7 +65,7 @@ const BUCKET_COPY: {
   },
 ];
 
-/** Caps come from `getUniversalCaps` — the same source as the SpeedoMeter gauges. */
+/** Caps come from `getUniversalCaps` - the same source as the SpeedoMeter gauges. */
 export function bucketCapRows(
   profile: Partial<FinancialProfile>,
   income: number,
@@ -79,5 +79,5 @@ export function bucketCapRows(
 }
 
 export function safetyNetHeading(itemCount: number): string {
-  return `Your financial safety net — ${itemCount} checks`;
+  return `Your financial safety net - ${itemCount} checks`;
 }

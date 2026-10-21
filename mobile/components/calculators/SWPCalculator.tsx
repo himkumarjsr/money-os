@@ -165,9 +165,9 @@ export function SWPCalculator() {
 
       <Insight tone={tone}>
         {withdraw <= sustain
-          ? "Withdrawals are within the corpus’ natural yield — principal can stay intact."
+          ? "Withdrawals are within the corpus’ natural yield - principal can stay intact."
           : lasts >= 600
-            ? "Withdrawal pace is very conservative — corpus may outlive the plan."
+            ? "Withdrawal pace is very conservative - corpus may outlive the plan."
             : `At this pace the corpus may run out in ~${yearsLeft.toFixed(1)} years. Consider lowering SWP toward ₹${Math.round(sustain).toLocaleString("en-IN")}/mo or growing equity share.`}
       </Insight>
     </View>

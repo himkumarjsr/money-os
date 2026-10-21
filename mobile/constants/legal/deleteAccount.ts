@@ -16,7 +16,7 @@ export const DELETE_ACCOUNT: LegalDoc = {
   headingStyle: "plain",
   sections: [
     {
-      title: "Option 1 — delete it yourself (fastest)",
+      title: "Option 1 - delete it yourself (fastest)",
       blocks: [
         {
           kind: "ul",
@@ -33,7 +33,7 @@ export const DELETE_ACCOUNT: LegalDoc = {
       ],
     },
     {
-      title: "Option 2 — can't log in, or no longer have the app?",
+      title: "Option 2 - can't log in, or no longer have the app?",
       blocks: [
         {
           kind: "p",
@@ -52,7 +52,7 @@ export const DELETE_ACCOUNT: LegalDoc = {
             "Expense Tracker history and obligations",
             "Insurance policy vault entries",
             "Notifications, feedback, and FK reward balance/history",
-            "Your own membership in any Split groups (shared group expense history that other members still rely on is not deleted — see our [Privacy Policy](/legal/privacy) for details)",
+            "Your own membership in any Split groups (shared group expense history that other members still rely on is not deleted - see our [Privacy Policy](/legal/privacy) for details)",
           ],
         },
       ],

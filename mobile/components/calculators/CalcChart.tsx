@@ -50,7 +50,7 @@ function niceTicks(min: number, max: number, count = 4) {
   return { lo, hi, ticks };
 }
 
-/** Monotone cubic (Fritsch–Carlson) — same feel as recharts `type="monotone"`. */
+/** Monotone cubic (Fritsch–Carlson) - same feel as recharts `type="monotone"`. */
 function monotonePath(pts: { x: number; y: number }[], moveTo = true): string {
   const n = pts.length;
   if (n === 0) return "";

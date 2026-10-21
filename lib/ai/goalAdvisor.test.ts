@@ -36,7 +36,7 @@ function goal(over: Partial<GoalItem>): GoalItem {
 }
 
 describe("fundedGoals", () => {
-  it("keeps every funded goal with an id — no cap", () => {
+  it("keeps every funded goal with an id - no cap", () => {
     const goals = [
       goal({ goalId: "a" }),
       goal({ goalId: undefined }),
@@ -68,7 +68,7 @@ describe("goalAdvisorContext", () => {
     expect(ctx.goal.instrumentSplit.some((s) => /Gold/.test(s.instrument))).toBe(true);
   });
 
-  it("sends only goal numbers and age/life stage/risk — no income or loans", () => {
+  it("sends only goal numbers and age/life stage/risk - no income or loans", () => {
     const profile = {
       selfAge: 34,
       lifeStage: "married_with_kids",

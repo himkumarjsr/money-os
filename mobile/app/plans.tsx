@@ -1,5 +1,5 @@
 /**
- * Native Plans — port of web app/plans/page.tsx (cards verbatim).
+ * Native Plans - port of web app/plans/page.tsx (cards verbatim).
  * Difference from web: the paid buttons never unlock a tier. Mobile payments
  * are off (store billing rules), so Pro / Pro Max show "Available soon in the
  * app" instead of calling setSubscription.

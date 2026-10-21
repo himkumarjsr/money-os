@@ -22,7 +22,7 @@ export type SplitApiResult<T> =
       data: Record<string, unknown>;
       /**
        * The server never handled the request (no route, token not accepted,
-       * offline) — safe to fall back to a direct write without duplicating.
+       * offline) - safe to fall back to a direct write without duplicating.
        */
       unavailable: boolean;
     };
