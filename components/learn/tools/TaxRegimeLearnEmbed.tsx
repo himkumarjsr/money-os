@@ -33,7 +33,7 @@ export default function TaxRegimeLearnEmbed() {
       {!open ? (
         <div className="rounded-xl border border-dashed border-[#534AB7]/40 bg-[#FAFAFE] px-4 py-8 text-center">
           <p className="text-sm text-[#5F5E5A]">
-            Compare old vs new regime with 80C, HRA, NPS, home loan — free,
+            Compare old vs new regime with 80C, HRA, NPS, home loan - free,
             instant.
           </p>
           <button

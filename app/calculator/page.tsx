@@ -121,7 +121,7 @@ export default function CalculatorPage() {
         Calculator
       </h1>
       <p className="mb-4 text-center text-sm text-slate-600 sm:mb-6 sm:text-xs sm:text-slate-500">
-        Quick sums — not tax or SIP tools
+        Quick sums - not tax or SIP tools
       </p>
 
       <div className="mt-auto overflow-hidden rounded-[28px] border border-[#E8E6F0] bg-[#111110] p-3 shadow-xl sm:mt-0 sm:p-4">

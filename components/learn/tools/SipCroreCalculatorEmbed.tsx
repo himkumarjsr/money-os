@@ -27,7 +27,7 @@ export default function SipCroreCalculatorEmbed() {
 
   return (
     <LearnToolEmbed
-      title="SIP for your goal — live calculator"
+      title="SIP for your goal - live calculator"
       subtitle="Target keyword: sip calculator 1 crore. Change years and return to see the monthly SIP you need."
       fullToolHref="/calculators/sip"
       fullToolLabel="Open SIP calculator →"

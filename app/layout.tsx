@@ -90,7 +90,7 @@ export const metadata: Metadata = {
         url: `${siteUrl}/og/og-home.png`,
         width: 1200,
         height: 630,
-        alt: "Finkoin — India Personal Finance",
+        alt: "Finkoin - India Personal Finance",
       },
     ],
   },
@@ -329,7 +329,7 @@ export default function RootLayout({
       <body className="font-sans min-h-dvh bg-[#F4F2FC] antialiased">
         {/*
           Critical CSS is inline so the splash paints before globals.css /
-          JS — covers the blank gap when opening the installed PWA.
+          JS - covers the blank gap when opening the installed PWA.
         */}
         <style
           dangerouslySetInnerHTML={{

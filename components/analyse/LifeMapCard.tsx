@@ -12,7 +12,7 @@ type LifeMapGoal = {
 
 const MAX_YEARS = 35;
 
-/** Every goal on one timeline, each funded from this month — not one goal at a time. */
+/** Every goal on one timeline, each funded from this month - not one goal at a time. */
 export default function LifeMapCard({
   goals,
   selfAge,

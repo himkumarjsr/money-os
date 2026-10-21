@@ -190,7 +190,7 @@ describe("bill payments logged without choosing a card", () => {
       status: "marked_paid",
       remaining: 0,
     });
-    expect(cardLastBillText(amazon)).toBe("₹10,343 due 1 Oct — Paid ✓");
+    expect(cardLastBillText(amazon)).toBe("₹10,343 due 1 Oct - Paid ✓");
   });
 });
 
@@ -268,7 +268,7 @@ describe("Card bills section", () => {
       clearlyUnpaid: true,
     });
     expect(cardLastBillText(amazon)).toBe(
-      "₹10,343 due 1 Oct — ₹5,000 of ₹10,343 paid",
+      "₹10,343 due 1 Oct - ₹5,000 of ₹10,343 paid",
     );
   });
 
@@ -310,7 +310,7 @@ describe("Card bills section", () => {
       asOf,
     }).cards[0];
     expect(res.lastBill?.status).toBe("paid");
-    expect(cardLastBillText(res)).toBe("₹859 due 1 Oct — Paid ✓");
+    expect(cardLastBillText(res)).toBe("₹859 due 1 Oct - Paid ✓");
     expect(res.cycle.spent).toBe(1000);
     expect(res.cycle.toPay).toBe(600);
     expect(res.upcoming).toBe(600);

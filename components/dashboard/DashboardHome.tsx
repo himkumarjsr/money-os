@@ -468,7 +468,7 @@ function BillsCard({ userId }: { userId: string | null }) {
                       </p>
                     </div>
                     <span className="shrink-0 text-sm font-bold text-[#111110]">
-                      {item.amount != null ? amountText(item.amount) : "—"}
+                      {item.amount != null ? amountText(item.amount) : "-"}
                     </span>
                   </li>
                 ))}

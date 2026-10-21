@@ -427,7 +427,7 @@ export default function CreditCardBillReminder({
                         flexBasis: "100%",
                       }}
                     >
-                      Couldn&apos;t match a payment to this bill — mark as paid?
+                      Couldn&apos;t match a payment to this bill - mark as paid?
                     </span>
                   ) : last.clearlyUnpaid ? (
                     <span

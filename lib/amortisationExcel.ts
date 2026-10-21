@@ -29,7 +29,7 @@ export function buildAmortisationWorkbook(
   const workbook = XLSX.utils.book_new();
 
   const summaryData = [
-    [`Finkoin — ${calculatorName} Schedule`],
+    [`Finkoin - ${calculatorName} Schedule`],
     [""],
     ["Loan amount", formatINR(loanAmount)],
     ["Annual interest rate", `${rate}%`],

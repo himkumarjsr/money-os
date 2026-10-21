@@ -113,7 +113,7 @@ export const TERMS_OF_SERVICE: LegalDoc = {
         {
           kind: "callout",
           tone: "grey",
-          title: "Digital Products — No Refund Policy",
+          title: "Digital Products - No Refund Policy",
           text: "As Finkoin delivers digital content that is instantly accessible upon payment, all purchases are final and non-refundable once the content has been accessed or unlocked.",
         },
         { kind: "p", text: "Exceptions (at our discretion):" },

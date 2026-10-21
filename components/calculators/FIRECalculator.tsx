@@ -68,13 +68,13 @@ export function FIRECalculator() {
       "At this SIP and return assumption, closing the gap may take decades. Increase monthly investing, reduce lifestyle expenses, or clear loans to lower the target.";
   } else if (result.yearsToTarget <= 7) {
     tone = "good";
-    insight = `You may reach your total FIRE target in about ${formatYearsMonths(result.yearsToTarget, result.monthsToTarget)} — closer than the “₹10 crore” fear many people carry.`;
+    insight = `You may reach your total FIRE target in about ${formatYearsMonths(result.yearsToTarget, result.monthsToTarget)} - closer than the “₹10 crore” fear many people carry.`;
   } else if (result.yearsToTarget <= 15) {
     tone = "warn";
     insight = `Estimated ${formatYearsMonths(result.yearsToTarget, result.monthsToTarget)} to your target at ${returnPct}% growth. Clearing EMIs or raising SIP materially shortens this.`;
   } else {
     tone = "bad";
-    insight = `Roughly ${formatYearsMonths(result.yearsToTarget, result.monthsToTarget)} away at current inputs. EMIs inflate the number you think you need — use expenses without EMIs.`;
+    insight = `Roughly ${formatYearsMonths(result.yearsToTarget, result.monthsToTarget)} away at current inputs. EMIs inflate the number you think you need - use expenses without EMIs.`;
   }
 
   if (result.debtPayoffFireSavings > 0 && monthlyEmi > 0) {
@@ -89,7 +89,7 @@ export function FIRECalculator() {
         Uses the{" "}
         <strong className="font-semibold text-slate-800">4% rule</strong> (25×
         annual lifestyle expenses) plus outstanding loan balances. Enter
-        expenses <em>without</em> EMIs — add loans separately.
+        expenses <em>without</em> EMIs - add loans separately.
       </p>
 
       <SliderField
@@ -183,7 +183,7 @@ export function FIRECalculator() {
           <p className="mt-1 leading-relaxed">
             Naive FIRE (expenses + EMI): {fmt(result.naiveFireCorpus)}.
             Loan-free lifestyle FIRE: {fmt(result.lifestyleFireCorpus)}.
-            Difference: <strong>{fmt(result.debtPayoffFireSavings)}</strong> —
+            Difference: <strong>{fmt(result.debtPayoffFireSavings)}</strong> -
             same lifestyle once loans end.
           </p>
         </div>

@@ -1,4 +1,4 @@
-/** Native Blog article — port of web app/blog/[slug]/page.tsx. */
+/** Native Blog article - port of web app/blog/[slug]/page.tsx. */
 import { Pressable, Text, View } from "react-native";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { Colors, themedStyles } from "@/constants/theme";

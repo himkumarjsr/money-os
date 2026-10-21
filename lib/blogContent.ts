@@ -133,7 +133,7 @@ Need a practical comparison with your numbers? Use the [Tax Regime Calculator](/
     ],
     publishedAt: "2026-05-01",
     category: "tax",
-    body: `Choosing between India's old and new tax regime is not about "which is popular" — it is about **your** deductions and income mix.
+    body: `Choosing between India's old and new tax regime is not about "which is popular" - it is about **your** deductions and income mix.
 
 ## Quick rule of thumb
 
@@ -142,7 +142,7 @@ Need a practical comparison with your numbers? Use the [Tax Regime Calculator](/
 
 ## What to do next
 
-Use Finkoin's [free tax regime calculator](/calculators/tax-regime-2026) with your actual salary, rent, and Chapter VI-A numbers — then compare side by side.
+Use Finkoin's [free tax regime calculator](/calculators/tax-regime-2026) with your actual salary, rent, and Chapter VI-A numbers - then compare side by side.
 
 For a deeper dive on 80C picks, read our [80C deductions guide](/blog/80c-deductions-guide-2026).
 
@@ -170,12 +170,12 @@ Ready for a full picture? Run the [financial health check](/analyse) to see emer
 
 ## Use calculators, not guesses
 
-- [Financial health check](/analyse) — surfaces insurance gap vs income and dependents.
-- [Tax regime calculator](/calculators/tax-regime-2026) — if you are optimising take-home and benefits together.
+- [Financial health check](/analyse) - surfaces insurance gap vs income and dependents.
+- [Tax regime calculator](/calculators/tax-regime-2026) - if you are optimising take-home and benefits together.
 
 ## Related reading
 
-- [Emergency fund guide](/blog/emergency-fund-calculator-india) — liquidity first, insurance next.`,
+- [Emergency fund guide](/blog/emergency-fund-calculator-india) - liquidity first, insurance next.`,
   },
   {
     slug: "emergency-fund-calculator-india",
@@ -189,7 +189,7 @@ Ready for a full picture? Run the [financial health check](/analyse) to see emer
     ],
     publishedAt: "2026-05-03",
     category: "savings",
-    body: `An emergency fund is boring — until life is not. In India, medical shocks, job changes, and family responsibilities show up without warning.
+    body: `An emergency fund is boring - until life is not. In India, medical shocks, job changes, and family responsibilities show up without warning.
 
 ## Start with monthly expenses
 
@@ -213,7 +213,7 @@ Then explore [free calculators](/calculators) for SIP planning once the buffer e
     slug: "80c-deductions-guide-2026",
     title: "Section 80C Deductions 2026: Save ₹46,800 in Tax",
     description:
-      "Complete list of 80C investments and deductions for FY 2025-26. ELSS vs PPF vs FD — which is best for your goals?",
+      "Complete list of 80C investments and deductions for FY 2025-26. ELSS vs PPF vs FD - which is best for your goals?",
     keywords: [
       "80C deductions 2026",
       "section 80C limit 2026",
@@ -221,7 +221,7 @@ Then explore [free calculators](/calculators) for SIP planning once the buffer e
     ],
     publishedAt: "2026-05-04",
     category: "tax",
-    body: `Section **80C** is the most famous tax-saving bucket in India — and also the most mis-sold.
+    body: `Section **80C** is the most famous tax-saving bucket in India - and also the most mis-sold.
 
 ## What counts under 80C
 
@@ -231,11 +231,11 @@ Common instruments include EPF (employee contribution), PPF, ELSS, life insuranc
 
 - **ELSS**: market-linked, 3-year lock-in, potential higher long-term returns with volatility.
 - **PPF**: long horizon, government-backed flavour, illiquid but steady.
-- **Tax-saving FD**: predictable, locked-in, lower return — but easy to understand.
+- **Tax-saving FD**: predictable, locked-in, lower return - but easy to understand.
 
 ## Do not optimise 80C in isolation
 
-Use the [old vs new regime article](/blog/old-vs-new-tax-regime-2026) and the [tax regime calculator](/calculators/tax-regime-2026) — 80C matters only if the old regime wins for your profile.`,
+Use the [old vs new regime article](/blog/old-vs-new-tax-regime-2026) and the [tax regime calculator](/calculators/tax-regime-2026) - 80C matters only if the old regime wins for your profile.`,
   },
 ];
 

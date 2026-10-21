@@ -58,7 +58,7 @@ export function ChangePasswordSheet({
     <BottomSheet visible={visible} onClose={onClose} scroll>
       <Text style={styles.title}>Change password</Text>
       <Text style={styles.sub}>
-        Works for Google sign-ins too — it adds a password to your account.
+        Works for Google sign-ins too - it adds a password to your account.
       </Text>
       <View style={styles.form}>
         <PasswordInput

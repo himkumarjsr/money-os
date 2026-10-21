@@ -4,7 +4,7 @@ import {
   buildAmortisationWorkbook,
 } from "@/lib/amortisationExcel";
 
-/** Loads xlsx only when the user exports — keeps it out of the main calculator bundle. */
+/** Loads xlsx only when the user exports - keeps it out of the main calculator bundle. */
 export async function downloadAmortisationExcel(
   rows: AmortisationRow[],
   loanAmount: number,

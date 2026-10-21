@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     plan: typeof notes.plan === "string" ? notes.plan : "pro",
   });
   if (payErr && payErr.code !== "23505") {
-    // 42P01: payments table not migrated yet — the owner check above still
+    // 42P01: payments table not migrated yet - the owner check above still
     // holds, so don't block a paying user over the missing record.
     console.error("Payment record insert failed:", payErr.message);
     if (payErr.code !== "42P01") {

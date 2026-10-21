@@ -220,8 +220,8 @@ export function PrepayVsInvestCalculator() {
       />
       <Insight tone={prepayWins ? "good" : "warn"}>
         {prepayWins
-          ? "Prepaying comes out ahead — and it is a guaranteed return."
-          : `Investing comes out ahead at ${ret}% — but that return is not guaranteed, while the ${rate}% saved by prepaying is.`}
+          ? "Prepaying comes out ahead - and it is a guaranteed return."
+          : `Investing comes out ahead at ${ret}% - but that return is not guaranteed, while the ${rate}% saved by prepaying is.`}
       </Insight>
       <Note>
         Home loan interest is deductible under 24(b) in the old regime, which
@@ -323,7 +323,7 @@ export function BalanceTransferCalculator() {
       </Stats>
       <Insight tone={b.netSaving > 0 ? "good" : "bad"}>
         {b.netSaving > 0
-          ? "Switching pays off. Ask your current bank to match the rate first — many do, for a small fee."
+          ? "Switching pays off. Ask your current bank to match the rate first - many do, for a small fee."
           : "Switching costs more than it saves."}
       </Insight>
     </div>
@@ -382,7 +382,7 @@ export function FlatVsReducingCalculator() {
       <Note>
         Flat rates charge interest on the full loan for the whole tenure even as
         you repay it. Common in car dealer, consumer durable and some personal
-        loans — always compare the reducing rate (APR).
+        loans - always compare the reducing rate (APR).
       </Note>
     </div>
   );
@@ -604,7 +604,7 @@ export function DebtPayoffCalculator() {
         title="Order of payoff"
         rows={chosen.order.map((o) => ({
           label: o.name,
-          value: o.month ? `Month ${o.month}` : "—",
+          value: o.month ? `Month ${o.month}` : "-",
         }))}
       />
       {Number.isFinite(a.months) && Number.isFinite(s.months) ? (
@@ -709,7 +709,7 @@ export function EducationLoanCalculator() {
       {!pay ? (
         <Insight tone="warn">
           Paying even the simple interest during the course keeps the loan from
-          growing — {inr(e.principalAtRepay - amount)} gets added otherwise.
+          growing - {inr(e.principalAtRepay - amount)} gets added otherwise.
         </Insight>
       ) : null}
     </div>

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-/** Public, sanitized snippets — backed by `app_feedback` (RLS blocks direct anon reads). */
+/** Public, sanitized snippets - backed by `app_feedback` (RLS blocks direct anon reads). */
 export async function GET() {
   try {
     const admin = getSupabaseAdmin();

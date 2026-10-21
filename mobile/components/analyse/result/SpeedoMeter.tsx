@@ -322,7 +322,7 @@ function GaugeSvg({
         fontSize={16}
         fontWeight="bold"
       >
-        {income > 0 ? `${actualPct.toFixed(0)}%` : "—"}
+        {income > 0 ? `${actualPct.toFixed(0)}%` : "-"}
       </SvgText>
     </Svg>
   );
@@ -361,7 +361,7 @@ function GaugeColumn({
   );
 }
 
-/** Web: `SpeedoMeter` with `singleScore` — hero gauge. */
+/** Web: `SpeedoMeter` with `singleScore` - hero gauge. */
 export function SpeedoMeterSingle({
   score: rawScore,
   tone,
@@ -443,7 +443,7 @@ export function SpeedoMeterSingle({
   );
 }
 
-/** Web: `SpeedoMeter` multi mode — 5 bucket gauges, chips, insights, footnote. */
+/** Web: `SpeedoMeter` multi mode - 5 bucket gauges, chips, insights, footnote. */
 export function SpeedoMeterMulti(props: SpeedoMeterProps) {
   const {
     income,
@@ -503,7 +503,7 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
   const stL = spendStatus(pct.loans, c.loans * 100);
   const investTarget = investmentTargetPct(c.investment);
   const stI = investStatus(pct.investment, investTarget);
-  const fmtPct = (v: number) => (income > 0 ? v.toFixed(0) : "—");
+  const fmtPct = (v: number) => (income > 0 ? v.toFixed(0) : "-");
 
   const needsCapPct = Math.round(c.needs * 100);
   const wantsCapPct = Math.round(c.wants * 100);
@@ -514,21 +514,21 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
     issues.push(
       spendStatus(pct.needs, needsCapPct) === "critical"
         ? `Needs are critically above the ${needsCapPct}% guide.`
-        : `Needs are above the ${needsCapPct}% guide — review core spending.`,
+        : `Needs are above the ${needsCapPct}% guide - review core spending.`,
     );
   }
   if (spendStatus(pct.wants, wantsCapPct) !== "good") {
     issues.push(
-      `Wants are over the ${wantsCapPct}% cap — ease discretionary spend.`,
+      `Wants are over the ${wantsCapPct}% cap - ease discretionary spend.`,
     );
   }
   if (income > 0 && security <= 0) {
     issues.push(
-      "No insurance premiums on file — health and term cover protect everything else.",
+      "No insurance premiums on file - health and term cover protect everything else.",
     );
   } else if (spendStatus(pct.security, securityCapPct) !== "good") {
     issues.push(
-      `Insurance premiums are above the ${securityCapPct}% guide — review overlapping or investment-linked policies.`,
+      `Insurance premiums are above the ${securityCapPct}% guide - review overlapping or investment-linked policies.`,
     );
   }
   if (spendStatus(pct.loans, loansCapPct) !== "good") {
@@ -537,13 +537,13 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
   if (stI !== "good") {
     issues.push(
       stI === "critical"
-        ? `Investment flow is below 15% of income — increase long-term contributions when possible.`
-        : `Investment flow is under your ${investTarget}% target — try to step up toward it.`,
+        ? `Investment flow is below 15% of income - increase long-term contributions when possible.`
+        : `Investment flow is under your ${investTarget}% target - try to step up toward it.`,
     );
   }
   const t = needs + wants + security + loans + investment;
   if (income > 0 && t > income + 1e-6) {
-    issues.push("Total allocations exceed take-home — recheck inputs.");
+    issues.push("Total allocations exceed take-home - recheck inputs.");
   }
 
   return (
@@ -639,23 +639,23 @@ export function SpeedoMeterMulti(props: SpeedoMeterProps) {
       <View style={styles.chipsRow}>
         <Chip
           status={stN}
-          text={`Needs ${income > 0 ? `${pct.needs.toFixed(0)}%` : "—"} · ${chipLabelSpend(stN)}`}
+          text={`Needs ${income > 0 ? `${pct.needs.toFixed(0)}%` : "-"} · ${chipLabelSpend(stN)}`}
         />
         <Chip
           status={stW}
-          text={`Wants ${income > 0 ? `${pct.wants.toFixed(0)}%` : "—"} · ${chipLabelSpend(stW)}`}
+          text={`Wants ${income > 0 ? `${pct.wants.toFixed(0)}%` : "-"} · ${chipLabelSpend(stW)}`}
         />
         <Chip
           status={stS}
-          text={`Insurance ${income > 0 ? `${pct.security.toFixed(0)}%` : "—"} · ${chipLabelSpend(stS)}`}
+          text={`Insurance ${income > 0 ? `${pct.security.toFixed(0)}%` : "-"} · ${chipLabelSpend(stS)}`}
         />
         <Chip
           status={stL}
-          text={`Loans ${income > 0 ? `${pct.loans.toFixed(0)}%` : "—"} · ${chipLabelSpend(stL)}`}
+          text={`Loans ${income > 0 ? `${pct.loans.toFixed(0)}%` : "-"} · ${chipLabelSpend(stL)}`}
         />
         <Chip
           status={stI}
-          text={`Investment ${income > 0 ? `${pct.investment.toFixed(0)}%` : "—"} · ${chipLabelInvest(stI)}`}
+          text={`Investment ${income > 0 ? `${pct.investment.toFixed(0)}%` : "-"} · ${chipLabelInvest(stI)}`}
         />
       </View>
 

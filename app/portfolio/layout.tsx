@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-const title = "Portfolio Analysis — Mutual Fund Review | Finkoin";
+const title = "Portfolio Analysis - Mutual Fund Review | Finkoin";
 const description =
   "Analyse your mutual fund portfolio. See what to continue, watch, or switch. Free portfolio insights for India.";
 

@@ -1,4 +1,4 @@
-/** Global toast — port of web components/ui/Toast.tsx (gamification toastMessage). */
+/** Global toast - port of web components/ui/Toast.tsx (gamification toastMessage). */
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

@@ -1,5 +1,5 @@
 /**
- * Refer & earn — port of web app/refer/page.tsx.
+ * Refer & earn - port of web app/refer/page.tsx.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, Share, Text, View } from "react-native";
@@ -167,7 +167,7 @@ export default function ReferScreen() {
         <View style={styles.statsRow}>
           <View style={{ flex: 1 }}>
             <GoldText style={[styles.statNum, { color: Colors.primaryText }]}>
-              {referralCount ?? "—"}
+              {referralCount ?? "-"}
             </GoldText>
             <Text style={styles.statLabel}>Friends referred</Text>
           </View>
@@ -194,7 +194,7 @@ export default function ReferScreen() {
       ) : null}
 
       <Text style={pageStyles.footnote}>
-        Bonuses apply when our referral processor runs after signup —{" "}
+        Bonuses apply when our referral processor runs after signup -{" "}
         <Text
           style={pageStyles.link}
           onPress={() => router.push("/legal/terms" as never)}

@@ -12,7 +12,7 @@ export type Item = {
   id: string;
   title: string;
   blurb: string;
-  /** AppIcon name from components/ui/AppIcon — purple theme icons only. */
+  /** AppIcon name from components/ui/AppIcon - purple theme icons only. */
   icon?: "flame" | "receipt" | "trending" | "home" | "bank" | "wallet";
   keywords?: string[];
   isPremium?: boolean;
@@ -199,7 +199,7 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
       {
         id: "fire",
         title: "FIRE number",
-        blurb: "Financial independence target — 25× expenses + loans",
+        blurb: "Financial independence target - 25× expenses + loans",
         icon: "flame",
         keywords: [
           "FIRE number calculator India",
@@ -332,7 +332,7 @@ export const CATEGORIES: { id: Cat; label: string; items: Item[] }[] = [
       {
         id: "tax-regime",
         title: "Tax Regime Comparison",
-        blurb: "Old vs New regime — which saves more tax in 2026",
+        blurb: "Old vs New regime - which saves more tax in 2026",
         icon: "receipt",
         isPremium: false,
         keywords: [

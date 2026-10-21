@@ -336,7 +336,7 @@ export interface FinancialProfile {
   liquidMFValue?: number;
   /** @deprecated Legacy ring-fenced amount from older wizard; merged into weighted emergency total at 100%. Prefer savings + liquid MF + FD + other liquid. */
   emergencyFundCurrent: number;
-  /** Gold ETF, short-term bonds, money market, etc. — counts 50% toward accessible emergency fund. */
+  /** Gold ETF, short-term bonds, money market, etc. - counts 50% toward accessible emergency fund. */
   otherLiquidSavings?: number;
   mfValue?: number;
   indianStocksValue?: number;
@@ -484,7 +484,7 @@ const optionalWholeNumber = z.preprocess((val) => {
   return Math.round(n);
 }, z.number().int("Enter a whole number").min(0, "Cannot be negative").optional());
 
-/** Money / rate fields — decimals allowed. */
+/** Money / rate fields - decimals allowed. */
 const optionalDecimalNumber = optionalMoney;
 
 const optionalSpouseAge = z.preprocess(
@@ -1474,7 +1474,7 @@ function migrateLegacyAnalysePartial(
         interestRate: row.interestRate ?? 0,
         remainingMonths: row.remainingMonths ?? 0,
         odLimit: row.odLimit ?? 0,
-        // OD "amount used" is the same as outstanding — keep one source of truth.
+        // OD "amount used" is the same as outstanding - keep one source of truth.
         odUsed:
           loanType === "overdraft"
             ? outstanding || Number(row.odUsed ?? 0) || 0
@@ -2116,7 +2116,7 @@ export function normalizeAnalyseFormValues(
 ): FinancialProfile {
   const form = migrateLegacyAnalysePartial(data);
   const formUnifiedDefined = Array.isArray(form.unifiedLoans);
-  /** User cleared every loan in the UI (`unifiedLoans: []`) — drop stale scalars. */
+  /** User cleared every loan in the UI (`unifiedLoans: []`) - drop stale scalars. */
   const clearStaleLegacyLoans =
     formUnifiedDefined && (form.unifiedLoans ?? []).length === 0;
   const unifiedLoans = (form.unifiedLoans ?? []).filter(

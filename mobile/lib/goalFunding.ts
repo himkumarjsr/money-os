@@ -1,7 +1,7 @@
 /**
  * Weighted-parallel goal funding. Safety steps (emergency, insurance) stay
  * sequential in priorityEngine; once they're covered, the goal pool is split
- * across every active goal at the same time — weighted by urgency, with a
+ * across every active goal at the same time - weighted by urgency, with a
  * floor so long-horizon goals (retirement, a toddler's education) are never
  * deferred to zero. Pure engine math, no AI. Amounts are today's rupees.
  */
@@ -37,7 +37,7 @@ export const HORIZON_ASSUMPTIONS: Record<GoalHorizon, { nominalReturn: number }>
   "7y+": { nominalReturn: 0.12 },
 };
 
-/** Liquid investments minus non-mortgage debt — gates any real-estate mention. */
+/** Liquid investments minus non-mortgage debt - gates any real-estate mention. */
 export function liquidNetWorth(profile: FinancialProfile): number {
   const p = profile as unknown as Record<string, unknown>;
   const n = (k: string) => {
@@ -97,7 +97,7 @@ export type GoalFundingPlan = {
   pool: number;
   totalRequired: number;
   totalAllocated: number;
-  /** Pool left after every goal is fully funded — free for general wealth SIP. */
+  /** Pool left after every goal is fully funded - free for general wealth SIP. */
   unallocated: number;
   /** How far the pool falls short of funding every goal on time. */
   shortfall: number;

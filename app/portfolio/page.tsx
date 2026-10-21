@@ -99,7 +99,7 @@ function PortfolioPageInner() {
               MF Portfolio Analysis
             </h1>
             <p className="mt-2 text-slate-600">
-              Available in Pro Max — ₹99/month
+              Available in Pro Max - ₹99/month
             </p>
             <Link
               href="/plans"

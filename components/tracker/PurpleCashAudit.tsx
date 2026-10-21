@@ -192,7 +192,7 @@ export default function PurpleCashAudit({
           )}
 
           <p style={{ margin: "0 0 10px", fontSize: 11, color: "#9B9A94" }}>
-            Obligation checklist totals are planning only — they never reduce
+            Obligation checklist totals are planning only - they never reduce
             LEFT. Credit card dues / purchases are tracked under Bills &amp;
             calendar, not purple SPENT.
           </p>
@@ -207,7 +207,7 @@ export default function PurpleCashAudit({
               letterSpacing: 0.4,
             }}
           >
-            Excluded — Credit card section only
+            Excluded - Credit card section only
           </div>
           {audit.excluded.length === 0 ? (
             <div style={{ color: "#9B9A94" }}>

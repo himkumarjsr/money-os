@@ -45,8 +45,8 @@ export const healthScoreSection: DocSection = {
         [
           "No income entered",
           "Income is 0. This is the only issue returned, so the score is 85",
-          "—",
-          "—",
+          "-",
+          "-",
         ],
         [
           "Needs bucket vs cap",
@@ -74,14 +74,14 @@ export const healthScoreSection: DocSection = {
         ],
         [
           "Investment bucket vs cap",
-          "—",
-          "—",
+          "-",
+          "-",
           "Always fine: investing more than the cap is never penalised",
         ],
         [
           "Insurance spend floor",
           "Monthly premiums below 2% of income",
-          "—",
+          "-",
           "2% or more",
         ],
         [
@@ -92,7 +92,7 @@ export const healthScoreSection: DocSection = {
         ],
         [
           "Unallocated cash",
-          "—",
+          "-",
           "More than 10% of income is left unassigned, or the buckets add up to more than income by over 10%",
           "Within ±10%",
         ],
@@ -111,7 +111,7 @@ export const healthScoreSection: DocSection = {
         [
           "Medical emergency fund",
           "Below the medical target",
-          "—",
+          "-",
           "At or above target",
         ],
       ],

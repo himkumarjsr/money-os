@@ -1,5 +1,5 @@
 /**
- * Daily tip card — port of web components/MorningTipPopup.tsx.
+ * Daily tip card - port of web components/MorningTipPopup.tsx.
  * Shown once per IST day (6 AM–11 PM), 3s after the app opens.
  */
 import { useEffect, useRef, useState } from "react";

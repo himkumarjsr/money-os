@@ -7,7 +7,7 @@ import {
 } from "@/lib/universal-buckets";
 
 /**
- * Budget caps in whole percent for a past month — the same split as the main
+ * Budget caps in whole percent for a past month - the same split as the main
  * tracker: the user's own split (smart budget included) once Analyse is done,
  * otherwise the generic split.
  */

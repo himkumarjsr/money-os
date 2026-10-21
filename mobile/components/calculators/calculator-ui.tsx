@@ -118,11 +118,11 @@ type SliderFieldProps = {
   prefix?: string;
   format?: (v: number) => string;
   unitType?: UnitType;
-  /** Percent that is a share, not a yearly rate — caption shows "40%" instead of "40% p.a.". */
+  /** Percent that is a share, not a yearly rate - caption shows "40%" instead of "40% p.a.". */
   plainPercent?: boolean;
 };
 
-/** Typed value box + slider + amount-in-words — native port of the PWA SliderField. */
+/** Typed value box + slider + amount-in-words - native port of the PWA SliderField. */
 export function SliderField({
   label,
   value,
@@ -356,7 +356,7 @@ export function ChartCard({
   );
 }
 
-/** Full-width Excel download row — matches the PWA phone layout. */
+/** Full-width Excel download row - matches the PWA phone layout. */
 export function ExcelDownloadButton({
   onPress,
   subtitle = "Full amortisation in Excel",

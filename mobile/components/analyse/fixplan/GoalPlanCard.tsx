@@ -39,7 +39,7 @@ export function GoalPlanCard({
       {parallel ? (
         <Text style={styles.intro}>
           ₹{loc(budget)}/month, split across {goals.length}{" "}
-          {goals.length === 1 ? "goal" : "goals"} at the same time — nearer
+          {goals.length === 1 ? "goal" : "goals"} at the same time - nearer
           deadlines get more, long-horizon goals are never left at zero.
         </Text>
       ) : null}

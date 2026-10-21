@@ -1,4 +1,4 @@
-/** Native Learn hub — port of web app/learn/page.tsx + components/learn/learn-hub.tsx. */
+/** Native Learn hub - port of web app/learn/page.tsx + components/learn/learn-hub.tsx. */
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
@@ -27,13 +27,13 @@ export default function LearnHubScreen() {
     <ContentScreen
       barTitle="Learn"
       share={{
-        title: "Learn Personal Finance — India Guide | Finkoin",
+        title: "Learn Personal Finance - India Guide | Finkoin",
         path: "/learn",
       }}
     >
       <Text style={styles.h1}>Learn finance</Text>
       <Text style={styles.lead}>
-        Short, India-relevant guides — no paywall, no fluff. Pick a category or
+        Short, India-relevant guides - no paywall, no fluff. Pick a category or
         browse everything.
       </Text>
       <View style={styles.topLinks}>

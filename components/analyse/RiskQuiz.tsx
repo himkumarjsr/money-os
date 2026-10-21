@@ -46,7 +46,7 @@ export default function RiskQuiz({
       <p className="text-sm text-[#7A7871]">
         {tolerance
           ? `Your risk profile: ${RISK_TOLERANCE_LABELS[tolerance]}. We use it to pick instruments for each goal.`
-          : "Optional — answer all three and we'll match instruments to how you handle ups and downs."}
+          : "Optional - answer all three and we'll match instruments to how you handle ups and downs."}
       </p>
     </div>
   );

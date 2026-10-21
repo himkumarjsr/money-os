@@ -5,7 +5,7 @@ export function paywallConfirmLabel(opts: {
   priceInr: number;
   loading?: boolean;
 }): string {
-  if (!opts.paymentsEnabled) return "Continue — payments coming soon";
+  if (!opts.paymentsEnabled) return "Continue - payments coming soon";
   if (opts.loading) return "Opening secure checkout...";
   return `Confirm and unlock ₹${opts.priceInr}`;
 }
@@ -14,5 +14,5 @@ export function paywallConfirmLabel(opts: {
 export function paywallPriceNote(paymentsEnabled: boolean): string | null {
   return paymentsEnabled
     ? null
-    : "You won't be charged — payments aren't switched on yet.";
+    : "You won't be charged - payments aren't switched on yet.";
 }

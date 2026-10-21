@@ -103,7 +103,7 @@ function SplitGroupInner() {
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     const refresh = () => {
       if (refreshTimer) clearTimeout(refreshTimer);
-      // Debounce realtime storms — rapid INSERT/UPDATE bursts freeze PWA scroll.
+      // Debounce realtime storms - rapid INSERT/UPDATE bursts freeze PWA scroll.
       refreshTimer = setTimeout(() => {
         void fetchGroupDetail(groupId);
       }, 400);
@@ -251,7 +251,7 @@ function SplitGroupInner() {
       setInviteMsg(
         res.emailError
           ? `${res.emailError} Share the link below instead:`
-          : "Email not sent — share the link below:",
+          : "Email not sent - share the link below:",
       );
     } else {
       setInviteMsg("Invite created.");

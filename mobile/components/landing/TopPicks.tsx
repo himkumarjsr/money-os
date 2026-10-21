@@ -22,7 +22,7 @@ const cards = (): Card[] => [
   {
     key: "advisor",
     title: "Meet your finance advisor",
-    body: "Start your financial independence journey with interactive guidance — not just form filling.",
+    body: "Start your financial independence journey with interactive guidance - not just form filling.",
     cta: "Start guided checkup →",
     route: "/(tabs)/analyse",
     accent: Colors.backgroundDeep,
@@ -33,7 +33,7 @@ const cards = (): Card[] => [
   {
     key: "tax",
     title: "New vs old tax regime",
-    body: "Compare regimes with HRA, 80C, NPS, and equity gains — built for FY 2025-26 planning.",
+    body: "Compare regimes with HRA, 80C, NPS, and equity gains - built for FY 2025-26 planning.",
     cta: "Open calculator →",
     route: "/calculators/tax-regime",
     accent: Colors.primaryLight,
@@ -44,7 +44,7 @@ const cards = (): Card[] => [
   {
     key: "portfolio",
     title: "Portfolio analysis",
-    body: "Review holdings and allocation in one workspace — built for Indian investors.",
+    body: "Review holdings and allocation in one workspace - built for Indian investors.",
     cta: "Coming soon",
     badge: "soon",
     accent: Colors.surfaceMuted,
@@ -67,7 +67,7 @@ const cards = (): Card[] => [
   {
     key: "split",
     title: "FK Split",
-    body: "Split bills, track shared expenses, and settle up — ₹ first. No ads.",
+    body: "Split bills, track shared expenses, and settle up - ₹ first. No ads.",
     cta: "Open FK Split →",
     route: "/(tabs)/split",
     accent: Colors.primaryLight,
@@ -87,7 +87,7 @@ export function TopPicks() {
     <View style={styles.wrap}>
       <GoldText style={styles.kicker}>Start here</GoldText>
       <Text style={styles.head}>
-        Top picks on Finkoin — advisor, tax, portfolio, and tracking
+        Top picks on Finkoin - advisor, tax, portfolio, and tracking
       </Text>
       <View style={styles.list}>
         {cards().map((c) => (

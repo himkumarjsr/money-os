@@ -42,7 +42,7 @@ export function RentVsBuyCalculator() {
   const buyHigher = buyOutflow > rentOutflow;
   const verdict = buyHigher
     ? "Over this window, total rent paid looks lower than down payment + EMIs (excludes property price change & tax perks)."
-    : "Buying’s cash-outflow can be lower than renting if you hold the full period — still model maintenance & registration.";
+    : "Buying’s cash-outflow can be lower than renting if you hold the full period - still model maintenance & registration.";
 
   const tone: InsightTone = buyHigher ? "warn" : "good";
 

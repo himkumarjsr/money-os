@@ -112,7 +112,7 @@ function LoanDetailsForm({
           style={styles.skipBtn}
           accessibilityRole="button"
         >
-          <Text style={styles.skipText}>Skip — keep estimate</Text>
+          <Text style={styles.skipText}>Skip - keep estimate</Text>
         </Pressable>
       </View>
     </View>
@@ -131,7 +131,7 @@ export function LoanSyncNotices({ status, onSaveDetails }: Props) {
           <Text style={styles.driftTitle}>Your loans changed in Tracker</Text>
           {status.drift.map((d, i) => (
             <Text key={`${d.label}-${i}`} style={styles.driftText}>
-              • {d.label} — {LOAN_DRIFT_LABELS[d.kind]}
+              • {d.label} - {LOAN_DRIFT_LABELS[d.kind]}
             </Text>
           ))}
           <Text style={styles.driftNote}>

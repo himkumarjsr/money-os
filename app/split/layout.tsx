@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-const title = "Finkoin Split — Split Expenses with Friends | India";
+const title = "Finkoin Split - Split Expenses with Friends | India";
 const description =
-  "Split bills, track shared expenses and settle debts with friends. Free expense splitting app for Indians — a simple Splitwise alternative. Finkoin Split.";
+  "Split bills, track shared expenses and settle debts with friends. Free expense splitting app for Indians - a simple Splitwise alternative. Finkoin Split.";
 
 export const metadata: Metadata = fitMetadata({
   title: { absolute: title },
@@ -19,7 +19,7 @@ export const metadata: Metadata = fitMetadata({
   alternates: { canonical: "/split" },
   robots: "index, follow",
   openGraph: {
-    title: "Finkoin Split — Free Expense Splitting",
+    title: "Finkoin Split - Free Expense Splitting",
     description:
       "Split expenses with friends. Track group spending. Settle debts easily. Free forever.",
     url: `${SITE_URL}/split`,
@@ -30,13 +30,13 @@ export const metadata: Metadata = fitMetadata({
         url: `${SITE_URL}/og/og-split.png`,
         width: 1200,
         height: 630,
-        alt: "Finkoin Split — Split expenses with friends",
+        alt: "Finkoin Split - Split expenses with friends",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Finkoin Split — Free Expense Splitting",
+    title: "Finkoin Split - Free Expense Splitting",
     description:
       "Split expenses with friends. Track group spending. Settle debts easily.",
     images: [`${SITE_URL}/og/og-split.png`],

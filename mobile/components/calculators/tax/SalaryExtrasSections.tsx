@@ -28,7 +28,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
         id="job-switch"
         emoji="🔁"
         title="Job switch / Full & Final (mid-year)"
-        subtitle="Changed employers this FY — Form 16 from both"
+        subtitle="Changed employers this FY - Form 16 from both"
         oneLiner="Add previous employer taxable salary, F&F extras, and TDS already deducted so total tax and balance due stay accurate."
         isOn={i.secJobSwitch}
         onToggle={(v) => update({ secJobSwitch: v })}
@@ -85,9 +85,9 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
       <ToggleSection
         id="hra"
         emoji="🏠"
-        title="HRA — House Rent Allowance"
+        title="HRA - House Rent Allowance"
         subtitle="I receive HRA and pay rent"
-        oneLiner="Uses rent paid, metro vs non-metro, and salary base for the 10% test — opens old-regime exemption math."
+        oneLiner="Uses rent paid, metro vs non-metro, and salary base for the 10% test - opens old-regime exemption math."
         isOn={i.secHRA}
         onToggle={(v) =>
           update(v ? { secHRA: true, sec80GG: false } : { secHRA: false })
@@ -150,7 +150,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
         emoji="🏠"
         title="Rent without HRA (80GG)"
         subtitle="I pay rent but don’t get HRA"
-        oneLiner="Illustrative ₹60k / rent−10% income cap — only matters when old regime wins on deductions."
+        oneLiner="Illustrative ₹60k / rent−10% income cap - only matters when old regime wins on deductions."
         isOn={i.sec80GG}
         onToggle={(v) =>
           update(v ? { sec80GG: true, secHRA: false } : { sec80GG: false })
@@ -170,9 +170,9 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
       <ToggleSection
         id="lta"
         emoji="✈️"
-        title="LTA — Leave Travel Allowance"
+        title="LTA - Leave Travel Allowance"
         subtitle="I receive LTA from employer"
-        oneLiner="Exemption tracks eligible domestic travel spend up to the allowance — payroll blocks still apply."
+        oneLiner="Exemption tracks eligible domestic travel spend up to the allowance - payroll blocks still apply."
         isOn={i.secLTA}
         onToggle={(v) => update({ secLTA: v })}
       >
@@ -203,7 +203,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
           />
         ) : null}
         <Text style={tx.xsMuted}>
-          LTA exemption needs domestic travel proofs; blocks are claim-limited —
+          LTA exemption needs domestic travel proofs; blocks are claim-limited -
           verify with payroll.
         </Text>
         <Text style={[tx.sm, styles.mt8]}>
@@ -215,7 +215,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
       <ToggleSection
         id="rsu"
         emoji="📈"
-        title="RSU / ESOP — Company shares"
+        title="RSU / ESOP - Company shares"
         subtitle="RSUs or ESOPs vesting this year"
         oneLiner="FMV at vest flows like salary; later sales map into equity STCG/LTCG buckets in this model."
         isOn={i.secRSU}
@@ -370,7 +370,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
           {inr(derived.gratuityTaxable)}
         </Text>
         <Text style={tx.xsMuted}>
-          Private employees: ₹20L cumulative exemption ceiling applies — confirm
+          Private employees: ₹20L cumulative exemption ceiling applies - confirm
           notifications with payroll.
         </Text>
       </ToggleSection>
@@ -380,7 +380,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
         emoji="🌴"
         title="Leave encashment"
         subtitle="Encashed leave this year"
-        oneLiner="Retirement vs in-service paths change exemption sketches — confirm HR worksheets."
+        oneLiner="Retirement vs in-service paths change exemption sketches - confirm HR worksheets."
         isOn={i.secLeave}
         onToggle={(v) => update({ secLeave: v })}
       >
@@ -445,7 +445,7 @@ export function SalaryExtrasSections({ s }: { s: TaxCalcState }) {
           {inr(derived.leaveTaxable)}
         </Text>
         <Text style={tx.xsMuted}>
-          Section 10(10AA) — illustrative split only.
+          Section 10(10AA) - illustrative split only.
         </Text>
       </ToggleSection>
     </>

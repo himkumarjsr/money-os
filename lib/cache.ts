@@ -14,7 +14,7 @@ export {
   type CachedPlan,
 } from "@/lib/aiPlanCache";
 
-/** AI plans quote the user's exact numbers — keep them session-only. */
+/** AI plans quote the user's exact numbers - keep them session-only. */
 function sessionKv(): KeyValueStorage | null {
   if (typeof sessionStorage === "undefined") return null;
   try {

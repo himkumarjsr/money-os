@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { generatePageMeta } from "@/lib/seo";
 
 export const metadata: Metadata = generatePageMeta(
-  "Your Financial Health Report — Score & Insights | Finkoin",
+  "Your Financial Health Report - Score & Insights | Finkoin",
   "View your financial health score, emergency fund status, insurance gaps, debt ratio, and personalised next steps. Free summary on Finkoin.",
   ["financial health report India", "financial health score", "free financial analysis India"],
   {

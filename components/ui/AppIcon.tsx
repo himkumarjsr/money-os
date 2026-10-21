@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
  * default so an icon inherits the surrounding text colour; pass `color` to
  * force the Finkoin purple. Mirrors the style of `components/tracker/TrackerIcons`.
  *
- * Keep the Indian flag (🇮🇳) as an emoji everywhere — it is intentionally not
+ * Keep the Indian flag (🇮🇳) as an emoji everywhere - it is intentionally not
  * represented here.
  */
 

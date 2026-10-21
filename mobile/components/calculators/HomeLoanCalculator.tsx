@@ -154,9 +154,9 @@ export function HomeLoanCalculator() {
 
       <Insight tone={tone}>
         {breach
-          ? "EMI is above 40% of stated income — high strain. Increase down payment, stretch tenure, or revisit budget."
+          ? "EMI is above 40% of stated income - high strain. Increase down payment, stretch tenure, or revisit budget."
           : pctOfIncome > 32
-            ? "EMI is workable but leaves limited buffer — keep 6-month EMI in liquid savings."
+            ? "EMI is workable but leaves limited buffer - keep 6-month EMI in liquid savings."
             : "EMI is within a healthy slice of income."}
       </Insight>
       <CompareLink

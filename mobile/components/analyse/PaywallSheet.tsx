@@ -1,7 +1,7 @@
 /**
  * Port of web `components/analyse/paywall-modal.tsx` as a bottom sheet.
  * Payments are not live on mobile: confirming never charges and never writes
- * subscriptionTier — it just closes and opens the Fix Plan.
+ * subscriptionTier - it just closes and opens the Fix Plan.
  */
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";

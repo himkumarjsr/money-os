@@ -90,7 +90,7 @@ export function RentVsOwnCarCalculator() {
 
       <Insight tone={tone}>
         {cheaper === "own"
-          ? `Owning looks cheaper at ~${formatCurrency(Math.round(ownCost), "en-IN", "INR")}/mo vs cab — if utilisation stays high and EMIs are manageable.`
+          ? `Owning looks cheaper at ~${formatCurrency(Math.round(ownCost), "en-IN", "INR")}/mo vs cab - if utilisation stays high and EMIs are manageable.`
           : `Cabs look cheaper at ~${formatCurrency(Math.round(cabCost), "en-IN", "INR")}/mo unless you need daily reliability or outsized km.`}
       </Insight>
     </View>

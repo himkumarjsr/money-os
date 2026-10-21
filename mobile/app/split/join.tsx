@@ -1,5 +1,5 @@
 /**
- * Join a split group from an invite link — port of web
+ * Join a split group from an invite link - port of web
  * app/split/join/JoinSplitGroupClient.tsx. Opened by finkoin://split/join?…,
  * https://www.finkoin.com/split/join?… (app links) and invite push taps.
  */
@@ -13,7 +13,7 @@ import { Colors, themedStyles } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { useSplitStore } from "@/store/splitStore";
 
-/** Web AppIcon "alert" (triangle) — swap for AppIcon once it ships there. */
+/** Web AppIcon "alert" (triangle) - swap for AppIcon once it ships there. */
 function AlertGlyph() {
   return (
     <Svg
@@ -124,7 +124,7 @@ export default function JoinSplitGroupScreen() {
             <Text style={styles.title}>Log in to join</Text>
             <Text style={styles.body}>
               Sign in to your Finkoin account to join this group. New here?
-              Create a free account — the group will be waiting.
+              Create a free account - the group will be waiting.
             </Text>
             <Pressable
               onPress={() =>

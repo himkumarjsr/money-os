@@ -36,7 +36,7 @@ export const overviewSection: DocSection = {
         [
           "Backend",
           "Supabase (Postgres + Auth + Storage + Realtime) and Next.js route handlers on Vercel",
-          "—",
+          "-",
           "Row Level Security on every user table; privileged writes only in server routes or SECURITY DEFINER functions.",
         ],
       ],
@@ -470,7 +470,7 @@ export const radioSection: DocSection = {
           "Store TTL (~2 min) + Realtime + refresh on focus",
           "Brief staleness between devices",
         ],
-        ["DB policies", "`(select auth.uid())` caching, FK indexes (047)", "—"],
+        ["DB policies", "`(select auth.uid())` caching, FK indexes (047)", "-"],
         [
           "Offline",
           "Workbox runtime caching + persisted stores + offline route",

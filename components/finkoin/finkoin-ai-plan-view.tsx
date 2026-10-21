@@ -33,7 +33,7 @@ function num(v: unknown): number {
   return Number.isFinite(x) ? x : 0;
 }
 
-/** Personal loan EMI is known but principal was not entered — do not show invented outstanding/tenure. */
+/** Personal loan EMI is known but principal was not entered - do not show invented outstanding/tenure. */
 function personalLoanPrincipalUnknown(
   d: FinkoinDebtPlanItem,
   profile?: FinancialProfile | null,
@@ -250,7 +250,7 @@ export function FinkoinAiPlanView({
 
       <p className="text-xs text-slate-500">
         {isFallback
-          ? "ℹ️ Showing estimated plan — AI analysis will load shortly"
+          ? "ℹ️ Showing estimated plan - AI analysis will load shortly"
           : "✓ AI personalised analysis"}
       </p>
 
@@ -381,9 +381,9 @@ export function FinkoinAiPlanView({
                         <Rupee n={num(d.extraMonthlyPayment)} />
                       </td>
                       <td className="px-3 py-2">
-                        {plUnknown ? "—" : num(d.monthsToClear)}
+                        {plUnknown ? "-" : num(d.monthsToClear)}
                       </td>
-                      <td className="px-3 py-2">{d.priorityRank ?? "—"}</td>
+                      <td className="px-3 py-2">{d.priorityRank ?? "-"}</td>
                     </tr>
                   );
                 })}
@@ -493,7 +493,7 @@ export function FinkoinAiPlanView({
           {runtimePriorityItems.map((item, idx) => {
             const gap = num(item.gap);
             const monthly = num(item.monthlyContribution);
-            const eta = daysToAchieve(gap, monthly) ?? "—";
+            const eta = daysToAchieve(gap, monthly) ?? "-";
             return (
               <div
                 key={`rt-priority-${item.id}-${idx}`}
@@ -594,19 +594,19 @@ export function FinkoinAiPlanView({
                     {num(a.splitPlan.keepAmount) > 0 ? (
                       <li>
                         Keep {fmt(num(a.splitPlan.keepAmount))} in{" "}
-                        {a.splitPlan.keepWhere} — {a.splitPlan.keepReason}
+                        {a.splitPlan.keepWhere} - {a.splitPlan.keepReason}
                       </li>
                     ) : null}
                     {num(a.splitPlan.moveAmount) > 0 ? (
                       <li>
                         Move {fmt(num(a.splitPlan.moveAmount))} to{" "}
-                        {a.splitPlan.moveWhere} — {a.splitPlan.moveReason}
+                        {a.splitPlan.moveWhere} - {a.splitPlan.moveReason}
                       </li>
                     ) : null}
                     {num(a.splitPlan.moveAmount2) > 0 ? (
                       <li>
                         Move {fmt(num(a.splitPlan.moveAmount2))} to{" "}
-                        {a.splitPlan.moveWhere2} — {a.splitPlan.moveReason2}
+                        {a.splitPlan.moveWhere2} - {a.splitPlan.moveReason2}
                       </li>
                     ) : null}
                   </ul>
@@ -719,7 +719,7 @@ export function FinkoinAiPlanView({
             ) : null}
             {sp.ssyUrgent?.applicable && sp.ssyUrgent.advice ? (
               <div className="rounded-xl border border-red-200 bg-red-50/50 p-3 text-sm">
-                <p className="font-semibold text-red-900">SSY — urgent</p>
+                <p className="font-semibold text-red-900">SSY - urgent</p>
                 {sp.ssyUrgent.monthsLeft != null ? (
                   <p className="mt-1 text-xs text-red-800">
                     Months left: ~{num(sp.ssyUrgent.monthsLeft)}

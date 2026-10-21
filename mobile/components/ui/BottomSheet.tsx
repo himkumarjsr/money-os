@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, getActiveTheme, themedStyles } from "@/constants/theme";
 import { useKeyboardSheet } from "@/lib/useKeyboardSheet";
 
-/** Slide-up sheet (20px top radius, tap backdrop to close) — matches AddExpenseSheet chrome. */
+/** Slide-up sheet (20px top radius, tap backdrop to close) - matches AddExpenseSheet chrome. */
 export function BottomSheet({
   visible,
   onClose,

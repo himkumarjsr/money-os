@@ -3,7 +3,7 @@
  * number per goal; this fans out one focused RAG + LLM call per funded goal,
  * each grounded in that goal type's own reference notes, then the route
  * assembles the results. Each call gets only that goal's numbers plus age,
- * life stage, risk profile (and the child's age for child goals) — never
+ * life stage, risk profile (and the child's age for child goals) - never
  * salary, loans or the full profile.
  */
 import type Groq from "groq-sdk";
@@ -36,7 +36,7 @@ export type GoalAdvisorProfile = {
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
-/** Every goal the split funds — each one must end up explained. */
+/** Every goal the split funds - each one must end up explained. */
 export function fundedGoals(goals: GoalItem[] | undefined): GoalItem[] {
   return (goals ?? []).filter((g) => g.goalId && (g.monthlyAllocated ?? 0) > 0);
 }
@@ -46,7 +46,7 @@ export function goalAdvisorCallCount(goals: GoalItem[]): number {
   return Math.min(goals.length, GOAL_ADVISOR_MAX_GOALS);
 }
 
-/** Minimal per-goal payload — the only user data that leaves for this call. */
+/** Minimal per-goal payload - the only user data that leaves for this call. */
 export function goalAdvisorContext(goal: GoalItem, profile: GoalAdvisorProfile) {
   const kidIndex = goal.goalId?.includes(":")
     ? Number(goal.goalId.split(":")[1])
@@ -86,7 +86,7 @@ export function goalAdvisorContext(goal: GoalItem, profile: GoalAdvisorProfile) 
 
 const WATCH_OUT: Partial<Record<GoalType, string>> = {
   kid_education:
-    "Education costs tend to rise faster than general inflation — step this SIP up each year with your income.",
+    "Education costs tend to rise faster than general inflation - step this SIP up each year with your income.",
   kid_marriage:
     "Keep this separate from the education fund so one doesn't quietly fund the other.",
   home_purchase:
@@ -94,16 +94,16 @@ const WATCH_OUT: Partial<Record<GoalType, string>> = {
   vehicle_purchase:
     "Add insurance, fuel and maintenance to the budget, and avoid financing a depreciating asset if you can.",
   parents_eldercare:
-    "Check senior health cover waiting periods and co-pays — this buffer covers what insurance won't.",
+    "Check senior health cover waiting periods and co-pays - this buffer covers what insurance won't.",
   retirement:
-    "Don't pause this to fund shorter goals — every year skipped is compounding lost.",
+    "Don't pause this to fund shorter goals - every year skipped is compounding lost.",
   marriage:
     "Fund it monthly rather than with a personal loan, and keep the emergency fund separate.",
   baby:
     "Check whether your health policy's maternity waiting period has finished.",
 };
 
-/** Deterministic copy from engine numbers — used when a call fails or AI is off. */
+/** Deterministic copy from engine numbers - used when a call fails or AI is off. */
 export function engineGoalAdvice(goal: GoalItem): GoalAdvice {
   const monthly = goal.monthlyAllocated ?? goal.monthlyRequired;
   const year = new Date().getFullYear() + goal.yearsToGoal;
@@ -114,8 +114,8 @@ export function engineGoalAdvice(goal: GoalItem): GoalAdvice {
       : 100;
   const why =
     goal.yearsToGoal <= 3
-      ? `${inr(monthly)}/month toward ${inr(goal.targetAmount)} by ${year} — a near deadline, so it gets a bigger share of your goal budget.`
-      : `${inr(monthly)}/month toward ${inr(goal.targetAmount)} by ${year} — started now so ${goal.yearsToGoal} years of compounding do most of the work.`;
+      ? `${inr(monthly)}/month toward ${inr(goal.targetAmount)} by ${year} - a near deadline, so it gets a bigger share of your goal budget.`
+      : `${inr(monthly)}/month toward ${inr(goal.targetAmount)} by ${year} - started now so ${goal.yearsToGoal} years of compounding do most of the work.`;
   return {
     why:
       funded < 100
@@ -168,7 +168,7 @@ async function adviseOne(
   const user = `REFERENCE NOTES (use only these for facts):
 ${notes.map((n, i) => `[${i + 1}] ${n.title}\n${n.content}`).join("\n\n")}
 
-GOAL AND PERSON (engine numbers — use exactly):
+GOAL AND PERSON (engine numbers - use exactly):
 ${JSON.stringify(goalAdvisorContext(goal, profile), null, 2)}
 
 Explain why this goal gets ${inr(goal.monthlyAllocated ?? 0)}/month now, why this instrument split fits its ${goal.yearsToGoal}-year horizon${profile.riskTolerance ? " and the person's risk profile" : ""} (including the gold hedge), and one thing to watch out for.`;

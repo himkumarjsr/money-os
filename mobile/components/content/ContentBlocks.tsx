@@ -362,7 +362,7 @@ function Block({
           </View>
           <View style={styles.toolFoot}>
             <Text style={styles.toolFootText}>
-              Educational estimate — not investment advice. Know it. Fix it.
+              Educational estimate - not investment advice. Know it. Fix it.
               Grow it.
             </Text>
             <ActionButton label="Full health check →" href="/analyse" />

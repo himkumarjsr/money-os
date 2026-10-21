@@ -174,7 +174,7 @@ describe("getBucketBreakdown", () => {
       { label: "PPF contribution", value: 500 },
       {
         label:
-          "EPF contribution (employee) — deducted at source, not from in-hand",
+          "EPF contribution (employee) - deducted at source, not from in-hand",
         value: 2000,
       },
       { label: "SSY contribution", value: 1000 },

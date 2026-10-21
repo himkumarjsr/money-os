@@ -181,7 +181,7 @@ export function SIPCalculator() {
       </ChartCard>
 
       <Insight tone={insightTone}>
-        Your money grows <B>{mult.toFixed(1)}×</B> — roughly ₹{mult.toFixed(1)}{" "}
+        Your money grows <B>{mult.toFixed(1)}×</B> - roughly ₹{mult.toFixed(1)}{" "}
         for every ₹1 put in (at {rate}% p.a.).
       </Insight>
       <CompareLink

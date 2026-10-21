@@ -368,7 +368,7 @@ function SettingsInner() {
             Email
           </p>
           <p className="mt-2 text-sm font-medium text-[#111110]">
-            {user?.email ?? "—"}
+            {user?.email ?? "-"}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-[#9B9A94]">
             Email sign-in can&apos;t be changed here.{" "}
@@ -446,8 +446,8 @@ function SettingsInner() {
           <div className="bg-[#F7F7F4] px-4 py-[14px]">
             <p className="text-[11px] leading-relaxed text-[#9B9A94]">
               {emailConsent
-                ? `✓ Email subscribed — tips sent to ${user?.email ?? "your email"}`
-                : "Not subscribed — toggle to receive daily tip emails"}
+                ? `✓ Email subscribed - tips sent to ${user?.email ?? "your email"}`
+                : "Not subscribed - toggle to receive daily tip emails"}
             </p>
           </div>
 
@@ -483,8 +483,8 @@ function SettingsInner() {
               {!pushSupported
                 ? "Push needs a supporting browser. On iPhone: Add to Home Screen, then enable here."
                 : pushConsent
-                  ? "✓ Device push on — tips and Split expense alerts on this phone"
-                  : "Off — enable for tips and Split expense alerts on this phone"}
+                  ? "✓ Device push on - tips and Split expense alerts on this phone"
+                  : "Off - enable for tips and Split expense alerts on this phone"}
             </p>
             {pushMessage ? (
               <p className="mt-1 text-[11px] font-medium text-[#534AB7]">

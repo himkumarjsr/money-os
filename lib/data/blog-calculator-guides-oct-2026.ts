@@ -230,7 +230,7 @@ After 2 years you still owe about ${inrShort(balance)}. You prepay ${inrShort(pr
 
 | Option | New EMI | Loan ends | Total interest | Interest saved |
 | --- | --- | --- | --- | --- |
-| No prepayment | ${inr(emi)} | 20 years | ${inrShort(baseInterest)} | — |
+| No prepayment | ${inr(emi)} | 20 years | ${inrShort(baseInterest)} | - |
 | Keep EMI, cut tenure | ${inr(emi)} | ${((paid + newMonths) / 12).toFixed(1)} years | ${inrShort(interestA)} | ${inrShort(baseInterest - interestA)} |
 | Keep tenure, cut EMI | ${inr(newEmi)} | 20 years | ${inrShort(interestB)} | ${inrShort(baseInterest - interestB)} |
 

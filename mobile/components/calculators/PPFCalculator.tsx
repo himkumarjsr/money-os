@@ -23,7 +23,7 @@ function useClamped(initial: number, min: number, max: number) {
   return [v, set] as const;
 }
 
-/** Year-end deposits, annual compounding — 15 equal contributions. */
+/** Year-end deposits, annual compounding - 15 equal contributions. */
 function ppfv(yearly: number, annualPct: number) {
   const r = annualPct / 100;
   if (r <= 0) return yearly * 15;
@@ -219,7 +219,7 @@ export function PPFCalculator() {
       </ChartCard>
 
       <Insight tone={tone}>
-        PPF is EEE for qualifying contributions — extend beyond 15y in blocks of
+        PPF is EEE for qualifying contributions - extend beyond 15y in blocks of
         5y if you still need tax-free debt-free compounding.
       </Insight>
       <CompareLink

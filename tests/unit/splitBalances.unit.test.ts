@@ -6,7 +6,7 @@ import {
   type BalanceMember,
 } from "@/lib/splitBalances";
 
-describe("Split — Balance Calculation (lib/splitBalances)", () => {
+describe("Split - Balance Calculation (lib/splitBalances)", () => {
   const members: BalanceMember[] = [
     { email: "him@test.com", display_name: "Himanshu" },
     { email: "anshu@test.com", display_name: "Anshu" },

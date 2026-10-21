@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Navigation — Forward and Backward Routing", () => {
+test.describe("Navigation - Forward and Backward Routing", () => {
   test("all main nav links work", async ({ page }) => {
     const routes = ["/analyse", "/calculators", "/learn", "/split", "/blog"];
     for (const route of routes) {

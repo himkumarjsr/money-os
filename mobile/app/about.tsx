@@ -1,4 +1,4 @@
-/** Native About — port of web app/about/page.tsx. */
+/** Native About - port of web app/about/page.tsx. */
 import { Image, Linking, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import {
@@ -87,7 +87,7 @@ const VALUES: {
     icon: "notebook",
     flag: null,
     title: "Education over selling",
-    desc: "We explain every concept so you learn while you plan. Not just results — understanding.",
+    desc: "We explain every concept so you learn while you plan. Not just results - understanding.",
   },
   {
     icon: null,
@@ -99,7 +99,7 @@ const VALUES: {
     icon: "coin",
     flag: null,
     title: "Affordable always",
-    desc: "Core features free forever. Premium features at ₹99 — not ₹5,000/year like advisors.",
+    desc: "Core features free forever. Premium features at ₹99 - not ₹5,000/year like advisors.",
   },
   {
     icon: "bulb",
@@ -120,7 +120,7 @@ export default function AboutScreen() {
     <ContentScreen
       barTitle="About"
       share={{
-        title: "About Finkoin — Financial Health Platform for India",
+        title: "About Finkoin - Financial Health Platform for India",
         path: "/about",
       }}
     >

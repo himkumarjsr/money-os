@@ -1,5 +1,5 @@
 /**
- * My Goals — port of web app/goals/page.tsx. Goals come from the profile
+ * My Goals - port of web app/goals/page.tsx. Goals come from the profile
  * (detectGoals + the user's own goals); each one shows the monthly SIP it
  * needs and the SIPs linked to it in user_planned_investments.
  */

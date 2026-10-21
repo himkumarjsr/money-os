@@ -1,5 +1,5 @@
 /**
- * MF Portfolio Analysis — port of web app/portfolio/page.tsx.
+ * MF Portfolio Analysis - port of web app/portfolio/page.tsx.
  */
 import { useMemo, useState } from "react";
 import {
@@ -88,7 +88,7 @@ export default function PortfolioScreen() {
           <AppIcon name="lock" size={28} color={Colors.primaryText} />
           <Text style={styles.lockTitle}>MF Portfolio Analysis</Text>
           <Text style={styles.lockSub}>
-            Available in Pro Max — ₹99/month
+            Available in Pro Max - ₹99/month
           </Text>
           <Pressable
             onPress={() => router.push("/plans")}

@@ -1,6 +1,6 @@
 /**
  * Calendar helpers using the device's local timezone.
- * Avoid `toISOString().slice(0, 10)` — that is UTC and lags after local midnight
+ * Avoid `toISOString().slice(0, 10)` - that is UTC and lags after local midnight
  * (e.g. 12:01 AM IST is still the previous UTC day).
  */
 

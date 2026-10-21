@@ -1,5 +1,5 @@
 /**
- * Port of web components/analyse/analyse-result-error-boundary.tsx — catches
+ * Port of web components/analyse/analyse-result-error-boundary.tsx - catches
  * render errors on Result / Fix Plan, logs them, and offers "Start again".
  */
 import { Component, type ErrorInfo, type ReactNode } from "react";

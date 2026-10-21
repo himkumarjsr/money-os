@@ -17,7 +17,7 @@ export function buildMissedDeductionAlerts(
     const room80C = Math.max(0, 150_000 - Math.min(i.deductions80C, 150_000));
     if (gross > 2_50_000 && room80C >= 25_000) {
       alerts.push(
-        `About ${fmt(room80C)} of your ₹1.5L 80C bucket may still be unused — ELSS, PPF, EPF/VPF, principal repayment if eligible.`,
+        `About ${fmt(room80C)} of your ₹1.5L 80C bucket may still be unused - ELSS, PPF, EPF/VPF, principal repayment if eligible.`,
       );
     }
 
@@ -28,7 +28,7 @@ export function buildMissedDeductionAlerts(
 
     if (gross > 3_00_000 && i.deductions80DSelf <= 0 && i.deductions80DParents <= 0 && !i.flags.nri) {
       alerts.push(
-        "No 80D premiums entered — if you pay health insurance for self/family or parents, premiums may be deductible within separate caps.",
+        "No 80D premiums entered - if you pay health insurance for self/family or parents, premiums may be deductible within separate caps.",
       );
     } else {
       if (roomSelf >= 3_000 && i.deductions80DSelf > 0) {
@@ -36,14 +36,14 @@ export function buildMissedDeductionAlerts(
       }
       if (roomPar >= 3_000 && i.deductions80DParents > 0) {
         alerts.push(
-          `Parents’ premium bucket may still have about ${fmt(roomPar)} — confirm senior vs non-senior parent toggle.`,
+          `Parents’ premium bucket may still have about ${fmt(roomPar)} - confirm senior vs non-senior parent toggle.`,
         );
       }
     }
 
     if (!i.hasHRA && i.rentPaidNoHra > 0 && (i.employment === "salaried" || i.employment === "freelancer")) {
       alerts.push(
-        "Rent without HRA — old regime may allow 80GG (auto-calculated). Keep rent receipts and Form 10BA-style documentation.",
+        "Rent without HRA - old regime may allow 80GG (auto-calculated). Keep rent receipts and Form 10BA-style documentation.",
       );
     }
 
@@ -51,17 +51,17 @@ export function buildMissedDeductionAlerts(
       i.interestSavingsPortion > 0 ? i.interestSavingsPortion : i.interestIncome;
     if (ttaHint > 0 && i.age < 60 && i.deduction80TTA <= 0) {
       alerts.push(
-        `₹${fmt(ttaHint)} interest-type income — savings account interest may qualify for 80TTA (₹10k cap for non-seniors).`,
+        `₹${fmt(ttaHint)} interest-type income - savings account interest may qualify for 80TTA (₹10k cap for non-seniors).`,
       );
     }
     if (i.interestIncome > 0 && i.age >= 60 && i.deduction80TTB <= 0) {
       alerts.push(
-        "Senior with interest income — review 80TTB (₹50k on qualifying interest) with your CA.",
+        "Senior with interest income - review 80TTB (₹50k on qualifying interest) with your CA.",
       );
     }
 
     if (i.flags.disabledSelf && i.deduction80U <= 0) {
-      alerts.push("Self-disability flagged but 80U is ₹0 — confirm severity bands (₹75k / ₹1.25L) with certificates.");
+      alerts.push("Self-disability flagged but 80U is ₹0 - confirm severity bands (₹75k / ₹1.25L) with certificates.");
     }
 
     if (
@@ -71,30 +71,30 @@ export function buildMissedDeductionAlerts(
       gross > 5_00_000
     ) {
       alerts.push(
-        "No home-loan interest under 24(b)/80EEA — if you pay self-occupied loan interest, lender certificates may belong on the old regime.",
+        "No home-loan interest under 24(b)/80EEA - if you pay self-occupied loan interest, lender certificates may belong on the old regime.",
       );
     }
 
     if (i.employment === "salaried" && i.professionalTax <= 0 && gross > 2_00_000) {
-      alerts.push("Professional tax deducted by employer is often allowable — add if applicable.");
+      alerts.push("Professional tax deducted by employer is often allowable - add if applicable.");
     }
   }
 
   if (sumEquityAlerts(i)) {
     alerts.push(
-      "Equity STCG/LTCG uses flat illustrative rates — real tax may differ with grandfathering, surcharge, and grandfathered exemptions.",
+      "Equity STCG/LTCG uses flat illustrative rates - real tax may differ with grandfathering, surcharge, and grandfathered exemptions.",
     );
   }
 
   if (i.flags.nri) {
     alerts.push(
-      "NRI residency / DTAA can override this comparison — treat output as illustrative only.",
+      "NRI residency / DTAA can override this comparison - treat output as illustrative only.",
     );
   }
 
   if (i.agriculturalIncome > 0 && !i.excludeAgriculturalFromTax) {
     alerts.push(
-      "Agricultural income included in ordinary gross — many structures are exempt or partially exempt; confirm treatment.",
+      "Agricultural income included in ordinary gross - many structures are exempt or partially exempt; confirm treatment.",
     );
   }
 

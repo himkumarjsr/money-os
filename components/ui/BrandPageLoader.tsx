@@ -12,7 +12,7 @@ type BrandPageLoaderProps = {
   minHeight?: string | number;
   /** Put label beside the ring (soft-refresh strips, buttons). */
   inline?: boolean;
-  /** Render only the ring+label (no outer centering wrapper) — for buttons. */
+  /** Render only the ring+label (no outer centering wrapper) - for buttons. */
   bare?: boolean;
   className?: string;
 };

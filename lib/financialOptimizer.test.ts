@@ -139,7 +139,7 @@ describe("financialOptimizer", () => {
     expect(plan.kvpStrategy.applicable).toBe(false);
     expect(plan.monthlyAllocation).toEqual([]);
     expect(plan.monthlyActionPlan).toEqual([
-      "No free surplus on paper — trim wants / loan EMIs or raise income before scaling investments.",
+      "No free surplus on paper - trim wants / loan EMIs or raise income before scaling investments.",
     ]);
     expect(plan.timeline.some((step) => step.instrument === "SSY")).toBe(false);
   });

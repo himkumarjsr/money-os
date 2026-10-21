@@ -1,5 +1,5 @@
 /**
- * Signed-out Split landing — port of web `components/landing/SplitMarketingLanding.tsx`.
+ * Signed-out Split landing - port of web `components/landing/SplitMarketingLanding.tsx`.
  */
 import { Text, TouchableOpacity, View, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +17,7 @@ import { GoldText } from "@/components/ui/GoldMirror";
 const FAQS = [
   {
     q: "What is Finkoin Split?",
-    a: "A free expense-splitting app for friends, roommates, and trips in India. Create a group, add spends, and see who owes whom — clearly.",
+    a: "A free expense-splitting app for friends, roommates, and trips in India. Create a group, add spends, and see who owes whom - clearly.",
   },
   {
     q: "Is Finkoin Split a Splitwise alternative?",
@@ -36,7 +36,7 @@ const FAQS = [
 const FEATURES = [
   {
     t: "Groups for trips & flatmates",
-    d: "One space per trip, PG, or friend circle — keep balances tidy.",
+    d: "One space per trip, PG, or friend circle - keep balances tidy.",
   },
   {
     t: "Add expenses in seconds",
@@ -61,7 +61,7 @@ const STEPS = [
   {
     n: "2",
     t: "Invite friends",
-    d: "Share a link — they join and can add expenses too.",
+    d: "Share a link - they join and can add expenses too.",
   },
   {
     n: "3",
@@ -84,9 +84,9 @@ export function SplitMarketingLanding() {
       >
         <View style={styles.hero}>
           <GoldText style={styles.eyebrow}>FINKOIN SPLIT</GoldText>
-          <Text style={styles.title}>Split expenses with friends — simply</Text>
+          <Text style={styles.title}>Split expenses with friends - simply</Text>
           <Text style={styles.sub}>
-            Free group expense tracker for India. Trips, flatmates, dinners —
+            Free group expense tracker for India. Trips, flatmates, dinners -
             track who paid, who owes, and settle without awkward maths. A clean
             Splitwise-style alternative.
           </Text>

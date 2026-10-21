@@ -1,5 +1,5 @@
 /**
- * Settings — port of web app/settings/page.tsx.
+ * Settings - port of web app/settings/page.tsx.
  * Web Push is replaced by native Expo push (lib/pushNotifications), and the
  * JSON export goes through the OS share sheet instead of a browser download.
  */
@@ -400,10 +400,10 @@ function SettingsInner() {
   const pushStatusText = !pushAvailable
     ? "Push isn't available in Expo Go on Android. Use a development or store build."
     : !pushSupported
-      ? "Push needs a physical phone — simulators can't receive notifications."
+      ? "Push needs a physical phone - simulators can't receive notifications."
       : pushConsent
-        ? "✓ Device push on — tips and Split expense alerts on this phone"
-        : "Off — enable for tips and Split expense alerts on this phone";
+        ? "✓ Device push on - tips and Split expense alerts on this phone"
+        : "Off - enable for tips and Split expense alerts on this phone";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -482,7 +482,7 @@ function SettingsInner() {
 
           <View style={styles.divider} />
           <Text style={styles.miniTitle}>Email</Text>
-          <Text style={styles.emailValue}>{user?.email ?? "—"}</Text>
+          <Text style={styles.emailValue}>{user?.email ?? "-"}</Text>
           <Text style={styles.helper}>
             Email sign-in can't be changed here.{" "}
             <Text
@@ -570,8 +570,8 @@ function SettingsInner() {
             <View style={styles.notifNote}>
               <Text style={styles.noteText}>
                 {emailConsent
-                  ? `✓ Email subscribed — tips sent to ${user?.email ?? "your email"}`
-                  : "Not subscribed — toggle to receive daily tip emails"}
+                  ? `✓ Email subscribed - tips sent to ${user?.email ?? "your email"}`
+                  : "Not subscribed - toggle to receive daily tip emails"}
               </Text>
             </View>
 

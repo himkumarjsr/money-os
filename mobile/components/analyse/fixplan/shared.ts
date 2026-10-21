@@ -10,7 +10,7 @@ import {
   themed,
 } from "@/constants/theme";
 
-/** `Math.round(n).toLocaleString("en-IN")` — the web page's most common money format. */
+/** `Math.round(n).toLocaleString("en-IN")` - the web page's most common money format. */
 export const inr = (n: unknown) =>
   Math.round(Number(n || 0)).toLocaleString("en-IN");
 

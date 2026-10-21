@@ -16,7 +16,7 @@ import {
 } from "@/lib/trackerCreditCards";
 import { useAuthStore } from "@/store/authStore";
 
-/** Every transaction for a month with Edit / Delete — mobile list for web ExpenseTable. */
+/** Every transaction for a month with Edit / Delete - mobile list for web ExpenseTable. */
 export function ExpenseList({
   transactions,
   onChanged,
@@ -104,7 +104,7 @@ export function ExpenseList({
                 </Text>
               </View>
               <Text style={[styles.noteText, styles.colNote]} numberOfLines={2}>
-                {note || "—"}
+                {note || "-"}
               </Text>
               <View style={[styles.colAmount, styles.amountWrap]}>
                 {onCard ? (

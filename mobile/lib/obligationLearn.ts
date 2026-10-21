@@ -67,7 +67,7 @@ export function candidateFromExpense(
 }
 
 /**
- * Credit card bill pays belong in the Credit card dues UI — never spawn new
+ * Credit card bill pays belong in the Credit card dues UI - never spawn new
  * obligation rows from tracker expenses. Other mapped types may auto-add.
  */
 export function shouldLearnObligationFromExpense(opts: {

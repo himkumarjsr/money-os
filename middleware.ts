@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
 
   // Validates JWT and refreshes session / rotates refresh cookie when needed.
   // Page auth is handled client-side (ProtectedGate + recoverAuthSession) so Zustand
-  // and Supabase session stay in sync — server-only cookie checks caused logged-in
+  // and Supabase session stay in sync - server-only cookie checks caused logged-in
   // users to be sent to /login (e.g. mobile profile tab).
   await supabase.auth.getUser();
 

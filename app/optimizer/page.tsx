@@ -333,7 +333,7 @@ export default function OptimizerPage() {
 
       <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
         <h3 className="text-lg font-semibold">
-          SECTION 2 — Where Every Rupee Goes
+          SECTION 2 - Where Every Rupee Goes
         </h3>
         <div className="mt-3 space-y-2 text-sm">
           {[
@@ -368,7 +368,7 @@ export default function OptimizerPage() {
 
       <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
         <h3 className="text-lg font-semibold">
-          SECTION 3 — Your Surplus Allocation
+          SECTION 3 - Your Surplus Allocation
         </h3>
         <p className="mt-1 text-sm text-[#5F5E5A]">
           You have ₹{Math.max(0, amountLeftInHand).toLocaleString("en-IN")} left
@@ -420,7 +420,7 @@ export default function OptimizerPage() {
 
       <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
         <h3 className="text-lg font-semibold">
-          SECTION 4 — Debt Payoff Calculator
+          SECTION 4 - Debt Payoff Calculator
         </h3>
         <div className="mt-3 space-y-2 text-sm">
           {(activePriorityPlan?.debts || []).map((d: any) => {
@@ -450,7 +450,7 @@ export default function OptimizerPage() {
       </div>
 
       <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
-        <h3 className="text-lg font-semibold">SECTION 5 — Goal Timeline</h3>
+        <h3 className="text-lg font-semibold">SECTION 5 - Goal Timeline</h3>
         {activePriorityPlan?.goals?.[0] ? (
           <>
             <p className="mt-1 text-sm text-[#5F5E5A]">
@@ -486,7 +486,7 @@ export default function OptimizerPage() {
 
       {activePriorityPlan?.fdSuggestion ? (
         <div className="rounded-2xl border border-[#E8E6F0] bg-white p-5">
-          <h3 className="text-lg font-semibold">SECTION 6 — FD Rate Alert</h3>
+          <h3 className="text-lg font-semibold">SECTION 6 - FD Rate Alert</h3>
           <p className="mt-2 text-sm text-[#5F5E5A]">
             {activePriorityPlan.fdSuggestion.message}
           </p>

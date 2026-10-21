@@ -72,7 +72,7 @@ function TaxRegimeCalculatorBody({ onReset }: { onReset: () => void }) {
           <Text style={styles.intro}>
             FY 2025-26 (AY 2026-27) planner. Tap{" "}
             <Text style={styles.introQ}>?</Text> on any row for context. Equity
-            CG uses illustrative 20% STCG / 12.5% LTCG after ₹1.25L — verify
+            CG uses illustrative 20% STCG / 12.5% LTCG after ₹1.25L - verify
             with a CA.
           </Text>
 
@@ -115,7 +115,7 @@ function TaxRegimeCalculatorBody({ onReset }: { onReset: () => void }) {
 
       {!personalCAOpen ? (
         <Text style={styles.footer}>
-          Educational only — verify against notified law and Form 16.
+          Educational only - verify against notified law and Form 16.
         </Text>
       ) : null}
     </View>

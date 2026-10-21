@@ -1,5 +1,5 @@
 /**
- * Add / edit expense — PWA `/split/[groupId]/add-expense` parity.
+ * Add / edit expense - PWA `/split/[groupId]/add-expense` parity.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -338,7 +338,7 @@ export default function AddExpenseScreen() {
     return out;
   }, [includedMembers, shareCounts]);
 
-  /** Live share preview — same engine as the API (esp. equal). */
+  /** Live share preview - same engine as the API (esp. equal). */
   const previewShares = useMemo(() => {
     if (!amountRaw || amountRaw <= 0 || includedMembers.length === 0) {
       return null;

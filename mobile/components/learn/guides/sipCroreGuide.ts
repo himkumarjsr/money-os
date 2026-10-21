@@ -21,12 +21,12 @@ export const SIP_CRORE_GUIDE: LearnGuideBody = {
     },
     {
       id: "quick-table",
-      title: "Quick reference — ₹1 crore at 12% p.a.",
+      title: "Quick reference - ₹1 crore at 12% p.a.",
       card: true,
       blocks: [
         {
           kind: "p",
-          text: "Illustrative monthly SIP (constant 12% expected return, monthly compounding). Markets vary — treat as a planning range, not a promise.",
+          text: "Illustrative monthly SIP (constant 12% expected return, monthly compounding). Markets vary - treat as a planning range, not a promise.",
         },
         {
           kind: "table",
@@ -56,7 +56,7 @@ export const SIP_CRORE_GUIDE: LearnGuideBody = {
           items: [
             "**Return rate:** Equity SIP planning often uses 10–12% long-term; 15% is aggressive. Lower rates need higher SIPs.",
             "**Inflation:** ₹1 crore in 20 years buys less than today’s ₹1 crore. For lifestyle goals, inflate the target.",
-            "**Step-up SIP:** Raising SIP 10% yearly can cut the starting amount — model that on the [full SIP calculator](/calculators/sip).",
+            "**Step-up SIP:** Raising SIP 10% yearly can cut the starting amount - model that on the [full SIP calculator](/calculators/sip).",
             "**Taxes & costs:** Equity LTCG and expense ratios reduce net corpus vs gross calculator output.",
           ],
         },
@@ -73,7 +73,7 @@ export const SIP_CRORE_GUIDE: LearnGuideBody = {
           items: [
             "Pick a horizon you can stick to (10 / 15 / 20 years).",
             "Set a conservative return (e.g. 10–12%).",
-            "Note the monthly SIP — check it fits after rent, EMIs, and emergency fund.",
+            "Note the monthly SIP - check it fits after rent, EMIs, and emergency fund.",
             "Run a [Finkoin financial health check](/analyse) so the SIP doesn’t starve insurance or liquidity.",
           ],
         },
@@ -87,8 +87,8 @@ export const SIP_CRORE_GUIDE: LearnGuideBody = {
         {
           kind: "ul",
           items: [
-            "[SIP calculator India](/calculators/sip) — forward returns from a monthly amount",
-            "[FIRE number calculator](/calculators/fire) — when ₹1 crore is not enough",
+            "[SIP calculator India](/calculators/sip) - forward returns from a monthly amount",
+            "[FIRE number calculator](/calculators/fire) - when ₹1 crore is not enough",
             "[SIP vs lump sum](/learn/sip-vs-lumpsum-when-to-use-which)",
           ],
         },

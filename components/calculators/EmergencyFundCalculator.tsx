@@ -107,7 +107,7 @@ export function EmergencyFundCalculator() {
           label="Months to close gap"
           value={
             monthsToFill === Infinity
-              ? "—"
+              ? "-"
               : `${Math.ceil(monthsToFill)} months`
           }
         />
@@ -115,7 +115,7 @@ export function EmergencyFundCalculator() {
 
       <Insight tone={tone}>
         {gap <= expenses * 0.5
-          ? "You are close to a sensible cushion — top up toward the full target."
+          ? "You are close to a sensible cushion - top up toward the full target."
           : `Aim for ${monthsNeeded} months of expenses (${LABELS[stage]}) in liquid/low-risk funds.`}
       </Insight>
     </div>

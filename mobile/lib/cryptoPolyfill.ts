@@ -1,6 +1,6 @@
 /**
  * Supabase PKCE needs WebCrypto (crypto.subtle.digest SHA-256).
- * Hermes / React Native do not provide it — without this, OAuth falls back to
+ * Hermes / React Native do not provide it - without this, OAuth falls back to
  * "plain" challenge and Google login fails or never completes.
  *
  * Import this file first (before @supabase/supabase-js).
@@ -62,7 +62,7 @@ if (needsPolyfill && g.crypto) {
     digest: async (algorithm, data) => {
       const algo = mapAlgo(algorithm);
       const bytes = toUint8Array(data);
-      // Native byte digest — returns ArrayBuffer (WebCrypto shape)
+      // Native byte digest - returns ArrayBuffer (WebCrypto shape)
       return ExpoCrypto.digest(algo, bytes as unknown as BufferSource);
     },
   } as SubtleCrypto;

@@ -37,7 +37,7 @@ export default function LearnToolEmbed({
       <div className="p-4 sm:p-5">{children}</div>
       <div className="flex flex-col gap-2 border-t border-[#E8E6F0] bg-[#F7F7F4] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <p className="text-[11px] text-[#9B9A94]">
-          Educational estimate — not investment advice. Know it. Fix it. Grow
+          Educational estimate - not investment advice. Know it. Fix it. Grow
           it.
         </p>
         <div className="flex flex-wrap gap-2">

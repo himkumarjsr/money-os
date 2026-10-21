@@ -18,7 +18,7 @@ export type RichArticle = {
   toc: { id: string; label: string }[];
   intro: string[];
   sections: RichSection[];
-  /** Optional — if set, shown in purple tip box with link */
+  /** Optional - if set, shown in purple tip box with link */
   finkoinTip?: string;
   finkoinTipHref?: string;
   related: { id: string; title: string }[];
@@ -40,7 +40,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "settled", label: "Biggest mistake: “Settled”" },
     ],
     intro: [
-      "India’s CIBIL score is a three-digit number from 300–900. This CIBIL score guide explains how it is usually calculated, what hurts it most, and how to improve it fast — without changing your loan applications blindly.",
+      "India’s CIBIL score is a three-digit number from 300–900. This CIBIL score guide explains how it is usually calculated, what hurts it most, and how to improve it fast - without changing your loan applications blindly.",
     ],
     sections: [
       {
@@ -49,7 +49,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "About 80% of loans approved in India go to people with a score above 750. Below 700, you may get a higher interest rate or face rejection. A 50-point score difference can mean 1–2% higher home loan rate — on a ₹50 lakh loan over 20 years, that can be roughly ₹6–12 lakh extra interest.",
+            text: "About 80% of loans approved in India go to people with a score above 750. Below 700, you may get a higher interest rate or face rejection. A 50-point score difference can mean 1–2% higher home loan rate - on a ₹50 lakh loan over 20 years, that can be roughly ₹6–12 lakh extra interest.",
           },
           {
             kind: "callout",
@@ -65,15 +65,15 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Updated from Jan 2025 onward, many credit profiles refresh more frequently than the older “once a month” mental model — check your report after big life changes (new loan, closure, limit change).",
+            text: "Updated from Jan 2025 onward, many credit profiles refresh more frequently than the older “once a month” mental model - check your report after big life changes (new loan, closure, limit change).",
           },
           {
             kind: "ul",
             items: [
-              "1) Payment history — 35% weight: The single most important factor. Miss one EMI by 30 days → score can drop ~30–50 points immediately; 90+ days late can drop 100+ points. One missed payment in three years is a smaller blemish than repeated misses. Pro tip: autopay the minimum due, then pay the full bill manually so you never miss the due date.",
-              "2) Credit utilisation — 30% weight: How much of your credit limit you use. ₹40,000 of ₹1,00,000 limit = 40%. Ideal: below ~30%. Above ~50% can hurt significantly. Pro tip: ask your bank to increase the credit limit — spending stays the same but utilisation falls.",
-              "3) Credit mix and duration — 25% weight: Mix means both secured (home loan, car loan) and unsecured (credit card, personal loan) can help when reported cleanly. Duration means older accounts boost your score — never close your oldest credit card if you can keep it fee-free (even unused).",
-              "4) New credit inquiries — 10% weight: Every loan application can create a hard inquiry; each hard inquiry may drop the score ~5–10 points. Five loans in one month is risky. Checking your own score is a soft inquiry — no impact. Pro tip: apply for one loan at a time and space applications (many people use ~6 months as a practical gap).",
+              "1) Payment history - 35% weight: The single most important factor. Miss one EMI by 30 days → score can drop ~30–50 points immediately; 90+ days late can drop 100+ points. One missed payment in three years is a smaller blemish than repeated misses. Pro tip: autopay the minimum due, then pay the full bill manually so you never miss the due date.",
+              "2) Credit utilisation - 30% weight: How much of your credit limit you use. ₹40,000 of ₹1,00,000 limit = 40%. Ideal: below ~30%. Above ~50% can hurt significantly. Pro tip: ask your bank to increase the credit limit - spending stays the same but utilisation falls.",
+              "3) Credit mix and duration - 25% weight: Mix means both secured (home loan, car loan) and unsecured (credit card, personal loan) can help when reported cleanly. Duration means older accounts boost your score - never close your oldest credit card if you can keep it fee-free (even unused).",
+              "4) New credit inquiries - 10% weight: Every loan application can create a hard inquiry; each hard inquiry may drop the score ~5–10 points. Five loans in one month is risky. Checking your own score is a soft inquiry - no impact. Pro tip: apply for one loan at a time and space applications (many people use ~6 months as a practical gap).",
             ],
           },
         ],
@@ -84,7 +84,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "From Dec 2025, RBI’s push for uniform credit reporting formats aims to make disputes and corrections more predictable — treat “reporting errors” as fixable, but always keep proof (NOCs, bank emails, payment receipts).",
+            text: "From Dec 2025, RBI’s push for uniform credit reporting formats aims to make disputes and corrections more predictable - treat “reporting errors” as fixable, but always keep proof (NOCs, bank emails, payment receipts).",
           },
           {
             kind: "ul",
@@ -119,13 +119,13 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "callout",
             tone: "amber",
             title: "“Settled” is a red flag",
-            text: "Settling a loan for less than full dues can show as “settled” on your report — often a long-term negative signal versus a clean closure. Prefer paying the full outstanding and getting a clear closure/NOC, even if the bank offers a settlement discount. Settled accounts can remain visible for years (commonly discussed as ~7 years).",
+            text: "Settling a loan for less than full dues can show as “settled” on your report - often a long-term negative signal versus a clean closure. Prefer paying the full outstanding and getting a clear closure/NOC, even if the bank offers a settlement discount. Settled accounts can remain visible for years (commonly discussed as ~7 years).",
           },
         ],
       },
     ],
     finkoinTip:
-      "Check how your credit behaviour connects to your broader financial health score on Finkoin — patterns in dues, loans, and cash buffers show up together.",
+      "Check how your credit behaviour connects to your broader financial health score on Finkoin - patterns in dues, loans, and cash buffers show up together.",
     finkoinTipHref: "/analyse",
     related: [
       {
@@ -146,7 +146,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
   "sip-vs-lumpsum-when-to-use-which": {
     seoTitle: "SIP vs Lumpsum: When Each Wins (India Examples)",
     seoDescription:
-      "SIP vs lumpsum: India examples, rupee averaging, STP hybrid, bonus windfall rule. Educational only — not investment advice.",
+      "SIP vs lumpsum: India examples, rupee averaging, STP hybrid, bonus windfall rule. Educational only - not investment advice.",
     tags: ["SIP", "Lumpsum", "Mutual funds", "India"],
     toc: [
       { id: "core-diff", label: "The core difference" },
@@ -157,7 +157,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "practical-rule", label: "The practical rule" },
     ],
     intro: [
-      "SIP vs lumpsum is not a religion — it is a timing and behaviour problem. A SIP invests ₹5,000 every month automatically; a lumpsum invests ₹60,000 at once. Same money can produce very different paths depending on when you invest and how you react to volatility.",
+      "SIP vs lumpsum is not a religion - it is a timing and behaviour problem. A SIP invests ₹5,000 every month automatically; a lumpsum invests ₹60,000 at once. Same money can produce very different paths depending on when you invest and how you react to volatility.",
     ],
     sections: [
       {
@@ -185,7 +185,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           },
           {
             kind: "p",
-            text: "Example (illustrative): Jan 2022 — Sensex near ~61,000 (a cycle high). A ₹5 lakh lumpsum bought high; by mid-2022 many portfolios were down ~15%. A ₹20,000/month SIP bought cheaper units through mid/late-2022 and many disciplined SIPs recovered sooner than a single high entry.",
+            text: "Example (illustrative): Jan 2022 - Sensex near ~61,000 (a cycle high). A ₹5 lakh lumpsum bought high; by mid-2022 many portfolios were down ~15%. A ₹20,000/month SIP bought cheaper units through mid/late-2022 and many disciplined SIPs recovered sooner than a single high entry.",
           },
           {
             kind: "callout",
@@ -209,7 +209,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           },
           {
             kind: "p",
-            text: "Example (illustrative): March 2020 (COVID crash) — Nifty near ~7,500. ₹5 lakh lumpsum invested early in the rebound path could grow materially by 2024; a ₹20,000/month SIP from the same start may still trail a perfect early lumpsum because the deepest units were cheapest — lumpsum “won” because crash timing was the entry point.",
+            text: "Example (illustrative): March 2020 (COVID crash) - Nifty near ~7,500. ₹5 lakh lumpsum invested early in the rebound path could grow materially by 2024; a ₹20,000/month SIP from the same start may still trail a perfect early lumpsum because the deepest units were cheapest - lumpsum “won” because crash timing was the entry point.",
           },
         ],
       },
@@ -229,7 +229,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Nobody consistently predicts tops — not fund managers, not analysts, not media. Over 20 years, SIP wins in many stress scenarios; lumpsum at a random start also tends to work because time-in-market helps. The worst decision is perpetual waiting in cash.",
+            text: "Nobody consistently predicts tops - not fund managers, not analysts, not media. Over 20 years, SIP wins in many stress scenarios; lumpsum at a random start also tends to work because time-in-market helps. The worst decision is perpetual waiting in cash.",
           },
         ],
       },
@@ -248,7 +248,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
     ],
     finkoinTip:
-      "Model goals and volatility tolerance in Finkoin — your plan reads better when SIP amounts match real monthly cash, not ideal spreadsheets.",
+      "Model goals and volatility tolerance in Finkoin - your plan reads better when SIP amounts match real monthly cash, not ideal spreadsheets.",
     finkoinTipHref: "/goals",
     related: [
       { id: "what-is-asset-allocation", title: "What is asset allocation?" },
@@ -286,7 +286,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Every EMI has two parts: principal (80C bucket, subject to caps/conditions) and interest (24B bucket). Example: month 1 of a ₹50 lakh loan at ~8.5% — EMI about ₹43,391; interest component about ₹35,417; principal component about ₹7,974 (your amortisation schedule is the source of truth).",
+            text: "Every EMI has two parts: principal (80C bucket, subject to caps/conditions) and interest (24B bucket). Example: month 1 of a ₹50 lakh loan at ~8.5% - EMI about ₹43,391; interest component about ₹35,417; principal component about ₹7,974 (your amortisation schedule is the source of truth).",
           },
         ],
       },
@@ -298,9 +298,9 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "ul",
             items: [
               "Limit: ₹1,50,000/year shared with all 80C items (ELSS, PPF, EPF, tuition fees, etc.).",
-              "Typically meaningful under the old tax regime; the new regime generally removes these deductions — compare regimes with real numbers.",
+              "Typically meaningful under the old tax regime; the new regime generally removes these deductions - compare regimes with real numbers.",
               "Benefit timing often ties to possession for eligible housing conditions; under-construction periods may not give principal benefit yet (verify your year’s rules + lender certificate).",
-              "If you sell within 5 years of possession, many 80C principal benefits on that property can be reversed/clawed back — treat this as a real penalty risk.",
+              "If you sell within 5 years of possession, many 80C principal benefits on that property can be reversed/clawed back - treat this as a real penalty risk.",
             ],
           },
         ],
@@ -314,7 +314,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             items: [
               "Self-occupied: interest deduction is commonly capped at ₹2,00,000/year (verify current law for your filing year).",
               "Under-construction: pre-EMI/ construction-period interest is often claimed in five equal instalments after possession (not before).",
-              "Let-out property: interest deduction rules differ; loss set-off against other income has limits — model carefully with a CA if you rely on this.",
+              "Let-out property: interest deduction rules differ; loss set-off against other income has limits - model carefully with a CA if you rely on this.",
               "Joint loan + co-owners: each eligible co-owner may claim benefits within limits if ownership/loan servicing aligns with documentation.",
             ],
           },
@@ -328,7 +328,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "callout",
             tone: "violet",
             title: "Illustrative savings math",
-            text: "If both spouses are co-owners and both service the loan, many families can claim ₹2L + ₹2L interest (24B) and ₹1.5L + ₹1.5L principal (80C) within eligibility — that is up to ₹7L of deductions before other sections, which can be large tax saving at the 30% slab (illustratively ~₹2.1L/year). Always match sale deed + loan agreement + payments.",
+            text: "If both spouses are co-owners and both service the loan, many families can claim ₹2L + ₹2L interest (24B) and ₹1.5L + ₹1.5L principal (80C) within eligibility - that is up to ₹7L of deductions before other sections, which can be large tax saving at the 30% slab (illustratively ~₹2.1L/year). Always match sale deed + loan agreement + payments.",
           },
         ],
       },
@@ -338,7 +338,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "If you buy under-construction, you may pay EMI but get limited/no benefits until possession timelines are met — long delays can mean years of “paying EMI without deductions you expected.” Pre-construction interest is usually spread after possession, not claimed casually before that.",
+            text: "If you buy under-construction, you may pay EMI but get limited/no benefits until possession timelines are met - long delays can mean years of “paying EMI without deductions you expected.” Pre-construction interest is usually spread after possession, not claimed casually before that.",
           },
         ],
       },
@@ -348,7 +348,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Home loan + 80C + HRA together often makes the old regime attractive for buyers — but not always. Calculate both regimes with your exact income, rent, and loan certificate numbers (use Finkoin’s tax calculator for a quick regime comparison).",
+            text: "Home loan + 80C + HRA together often makes the old regime attractive for buyers - but not always. Calculate both regimes with your exact income, rent, and loan certificate numbers (use Finkoin’s tax calculator for a quick regime comparison).",
           },
         ],
       },
@@ -363,7 +363,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "section-80c-limits-and-beyond",
-        title: "Section 80C limits — and beyond",
+        title: "Section 80C limits - and beyond",
       },
       {
         id: "prepayment-vs-tenure-reduction-home-loan",
@@ -373,7 +373,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
   },
 
   "what-is-the-50-30-20-budgeting-rule": {
-    seoTitle: "Why 50/30/20 Struggles in India — Finkoin 40/20/10/30",
+    seoTitle: "Why 50/30/20 Struggles in India - Finkoin 40/20/10/30",
     seoDescription:
       "India inflation ~5–6%, RBI target ~4%, real wage pressure, and why Finkoin uses 40-20-10-30: needs, invest, protect, wants. Educational only.",
     tags: ["Budgeting", "Inflation", "India", "Finkoin framework"],
@@ -386,7 +386,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "why-finkoin", label: "Why Finkoin uses this" },
     ],
     intro: [
-      "The popular 50-30-20 budgeting rule was popularised from a US context (often associated with Elizabeth Warren’s 2006 book era) where inflation was typically lower and safety nets were stronger. India’s cashflow reality is different: headline CPI can print low in some months, but your lifestyle basket often behaves like higher inflation — and your safety net is mostly self-funded.",
+      "The popular 50-30-20 budgeting rule was popularised from a US context (often associated with Elizabeth Warren’s 2006 book era) where inflation was typically lower and safety nets were stronger. India’s cashflow reality is different: headline CPI can print low in some months, but your lifestyle basket often behaves like higher inflation - and your safety net is mostly self-funded.",
     ],
     sections: [
       {
@@ -396,10 +396,10 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "50% needs, 30% wants, 20% savings — simple, memorable, and wrong for many Indian metros if copied blindly.",
+              "50% needs, 30% wants, 20% savings - simple, memorable, and wrong for many Indian metros if copied blindly.",
               "India’s historical CPI average is often discussed around ~5–6%/year; RBI’s inflation target is 4% with a tolerance band commonly cited as 2–6%.",
-              "Average Indian salary hikes are often ~8–10%/year, but real salary growth after inflation is often only ~3–4%/year — easy to overspend on wants and miss compounding.",
-              "Agricultural real wages grew only ~1%/year from 2014–2024 even though nominal wages grew ~6%/year (World Bank-style narrative) — a reminder that “nominal growth” can hide weak purchasing power gains.",
+              "Average Indian salary hikes are often ~8–10%/year, but real salary growth after inflation is often only ~3–4%/year - easy to overspend on wants and miss compounding.",
+              "Agricultural real wages grew only ~1%/year from 2014–2024 even though nominal wages grew ~6%/year (World Bank-style narrative) - a reminder that “nominal growth” can hide weak purchasing power gains.",
             ],
           },
         ],
@@ -421,10 +421,10 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "40% — Needs: rent/EMI, groceries, utilities/transport/mobile, basic healthcare/medicine, school fees.",
-              "20% — Investments: MF SIPs, PPF/NPS (where suitable), EPF (often auto), goal SIPs. Why before wants? Starting ₹10,000/month at ~12% at age 25 vs 30 can differ by crores by age 60 — time is leverage.",
-              "10% — Security: term plan, health insurance, emergency fund top-up until ~6 months of expenses, vehicle insurance renewals.",
-              "30% — Wants: dining, OTT, shopping/gadgets, vacations — what is left after needs, investing, and protection.",
+              "40% - Needs: rent/EMI, groceries, utilities/transport/mobile, basic healthcare/medicine, school fees.",
+              "20% - Investments: MF SIPs, PPF/NPS (where suitable), EPF (often auto), goal SIPs. Why before wants? Starting ₹10,000/month at ~12% at age 25 vs 30 can differ by crores by age 60 - time is leverage.",
+              "10% - Security: term plan, health insurance, emergency fund top-up until ~6 months of expenses, vehicle insurance renewals.",
+              "30% - Wants: dining, OTT, shopping/gadgets, vacations - what is left after needs, investing, and protection.",
             ],
           },
         ],
@@ -435,7 +435,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Much of India’s inflation pain shows up in food and services — the “needs” bucket. Capping needs at ~40% forces trade-offs early. Long-term investments aim to beat inflation over decades; the security bucket prevents one shock from undoing compounding.",
+            text: "Much of India’s inflation pain shows up in food and services - the “needs” bucket. Capping needs at ~40% forces trade-offs early. Long-term investments aim to beat inflation over decades; the security bucket prevents one shock from undoing compounding.",
           },
         ],
       },
@@ -448,21 +448,21 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             headers: ["Life stage", "Needs", "Security", "Invest", "Wants"],
             rows: [
               [
-                "Early career (₹25–40k) — short-term OK",
+                "Early career (₹25–40k) - short-term OK",
                 "~50%",
                 "~10%",
                 "~15%",
                 "~25%",
               ],
               [
-                "Mid career (₹80k–2L) — push invest first",
+                "Mid career (₹80k–2L) - push invest first",
                 "~40%",
                 "~10%",
                 "~20–25%",
                 "~25–30%",
               ],
               [
-                "High income (₹2L+) — avoid lifestyle first",
+                "High income (₹2L+) - avoid lifestyle first",
                 "~30%",
                 "~10%",
                 "~30–35%",
@@ -472,7 +472,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           },
           {
             kind: "p",
-            text: "Key rule: as income rises, increase investments percentage first — not wants percentage.",
+            text: "Key rule: as income rises, increase investments percentage first - not wants percentage.",
           },
         ],
       },
@@ -497,7 +497,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "emergency-fund-how-much-where-to-keep-it",
-        title: "Emergency fund — how much, where to keep it",
+        title: "Emergency fund - how much, where to keep it",
       },
       {
         id: "credit-card-minimum-trap",
@@ -521,7 +521,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "finkoin-rec", label: "What Finkoin recommends" },
     ],
     intro: [
-      "PPF vs ELSS is the common Section 80C debate: both can count toward the same ₹1,50,000/year basket, but one is government-backed debt and the other is equity with a short lock-in and market risk. Here is the honest answer — not what a bank’s sales target wants you to hear.",
+      "PPF vs ELSS is the common Section 80C debate: both can count toward the same ₹1,50,000/year basket, but one is government-backed debt and the other is equity with a short lock-in and market risk. Here is the honest answer - not what a bank’s sales target wants you to hear.",
     ],
     sections: [
       {
@@ -557,7 +557,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "Expected returns: not guaranteed; long-run equity CAGR is often quoted ~12–15% in educational articles — verify with rolling returns, not marketing.",
+              "Expected returns: not guaranteed; long-run equity CAGR is often quoted ~12–15% in educational articles - verify with rolling returns, not marketing.",
               "Lock-in: 3 years minimum per instalment (shortest among common 80C options).",
               "Tax: 80C on investment; gains taxed under equity capital gains rules applicable in your filing year (e.g., LTCG above exemption thresholds).",
               "Risk: can be negative in any 3-year window.",
@@ -571,7 +571,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Illustrative ₹1.5L/year for 15 years: PPF at ~7.1% might land near ~₹40.7L tax-free (math depends on exact rate path). ELSS at ~12% average might land near ~₹74.9L before tax — tax on large gains can be meaningful (illustratively ~₹5–7L depending on exemptions and redemption timing), leaving a higher net for many scenarios but with volatility risk.",
+            text: "Illustrative ₹1.5L/year for 15 years: PPF at ~7.1% might land near ~₹40.7L tax-free (math depends on exact rate path). ELSS at ~12% average might land near ~₹74.9L before tax - tax on large gains can be meaningful (illustratively ~₹5–7L depending on exemptions and redemption timing), leaving a higher net for many scenarios but with volatility risk.",
           },
           {
             kind: "callout",
@@ -590,7 +590,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             items: [
               "Choose PPF if: age 50+, very risk-averse, already heavy equity elsewhere, need predictable sleeve, or you want a government-backed anchor.",
               "Choose ELSS if: below ~45, 5+ year horizon, can tolerate crashes, want wealth-building not just “tax saving”.",
-              "Choose both if: high income filling full ₹1.5L — common splits like 50:50 or 70:30 ELSS:PPF depending on risk appetite.",
+              "Choose both if: high income filling full ₹1.5L - common splits like 50:50 or 70:30 ELSS:PPF depending on risk appetite.",
             ],
           },
         ],
@@ -601,7 +601,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Three years is only the lock-in minimum — many advisors treat ELSS as a 7–10 year sleeve. Redeeming right after lock-in “because tax saving is done” is a common mistake; redeem when your goal needs it.",
+            text: "Three years is only the lock-in minimum - many advisors treat ELSS as a 7–10 year sleeve. Redeeming right after lock-in “because tax saving is done” is a common mistake; redeem when your goal needs it.",
           },
         ],
       },
@@ -611,26 +611,26 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "If you are conservative, fill PPF first for stability, then add ELSS for growth with money you won’t need soon. Avoid mixing insurance investment products into 80C unless you have audited the costs — many traditional plans underperform simple MF + term insurance splits.",
+            text: "If you are conservative, fill PPF first for stability, then add ELSS for growth with money you won’t need soon. Avoid mixing insurance investment products into 80C unless you have audited the costs - many traditional plans underperform simple MF + term insurance splits.",
           },
         ],
       },
     ],
     finkoinTip:
-      "Compare tax-saving choices as part of a full plan: Finkoin helps you see insurance, debt, and investing trade-offs together — not as isolated “March products”.",
+      "Compare tax-saving choices as part of a full plan: Finkoin helps you see insurance, debt, and investing trade-offs together - not as isolated “March products”.",
     finkoinTipHref: "/analyse",
     related: [
       {
         id: "section-80c-limits-and-beyond",
-        title: "Section 80C limits — and beyond",
+        title: "Section 80C limits - and beyond",
       },
       {
         id: "80c-complete-guide-tax-saving-india",
-        title: "Section 80C — complete guide",
+        title: "Section 80C - complete guide",
       },
       {
         id: "nps-tax-deductions-guide-india",
-        title: "NPS tax benefits — 80CCD layers",
+        title: "NPS tax benefits - 80CCD layers",
       },
     ],
   },
@@ -658,7 +658,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Many Indians think: “My FD gives 7% — that is good.” Quick reality check: FD ~7%, long-run CPI often ~5–6%, tax slab 30% → post-tax FD ~4.9% → real return near ~0% (or negative) vs 6% inflation. ₹100 still grows to ₹107 nominally — but purchasing power can stagnate.",
+            text: "Many Indians think: “My FD gives 7% - that is good.” Quick reality check: FD ~7%, long-run CPI often ~5–6%, tax slab 30% → post-tax FD ~4.9% → real return near ~0% (or negative) vs 6% inflation. ₹100 still grows to ₹107 nominally - but purchasing power can stagnate.",
           },
         ],
       },
@@ -672,14 +672,14 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
               "Headline CPI inflation India April 2026: ~3.48% (current headline number).",
               "Historical 10-year average is often discussed around ~5–6%. RBI inflation target: ~4% with a commonly cited tolerance band ~2–6%.",
               "Medical inflation is often quoted ~12–14%/year; education inflation is often quoted ~10–12%/year depending on segment.",
-              "Your relevant inflation is not only headline CPI — it is the inflation of your basket (rent, school fees, healthcare, help at home).",
+              "Your relevant inflation is not only headline CPI - it is the inflation of your basket (rent, school fees, healthcare, help at home).",
             ],
           },
           {
             kind: "callout",
             tone: "violet",
             title: "Why headline CPI misleads",
-            text: "Even when headline CPI prints low, components can diverge: e.g. food inflation around ~4.2% (April 2026 print narrative) while personal care/services can print far higher in the same release — read sub-indices, not only the headline.",
+            text: "Even when headline CPI prints low, components can diverge: e.g. food inflation around ~4.2% (April 2026 print narrative) while personal care/services can print far higher in the same release - read sub-indices, not only the headline.",
           },
         ],
       },
@@ -689,7 +689,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Approximate years to halve purchasing power ≈ 72 ÷ inflation rate. At ~6% CPI: 72 ÷ 6 = 12 years — ₹10 lakh today is ~₹5 lakh purchasing power in 12 years if inflation stays elevated. At ~12% medical inflation: 72 ÷ 12 = 6 years — a ₹5 lakh bill’s “feel” doubles fast.",
+            text: "Approximate years to halve purchasing power ≈ 72 ÷ inflation rate. At ~6% CPI: 72 ÷ 6 = 12 years - ₹10 lakh today is ~₹5 lakh purchasing power in 12 years if inflation stays elevated. At ~12% medical inflation: 72 ÷ 12 = 6 years - a ₹5 lakh bill’s “feel” doubles fast.",
           },
         ],
       },
@@ -709,7 +709,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Child education in ~15 years: if costs rise ~12%/year, a ₹15 lakh today line-item can become a shockingly large number — your SIP must step up with education inflation, not only headline CPI.",
+            text: "Child education in ~15 years: if costs rise ~12%/year, a ₹15 lakh today line-item can become a shockingly large number - your SIP must step up with education inflation, not only headline CPI.",
           },
         ],
       },
@@ -720,30 +720,30 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "Equity mutual funds: long-run CAGR often quoted ~11–13% — beats ~5–6% inflation in many multi-decade windows (not every year).",
+              "Equity mutual funds: long-run CAGR often quoted ~11–13% - beats ~5–6% inflation in many multi-decade windows (not every year).",
               "Real estate: can beat inflation in select locations, but illiquid and lumpy.",
-              "Gold: often a hedge/stabiliser — not a dividend compounding machine.",
-              "Savings/FD/PPF: often ~0–2% real after inflation+tax — fine for stability, weak for long-run wealth alone.",
+              "Gold: often a hedge/stabiliser - not a dividend compounding machine.",
+              "Savings/FD/PPF: often ~0–2% real after inflation+tax - fine for stability, weak for long-run wealth alone.",
             ],
           },
           {
             kind: "p",
-            text: "Educational conclusion many planners use: long horizons often need meaningful equity exposure (commonly discussed ~60–70% of long-term savings) — personalised to your risk and goals.",
+            text: "Educational conclusion many planners use: long horizons often need meaningful equity exposure (commonly discussed ~60–70% of long-term savings) - personalised to your risk and goals.",
           },
         ],
       },
     ],
     finkoinTip:
-      "Use Finkoin’s calculators and goal view to translate “₹1 crore” into months-of-expenses — inflation-aware planning is less misleading than nominal targets.",
+      "Use Finkoin’s calculators and goal view to translate “₹1 crore” into months-of-expenses - inflation-aware planning is less misleading than nominal targets.",
     finkoinTipHref: "/calculators",
     related: [
       {
         id: "what-is-the-50-30-20-budgeting-rule",
-        title: "Why 50-30-20 struggles — Finkoin 40-20-10-30",
+        title: "Why 50-30-20 struggles - Finkoin 40-20-10-30",
       },
       {
         id: "sip-vs-lumpsum-when-to-use-which",
-        title: "SIP vs lumpsum — when to use which",
+        title: "SIP vs lumpsum - when to use which",
       },
       {
         id: "what-is-compound-interest-and-why-it-changes-everything",
@@ -769,7 +769,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "priority", label: "Priority order" },
     ],
     intro: [
-      "Section 80C limit is just ₹1.5 lakh — many Indians stop planning there. In reality, old-regime taxpayers can often stack several more sections and save large tax if they qualify. (New regime: most deductions don’t apply — compare regimes first.)",
+      "Section 80C limit is just ₹1.5 lakh - many Indians stop planning there. In reality, old-regime taxpayers can often stack several more sections and save large tax if they qualify. (New regime: most deductions don’t apply - compare regimes first.)",
     ],
     sections: [
       {
@@ -780,7 +780,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "callout",
             tone: "emerald",
             title: "Reality check",
-            text: "You can sometimes claim several lakhs beyond 80C if eligible — especially 80D + 24B + NPS extra window — which can change effective tax materially at the 30% slab.",
+            text: "You can sometimes claim several lakhs beyond 80C if eligible - especially 80D + 24B + NPS extra window - which can change effective tax materially at the 30% slab.",
           },
         ],
       },
@@ -808,17 +808,17 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "nps",
-        title: "Section 80CCD(1B) — NPS extra",
+        title: "Section 80CCD(1B) - NPS extra",
         blocks: [
           {
             kind: "p",
-            text: "Additional ₹50,000 beyond 80C for NPS Tier-I (within eligibility rules). At 30% slab, that can be ~₹15,000 tax saved — plus market-linked growth/discipline.",
+            text: "Additional ₹50,000 beyond 80C for NPS Tier-I (within eligibility rules). At 30% slab, that can be ~₹15,000 tax saved - plus market-linked growth/discipline.",
           },
         ],
       },
       {
         id: "24b",
-        title: "Section 24B — home loan interest",
+        title: "Section 24B - home loan interest",
         blocks: [
           {
             kind: "p",
@@ -828,11 +828,11 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "80e",
-        title: "Section 80E — education loan interest",
+        title: "Section 80E - education loan interest",
         blocks: [
           {
             kind: "p",
-            text: "Section 80E gives a deduction for interest on a qualifying education loan for higher education — subject to an 8-consecutive-year window and other conditions in law. Eligibility is narrow: it is meant for specified education loans for certain borrowers (commonly discussed for the borrower’s own higher education in typical salaried examples) — do not assume children’s loans automatically qualify; verify with a CA.",
+            text: "Section 80E gives a deduction for interest on a qualifying education loan for higher education - subject to an 8-consecutive-year window and other conditions in law. Eligibility is narrow: it is meant for specified education loans for certain borrowers (commonly discussed for the borrower’s own higher education in typical salaried examples) - do not assume children’s loans automatically qualify; verify with a CA.",
           },
         ],
       },
@@ -842,7 +842,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "80TTA: savings account interest deduction up to ₹10,000 for eligible assessees below senior thresholds. 80TTB: senior citizens may claim higher deduction on specified interest income — verify current caps.",
+            text: "80TTA: savings account interest deduction up to ₹10,000 for eligible assessees below senior thresholds. 80TTB: senior citizens may claim higher deduction on specified interest income - verify current caps.",
           },
         ],
       },
@@ -852,7 +852,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Illustrative stack: 80C ₹1,50,000 + 80D ₹75,000 + 80CCD(1B) ₹50,000 + 24B ₹2,00,000 = ₹4,75,000. At 30% slab, ₹4.75L × 30% ≈ ₹1,42,500 tax saved — only if you truly qualify for each line.",
+            text: "Illustrative stack: 80C ₹1,50,000 + 80D ₹75,000 + 80CCD(1B) ₹50,000 + 24B ₹2,00,000 = ₹4,75,000. At 30% slab, ₹4.75L × 30% ≈ ₹1,42,500 tax saved - only if you truly qualify for each line.",
           },
         ],
       },
@@ -874,12 +874,12 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
     ],
     finkoinTip:
-      "Finkoin’s tax calculator shows old vs new regime savings for your exact income and deductions — use it before committing to ELSS-only “March panic”.",
+      "Finkoin’s tax calculator shows old vs new regime savings for your exact income and deductions - use it before committing to ELSS-only “March panic”.",
     finkoinTipHref: "/calculators/tax-regime-2026",
     related: [
       {
         id: "old-vs-new-tax-regime-which-saves-you-more-money",
-        title: "Old vs new tax regime — which saves more?",
+        title: "Old vs new tax regime - which saves more?",
       },
       {
         id: "how-home-loan-tax-benefits-work-80c-24b",
@@ -887,7 +887,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "nps-tax-deductions-guide-india",
-        title: "NPS tax benefits — 80CCD layers",
+        title: "NPS tax benefits - 80CCD layers",
       },
     ],
   },
@@ -907,7 +907,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "parents", label: "Parents’ health insurance" },
     ],
     intro: [
-      "Family floater health insurance means one sum insured floats across family members. It can be cheaper than separate policies, but one large claim can shrink the pool for everyone else that year — trade-offs matter.",
+      "Family floater health insurance means one sum insured floats across family members. It can be cheaper than separate policies, but one large claim can shrink the pool for everyone else that year - trade-offs matter.",
     ],
     sections: [
       {
@@ -916,7 +916,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Example: family of four. Four individual ₹5L plans = ₹20L total cover; premiums might be ₹8k–12k/year each (illustrative). A ₹15L floater might cost ₹15k–20k/year — cheaper, but a ₹12L claim can leave only ₹3L for the rest of the policy year.",
+            text: "Example: family of four. Four individual ₹5L plans = ₹20L total cover; premiums might be ₹8k–12k/year each (illustrative). A ₹15L floater might cost ₹15k–20k/year - cheaper, but a ₹12L claim can leave only ₹3L for the rest of the policy year.",
           },
         ],
       },
@@ -941,7 +941,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "Parents 55+ inside the same floater can spike premium and renewal risk — often better as a separate senior policy.",
+              "Parents 55+ inside the same floater can spike premium and renewal risk - often better as a separate senior policy.",
               "Pre-existing conditions for one member can hurt everyone’s pricing/renewal comfort.",
               "If multiple members have higher claim risk, separate pools reduce correlation risk.",
             ],
@@ -956,7 +956,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "callout",
             tone: "emerald",
             title: "High SI, lower premium",
-            text: "Common structure: base ₹5L per person + super top-up ₹20L with ₹5L deductible — top-up pays after the base threshold. Illustrative premiums for large top-ups can be a few thousand rupees/year; compare quotes and continuity clauses carefully.",
+            text: "Common structure: base ₹5L per person + super top-up ₹20L with ₹5L deductible - top-up pays after the base threshold. Illustrative premiums for large top-ups can be a few thousand rupees/year; compare quotes and continuity clauses carefully.",
           },
         ],
       },
@@ -982,7 +982,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Healthcare costs often rise faster than headline CPI — many planners use ~12–14%/year as a stress assumption. ₹10L cover today can feel like ₹5L in purchasing power in ~6 years at ~12% inflation — review SI every ~3 years.",
+            text: "Healthcare costs often rise faster than headline CPI - many planners use ~12–14%/year as a stress assumption. ₹10L cover today can feel like ₹5L in purchasing power in ~6 years at ~12% inflation - review SI every ~3 years.",
           },
         ],
       },
@@ -992,13 +992,13 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Corporate floater usually won’t cover parents the way you assume — buy a dedicated parents policy early (before severe pre-existing conditions). Compare senior products on network + exclusions, not only premium.",
+            text: "Corporate floater usually won’t cover parents the way you assume - buy a dedicated parents policy early (before severe pre-existing conditions). Compare senior products on network + exclusions, not only premium.",
           },
         ],
       },
     ],
     finkoinTip:
-      "After you model monthly essentials on Finkoin, check whether your health SI matches “one bad hospital bill” in your city tier — underinsurance is common.",
+      "After you model monthly essentials on Finkoin, check whether your health SI matches “one bad hospital bill” in your city tier - underinsurance is common.",
     finkoinTipHref: "/analyse",
     related: [
       {
@@ -1011,7 +1011,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "emergency-fund-how-much-where-to-keep-it",
-        title: "Emergency fund — how much, where to keep it",
+        title: "Emergency fund - how much, where to keep it",
       },
     ],
   },
@@ -1031,7 +1031,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "hybrid-loan", label: "Smart hybrid approach" },
     ],
     intro: [
-      "Fixed vs floating home loan is not only about the first EMI — it is about how your cashflow behaves when rates change, how prepayment penalties work, and whether your “fixed” is truly fixed for the full tenure.",
+      "Fixed vs floating home loan is not only about the first EMI - it is about how your cashflow behaves when rates change, how prepayment penalties work, and whether your “fixed” is truly fixed for the full tenure.",
     ],
     sections: [
       {
@@ -1063,7 +1063,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "₹50L for 20 years: at ~10.5% fixed, EMI ≈ ₹49,919/month; total outflow ≈ ₹1.20 crore; interest ≈ ₹70 lakh. At ~8.5% floating (if it stayed flat), EMI ≈ ₹43,391/month; total outflow ≈ ₹1.04 crore; interest ≈ ₹54 lakh — a large gap, but floating rates rarely stay flat for two decades.",
+            text: "₹50L for 20 years: at ~10.5% fixed, EMI ≈ ₹49,919/month; total outflow ≈ ₹1.20 crore; interest ≈ ₹70 lakh. At ~8.5% floating (if it stayed flat), EMI ≈ ₹43,391/month; total outflow ≈ ₹1.04 crore; interest ≈ ₹54 lakh - a large gap, but floating rates rarely stay flat for two decades.",
           },
           {
             kind: "callout",
@@ -1096,7 +1096,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Can you handle EMI rising by ~₹3,000–5,000/month if rates rise? If yes, floating historically tends to win for many long-tenure borrowers. If no, a shorter fixed window can buy peace — peace has a price.",
+            text: "Can you handle EMI rising by ~₹3,000–5,000/month if rates rise? If yes, floating historically tends to win for many long-tenure borrowers. If no, a shorter fixed window can buy peace - peace has a price.",
           },
         ],
       },
@@ -1106,7 +1106,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Retail floating loans typically have no prepayment penalty (RBI direction for many products — still read your sanction letter). Fixed loans may impose 2–4% penalties on prepayment in some structures. Bonuses used for prepayment can dominate lifetime interest saved versus the fixed/floating label alone.",
+            text: "Retail floating loans typically have no prepayment penalty (RBI direction for many products - still read your sanction letter). Fixed loans may impose 2–4% penalties on prepayment in some structures. Bonuses used for prepayment can dominate lifetime interest saved versus the fixed/floating label alone.",
           },
         ],
       },
@@ -1119,15 +1119,15 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             items: [
               "Prefer floating if you can tolerate variability and want prepayment flexibility.",
               "Keep ~3 months EMI as cash buffer before aggressive prepay.",
-              "If rates rise: some lenders allow tenure extension instead of EMI spike — understand costs.",
-              "Refinance if another lender offers ~0.5% lower on large balances — small rate cuts compound over years.",
+              "If rates rise: some lenders allow tenure extension instead of EMI spike - understand costs.",
+              "Refinance if another lender offers ~0.5% lower on large balances - small rate cuts compound over years.",
             ],
           },
         ],
       },
     ],
     finkoinTip:
-      "Stress-test EMI + goals together on Finkoin — a loan decision should not crowd out insurance and emergency cash.",
+      "Stress-test EMI + goals together on Finkoin - a loan decision should not crowd out insurance and emergency cash.",
     finkoinTipHref: "/analyse",
     related: [
       {
@@ -1140,7 +1140,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "top-up-home-loan-when-it-makes-sense",
-        title: "Top-up home loan — when it makes sense",
+        title: "Top-up home loan - when it makes sense",
       },
     ],
   },
@@ -1159,7 +1159,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "delay", label: "If the builder delays" },
     ],
     intro: [
-      "RERA (Real Estate Regulatory Authority) is the state-level implementation of India’s Real Estate (Regulation and Development) Act. For homebuyers, it is mainly a disclosure + escrow + complaint framework — not a guarantee that every project will succeed, but a major upgrade versus the pre-2016 opaque market.",
+      "RERA (Real Estate Regulatory Authority) is the state-level implementation of India’s Real Estate (Regulation and Development) Act. For homebuyers, it is mainly a disclosure + escrow + complaint framework - not a guarantee that every project will succeed, but a major upgrade versus the pre-2016 opaque market.",
     ],
     sections: [
       {
@@ -1168,7 +1168,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Each state has a RERA portal where registered projects must publish key details. Before RERA, delays and plan changes were harder to challenge systematically; after RERA, buyers have structured recourse — but diligence still matters.",
+            text: "Each state has a RERA portal where registered projects must publish key details. Before RERA, delays and plan changes were harder to challenge systematically; after RERA, buyers have structured recourse - but diligence still matters.",
           },
         ],
       },
@@ -1179,11 +1179,11 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "Registration: mandatory registration for eligible projects — avoid “RERA not applicable” ambiguity unless you truly understand the exemption.",
-              "Escrow discipline: a large share of collections is meant to be ring-fenced for project delivery (rules are detailed — read the project QA on the portal).",
+              "Registration: mandatory registration for eligible projects - avoid “RERA not applicable” ambiguity unless you truly understand the exemption.",
+              "Escrow discipline: a large share of collections is meant to be ring-fenced for project delivery (rules are detailed - read the project QA on the portal).",
               "Carpet area transparency: pricing clarity on carpet area vs super built-up (common difference ~20–30%).",
               "Delivery timelines: promised dates matter; delays can trigger compensation frameworks described on portals/circulars.",
-              "Defect liability: structural defect warranty periods apply per law — keep documentation for snags.",
+              "Defect liability: structural defect warranty periods apply per law - keep documentation for snags.",
             ],
           },
         ],
@@ -1233,13 +1233,13 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Buyers can file complaints on the state RERA portal with payment proofs and agreement clauses. Many cases resolve in time-bound authority processes — use the system; keep PDF evidence organized.",
+            text: "Buyers can file complaints on the state RERA portal with payment proofs and agreement clauses. Many cases resolve in time-bound authority processes - use the system; keep PDF evidence organized.",
           },
         ],
       },
     ],
     finkoinTip:
-      "If you are saving for a down payment, Finkoin helps separate “goal investments” from emergency cash — don’t market-time your safety buffer.",
+      "If you are saving for a down payment, Finkoin helps separate “goal investments” from emergency cash - don’t market-time your safety buffer.",
     finkoinTipHref: "/goals",
     related: [
       {
@@ -1280,7 +1280,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Example: ₹10 lakh total — ₹6L equity index funds (60%), ₹2L debt (20%), ₹1L gold (10%), ₹1L liquid (10%). The point is percentages, not lottery tickets in one theme fund.",
+            text: "Example: ₹10 lakh total - ₹6L equity index funds (60%), ₹2L debt (20%), ₹1L gold (10%), ₹1L liquid (10%). The point is percentages, not lottery tickets in one theme fund.",
           },
         ],
       },
@@ -1301,10 +1301,10 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "Equity (stocks/MFs): higher long-run CAGR expectation, can draw down sharply in crashes — best for long horizons.",
-              "Debt (FD/bonds/debt MF): lower volatility, credit/ rate risks still exist — best for 2–5 year horizons.",
-              "Gold: hedge/stabiliser — commonly sized ~5–10% in retail plans.",
-              "Real estate / REITs: lumpy, illiquid — size carefully vs liquidity needs.",
+              "Equity (stocks/MFs): higher long-run CAGR expectation, can draw down sharply in crashes - best for long horizons.",
+              "Debt (FD/bonds/debt MF): lower volatility, credit/ rate risks still exist - best for 2–5 year horizons.",
+              "Gold: hedge/stabiliser - commonly sized ~5–10% in retail plans.",
+              "Real estate / REITs: lumpy, illiquid - size carefully vs liquidity needs.",
             ],
           },
         ],
@@ -1315,7 +1315,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Classic heuristic: equity% ≈ 100 − age (some use 110–120 because lifespans rose). At 25: ~75% equity; at 45: ~55%; at 65: ~35% — then personalise for income stability and goals.",
+            text: "Classic heuristic: equity% ≈ 100 − age (some use 110–120 because lifespans rose). At 25: ~75% equity; at 45: ~55%; at 65: ~35% - then personalise for income stability and goals.",
           },
         ],
       },
@@ -1325,7 +1325,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "If you target 70/30 equity/debt and markets rally, you might drift to 80/20. Rebalancing sells some equity and buys debt to return to policy — mechanically ‘sell high, buy low’ once a year (taxes/costs matter).",
+            text: "If you target 70/30 equity/debt and markets rally, you might drift to 80/20. Rebalancing sells some equity and buys debt to return to policy - mechanically ‘sell high, buy low’ once a year (taxes/costs matter).",
           },
         ],
       },
@@ -1347,13 +1347,13 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "callout",
             tone: "amber",
             title: "Not a recommendation",
-            text: "Illustrative diversification across caps and geographies — adjust to your horizon, liquidity, and tax locations.",
+            text: "Illustrative diversification across caps and geographies - adjust to your horizon, liquidity, and tax locations.",
           },
         ],
       },
     ],
     finkoinTip:
-      "Use Finkoin’s portfolio view to see concentration risk — allocation first, ticker obsession second.",
+      "Use Finkoin’s portfolio view to see concentration risk - allocation first, ticker obsession second.",
     finkoinTipHref: "/portfolio",
     related: [
       {
@@ -1362,7 +1362,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "sip-vs-lumpsum-when-to-use-which",
-        title: "SIP vs lumpsum — when to use which",
+        title: "SIP vs lumpsum - when to use which",
       },
       {
         id: "what-is-an-index-fund-and-why-it-beats-most-mutual-funds",
@@ -1394,7 +1394,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Illustrative: spend ₹1,00,000; minimum due might be ~₹5,000. Revolving interest is often ~3–3.5%/month (~36–42%/year). Minimum payments mostly cover interest; principal falls slowly — total paid can become ₹3–4 lakh+ over many years for ₹1L of purchases.",
+            text: "Illustrative: spend ₹1,00,000; minimum due might be ~₹5,000. Revolving interest is often ~3–3.5%/month (~36–42%/year). Minimum payments mostly cover interest; principal falls slowly - total paid can become ₹3–4 lakh+ over many years for ₹1L of purchases.",
           },
         ],
       },
@@ -1404,7 +1404,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Banks profit when customers revolve — it is one of the highest-yield retail products. A low minimum due encourages ‘pay little’ behaviour while interest runs in the background.",
+            text: "Banks profit when customers revolve - it is one of the highest-yield retail products. A low minimum due encourages ‘pay little’ behaviour while interest runs in the background.",
           },
         ],
       },
@@ -1445,7 +1445,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             items: [
               "Stop spending on the card immediately.",
               "Convert to EMI if the rate is materially lower than revolving (still read fees).",
-              "If eligible, use a cheaper loan to close revolving — maths must include processing fees.",
+              "If eligible, use a cheaper loan to close revolving - maths must include processing fees.",
               "Reduce limit / freeze card until you can pay full every month.",
             ],
           },
@@ -1469,7 +1469,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
     ],
     finkoinTip:
-      "If you carry revolving card debt, Finkoin’s debt lens helps prioritise the highest APR leak first — spreadsheets fail when behaviour doesn’t change.",
+      "If you carry revolving card debt, Finkoin’s debt lens helps prioritise the highest APR leak first - spreadsheets fail when behaviour doesn’t change.",
     finkoinTipHref: "/analyse",
     related: [
       {
@@ -1478,11 +1478,11 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "top-up-home-loan-when-it-makes-sense",
-        title: "Top-up home loan — when it makes sense",
+        title: "Top-up home loan - when it makes sense",
       },
       {
         id: "what-is-the-50-30-20-budgeting-rule",
-        title: "Why 50-30-20 struggles — Finkoin 40-20-10-30",
+        title: "Why 50-30-20 struggles - Finkoin 40-20-10-30",
       },
     ],
   },
@@ -1501,7 +1501,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "plan", label: "A simple combined plan" },
     ],
     intro: [
-      "NPS vs EPF is not a winner-takes-all fight — EPF is the forced, employer-matched foundation for many salaried Indians, while NPS adds optional market exposure and an extra deduction window beyond vanilla 80C (where eligible).",
+      "NPS vs EPF is not a winner-takes-all fight - EPF is the forced, employer-matched foundation for many salaried Indians, while NPS adds optional market exposure and an extra deduction window beyond vanilla 80C (where eligible).",
     ],
     sections: [
       {
@@ -1511,8 +1511,8 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "EPF: employee contributes 12% of salary (definitions vary by payroll); employer contributes 12% of salary with split: 8.33% to EPS (pension) and 3.67% to EPF for many setups — verify your payslip.",
-              "Interest rate is declared by government (often discussed around ~8.25% for recent FY narratives — verify EPFO notification for your year).",
+              "EPF: employee contributes 12% of salary (definitions vary by payroll); employer contributes 12% of salary with split: 8.33% to EPS (pension) and 3.67% to EPF for many setups - verify your payslip.",
+              "Interest rate is declared by government (often discussed around ~8.25% for recent FY narratives - verify EPFO notification for your year).",
               "Tax treatment commonly described as EEE within statutory limits for qualifying withdrawals.",
             ],
           },
@@ -1538,7 +1538,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "EPF: predictable accrual mechanics, employer match is ‘free money’, strong debt-like behaviour. NPS: equity/debt choice, extra tax box, but retirement withdrawal rules include mandatory annuity purchase on a portion at exit — annuity income is taxable at slab rates; the lump-sum portion has specified tax treatment — read current year rules before deciding.",
+            text: "EPF: predictable accrual mechanics, employer match is ‘free money’, strong debt-like behaviour. NPS: equity/debt choice, extra tax box, but retirement withdrawal rules include mandatory annuity purchase on a portion at exit - annuity income is taxable at slab rates; the lump-sum portion has specified tax treatment - read current year rules before deciding.",
           },
         ],
       },
@@ -1549,7 +1549,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "EPF first: never skip employer match; don’t withdraw on job changes — transfer using UAN.",
+              "EPF first: never skip employer match; don’t withdraw on job changes - transfer using UAN.",
               "Add NPS for: extra ₹50k deduction, more equity exposure, disciplined retirement beyond EPF.",
             ],
           },
@@ -1563,7 +1563,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "callout",
             tone: "amber",
             title: "EPFO narrative",
-            text: "Media reports cite millions of inoperative accounts and large unclaimed balances when people cash out EPF between jobs — every withdrawal breaks compounding. Prefer transfer; if withdrawn early, TDS and tax rules may apply.",
+            text: "Media reports cite millions of inoperative accounts and large unclaimed balances when people cash out EPF between jobs - every withdrawal breaks compounding. Prefer transfer; if withdrawn early, TDS and tax rules may apply.",
           },
         ],
       },
@@ -1573,7 +1573,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Common retail pattern: let EPF compound, add NPS ₹50k if suitable, run separate ELSS/MF SIPs for goals, keep PPF if you want a government-backed sleeve — together: guaranteed-ish floor + equity upside (personalise).",
+            text: "Common retail pattern: let EPF compound, add NPS ₹50k if suitable, run separate ELSS/MF SIPs for goals, keep PPF if you want a government-backed sleeve - together: guaranteed-ish floor + equity upside (personalise).",
           },
         ],
       },
@@ -1584,7 +1584,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
     related: [
       {
         id: "nps-tax-deductions-guide-india",
-        title: "NPS tax benefits — 80CCD layers",
+        title: "NPS tax benefits - 80CCD layers",
       },
       {
         id: "ppf-vs-elss-which-is-better-for-tax-saving",
@@ -1610,7 +1610,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "how-much", label: "How much gold is right" },
     ],
     intro: [
-      "Gold as investment is misunderstood because most Indian households hold it as jewellery — which is part consumption, part ornament, and a costly way to access spot gold returns.",
+      "Gold as investment is misunderstood because most Indian households hold it as jewellery - which is part consumption, part ornament, and a costly way to access spot gold returns.",
     ],
     sections: [
       {
@@ -1619,7 +1619,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "India is among the world’s largest gold consumers; private holdings are enormous in aggregate. Most is jewellery — typically the worst form for investment due to making charges and buy/sell spreads.",
+            text: "India is among the world’s largest gold consumers; private holdings are enormous in aggregate. Most is jewellery - typically the worst form for investment due to making charges and buy/sell spreads.",
           },
         ],
       },
@@ -1631,9 +1631,9 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
             kind: "ul",
             items: [
               "Inflation / currency debasement hedge over long horizons (not smooth yearly).",
-              "Portfolio stabiliser: in some crashes gold rises while equities fall — not always.",
-              "Geopolitical risk hedge — behaves like insurance, not cashflow.",
-              "Weddings/tradition: treat as consumption with emotional value — not ROI.",
+              "Portfolio stabiliser: in some crashes gold rises while equities fall - not always.",
+              "Geopolitical risk hedge - behaves like insurance, not cashflow.",
+              "Weddings/tradition: treat as consumption with emotional value - not ROI.",
             ],
           },
         ],
@@ -1645,10 +1645,10 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "Myth: gold always rises — reality: long drawdowns happen (e.g., 2011–2015 global gold slump narrative).",
-              "Myth: jewellery is investment — reality: making charges + resale spreads can destroy returns.",
-              "Myth: physical bars are ‘safest’ — reality: storage/theft/purity friction; SGB/ETFs can be cleaner for portfolio gold.",
-              "Myth: gold beats equity long-term — reality: broad Indian equity indices have often led over multi-decade windows — gold is usually a diversifier, not the growth engine.",
+              "Myth: gold always rises - reality: long drawdowns happen (e.g., 2011–2015 global gold slump narrative).",
+              "Myth: jewellery is investment - reality: making charges + resale spreads can destroy returns.",
+              "Myth: physical bars are ‘safest’ - reality: storage/theft/purity friction; SGB/ETFs can be cleaner for portfolio gold.",
+              "Myth: gold beats equity long-term - reality: broad Indian equity indices have often led over multi-decade windows - gold is usually a diversifier, not the growth engine.",
             ],
           },
         ],
@@ -1660,9 +1660,9 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
           {
             kind: "ul",
             items: [
-              "Sovereign Gold Bonds (SGB): RBI-issued, tracks gold price + small fixed coupon historically; tax rules differ by exit/maturity — verify for your case. Note: new tranche issuance may pause; secondary market purchase is still a path for some investors.",
+              "Sovereign Gold Bonds (SGB): RBI-issued, tracks gold price + small fixed coupon historically; tax rules differ by exit/maturity - verify for your case. Note: new tranche issuance may pause; secondary market purchase is still a path for some investors.",
               "Gold ETFs: exchange-traded, transparent pricing, expense ratios ~0.5–1% typically.",
-              "Digital gold apps: understand counterparty/regulatory protections — if unclear, prefer regulated exchange-traded routes.",
+              "Digital gold apps: understand counterparty/regulatory protections - if unclear, prefer regulated exchange-traded routes.",
             ],
           },
         ],
@@ -1673,13 +1673,13 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Many advisors cap gold at ~5–10% of an investment portfolio as a diversifier — beyond that, gold’s lack of coupons/cashflows can drag long-run growth vs equity-heavy plans.",
+            text: "Many advisors cap gold at ~5–10% of an investment portfolio as a diversifier - beyond that, gold’s lack of coupons/cashflows can drag long-run growth vs equity-heavy plans.",
           },
         ],
       },
     ],
     finkoinTip:
-      "If gold is ‘peace of mind’, size it like insurance in Finkoin — small, stable, not half your net worth.",
+      "If gold is ‘peace of mind’, size it like insurance in Finkoin - small, stable, not half your net worth.",
     finkoinTipHref: "/portfolio",
     related: [
       { id: "what-is-asset-allocation", title: "What is asset allocation?" },
@@ -1696,7 +1696,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
 
   "prepayment-vs-tenure-reduction-home-loan": {
     seoTitle:
-      "Home Loan Prepayment Calculator — Reduce EMI or Tenure? | Finkoin",
+      "Home Loan Prepayment Calculator - Reduce EMI or Tenure? | Finkoin",
     seoDescription:
       "Home loan prepayment calculator India: reduce EMI vs cut tenure with live math. Illustrative interest savings. Educational only.",
     tags: ["Prepayment", "Home loan", "EMI", "Tenure", "prepayment calculator"],
@@ -1711,7 +1711,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       { id: "rule", label: "Definitive rule-of-thumb" },
     ],
     intro: [
-      "Home loan prepayment decisions are cashflow vs interest saved: banks often push EMI reduction because it feels good monthly — but keeping EMI constant and cutting tenure usually saves more total interest if you can afford it.",
+      "Home loan prepayment decisions are cashflow vs interest saved: banks often push EMI reduction because it feels good monthly - but keeping EMI constant and cutting tenure usually saves more total interest if you can afford it.",
     ],
     sections: [
       {
@@ -1754,7 +1754,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "If option A saves ~₹4,843/month and you invest that at ~12% for 15 years, you can build a corpus — in some disciplined scenarios this can compete with option B’s interest saved. If you will spend the savings (common), option B wins cleanly.",
+            text: "If option A saves ~₹4,843/month and you invest that at ~12% for 15 years, you can build a corpus - in some disciplined scenarios this can compete with option B’s interest saved. If you will spend the savings (common), option B wins cleanly.",
           },
         ],
       },
@@ -1764,7 +1764,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Interest accrues on daily reducing balance — one large annual prepayment often beats spreading the same rupees into tiny monthly chunks (illustrative gap can be tens of thousands on ₹1L prepayment).",
+            text: "Interest accrues on daily reducing balance - one large annual prepayment often beats spreading the same rupees into tiny monthly chunks (illustrative gap can be tens of thousands on ₹1L prepayment).",
           },
         ],
       },
@@ -1774,7 +1774,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "Prepaying early knocks down principal when interest component is highest. Late-tenure prepayments save less interest because EMI is mostly principal — sometimes investing surplus beats prepaying in final years.",
+            text: "Prepaying early knocks down principal when interest component is highest. Late-tenure prepayments save less interest because EMI is mostly principal - sometimes investing surplus beats prepaying in final years.",
           },
         ],
       },
@@ -1784,7 +1784,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
         blocks: [
           {
             kind: "p",
-            text: "If you are optimising old-regime 24B interest deductions, aggressive prepayment can reduce interest below deduction thresholds — model after-tax savings, not only gross interest saved.",
+            text: "If you are optimising old-regime 24B interest deductions, aggressive prepayment can reduce interest below deduction thresholds - model after-tax savings, not only gross interest saved.",
           },
         ],
       },
@@ -1805,7 +1805,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
     ],
     finkoinTip:
-      "Use the prepayment calculator above, then stress-test EMI affordability on Finkoin’s EMI tool — pick the option you’ll stick with for years.",
+      "Use the prepayment calculator above, then stress-test EMI affordability on Finkoin’s EMI tool - pick the option you’ll stick with for years.",
     finkoinTipHref: "/calculators/emi",
     related: [
       {
@@ -1818,7 +1818,7 @@ const LEARN_RICH_ARTICLES: Record<string, RichArticle> = {
       },
       {
         id: "top-up-home-loan-when-it-makes-sense",
-        title: "Top-up home loan — when it makes sense",
+        title: "Top-up home loan - when it makes sense",
       },
     ],
   },

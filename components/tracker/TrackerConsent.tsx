@@ -20,17 +20,17 @@ const TRACK_ITEMS: TrackItem[] = [
   {
     kind: "tracker",
     icon: "home",
-    label: "Needs / mandatory expenses — rent, groceries, utilities",
+    label: "Needs / mandatory expenses - rent, groceries, utilities",
   },
   {
     kind: "tracker",
     icon: "party",
-    label: "Wants / non-mandatory expenses — dining, entertainment",
+    label: "Wants / non-mandatory expenses - dining, entertainment",
   },
   {
     kind: "tracker",
     icon: "coffee",
-    label: "Habit expenses — tea, coffee, cigarettes",
+    label: "Habit expenses - tea, coffee, cigarettes",
   },
   { kind: "app", icon: "card", label: "Loans & credit card payments" },
   { kind: "app", icon: "trending", label: "Investments & savings" },

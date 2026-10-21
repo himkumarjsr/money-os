@@ -36,7 +36,7 @@ export const LEARN_BUFFER = 0.1;
 /** Never lower these buckets below this share of income (whole percents). */
 export const LEARN_FLOORS = { needs: 10, wants: 5 } as const;
 /**
- * A month needs at least this many spending entries to count — a half-logged
+ * A month needs at least this many spending entries to count - a half-logged
  * month looks like low spending and must not shrink a budget.
  */
 export const LEARN_MIN_ENTRIES = 5;
@@ -50,7 +50,7 @@ export const LEARN_LOANS_CEILING = 40;
  * `LEARN_LOANS_CEILING`% of income); the rest goes to Investment. Needs and
  * Wants never go up, Investment never goes down, Security is never touched.
  *
- * `minMonthly` keeps a bucket at or above a known monthly cost — e.g. the
+ * `minMonthly` keeps a bucket at or above a known monthly cost - e.g. the
  * Needs total from the Analyse form, which spreads yearly bills such as
  * school fees across months, so a quiet quarter can't cut Needs below them.
  */

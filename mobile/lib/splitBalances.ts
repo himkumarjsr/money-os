@@ -120,7 +120,7 @@ export function computeNetBalances(
 
 /**
  * Minimum cash-flow debt simplification. Greedily matches the largest creditor
- * with the largest debtor each step, producing at most (n-1) transfers — the
+ * with the largest debtor each step, producing at most (n-1) transfers - the
  * fewest transactions needed to settle the whole group.
  */
 export function simplifyDebts(balances: NetBalance[]): SimplifiedEdge[] {

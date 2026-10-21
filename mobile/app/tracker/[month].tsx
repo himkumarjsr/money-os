@@ -47,7 +47,7 @@ const TRACKER_BENEFITS: readonly SignedOutBenefit[] = [
   { icon: "bell", text: "Never miss an EMI or card bill" },
 ];
 
-/** All transactions for one month (`/tracker/2026-03`) — port of web app/tracker/[month]. */
+/** All transactions for one month (`/tracker/2026-03`) - port of web app/tracker/[month]. */
 export default function TrackerMonthScreen() {
   const { month: monthParam = "" } = useLocalSearchParams<{ month: string }>();
   const user = useAuthStore((s) => s.user);

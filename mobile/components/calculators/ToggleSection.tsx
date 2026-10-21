@@ -27,7 +27,7 @@ const EMOJI_TO_ICON: Record<string, AppIconName> = {
   "💡": "bulb",
 };
 
-/** 44×24 track, 18px thumb — matches the PWA section switch. */
+/** 44×24 track, 18px thumb - matches the PWA section switch. */
 export function ToggleSwitch({
   isOn,
   onToggle,

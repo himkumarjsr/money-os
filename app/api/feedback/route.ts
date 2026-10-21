@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Trust the session (not the client) for identity. Anonymous feedback is
-    // allowed but never earns FK tokens — this kills token farming.
+    // allowed but never earns FK tokens - this kills token farming.
     const sessionUser = await getAuthedUser();
     const user_id = sessionUser?.id ?? null;
 

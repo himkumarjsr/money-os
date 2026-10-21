@@ -8,7 +8,7 @@ const hasCreds = Boolean(getE2ECredentials());
  * - Back navigates to group
  * - Equal split preview shows per-person amounts
  */
-test.describe("FK Split — Group detail scroll", () => {
+test.describe("FK Split - Group detail scroll", () => {
   test("Add expense link points at add-expense route", async ({ page }) => {
     const groupId = "e4f46c93-2173-4f08-b19c-29f247712f55";
     await page.goto(`/split/${groupId}`);
@@ -35,7 +35,7 @@ test.describe("FK Split — Group detail scroll", () => {
     await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(2500);
 
-    // Next.js error overlay hides <body> and breaks scroll — fail clearly.
+    // Next.js error overlay hides <body> and breaks scroll - fail clearly.
     await expect(
       page.getByText(/Server Error|Cannot find module/i),
     ).toHaveCount(0);
@@ -62,12 +62,12 @@ test.describe("FK Split — Group detail scroll", () => {
   });
 });
 
-test.describe("FK Split — Add expense UI", () => {
+test.describe("FK Split - Add expense UI", () => {
   test("add-expense route does not crash without auth", async ({ page }) => {
     await page.goto("/split/00000000-0000-0000-0000-000000000000/add-expense");
     await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(2000);
-    // Avoid body.toBeVisible() — Next error overlay sets body visibility:hidden.
+    // Avoid body.toBeVisible() - Next error overlay sets body visibility:hidden.
     await expect(
       page.getByText(/Server Error|Cannot find module/i),
     ).toHaveCount(0);
@@ -94,7 +94,7 @@ test.describe("FK Split — Add expense UI", () => {
   });
 });
 
-test.describe("FK Split — Add expense (authenticated)", () => {
+test.describe("FK Split - Add expense (authenticated)", () => {
   test.skip(!hasCreds, "Set E2E_USER_EMAIL + E2E_USER_PASSWORD in .env.local");
 
   test.beforeEach(async ({ page }) => {

@@ -365,7 +365,7 @@ export function CapitalGainsCalculator() {
       </Stats>
       {c.indexedOption ? (
         <Rows
-          title="Property bought before 23 Jul 2024 — two options"
+          title="Property bought before 23 Jul 2024 - two options"
           rows={[
             {
               label: "12.5% without indexation",
@@ -476,17 +476,17 @@ export function DeductionsCalculator() {
             onChange={setC80}
           />
           <MoneyField
-            label="NPS — your own (80CCD(1B))"
+            label="NPS - your own (80CCD(1B))"
             value={nps}
             onChange={setNps}
           />
           <MoneyField
-            label="Health insurance — self & family"
+            label="Health insurance - self & family"
             value={selfH}
             onChange={setSelfH}
           />
           <MoneyField
-            label="Health insurance — parents"
+            label="Health insurance - parents"
             value={parH}
             onChange={setParH}
           />
@@ -523,7 +523,7 @@ export function DeductionsCalculator() {
         title="Used vs limit"
         format={(n) => `${n.toFixed(0)}%`}
         items={d.rows.map((r) => ({
-          label: `${r.key} — ${inr(r.used)} of ${inr(r.cap)}`,
+          label: `${r.key} - ${inr(r.used)} of ${inr(r.cap)}`,
           value: (r.used / r.cap) * 100,
           highlight: r.used >= r.cap,
         }))}
@@ -585,7 +585,7 @@ export function AdvanceTaxCalculator() {
         </>
       ) : (
         <Insight tone="good">
-          Under ₹10,000 after TDS — no advance tax needed. Pay any balance as
+          Under ₹10,000 after TDS - no advance tax needed. Pay any balance as
           self-assessment tax before filing.
         </Insight>
       )}
@@ -675,7 +675,7 @@ export function PresumptiveTaxCalculator() {
       />
       {!p.eligible ? (
         <Insight tone="bad">
-          Above the {inr(p.limit)} limit for this scheme — you need regular
+          Above the {inr(p.limit)} limit for this scheme - you need regular
           books and possibly an audit.
         </Insight>
       ) : null}
@@ -777,12 +777,12 @@ export function RentalIncomeCalculator() {
       {r.setOffLoss > 0 ? (
         <Insight tone="good">
           A loss of {inr(r.setOffLoss)} can reduce your other income this year
-          (₹2 lakh cap), saving {inr(r.taxSavedByLoss)} — old regime only. The
+          (₹2 lakh cap), saving {inr(r.taxSavedByLoss)} - old regime only. The
           rest carries forward 8 years.
         </Insight>
       ) : null}
       <Note>
-        Society maintenance is not deductible — the 30% standard deduction
+        Society maintenance is not deductible - the 30% standard deduction
         covers repairs.
       </Note>
     </Stack>

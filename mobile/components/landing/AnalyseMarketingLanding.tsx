@@ -1,5 +1,5 @@
 /**
- * Signed-out Report tab — port of web `components/landing/AnalyseMarketingLanding.tsx`
+ * Signed-out Report tab - port of web `components/landing/AnalyseMarketingLanding.tsx`
  * (copy verbatim). Primary CTA → signup, secondary → login, both returning
  * to the Report tab.
  */
@@ -17,7 +17,7 @@ import { openContentHref } from "@/lib/contentLinks";
 const FAQS = [
   {
     q: "What is the Finkoin financial health check?",
-    a: "A free 5-minute assessment that scores your emergency fund, insurance cover, debt load, and investing habits — built for Indian salaries, EMIs, and goals.",
+    a: "A free 5-minute assessment that scores your emergency fund, insurance cover, debt load, and investing habits - built for Indian salaries, EMIs, and goals.",
   },
   {
     q: "Do I need PAN or Aadhaar?",
@@ -37,7 +37,7 @@ const STEPS = [
   {
     n: "1",
     title: "Answer simple money questions",
-    body: "Income, EMIs, insurance, and investments — no jargon wall.",
+    body: "Income, EMIs, insurance, and investments - no jargon wall.",
   },
   {
     n: "2",
@@ -58,11 +58,11 @@ const PILLARS = [
   },
   {
     t: "Term insurance",
-    d: "Is your cover enough for dependents — or is there a silent gap?",
+    d: "Is your cover enough for dependents - or is there a silent gap?",
   },
   {
     t: "Debt load",
-    d: "EMIs and credit stress vs income — what is sustainable.",
+    d: "EMIs and credit stress vs income - what is sustainable.",
   },
   {
     t: "Investing habits",
@@ -96,7 +96,7 @@ export function AnalyseMarketingLanding({
           Know your financial health score in 5 minutes
         </Text>
         <Text style={styles.lead}>
-          Free check for India — emergency fund, term insurance, debt, and
+          Free check for India - emergency fund, term insurance, debt, and
           investments. No PAN. No Aadhaar. Clear next steps, not a lecture.
         </Text>
         <Button

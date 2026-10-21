@@ -13,7 +13,7 @@ export default function BackLink({
   className = "",
   /** When set (e.g. Quick Tools `from=home`), skip history.back() and go here. */
   forceHref,
-  /** Used with forceHref — prefer replace to avoid intermediate-page flash. */
+  /** Used with forceHref - prefer replace to avoid intermediate-page flash. */
   replace: useReplace = true,
 }: {
   fallbackHref?: string;

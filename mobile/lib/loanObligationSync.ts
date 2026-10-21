@@ -343,7 +343,7 @@ export type LoanObligationPlan = {
 /**
  * Analyse → Tracker. Every loan (not just the first of each type) gets a
  * Tracker row; edited EMIs update it; loans the user removed from the form
- * are closed. `previous` is the profile the form was edited from — a manual
+ * are closed. `previous` is the profile the form was edited from - a manual
  * Tracker loan is only closed if the user saw it in the form and removed it.
  */
 export function planLoanObligationSync(

@@ -75,7 +75,7 @@ describe("calculator SEO checklist", () => {
     const title = fitTitle(seoOf(id).title);
     expect(title.length).toBeGreaterThanOrEqual(30);
     expect(title.length).toBeLessThanOrEqual(SEO_TITLE_MAX);
-    expect(title.split("—")[0]).toMatch(/Calculator|Calculations/);
+    expect(title.split(" - ")[0]).toMatch(/Calculator|Calculations/);
   });
 
   it.each(ALL_IDS)("%s: description is 120–155 characters", (id) => {

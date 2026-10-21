@@ -41,7 +41,7 @@ export default function CalculatorsScreen() {
       <ScrollView contentContainerStyle={styles.pad}>
         <Text style={styles.title}>Calculators</Text>
         <Text style={styles.sub}>
-          Sliders update results instantly — illustrative, not advice.
+          Sliders update results instantly - illustrative, not advice.
         </Text>
         <Text style={styles.seoNote}>
           Includes SIP calculator India, EMI calculator, and income tax planning

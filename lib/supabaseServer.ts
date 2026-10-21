@@ -54,7 +54,7 @@ export async function createSupabaseServerClient() {
           try {
             cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
           } catch {
-            // Server Component context cannot mutate cookies — rely on middleware / route handlers.
+            // Server Component context cannot mutate cookies - rely on middleware / route handlers.
           }
         },
       },
@@ -64,7 +64,7 @@ export async function createSupabaseServerClient() {
 
 let adminSingleton: SupabaseClient | null = null;
 
-/** Service role client — server-only; never import from client bundles. */
+/** Service role client - server-only; never import from client bundles. */
 export function getSupabaseAdmin(): SupabaseClient {
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
@@ -82,7 +82,7 @@ export function getSupabaseAdmin(): SupabaseClient {
   return adminSingleton;
 }
 
-/** @deprecated Prefer `getSupabaseAdmin()` — lazily created singleton */
+/** @deprecated Prefer `getSupabaseAdmin()` - lazily created singleton */
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   get(_t, prop) {
     const client = getSupabaseAdmin();

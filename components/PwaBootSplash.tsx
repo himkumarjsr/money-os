@@ -37,7 +37,7 @@ export default function PwaBootSplash() {
       }, 380);
     };
 
-    // Let the first content paint, then fade — feels intentional, not abrupt.
+    // Let the first content paint, then fade - feels intentional, not abrupt.
     let raf2 = 0;
     const raf1 = window.requestAnimationFrame(() => {
       raf2 = window.requestAnimationFrame(() => {

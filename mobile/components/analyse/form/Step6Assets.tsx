@@ -177,7 +177,7 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
         <View style={styles.fdBox}>
           <Text style={styles.fdTitle}>Fixed deposits (breakable)</Text>
           <Text style={formStyles.body}>
-            Same as &quot;Fixed Deposit total value&quot; above — enter it once.
+            Same as &quot;Fixed Deposit total value&quot; above - enter it once.
             We weight FD at 70% as emergency money (penalty + time to break).
           </Text>
           <Text style={[formStyles.body, { color: Colors.textPrimary }]}>
@@ -196,7 +196,7 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
         <MoneyField
           name="medicalEmergencyFund"
           label="Medical emergency fund"
-          helper="Cash set aside only for medical use — separate from the general emergency pot above. Suggested minimum about ₹2–3 lakh depending on city and family. Used in your report checklist."
+          helper="Cash set aside only for medical use - separate from the general emergency pot above. Suggested minimum about ₹2–3 lakh depending on city and family. Used in your report checklist."
           optional
         />
 
@@ -237,7 +237,7 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
       <Card>
         <SectionTitle>Bereavement / demise fund</SectionTitle>
         <Text style={formStyles.body}>
-          Liquid money for last rites, travel, and immediate expenses — not
+          Liquid money for last rites, travel, and immediate expenses - not
           invested. Many families keep at least ₹2L aside; adjust to what feels
           right for your family.
         </Text>
@@ -254,17 +254,17 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
           <MoneyField
             name="ppfBalance"
             label="PPF current balance"
-            helper="PPF balance — Existing investment cache"
+            helper="PPF balance - Existing investment cache"
           />
           <MoneyField
             name="npsBalance"
             label="NPS current balance"
-            helper="NPS balance — Existing investment cache"
+            helper="NPS balance - Existing investment cache"
           />
           <MoneyField
             name="epfBalance"
             label="EPF / PF current balance"
-            helper="EPF / PF balance — Existing investment cache"
+            helper="EPF / PF balance - Existing investment cache"
           />
           <MoneyField
             name="monthlySIP"
@@ -422,33 +422,33 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
         <MoneyField
           name="monthlyRD"
           label="Monthly RD amount currently running"
-          helper="RD — Investment cache · Emergency / short term"
+          helper="RD - Investment cache · Emergency / short term"
         />
         <MoneyField
           name="monthlyPPFContribution"
           label="Monthly PPF contribution"
-          helper="PPF — Tax-free long term savings"
+          helper="PPF - Tax-free long term savings"
         />
         <MoneyField
           name="monthlyNPSContribution"
           label="Monthly NPS contribution"
-          helper="NPS — Investment cache · Retirement"
+          helper="NPS - Investment cache · Retirement"
         />
         <MoneyField
           name="monthlyEPFContribution"
-          label="Monthly EPF contribution — employee side only"
-          helper="EPF — Retirement deduction already reflected in take-home salary"
+          label="Monthly EPF contribution - employee side only"
+          helper="EPF - Retirement deduction already reflected in take-home salary"
         />
         {live.hasEligibleGirlChild ? (
           <MoneyField
             name="ssy"
             label="Monthly SSY deposit (girl child under 10)"
             helper={mergeHelpers(
-              "Sukanya Samriddhi — open before she turns 10",
+              "Sukanya Samriddhi - open before she turns 10",
               "Max ₹1,50,000/year",
               "Matures when girl turns 21",
               "Interest rate 8.2% p.a.",
-              "SSY — Investment cache · Girl child · 8.2% guaranteed",
+              "SSY - Investment cache · Girl child · 8.2% guaranteed",
             )}
           />
         ) : null}
@@ -456,7 +456,7 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
         <Card style={{ gap: 12 }}>
           <YesNoQuestion
             question="Do you have any India Post / post office savings schemes?"
-            sub="NSC, KVP, MIS, SCSS, RD, time deposits, and similar — holdings count toward net worth."
+            sub="NSC, KVP, MIS, SCSS, RD, time deposits, and similar - holdings count toward net worth."
             value={!!hasPostOfficeSchemes}
             onChange={(next) => {
               setValue("hasPostOfficeSchemes", next, { shouldDirty: true });

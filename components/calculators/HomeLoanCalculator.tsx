@@ -427,7 +427,7 @@ export function HomeLoanCalculator() {
                           {formatINR(entry.emi)}
                         </td>
                         <td className="px-4 py-2.5 text-[13px] text-slate-900">
-                          —
+                          -
                         </td>
                       </tr>
                     );
@@ -481,9 +481,9 @@ export function HomeLoanCalculator() {
 
       <Insight tone={tone}>
         {breach
-          ? "EMI is above 40% of stated income — high strain. Increase down payment, stretch tenure, or revisit budget."
+          ? "EMI is above 40% of stated income - high strain. Increase down payment, stretch tenure, or revisit budget."
           : pctOfIncome > 32
-            ? "EMI is workable but leaves limited buffer — keep 6-month EMI in liquid savings."
+            ? "EMI is workable but leaves limited buffer - keep 6-month EMI in liquid savings."
             : "EMI is within a healthy slice of income."}
       </Insight>
 

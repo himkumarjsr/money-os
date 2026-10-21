@@ -27,7 +27,7 @@ export function FdSuggestionCard({ fd }: { fd: Fd }) {
 export function DoThisFirst({ text }: { text?: string }) {
   return (
     <View style={[styles.callout, styles.amber]}>
-      <Text style={styles.amberLabel}>DO THIS FIRST — THIS WEEK</Text>
+      <Text style={styles.amberLabel}>DO THIS FIRST - THIS WEEK</Text>
       <Text style={styles.amberText}>{text}</Text>
     </View>
   );

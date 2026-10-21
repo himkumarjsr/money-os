@@ -123,7 +123,7 @@ export function EMICalculator() {
 
       <Insight tone={tone}>
         Interest is about <B>{(interestRatio * 100).toFixed(0)}%</B> of
-        principal —{" "}
+        principal -{" "}
         {interestRatio < 0.45
           ? "consider prepayment when possible."
           : "explore shorter tenure or balance transfer if eligible."}

@@ -224,7 +224,7 @@ export function optimizeFinances(
     mandatoryFunds.push({
       fundName: "Bereavement fund",
       purpose:
-        "Immediate expenses when a parent or close family member passes — travel, rituals, urgent cash.",
+        "Immediate expenses when a parent or close family member passes - travel, rituals, urgent cash.",
       targetAmount: bereavementTarget,
       currentAmount: bereavementCurrent,
       gap,
@@ -252,7 +252,7 @@ export function optimizeFinances(
   mandatoryFunds.push({
     fundName: "Medical emergency fund",
     purpose:
-      "Hospital bills not fully covered by insurance — deductibles, exclusions, co-pay, waiting periods.",
+      "Hospital bills not fully covered by insurance - deductibles, exclusions, co-pay, waiting periods.",
     targetAmount: medicalTarget,
     currentAmount: Math.round(medicalCurrent),
     gap: medGap,
@@ -292,7 +292,7 @@ export function optimizeFinances(
     });
   }
 
-  // 4. Emergency fund (weighted accessible corpus — same as health engine)
+  // 4. Emergency fund (weighted accessible corpus - same as health engine)
   const emMonths =
     er.monthlyExpenses > 0 ? realEmergencyFund / er.monthlyExpenses : 0;
   const emGap = Math.max(0, emergencyTarget - realEmergencyFund);
@@ -300,7 +300,7 @@ export function optimizeFinances(
   mandatoryFunds.push({
     fundName: "Emergency fund",
     purpose:
-      "Six months of essential expenses if income stops — weighted for how fast you can access cash.",
+      "Six months of essential expenses if income stops - weighted for how fast you can access cash.",
     targetAmount: emergencyTarget,
     currentAmount: Math.round(realEmergencyFund),
     gap: emGap,
@@ -345,7 +345,7 @@ export function optimizeFinances(
           ? "Long horizon allows equity compounding; keep goal-tagged SIPs separate."
           : yearsToGoal > 5
             ? "Blends safety (PPF) with flexibility (debt MF)."
-            : "Short horizon — limit equity; protect principal.",
+            : "Short horizon - limit equity; protect principal.",
       urgency: yearsToGoal < 5 ? "critical" : "medium",
       monthsToFill: yearsToGoal * 12,
       monthlyContribution: monthlyEdu,
@@ -365,13 +365,13 @@ export function optimizeFinances(
     mandatoryFunds.push({
       fundName: "Sukanya Samriddhi Yojana",
       purpose:
-        "Girl child education / marriage — government scheme with EEE tax treatment (subject to rules).",
+        "Girl child education / marriage - government scheme with EEE tax treatment (subject to rules).",
       targetAmount: ssyTarget,
       currentAmount: 0,
       gap: ssyTarget,
       whereToKeep: "SSY at post office or authorised bank",
       whyThisPlace:
-        "Purpose-built for girl child; long lock-in enforces discipline — confirm current rates and limits.",
+        "Purpose-built for girl child; long lock-in enforces discipline - confirm current rates and limits.",
       urgency: girlChildAge >= 9 ? "critical" : "high",
       monthsToFill: ssyYearsLeft * 12,
       monthlyContribution: ssyMonthly,
@@ -405,17 +405,17 @@ export function optimizeFinances(
     keepInFDReason:
       fdToKeep > 0
         ? "Remaining FD keeps earning until maturity; revisit on rollover so it matches your liquidity ladder."
-        : "No residual FD left after this split — renew only if it fits your revised liquidity plan.",
+        : "No residual FD left after this split - renew only if it fits your revised liquidity plan.",
     moveToKVP: Math.round(fdForKVP),
     moveToKVPReason:
       totalInsuranceYearly > 0
         ? `Size roughly one year of premiums (${fmtIn(totalInsuranceYearly)}) in government-backed instruments; renewals then draw from this ladder instead of salary.`
-        : "Low / no premiums on file — you can skip KVP until insurance outflows are known.",
+        : "Low / no premiums on file - you can skip KVP until insurance outflows are known.",
     useForCreditCard: Math.round(fdForCreditCard),
     useForCreditCardReason:
       fdForCreditCard > 0
-        ? `Keep ${fmtIn(fdForCreditCard)} as lien-backed FD if your bank offers a secured card — useful for medical spikes; pay from reimbursement/claims where possible.`
-        : "No FD slice earmarked for a secured card — optional if you already have enough unsecured liquidity.",
+        ? `Keep ${fmtIn(fdForCreditCard)} as lien-backed FD if your bank offers a secured card - useful for medical spikes; pay from reimbursement/claims where possible.`
+        : "No FD slice earmarked for a secured card - optional if you already have enough unsecured liquidity.",
     moveToLiquidMF: Math.round(fdForLiquidMF),
     moveToLiquidMFReason:
       fdForLiquidMF > 0
@@ -438,7 +438,7 @@ export function optimizeFinances(
 • Year 2: Use RD maturity for renewal; recycle KVP interest into the next RD.
 • By year 3+: Premiums can ride on maturing ladders; salary stays freer for investing.
 
-Rates and tax treatment change — verify on RBI / India Post notices before you commit.`,
+Rates and tax treatment change - verify on RBI / India Post notices before you commit.`,
   };
 
   const incompleteFunds = mandatoryFunds
@@ -480,7 +480,7 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
           ? Math.round((remainingSurplus / totalIncome) * 100)
           : 0,
       purpose:
-        "Long-term wealth after safety nets — increase only when buckets above are funded.",
+        "Long-term wealth after safety nets - increase only when buckets above are funded.",
       where:
         age < 40
           ? "Low-cost index fund (e.g. Nifty 50) via SIP"
@@ -550,7 +550,7 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       monthlyPremiumEstimate: 500,
       productSuggestion:
         "Comprehensive OD + TP; add zero-dep if the car is new.",
-      urgency: "Renew before expiry — avoid a break in own-damage cover",
+      urgency: "Renew before expiry - avoid a break in own-damage cover",
       buyFromFinkoin: true,
       policyHint: "car",
     });
@@ -567,10 +567,10 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
       gap: Math.max(0, pTarget - pCover),
       monthlyPremiumEstimate: 2_500,
       productSuggestion:
-        "Senior-focused health plans — watch co-pay, disease-wise caps and waiting periods.",
+        "Senior-focused health plans - watch co-pay, disease-wise caps and waiting periods.",
       urgency:
         pCover < pTarget
-          ? "High — elder hospital bills are lumpy"
+          ? "High - elder hospital bills are lumpy"
           : "Review at renewal",
       buyFromFinkoin: true,
       policyHint: "parents_health",
@@ -633,7 +633,7 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
         ? "Equity / hybrid MF"
         : "Liquid MF",
     reason: hasGirlChildUnder10(profile)
-      ? "SSY has a hard age gate — don’t miss the window."
+      ? "SSY has a hard age gate - don’t miss the window."
       : "Compounding needs time; start small if needed.",
   });
 
@@ -665,12 +665,12 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
 
   if (bFund && bFund.monthlyContribution > 0) {
     monthlyActionPlan.push(
-      `${fmtIn(bFund.monthlyContribution)}/month → Savings (bereavement) — ${bFund.purpose.slice(0, 80)}…`,
+      `${fmtIn(bFund.monthlyContribution)}/month → Savings (bereavement) - ${bFund.purpose.slice(0, 80)}…`,
     );
   }
   if (mFund && mFund.monthlyContribution > 0) {
     monthlyActionPlan.push(
-      `${fmtIn(mFund.monthlyContribution)}/month → Liquid MF (medical buffer) — builds ${fmtIn(medicalTarget)} target.`,
+      `${fmtIn(mFund.monthlyContribution)}/month → Liquid MF (medical buffer) - builds ${fmtIn(medicalTarget)} target.`,
     );
   }
   if (totalInsuranceYearly > 0) {
@@ -693,7 +693,7 @@ Rates and tax treatment change — verify on RBI / India Post notices before you
   }
   if (monthlyActionPlan.length === 0 && monthlySurplus <= 0) {
     monthlyActionPlan.push(
-      "No free surplus on paper — trim wants / loan EMIs or raise income before scaling investments.",
+      "No free surplus on paper - trim wants / loan EMIs or raise income before scaling investments.",
     );
   }
 
