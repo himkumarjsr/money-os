@@ -25,8 +25,9 @@ export default function AllCalculatorsLinks({
       </h2>
       <div className="mt-4 grid gap-6 sm:grid-cols-2">
         {CATEGORIES.map((cat) => {
-          const items = cat.items.filter((i) =>
-            INDEXABLE_CALC_IDS.includes(i.id),
+          // tax-regime lives at its own route, /calculators/tax-regime-2026.
+          const items = cat.items.filter(
+            (i) => i.id === "tax-regime" || INDEXABLE_CALC_IDS.includes(i.id),
           );
           if (items.length === 0) return null;
           return (
