@@ -8,7 +8,11 @@ import {
   type GoalFundingItem,
   type GoalFundingPlan,
 } from "@/lib/goalFunding";
-import { goalReach, type GoalReach } from "@/lib/goalReach";
+import {
+  buildUrgentGoalItems,
+  goalReach,
+  type GoalReach,
+} from "@/lib/goalReach";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 import {
   licEndowmentPremiumMonthly,
@@ -153,6 +157,7 @@ const GOAL_ICONS: Record<string, string> = {
 };
 
 const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+const rupeesFmt = rupees;
 
 function goalFundingAction(item: GoalFundingItem, startMonth: number): string {
   const what = `${rupees(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()} (${item.sharePct}% of your goal budget)`;
@@ -437,6 +442,49 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     startMonth: 1,
   });
 
+  // Fixed-date goals that are close (a wedding next year) can't wait for the
+  // rest of the plan: they come straight after the emergency fund.
+  const urgentStartMonth =
+    hardPriorityMode && emergencyMonthsToComplete > 0
+      ? emergencyMonthsToComplete + 1
+      : 1;
+  const urgentGoals = buildUrgentGoalItems(
+    profile,
+    hardPriorityMode ? monthlySurplus : runningSurplus,
+    urgentStartMonth,
+  );
+  const urgentMonthly = urgentGoals.reduce((s, g) => s + g.monthlyAllocated, 0);
+  for (const item of urgentGoals) {
+    const before = runningSurplus;
+    runningSurplus = Math.max(0, runningSurplus - item.monthlyAllocated);
+    priorities.push({
+      rank: rank++,
+      id: `goal_${item.goalId.replace(":", "_")}`,
+      title: item.label,
+      category: "goal",
+      urgency: "high",
+      status: item.fundedPct >= 100 ? "partial" : "missing",
+      currentAmount: 0,
+      targetAmount: item.targetAmount,
+      gap: item.targetAmount,
+      monthlyRequired: item.monthlyRequired,
+      monthlyContribution: item.monthlyAllocated,
+      surplusBefore: before,
+      surplusAfterThis: runningSurplus,
+      monthsToComplete: item.yearsToGoal * 12,
+      instrument: item.instrument,
+      actionThisWeek:
+        urgentStartMonth > 1
+          ? `From month ${urgentStartMonth}, put ${rupeesFmt(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()}.`
+          : `Put ${rupeesFmt(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()}.`,
+      whyThisMatters: `${item.label} is on a date you can't move (${item.targetYear}), so it is funded right after your emergency fund - before other goals and wealth SIPs.`,
+      icon: GOAL_ICONS[item.type] ?? "🎯",
+      canBuyFromFinkoin: false,
+      startMonth: urgentStartMonth,
+      reach: goalReach(item, { profile, startMonth: urgentStartMonth }),
+    });
+  }
+
   const medicalTarget = medicalEmergencyTarget(profile);
   const enteredMedical = Number(profile.medicalEmergencyFund ?? 0) || 0;
   let medicalCurrent = enteredMedical;
@@ -469,7 +517,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     medicalGapLeft > 0
       ? Math.round(
           Math.min(
-            Math.max(0, monthlySurplus - emergencyMonthly),
+            Math.max(0, monthlySurplus - emergencyMonthly - urgentMonthly),
             Math.ceil(medicalGapLeft / 6),
           ),
         )
@@ -847,7 +895,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   // after emergency/medical top-ups, which are temporary.
   const steadyStateBudget = Math.max(
     0,
-    monthlySurplus - termPremiumEst - healthPremiumEst,
+    monthlySurplus - termPremiumEst - healthPremiumEst - urgentMonthly,
   );
   let steadyRunning = steadyStateBudget;
   const postSafetyBudget = Math.max(0, steadyStateBudget - ssyReserve);
@@ -863,12 +911,20 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       ].includes(p.id),
     )
     .every((p) => p.status === "complete");
-  const goalFunding = buildGoalFundingPlan(
+  const parallelFunding = buildGoalFundingPlan(
     profile,
     postSafetyBudget - debtDeployMonthly,
     new Date(),
-    { safetyNetComplete },
+    { safetyNetComplete, excludeGoalIds: urgentGoals.map((g) => g.goalId) },
   );
+  // Urgent goals keep their own earlier step; list them with the rest.
+  const goalFunding: GoalFundingPlan = {
+    ...parallelFunding,
+    totalRequired:
+      parallelFunding.totalRequired +
+      urgentGoals.reduce((s, g) => s + g.monthlyRequired, 0),
+    items: [...urgentGoals, ...parallelFunding.items],
+  };
 
   const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
   let safetyNoted = false;
@@ -886,6 +942,16 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       emergency = Math.min(left, emRemaining);
       emRemaining = Math.max(0, emRemaining - emergency);
       left -= emergency;
+    }
+
+    // Close fixed-date goals (a wedding next year) come next, until their date.
+    let urgent = 0;
+    if (emRemaining === 0 && month >= urgentStartMonth) {
+      const due = urgentGoals
+        .filter((g) => month <= g.yearsToGoal * 12)
+        .reduce((s, g) => s + g.monthlyAllocated, 0);
+      urgent = Math.min(left, due);
+      left -= urgent;
     }
 
     // Goal 2: Fill medical with remaining and post-emergency freed surplus.
@@ -943,6 +1009,11 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           : `${rupees(medical)} to finish the medical fund`,
       );
     }
+    if (urgent > 0) {
+      parts.push(
+        `${rupees(urgent)} to ${urgentGoals.map((g) => g.label.toLowerCase()).join(" and ")}`,
+      );
+    }
     if (termYearly > 0) {
       parts.push(`pay the ${rupees(termYearly)} yearly term premium`);
     }
@@ -971,7 +1042,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       emergency,
       medical,
       termYearly,
-      sip,
+      sip: sip + urgent,
       extraDebt,
       remaining: left,
       note,
@@ -1055,7 +1126,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     });
   }
 
-  for (const item of goalFunding.items) {
+  for (const item of parallelFunding.items) {
     if (item.monthlyAllocated <= 0) continue;
     const before = steadyRunning;
     // Exactly the split amount: the goals table, actions and PDF all show it.

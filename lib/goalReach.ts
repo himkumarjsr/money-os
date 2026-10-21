@@ -5,17 +5,38 @@
  * rupees (real returns), the same basis goalFunding sizes goals on.
  */
 import { formatIndian } from "@/lib/formatters";
+import { detectGoals } from "@/lib/goalDetection";
 import {
+  goalHorizon,
   HORIZON_ASSUMPTIONS,
   realSalaryStepUpPct,
   type GoalFundingItem,
 } from "@/lib/goalFunding";
+import {
+  allocateGoalPortfolio,
+  allocationSummary,
+} from "@/lib/portfolioAllocation";
 import { LONG_RUN_INFLATION } from "@/lib/financialEngine";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   getUniversalBucketActuals,
   getUniversalCaps,
 } from "@/lib/universal-buckets";
+
+/** Goals whose date can't be moved: a wedding, a birth, a child's college. */
+export const FIXED_DATE_GOAL_TYPES = [
+  "marriage",
+  "baby",
+  "kid_education",
+  "kid_marriage",
+] as const;
+
+/** Fixed-date goals this close are funded right after the emergency fund. */
+export const URGENT_GOAL_YEARS = 3;
+
+export function isFixedDateGoal(type: string): boolean {
+  return (FIXED_DATE_GOAL_TYPES as readonly string[]).includes(type);
+}
 
 export type GoalReach = {
   targetAmount: number;
@@ -33,6 +54,8 @@ export type GoalReach = {
   /** projected / target, 0–100. */
   reachPct: number;
   onTrack: boolean;
+  /** The date can't be moved (wedding, birth, college). */
+  fixedDate: boolean;
   /** Monthly SIP that reaches the goal on time if started this month. */
   monthlyNeededNow: number;
   /** Earliest year the current monthly gets there, or null if not within 50 years. */
@@ -100,20 +123,45 @@ export function goalReach(
     }
   }
 
+  const fixedDate = isFixedDateGoal(item.type);
+  const p = opts.profile as Partial<FinancialProfile>;
   const suggestions: string[] = [];
   if (!onTrack) {
     if (start > 1) {
       suggestions.push(
         start > months
-          ? `Your safety steps use the surplus first, so this SIP would only start in month ${start} - after ${item.targetYear}. Starting ${rs(item.monthlyRequired)}/month now reaches it on time.`
-          : `Your safety steps use the surplus first, so this SIP only starts in month ${start}. Starting ${rs(item.monthlyRequired)}/month now reaches it on time.`,
+          ? `Earlier steps (like your emergency fund) use the surplus first, so this SIP would only start in month ${start} - after ${item.targetYear}. Starting ${rs(item.monthlyRequired)}/month now reaches it on time.`
+          : `Earlier steps (like your emergency fund) use the surplus first, so this SIP only starts in month ${start}. Starting ${rs(item.monthlyRequired)}/month now reaches it on time.`,
       );
     } else {
       suggestions.push(
         `Reaching it on time takes ${rs(item.monthlyRequired)}/month - ${rs(item.monthlyRequired - monthly)} more than your surplus allows today.`,
       );
     }
-    const p = opts.profile as Partial<FinancialProfile>;
+    if (fixedDate) {
+      const sips =
+        (p.monthlySIP ?? 0) +
+        (p.monthlyRD ?? 0) +
+        (p.customInvestments ?? []).reduce(
+          (s, c) => s + (c.monthlyContribution ?? 0),
+          0,
+        );
+      if (sips > 0) {
+        suggestions.push(
+          `This date can't move, so pause your ${rs(sips)}/month SIPs / RD until ${item.targetYear} and put that here. Restart them after.`,
+        );
+      }
+      const investments =
+        (p.fdValue ?? 0) +
+        (p.mfValue ?? 0) +
+        (p.indianStocksValue ?? 0) +
+        (p.liquidMFValue ?? 0);
+      if (investments > 0) {
+        suggestions.push(
+          `Use part of your existing FDs / mutual funds (${rs(investments)} today) for the shortfall rather than a loan.`,
+        );
+      }
+    }
     const income =
       (p.monthlySalary ?? 0) +
       (p.lifeStage === "bachelor" ? 0 : (p.spouseIncome ?? 0)) +
@@ -125,19 +173,21 @@ export function goalReach(
         `Wants are ${rs(wantsOver)}/month over your limit. Moving that here adds about ${rs(wantsOver * sipUnitValue(1, months, r, g))} by ${item.targetYear}.`,
       );
     }
-    if (g === 0) {
+    if (g === 0 && !fixedDate) {
       suggestions.push(
         "Add your expected yearly salary increase in Analyse - raising this SIP as your salary grows lowers what you need to start with.",
       );
     }
-    if (reachableYear) {
+    if (reachableYear && !fixedDate) {
       suggestions.push(
         `Move the goal to ${reachableYear} and your current ${rs(monthly)}/month gets there.`,
       );
     }
     if (projected > 0) {
       suggestions.push(
-        `Or set the target to ${rs(projected)} - what this plan reaches by ${item.targetYear}.`,
+        fixedDate
+          ? `Or plan for a budget of ${rs(projected)} - what this plan reaches by ${item.targetYear}.`
+          : `Or set the target to ${rs(projected)} - what this plan reaches by ${item.targetYear}.`,
       );
     }
   }
@@ -153,8 +203,76 @@ export function goalReach(
     shortfall,
     reachPct,
     onTrack,
+    fixedDate,
     monthlyNeededNow: Math.round(item.monthlyRequired),
     reachableYear,
     suggestions,
   };
+}
+
+/**
+ * Fixed-date goals within {@link URGENT_GOAL_YEARS} years, funded straight
+ * after the emergency fund: a wedding date can't wait for the rest of the
+ * plan. Each gets what it needs from `startMonth`, nearest date first, up to
+ * the `available` monthly surplus.
+ */
+export function buildUrgentGoalItems(
+  profile: FinancialProfile,
+  available: number,
+  startMonth: number,
+  now: Date = new Date(),
+): GoalFundingItem[] {
+  const goals = detectGoals(profile, now)
+    .filter(
+      (g) => isFixedDateGoal(g.type) && g.yearsToGoal <= URGENT_GOAL_YEARS,
+    )
+    .sort((a, b) => a.yearsToGoal - b.yearsToGoal);
+  let left = Math.max(0, Math.round(available));
+  return goals.map((g) => {
+    const months = Math.max(1, g.yearsToGoal * 12);
+    const horizon = goalHorizon(g.yearsToGoal);
+    const r =
+      ((1 + HORIZON_ASSUMPTIONS[horizon].nominalReturn) /
+        (1 + LONG_RUN_INFLATION) -
+        1) /
+      12;
+    const unitNow = sipUnitValue(1, months, r, 0);
+    const unitFromStart = sipUnitValue(startMonth, months, r, 0);
+    const neededFromStart =
+      unitFromStart > 0 ? g.targetAmount / unitFromStart : g.targetAmount;
+    // Money that would only start after the date can't help this goal.
+    const monthlyAllocated =
+      startMonth > months ? 0 : Math.min(left, Math.round(neededFromStart));
+    left -= monthlyAllocated;
+    const allocation = allocateGoalPortfolio({
+      yearsToGoal: g.yearsToGoal,
+      monthly: monthlyAllocated,
+      riskTolerance: profile.riskTolerance,
+      realEstateEligible: false,
+    });
+    const monthlyRequired = Math.round(g.targetAmount / unitNow);
+    return {
+      goalId: g.id,
+      type: g.type,
+      label: g.label,
+      yearsToGoal: g.yearsToGoal,
+      targetYear: g.targetYear,
+      horizon,
+      targetAmount: g.targetAmount,
+      currentSaved: 0,
+      monthlyRequired,
+      monthlyAllocated,
+      sharePct: 100,
+      fundedPct:
+        neededFromStart > 0
+          ? Math.min(
+              100,
+              Math.round((monthlyAllocated / neededFromStart) * 100),
+            )
+          : 100,
+      instrument: allocationSummary(allocation),
+      allocation,
+      isPrimary: false,
+    };
+  });
 }

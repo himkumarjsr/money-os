@@ -225,7 +225,7 @@ export function buildGoalFundingPlan(
   profile: FinancialProfile,
   pool: number,
   now: Date = new Date(),
-  opts: { safetyNetComplete?: boolean } = {},
+  opts: { safetyNetComplete?: boolean; excludeGoalIds?: string[] } = {},
 ): GoalFundingPlan {
   const realEstateEligible =
     !!opts.safetyNetComplete &&
@@ -233,7 +233,11 @@ export function buildGoalFundingPlan(
   const primaryTypes =
     PRIMARY_GOAL_TYPES[String(profile.primaryGoal ?? "")] ?? [];
   // Debt-free is funded by the EMIs already in the loans bucket, not the goal pool.
-  const goals = detectGoals(profile, now).filter((g) => g.type !== "debt_free");
+  // Urgent fixed-date goals are funded earlier, in their own step.
+  const excluded = new Set(opts.excludeGoalIds ?? []);
+  const goals = detectGoals(profile, now).filter(
+    (g) => g.type !== "debt_free" && !excluded.has(g.id),
+  );
   const stepUpPct = realSalaryStepUpPct(profile);
 
   const sized = goals.map((g) => {
