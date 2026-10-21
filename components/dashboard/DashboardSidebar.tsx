@@ -24,7 +24,7 @@ function SidebarLink({
       className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
         active
           ? "bg-[#EEEDFE] font-semibold text-[#534AB7]"
-          : "text-[#3D3A5C] hover:bg-[#F7F6FD] hover:text-[#534AB7]"
+          : "text-[#3D3A5C] hover:bg-[#F4F2FC] hover:text-[#534AB7]"
       }`}
     >
       <AppIcon name={item.icon} size={17} color="#534AB7" />
