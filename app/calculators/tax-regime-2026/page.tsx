@@ -5,19 +5,23 @@ import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
 import CalculatorsClient from "../CalculatorsClient";
-import { getRelatedLinksForCalc } from "../calculator-seo";
+import {
+  buildCalculatorJsonLd,
+  getRelatedLinksForCalc,
+  getSeoForCalc,
+} from "../calculator-seo";
 import TaxExploreMore from "./TaxExploreMore";
 
 const canonicalPath = "/calculators/tax-regime-2026";
 const pageUrl = `${SITE_URL}${canonicalPath}`;
+const seo = getSeoForCalc("tax-regime");
 
 export const metadata: Metadata = fitMetadata({
   title: {
     absolute:
       "Old vs New Tax Regime Calculator 2025-26 — Which Saves More? | Finkoin",
   },
-  description:
-    "Free tax regime calculator for FY 2025-26. Compare old vs new tax regime with all deductions — 80C, HRA, NPS, home loan. Find which regime saves you more tax instantly. Works for salaried, freelancer, retired.",
+  description: seo.description,
   keywords: [
     "old vs new tax regime calculator",
     "tax regime calculator 2025-26",
@@ -40,8 +44,7 @@ export const metadata: Metadata = fitMetadata({
   },
   openGraph: {
     title: "Tax Regime Calculator 2025-26 | Finkoin",
-    description:
-      "Old vs New tax regime comparison. Free. Instant. Accurate. Know it. Fix it. Grow it.",
+    description: seo.description,
     url: pageUrl,
     siteName: "Finkoin",
     type: "website",
@@ -57,96 +60,19 @@ export const metadata: Metadata = fitMetadata({
   twitter: {
     card: "summary_large_image",
     title: "Tax Regime Calculator 2025-26 | Finkoin",
-    description: "Old vs New tax regime comparison. Free. Instant. Accurate.",
+    description: seo.description,
     images: [`${SITE_URL}/og/og-tax-calculator.png`],
   },
 });
 
-const webAppJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: "Tax Regime Calculator 2025-26",
-  url: pageUrl,
-  applicationCategory: "FinanceApplication",
-  operatingSystem: "Any",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "INR",
-  },
-  description:
-    "Free old vs new tax regime calculator for FY 2025-26. Compare tax under both regimes instantly.",
-  provider: {
-    "@type": "Organization",
-    name: "Finkoin",
-    url: SITE_URL,
-  },
-  featureList: [
-    "Old regime calculation with deductions",
-    "New regime calculation",
-    "Side by side comparison",
-    "HRA, 80C, NPS deductions",
-    "Instant results",
-  ],
-};
-
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "Which tax regime is better for salaried employees in 2025-26?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "For FY 2025-26, the new tax regime is better if your deductions (80C + HRA + home loan interest) are less than ₹3.75 lakh. If your deductions exceed ₹3.75 lakh, the old regime often saves more. Use Finkoin's calculator to find your exact saving.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "What is the standard deduction in new tax regime 2025-26?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "The standard deduction in the new tax regime for FY 2025-26 is ₹75,000 for salaried employees. This was increased from ₹50,000 in Budget 2024.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Can I switch between old and new tax regime every year?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Salaried employees can switch between old and new tax regime every financial year when filing ITR. Business owners can switch only once. Inform your employer at the start of the financial year.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "What deductions are available in old tax regime?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Old regime allows: Section 80C (₹1.5 lakh for PPF, ELSS, LIC), Section 80D (₹25,000 health insurance), HRA exemption, Section 24B (₹2 lakh home loan interest), NPS 80CCD(1B) (₹50,000 extra), and more.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Is income up to 12 lakh tax free in 2026?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Under the new tax regime, if your taxable income is up to ₹12 lakh after the ₹75,000 standard deduction, Section 87A rebate can bring tax to zero (subject to current Budget rules).",
-      },
-    },
-  ],
-};
+const jsonLd = buildCalculatorJsonLd(seo, "tax-regime");
 
 export default function TaxRegime2026Page() {
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6">
         <Breadcrumb
@@ -167,6 +93,25 @@ export default function TaxRegime2026Page() {
           urlBaseForTaxCanonical="/calculators/tax-regime-2026"
         />
       </Suspense>
+      {/* Visible FAQ: FAQPage schema must match text on the page. */}
+      <section
+        aria-labelledby="tax-faq"
+        className="mx-auto mt-10 max-w-3xl px-4 text-slate-700 sm:px-6"
+      >
+        <h2 id="tax-faq" className="text-lg font-semibold text-slate-900">
+          Frequently asked questions
+        </h2>
+        <dl className="mt-4 space-y-5">
+          {seo.faq.map((f) => (
+            <div key={f.q}>
+              <dt className="font-semibold text-slate-900">{f.q}</dt>
+              <dd className="mt-1 text-sm leading-relaxed sm:text-base">
+                {f.a}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
       <div className="px-4 pb-4 sm:px-6">
         <CalculatorRelatedLinks links={getRelatedLinksForCalc("tax-regime")} />
       </div>

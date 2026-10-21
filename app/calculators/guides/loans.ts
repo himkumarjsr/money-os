@@ -551,7 +551,7 @@ function educationLoanGuide(): CalcGuide {
   const amounts = [5_00_000, 10_00_000, 15_00_000, 25_00_000];
   return {
     intro:
-      "An education loan calculator shows the EMI after the study period, the interest that builds up meanwhile and the Section 80E tax saving. Enter the loan, rate, course length, repayment years and tax slab.",
+      "An education loan calculator shows the EMI (Equated Monthly Instalment) after the study period, the interest that builds up meanwhile and the Section 80E tax saving. Enter the loan, rate, course length, repayment years and tax slab.",
     howItWorks: [
       "No EMI is due during the moratorium. The calculator sets it at the course length plus one year. Simple interest still runs on the loan for that whole period.",
       "If you do not pay that interest as you go, it is added to the loan. The EMI is then worked out on the bigger amount over your repayment years.",
