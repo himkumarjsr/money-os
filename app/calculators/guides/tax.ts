@@ -203,7 +203,7 @@ function ltcgHarvestGuide(): CalcGuide {
   const booked = [0, 50_000, 1_00_000, 1_25_000];
   return {
     intro:
-      "An LTCG harvesting calculator shows how much long-term equity gain to book this year so it falls inside the ₹1.25 lakh yearly exemption. Enter your unrealised long-term gain and any gain already booked this year.",
+      "An LTCG (Long-Term Capital Gains) harvesting calculator shows how much long-term equity gain to book this year so it falls inside the ₹1.25 lakh yearly exemption. Enter your unrealised long-term gain and any gain already booked this year.",
     howItWorks: [
       "Long-term gains on listed shares and equity funds are tax-free up to ₹1.25 lakh a year; above that the rate is 12.5% plus cess. The exemption cannot be carried to the next year, so unused room is lost.",
       "Harvesting means selling units with a long-term gain up to that room and buying them back. Your holding stays the same, but the purchase cost resets higher, so less gain is taxed when you finally sell.",
@@ -529,7 +529,7 @@ function gstGuide(): CalcGuide {
   const rates = [3, 5, 12, 18, 28, 40];
   return {
     intro:
-      "A GST calculator adds GST to a price or takes it out of a price that already includes it. Enter the amount, choose the rate and say whether the amount is before or after GST.",
+      "A GST (Goods and Services Tax) calculator adds GST to a price or takes it out of a price that already includes it. Enter the amount, choose the rate and say whether the amount is before or after GST.",
     howItWorks: [
       "To add GST, multiply the base price by the rate and add it on. To remove GST, divide the inclusive price by one plus the rate; the difference is the tax.",
       "Within a state, the GST is split equally into CGST and SGST. For a sale to another state, the full amount is IGST. The total is the same either way.",

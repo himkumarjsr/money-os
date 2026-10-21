@@ -127,7 +127,7 @@ function fireGuide(): CalcGuide {
   const expenses = [40_000, 60_000, 80_000, 1_00_000, 1_50_000];
   return {
     intro:
-      "A FIRE calculator estimates the investments you need to stop depending on a salary, and how long it will take to get there. Enter your monthly expenses without EMIs, your EMIs and loans, your current corpus, your monthly SIP and an expected return.",
+      "A FIRE (Financial Independence, Retire Early) calculator estimates the investments you need to stop depending on a salary, and how long it will take to get there. Enter your monthly expenses without EMIs, your EMIs and loans, your current corpus, your monthly SIP and an expected return.",
     howItWorks: [
       "Your FIRE number is 25 times your yearly lifestyle expenses. That is the corpus from which a 4% yearly withdrawal covers one year of spending.",
       "EMIs are left out of the lifestyle figure because loans end. Instead, the calculator adds the outstanding loan amount to the target once, so you can clear it on the day you stop working.",
