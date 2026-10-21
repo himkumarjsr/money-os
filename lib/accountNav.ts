@@ -2,7 +2,7 @@ import type { AppIconName } from "@/components/ui/AppIcon";
 
 /**
  * Signed-in destinations, shared by the navbar profile dropdown and the
- * /dashboard sidebar so the two lists can't drift apart.
+ * dashboard sidebar so the two lists can't drift apart.
  */
 export type AccountNavItem = {
   icon: AppIconName;
@@ -11,7 +11,7 @@ export type AccountNavItem = {
 };
 
 export const ACCOUNT_NAV = {
-  dashboard: { icon: "home", label: "Dashboard", href: "/dashboard" },
+  dashboard: { icon: "home", label: "Dashboard", href: "/" },
   profile: { icon: "user", label: "My Profile", href: "/profile" },
   tracker: { icon: "notebook", label: "Expense Tracker", href: "/tracker" },
   bills: { icon: "calendar", label: "Bills & renewals", href: "/bills" },

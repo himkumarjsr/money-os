@@ -3,11 +3,12 @@
 import type { ReactNode } from "react";
 import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
 import HomeMobileQuickTools from "@/components/landing/HomeMobileQuickTools";
-import SignedInRedirect from "@/components/landing/SignedInRedirect";
+import DashboardScreen from "@/components/dashboard/DashboardScreen";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { TrackImpression } from "@/components/TrackImpression";
 import { m, useScroll, useSpring, useTransform } from "framer-motion";
 import dynamic from "next/dynamic";
+import { useAuthStore } from "@/store/authStore";
 
 const HomePageBelowFold = dynamic(() => import("./HomePageBelowFold"), {
   ssr: true,
@@ -33,10 +34,16 @@ export default function HomePageClient({ children }: { children: ReactNode }) {
   const heroY = useTransform(scrollY, [0, 420], [0, -70]);
   const orbLeftY = useTransform(scrollY, [0, 1000], [0, -140]);
   const orbRightY = useTransform(scrollY, [0, 1200], [0, -180]);
+  // Wait for the session check so a stale persisted login doesn't swap pages.
+  const signedIn = useAuthStore(
+    (s) => s.hasInitialized && s.isLoggedIn && Boolean(s.user),
+  );
+
+  // Signed in, finkoin.com/ is the dashboard - same URL, no redirect.
+  if (signedIn) return <DashboardScreen />;
 
   return (
     <div className="relative min-h-dvh overflow-x-clip bg-gradient-to-b from-indigo-50 via-[#F4F2FC] to-violet-50/70 text-slate-900 antialiased">
-      <SignedInRedirect />
       <m.div
         aria-hidden
         className="pointer-events-none fixed left-0 right-0 top-0 z-[70] h-1 origin-left bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500"
