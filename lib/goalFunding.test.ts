@@ -9,6 +9,7 @@ import {
   GOAL_FLOOR_SHARE,
   allocateGoalSurplus,
   buildGoalFundingPlan,
+  earmarkExistingSavings,
   goalHorizon,
 } from "./goalFunding";
 import { detectGoals } from "./goalDetection";
@@ -39,7 +40,10 @@ describe("allocateGoalSurplus", () => {
     expect(out.wedding / 1000).toBeCloseTo(60, -1);
     expect(out.education / 1000).toBeCloseTo(23, -1);
     expect(out.retirement / 1000).toBeCloseTo(17, -1);
-    expect(out.wedding + out.education + out.retirement).toBeCloseTo(100_000, 0);
+    expect(out.wedding + out.education + out.retirement).toBeCloseTo(
+      100_000,
+      0,
+    );
   });
 
   it("gives every goal at least the floor share", () => {
@@ -50,7 +54,9 @@ describe("allocateGoalSurplus", () => {
     }));
     const out = allocateGoalSurplus(goals, 50_000);
     for (const g of goals) {
-      expect(out[g.id]).toBeGreaterThanOrEqual(GOAL_FLOOR_SHARE * 50_000 - 0.01);
+      expect(out[g.id]).toBeGreaterThanOrEqual(
+        GOAL_FLOOR_SHARE * 50_000 - 0.01,
+      );
     }
   });
 
@@ -124,10 +130,13 @@ describe("buildGoalFundingPlan", () => {
     );
     expect(plan.totalAllocated).toBeLessThanOrEqual(30_000);
     expect(plan.shortfall).toBeGreaterThan(0);
-    for (const item of plan.items) expect(item.monthlyAllocated).toBeGreaterThan(0);
+    for (const item of plan.items)
+      expect(item.monthlyAllocated).toBeGreaterThan(0);
     const shares = plan.items.map((i) => i.monthlyAllocated);
     expect([...shares].sort((a, b) => b - a)).toEqual(shares);
-    expect(plan.items.find((i) => i.goalId === "home_purchase")?.isPrimary).toBe(true);
+    expect(
+      plan.items.find((i) => i.goalId === "home_purchase")?.isPrimary,
+    ).toBe(true);
   });
 
   it("leaves debt-free out of the pool - EMIs already fund it", () => {
@@ -156,7 +165,11 @@ describe("buildGoalFundingPlan", () => {
     expect(goalHorizon(5)).toBe("3-7y");
     expect(goalHorizon(12)).toBe("7y+");
     const plan = buildGoalFundingPlan(
-      profile({ lifeStage: "bachelor", ownsCar: false, planningMarriage: true }),
+      profile({
+        lifeStage: "bachelor",
+        ownsCar: false,
+        planningMarriage: true,
+      }),
       50_000,
       NOW,
     );
@@ -196,12 +209,21 @@ describe("instrument split per funded goal", () => {
     const noNet = buildGoalFundingPlan(rich, 100_000, NOW, {
       safetyNetComplete: false,
     });
-    expect(noNet.items.every((i) => i.allocation.realEstateNote === null)).toBe(true);
+    expect(noNet.items.every((i) => i.allocation.realEstateNote === null)).toBe(
+      true,
+    );
 
-    const modest = buildGoalFundingPlan(profile({ mfValue: 500_000 }), 100_000, NOW, {
-      safetyNetComplete: true,
-    });
-    expect(modest.items.every((i) => i.allocation.realEstateNote === null)).toBe(true);
+    const modest = buildGoalFundingPlan(
+      profile({ mfValue: 500_000 }),
+      100_000,
+      NOW,
+      {
+        safetyNetComplete: true,
+      },
+    );
+    expect(
+      modest.items.every((i) => i.allocation.realEstateNote === null),
+    ).toBe(true);
   });
 });
 
@@ -218,7 +240,10 @@ describe("retirement SIP (pinned)", () => {
   };
 
   /** Independent reference: real 12% equity, EPF 8.15% / PPF 7.1% / NPS 10%, 6% inflation. */
-  const reference = (equity: number, accounts: Array<[number, number, number]>) => {
+  const reference = (
+    equity: number,
+    accounts: Array<[number, number, number]>,
+  ) => {
     const real = (nom: number) => (1 + nom) / 1.06 - 1;
     const years = 30;
     const fv = (bal: number, monthly: number, nom: number) => {
@@ -256,7 +281,10 @@ describe("retirement SIP (pinned)", () => {
   });
 
   it("mutual funds via totalEquityValue (not added on top of mfValue)", () => {
-    const item = retirementSip({ totalEquityValue: 10_00_000, mfValue: 10_00_000 });
+    const item = retirementSip({
+      totalEquityValue: 10_00_000,
+      mfValue: 10_00_000,
+    });
     expect(item.monthlyRequired).toBe(reference(10_00_000, []));
     expect(item.monthlyRequired).toBe(PINNED.totalEquity);
     expect(item.currentSaved).toBe(10_00_000);
@@ -276,7 +304,9 @@ describe("retirement SIP (pinned)", () => {
 
   it("existing equity is grown, so it cuts the SIP far more than its face value", () => {
     const none = retirementSip({}).monthlyRequired;
-    const withEquity = retirementSip({ totalEquityValue: 10_00_000 }).monthlyRequired;
+    const withEquity = retirementSip({
+      totalEquityValue: 10_00_000,
+    }).monthlyRequired;
     const faceValueOnly = Math.round(
       (none * (5_00_00_000 - 10_00_000)) / 5_00_00_000,
     );
@@ -284,4 +314,50 @@ describe("retirement SIP (pinned)", () => {
   });
 });
 
-const PINNED = { pfOnly: 42_702, totalEquity: 47_558, individualEquity: 47_558 };
+const PINNED = {
+  pfOnly: 42_702,
+  totalEquity: 47_558,
+  individualEquity: 47_558,
+};
+
+describe("earmarkExistingSavings", () => {
+  const wedding = {
+    lifeStage: "bachelor",
+    planningMarriage: true,
+    marriageFundTarget: 1_000_000,
+    marriageFundYear: 2028,
+  } as Partial<AnalyseFormValues>;
+
+  it("uses existing FDs for the nearest goal, lowering its monthly need", () => {
+    const without = earmarkExistingSavings(profile(wedding), NOW).get(
+      "marriage",
+    );
+    const withFd = earmarkExistingSavings(
+      profile({ ...wedding, fdValue: 600_000 } as Partial<AnalyseFormValues>),
+      NOW,
+    ).get("marriage");
+    expect(withFd!.lumpsum).toBe(600_000);
+    expect(withFd!.monthlyRequired).toBeLessThan(without!.monthlyRequired / 2);
+  });
+
+  it("keeps FD the emergency fund still needs out of goals", () => {
+    const mark = earmarkExistingSavings(
+      profile({ ...wedding, fdValue: 600_000 } as Partial<AnalyseFormValues>),
+      NOW,
+      { fdNeededForEmergency: 400_000 },
+    ).get("marriage");
+    expect(mark!.lumpsum).toBe(200_000);
+  });
+
+  it("counts running SIPs as already paying into goals", () => {
+    const without = earmarkExistingSavings(profile(wedding), NOW).get(
+      "marriage",
+    );
+    const mark = earmarkExistingSavings(
+      profile({ ...wedding, monthlySIP: 10_000 } as Partial<AnalyseFormValues>),
+      NOW,
+    ).get("marriage");
+    expect(mark!.existingMonthly).toBeGreaterThan(0);
+    expect(mark!.monthlyRequired).toBeLessThan(without!.monthlyRequired);
+  });
+});

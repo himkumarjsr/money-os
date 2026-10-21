@@ -7,6 +7,7 @@
 import { formatIndian } from "@/lib/formatters";
 import { detectGoals } from "@/lib/goalDetection";
 import {
+  earmarkExistingSavings,
   goalHorizon,
   HORIZON_ASSUMPTIONS,
   realSalaryStepUpPct,
@@ -61,6 +62,8 @@ export type GoalReach = {
   /** Earliest year the current monthly gets there, or null if not within 50 years. */
   reachableYear: number | null;
   suggestions: string[];
+  /** Existing savings and running SIPs already counted toward this goal. */
+  counted: string | null;
 };
 
 const rs = (v: number) => `₹${formatIndian(Math.round(Math.max(0, v)))}`;
@@ -192,6 +195,18 @@ export function goalReach(
     }
   }
 
+  const saved = Math.max(0, item.currentSaved ?? 0);
+  const running = Math.max(0, item.existingMonthly ?? 0);
+  const countedParts = [
+    saved > 0 ? `${rs(saved)} of your existing savings` : "",
+    running > 0 ? `${rs(running)}/month of your running SIPs / RD` : "",
+  ].filter(Boolean);
+  const counted = countedParts.length
+    ? `Already counted: ${countedParts.join(" and ")}${item.type === "retirement" ? ", plus your EPF / PPF / NPS growth" : ""}.`
+    : item.type === "retirement"
+      ? "Already counted: your EPF / PPF / NPS growth."
+      : null;
+
   return {
     targetAmount: item.targetAmount,
     targetYear: item.targetYear,
@@ -207,6 +222,7 @@ export function goalReach(
     monthlyNeededNow: Math.round(item.monthlyRequired),
     reachableYear,
     suggestions,
+    counted,
   };
 }
 
@@ -221,7 +237,9 @@ export function buildUrgentGoalItems(
   available: number,
   startMonth: number,
   now: Date = new Date(),
+  opts: { fdNeededForEmergency?: number } = {},
 ): GoalFundingItem[] {
+  const earmarks = earmarkExistingSavings(profile, now, opts);
   const goals = detectGoals(profile, now)
     .filter(
       (g) => isFixedDateGoal(g.type) && g.yearsToGoal <= URGENT_GOAL_YEARS,
@@ -238,8 +256,10 @@ export function buildUrgentGoalItems(
       12;
     const unitNow = sipUnitValue(1, months, r, 0);
     const unitFromStart = sipUnitValue(startMonth, months, r, 0);
-    const neededFromStart =
-      unitFromStart > 0 ? g.targetAmount / unitFromStart : g.targetAmount;
+    const mark = earmarks.get(g.id);
+    // What's still missing after existing FDs / funds and running SIPs.
+    const gap = (mark?.monthlyRequired ?? 0) * unitNow;
+    const neededFromStart = unitFromStart > 0 ? gap / unitFromStart : gap;
     // Money that would only start after the date can't help this goal.
     const monthlyAllocated =
       startMonth > months ? 0 : Math.min(left, Math.round(neededFromStart));
@@ -250,7 +270,7 @@ export function buildUrgentGoalItems(
       riskTolerance: profile.riskTolerance,
       realEstateEligible: false,
     });
-    const monthlyRequired = Math.round(g.targetAmount / unitNow);
+    const monthlyRequired = mark?.monthlyRequired ?? 0;
     return {
       goalId: g.id,
       type: g.type,
@@ -259,7 +279,8 @@ export function buildUrgentGoalItems(
       targetYear: g.targetYear,
       horizon,
       targetAmount: g.targetAmount,
-      currentSaved: 0,
+      currentSaved: mark?.lumpsum ?? 0,
+      existingMonthly: mark?.existingMonthly ?? 0,
       monthlyRequired,
       monthlyAllocated,
       sharePct: 100,

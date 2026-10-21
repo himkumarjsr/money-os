@@ -96,6 +96,8 @@ export type GoalFundingItem = {
   horizon: GoalHorizon;
   targetAmount: number;
   currentSaved: number;
+  /** Part of the user's running SIPs / RD counted toward this goal (₹/month). */
+  existingMonthly?: number;
   /** Monthly SIP that fully funds the goal on time. */
   monthlyRequired: number;
   /** What this goal actually gets from the pool. */
@@ -190,42 +192,112 @@ function roundPreservingTotal(values: number[]): number[] {
   return floors;
 }
 
-function retirementNeed(
+export type GoalEarmark = {
+  /** Existing FDs / funds / gold set against this goal, today's rupees. */
+  lumpsum: number;
+  /** Running SIPs / RD counted toward it, ₹/month. */
+  existingMonthly: number;
+  /** New monthly SIP still needed from the surplus. */
+  monthlyRequired: number;
+};
+
+const n0 = (v: unknown) => {
+  const x = Number(v);
+  return Number.isFinite(x) && x > 0 ? x : 0;
+};
+
+/**
+ * Sets the user's existing savings against their goals, nearest date first,
+ * so a goal only asks the surplus for what is still missing:
+ * - FDs, NSC / post office (less what the emergency fund still leans on),
+ *   gold and equity funds / stocks, each grown at the goal's expected return;
+ * - running SIPs / RD / other monthly investments.
+ * Short goals draw on safer pots first, long ones on equity. Retirement comes
+ * last and also counts EPF / PPF / NPS (balances and contributions).
+ * Land and other property are not counted: they can't be sold in parts.
+ */
+export function earmarkExistingSavings(
   profile: FinancialProfile,
-  goal: DetectedGoal,
-): { currentSaved: number; monthlyRequired: number } {
-  const equity = existingEquityValue(profile);
-  const realEquityReturn = realReturnPct(
-    HORIZON_ASSUMPTIONS["7y+"].nominalReturn,
-  );
-  // Today's equity compounds to retirement like EPF/PPF/NPS do (real terms).
-  const projectedEquity =
-    equity * Math.pow(1 + realEquityReturn / 100, goal.yearsToGoal);
-  const projectedPf = projectRetirementAccounts(profile, goal.yearsToGoal, {
-    real: true,
-  }).total;
-  const gap = Math.max(0, goal.targetAmount - projectedEquity - projectedPf);
-  return {
-    currentSaved: Math.round(
-      equity +
-        (profile.epfBalance || 0) +
-        (profile.ppfBalance || 0) +
-        (profile.npsBalance || 0),
-    ),
-    monthlyRequired: monthlyStepUpSipForGoal(
-      gap,
-      realEquityReturn,
-      goal.yearsToGoal,
-      realSalaryStepUpPct(profile),
-    ),
+  now: Date = new Date(),
+  opts: { fdNeededForEmergency?: number } = {},
+): Map<string, GoalEarmark> {
+  const p = profile as FinancialProfile & {
+    postOfficeSchemes?: Array<{ amount?: number }>;
   };
+  const postOffice =
+    (p.postOfficeSchemes ?? []).reduce((s, r) => s + n0(r?.amount), 0) ||
+    n0(p.nscDepositAmount);
+  const pots = {
+    debt: Math.max(
+      0,
+      n0(p.fdValue) - n0(opts.fdNeededForEmergency) + postOffice,
+    ),
+    gold: n0(p.goldValue),
+    equity: existingEquityValue(profile),
+  };
+  let monthlyPool =
+    n0(p.monthlySIP) +
+    n0(p.monthlyRD) +
+    (p.customInvestments ?? []).reduce(
+      (s, c) => s + n0(c?.monthlyContribution),
+      0,
+    );
+  const stepUpPct = realSalaryStepUpPct(profile);
+  const goals = detectGoals(profile, now)
+    .filter((g) => g.type !== "debt_free")
+    .sort((a, b) => {
+      if (a.type === "retirement") return 1;
+      if (b.type === "retirement") return -1;
+      return a.yearsToGoal - b.yearsToGoal;
+    });
+
+  const out = new Map<string, GoalEarmark>();
+  for (const g of goals) {
+    const horizon = goalHorizon(g.yearsToGoal);
+    const rPct = realReturnPct(HORIZON_ASSUMPTIONS[horizon].nominalReturn);
+    const grow = Math.pow(1 + rPct / 100, g.yearsToGoal);
+    let target = g.targetAmount;
+    if (g.type === "retirement") {
+      target -= projectRetirementAccounts(profile, g.yearsToGoal, {
+        real: true,
+      }).total;
+    }
+    const order: Array<keyof typeof pots> =
+      g.yearsToGoal <= 3
+        ? ["debt", "gold", "equity"]
+        : g.yearsToGoal <= 7
+          ? ["debt", "equity", "gold"]
+          : ["equity", "gold", "debt"];
+    let lumpsum = 0;
+    for (const k of order) {
+      const stillToday = Math.max(0, target / grow - lumpsum);
+      const take =
+        g.type === "retirement" ? pots[k] : Math.min(pots[k], stillToday);
+      pots[k] -= take;
+      lumpsum += take;
+    }
+    const gap = Math.max(0, target - lumpsum * grow);
+    const needed = monthlyStepUpSipForGoal(gap, rPct, g.yearsToGoal, stepUpPct);
+    const existingMonthly = Math.min(monthlyPool, needed);
+    monthlyPool -= existingMonthly;
+    out.set(g.id, {
+      lumpsum: Math.round(lumpsum),
+      existingMonthly: Math.round(existingMonthly),
+      monthlyRequired: Math.round(Math.max(0, needed - existingMonthly)),
+    });
+  }
+  return out;
 }
 
 export function buildGoalFundingPlan(
   profile: FinancialProfile,
   pool: number,
   now: Date = new Date(),
-  opts: { safetyNetComplete?: boolean; excludeGoalIds?: string[] } = {},
+  opts: {
+    safetyNetComplete?: boolean;
+    excludeGoalIds?: string[];
+    fdNeededForEmergency?: number;
+  } = {},
 ): GoalFundingPlan {
   const realEstateEligible =
     !!opts.safetyNetComplete &&
@@ -238,28 +310,26 @@ export function buildGoalFundingPlan(
   const goals = detectGoals(profile, now).filter(
     (g) => g.type !== "debt_free" && !excluded.has(g.id),
   );
-  const stepUpPct = realSalaryStepUpPct(profile);
+  const earmarks = earmarkExistingSavings(profile, now, {
+    fdNeededForEmergency: opts.fdNeededForEmergency,
+  });
 
   const sized = goals.map((g) => {
     const horizon = goalHorizon(g.yearsToGoal);
-    const need =
+    const mark = earmarks.get(g.id);
+    const pf =
       g.type === "retirement"
-        ? retirementNeed(profile, g)
-        : {
-            currentSaved: 0,
-            monthlyRequired: monthlyStepUpSipForGoal(
-              g.targetAmount,
-              realReturnPct(HORIZON_ASSUMPTIONS[horizon].nominalReturn),
-              g.yearsToGoal,
-              stepUpPct,
-            ),
-          };
+        ? n0(profile.epfBalance) +
+          n0(profile.ppfBalance) +
+          n0(profile.npsBalance)
+        : 0;
     return {
       goal: g,
       horizon,
       isPrimary: primaryTypes.includes(g.type),
-      currentSaved: need.currentSaved,
-      monthlyRequired: Math.round(need.monthlyRequired),
+      currentSaved: Math.round((mark?.lumpsum ?? 0) + pf),
+      existingMonthly: mark?.existingMonthly ?? 0,
+      monthlyRequired: mark?.monthlyRequired ?? 0,
     };
   });
 
@@ -294,6 +364,7 @@ export function buildGoalFundingPlan(
       horizon: s.horizon,
       targetAmount: s.goal.targetAmount,
       currentSaved: s.currentSaved,
+      existingMonthly: s.existingMonthly,
       monthlyRequired: s.monthlyRequired,
       monthlyAllocated,
       sharePct:

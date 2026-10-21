@@ -616,6 +616,11 @@ export default function FixPlanPage() {
                       ? "On track"
                       : `₹${Math.round(p.reach.shortfall).toLocaleString("en-IN")} short (${p.reach.reachPct}%)`}
                   </p>
+                  {p.reach.counted ? (
+                    <p className="mt-0.5 text-xs text-[#5F5E5A]">
+                      {p.reach.counted}
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">

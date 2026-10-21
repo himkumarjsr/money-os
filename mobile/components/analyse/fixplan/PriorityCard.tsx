@@ -107,6 +107,9 @@ export function PriorityCard({
                 ? "On track"
                 : `₹${loc(p.reach.shortfall)} short (${p.reach.reachPct}%)`}
             </Text>
+            {p.reach.counted ? (
+              <Text style={styles.cellSub}>{p.reach.counted}</Text>
+            ) : null}
           </View>
         ) : (
           <View style={styles.cell}>

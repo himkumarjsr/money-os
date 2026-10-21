@@ -85,6 +85,8 @@ export interface GoalItem {
   monthlyAllocated?: number;
   sharePct?: number;
   allocation?: PortfolioAllocation;
+  /** Running SIPs / RD already counted toward this goal (₹/month). */
+  existingMonthly?: number;
 }
 
 export interface PriorityPlan {
@@ -448,10 +450,23 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     hardPriorityMode && emergencyMonthsToComplete > 0
       ? emergencyMonthsToComplete + 1
       : 1;
+  // FDs the emergency fund still leans on stay out of goal earmarking.
+  const fdNeededForEmergency = Math.min(
+    profile.fdValue || 0,
+    Math.max(
+      0,
+      emergencyTarget -
+        ((profile.savingsAccountBalance || 0) +
+          (profile.liquidMFValue || 0) * 0.95 +
+          (profile.otherLiquidSavings || 0) * 0.5),
+    ) / 0.7,
+  );
   const urgentGoals = buildUrgentGoalItems(
     profile,
     hardPriorityMode ? monthlySurplus : runningSurplus,
     urgentStartMonth,
+    new Date(),
+    { fdNeededForEmergency },
   );
   const urgentMonthly = urgentGoals.reduce((s, g) => s + g.monthlyAllocated, 0);
   for (const item of urgentGoals) {
@@ -915,7 +930,11 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     profile,
     postSafetyBudget - debtDeployMonthly,
     new Date(),
-    { safetyNetComplete, excludeGoalIds: urgentGoals.map((g) => g.goalId) },
+    {
+      safetyNetComplete,
+      excludeGoalIds: urgentGoals.map((g) => g.goalId),
+      fdNeededForEmergency,
+    },
   );
   // Urgent goals keep their own earlier step; list them with the rest.
   const goalFunding: GoalFundingPlan = {
@@ -1429,6 +1448,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       currentSaved: Math.round(item.currentSaved),
       monthlyRequired: item.monthlyRequired,
       monthlyAllocated: item.monthlyAllocated,
+      existingMonthly: item.existingMonthly ?? 0,
       sharePct: item.sharePct,
       yearsToGoal: item.yearsToGoal,
       instrument: item.instrument,
