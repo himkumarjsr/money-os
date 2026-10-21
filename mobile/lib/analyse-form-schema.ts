@@ -415,6 +415,8 @@ export interface FinancialProfile {
   dismissedGoals?: string[];
   /** Already has term cover: add the suggested top-up to the plan? undefined = not asked yet. */
   wantsTermTopUp?: boolean;
+  /** Part of monthlySIP learned from running Tracker SIPs. */
+  trackerSipMonthly?: number;
   /** Goals the user added themselves on the Goals page (travel, studies…). */
   customGoals?: CustomGoal[];
   /** Risk quiz answers (index = RISK_QUESTIONS index, 0–2 each). */
@@ -788,6 +790,7 @@ const formShape = {
   babyFundYear: optionalWholeNumber,
   dismissedGoals: z.array(z.string()).max(40).optional(),
   wantsTermTopUp: z.boolean().optional(),
+  trackerSipMonthly: z.number().min(0).optional(),
   customGoals: z
     .array(
       z.object({
@@ -2062,6 +2065,7 @@ export function financialProfileToFormValues(
     babyFundYear: p.babyFundYear,
     dismissedGoals: p.dismissedGoals,
     wantsTermTopUp: p.wantsTermTopUp,
+    trackerSipMonthly: p.trackerSipMonthly,
     customGoals: p.customGoals,
     riskAnswers: p.riskAnswers,
     riskTolerance: p.riskTolerance,
@@ -2693,6 +2697,7 @@ export function normalizeAnalyseFormValues(
     babyFundYear: form.babyFundYear,
     dismissedGoals: form.dismissedGoals,
     wantsTermTopUp: form.wantsTermTopUp,
+    trackerSipMonthly: form.trackerSipMonthly,
     customGoals: form.customGoals,
     riskAnswers: form.riskAnswers,
     riskTolerance: scoreRiskTolerance(form.riskAnswers) ?? form.riskTolerance,

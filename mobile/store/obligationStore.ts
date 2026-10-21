@@ -24,6 +24,10 @@ import {
 } from "@/lib/premiumRdPlan";
 import { getSupabase } from "@/lib/supabase";
 import {
+  mergeTrackerInvestmentsIntoProfile,
+  type TrackerRowLike,
+} from "@/lib/trackerPlanFit";
+import {
   ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
@@ -205,6 +209,26 @@ async function fetchLoanObligations(
     is_active: r.is_active !== false,
     source: r.source == null ? null : String(r.source),
     updated_at: r.updated_at == null ? null : String(r.updated_at),
+  }));
+}
+
+/** Active Tracker investments (SIP / PPF / FD) for the report sync. */
+async function fetchInvestmentObligations(
+  userId: string,
+): Promise<TrackerRowLike[]> {
+  const { data } = await getSupabase()
+    .from("financial_obligations")
+    .select("title, category, amount, frequency, end_month, is_active")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .in("category", ["investment_sip", "investment_ppf", "investment_fd"]);
+  return ((data as Record<string, unknown>[] | null) ?? []).map((r) => ({
+    title: String(r.title ?? ""),
+    category: String(r.category ?? ""),
+    amount: Number(r.amount ?? 0),
+    frequency: String(r.frequency ?? "monthly"),
+    end_month: r.end_month == null ? null : String(r.end_month),
+    is_active: r.is_active !== false,
   }));
 }
 
@@ -1014,12 +1038,19 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         )
           .map(linkedObligationId)
           .filter((id): id is string => !!id);
-        const { profile, changed, numbersChanged } =
-          mergeTrackerLoansIntoProfile(
-            snap.lastSubmission,
-            await fetchLoanObligations(userId, linkedIds),
-            { closedAfter: snap.submittedAt },
-          );
+        const loans = mergeTrackerLoansIntoProfile(
+          snap.lastSubmission,
+          await fetchLoanObligations(userId, linkedIds),
+          { closedAfter: snap.submittedAt },
+        );
+        const sips = mergeTrackerInvestmentsIntoProfile(
+          loans.profile,
+          await fetchInvestmentObligations(userId),
+          monthStartIso(new Date()),
+        );
+        const profile = sips.profile;
+        const changed = loans.changed || sips.changed;
+        const numbersChanged = loans.numbersChanged || sips.changed;
         // Saved report already current: still bring this device's copy in
         // line, or a report from an earlier visit keeps showing old loans.
         if (!changed) {
