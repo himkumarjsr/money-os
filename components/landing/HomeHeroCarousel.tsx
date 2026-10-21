@@ -44,7 +44,7 @@ const SLIDES: Slide[] = [
     key: "score",
     title: "Start your financial freedom journey",
     subtitle:
-      "Meet your Finkoin advisor—interactive, step-by-step guidance on emergency fund, insurance, and your fix plan in minutes.",
+      "Meet your Finkoin advisor - interactive, step-by-step guidance on emergency fund, insurance, and your fix plan in minutes.",
     href: "/analyse",
     cta: "Meet your advisor",
   },
@@ -52,7 +52,7 @@ const SLIDES: Slide[] = [
     key: "tax",
     title: "New vs old tax regime",
     subtitle:
-      "Compare regimes with HRA, 80C, NPS — built for FY 2025-26 planning.",
+      "Compare regimes with HRA, 80C, NPS - built for FY 2025-26 planning.",
     href: "/calculators/tax-regime-2026?from=home",
     cta: "Open calculator",
   },
@@ -60,7 +60,7 @@ const SLIDES: Slide[] = [
     key: "portfolio",
     title: "Portfolio analysis",
     subtitle:
-      "Review holdings and allocation in one workspace — built for Indian investors.",
+      "Review holdings and allocation in one workspace - built for Indian investors.",
     comingSoon: true,
   },
   {

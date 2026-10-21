@@ -18,7 +18,7 @@ export function SalaryStep({ s }: { s: TaxCalcState }) {
     <StepCard
       title="Step 2 · Core salary income"
       teach={TEACH.sections.income}
-      blurb="Enter current employer recurring payslip salary here — turn on Step 3 for HRA, job-switch / F&F, or side income."
+      blurb="Enter current employer recurring payslip salary here - turn on Step 3 for HRA, job-switch / F&F, or side income."
     >
       <View style={styles.body}>
         <Text style={[tx.xsMuted, { marginBottom: 8 }]}>
@@ -33,7 +33,7 @@ export function SalaryStep({ s }: { s: TaxCalcState }) {
           id="tax-basic-m"
           label={
             i.secJobSwitch
-              ? "Current employer — basic salary (monthly)"
+              ? "Current employer - basic salary (monthly)"
               : "Basic salary (monthly)"
           }
           teach={TEACH.income.basicMonthly}
@@ -45,7 +45,7 @@ export function SalaryStep({ s }: { s: TaxCalcState }) {
           id="tax-special-m"
           label={
             i.secJobSwitch
-              ? "Current employer — special allowance (monthly)"
+              ? "Current employer - special allowance (monthly)"
               : "Special allowance (monthly)"
           }
           teach={TEACH.income.allowancesMonthly}

@@ -333,7 +333,7 @@ function TrackerContent() {
   >([]);
   /** Extra prior months for CC unpaid carry-forward (not used by Safety Pulse). */
   const [ccBillHistory, setCcBillHistory] = useState<TrackerTransaction[]>([]);
-  /** Two and three months back — card ledger history for the previous month. */
+  /** Two and three months back - card ledger history for the previous month. */
   const [prev2Transactions, setPrev2Transactions] = useState<
     TrackerTransaction[]
   >([]);
@@ -388,7 +388,7 @@ function TrackerContent() {
   } | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  /** First calendar month the user has tracker activity — nav cannot go earlier. */
+  /** First calendar month the user has tracker activity - nav cannot go earlier. */
   const [trackerStart, setTrackerStart] = useState<{
     month: number;
     year: number;
@@ -437,7 +437,7 @@ function TrackerContent() {
     });
   };
   const fetchReqId = useRef(0);
-  /** Hard fetches that are still in flight — soft must not clear the spinner early. */
+  /** Hard fetches that are still in flight - soft must not clear the spinner early. */
   const hardInFlight = useRef(0);
   const selectedCalRef = useRef({ month: selectedMonth, year: selectedYear });
   selectedCalRef.current = { month: selectedMonth, year: selectedYear };
@@ -508,7 +508,7 @@ function TrackerContent() {
   }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
-    // Already known from localStorage — skip the DB round-trip flash.
+    // Already known from localStorage - skip the DB round-trip flash.
     if (hasConsent === true) return;
 
     try {
@@ -804,7 +804,7 @@ function TrackerContent() {
     if (!hasConsent) return;
 
     console.group(
-      `[Tracker] ${currentMonth} ${currentYear} — ${transactions.length} row(s)`,
+      `[Tracker] ${currentMonth} ${currentYear} - ${transactions.length} row(s)`,
     );
     console.table(
       transactions.map((t) => ({
@@ -840,7 +840,7 @@ function TrackerContent() {
     let lastSoftFetchAt = 0;
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      // Soft refresh — full loading teardown breaks PWA "Add expense" taps after a few entries.
+      // Soft refresh - full loading teardown breaks PWA "Add expense" taps after a few entries.
       if (showAddModal) return;
       // Avoid stacking fetches on resume (auth refresh + visibility) after idle.
       const now = Date.now();
@@ -926,7 +926,7 @@ function TrackerContent() {
           };
         setTrackerStart(start);
       } catch {
-        /* ignore — nav stays unbounded */
+        /* ignore - nav stays unbounded */
       }
     })();
     return () => {
@@ -1106,7 +1106,7 @@ function TrackerContent() {
           savingsAmount: freshPlan.savingsAmount,
         });
 
-        // One salary + one CF at the correct leftover — drop extras / fix amount.
+        // One salary + one CF at the correct leftover - drop extras / fix amount.
         if (cleanup.dropIds.length > 0) {
           await supabase
             .from("expense_transactions")
@@ -1449,7 +1449,7 @@ function TrackerContent() {
 
   /**
    * Always add a *new* income row (bonus, freelance, etc.).
-   * Does not open the existing salary for edit — that was the bug.
+   * Does not open the existing salary for edit - that was the bug.
    */
   const openAddIncome = () => {
     setExpandedIncome(true);
@@ -1460,7 +1460,7 @@ function TrackerContent() {
       (t) => (t.subcategory || t.category) === "salary",
     );
     if (hasSalary) {
-      // Additional income on top of salary — never overwrite salary.
+      // Additional income on top of salary - never overwrite salary.
       setModalDefaults({
         subcategory: "other_income",
         amount: undefined,
@@ -2270,7 +2270,7 @@ function TrackerContent() {
                       </div>
                     ) : null}
                     <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>
-                      Use Add income for bonus / freelance / other — leftover
+                      Use Add income for bonus / freelance / other - leftover
                       savings still auto-sync on the 1st if missing.
                     </p>
                   </div>
@@ -2367,7 +2367,7 @@ function TrackerContent() {
             : cat.cap;
         const budgetAmount =
           displayIncome > 0 ? displayIncome * (capPct / 100) : 0;
-        // Investment is a target to reach, not a limit — going over is good.
+        // Investment is a target to reach, not a limit - going over is good.
         const isTargetBucket = bucketKey === "investment";
         const overBudget =
           !isTargetBucket && budgetAmount > 0 && bucketTotal > budgetAmount;
@@ -2692,22 +2692,22 @@ function TrackerContent() {
                                     {onEmi ? (
                                       <RowTag
                                         label="On EMI"
-                                        title="Converted to EMI — only the monthly EMI counts, under Loans"
+                                        title="Converted to EMI - only the monthly EMI counts, under Loans"
                                       />
                                     ) : refund ? (
                                       <RowTag
                                         label="Refund"
-                                        title="Card refund / cashback — lowers this section and the card bill"
+                                        title="Card refund / cashback - lowers this section and the card bill"
                                       />
                                     ) : onCard ? (
                                       <RowTag
                                         label="Card"
-                                        title="Paid by credit card — counts here now; your bank Spent changes when you pay the bill"
+                                        title="Paid by credit card - counts here now; your bank Spent changes when you pay the bill"
                                       />
                                     ) : isPaidFromSavings(txn) ? (
                                       <RowTag
                                         label="Paid from RD"
-                                        title="Paid out of your RD savings — your monthly RD deposits already counted, so this doesn't count again"
+                                        title="Paid out of your RD savings - your monthly RD deposits already counted, so this doesn't count again"
                                       />
                                     ) : null}
                                   </div>
@@ -3038,7 +3038,7 @@ function TrackerContent() {
                     }
                   }
 
-                  // Tick by amount first (Home loan EMI etc. — no strict type).
+                  // Tick by amount first (Home loan EMI etc. - no strict type).
                   await store.generateChecklist(user.id, checklistMonth);
                   await store.fetchChecklist(user.id, checklistMonth);
                   const { checklist } = useObligationStore.getState();

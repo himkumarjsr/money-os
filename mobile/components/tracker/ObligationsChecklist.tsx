@@ -28,7 +28,7 @@ const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 type Learned = { title: string; category: string; amount: number };
 type Editing = { id: string; payload: ObligationFormPayload };
 
-/** This month's obligations — port of web ObligationsChecklist. */
+/** This month's obligations - port of web ObligationsChecklist. */
 export function ObligationsChecklist({
   userId,
   checklistMonth,
@@ -42,7 +42,7 @@ export function ObligationsChecklist({
   checklistMonth?: Date;
   learnedSuggestion?: Learned | null;
   onDismissLearn?: () => void;
-  /** True when health check already submitted — hides the "set up calendar" empty CTA. */
+  /** True when health check already submitted - hides the "set up calendar" empty CTA. */
   analyseCompleted?: boolean;
   defaultOpen?: boolean;
 }) {
@@ -286,7 +286,7 @@ export function ObligationsChecklist({
                       <View
                         accessibilityLabel={
                           isClosed
-                            ? "Closed — will not appear from next month"
+                            ? "Closed - will not appear from next month"
                             : isPaid
                               ? "Paid via logged expense"
                               : "Checks automatically when you log the expense"
@@ -309,7 +309,7 @@ export function ObligationsChecklist({
                             color={Colors.onPrimary}
                           />
                         ) : isClosed ? (
-                          <Text style={styles.dotDash}>—</Text>
+                          <Text style={styles.dotDash}>-</Text>
                         ) : null}
                       </View>
                       <Text style={styles.emoji}>
@@ -419,7 +419,7 @@ export function ObligationsChecklist({
                               <Pressable
                                 onPress={() => void markSkipped(item.id)}
                                 accessibilityRole="button"
-                                accessibilityHint="Skip this month only — comes back next month"
+                                accessibilityHint="Skip this month only - comes back next month"
                                 hitSlop={6}
                                 style={styles.actionBtn}
                               >
@@ -454,7 +454,7 @@ export function ObligationsChecklist({
             ) : (
               <Text style={styles.emptyRow}>
                 {obligations.length > 0
-                  ? `${obligations.length} obligation${obligations.length === 1 ? "" : "s"} saved — none due on this month’s checklist yet.`
+                  ? `${obligations.length} obligation${obligations.length === 1 ? "" : "s"} saved - none due on this month’s checklist yet.`
                   : "No obligations due this month yet."}
               </Text>
             )}

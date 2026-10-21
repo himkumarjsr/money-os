@@ -215,7 +215,7 @@ export function StepUpSipCalculator() {
         ]}
       />
       <Note>
-        Increase your SIP each year in line with your salary hike — it is the
+        Increase your SIP each year in line with your salary hike - it is the
         single biggest lever after starting early.
       </Note>
       <CompareLink
@@ -547,7 +547,7 @@ export function CagrCalculator() {
           ? "Equity-like growth."
           : c >= 7
             ? "Roughly FD-like growth."
-            : "Below a fixed deposit — check whether the risk was worth it."}
+            : "Below a fixed deposit - check whether the risk was worth it."}
       </Insight>
       <Note>
         CAGR fits one start and one end value. For SIPs, top-ups or withdrawals
@@ -1166,7 +1166,7 @@ export function ExpenseRatioCalculator() {
       />
       <Note>
         The regular plan pays a distributor commission out of your returns every
-        year. Same fund, same manager — only the cost differs.
+        year. Same fund, same manager - only the cost differs.
       </Note>
     </Stack>
   );

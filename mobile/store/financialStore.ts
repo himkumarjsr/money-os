@@ -1,5 +1,5 @@
 /**
- * RN-adapted financial store — mirrors web store/financialStore.ts
+ * RN-adapted financial store - mirrors web store/financialStore.ts
  * with AsyncStorage instead of localStorage.
  */
 import {

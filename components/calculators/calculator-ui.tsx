@@ -70,7 +70,7 @@ type SliderFieldProps = {
   prefix?: string;
   format?: (v: number) => string;
   unitType?: "money" | "percent" | "years" | "months" | "number";
-  /** Percent that is a share, not a yearly rate — caption shows "40%" instead of "40% p.a.". */
+  /** Percent that is a share, not a yearly rate - caption shows "40%" instead of "40% p.a.". */
   plainPercent?: boolean;
 };
 

@@ -60,7 +60,7 @@ export function useFieldError(name?: FormPath): string | undefined {
   return err?.message ?? err?.root?.message;
 }
 
-/** setValue + immediate draft write — same `setAnalysis` the autosave subscription uses. */
+/** setValue + immediate draft write - same `setAnalysis` the autosave subscription uses. */
 export function usePersistField() {
   const { setValue, getValues } = useFormContext<AnalyseFormValues>();
   const setAnalysis = useFinancialStore((st) => st.setAnalysis);
@@ -367,7 +367,7 @@ export function AgeField({
 
 /**
  * Web `NumberInput`: clamps on every keystroke + blur; 0 renders as empty.
- * `clampOnBlur` (years / ages): typing is never clamped mid-entry — the raw
+ * `clampOnBlur` (years / ages): typing is never clamped mid-entry - the raw
  * whole number is stored while typing and clamped once on blur.
  */
 export function ClampNumberField({

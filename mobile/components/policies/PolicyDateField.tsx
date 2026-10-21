@@ -13,7 +13,7 @@ function parseISO(iso: string): Date | null {
 }
 
 /**
- * Inline calendar for policy dates — stand-in for the PWA `<input type="date">`.
+ * Inline calendar for policy dates - stand-in for the PWA `<input type="date">`.
  * Unlike the tracker DateField it allows an empty value, has no max, and can
  * jump by year (renewal / purchase dates are often years away).
  */

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("FK Split — Complete Flow", () => {
+test.describe("FK Split - Complete Flow", () => {
   test("split page loads when logged out", async ({ page }) => {
     await page.goto("/split");
     await expect(page.locator("body")).toBeVisible();

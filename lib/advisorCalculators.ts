@@ -1,6 +1,6 @@
 /**
  * Pure maths for the advisor-style calculators (investing, retirement, loans,
- * tax, protection, goals). Illustrative only — not investment or tax advice.
+ * tax, protection, goals). Illustrative only - not investment or tax advice.
  * Rates are annual percentages unless a name says otherwise.
  */
 
@@ -17,7 +17,7 @@ export function lumpsumFV(amount: number, ratePct: number, years: number) {
   return Math.max(0, amount) * Math.pow(1 + ratePct / 100, Math.max(0, years));
 }
 
-/** Future value of a monthly SIP (end-of-month, monthly compounding) — matches SIP calculator. */
+/** Future value of a monthly SIP (end-of-month, monthly compounding) - matches SIP calculator. */
 export function sipFV(monthly: number, ratePct: number, months: number) {
   const n = Math.max(0, Math.round(months));
   const r = ratePct / 100 / 12;
@@ -227,7 +227,7 @@ export function cagr(initial: number, final: number, years: number) {
 
 export type CashFlow = { date: string; amount: number };
 
-/** XIRR (% p.a.) — amounts invested are negative, money received is positive. */
+/** XIRR (% p.a.) - amounts invested are negative, money received is positive. */
 export function xirr(flows: CashFlow[]): number | null {
   const valid = flows
     .map((f) => ({ t: new Date(f.date).getTime(), amount: f.amount }))
@@ -300,7 +300,7 @@ export function fixedDeposit(params: {
   };
 }
 
-/** Bank RD — each monthly instalment compounds quarterly for the months it stays. */
+/** Bank RD - each monthly instalment compounds quarterly for the months it stays. */
 export function recurringDeposit(
   monthly: number,
   ratePct: number,
@@ -357,7 +357,7 @@ export function goldCompare(params: {
   };
 }
 
-/** Direct vs regular plan — same gross return, different expense ratios. */
+/** Direct vs regular plan - same gross return, different expense ratios. */
 export function expenseRatioDrag(params: {
   lumpsum: number;
   monthly: number;
@@ -525,7 +525,7 @@ export function corpusForPension(monthlyPension: number, ratePct: number) {
   return (monthlyPension * 12) / (ratePct / 100);
 }
 
-/** Gratuity — covered by the Payment of Gratuity Act (15/26) or not (15/30, completed years). */
+/** Gratuity - covered by the Payment of Gratuity Act (15/26) or not (15/30, completed years). */
 export function gratuity(params: {
   monthlyBasicDa: number;
   years: number;
@@ -742,7 +742,7 @@ export function debtPayoff(
       if (d.bal <= 0.5 && d.paidOffMonth === 0) d.paidOffMonth = month;
     }
     const owed = list.reduce((sum, d) => sum + Math.max(0, d.bal), 0);
-    if (owed >= lastOwed) break; // payments don't cover interest — never ends
+    if (owed >= lastOwed) break; // payments don't cover interest - never ends
     lastOwed = owed;
   }
   const done = !list.some((d) => d.bal > 0.5);
@@ -777,7 +777,7 @@ export function educationLoan(params: {
     : amount + moratoriumInterest;
   const emi = emiFor(principalAtRepay, ratePct, repayYears * 12);
   const repayInterest = emi * repayYears * 12 - principalAtRepay;
-  // Interest paid while studying, or added to the loan — a cost either way.
+  // Interest paid while studying, or added to the loan - a cost either way.
   const totalInterest = repayInterest + moratoriumInterest;
   // 80E (old regime): interest paid in the first 8 years of repayment is deductible.
   const r = ratePct / 100 / 12;
@@ -984,10 +984,10 @@ export function capitalGains(params: {
   let indexedOption: { indexedCost: number; gain: number; tax: number } | null =
     null;
   if (gain <= 0) {
-    rateLabel = "Loss — can be carried forward for 8 years";
+    rateLabel = "Loss - can be carried forward for 8 years";
   } else if (params.asset === "debt-mf") {
     tax = gain * (params.slabPct / 100) * cess;
-    rateLabel = `Slab rate (${params.slabPct}%) — debt funds bought after Apr 2023`;
+    rateLabel = `Slab rate (${params.slabPct}%) - debt funds bought after Apr 2023`;
   } else if (!longTerm) {
     if (params.asset === "equity") {
       tax = gain * 0.2 * cess;
@@ -1239,7 +1239,7 @@ export function healthCover(params: {
       ? 15_00_000
       : 10_00_000
     : 0;
-  // Employer cover ends with the job — count half of it.
+  // Employer cover ends with the job - count half of it.
   const personalBase = Math.max(5_00_000, family - p.employerCover * 0.5);
   const superTopUp = Math.max(0, family * 2 - personalBase);
   const surgeryToday = 5_00_000;

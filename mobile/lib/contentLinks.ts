@@ -2,7 +2,7 @@ import { Linking } from "react-native";
 import { router, type Href } from "expo-router";
 import { CATEGORIES } from "@/constants/calculator-config";
 
-/** Public site used only for share links — the app never opens it. */
+/** Public site used only for share links - the app never opens it. */
 export const PUBLIC_SITE_URL = "https://www.finkoin.com";
 
 const FINKOIN_HOST = /^https?:\/\/(www\.)?finkoin\.com/i;

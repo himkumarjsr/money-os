@@ -52,7 +52,7 @@ export interface DebtItem {
   extraEMIRecommended: number;
   monthsToClearWithExtra: number;
   icon: string;
-  /** Outstanding was guessed from the EMI — the user never entered it. */
+  /** Outstanding was guessed from the EMI - the user never entered it. */
   outstandingEstimated?: boolean;
   /** Rate was not entered: a typical rate for the loan type, or 0 when unknown. */
   rateEstimated?: boolean;
@@ -157,8 +157,8 @@ function goalFundingAction(item: GoalFundingItem, startMonth: number): string {
 function goalFundingWhy(item: GoalFundingItem): string {
   const base =
     item.yearsToGoal <= 3
-      ? `Hard deadline in ${item.yearsToGoal} ${item.yearsToGoal === 1 ? "year" : "years"} — it can't benefit from waiting, so it gets a bigger share.`
-      : `${item.yearsToGoal} years away — funded now, not deferred, because every year skipped is compounding lost.`;
+      ? `Hard deadline in ${item.yearsToGoal} ${item.yearsToGoal === 1 ? "year" : "years"} - it can't benefit from waiting, so it gets a bigger share.`
+      : `${item.yearsToGoal} years away - funded now, not deferred, because every year skipped is compounding lost.`;
   return item.fundedPct < 100
     ? `${base} This covers ${item.fundedPct}% of the ${rupees(item.monthlyRequired)}/month needed to hit ${rupees(item.targetAmount)} by ${item.targetYear}.`
     : `${base} Fully funded to reach ${rupees(item.targetAmount)} by ${item.targetYear}.`;
@@ -609,8 +609,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       monthsToComplete: 1,
       instrument:
         termHave === 0
-          ? "Pure term plan from an insurer with a strong claim-settlement record — no ULIP or endowment"
-          : "Separate top-up / additional term from another insurer — do not cancel your ₹" +
+          ? "Pure term plan from an insurer with a strong claim-settlement record - no ULIP or endowment"
+          : "Separate top-up / additional term from another insurer - do not cancel your ₹" +
             termHaveCr +
             "Cr policy",
       actionThisWeek: !termIncluded
@@ -620,12 +620,12 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
             ? `From month ${termStartMonth}, compare pure term quotes. Budget ~₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${termGapCr} crore cover.`
             : `Compare 3 term insurance quotes online. Budget ~₹${termPremiumEst.toLocaleString("en-IN")}/month for ₹${termGapCr} crore cover.`
           : termStartMonth > 1
-            ? `From month ${termStartMonth}, add a top-up for ~₹${termGapCr} crore only (you already have ₹${termHaveCr}Cr). Keep the old policy — income proof limits often block a second full policy at today's salary.`
-            : `Add a top-up for ~₹${termGapCr} crore only (existing ₹${termHaveCr}Cr stays). Do not cancel — buy additional cover from another insurer if needed.`,
+            ? `From month ${termStartMonth}, add a top-up for ~₹${termGapCr} crore only (you already have ₹${termHaveCr}Cr). Keep the old policy - income proof limits often block a second full policy at today's salary.`
+            : `Add a top-up for ~₹${termGapCr} crore only (existing ₹${termHaveCr}Cr stays). Do not cancel - buy additional cover from another insurer if needed.`,
       whyThisMatters:
         termHave === 0
           ? "Your family has zero income if you pass away. All EMIs continue with no salary."
-          : `Income has likely grown since you bought ₹${termHaveCr}Cr cover. We only flag the ₹${termGapCr} crore gap — top-up, not a second full policy or cancel-and-rebuy.`,
+          : `Income has likely grown since you bought ₹${termHaveCr}Cr cover. We only flag the ₹${termGapCr} crore gap - top-up, not a second full policy or cancel-and-rebuy.`,
       icon: "🛡️",
       canBuyFromFinkoin: false,
       finkoinProductType: "term",
@@ -676,7 +676,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusAfterThis: Math.max(0, runningSurplus - healthPremiumEst),
       monthsToComplete: 1,
       instrument:
-        "Family floater health policy — compare room-rent limits, co-pay and waiting periods across 2–3 insurers",
+        "Family floater health policy - compare room-rent limits, co-pay and waiting periods across 2–3 insurers",
       actionThisWeek: `Get ₹${(healthNeeded / 100000).toFixed(0)} lakh health cover. Compare quotes on IRDAI-registered insurer or aggregator sites, or through a licensed advisor.`,
       whyThisMatters:
         "One hospitalisation in metro costs ₹2-5 lakh. Without cover your savings get wiped.",
@@ -695,7 +695,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           id: "accelerate_debt",
           title: "Accelerate debt paydown",
           instrument: "Extra EMI toward highest-rate loans first",
-          why: "Your chosen goal is clearing debt — surplus after safety should cut interest cost before new investing.",
+          why: "Your chosen goal is clearing debt - surplus after safety should cut interest cost before new investing.",
           icon: "💳",
           noteSafe: (m: number) =>
             `Safety complete. Route surplus to extra EMI / debt prepay from month ${m}.`,
@@ -709,7 +709,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           id: "home_downpayment",
           title: "Home down-payment corpus",
           instrument: "Debt funds / RD for <5y horizon; Nifty 50 SIP if 5y+",
-          why: "Your goal is buying a home — after safety layers and other obligations, route whatever surplus remains to the down-payment corpus.",
+          why: "Your goal is buying a home - after safety layers and other obligations, route whatever surplus remains to the down-payment corpus.",
           icon: "🏠",
           noteSafe: (m: number) =>
             `Safety complete. Fund home down-payment SIP from month ${m} (last in surplus waterfall).`,
@@ -723,7 +723,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           id: "car_purchase_fund",
           title: "Car purchase fund",
           instrument: "Post Office RD or liquid / short-duration debt fund",
-          why: "Your goal is buying a car — keep this surplus in low-volatility instruments for the purchase horizon.",
+          why: "Your goal is buying a car - keep this surplus in low-volatility instruments for the purchase horizon.",
           icon: "🚗",
           noteSafe: (m: number) =>
             `Safety complete. Build car purchase fund from month ${m}.`,
@@ -737,7 +737,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           id: "kids_education_sip",
           title: "Kids education fund",
           instrument: "Child education SIP / SSY (if eligible) + equity SIP",
-          why: "Your goal is kids' education — surplus should go to a dedicated education corpus.",
+          why: "Your goal is kids' education - surplus should go to a dedicated education corpus.",
           icon: "🎓",
           noteSafe: (m: number) =>
             `Safety complete. Education SIP from month ${m}.`,
@@ -751,7 +751,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           id: "boost_emergency",
           title: "Strengthen emergency fund",
           instrument: "Liquid mutual fund + savings buffer",
-          why: "Your goal is building the emergency fund — keep surplus liquid until the target months of cover are solid.",
+          why: "Your goal is building the emergency fund - keep surplus liquid until the target months of cover are solid.",
           icon: "🛡️",
           noteSafe: (m: number) =>
             `Safety complete. Keep boosting liquid emergency reserves from month ${m}.`,
@@ -779,7 +779,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           id: "start_sip",
           title: "Early-retirement SIP",
           instrument: "Nifty 50 / flexi-cap SIP + NPS",
-          why: "Your goal is retiring early — surplus after safety should compound aggressively toward FIRE.",
+          why: "Your goal is retiring early - surplus after safety should compound aggressively toward FIRE.",
           icon: "🔥",
           noteSafe: (m: number) =>
             `Safety complete. Early-retirement SIP from month ${m}; route leftover to debt prepay if any.`,
@@ -835,7 +835,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           "girl" && kidAge < 10,
     ).length * 12500;
   // Recurring steps (SSY, debt deploy, goals, leftover SIP) draw from the same
-  // steady-state budget the goal split uses — never from the month-1 leftover
+  // steady-state budget the goal split uses - never from the month-1 leftover
   // after emergency/medical top-ups, which are temporary.
   const steadyStateBudget = Math.max(
     0,
@@ -992,7 +992,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       rank: rank++,
       id: `ssy_girl_age_${girl.age}`,
       title: isUrgent
-        ? `⚠️ URGENT: Open SSY — daughter age ${girl.age}`
+        ? `⚠️ URGENT: Open SSY - daughter age ${girl.age}`
         : `Open SSY for daughter age ${girl.age}`,
       category: "kids",
       urgency: isUrgent ? "critical" : "high",
@@ -1102,7 +1102,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           ? `From month ${sipStartMonth}, invest the remaining ₹${Math.round(amount).toLocaleString("en-IN")}/month in an index fund SIP.`
           : `Invest the remaining ₹${Math.round(amount).toLocaleString("en-IN")}/month in an index fund SIP.`,
       whyThisMatters:
-        "Every goal is already funded on time — this extra builds long-run wealth.",
+        "Every goal is already funded on time - this extra builds long-run wealth.",
       icon: "📈",
       canBuyFromFinkoin: false,
       startMonth: sipStartMonth,

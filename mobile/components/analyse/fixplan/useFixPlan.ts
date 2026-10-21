@@ -251,7 +251,7 @@ export function useFixPlan({ profile, result, userId, enabled }: Args) {
   );
 
   useEffect(() => {
-    // Silent background retry for fallback plans — do not remount the loader.
+    // Silent background retry for fallback plans - do not remount the loader.
     if (!aiPlan?.isFallback) return;
     const timer = setTimeout(() => {
       void regenerate(false);
@@ -270,7 +270,7 @@ export function useFixPlan({ profile, result, userId, enabled }: Args) {
     }
   }, [regenerate]);
 
-  /** Initial-load retry when no plan is shown — cache first, network on miss. */
+  /** Initial-load retry when no plan is shown - cache first, network on miss. */
   const retry = useCallback(() => loadRef.current?.(false), []);
 
   /** Yes/no on a term top-up: show it at once, then save it to the report. */

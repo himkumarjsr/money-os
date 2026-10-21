@@ -171,7 +171,7 @@ export default function AddExpenseModal({
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
-      // Always clear — stacked modals / PWA remounts can leave body stuck.
+      // Always clear - stacked modals / PWA remounts can leave body stuck.
       document.body.style.overflow = "";
     };
   }, []);
@@ -232,7 +232,7 @@ export default function AddExpenseModal({
     };
   }, [user?.id]);
 
-  // Loans → Credit card payment is a cash bill settle — don't leave "Paid via"
+  // Loans → Credit card payment is a cash bill settle - don't leave "Paid via"
   // stuck on Credit card (that would mean charging another card).
   useEffect(() => {
     if (
@@ -408,7 +408,7 @@ export default function AddExpenseModal({
     setError("");
 
     const supabase = getSupabase();
-    // Parse as local calendar date — avoid UTC shift from `new Date("yyyy-mm-dd")`.
+    // Parse as local calendar date - avoid UTC shift from `new Date("yyyy-mm-dd")`.
     const [yStr, mStr, dStr] = date.split("-");
     const yNum = Number(yStr);
     const mNum = Number(mStr);
@@ -418,7 +418,7 @@ export default function AddExpenseModal({
         ? new Date(yNum, mNum - 1, dNum)
         : new Date(date);
 
-    // Clean note — never persist internal [#cardId] tokens.
+    // Clean note - never persist internal [#cardId] tokens.
     let descriptionToStore = displayExpenseDescription(description);
     if (
       bucket === "loans" &&
@@ -780,7 +780,7 @@ export default function AddExpenseModal({
                 <strong style={{ color: "#534AB7" }}>
                   counts only the part above
                 </strong>{" "}
-                this card&apos;s spends you logged last month and this month —
+                this card&apos;s spends you logged last month and this month -
                 those already counted in their sections.
               </p>
             ) : null}

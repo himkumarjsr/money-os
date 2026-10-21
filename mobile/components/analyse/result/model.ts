@@ -1,5 +1,5 @@
 /**
- * Derivations for the Result screen — mirrors the inline math in web
+ * Derivations for the Result screen - mirrors the inline math in web
  * `app/analyse/result/page.tsx` line-for-line, using the shared lib helpers.
  */
 import type { FinancialProfile } from "@/lib/analyse-form-schema";

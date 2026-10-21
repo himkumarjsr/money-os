@@ -1,5 +1,5 @@
 /**
- * My Investments — port of web app/investments/page.tsx.
+ * My Investments - port of web app/investments/page.tsx.
  */
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -80,7 +80,7 @@ export default function InvestmentsScreen() {
       )}
 
       <Text style={pageStyles.footnote}>
-        Illustrative totals from your inputs — not live broker sync.{" "}
+        Illustrative totals from your inputs - not live broker sync.{" "}
         <Text
           style={{ color: Colors.primaryText, fontWeight: "600" }}
           onPress={() => router.push("/portfolio")}

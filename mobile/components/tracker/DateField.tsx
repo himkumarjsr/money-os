@@ -12,7 +12,7 @@ function parseISO(iso: string): Date | null {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 
-/** Tap-to-open inline calendar — native stand-in for the PWA `<input type="date" max>`. */
+/** Tap-to-open inline calendar - native stand-in for the PWA `<input type="date" max>`. */
 export function DateField({
   label = "Date",
   value,

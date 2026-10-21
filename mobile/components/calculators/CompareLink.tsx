@@ -3,7 +3,7 @@ import { router, type Href } from "expo-router";
 import { Colors, themedStyles } from "@/constants/theme";
 import { compareHref, type Scenario } from "@/lib/compareScenarios";
 
-/** "Compare side by side" — opens the Compare calculator prefilled with these inputs. */
+/** "Compare side by side" - opens the Compare calculator prefilled with these inputs. */
 export function CompareLink({ scenario }: { scenario: Scenario }) {
   return (
     <Pressable

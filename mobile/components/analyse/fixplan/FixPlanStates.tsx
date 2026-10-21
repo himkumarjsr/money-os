@@ -26,7 +26,7 @@ export function FixPlanLoader({ label }: { label?: string }) {
   );
 }
 
-/** Web: plain "Unable to generate fix plan. {aiError}" — no retry button. */
+/** Web: plain "Unable to generate fix plan. {aiError}" - no retry button. */
 export function FixPlanError({ message }: { message: string }) {
   return (
     <View style={styles.center}>

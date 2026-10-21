@@ -96,7 +96,7 @@ describe("obligationMatchScore", () => {
   });
 });
 
-describe("planObligationExpenseSync — amount first", () => {
+describe("planObligationExpenseSync - amount first", () => {
   const homeLoan = {
     id: "c1",
     status: "pending" as const,
@@ -113,7 +113,7 @@ describe("planObligationExpenseSync — amount first", () => {
           id: "t1",
           amount: 28760,
           bucket: "loans",
-          subcategory: "personal_loan", // wrong subtype — amount still wins
+          subcategory: "personal_loan", // wrong subtype - amount still wins
           description: null,
         },
       ],

@@ -194,7 +194,7 @@ export default function TermsPage() {
           }}
         >
           <p style={{ margin: 0, fontWeight: 600, color: "#111110" }}>
-            Digital Products — No Refund Policy
+            Digital Products - No Refund Policy
           </p>
           <p style={{ marginTop: 8, marginBottom: 0, color: "#5F5E5A" }}>
             As Finkoin delivers digital content that is instantly accessible

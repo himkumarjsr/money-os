@@ -9,7 +9,7 @@ import type { User } from "@supabase/supabase-js";
  * NOTE: The rate limiter is per-instance (in-memory). On serverless it protects
  * a single warm instance, which meaningfully blunts bursts/abuse but is not a
  * global limit. For strict global limits back this with a shared store
- * (e.g. Upstash Redis) — the call sites stay the same.
+ * (e.g. Upstash Redis) - the call sites stay the same.
  */
 
 export async function getAuthedUser(): Promise<User | null> {

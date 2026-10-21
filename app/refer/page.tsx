@@ -176,7 +176,7 @@ export default function ReferPage() {
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
               <div className="text-2xl font-extrabold text-[#534AB7]">
-                {referralCount ?? "—"}
+                {referralCount ?? "-"}
               </div>
               <div className="text-xs text-[#9B9A94]">Friends referred</div>
             </div>
@@ -210,7 +210,7 @@ export default function ReferPage() {
         ) : null}
 
         <p className="mt-10 text-center text-xs text-[#9B9A94]">
-          Bonuses apply when our referral processor runs after signup —{" "}
+          Bonuses apply when our referral processor runs after signup -{" "}
           <Link href="/legal/terms" className="font-semibold text-[#534AB7]">
             Terms
           </Link>

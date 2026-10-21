@@ -103,7 +103,7 @@ export async function shareFixPlanPdf(
     file.create({ overwrite: true });
     file.write(bytes);
 
-    // The PDF holds every number in the user's profile — don't leave it on disk.
+    // The PDF holds every number in the user's profile - don't leave it on disk.
     try {
       await Sharing.shareAsync(file.uri, {
         mimeType: "application/pdf",

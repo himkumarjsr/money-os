@@ -222,7 +222,7 @@ export function SIPCalculator() {
       </div>
 
       <Insight tone={insightTone}>
-        Your money grows <strong>{mult.toFixed(1)}×</strong> — roughly ₹
+        Your money grows <strong>{mult.toFixed(1)}×</strong> - roughly ₹
         {mult.toFixed(1)} for every ₹1 put in (at {rate}% p.a.).
       </Insight>
 

@@ -1,5 +1,5 @@
 /**
- * Notification bell — same UI/behavior as web NotificationBell.
+ * Notification bell - same UI/behavior as web NotificationBell.
  * Finance tips panel from user_notifications.
  */
 import { useState } from "react";

@@ -1,5 +1,5 @@
 /**
- * Native port of web lib/renderBlogBody.tsx — same block rules
+ * Native port of web lib/renderBlogBody.tsx - same block rules
  * (tables, multi-line bullet lists, ##/### headings, paragraphs) and the
  * same inline subset (bold + links only).
  */

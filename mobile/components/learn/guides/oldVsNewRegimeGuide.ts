@@ -64,7 +64,7 @@ export const OLD_VS_NEW_REGIME_GUIDE: LearnGuideBody = {
           kind: "tool",
           title: "Old vs new tax regime calculator (FY 2025-26)",
           subtitle: "Your edge vs plain articles: run the numbers here, then file smarter.",
-          text: "Compare old vs new regime with 80C, HRA, NPS, home loan — free, instant.",
+          text: "Compare old vs new regime with 80C, HRA, NPS, home loan - free, instant.",
           href: "/calculators/tax-regime-2026",
           label: "Open full-screen tax calculator →",
         },
@@ -104,7 +104,7 @@ export const OLD_VS_NEW_REGIME_GUIDE: LearnGuideBody = {
     },
     {
       id: "comparison",
-      title: "Old vs new regime — side-by-side comparison",
+      title: "Old vs new regime - side-by-side comparison",
       blocks: [
         {
           kind: "table",
@@ -136,7 +136,7 @@ export const OLD_VS_NEW_REGIME_GUIDE: LearnGuideBody = {
           tone: "grey",
           items: [
             {
-              title: "₹10L salary — common pivot point",
+              title: "₹10L salary - common pivot point",
               text: "If you claim HRA + 80C + 80D (and/or home loan interest), old regime often becomes competitive. If deductions are minimal, new regime often wins.",
             },
             {

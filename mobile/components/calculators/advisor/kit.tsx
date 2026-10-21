@@ -28,13 +28,13 @@ export function useNum(initial: number) {
 
 /** ₹ with Indian grouping, no paise. */
 export function inr(n: number) {
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   const r = Math.round(n);
   return `${r < 0 ? "−" : ""}₹${formatIndian(Math.abs(r))}`;
 }
 
 export function pct(n: number | null, digits = 2) {
-  if (n === null || !Number.isFinite(n)) return "—";
+  if (n === null || !Number.isFinite(n)) return "-";
   return `${n.toFixed(digits)}%`;
 }
 
@@ -54,7 +54,7 @@ export function Stack({ children }: { children: ReactNode }) {
   return <View style={calcStyles.stack}>{children}</View>;
 }
 
-/** Inputs group — one column on phones (mirrors the PWA's two-column grid). */
+/** Inputs group - one column on phones (mirrors the PWA's two-column grid). */
 export function Inputs({ children }: { children: ReactNode }) {
   return <View>{children}</View>;
 }

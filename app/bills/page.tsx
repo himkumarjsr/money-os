@@ -667,7 +667,7 @@ function BillRow({
               : "text-[#111110]"
         }`}
       >
-        {item.amount != null ? amountText(item.amount) : "—"}
+        {item.amount != null ? amountText(item.amount) : "-"}
       </div>
     </div>
   );

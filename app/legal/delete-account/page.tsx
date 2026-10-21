@@ -70,7 +70,7 @@ export default function DeleteAccountPage() {
             marginBottom: 12,
           }}
         >
-          Option 1 — delete it yourself (fastest)
+          Option 1 - delete it yourself (fastest)
         </h2>
         <ul style={{ paddingLeft: 20, color: "#5F5E5A", lineHeight: 1.8 }}>
           <li>
@@ -105,7 +105,7 @@ export default function DeleteAccountPage() {
             marginBottom: 12,
           }}
         >
-          Option 2 — can&apos;t log in, or no longer have the app?
+          Option 2 - can&apos;t log in, or no longer have the app?
         </h2>
         <p style={{ color: "#5F5E5A", lineHeight: 1.7 }}>
           Email{" "}
@@ -140,7 +140,7 @@ export default function DeleteAccountPage() {
           <li>Notifications, feedback, and FK reward balance/history</li>
           <li>
             Your own membership in any Split groups (shared group expense
-            history that other members still rely on is not deleted — see our{" "}
+            history that other members still rely on is not deleted - see our{" "}
             <a href="/legal/privacy" style={{ color: "#534AB7" }}>
               Privacy Policy
             </a>{" "}

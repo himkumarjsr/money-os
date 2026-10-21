@@ -54,7 +54,7 @@ const TOOLS: Array<{
   },
 ];
 
-/** Full-width quick tools — shown below the home banner on mobile only. */
+/** Full-width quick tools - shown below the home banner on mobile only. */
 export default function HomeMobileQuickTools() {
   return (
     <section

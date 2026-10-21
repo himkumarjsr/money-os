@@ -1,5 +1,5 @@
 /**
- * FK Split store — mobile parity with PWA store/splitStore.ts.
+ * FK Split store - mobile parity with PWA store/splitStore.ts.
  * Reads via Supabase with the user session; writes go through the web
  * /api/split/* routes (server checks + notifications), falling back to direct
  * Supabase writes only when the server can't take the request.
@@ -917,38 +917,19 @@ export const useSplitStore = create<SplitStore>((set, get) => ({
       const code = input.code.trim().toUpperCase();
       if (!code) return { error: "Enter an invite code" };
 
-      const supabase = getSupabase();
-      const { data: group, error: gErr } = await supabase
-        .from("split_groups")
-        .select("id, name, is_active")
-        .eq("invite_code", code)
-        .maybeSingle();
-
-      if (gErr) return { error: gErr.message };
-      if (!group || group.is_active === false) {
+      // The database checks the code and adds the member (migration 056);
+      // members can't insert themselves directly.
+      const { data, error } = await getSupabase().rpc("split_join_by_code", {
+        p_code: code,
+      });
+      if (error) return { error: error.message };
+      const group = Array.isArray(data) ? data[0] : data;
+      if (!group?.group_id) {
         return { error: "Group not found for this invite code" };
       }
 
-      const email = input.userEmail.toLowerCase().trim();
-      const { error: mErr } = await supabase.from("split_group_members").upsert(
-        {
-          group_id: group.id,
-          user_id: input.userId,
-          email,
-          display_name:
-            input.userName?.trim() || email.split("@")[0] || "Member",
-          status: "active",
-          role: "member",
-          joined_at: new Date().toISOString(),
-          left_at: null,
-        },
-        { onConflict: "group_id,email" },
-      );
-
-      if (mErr) return { error: mErr.message };
-
       set({ lastFetched: {} });
-      return { groupId: group.id, groupName: group.name };
+      return { groupId: group.group_id, groupName: group.group_name };
     } catch (err) {
       return {
         error: err instanceof Error ? err.message : "Could not join group",

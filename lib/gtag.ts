@@ -1,7 +1,7 @@
 /**
  * GA4 helpers. Loaded only when NEXT_PUBLIC_GA_MEASUREMENT_ID is set (G-xxxxxxxxxx).
  * Every event is enriched with device / PWA / viewport context from {@link getAnalyticsContext}.
- * City/country appear in GA4 Geo reports from Google's IP processing — not set here.
+ * City/country appear in GA4 Geo reports from Google's IP processing - not set here.
  */
 
 import { getAnalyticsContext } from "@/lib/analyticsContext";
@@ -23,7 +23,7 @@ export function trackEvent(eventName: string, params?: Record<string, unknown>):
   window.gtag?.("event", eventName, mergeParams(params));
 }
 
-/** Primary CTAs — event name `cta_click`. */
+/** Primary CTAs - event name `cta_click`. */
 export function trackCta(payload: {
   cta_name: string;
   cta_location: string;

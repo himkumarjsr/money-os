@@ -403,7 +403,7 @@ export function EMICalculator() {
                           {formatINR(entry.emi)}
                         </td>
                         <td className="px-4 py-2.5 text-[13px] text-slate-900">
-                          —
+                          -
                         </td>
                       </tr>
                     );
@@ -457,7 +457,7 @@ export function EMICalculator() {
 
       <Insight tone={tone}>
         Interest is about <strong>{(interestRatio * 100).toFixed(0)}%</strong>{" "}
-        of principal —{" "}
+        of principal -{" "}
         {interestRatio < 0.45
           ? "consider prepayment when possible."
           : "explore shorter tenure or balance transfer if eligible."}

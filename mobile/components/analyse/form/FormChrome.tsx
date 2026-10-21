@@ -3,7 +3,7 @@ import { Colors, themedStyles, tintBg } from "@/constants/theme";
 import { STEPS } from "./shared";
 import { GoldText } from "@/components/ui/GoldMirror";
 
-/** 7 clickable step pills — jumping is not validation-gated (web behaviour). */
+/** 7 clickable step pills - jumping is not validation-gated (web behaviour). */
 export function ProgressPills({
   step,
   onJump,

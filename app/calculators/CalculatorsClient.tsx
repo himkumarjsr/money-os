@@ -86,7 +86,7 @@ export default function CalculatorsClient({
   );
 
   useEffect(() => {
-    // Only track when a tool is actually open (deep link / hub pick) — not hub browse.
+    // Only track when a tool is actually open (deep link / hub pick) - not hub browse.
     if (!sheetOpen && !onDedicatedCalcPath && !openedFromHub.current) return;
     trackToolOpen({
       tool_category: "calculator",
@@ -156,7 +156,7 @@ export default function CalculatorsClient({
       return;
     }
 
-    // Hub browse: stay on /calculators — do not push first-tool URLs (SIP/EMI).
+    // Hub browse: stay on /calculators - do not push first-tool URLs (SIP/EMI).
     if (pathname === "/calculators" && !openedFromHub.current && !fromHome) {
       return;
     }
@@ -192,11 +192,11 @@ export default function CalculatorsClient({
     if (openSheet) setSheetOpen(true);
   };
 
-  /** Category chips only switch the list — never open EMI/SIP/etc. */
+  /** Category chips only switch the list - never open EMI/SIP/etc. */
   const selectCategory = (nextCategory: Cat) => {
     const cat = CATEGORIES.find((c) => c.id === nextCategory);
     if (!cat) return;
-    // Only change the visible list. Do NOT setCalcId here — that races with
+    // Only change the visible list. Do NOT setCalcId here - that races with
     // URL sync while still on /calculators/[id] and auto-opens the first tool.
     setCategory(nextCategory);
     setSheetOpen(false);
@@ -232,7 +232,7 @@ export default function CalculatorsClient({
       goHomeFast();
       return;
     }
-    // Fast path — avoid slow history.back() on this heavy page.
+    // Fast path - avoid slow history.back() on this heavy page.
     goHomeFast();
   };
 
@@ -276,7 +276,7 @@ export default function CalculatorsClient({
               </h1>
             )}
             <p className="mt-1 text-sm text-slate-600">
-              Sliders update results instantly — illustrative, not advice.
+              Sliders update results instantly - illustrative, not advice.
             </p>
             <p className="mt-3 text-xs font-medium text-slate-500">
               Includes SIP calculator India, EMI calculator, and income tax

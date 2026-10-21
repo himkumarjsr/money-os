@@ -17,7 +17,7 @@ export default function CareersComingSoonPage() {
       </p>
       <h1 className="mt-3 text-3xl font-bold text-slate-900">Coming soon</h1>
       <p className="mt-4 text-slate-600">
-        We&apos;re not hiring publicly yet — check back later.
+        We&apos;re not hiring publicly yet - check back later.
       </p>
       <Link
         href="/contact"

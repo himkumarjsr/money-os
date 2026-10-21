@@ -3,7 +3,7 @@ import { siteBase } from "@/lib/googleAuth";
 
 /**
  * Calls the web app's account-deletion API with the current session's
- * access token (mobile has no cookies, so this is a Bearer-token call —
+ * access token (mobile has no cookies, so this is a Bearer-token call -
  * the only API route in this app mobile authenticates this way).
  */
 export async function deleteMyAccount(): Promise<{ error?: string }> {

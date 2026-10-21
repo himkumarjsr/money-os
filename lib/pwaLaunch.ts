@@ -67,7 +67,7 @@ export function hasPwaOpenAttempted(joinKey: string): boolean {
  *
  * Android: `intent://` can open the installed WebAPK/TWA on `/split/join?token=…`.
  * iOS: home-screen PWAs cannot be opened with a path/query, and Safari / WhatsApp
- * WebView storage is siloed from the PWA — so “save invite, open app” never works.
+ * WebView storage is siloed from the PWA - so “save invite, open app” never works.
  * iOS always continues the join in the browser instead.
  *
  * Desktop + localhost always stay on the normal browser join / login path.
@@ -82,7 +82,7 @@ export function shouldOfferOpenInApp(opts?: {
   if (standalone) return false;
 
   const ua = opts?.userAgent ?? globalThis.navigator?.userAgent ?? "";
-  // iOS cannot hand off invite URLs into the PWA — skip the dead-end prompt.
+  // iOS cannot hand off invite URLs into the PWA - skip the dead-end prompt.
   if (isIosUserAgent(ua)) return false;
   if (!isAndroidUserAgent(ua)) return false;
 

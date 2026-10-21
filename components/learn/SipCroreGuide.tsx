@@ -33,10 +33,10 @@ export default function SipCroreGuide() {
 
       <SipCroreCalculatorEmbed />
 
-      <Card id="quick-table" title="Quick reference — ₹1 crore at 12% p.a.">
+      <Card id="quick-table" title="Quick reference - ₹1 crore at 12% p.a.">
         <p>
           Illustrative monthly SIP (constant 12% expected return, monthly
-          compounding). Markets vary — treat as a planning range, not a promise.
+          compounding). Markets vary - treat as a planning range, not a promise.
         </p>
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full min-w-[280px] text-left text-sm">
@@ -84,7 +84,7 @@ export default function SipCroreGuide() {
           </li>
           <li>
             <strong>Step-up SIP:</strong> Raising SIP 10% yearly can cut the
-            starting amount — model that on the{" "}
+            starting amount - model that on the{" "}
             <Link
               href="/calculators/sip"
               className="font-semibold text-[#534AB7]"
@@ -105,7 +105,7 @@ export default function SipCroreGuide() {
           <li>Pick a horizon you can stick to (10 / 15 / 20 years).</li>
           <li>Set a conservative return (e.g. 10–12%).</li>
           <li>
-            Note the monthly SIP — check it fits after rent, EMIs, and emergency
+            Note the monthly SIP - check it fits after rent, EMIs, and emergency
             fund.
           </li>
           <li>
@@ -127,7 +127,7 @@ export default function SipCroreGuide() {
             >
               SIP calculator India
             </Link>{" "}
-            — forward returns from a monthly amount
+            - forward returns from a monthly amount
           </li>
           <li>
             <Link
@@ -136,7 +136,7 @@ export default function SipCroreGuide() {
             >
               FIRE number calculator
             </Link>{" "}
-            — when ₹1 crore is not enough
+            - when ₹1 crore is not enough
           </li>
           <li>
             <Link

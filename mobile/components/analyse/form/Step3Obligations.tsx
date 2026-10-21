@@ -111,7 +111,7 @@ export function Step3Obligations({
               <MoneyField
                 name="rentAmount"
                 label="Rent you pay monthly"
-                helper="Enter your monthly rent if you live in a rented house. If you have a home loan (own house), enter 0 here — your EMI goes in the Loans section below."
+                helper="Enter your monthly rent if you live in a rented house. If you have a home loan (own house), enter 0 here - your EMI goes in the Loans section below."
               />
               <MoneyField
                 name="rentMaintenanceMonthly"
@@ -192,7 +192,7 @@ export function Step3Obligations({
                             : ""}
                         </Text>
                         <Text style={styles.savedNote}>
-                          Saved — add another loan below if needed
+                          Saved - add another loan below if needed
                         </Text>
                       </View>
                       <View style={styles.savedActions}>
@@ -264,7 +264,7 @@ export function Step3Obligations({
                     {loanEmi > 0 ? (
                       <DayOfMonthPicker
                         label="Which date is this EMI debited? (optional)"
-                        hint="We'll remind you a few days before. Pick month and day only — no year."
+                        hint="We'll remind you a few days before. Pick month and day only - no year."
                         value={
                           watch(`unifiedLoans.${index}.emiDay` as const) ||
                           undefined
@@ -312,7 +312,7 @@ export function Step3Obligations({
                       }
                       helper={
                         isOd
-                          ? "How much of your OD limit is drawn today — this drives your analysis"
+                          ? "How much of your OD limit is drawn today - this drives your analysis"
                           : "Total principal still owed"
                       }
                       onValueChange={(next) => {
@@ -380,7 +380,7 @@ export function Step3Obligations({
                         <Text style={formStyles.small}>
                           Use{" "}
                           <Text style={styles.strong}>Outstanding amount</Text>{" "}
-                          above for how much of the OD is currently used — that
+                          above for how much of the OD is currently used - that
                           value drives your analysis.
                         </Text>
                         <ClampNumberField
@@ -495,7 +495,7 @@ export function Step3Obligations({
           <Card>
             <MoneyField
               name="creditCardBillMonthly"
-              label="Credit card — typical monthly payment"
+              label="Credit card - typical monthly payment"
               helper="What you usually pay each month across cards (full pay-off or part of balance). Counts toward loan/debt pressure in your meter."
             />
             {(watch("creditCardBillMonthly") ?? 0) > 0 ? (
@@ -514,7 +514,7 @@ export function Step3Obligations({
             <MoneyField
               name="creditCardCarriedBalance"
               label="Card balance carried forward"
-              helper="Bill amount you didn't pay in full and carried to next month. Counts as a debt — cards charge about 36–45% a year on it."
+              helper="Bill amount you didn't pay in full and carried to next month. Counts as a debt - cards charge about 36–45% a year on it."
             />
           </Card>
         ) : null}

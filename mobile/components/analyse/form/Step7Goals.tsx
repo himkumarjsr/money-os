@@ -137,8 +137,8 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
             label="Emergency fund target"
             helper={
               live.emergencyFundSuggestion
-                ? `Suggested: ${formatCurrencyINR(live.emergencyFundSuggestion)} — ${live.emergencyFundMonths} months of your monthly expenses and obligations, based on your life stage`
-                : `We recommend ${live.emergencyFundMonths} months of expenses for your life stage — add expenses to see an amount`
+                ? `Suggested: ${formatCurrencyINR(live.emergencyFundSuggestion)} - ${live.emergencyFundMonths} months of your monthly expenses and obligations, based on your life stage`
+                : `We recommend ${live.emergencyFundMonths} months of expenses for your life stage - add expenses to see an amount`
             }
           />
         ) : null}
@@ -199,7 +199,7 @@ export function Step7Goals({ live }: Pick<StepProps, "live">) {
         <Text style={styles.greyNote}>
           {riskTolerance
             ? `Your risk profile: ${RISK_TOLERANCE_LABELS[riskTolerance]}. We use it to pick instruments for each goal.`
-            : "Optional — answer all three and we'll match instruments to how you handle ups and downs."}
+            : "Optional - answer all three and we'll match instruments to how you handle ups and downs."}
         </Text>
       </View>
     </View>

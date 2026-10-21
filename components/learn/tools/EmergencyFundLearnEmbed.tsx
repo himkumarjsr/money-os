@@ -21,7 +21,7 @@ const EmergencyFundCalculator = dynamic(
 export default function EmergencyFundLearnEmbed() {
   return (
     <LearnToolEmbed
-      title="Emergency fund calculator — India"
+      title="Emergency fund calculator - India"
       subtitle="How much buffer do you need? Adjust expenses and life stage for your number."
       fullToolHref="/calculators/emergency"
       fullToolLabel="Open full emergency calculator →"

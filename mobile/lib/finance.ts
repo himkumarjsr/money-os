@@ -1,5 +1,5 @@
 /**
- * Shared financial helpers — extend per calculator in /lib as needed.
+ * Shared financial helpers - extend per calculator in /lib as needed.
  */
 
 export function compoundInterest(

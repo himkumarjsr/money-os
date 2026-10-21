@@ -1,5 +1,5 @@
 /**
- * "Pricing" home section — web HomePageBelowFold pricing tiers (copy verbatim).
+ * "Pricing" home section - web HomePageBelowFold pricing tiers (copy verbatim).
  * Mobile payments are off, so a note says the app is free during early access.
  */
 import { useState } from "react";
@@ -25,7 +25,7 @@ const PRICING = [
     period: "/mo",
     description:
       "AI fix plan plus optional chat with a qualified advisor for clarifications.",
-    cta: { label: "Get Pro — ₹49/mo", href: "/plans", highlight: true },
+    cta: { label: "Get Pro - ₹49/mo", href: "/plans", highlight: true },
     popular: true,
     planId: "pro",
   },
@@ -35,7 +35,7 @@ const PRICING = [
     period: "/mo",
     description:
       "Full workspace: goals, automations, exports, and priority support.",
-    cta: { label: "Get Pro Max — ₹99/mo", href: "/plans", highlight: false },
+    cta: { label: "Get Pro Max - ₹99/mo", href: "/plans", highlight: false },
     popular: false,
     planId: "promax",
   },
@@ -59,7 +59,7 @@ export function Pricing() {
           const shown =
             "planId" in tier ? planPriceDisplay(tier.planId, billing) : null;
           const ctaLabel = shown
-            ? `Get ${tier.name} — ${shown.price}${shown.periodShort}`
+            ? `Get ${tier.name} - ${shown.price}${shown.periodShort}`
             : tier.cta.label;
           return (
             <View

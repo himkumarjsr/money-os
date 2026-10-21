@@ -126,7 +126,7 @@ export default function RewardsPage() {
             />
             <StatCard
               label="Badges"
-              value={badges.length ? badges.join(", ") : "—"}
+              value={badges.length ? badges.join(", ") : "-"}
             />
           </div>
         )}

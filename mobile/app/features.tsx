@@ -1,4 +1,4 @@
-/** Native Features — port of web app/features/page.tsx + FeaturesShowcase. */
+/** Native Features - port of web app/features/page.tsx + FeaturesShowcase. */
 import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";

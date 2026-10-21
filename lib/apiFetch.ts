@@ -19,7 +19,7 @@ export async function apiFetch(
       const token = data.session?.access_token;
       if (token) headers.set("Authorization", `Bearer ${token}`);
     } catch {
-      /* not signed in / Supabase not configured — cookies only */
+      /* not signed in / Supabase not configured - cookies only */
     }
   }
   return fetch(input, { ...init, headers });

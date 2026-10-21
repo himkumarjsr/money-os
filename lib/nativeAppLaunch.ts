@@ -1,6 +1,6 @@
 import { isAndroidUserAgent, isIosUserAgent, isStandalonePwa } from "@/lib/pwaLaunch";
 
-/** Native app identifiers — must match mobile/app.json. */
+/** Native app identifiers - must match mobile/app.json. */
 export const NATIVE_APP_SCHEME = "finkoin";
 export const NATIVE_ANDROID_PACKAGE = "com.finkoin.app";
 

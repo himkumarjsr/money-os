@@ -35,7 +35,7 @@ export async function resolveAuthenticated(): Promise<boolean> {
  */
 export async function recoverAuthSession(): Promise<boolean> {
   if (useAuthStore.getState().isLoggedIn && useAuthStore.getState().user) {
-    // Soft verify — keep UI logged in if session briefly lags.
+    // Soft verify - keep UI logged in if session briefly lags.
     await useAuthStore.getState().refreshUser({ clearOnMissingSession: false });
     if (useAuthStore.getState().isLoggedIn) return true;
   }

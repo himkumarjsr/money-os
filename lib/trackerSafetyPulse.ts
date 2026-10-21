@@ -241,7 +241,7 @@ export function previousCalendarMonth(
 
 /**
  * Deterministic month safety analytics for the expense tracker.
- * No AI — rules only (caps, runway, MoM movers).
+ * No AI - rules only (caps, runway, MoM movers).
  */
 export function computeMonthSafetyPulse(input: {
   currentTxns: TrackerTxnLike[];
@@ -321,14 +321,14 @@ export function computeMonthSafetyPulse(input: {
   } else if (current.income <= 0 && current.totalSpent > 0) {
     status = "tight";
     reasons.push(
-      "No income logged for this month — add salary so Safety Pulse can judge your caps.",
+      "No income logged for this month - add salary so Safety Pulse can judge your caps.",
     );
     action =
       "Log this month’s income (or complete Analyse so we can use your salary).";
   } else if (current.totalSpent > current.income && current.income > 0) {
     status = "over";
     reasons.push(
-      `Spent ${formatInr(current.totalSpent)} against ${formatInr(current.income)} income — already over by ${formatInr(current.totalSpent - current.income)}.`,
+      `Spent ${formatInr(current.totalSpent)} against ${formatInr(current.income)} income - already over by ${formatInr(current.totalSpent - current.income)}.`,
     );
   } else if (
     projectedMonthSpend != null &&
@@ -345,7 +345,7 @@ export function computeMonthSafetyPulse(input: {
     status = "tight";
     const top = [...overCaps].sort((a, b) => b.overBy - a.overBy)[0];
     reasons.push(
-      `${top.label} is ${top.pctOfIncome.toFixed(1)}% of income (cap ${top.capPct}%) — over by ${formatInr(top.overBy)}.`,
+      `${top.label} is ${top.pctOfIncome.toFixed(1)}% of income (cap ${top.capPct}%) - over by ${formatInr(top.overBy)}.`,
     );
   } else if (
     dailySafeSpend != null &&
@@ -362,12 +362,12 @@ export function computeMonthSafetyPulse(input: {
     status = "safe";
     if (current.income > 0) {
       reasons.push(
-        `You’re within plan — ${formatInr(Math.max(0, current.remaining))} left after logged spend.`,
+        `You’re within plan - ${formatInr(Math.max(0, current.remaining))} left after logged spend.`,
       );
     }
   }
 
-  // Extra reasons (MoM + investment skip) — keep max 2 total reasons
+  // Extra reasons (MoM + investment skip) - keep max 2 total reasons
   if (reasons.length < 2 && spentDelta != null && Math.abs(spentDelta) >= 500) {
     const dir = spentDelta > 0 ? "up" : "down";
     const pct =
@@ -408,9 +408,9 @@ export function computeMonthSafetyPulse(input: {
     ) {
       const share = input.caps?.investment ?? 0.2;
       const target = Math.round(current.income * share);
-      action = `No investment logged — aim ~${formatInr(target)} (${Math.round(share * 100)}% cap) via SIP this month.`;
+      action = `No investment logged - aim ~${formatInr(target)} (${Math.round(share * 100)}% cap) via SIP this month.`;
     } else if ((current.bucketTotals.habits || 0) > 0 && status !== "safe") {
-      action = `Habits took ${formatInr(current.bucketTotals.habits || 0)} — redirect the next habit spend to emergency fund or SIP.`;
+      action = `Habits took ${formatInr(current.bucketTotals.habits || 0)} - redirect the next habit spend to emergency fund or SIP.`;
     } else if (
       dailySafeSpend != null &&
       daysLeftInMonth != null &&
@@ -419,7 +419,7 @@ export function computeMonthSafetyPulse(input: {
     ) {
       action = `Keep discretionary spend near ${formatInr(dailySafeSpend)}/day for the rest of the month.`;
     } else if (status === "safe" && movers[0] && movers[0].delta < -500) {
-      action = `Nice — ${movers[0].label} is down ${formatInr(movers[0].delta)}. Keep that streak.`;
+      action = `Nice - ${movers[0].label} is down ${formatInr(movers[0].delta)}. Keep that streak.`;
     } else if (status === "safe") {
       action =
         "Stay on plan: log big spends the day they happen so this pulse stays accurate.";
@@ -440,15 +440,15 @@ export function computeMonthSafetyPulse(input: {
   let headline = "Log income and a few expenses to unlock your month pulse.";
   if (status === "safe") {
     headline = isCurrentCalendarMonth
-      ? "This month is still recoverable — you’re on track."
+      ? "This month is still recoverable - you’re on track."
       : "This month stayed within plan.";
   } else if (status === "tight") {
     headline = isCurrentCalendarMonth
-      ? "This month is recoverable — one fix will help."
+      ? "This month is recoverable - one fix will help."
       : "This month ran tight against your caps.";
   } else if (status === "over") {
     headline = isCurrentCalendarMonth
-      ? "Over plan — cut now to limit the damage."
+      ? "Over plan - cut now to limit the damage."
       : "This month finished over plan.";
   }
 

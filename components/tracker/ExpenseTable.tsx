@@ -144,7 +144,7 @@ export default function ExpenseTable({
                 <td
                   style={{ padding: "12px", color: "#111110", maxWidth: 140 }}
                 >
-                  {displayExpenseDescription(t.description) || "—"}
+                  {displayExpenseDescription(t.description) || "-"}
                 </td>
                 <td
                   style={{
@@ -169,7 +169,7 @@ export default function ExpenseTable({
                   >
                     {onCard ? (
                       <span
-                        title="Paid by credit card — not in purple LEFT or bucket totals"
+                        title="Paid by credit card - not in purple LEFT or bucket totals"
                         aria-label="Paid by credit card"
                         style={{
                           display: "inline-flex",

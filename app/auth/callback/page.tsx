@@ -60,7 +60,7 @@ function AuthCallbackContent() {
           window.location.search,
           window.location.hash,
         );
-        // Prefer URL next, then pending Split invite in localStorage — never wipe invite yet.
+        // Prefer URL next, then pending Split invite in localStorage - never wipe invite yet.
         const next =
           sanitizeAppPath(params.get("next")) ??
           peekPostLoginPath(window.location.search);

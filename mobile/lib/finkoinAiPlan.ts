@@ -292,11 +292,11 @@ export function buildFallbackFinkoinPlan(
 
   const top =
     emergencyGap > 0 && er.monthsCovered < 3
-      ? `This week: move ₹${Math.min(50_000, Math.round(emergencyGap)).toLocaleString("en-IN")} to liquid MF or savings earmarked “emergency” — you are below 3 months of needs on accessible cash.`
+      ? `This week: move ₹${Math.min(50_000, Math.round(emergencyGap)).toLocaleString("en-IN")} to liquid MF or savings earmarked “emergency” - you are below 3 months of needs on accessible cash.`
       : termHave === 0
         ? "This week: buy a pure-term quote for at least ₹1 crore (adjust with advisor) before starting new SIPs."
         : hasGirlU10 && girlAge !== undefined && girlAge >= 8
-          ? "This week: open Sukanya Samriddhi at India Post / bank — account must open before she turns 10."
+          ? "This week: open Sukanya Samriddhi at India Post / bank - account must open before she turns 10."
           : `This week: allocate ₹${Math.max(0, Math.round(surplus * 0.2)).toLocaleString("en-IN")}/mo to your top gap above.`;
 
   return {
@@ -342,8 +342,8 @@ export function buildFallbackFinkoinPlan(
               priority: 1,
               category: "Free cash flow",
               amount: 0,
-              where: "—",
-              why: "No surplus on paper — cut wants/EMIs or raise income before new commitments.",
+              where: "-",
+              why: "No surplus on paper - cut wants/EMIs or raise income before new commitments.",
             },
           ],
     specialSituations: {
@@ -351,7 +351,7 @@ export function buildFallbackFinkoinPlan(
         applicable: educationLoanEmiFromProfile(profile) > 0,
         advice:
           educationLoanEmiFromProfile(profile) > 0
-            ? "Education loan often has co-signer parents — keep term cover and avoid new consumer debt until rates are under control."
+            ? "Education loan often has co-signer parents - keep term cover and avoid new consumer debt until rates are under control."
             : "",
       },
       planningBaby: {
@@ -365,7 +365,7 @@ export function buildFallbackFinkoinPlan(
         applicable: hasGirlU10 && girlAge !== undefined && girlAge >= 8,
         monthsLeft: monthsToSsyClose,
         advice: hasGirlU10
-          ? "SSY must open before age 10 — gather birth certificate and guardian KYC this week."
+          ? "SSY must open before age 10 - gather birth certificate and guardian KYC this week."
           : "",
       },
       homePurchasePlan: {
@@ -395,8 +395,8 @@ export function buildFallbackFinkoinPlan(
     topPriorityAction: top,
     oneLiner:
       surplus > 0
-        ? `You have about ₹${surplus.toLocaleString("en-IN")}/month to steer — fund safety first, then invest.`
-        : "Surplus is tight on paper — trim wants or EMIs before adding risk.",
+        ? `You have about ₹${surplus.toLocaleString("en-IN")}/month to steer - fund safety first, then invest.`
+        : "Surplus is tight on paper - trim wants or EMIs before adding risk.",
     disclaimer:
       "Educational guidance only. Finkoin is not a SEBI registered investment advisor. Consult a qualified advisor before investing.",
   };

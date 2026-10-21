@@ -87,10 +87,10 @@ export default function MonthSafetyPulse({
   previousMonthLabel?: string | null;
   /** When true (master "Show all"), amounts are revealed regardless of local eye. */
   forceVisible?: boolean;
-  /** Nested panels (CC dues, obligations) — keep collapsed by default upstream. */
+  /** Nested panels (CC dues, obligations) - keep collapsed by default upstream. */
   children?: ReactNode;
 }) {
-  /** Independent of tracker summary eye — hidden by default. */
+  /** Independent of tracker summary eye - hidden by default. */
   const [amountsVisible, toggleAmountsVisible] = usePrivacyToggle(forceVisible);
   const style = STATUS_STYLE[pulse.status];
   const showComparison =

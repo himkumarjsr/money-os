@@ -102,7 +102,7 @@ const COPY: Record<string, Copy> = {
       ],
       [
         "Can I make up for a late start?",
-        "Yes, by investing more each month — the calculator shows the SIP needed to reach the same corpus.",
+        "Yes, by investing more each month - the calculator shows the SIP needed to reach the same corpus.",
       ],
       [
         "How much does a 5-year delay cost?",
@@ -158,7 +158,7 @@ const COPY: Record<string, Copy> = {
     faq: [
       [
         "What is CAGR?",
-        "Compound Annual Growth Rate — the steady yearly rate that turns the starting value into the ending value.",
+        "Compound Annual Growth Rate - the steady yearly rate that turns the starting value into the ending value.",
       ],
       [
         "CAGR or XIRR?",
@@ -178,7 +178,7 @@ const COPY: Record<string, Copy> = {
     faq: [
       [
         "What is XIRR?",
-        "Extended Internal Rate of Return — an annualised return that accounts for the date of every investment and withdrawal.",
+        "Extended Internal Rate of Return - an annualised return that accounts for the date of every investment and withdrawal.",
       ],
       [
         "Why is my XIRR different from absolute return?",
@@ -438,7 +438,7 @@ const COPY: Record<string, Copy> = {
     faq: [
       [
         "What is FOIR?",
-        "Fixed Obligation to Income Ratio — the share of your take-home lenders allow for all EMIs, usually 40–60%.",
+        "Fixed Obligation to Income Ratio - the share of your take-home lenders allow for all EMIs, usually 40–60%.",
       ],
       [
         "How much of the house price will a bank fund?",
@@ -775,7 +775,7 @@ const COPY: Record<string, Copy> = {
     faq: [
       [
         "How much term insurance do I need?",
-        "Enough to replace your income for your family and clear loans and goals — often 10–20 times your annual income.",
+        "Enough to replace your income for your family and clear loans and goals - often 10–20 times your annual income.",
       ],
       [
         "Till what age should cover run?",
@@ -815,7 +815,7 @@ const COPY: Record<string, Copy> = {
     faq: [
       [
         "What return do endowment plans give?",
-        "Typically 4–6% a year — often below PPF.",
+        "Typically 4–6% a year - often below PPF.",
       ],
       [
         "What is IRR?",
@@ -875,7 +875,7 @@ const COPY: Record<string, Copy> = {
     faq: [
       [
         "How early should I start saving for a wedding?",
-        "As early as possible — even 5–8 years ahead makes the monthly amount much smaller.",
+        "As early as possible - even 5–8 years ahead makes the monthly amount much smaller.",
       ],
       [
         "Where should wedding savings go?",
@@ -956,7 +956,7 @@ const COPY: Record<string, Copy> = {
       ],
       [
         "Should I save more than 20%?",
-        "If you can, yes — especially for early retirement or big goals.",
+        "If you can, yes - especially for early retirement or big goals.",
       ],
       [
         "What counts as needs and what counts as wants?",
@@ -980,7 +980,7 @@ export const ADVISOR_SEO: Record<string, CalculatorSeo> = Object.fromEntries(
     {
       path: `/calculators/${id}`,
       appName: c.appName,
-      title: `${c.appName} — ${c.tagline} | Finkoin`,
+      title: `${c.appName} - ${c.tagline} | Finkoin`,
       description: c.description,
       keywords: keywordsFor(id, c.appName),
       faq: c.faq.map(([q, a]) => ({ q, a })),

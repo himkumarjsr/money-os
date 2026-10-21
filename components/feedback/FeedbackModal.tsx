@@ -16,11 +16,11 @@ type FeedbackModalProps = {
 };
 
 const STEPS = [
-  { key: "intro", title: "Help us improve", subtitle: "A few short steps — like our guided checkup." },
+  { key: "intro", title: "Help us improve", subtitle: "A few short steps - like our guided checkup." },
   { key: "rating", title: "Step 1 · Overall experience", subtitle: "How would you rate Finkoin so far?" },
   { key: "area", title: "Step 2 · Where in the app?", subtitle: "What did you use most recently?" },
-  { key: "highlights", title: "Step 3 · What worked well?", subtitle: "Optional — tell us what you liked." },
-  { key: "improve", title: "Step 4 · What should improve?", subtitle: "Optional — bugs, confusion, or missing features." },
+  { key: "highlights", title: "Step 3 · What worked well?", subtitle: "Optional - tell us what you liked." },
+  { key: "improve", title: "Step 4 · What should improve?", subtitle: "Optional - bugs, confusion, or missing features." },
   { key: "recommend", title: "Step 5 · Recommendation", subtitle: "Would you recommend Finkoin to a friend?" },
 ] as const;
 
@@ -35,7 +35,7 @@ const AREAS = [
 
 type Recommend = "yes" | "maybe" | "no" | "";
 
-/** When set (build-time env), feedback uses your Google Form only — no Finkoin DB or `/api/feedback`. */
+/** When set (build-time env), feedback uses your Google Form only - no Finkoin DB or `/api/feedback`. */
 const FEEDBACK_GOOGLE_FORM_URL = (process.env.NEXT_PUBLIC_FEEDBACK_GOOGLE_FORM_URL ?? "").trim();
 
 export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModalProps) {
@@ -268,13 +268,13 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
             </p>
           ) : done ? (
             <p className="text-sm font-medium text-emerald-800">
-              Thanks — your feedback was saved. If Google Sheets mirroring is enabled, it will appear in the linked form too.
+              Thanks - your feedback was saved. If Google Sheets mirroring is enabled, it will appear in the linked form too.
             </p>
           ) : (
             <>
               {step === 0 ? (
                 <ul className="list-inside list-disc space-y-2 text-sm leading-relaxed text-slate-700">
-                  <li>Five quick questions — tap Next to begin.</li>
+                  <li>Five quick questions - tap Next to begin.</li>
                   <li>Takes under a minute.</li>
                   <li>You can skip optional text fields.</li>
                 </ul>
@@ -328,7 +328,7 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
                   onChange={(e) => setHighlights(e.target.value)}
                   rows={5}
                   maxLength={4000}
-                  placeholder="Features, clarity, speed — anything that stood out."
+                  placeholder="Features, clarity, speed - anything that stood out."
                   className="mt-1 w-full resize-y rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none ring-[#534AB7]/30 focus:ring-2"
                 />
               ) : null}
@@ -351,7 +351,7 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
                       <span className="font-semibold text-slate-900">Rating:</span> {rating}/5
                     </p>
                     <p className="mt-1">
-                      <span className="font-semibold text-slate-900">Area:</span> {areaLabel || "—"}
+                      <span className="font-semibold text-slate-900">Area:</span> {areaLabel || "-"}
                     </p>
                     {highlights.trim() ? (
                       <p className="mt-2 whitespace-pre-wrap">
@@ -369,8 +369,8 @@ export function FeedbackModal({ open, onClose, source = "header" }: FeedbackModa
                   <div className="grid gap-2">
                     {(
                       [
-                        { id: "yes" as const, label: "Yes — I would recommend it" },
-                        { id: "maybe" as const, label: "Maybe — depends" },
+                        { id: "yes" as const, label: "Yes - I would recommend it" },
+                        { id: "maybe" as const, label: "Maybe - depends" },
                         { id: "no" as const, label: "Not yet" },
                       ] as const
                     ).map((opt) => (

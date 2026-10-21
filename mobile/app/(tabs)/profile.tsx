@@ -211,7 +211,7 @@ export default function ProfileScreen() {
             Your Finkoin account
           </Text>
           <Text style={styles.gateSub}>
-            Same login as finkoin.com — email or Google.
+            Same login as finkoin.com - email or Google.
           </Text>
           <Button label="Log in" onPress={() => router.push("/(auth)/login")} />
           <Button
@@ -285,7 +285,7 @@ export default function ProfileScreen() {
           <View style={styles.statsRow}>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Health score</Text>
-              <Text style={styles.statValue}>{healthScore ?? "—"}</Text>
+              <Text style={styles.statValue}>{healthScore ?? "-"}</Text>
             </View>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>FK tokens</Text>

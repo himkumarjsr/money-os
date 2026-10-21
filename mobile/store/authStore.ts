@@ -238,7 +238,7 @@ export const useAuthStore = create<AuthState>()(
                     isLoading: false,
                     hasInitialized: true,
                   });
-                  // Deferred profile enrichment — outside the auth lock
+                  // Deferred profile enrichment - outside the auth lock
                   void get().refreshUser();
                 } else if (event === "SIGNED_OUT") {
                   set({
@@ -378,7 +378,7 @@ export const useAuthStore = create<AuthState>()(
             };
           }
 
-          // Apply immediately — do not wait on refreshUser network or auth lock
+          // Apply immediately - do not wait on refreshUser network or auth lock
           set({
             user: mapAuthUser(data.session.user),
             isLoggedIn: true,
@@ -472,7 +472,7 @@ export const useAuthStore = create<AuthState>()(
               Boolean(getGoogleWebClientId()),
             );
 
-            // 1) Preferred — Google ID token stays inside Expo (no finkoin.com)
+            // 1) Preferred - Google ID token stays inside Expo (no finkoin.com)
             const idTokenAttempt = await signInWithGoogleIdToken();
             if (!idTokenAttempt.skipped) {
               if (!idTokenAttempt.ok) {
@@ -500,7 +500,7 @@ export const useAuthStore = create<AuthState>()(
               return {};
             }
 
-            // 2) Fallback — Supabase OAuth with forced exp:// / finkoin:// return
+            // 2) Fallback - Supabase OAuth with forced exp:// / finkoin:// return
             const deepLinkPromise = waitForAuthDeepLink(60_000);
             const browser = await signInWithGoogleSupabaseBrowser();
 

@@ -1,4 +1,4 @@
-/** Illustrative helpers for tax calculator UI — not filing advice. */
+/** Illustrative helpers for tax calculator UI - not filing advice. */
 
 export type GratuityEmployer = "government" | "private";
 
@@ -21,7 +21,7 @@ export function gratuityTaxableExempt(
 export type LeaveEncashTiming = "retirement" | "during_service";
 export type LeaveEncashEmployer = "government" | "private";
 
-/** Highly simplified illustration — verify with employer / CA. */
+/** Highly simplified illustration - verify with employer / CA. */
 export function leaveEncashmentTaxableExemptIllustrative(
   received: number,
   timing: LeaveEncashTiming,
@@ -104,7 +104,7 @@ export function pensionAnnualFromMonthly(monthly: number): number {
   return Math.max(0, monthly) * 12;
 }
 
-/** Commuted pension exemption illustration — verify with Form 16. */
+/** Commuted pension exemption illustration - verify with Form 16. */
 export function commutedPensionExemptIllustrative(amount: number, kind: PensionKind): number {
   const a = Math.max(0, amount);
   if (kind === "government") return a;

@@ -20,7 +20,7 @@ export function Step2Income({ live }: Pick<StepProps, "live">) {
       ) : null}
       <MoneyField
         name="otherIncome"
-        label="Other income — freelance, rental, business"
+        label="Other income - freelance, rental, business"
       />
       <TotalPanel label="Total monthly income" amount={live.totalIncome} />
       {live.debtWarning ? <Note tone="red">{live.debtWarning}</Note> : null}

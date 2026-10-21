@@ -56,7 +56,7 @@ export const COMPLETE_ACTION =
 export const COMPLETE_WHY =
   "This bucket is already on track. Keep it funded and shift new surplus to the next gap.";
 
-/** A priority with nothing left to fund — its gap-based copy no longer applies. */
+/** A priority with nothing left to fund - its gap-based copy no longer applies. */
 export function isPriorityComplete(p: {
   gap?: unknown;
   monthlyContribution?: unknown;
@@ -71,7 +71,7 @@ export function isPriorityComplete(p: {
   return gap <= 0 || monthly <= 0 || p.status === "complete";
 }
 
-/** Engine numbers always win — AI/cache must not resurrect closed medical/emergency gaps. */
+/** Engine numbers always win - AI/cache must not resurrect closed medical/emergency gaps. */
 export function mergeEnginePriorityPlan(
   engine: any,
   overlay: any,
@@ -117,7 +117,7 @@ export function mergeEnginePriorityPlan(
           : match.whyThisMatters || p.whyThisMatters,
       };
     }),
-    // Deterministic allocation — never take AI/cache monthlyPlan
+    // Deterministic allocation - never take AI/cache monthlyPlan
     debts: engine.debts,
     goals: engine.goals,
     goalFunding: engine.goalFunding,
@@ -195,7 +195,7 @@ export function remainingBuffer(plan: any, steps: any[]): number {
   return Math.max(0, Math.round(Number(plan?.monthlySurplus || 0) - used));
 }
 
-/** Every priority that still needs money or a monthly contribution — rendered as a card on both platforms. */
+/** Every priority that still needs money or a monthly contribution - rendered as a card on both platforms. */
 export function openPriorities(plan: any) {
   return (plan?.priorities || []).filter(
     (p: any) =>
@@ -273,6 +273,6 @@ export function scoreProjectionGain(plan: any): number {
 /** Copy shown instead of "+0 pts"; only calls the score strong when it is in the good band. */
 export function noGainProjectionMessage(scoreToday: number): string {
   return scoreBand(scoreToday) === "good"
-    ? "Your score is already strong — keep it up."
+    ? "Your score is already strong - keep it up."
     : "This plan holds your score steady. Freeing up monthly surplus is what will move it up.";
 }

@@ -30,7 +30,7 @@ CRITICAL RULES:
 8. overallSummary MUST mention the user's actual monthly surplus, actual score, and top 2 specific issues with rupee amounts. NEVER invent gaps for priorities whose status is "complete" or gap is 0 (especially medical_fund / emergency_fund).
 9. thisWeekAction MUST be one specific action with an exact rupee amount or exact step.
 10. in12Months MUST describe the user's specific financial state in 12 months using their actual numbers.
-11. Goals in priorityPlan.goals are funded in parallel and explained separately per goal — do not write per-goal advice here. When a field mentions goals, use the exact monthlyAllocated figures and never imply only one goal is funded.`;
+11. Goals in priorityPlan.goals are funded in parallel and explained separately per goal - do not write per-goal advice here. When a field mentions goals, use the exact monthlyAllocated figures and never imply only one goal is funded.`;
 
 /**
  * Hourly AI budget per user, in model calls: a report costs 1 (main) + one per
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
   }
 
-  // Auth: this route triggers a paid third-party (Groq) call — require a
+  // Auth: this route triggers a paid third-party (Groq) call - require a
   // logged-in user and cap how often each user can invoke it.
   const user = await getAuthedUser();
   if (!user) {
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
       ? debtItems
           .map(
             (d: any) =>
-              `${d.displayName || d.type}: ₹${(d.outstanding || 0).toLocaleString("en-IN")} at ${d.rate || 0}% — EMI ₹${(d.emi || 0).toLocaleString("en-IN")}/month — extra EMI recommended ₹${(d.extraEMIRecommended || 0).toLocaleString("en-IN")} — ~${d.monthsToClearWithExtra || 0} months to clear with extra`,
+              `${d.displayName || d.type}: ₹${(d.outstanding || 0).toLocaleString("en-IN")} at ${d.rate || 0}% - EMI ₹${(d.emi || 0).toLocaleString("en-IN")}/month - extra EMI recommended ₹${(d.extraEMIRecommended || 0).toLocaleString("en-IN")} - ~${d.monthsToClearWithExtra || 0} months to clear with extra`,
           )
           .join("\n")
       : "No loans";
@@ -219,7 +219,7 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
     console.error("AI route error:", error.message);
 
     // Return fallback using code engine data
-    // User still gets a plan — just without
+    // User still gets a plan - just without
     // AI's personalised explanations
     if (priorityPlan) {
       const surplus = Math.round(
@@ -242,13 +242,13 @@ Return ONLY this JSON structure (priorityExplanations keys MUST match each item'
           ? priorityPlan.debts
               .map(
                 (d: any) =>
-                  `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")} at ${d.rate}% — EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo — add ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo extra — clear in ~${d.monthsToClearWithExtra || 0} months (interest saved vs minimum payments estimated from engine order).`,
+                  `${d.displayName || d.type}: outstanding ₹${Number(d.outstanding || 0).toLocaleString("en-IN")} at ${d.rate}% - EMI ₹${Number(d.emi || 0).toLocaleString("en-IN")}/mo - add ₹${Number(d.extraEMIRecommended || 0).toLocaleString("en-IN")}/mo extra - clear in ~${d.monthsToClearWithExtra || 0} months (interest saved vs minimum payments estimated from engine order).`,
               )
               .join(" ")
-          : "No loans in the plan — no extra EMI or interest-save timeline applies.";
+          : "No loans in the plan - no extra EMI or interest-save timeline applies.";
       const fallbackExplanations = {
         greeting: `Based on your financial profile, we have identified ${priorityPlan.priorities.filter((p: any) => p.status !== "complete").length} areas that need attention.`,
-        overallSummary: `Monthly surplus about ₹${surplus.toLocaleString("en-IN")} and score ${score}/100. ${issueLine || "Core buckets look funded — keep monitoring."}`,
+        overallSummary: `Monthly surplus about ₹${surplus.toLocaleString("en-IN")} and score ${score}/100. ${issueLine || "Core buckets look funded - keep monitoring."}`,
         priorityExplanations: Object.fromEntries(
           priorityPlan.priorities.map((p: any) => [
             p.id,

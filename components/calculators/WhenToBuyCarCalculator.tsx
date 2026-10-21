@@ -70,15 +70,15 @@ export function WhenToBuyCarCalculator() {
         />
         <ResultStat
           label="Months to save 20% down"
-          value={months === Infinity ? "—" : `${months} months`}
+          value={months === Infinity ? "-" : `${months} months`}
         />
       </div>
 
       <Insight tone={tone}>
         {!affordable
-          ? `Car price exceeds 6× salary (₹${Math.round(maxPrice).toLocaleString("en-IN")} cap) — downsize target.`
+          ? `Car price exceeds 6× salary (₹${Math.round(maxPrice).toLocaleString("en-IN")} cap) - downsize target.`
           : !saveOk
-            ? "At this savings pace, 20% down takes over 3 years — increase SIP or pick a lower segment."
+            ? "At this savings pace, 20% down takes over 3 years - increase SIP or pick a lower segment."
             : `Looks workable: ${months} months to 20% down while staying under the 6× salary guardrail.`}
       </Insight>
     </div>

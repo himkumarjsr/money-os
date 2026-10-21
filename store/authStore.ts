@@ -58,7 +58,7 @@ const AUTH_PERSIST_KEY = "finkoin-auth";
 
 /**
  * Read persisted login from localStorage.
- * Must NOT be applied during store module init — that diverges SSR vs client and
+ * Must NOT be applied during store module init - that diverges SSR vs client and
  * causes React hydration mismatches. Apply via `applyPersistedAuthBootstrap()`
  * in a client useLayoutEffect (before paint) instead.
  */
@@ -454,7 +454,7 @@ export const useAuthStore = create<AuthState>()(
             await get().refreshUser({ clearOnMissingSession: true });
             set({ hasInitialized: true, isLoading: false });
           } else if (hadPersistedLogin) {
-            // Confirmed no live session — clear stale persist.
+            // Confirmed no live session - clear stale persist.
             clearLoggedOutState(set);
           } else {
             set({
@@ -470,7 +470,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (!authListenerStarted) {
             authListenerStarted = true;
-            // Sync callback only — never await auth APIs inside onAuthStateChange
+            // Sync callback only - never await auth APIs inside onAuthStateChange
             // (can deadlock after idle tab resume / token refresh).
             supabase.auth.onAuthStateChange((event, sess) => {
               console.log("Auth event:", event);

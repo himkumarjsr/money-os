@@ -136,7 +136,7 @@ interface ObligationState {
    * Keeps this month's paid ✓ history; drops pending/skipped + future months.
    */
   closeObligation: (id: string, month?: Date) => Promise<boolean>;
-  /** @deprecated Prefer closeObligation — same soft-deactivate path. */
+  /** @deprecated Prefer closeObligation - same soft-deactivate path. */
   deleteObligation: (id: string, month?: Date) => Promise<void>;
   markPaid: (checklistId: string, amount: number) => Promise<void>;
   markUnpaid: (checklistId: string) => Promise<void>;
@@ -412,7 +412,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
         // Keep closed (is_active=false) rows for this month so they can show struck-out.
         // Drop orphan rows with no joined obligation.
         .filter((c) => c.obligation != null)
-        // Credit card bills belong in Credit card dues — never the checklist.
+        // Credit card bills belong in Credit card dues - never the checklist.
         .filter((c) => (c.obligation?.category || "") !== "credit_card");
 
       // Heal stale expected_amount so UI + amount-match stay aligned after edits.
@@ -503,7 +503,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     const { error } = await withEndMonthFallback(
       {
         ...data,
-        // Manual edit wins over analyse sync — don't let health-check overwrite.
+        // Manual edit wins over analyse sync - don't let health-check overwrite.
         source: "manual",
         updated_at: new Date().toISOString(),
       },
@@ -570,7 +570,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
       get().obligations.find((o) => o.id === id) ??
       get().checklist.find((c) => c.obligation_id === id)?.obligation;
 
-    // Stop forever — generate_monthly_checklist only picks is_active = true,
+    // Stop forever - generate_monthly_checklist only picks is_active = true,
     // so next months never get a new row.
     const { error } = await supabase
       .from("financial_obligations")
@@ -687,7 +687,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
 
   resetAllObligations: async (userId) => {
     const supabase = getSupabase();
-    // Checklist first (FK), then obligations — hard delete from DB
+    // Checklist first (FK), then obligations - hard delete from DB
     const { error: checklistErr } = await supabase
       .from("obligation_checklist")
       .delete()
@@ -920,7 +920,7 @@ export const useObligationStore = create<ObligationState>((set, get) => ({
     }
 
     // Insert missing analyse-derived rows only. Never overwrite / reactivate
-    // existing rows — closed (is_active=false) EMIs must stay closed so they
+    // existing rows - closed (is_active=false) EMIs must stay closed so they
     // never reappear next month after a health-check sync.
     for (const ob of obligations) {
       const { error } = await supabase.from("financial_obligations").upsert(

@@ -155,7 +155,7 @@ export function PolicyCard({
             </Text>
           </View>
           <Text style={styles.insurer}>
-            {p.insurerName || (p.analyseSourceKey ? "Insurer not added" : "—")}
+            {p.insurerName || (p.analyseSourceKey ? "Insurer not added" : "-")}
           </Text>
           <Text style={styles.plan}>
             {p.planName?.trim() || "Plan not specified"}

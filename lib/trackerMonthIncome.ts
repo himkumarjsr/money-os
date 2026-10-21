@@ -79,7 +79,7 @@ export function sumSalaryIncome(txns: IncomeLikeTxn[]): number {
   }, 0);
 }
 
-/** Main salary figure for the month (largest salary row — avoids summing dupes). */
+/** Main salary figure for the month (largest salary row - avoids summing dupes). */
 export function primarySalaryAmount(txns: IncomeLikeTxn[]): number {
   let max = 0;
   for (const t of txns) {
@@ -200,7 +200,7 @@ export function planMonthIncomeFromPrior(opts: {
   const savingsAmount =
     prevPocket > 0 ? computeMonthLeftover(prevPocket, opts.previousTxns) : 0;
 
-  // Copy last month's main salary only — never treat other-income / CF as salary.
+  // Copy last month's main salary only - never treat other-income / CF as salary.
   const salaryAmount =
     prevPrimarySalary > 0 ? prevPrimarySalary : Math.max(0, opts.profileSalary);
 

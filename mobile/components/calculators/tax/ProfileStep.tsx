@@ -21,7 +21,7 @@ export function ProfileStep({ s }: { s: TaxCalcState }) {
             Work / income style
           </Text>
           <Text style={[tx.hint, { marginBottom: 8 }]}>
-            Pick all that apply — you can have more than one source of income.
+            Pick all that apply - you can have more than one source of income.
           </Text>
           <ChipRow>
             {EMPLOYMENT_OPTIONS.map((opt) => (
@@ -77,7 +77,7 @@ export function ProfileStep({ s }: { s: TaxCalcState }) {
             accessibilityLabel="Age"
           />
           <Text style={[tx.hint, styles.ageText]}>
-            {i.age} yrs —{" "}
+            {i.age} yrs -{" "}
             {i.age >= 80
               ? "super senior"
               : i.age >= 60

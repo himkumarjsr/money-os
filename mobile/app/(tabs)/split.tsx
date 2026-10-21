@@ -1,5 +1,5 @@
 /**
- * FK Split — groups list (PWA `/split`).
+ * FK Split - groups list (PWA `/split`).
  * Logged-out: marketing landing (PWA SplitMarketingLanding).
  * Logged-in: groups list + create / invite / join sheets.
  */

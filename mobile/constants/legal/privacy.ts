@@ -8,7 +8,7 @@ export const PRIVACY_POLICY: LegalDoc = {
   meta: "Last updated: May 1, 2026 · Effective: May 1, 2026",
   summary: {
     tone: "violet",
-    text: "**Plain language summary:** Finkoin collects only financial numbers — your income, expenses, loans, and savings amounts. We never ask for PAN, Aadhaar, bank account numbers, or passwords. Your data is encrypted, never sold, and you can delete it anytime.",
+    text: "**Plain language summary:** Finkoin collects only financial numbers - your income, expenses, loans, and savings amounts. We never ask for PAN, Aadhaar, bank account numbers, or passwords. Your data is encrypted, never sold, and you can delete it anytime.",
   },
   headingStyle: "underlined",
   sections: [
@@ -81,7 +81,7 @@ export const PRIVACY_POLICY: LegalDoc = {
           items: [
             "Calculate your financial health score and analysis",
             "Generate your personalised financial plan",
-            "Share with our AI system (Groq) to generate personalised explanations — only financial numbers, never identity data",
+            "Share with our AI system (Groq) to generate personalised explanations - only financial numbers, never identity data",
             "Send you important account notifications and updates",
             "Process payments for paid features",
             "Improve our product and fix bugs",
@@ -105,7 +105,7 @@ export const PRIVACY_POLICY: LegalDoc = {
           kind: "ul",
           items: [
             "Your financial numbers are sent to Groq AI (a US-based AI service) to generate personalised explanations.",
-            "Only numerical financial data is shared — never your name, email, PAN, Aadhaar, or any identity information.",
+            "Only numerical financial data is shared - never your name, email, PAN, Aadhaar, or any identity information.",
             "Groq processes data under their privacy policy available at [groq.com/privacy](https://groq.com/privacy).",
             "AI-generated content is for educational purposes only and does not constitute SEBI-registered investment advice.",
           ],
@@ -122,7 +122,7 @@ export const PRIVACY_POLICY: LegalDoc = {
         {
           kind: "ul",
           items: [
-            "**Database:** Supabase (PostgreSQL) hosted on AWS Singapore region — data stays within Asia Pacific.",
+            "**Database:** Supabase (PostgreSQL) hosted on AWS Singapore region - data stays within Asia Pacific.",
             "**Encryption at rest:** All data is encrypted using AES-256 encryption.",
             "**Encryption in transit:** All connections use TLS 1.3 / HTTPS.",
             "**Authentication:** Secure JWT tokens with automatic expiry and refresh rotation.",

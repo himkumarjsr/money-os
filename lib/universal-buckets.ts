@@ -374,7 +374,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
   const wantsActual = lifestyleActual;
 
   // Security = insurance premiums only (health + term + motor + other policies).
-  // NOT EPF/PF/NPS or SSY — those belong in the investment bucket as monthly contributions.
+  // NOT EPF/PF/NPS or SSY - those belong in the investment bucket as monthly contributions.
   const securityActual =
     healthPremiumMonthly(data) +
     termPremiumMonthly(data) +
@@ -414,7 +414,7 @@ export function getUniversalBucketActuals(data: BucketProfileInput) {
     n(data.creditCardEmiMonthly) +
     additionalEmiTotal;
 
-  // MONTHLY CONTRIBUTIONS ONLY — SIP, RD, NPS, PPF, EPF (employee), SSY,
+  // MONTHLY CONTRIBUTIONS ONLY - SIP, RD, NPS, PPF, EPF (employee), SSY,
   // LIC / endowment premiums marked as investment + custom.
   const customMonthly = (data.customInvestments ?? []).reduce(
     (sum, row) => sum + n(row.monthlyContribution),
@@ -476,7 +476,7 @@ export function getUniversalBucketRows(
 }
 
 /**
- * Employee EPF is deducted at source — it is not paid from in-hand salary.
+ * Employee EPF is deducted at source - it is not paid from in-hand salary.
  * Keep it in the Investment bucket for savings-rate tracking, but exclude it
  * when computing surplus / unallocated cash.
  */

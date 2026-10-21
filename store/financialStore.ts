@@ -95,7 +95,7 @@ type FinancialState = {
   runAnalysis: () => void;
   clearSubmission: () => void;
   resetAll: () => void;
-  /** Alias for `resetAll()` — clears persisted analyse draft + result snapshot keys used by the form. */
+  /** Alias for `resetAll()` - clears persisted analyse draft + result snapshot keys used by the form. */
   resetStore: () => void;
   setHasHydrated: (value: boolean) => void;
 };

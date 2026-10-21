@@ -37,7 +37,7 @@ export function FixPlanHero({
       </Text>
       <Text style={styles.badge}>
         {isFallback
-          ? "ℹ️ Showing estimated plan — AI analysis will load shortly"
+          ? "ℹ️ Showing estimated plan - AI analysis will load shortly"
           : "✓ AI personalised analysis"}
       </Text>
       {refreshNotice ? (

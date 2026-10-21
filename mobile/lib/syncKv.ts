@@ -31,7 +31,7 @@ export function hydrateSyncKv(): Promise<void> {
         if (v != null && !memory.has(k)) memory.set(k, v);
       }
     } catch {
-      /* storage unavailable — memory-only for this session */
+      /* storage unavailable - memory-only for this session */
     }
     for (const k of SECURE_KEYS) {
       // appStorage also moves any legacy plaintext copy into SecureStore.

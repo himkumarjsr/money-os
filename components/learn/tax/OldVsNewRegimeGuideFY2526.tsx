@@ -126,7 +126,7 @@ export default function OldVsNewRegimeGuideFY2526() {
 
         <Section
           id="comparison"
-          title="Old vs new regime — side-by-side comparison"
+          title="Old vs new regime - side-by-side comparison"
         >
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
@@ -192,7 +192,7 @@ export default function OldVsNewRegimeGuideFY2526() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-900">
-                ₹10L salary — common pivot point
+                ₹10L salary - common pivot point
               </div>
               <p className="mt-2 text-sm text-slate-700">
                 If you claim HRA + 80C + 80D (and/or home loan interest), old

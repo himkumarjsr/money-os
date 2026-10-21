@@ -1,5 +1,5 @@
 /**
- * Compare insurance plans — port of web app/insurance/page.tsx. The policy
+ * Compare insurance plans - port of web app/insurance/page.tsx. The policy
  * vault stores a prefill for the comparison hub; here it's read from the
  * same `finkoin_compare_prefill` key (syncKv stands in for sessionStorage).
  */
@@ -45,10 +45,10 @@ export default function InsuranceCompareScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Pre-filled from your policy</Text>
             <View style={{ marginTop: 12, gap: 4 }}>
-              <Row label="Insurer:" value={prefill.insurerName ?? "—"} />
+              <Row label="Insurer:" value={prefill.insurerName ?? "-"} />
               <Row
                 label="Type:"
-                value={prefill.policyType?.replace(/_/g, " ") ?? "—"}
+                value={prefill.policyType?.replace(/_/g, " ") ?? "-"}
               />
               {prefill.planName ? (
                 <Row label="Plan:" value={prefill.planName} />
@@ -58,7 +58,7 @@ export default function InsuranceCompareScreen() {
                 value={
                   prefill.coverAmount != null
                     ? prefill.coverAmount.toLocaleString("en-IN")
-                    : "—"
+                    : "-"
                 }
               />
               <Row
@@ -66,7 +66,7 @@ export default function InsuranceCompareScreen() {
                 value={
                   prefill.premiumAmount != null
                     ? `₹${prefill.premiumAmount.toLocaleString("en-IN")} / ${prefill.premiumFrequency ?? "month"}`
-                    : "—"
+                    : "-"
                 }
               />
             </View>

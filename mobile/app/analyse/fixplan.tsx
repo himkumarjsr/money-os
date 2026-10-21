@@ -1,5 +1,5 @@
 /**
- * Fix Plan — port of web app/analyse/fixplan/page.tsx.
+ * Fix Plan - port of web app/analyse/fixplan/page.tsx.
  * Engine plan merged with the /api/ai/analyse overlay (engine numbers win).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";

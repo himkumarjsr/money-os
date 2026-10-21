@@ -6,7 +6,8 @@ import NotificationBell from "@/components/NotificationBell";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { CalculatorsNavMenu } from "@/components/CalculatorsNavMenu";
-import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import { AppIcon } from "@/components/ui/AppIcon";
+import { ACCOUNT_MENU_ITEMS } from "@/lib/accountNav";
 import { fadeIn } from "@/lib/animations";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
 import { trackNavClick } from "@/lib/gtag";
@@ -210,7 +211,7 @@ export function GlobalNavbar() {
         className="relative sticky top-0 z-50 w-full"
         style={{ paddingTop: "max(4px, env(safe-area-inset-top))" }}
       >
-        {/* Soft wash only — no border, shadow, or hard bottom edge */}
+        {/* Soft wash only - no border, shadow, or hard bottom edge */}
         <div
           aria-hidden
           className="fk-nav-wash pointer-events-none absolute inset-x-0 top-0 h-[88px] transition-opacity duration-300"
@@ -228,10 +229,10 @@ export function GlobalNavbar() {
         />
         <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
           <Link
-            href="/"
+            href={showAsLoggedIn ? "/dashboard" : "/"}
             scroll
             className="flex min-w-0 items-center gap-2 sm:gap-2.5"
-            aria-label="Finkoin home"
+            aria-label={showAsLoggedIn ? "Finkoin dashboard" : "Finkoin home"}
           >
             <BrandCoin size={32} decorative gold={isPremium} />
             <span className="fk-brand-name truncate text-[18px] font-bold tracking-[-0.5px] text-[#534AB7] sm:text-[20px]">
@@ -422,22 +423,7 @@ export function GlobalNavbar() {
 
               <div className="my-3 border-t border-[#F0EFF8]" />
               <nav className="space-y-1 text-sm">
-                {(
-                  [
-                    ["user", "My Profile", "/profile"],
-                    ["notebook", "Expense Tracker", "/tracker"],
-                    ["calendar", "Bills & renewals", "/bills"],
-                    ["users", "FK Split", "/split"],
-                    ["chart", "My Analysis", "/analyse/result"],
-                    ["shield", "My Policies", "/policies"],
-                    ["target", "My Goals", "/goals"],
-                    ["trending", "My Investments", "/investments"],
-                    ["trophy", "Leaderboard", "/leaderboard"],
-                    ["gift", "Rewards", "/rewards"],
-                    ["users", "Refer & Earn", "/refer"],
-                    ["settings", "Settings", "/settings"],
-                  ] as [AppIconName, string, string][]
-                ).map(([icon, label, href]) => (
+                {ACCOUNT_MENU_ITEMS.map(({ icon, label, href }) => (
                   <button
                     key={label}
                     type="button"
@@ -680,7 +666,7 @@ export function GlobalNavbar() {
                   activeBottomNav === "calculators" ? "page" : undefined
                 }
                 onClick={(e) => {
-                  // Always land on the hub list — never keep a deep-linked SIP/EMI sheet open.
+                  // Always land on the hub list - never keep a deep-linked SIP/EMI sheet open.
                   const path = pathname ?? "";
                   if (
                     path === "/calculators" ||

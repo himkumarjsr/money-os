@@ -1,4 +1,4 @@
-/** Whole rupees, Indian grouping — no decimals. */
+/** Whole rupees, Indian grouping - no decimals. */
 export function fmt(n: number): string {
   return "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
 }

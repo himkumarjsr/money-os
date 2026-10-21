@@ -1,5 +1,5 @@
 /**
- * Native Legal pages — port of web app/legal/{privacy,terms,refund,disclaimer,delete-account}.
+ * Native Legal pages - port of web app/legal/{privacy,terms,refund,disclaimer,delete-account}.
  * Content lives in constants/legal/*.
  */
 import { useState } from "react";

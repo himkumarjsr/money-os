@@ -3,7 +3,7 @@ import Link from "next/link";
 const FAQS = [
   {
     q: "What is Finkoin Split?",
-    a: "A free expense-splitting app for friends, roommates, and trips in India. Create a group, add spends, and see who owes whom — clearly.",
+    a: "A free expense-splitting app for friends, roommates, and trips in India. Create a group, add spends, and see who owes whom - clearly.",
   },
   {
     q: "Is Finkoin Split a Splitwise alternative?",
@@ -22,7 +22,7 @@ const FAQS = [
 const FEATURES = [
   {
     t: "Groups for trips & flatmates",
-    d: "One space per trip, PG, or friend circle — keep balances tidy.",
+    d: "One space per trip, PG, or friend circle - keep balances tidy.",
   },
   {
     t: "Add expenses in seconds",
@@ -58,10 +58,10 @@ export default function SplitMarketingLanding() {
           Finkoin Split
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight text-[#1a1824] sm:text-5xl sm:leading-[1.1]">
-          Split expenses with friends — simply
+          Split expenses with friends - simply
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-          Free group expense tracker for India. Trips, flatmates, dinners —
+          Free group expense tracker for India. Trips, flatmates, dinners -
           track who paid, who owes, and settle without awkward maths. A clean
           Splitwise-style alternative.
         </p>
@@ -114,7 +114,7 @@ export default function SplitMarketingLanding() {
             {
               n: "2",
               t: "Invite friends",
-              d: "Share a link — they join and can add expenses too.",
+              d: "Share a link - they join and can add expenses too.",
             },
             {
               n: "3",

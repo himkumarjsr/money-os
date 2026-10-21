@@ -1,5 +1,5 @@
 /**
- * Group detail — PWA `/split/[groupId]` parity.
+ * Group detail - PWA `/split/[groupId]` parity.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -335,7 +335,7 @@ export default function GroupDetailScreen() {
       setInviteMsg(
         res.emailError
           ? `${res.emailError} Share the link below instead:`
-          : "Email not sent — share the link below:",
+          : "Email not sent - share the link below:",
       );
     } else {
       setInviteMsg("Invite created.");

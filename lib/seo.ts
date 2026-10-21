@@ -2,7 +2,7 @@ export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.finkoin.com"
 ).replace(/\/+$/, "");
 
-/** Primary product tagline — use in meta, OG, and hero copy. */
+/** Primary product tagline - use in meta, OG, and hero copy. */
 export const FINKOIN_TAGLINE = "Know it. Fix it. Grow it.";
 export const FINKOIN_TAGLINE_SUB = "Your complete money life.";
 export const FINKOIN_TAGLINE_FULL = `${FINKOIN_TAGLINE} ${FINKOIN_TAGLINE_SUB}`;
@@ -154,7 +154,7 @@ export function pageMetadata(opts: {
 export const SEO_CONFIG = {
   siteName: "Finkoin",
   siteUrl: SITE_URL,
-  defaultTitle: "Finkoin — Free Personal Finance App for India",
+  defaultTitle: "Finkoin - Free Personal Finance App for India",
   defaultDescription:
     "Free financial health check, SIP, tax and EMI calculators, expense tracker and bill splitting for India. Know it. Fix it. Grow it. No PAN needed.",
   defaultKeywords: [
@@ -195,7 +195,7 @@ export const SEO_CONFIG = {
 };
 
 type PageMetaOptions = {
-  /** Path starting with / — merged with SITE_URL for OG absolute URLs */
+  /** Path starting with / - merged with SITE_URL for OG absolute URLs */
   canonicalPath?: string;
   /** Use full title string without appending "| Finkoin" (respects root title.template as absolute) */
   titleMode?: "template" | "absolute";

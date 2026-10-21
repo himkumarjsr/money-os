@@ -5,7 +5,7 @@ export function validatePAN(pan: string): boolean {
 
 /**
  * Client-side check only: valid Indian PAN pattern (ABCDE1234F).
- * Does not call NSDL/income-tax APIs — those require authorised integrations.
+ * Does not call NSDL/income-tax APIs - those require authorised integrations.
  */
 export async function verifyPAN(
   pan: string,
@@ -23,7 +23,7 @@ export async function verifyPAN(
   return {
     verified: true,
     message:
-      "PAN format looks valid. We don’t verify against the income-tax database yet — full KYC checks will come when we plug in an authorised API.",
+      "PAN format looks valid. We don’t verify against the income-tax database yet - full KYC checks will come when we plug in an authorised API.",
   };
 }
 
