@@ -11,7 +11,11 @@ import {
   LONG_RUN_INFLATION,
   projectRetirementAccounts,
 } from "@/lib/financialEngine";
-import { detectGoals, type DetectedGoal, type GoalType } from "@/lib/goalDetection";
+import {
+  detectGoals,
+  type DetectedGoal,
+  type GoalType,
+} from "@/lib/goalDetection";
 import {
   allocateGoalPortfolio,
   allocationSummary,
@@ -20,7 +24,7 @@ import {
   type GoalHorizon,
   type PortfolioAllocation,
 } from "@/lib/portfolioAllocation";
-import { monthlySipForGoal } from "@/lib/sipGoal";
+import { monthlyStepUpSipForGoal } from "@/lib/sipGoal";
 
 /** Each funded goal gets at least this share of the pool (or its full need, if smaller). */
 export const GOAL_FLOOR_SHARE = 0.05;
@@ -30,7 +34,10 @@ export const PRIMARY_GOAL_BOOST = 1.5;
 export { goalHorizon, type GoalHorizon };
 
 /** Nominal expected return per horizon bucket (instrument split: portfolioAllocation). */
-export const HORIZON_ASSUMPTIONS: Record<GoalHorizon, { nominalReturn: number }> = {
+export const HORIZON_ASSUMPTIONS: Record<
+  GoalHorizon,
+  { nominalReturn: number }
+> = {
   "0-1y": { nominalReturn: 0.065 },
   "1-3y": { nominalReturn: 0.07 },
   "3-7y": { nominalReturn: 0.1 },
@@ -59,6 +66,17 @@ export function liquidNetWorth(profile: FinancialProfile): number {
 
 const realReturnPct = (nominal: number) =>
   ((1 + nominal) / (1 + LONG_RUN_INFLATION) - 1) * 100;
+
+/**
+ * Yearly SIP step-up in today's rupees: the salary hike the user expects,
+ * less inflation (goal amounts are already in today's rupees). 0 when the
+ * hike is unknown or does not beat inflation.
+ */
+export function realSalaryStepUpPct(profile: FinancialProfile): number {
+  const hike = Number(profile.annualSalaryIncreasePct);
+  if (!Number.isFinite(hike) || hike <= 0) return 0;
+  return Math.max(0, ((1 + hike / 100) / (1 + LONG_RUN_INFLATION) - 1) * 100);
+}
 
 const PRIMARY_GOAL_TYPES: Record<string, GoalType[]> = {
   buy_home: ["home_purchase"],
@@ -158,7 +176,9 @@ export function allocateGoalSurplus(
 /** Whole rupees that sum to the rounded total (largest remainder), so shares never overshoot the pool. */
 function roundPreservingTotal(values: number[]): number[] {
   const floors = values.map((v) => Math.floor(v));
-  let left = Math.round(values.reduce((s, v) => s + v, 0)) - floors.reduce((s, v) => s + v, 0);
+  let left =
+    Math.round(values.reduce((s, v) => s + v, 0)) -
+    floors.reduce((s, v) => s + v, 0);
   const order = values
     .map((v, i) => ({ i, frac: v - Math.floor(v) }))
     .sort((a, b) => b.frac - a.frac);
@@ -175,7 +195,9 @@ function retirementNeed(
   goal: DetectedGoal,
 ): { currentSaved: number; monthlyRequired: number } {
   const equity = existingEquityValue(profile);
-  const realEquityReturn = realReturnPct(HORIZON_ASSUMPTIONS["7y+"].nominalReturn);
+  const realEquityReturn = realReturnPct(
+    HORIZON_ASSUMPTIONS["7y+"].nominalReturn,
+  );
   // Today's equity compounds to retirement like EPF/PPF/NPS do (real terms).
   const projectedEquity =
     equity * Math.pow(1 + realEquityReturn / 100, goal.yearsToGoal);
@@ -190,7 +212,12 @@ function retirementNeed(
         (profile.ppfBalance || 0) +
         (profile.npsBalance || 0),
     ),
-    monthlyRequired: monthlySipForGoal(gap, realEquityReturn, goal.yearsToGoal),
+    monthlyRequired: monthlyStepUpSipForGoal(
+      gap,
+      realEquityReturn,
+      goal.yearsToGoal,
+      realSalaryStepUpPct(profile),
+    ),
   };
 }
 
@@ -203,9 +230,11 @@ export function buildGoalFundingPlan(
   const realEstateEligible =
     !!opts.safetyNetComplete &&
     liquidNetWorth(profile) >= REAL_ESTATE_LIQUID_NET_WORTH;
-  const primaryTypes = PRIMARY_GOAL_TYPES[String(profile.primaryGoal ?? "")] ?? [];
+  const primaryTypes =
+    PRIMARY_GOAL_TYPES[String(profile.primaryGoal ?? "")] ?? [];
   // Debt-free is funded by the EMIs already in the loans bucket, not the goal pool.
   const goals = detectGoals(profile, now).filter((g) => g.type !== "debt_free");
+  const stepUpPct = realSalaryStepUpPct(profile);
 
   const sized = goals.map((g) => {
     const horizon = goalHorizon(g.yearsToGoal);
@@ -214,10 +243,11 @@ export function buildGoalFundingPlan(
         ? retirementNeed(profile, g)
         : {
             currentSaved: 0,
-            monthlyRequired: monthlySipForGoal(
+            monthlyRequired: monthlyStepUpSipForGoal(
               g.targetAmount,
               realReturnPct(HORIZON_ASSUMPTIONS[horizon].nominalReturn),
               g.yearsToGoal,
+              stepUpPct,
             ),
           };
     return {
@@ -262,10 +292,14 @@ export function buildGoalFundingPlan(
       currentSaved: s.currentSaved,
       monthlyRequired: s.monthlyRequired,
       monthlyAllocated,
-      sharePct: safePool > 0 ? Math.round((monthlyAllocated / safePool) * 100) : 0,
+      sharePct:
+        safePool > 0 ? Math.round((monthlyAllocated / safePool) * 100) : 0,
       fundedPct:
         s.monthlyRequired > 0
-          ? Math.min(100, Math.round((monthlyAllocated / s.monthlyRequired) * 100))
+          ? Math.min(
+              100,
+              Math.round((monthlyAllocated / s.monthlyRequired) * 100),
+            )
           : 100,
       instrument: allocationSummary(allocation),
       allocation,
@@ -273,7 +307,8 @@ export function buildGoalFundingPlan(
     };
   });
   items.sort(
-    (a, b) => b.monthlyAllocated - a.monthlyAllocated || a.yearsToGoal - b.yearsToGoal,
+    (a, b) =>
+      b.monthlyAllocated - a.monthlyAllocated || a.yearsToGoal - b.yearsToGoal,
   );
 
   const totalRequired = items.reduce((s, i) => s + i.monthlyRequired, 0);

@@ -49,7 +49,7 @@ import {
   msUntilNextLocalMidnight,
 } from "@/lib/localDate";
 import { getSupabase } from "@/lib/supabase";
-import { getProfileMonthlySalaryCached } from "@/lib/trackerProfileIncome";
+import { getProfileIncomeCached } from "@/lib/trackerProfileIncome";
 import {
   computeMonthSafetyPulse,
   previousCalendarMonth,
@@ -79,6 +79,7 @@ import {
 import {
   EXPENSE_SUBCATEGORY_TO_OBLIGATION,
   SAVINGS_CARRY_FORWARD_DESC,
+  PROFILE_OTHER_INCOME_DESC,
   listSavingsCarryForward,
   monthHasStarted,
   planAutoIncomeCleanup,
@@ -394,6 +395,7 @@ function TrackerContent() {
     year: number;
   } | null>(null);
   const [profileMonthlyFromDb, setProfileMonthlyFromDb] = useState(0);
+  const [profileOtherIncome, setProfileOtherIncome] = useState(0);
   /** Summary-card eye only (180° flip). Each Income/bucket section has its own eye. */
   const [amountsVisible, setAmountsVisible] = useState(false);
   const [sectionAmountsVisible, setSectionAmountsVisible] = useState<
@@ -863,8 +865,10 @@ function TrackerContent() {
     let cancelled = false;
     const supabase = getSupabase();
     void (async () => {
-      const v = await getProfileMonthlySalaryCached(supabase, user.id);
-      if (!cancelled) setProfileMonthlyFromDb(v);
+      const v = await getProfileIncomeCached(supabase, user.id);
+      if (cancelled) return;
+      setProfileMonthlyFromDb(v.salary);
+      setProfileOtherIncome(v.otherIncome);
     })();
     return () => {
       cancelled = true;
@@ -1047,6 +1051,7 @@ function TrackerContent() {
       currentTxns: transactions,
       profileSalary: profileMonthlyFromDb,
       previousCarryForward: prevCarryForward,
+      profileOtherIncome,
     });
     const cleanupPreview = planAutoIncomeCleanup({
       currentTxns: transactions,
@@ -1056,12 +1061,13 @@ function TrackerContent() {
     if (
       !plan.needsSalaryRow &&
       !plan.needsSavingsRow &&
+      !plan.needsOtherIncomeRow &&
       !cleanupPreview.needsWork
     ) {
       return;
     }
 
-    const key = `${user.id}:${selectedYear}-${selectedMonth}:sal${plan.needsSalaryRow}:cf${plan.needsSavingsRow}:clean${cleanupPreview.dropIds.join(",")}:${cleanupPreview.updateCf?.amount ?? ""}:${plan.salaryAmount}:${plan.savingsAmount}`;
+    const key = `${user.id}:${selectedYear}-${selectedMonth}:sal${plan.needsSalaryRow}:cf${plan.needsSavingsRow}:oi${plan.needsOtherIncomeRow}:clean${cleanupPreview.dropIds.join(",")}:${cleanupPreview.updateCf?.amount ?? ""}:${plan.salaryAmount}:${plan.savingsAmount}`;
     if (incomeSyncKeyRef.current === key) return;
     incomeSyncKeyRef.current = key;
 
@@ -1099,6 +1105,7 @@ function TrackerContent() {
           currentTxns: freshRows,
           profileSalary: profileMonthlyFromDb,
           previousCarryForward: prevCarryForward,
+          profileOtherIncome,
         });
         const cleanup = planAutoIncomeCleanup({
           currentTxns: freshRows,
@@ -1135,6 +1142,7 @@ function TrackerContent() {
           ),
           profileSalary: profileMonthlyFromDb,
           previousCarryForward: prevCarryForward,
+          profileOtherIncome,
         });
 
         const rows: Array<Record<string, unknown>> = [];
@@ -1160,6 +1168,20 @@ function TrackerContent() {
             category: "other_income",
             subcategory: "other_income",
             description: SAVINGS_CARRY_FORWARD_DESC,
+            bucket: "income",
+            payment_method: null,
+            month: monthName,
+            year: selectedYear,
+          });
+        }
+        if (afterPlan.needsOtherIncomeRow) {
+          rows.push({
+            user_id: user.id,
+            date,
+            amount: afterPlan.otherIncomeAmount,
+            category: "other_income",
+            subcategory: "other_income",
+            description: PROFILE_OTHER_INCOME_DESC,
             bucket: "income",
             payment_method: null,
             month: monthName,
@@ -1206,6 +1228,7 @@ function TrackerContent() {
     prevCarryForward,
     transactions,
     profileMonthlyFromDb,
+    profileOtherIncome,
     fetchTransactions,
     trackerStart,
   ]);
@@ -1366,12 +1389,13 @@ function TrackerContent() {
     currentTxns: transactions,
     profileSalary: profileMonthlyFromDb,
     previousCarryForward: prevCarryForward,
+    profileOtherIncome,
   });
   // Purple + Income use the same total (logged + any planned carry-forward).
   const displayIncome =
     incomePlan.displayTotal > 0
       ? incomePlan.displayTotal
-      : monthlyIncome || profileMonthlyFromDb;
+      : monthlyIncome || profileMonthlyFromDb + profileOtherIncome;
 
   // Lower Needs / Wants when the last 3 months stayed under them; the freed
   // share goes to Investment. A budget never drops below the monthly amount

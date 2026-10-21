@@ -37,6 +37,7 @@ import {
   step5Schema,
   step6Schema,
   step7Schema,
+  toMonthlyEquivalent,
   type AnalyseFormValues,
   type AnalyseSubmitIssue,
   type FinancialProfile,
@@ -996,9 +997,19 @@ export function AnalyseOnboardingForm() {
           watchedValues.shopping,
           watchedValues.personalCare,
         ]),
+    toMonthlyEquivalent(
+      watchedValues.travelInput,
+      watchedValues.travelFrequency,
+    ),
     lifeStage === "kids" ? watchedValues.kidsSchoolFees : 0,
     lifeStage === "kids" ? watchedValues.kidsActivities : 0,
     watchedValues.parentsSupport,
+    parentsSupport > 0 && hasParentsInsurance
+      ? toMonthlyEquivalent(
+          watchedValues.parentsHealthInsurancePremiumInput,
+          watchedValues.parentsHealthInsurancePremiumFrequency,
+        )
+      : 0,
   ]);
   const emergencyMonthsNeeded = emergencyFundMonthsNeeded(watchedValues);
   const emergencyFundSuggestion = computeEmergencyFundSuggestion(
@@ -2003,6 +2014,22 @@ export function AnalyseOnboardingForm() {
                       error={errors.otherIncome?.message}
                       {...bindMoneyField("otherIncome")}
                     />
+                    <NumberInput
+                      label="Expected yearly salary increase"
+                      error={errors.annualSalaryIncreasePct?.message}
+                      value={watch("annualSalaryIncreasePct") || 0}
+                      onChange={(val: number) =>
+                        setValue("annualSalaryIncreasePct", val, {
+                          shouldDirty: true,
+                        })
+                      }
+                      suffix="%"
+                      placeholder="e.g. 8"
+                      min={0}
+                      max={50}
+                      step={0.5}
+                      helper="Optional. Your goal SIPs can grow with your salary, so the starting amount is lower."
+                    />
                     <div className="mt-4 flex items-center justify-between rounded-[10px] bg-[#EEEDFE] px-4 py-3">
                       <span className="text-sm font-medium text-[#3C3489]">
                         Total monthly income
@@ -2756,6 +2783,23 @@ export function AnalyseOnboardingForm() {
                           error={errors.lifestyleTotal?.message}
                           {...bindMoneyField("lifestyleTotal")}
                         />
+                        <PremiumField
+                          inputId="travelInput"
+                          label="Travel and holidays"
+                          amountError={errors.travelInput?.message}
+                          frequency={watch("travelFrequency") ?? "yearly"}
+                          onFrequencyChange={(value) =>
+                            setValue("travelFrequency", value)
+                          }
+                        >
+                          <MoneyInput
+                            id="travelInput"
+                            label="Travel and holidays"
+                            hideLabel
+                            helper="(trips + flights + hotels) · Enter what you spend a month or a year"
+                            {...bindMoneyField("travelInput")}
+                          />
+                        </PremiumField>
                       </div>
                     </div>
                     <div className="space-y-4">
@@ -2854,6 +2898,36 @@ export function AnalyseOnboardingForm() {
                                   "parentsHealthInsuranceSumInsured",
                                 )}
                               />
+                            ) : null}
+                            {hasParentsInsurance ? (
+                              <PremiumField
+                                inputId="parentsHealthInsurancePremiumInput"
+                                label="Premium you pay (₹)"
+                                amountError={
+                                  errors.parentsHealthInsurancePremiumInput
+                                    ?.message
+                                }
+                                frequency={
+                                  watch(
+                                    "parentsHealthInsurancePremiumFrequency",
+                                  ) ?? "yearly"
+                                }
+                                onFrequencyChange={(value) =>
+                                  setValue(
+                                    "parentsHealthInsurancePremiumFrequency",
+                                    value,
+                                  )
+                                }
+                              >
+                                <MoneyInput
+                                  id="parentsHealthInsurancePremiumInput"
+                                  label="Premium you pay (₹)"
+                                  hideLabel
+                                  {...bindMoneyField(
+                                    "parentsHealthInsurancePremiumInput",
+                                  )}
+                                />
+                              </PremiumField>
                             ) : null}
                           </div>
                           <MoneyInput

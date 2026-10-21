@@ -9,7 +9,11 @@ import {
   type GoalFundingPlan,
 } from "@/lib/goalFunding";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
-import { licEndowmentPremiumMonthly } from "@/lib/universal-buckets";
+import {
+  licEndowmentPremiumMonthly,
+  parentsPremiumMonthly,
+  travelMonthly,
+} from "@/lib/universal-buckets";
 
 export interface PriorityItem {
   rank: number;
@@ -314,7 +318,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.creditCardBillMonthly || 0) +
     (profile.creditCardEmiMonthly || 0) +
     additionalLoanObligations;
-  const wantsActual = lifestyleActual;
+  const wantsActual = lifestyleActual + travelMonthly(profile);
   const investmentActual =
     (profile.monthlySIP || 0) +
     (profile.monthlyRD || 0) +
@@ -337,7 +341,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       const amount = p?.premiumAmount || p?.premiumInput || 0;
       const monthly = p?.frequency === "yearly" ? amount / 12 : amount;
       return sum + monthly;
-    }, 0);
+    }, 0) +
+    parentsPremiumMonthly(profile);
   const monthlySurplus = Math.max(
     0,
     monthlyIncome -

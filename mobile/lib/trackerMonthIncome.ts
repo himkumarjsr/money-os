@@ -1,6 +1,8 @@
 import { sumCashSpend } from "@/lib/trackerCreditCards";
 
 export const SAVINGS_CARRY_FORWARD_DESC = "Saving from last month";
+/** Row the tracker adds from the Analyse "Other income" answer. */
+export const PROFILE_OTHER_INCOME_DESC = "Other income";
 
 type IncomeLikeTxn = {
   id?: string;
@@ -169,8 +171,11 @@ export type MonthIncomePlan = {
   savingsAmount: number;
   /** Combined display when nothing logged yet. */
   displayTotal: number;
+  /** Monthly other income from the Analyse profile, seeded once per month. */
+  otherIncomeAmount: number;
   needsSalaryRow: boolean;
   needsSavingsRow: boolean;
+  needsOtherIncomeRow: boolean;
 };
 
 /**
@@ -179,6 +184,8 @@ export type MonthIncomePlan = {
  * Next month gets:
  *  1) One Salary (copy of last month's main salary)
  *  2) One "Saving from last month" = unspent salary pocket leftover
+ *  3) One "Other income" from the Analyse profile, only while the month has
+ *     no other income logged yet (so a manual entry is never doubled)
  * Never a second salary. Other income is not carried forward as salary.
  */
 export function planMonthIncomeFromPrior(opts: {
@@ -191,6 +198,8 @@ export function planMonthIncomeFromPrior(opts: {
    * so pass this to keep the chain of leftovers right.
    */
   previousCarryForward?: number;
+  /** Monthly "Other income" from the Analyse profile. */
+  profileOtherIncome?: number;
 }): MonthIncomePlan {
   const prevPrimarySalary = primarySalaryAmount(opts.previousTxns);
   const prevCarry =
@@ -212,6 +221,8 @@ export function planMonthIncomeFromPrior(opts: {
     sumCanonicalMonthIncome(opts.currentTxns) - currentSalary - currentCarry;
   const needsSalaryRow = !hasSalaryRow && salaryAmount > 0;
   const needsSavingsRow = !hasSavingsRow && savingsAmount > 0;
+  const otherIncomeAmount = Math.max(0, opts.profileOtherIncome ?? 0);
+  const needsOtherIncomeRow = currentOther <= 0 && otherIncomeAmount > 0;
 
   // The saved "Saving from last month" row is a copy of last month's
   // leftover and goes stale whenever last month changes; the sync rewrites
@@ -220,16 +231,18 @@ export function planMonthIncomeFromPrior(opts: {
     Math.round(
       ((hasSalaryRow ? currentSalary : needsSalaryRow ? salaryAmount : 0) +
         savingsAmount +
-        currentOther) *
+        (needsOtherIncomeRow ? otherIncomeAmount : currentOther)) *
         100,
     ) / 100;
 
   return {
     salaryAmount: Math.round(salaryAmount * 100) / 100,
     savingsAmount: Math.round(savingsAmount * 100) / 100,
+    otherIncomeAmount: Math.round(otherIncomeAmount * 100) / 100,
     displayTotal,
     needsSalaryRow,
     needsSavingsRow,
+    needsOtherIncomeRow,
   };
 }
 

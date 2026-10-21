@@ -604,3 +604,37 @@ describe("income helpers", () => {
     expect(EXPENSE_SUBCATEGORY_TO_OBLIGATION.home_loan_emi).toBe("loan_emi");
   });
 });
+
+describe("planMonthIncomeFromPrior with Analyse other income", () => {
+  const salary = {
+    bucket: "income",
+    subcategory: "salary",
+    amount: 80_000,
+  };
+
+  it("seeds the profile's other income when the month has none", () => {
+    const plan = planMonthIncomeFromPrior({
+      previousTxns: [],
+      currentTxns: [salary],
+      profileSalary: 80_000,
+      profileOtherIncome: 15_000,
+    });
+    expect(plan.needsOtherIncomeRow).toBe(true);
+    expect(plan.otherIncomeAmount).toBe(15_000);
+    expect(plan.displayTotal).toBe(95_000);
+  });
+
+  it("does not double up when other income is already logged", () => {
+    const plan = planMonthIncomeFromPrior({
+      previousTxns: [],
+      currentTxns: [
+        salary,
+        { bucket: "income", subcategory: "rental", amount: 12_000 },
+      ],
+      profileSalary: 80_000,
+      profileOtherIncome: 15_000,
+    });
+    expect(plan.needsOtherIncomeRow).toBe(false);
+    expect(plan.displayTotal).toBe(92_000);
+  });
+});
