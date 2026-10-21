@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Breadcrumb from "@/components/Breadcrumb";
+import AllCalculatorsLinks from "@/components/seo/AllCalculatorsLinks";
 import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
@@ -85,12 +86,22 @@ export default function TaxRegime2026Page() {
           ]}
         />
       </div>
+      {/* The calculator UI hydrates on the client; keep the page heading and intro in the server HTML. */}
+      <div className="mx-auto max-w-5xl px-4 pt-2 sm:px-6">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Old vs New Tax Regime Calculator 2025-26
+        </h1>
+        <p className="mt-1 max-w-3xl text-sm text-slate-600 sm:text-base">
+          {seo.description}
+        </p>
+      </div>
       <Suspense
         fallback={<BrandPageLoader fullScreen={false} label="Loading…" />}
       >
         <CalculatorsClient
           initialCalcId="tax-regime"
           urlBaseForTaxCanonical="/calculators/tax-regime-2026"
+          serverHeading
         />
       </Suspense>
       {/* Visible FAQ: FAQPage schema must match text on the page. */}
@@ -118,6 +129,9 @@ export default function TaxRegime2026Page() {
       <Suspense fallback={null}>
         <TaxExploreMore />
       </Suspense>
+      <div className="pb-10">
+        <AllCalculatorsLinks currentId="tax-regime" />
+      </div>
     </>
   );
 }

@@ -1,3 +1,4 @@
+import AllCalculatorsLinks from "@/components/seo/AllCalculatorsLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
@@ -119,6 +120,9 @@ export default async function CalculatorsPage(props: PageProps) {
       >
         <CalculatorsClient initialCalcId="sip" serverHeading />
       </Suspense>
+      <div className="pb-10">
+        <AllCalculatorsLinks />
+      </div>
     </>
   );
 }

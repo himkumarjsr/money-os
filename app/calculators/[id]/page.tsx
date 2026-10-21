@@ -1,4 +1,5 @@
 import Breadcrumb from "@/components/Breadcrumb";
+import AllCalculatorsLinks from "@/components/seo/AllCalculatorsLinks";
 import CalculatorGuide from "@/components/seo/CalculatorGuide";
 import CalculatorRelatedLinks from "@/components/seo/CalculatorRelatedLinks";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
@@ -136,6 +137,9 @@ export default async function CalculatorByIdPage(props: PageProps) {
       </section>
       <div className="px-4 pb-10 sm:px-6">
         <CalculatorRelatedLinks links={getRelatedLinksForCalc(calcId)} />
+      </div>
+      <div className="pb-10">
+        <AllCalculatorsLinks currentId={calcId} />
       </div>
     </>
   );
