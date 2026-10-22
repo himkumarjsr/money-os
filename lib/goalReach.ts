@@ -9,8 +9,6 @@ import { detectGoals } from "@/lib/goalDetection";
 import {
   earmarkExistingSavings,
   goalHorizon,
-  HORIZON_ASSUMPTIONS,
-  realSalaryStepUpPct,
   type GoalFundingItem,
   type SafetyReserve,
 } from "@/lib/goalFunding";
@@ -18,7 +16,13 @@ import {
   allocateGoalPortfolio,
   allocationSummary,
 } from "@/lib/portfolioAllocation";
-import { LONG_RUN_INFLATION } from "@/lib/financialEngine";
+import { LONG_RUN_INFLATION } from "@/lib/holdings";
+import {
+  averageReturn,
+  goalRate,
+  sipRealValue,
+  sipStepUp,
+} from "@/lib/goalMath";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   getUniversalBucketActuals,
@@ -73,25 +77,6 @@ export type GoalReach = {
 
 const rs = (v: number) => `₹${formatIndian(Math.round(Math.max(0, v)))}`;
 
-/**
- * Future value of a ₹1/month SIP paid at the end of months `start`..`months`
- * (1-based), rising by `stepUp` every 12 months from today.
- */
-export function sipUnitValue(
-  start: number,
-  months: number,
-  monthlyRate: number,
-  stepUp: number,
-): number {
-  let fv = 0;
-  for (let m = Math.max(1, start); m <= months; m++) {
-    fv +=
-      Math.pow(1 + stepUp, Math.floor((m - 1) / 12)) *
-      Math.pow(1 + monthlyRate, months - m);
-  }
-  return fv;
-}
-
 export function goalReach(
   item: GoalFundingItem,
   opts: {
@@ -102,17 +87,19 @@ export function goalReach(
 ): GoalReach {
   const year = (opts.now ?? new Date()).getFullYear();
   const months = Math.max(1, Math.round(item.yearsToGoal * 12));
-  const nominal = HORIZON_ASSUMPTIONS[item.horizon].nominalReturn;
-  const realAnnual = (1 + nominal) / (1 + LONG_RUN_INFLATION) - 1;
-  const r = realAnnual / 12;
-  const g = realSalaryStepUpPct(opts.profile as FinancialProfile) / 100;
+  const nominal = goalRate(opts.profile, item.yearsToGoal, item.type);
+  const realAnnual =
+    (1 + averageReturn(nominal, item.yearsToGoal)) / (1 + LONG_RUN_INFLATION) -
+    1;
+  const g = sipStepUp(opts.profile);
+  const unit = (from: number, to: number) => sipRealValue(to, nominal, g, from);
   const start = Math.max(1, Math.round(opts.startMonth));
   const monthly = Math.max(0, item.monthlyAllocated);
 
   // Part of the target the SIP has to build (retirement already counts
   // existing EPF / PPF / equity growth inside monthlyRequired).
-  const sipTarget = item.monthlyRequired * sipUnitValue(1, months, r, g);
-  const grown = monthly * sipUnitValue(start, months, r, g);
+  const sipTarget = item.monthlyRequired * unit(1, months);
+  const grown = monthly * unit(start, months);
   const shortfall = Math.max(0, Math.round(sipTarget - grown));
   const projected = Math.max(0, Math.round(item.targetAmount - shortfall));
   const onTrack = shortfall <= Math.max(1000, item.targetAmount * 0.005);
@@ -124,7 +111,7 @@ export function goalReach(
   let reachableYear: number | null = null;
   if (!onTrack && monthly > 0) {
     for (let y = item.yearsToGoal + 1; y <= 50; y++) {
-      if (monthly * sipUnitValue(start, y * 12, r, g) >= sipTarget) {
+      if (monthly * unit(start, y * 12) >= sipTarget) {
         reachableYear = year + y;
         break;
       }
@@ -178,7 +165,7 @@ export function goalReach(
       getUniversalBucketActuals(p).wants - income * getUniversalCaps(p).wants;
     if (wantsOver >= 500) {
       suggestions.push(
-        `Wants are ${rs(wantsOver)}/month over your limit. Moving that here adds about ${rs(wantsOver * sipUnitValue(1, months, r, g))} by ${item.targetYear}.`,
+        `Wants are ${rs(wantsOver)}/month over your limit. Moving that here adds about ${rs(wantsOver * unit(1, months))} by ${item.targetYear}.`,
       );
     }
     if (g === 0 && !fixedDate) {
@@ -192,10 +179,14 @@ export function goalReach(
       );
     }
     if (projected > 0) {
+      // Targets are entered at today's price; scale back out of the goal's own inflation.
+      const todayCost = item.todayCost ?? item.targetAmount;
+      const budget =
+        item.targetAmount > 0 ? (projected * todayCost) / item.targetAmount : 0;
       suggestions.push(
         fixedDate
-          ? `Or plan for a budget of ${rs(projected)} - what this plan reaches by ${item.targetYear}.`
-          : `Or set the target to ${rs(projected)} - what this plan reaches by ${item.targetYear}.`,
+          ? `Or plan for a budget of ${rs(budget)} at today's prices - what this plan reaches by ${item.targetYear}.`
+          : `Or set the target to ${rs(budget)} at today's prices - what this plan reaches by ${item.targetYear}.`,
       );
     }
   }
@@ -218,7 +209,8 @@ export function goalReach(
   return {
     targetAmount: item.targetAmount,
     targetYear: item.targetYear,
-    nominalReturnPct: Math.round(nominal * 1000) / 10,
+    nominalReturnPct:
+      Math.round(averageReturn(nominal, item.yearsToGoal) * 1000) / 10,
     realReturnPct: Math.round(realAnnual * 1000) / 10,
     startMonth: start,
     monthly,
@@ -250,6 +242,7 @@ export function buildUrgentGoalItems(
   opts: SafetyReserve = {},
 ): GoalFundingItem[] {
   const earmarks = earmarkExistingSavings(profile, now, opts);
+  const stepUp = sipStepUp(profile);
   const goals = detectGoals(profile, now)
     .filter(
       (g) => isFixedDateGoal(g.type) && g.yearsToGoal <= URGENT_GOAL_YEARS,
@@ -259,13 +252,9 @@ export function buildUrgentGoalItems(
   return goals.map((g) => {
     const months = Math.max(1, g.yearsToGoal * 12);
     const horizon = goalHorizon(g.yearsToGoal);
-    const r =
-      ((1 + HORIZON_ASSUMPTIONS[horizon].nominalReturn) /
-        (1 + LONG_RUN_INFLATION) -
-        1) /
-      12;
-    const unitNow = sipUnitValue(1, months, r, 0);
-    const unitFromStart = sipUnitValue(startMonth, months, r, 0);
+    const nominal = goalRate(profile, g.yearsToGoal, g.type);
+    const unitNow = sipRealValue(months, nominal, stepUp);
+    const unitFromStart = sipRealValue(months, nominal, stepUp, startMonth);
     const mark = earmarks.get(g.id);
     // What's still missing after existing FDs / funds and running SIPs.
     const gap = (mark?.monthlyRequired ?? 0) * unitNow;
@@ -288,7 +277,8 @@ export function buildUrgentGoalItems(
       yearsToGoal: g.yearsToGoal,
       targetYear: g.targetYear,
       horizon,
-      targetAmount: g.targetAmount,
+      targetAmount: mark?.futureCost ?? g.futureCost,
+      todayCost: g.targetAmount,
       currentSaved: mark?.lumpsum ?? 0,
       existingMonthly: mark?.existingMonthly ?? 0,
       monthlyRequired,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GoalFundingItem } from "./goalFunding";
-import { goalReach, sipUnitValue } from "./goalReach";
+import { goalReach } from "./goalReach";
+import { goalRate, sipRealValue } from "./goalMath";
 
 const item = (over: Partial<GoalFundingItem> = {}): GoalFundingItem =>
   ({
@@ -40,8 +41,8 @@ describe("goalReach", () => {
 
   it("puts nothing toward a goal whose SIP starts after its year", () => {
     // A goal with no existing savings: the SIP has to build all of it.
-    const r12 = (1.12 / 1.06 - 1) / 12;
-    const monthlyRequired = 3_00_00_000 / sipUnitValue(1, 96, r12, 0);
+    const monthlyRequired =
+      3_00_00_000 / sipRealValue(96, goalRate({}, 8, "custom"), 0);
     const r = goalReach(item({ type: "custom", monthlyRequired }), {
       profile: {},
       startMonth: 108,
@@ -61,10 +62,11 @@ describe("goalReach", () => {
     expect(r.suggestions).toEqual([]);
   });
 
-  it("values a flat SIP like the standard annuity formula", () => {
+  it("values a flat SIP like the standard annuity formula, in today's rupees", () => {
     const r = 0.01;
-    expect(sipUnitValue(1, 12, r, 0)).toBeCloseTo(
-      (Math.pow(1 + r, 12) - 1) / r,
+    const annual = Math.pow(1 + r, 12) - 1;
+    expect(sipRealValue(12, annual, 0)).toBeCloseTo(
+      (Math.pow(1 + r, 12) - 1) / r / 1.06,
       8,
     );
   });

@@ -76,7 +76,8 @@ describe("money score", () => {
   });
 
   it("fills the medical fund from savings beyond the emergency fund", () => {
-    const r = analyseFinances(base());
+    // Enough in the bank to cover the emergency fund (needs, EMIs and premiums) with room to spare.
+    const r = analyseFinances({ ...base(), savingsAccountBalance: 30_00_000 });
     const med = r.securityChecklist.find(
       (c) => c.label === "Medical emergency fund",
     );

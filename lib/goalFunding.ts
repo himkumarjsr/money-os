@@ -6,11 +6,7 @@
  * deferred to zero. Pure engine math, no AI. Amounts are today's rupees.
  */
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
-import {
-  existingEquityValue,
-  LONG_RUN_INFLATION,
-  projectRetirementAccounts,
-} from "@/lib/holdings";
+import { existingEquityValue, projectRetirementAccounts } from "@/lib/holdings";
 import {
   detectGoals,
   type DetectedGoal,
@@ -19,12 +15,19 @@ import {
 import {
   allocateGoalPortfolio,
   allocationSummary,
+  expectedNominalReturn,
   goalHorizon,
   REAL_ESTATE_LIQUID_NET_WORTH,
   type GoalHorizon,
   type PortfolioAllocation,
 } from "@/lib/portfolioAllocation";
-import { monthlyStepUpSipForGoal } from "@/lib/sipGoal";
+import {
+  goalRate,
+  goalRealReturnPctFor,
+  lumpRealGrowth,
+  monthlySipFor,
+  sipStepUp,
+} from "@/lib/goalMath";
 import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 /** Each funded goal gets at least this share of the pool (or its full need, if smaller). */
@@ -34,15 +37,19 @@ export const PRIMARY_GOAL_BOOST = 1.5;
 
 export { goalHorizon, type GoalHorizon };
 
-/** Nominal expected return per horizon bucket (instrument split: portfolioAllocation). */
+/**
+ * Nominal expected return per horizon bucket for a moderate investor: what
+ * the moderate instrument split earns (portfolioAllocation). Goal sizing uses
+ * the user's own risk profile via goalNominalReturn.
+ */
 export const HORIZON_ASSUMPTIONS: Record<
   GoalHorizon,
   { nominalReturn: number }
 > = {
-  "0-1y": { nominalReturn: 0.065 },
-  "1-3y": { nominalReturn: 0.07 },
-  "3-7y": { nominalReturn: 0.1 },
-  "7y+": { nominalReturn: 0.12 },
+  "0-1y": { nominalReturn: expectedNominalReturn("0-1y") },
+  "1-3y": { nominalReturn: expectedNominalReturn("1-3y") },
+  "3-7y": { nominalReturn: expectedNominalReturn("3-7y") },
+  "7y+": { nominalReturn: expectedNominalReturn("7y+") },
 };
 
 /** Liquid investments minus non-mortgage debt - gates any real-estate mention. */
@@ -65,23 +72,12 @@ export function liquidNetWorth(profile: FinancialProfile): number {
   return liquid - n("personalLoanOutstanding") - n("carLoanOutstanding");
 }
 
-const realReturnPct = (nominal: number) =>
-  ((1 + nominal) / (1 + LONG_RUN_INFLATION) - 1) * 100;
-
 /** Expected return above inflation (%) for money invested for `years`. */
-export function goalRealReturnPct(years: number): number {
-  return realReturnPct(HORIZON_ASSUMPTIONS[goalHorizon(years)].nominalReturn);
-}
-
-/**
- * Yearly SIP step-up in today's rupees: the salary hike the user expects,
- * less inflation (goal amounts are already in today's rupees). 0 when the
- * hike is unknown or does not beat inflation.
- */
-export function realSalaryStepUpPct(profile: FinancialProfile): number {
-  const hike = Number(profile.annualSalaryIncreasePct);
-  if (!Number.isFinite(hike) || hike <= 0) return 0;
-  return Math.max(0, ((1 + hike / 100) / (1 + LONG_RUN_INFLATION) - 1) * 100);
+export function goalRealReturnPct(
+  years: number,
+  risk?: FinancialProfile["riskTolerance"],
+): number {
+  return goalRealReturnPctFor(years, risk);
 }
 
 const PRIMARY_GOAL_TYPES: Record<string, GoalType[]> = {
@@ -118,6 +114,8 @@ export type GoalFundingItem = {
   isPrimary: boolean;
   /** Where currentSaved comes from (today's rupees). */
   sources?: GoalSavingsSources;
+  /** The goal's price today, before its own inflation (targetAmount is what it costs by targetYear, in today's rupees). */
+  todayCost?: number;
 };
 
 /** Existing money set against a goal, by where it sits today. */
@@ -212,6 +210,8 @@ function roundPreservingTotal(values: number[]): number[] {
 }
 
 export type GoalEarmark = {
+  /** What the goal costs by its year, in today's rupees (after its own inflation). */
+  futureCost: number;
   /** Existing FDs / funds / gold set against this goal, today's rupees. */
   lumpsum: number;
   /** Running SIPs / RD counted toward it, ₹/month. */
@@ -244,6 +244,8 @@ export type SafetyReserve = {
   equityUsedForSafety?: number;
   /** Gold sold for the emergency or medical fund. */
   goldUsedForSafety?: number;
+  /** New Sukanya Samriddhi deposits the plan adds, ₹/month (counted toward daughters' education). */
+  plannedSsyMonthly?: number;
 };
 
 /**
@@ -251,7 +253,8 @@ export type SafetyReserve = {
  * so a goal only asks the surplus for what is still missing:
  * - FDs, NSC / post office (less what the emergency fund still leans on),
  *   gold and equity funds / stocks, each grown at the goal's expected return;
- * - running SIPs / RD / other monthly investments.
+ * - running SIPs / RD / other monthly investments;
+ * - Sukanya Samriddhi deposits, toward daughters' education only.
  * Short goals draw on safer pots first, long ones on equity. Retirement comes
  * last and also counts EPF / PPF / NPS (balances and contributions).
  * Land and other property are not counted: they can't be sold in parts.
@@ -282,7 +285,11 @@ export function earmarkExistingSavings(
       (s, c) => s + n0(c?.monthlyContribution),
       0,
     );
-  const stepUpPct = realSalaryStepUpPct(profile);
+  // SSY can only pay for a daughter's education (or marriage at 21+).
+  let ssyPool = n0(p.ssy) + n0(opts.plannedSsyMonthly);
+  const isDaughter = (g: DetectedGoal) =>
+    g.kidIndex != null && p.kidsGenders?.[g.kidIndex] === "girl";
+  const stepUp = sipStepUp(profile);
   const goals = detectGoals(profile, now)
     .filter((g) => g.type !== "debt_free")
     .sort((a, b) => {
@@ -293,10 +300,10 @@ export function earmarkExistingSavings(
 
   const out = new Map<string, GoalEarmark>();
   for (const g of goals) {
-    const horizon = goalHorizon(g.yearsToGoal);
-    const rPct = realReturnPct(HORIZON_ASSUMPTIONS[horizon].nominalReturn);
-    const grow = Math.pow(1 + rPct / 100, g.yearsToGoal);
-    let target = g.targetAmount;
+    const nominal = goalRate(profile, g.yearsToGoal, g.type);
+    const grow = lumpRealGrowth(nominal, g.yearsToGoal);
+    const futureCost = g.futureCost ?? g.targetAmount;
+    let target = futureCost;
     const retirementAccounts =
       g.type === "retirement"
         ? projectRetirementAccounts(profile, g.yearsToGoal, { real: true })
@@ -320,15 +327,21 @@ export function earmarkExistingSavings(
       lumpsum += take;
     }
     const gap = Math.max(0, target - lumpsum * grow);
-    const needed = monthlyStepUpSipForGoal(gap, rPct, g.yearsToGoal, stepUpPct);
-    const existingMonthly = Math.min(monthlyPool, needed);
-    monthlyPool -= existingMonthly;
+    const needed = monthlySipFor(gap, g.yearsToGoal, nominal, stepUp);
+    const fromSsy =
+      g.type === "kid_education" && isDaughter(g)
+        ? Math.min(ssyPool, needed)
+        : 0;
+    ssyPool -= fromSsy;
+    const existingMonthly = fromSsy + Math.min(monthlyPool, needed - fromSsy);
+    monthlyPool -= existingMonthly - fromSsy;
     out.set(g.id, {
+      futureCost: Math.round(futureCost),
       lumpsum: Math.round(lumpsum),
       existingMonthly: Math.round(existingMonthly),
       monthlyRequired: Math.round(Math.max(0, needed - existingMonthly)),
       monthlyFromScratch: Math.round(
-        monthlyStepUpSipForGoal(g.targetAmount, rPct, g.yearsToGoal, stepUpPct),
+        monthlySipFor(futureCost, g.yearsToGoal, nominal, stepUp),
       ),
       fromDebt: Math.round(taken.debt),
       fromGold: Math.round(taken.gold),
@@ -363,6 +376,7 @@ export function buildGoalFundingPlan(
     fdNeededForEmergency: opts.fdNeededForEmergency,
     equityUsedForSafety: opts.equityUsedForSafety,
     goldUsedForSafety: opts.goldUsedForSafety,
+    plannedSsyMonthly: opts.plannedSsyMonthly,
   });
 
   const sized = goals.map((g) => {
@@ -419,7 +433,8 @@ export function buildGoalFundingPlan(
       yearsToGoal: s.goal.yearsToGoal,
       targetYear: s.goal.targetYear,
       horizon: s.horizon,
-      targetAmount: s.goal.targetAmount,
+      targetAmount: earmarks.get(s.goal.id)?.futureCost ?? s.goal.targetAmount,
+      todayCost: s.goal.targetAmount,
       currentSaved: s.currentSaved,
       existingMonthly: s.existingMonthly,
       monthlyRequired: s.monthlyRequired,

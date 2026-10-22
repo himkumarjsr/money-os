@@ -615,6 +615,8 @@ export default function AnalyseFormScreen() {
           ...formValues,
           primaryGoal: formValues.primaryGoal || "grow_wealth",
           monthlySalary: formValues.monthlySalary ?? 0,
+          // A full (re)take is the plan's yearly check.
+          planReviewedAt: new Date().toISOString(),
         }),
       );
       setAnalysis(mergedValues);

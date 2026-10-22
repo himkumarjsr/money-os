@@ -20,6 +20,7 @@ import type { GoalFundingItem } from "@/lib/goalFunding";
 import { goalSavingsLines } from "@/lib/goalSavingsText";
 import { buildGoalStrategies, projectGoalReach } from "@/lib/goalStrategies";
 import GoalStrategiesList from "@/components/analyse/GoalStrategiesList";
+import PlanAssumptionsCard from "@/components/analyse/PlanAssumptionsCard";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import Link from "next/link";
 
@@ -257,6 +258,11 @@ export default function GoalsSection({
       >
         Track SIPs for each goal →
       </Link>
+      <PlanAssumptionsCard
+        profile={profile}
+        saving={saving}
+        onChange={(next) => void save(next)}
+      />
       {error && !editing ? (
         <p className="mt-2 text-sm text-[#E24B4A]">{error}</p>
       ) : null}
