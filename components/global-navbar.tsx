@@ -23,7 +23,7 @@ import { usePathname } from "next/navigation";
 const centerNavItems = [
   { href: "/analyse", label: "Analyse" },
   { href: "/tracker", label: "Tracker" },
-  { href: "/split", label: "FK Split" },
+  { href: "/split", label: "Settle Up" },
   { href: "/calculators", label: "Calculators" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/optimizer", label: "Optimizer" },
@@ -229,7 +229,7 @@ export function GlobalNavbar() {
         />
         <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
           <Link
-            href={showAsLoggedIn ? "/dashboard" : "/"}
+            href="/"
             scroll
             className="flex min-w-0 items-center gap-2 sm:gap-2.5"
             aria-label={showAsLoggedIn ? "Finkoin dashboard" : "Finkoin home"}

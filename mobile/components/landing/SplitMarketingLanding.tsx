@@ -16,11 +16,11 @@ import { GoldText } from "@/components/ui/GoldMirror";
 
 const FAQS = [
   {
-    q: "What is Finkoin Split?",
+    q: "What is Finkoin Settle Up?",
     a: "A free expense-splitting app for friends, roommates, and trips in India. Create a group, add spends, and see who owes whom - clearly.",
   },
   {
-    q: "Is Finkoin Split a Splitwise alternative?",
+    q: "Is Finkoin Settle Up a Splitwise alternative?",
     a: "Yes. It is built for Indian groups who want simple bill splitting without heavy clutter. Free to start.",
   },
   {
@@ -29,7 +29,7 @@ const FAQS = [
   },
   {
     q: "Do I need to pay to split bills?",
-    a: "No. Core splitting on Finkoin Split is free.",
+    a: "No. Core splitting on Finkoin Settle Up is free.",
   },
 ] as const;
 
@@ -83,7 +83,7 @@ export function SplitMarketingLanding() {
         contentContainerStyle={styles.content}
       >
         <View style={styles.hero}>
-          <GoldText style={styles.eyebrow}>FINKOIN SPLIT</GoldText>
+          <GoldText style={styles.eyebrow}>FINKOIN SETTLE UP</GoldText>
           <Text style={styles.title}>Split expenses with friends - simply</Text>
           <Text style={styles.sub}>
             Free group expense tracker for India. Trips, flatmates, dinners -
@@ -109,7 +109,7 @@ export function SplitMarketingLanding() {
           </Text>
         </View>
 
-        <Text style={styles.h2}>Why people use Finkoin Split</Text>
+        <Text style={styles.h2}>Why people use Finkoin Settle Up</Text>
         <View style={styles.featureList}>
           {FEATURES.map((f) => (
             <View key={f.t}>
@@ -145,10 +145,12 @@ export function SplitMarketingLanding() {
         </View>
 
         <View style={styles.closing}>
-          <Text style={styles.closingTitle}>Split the next bill the easy way</Text>
+          <Text style={styles.closingTitle}>
+            Split the next bill the easy way
+          </Text>
           <Text style={styles.closingSub}>
-            Sign up free and create your first Finkoin Split group in under a
-            minute.
+            Sign up free and create your first Finkoin Settle Up group in under
+            a minute.
           </Text>
           <TouchableOpacity
             style={styles.closingBtn}

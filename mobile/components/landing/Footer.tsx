@@ -6,13 +6,7 @@
  */
 import { Linking, Pressable, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import Svg, {
-  Defs,
-  LinearGradient,
-  Path,
-  Rect,
-  Stop,
-} from "react-native-svg";
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { BrandCoin } from "@/components/ui/BrandCoin";
 import { themedStyles } from "@/constants/theme";
@@ -28,7 +22,7 @@ const COLUMNS: ReadonlyArray<{ heading: string; links: FooterLink[] }> = [
     links: [
       { label: "All Features", href: "/features" },
       { label: "Financial Health Check", href: "/(tabs)/analyse" },
-      { label: "FK Split", href: "/(tabs)/split" },
+      { label: "Settle Up", href: "/(tabs)/split" },
       { label: "Tax Calculator", href: "/calculators/tax-regime" },
       { label: "SIP Calculator", href: "/calculators/sip" },
       { label: "SWP Calculator", href: "/calculators/swp" },
@@ -83,7 +77,11 @@ function open(href: string) {
 /** `bottomPad`: extra space so the floating dock never covers the copyright (tab screens). */
 export function Footer({ bottomPad = 0 }: { bottomPad?: number }) {
   return (
-    <View style={styles.root} accessibilityRole="summary" accessibilityLabel="Site footer">
+    <View
+      style={styles.root}
+      accessibilityRole="summary"
+      accessibilityLabel="Site footer"
+    >
       <Svg
         style={styles.bg}
         width="100%"
@@ -103,9 +101,16 @@ export function Footer({ bottomPad = 0 }: { bottomPad?: number }) {
       <View style={styles.glowA} pointerEvents="none" />
       <View style={styles.glowB} pointerEvents="none" />
 
-      <View style={[styles.inner, bottomPad ? { paddingBottom: 32 + bottomPad } : null]}>
+      <View
+        style={[
+          styles.inner,
+          bottomPad ? { paddingBottom: 32 + bottomPad } : null,
+        ]}
+      >
         <View style={styles.ctaCard}>
-          <Text style={styles.ctaTitle}>Start your financial journey today</Text>
+          <Text style={styles.ctaTitle}>
+            Start your financial journey today
+          </Text>
           <Text style={styles.ctaSub}>Takes less than 2 minutes</Text>
           <Pressable
             onPress={() => open("/(tabs)/analyse")}
@@ -182,7 +187,9 @@ export function Footer({ bottomPad = 0 }: { bottomPad?: number }) {
             <AppIcon name="lock" size={14} color="#C4C2E8" />
             <Text style={styles.trustText}>Bank-level security</Text>
           </View>
-          <Text style={styles.trustText}>No spam • No credit card required</Text>
+          <Text style={styles.trustText}>
+            No spam • No credit card required
+          </Text>
         </View>
 
         <View style={styles.feedbackWrap}>
@@ -249,7 +256,12 @@ const styles = themedStyles(() => ({
     backgroundColor: "rgba(255,255,255,0.1)",
     padding: 24,
   },
-  ctaTitle: { fontSize: 20, fontWeight: "600", color: "#FFFFFF", letterSpacing: -0.3 },
+  ctaTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
   ctaSub: { marginTop: 4, fontSize: 14, color: "rgba(255,255,255,0.75)" },
   ctaBtn: {
     marginTop: 16,
@@ -269,9 +281,25 @@ const styles = themedStyles(() => ({
     alignSelf: "flex-start",
     minHeight: 44,
   },
-  logoText: { fontSize: 20, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.4 },
-  tagline: { marginTop: 12, fontSize: 14, fontWeight: "500", color: "rgba(255,255,255,0.8)" },
-  about: { marginTop: 12, maxWidth: 384, fontSize: 14, lineHeight: 22, color: "rgba(255,255,255,0.65)" },
+  logoText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: -0.4,
+  },
+  tagline: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.8)",
+  },
+  about: {
+    marginTop: 12,
+    maxWidth: 384,
+    fontSize: 14,
+    lineHeight: 22,
+    color: "rgba(255,255,255,0.65)",
+  },
   socials: { marginTop: 20, flexDirection: "row", gap: 10 },
   socialBtn: {
     height: 44,
@@ -283,7 +311,12 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  columns: { marginTop: 40, flexDirection: "row", flexWrap: "wrap", rowGap: 32 },
+  columns: {
+    marginTop: 40,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    rowGap: 32,
+  },
   column: { width: "50%", paddingRight: 12 },
   colHeading: {
     fontSize: 12,
@@ -295,7 +328,12 @@ const styles = themedStyles(() => ({
   },
   linkBtn: { minHeight: 36, justifyContent: "center" },
   link: { fontSize: 14, color: "rgba(255,255,255,0.75)" },
-  sebi: { paddingTop: 4, fontSize: 12, lineHeight: 18, color: "rgba(255,255,255,0.55)" },
+  sebi: {
+    paddingTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.55)",
+  },
   trust: {
     marginTop: 40,
     borderRadius: 16,
@@ -307,7 +345,11 @@ const styles = themedStyles(() => ({
     gap: 8,
   },
   trustRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  trustText: { fontSize: 12, fontWeight: "500", color: "rgba(255,255,255,0.75)" },
+  trustText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.75)",
+  },
   feedbackWrap: { marginTop: 24, alignItems: "center" },
   feedbackBtn: {
     flexDirection: "row",

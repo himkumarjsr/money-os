@@ -510,6 +510,15 @@ function applyIssueErrors(
   return fieldErrors[0]?.message ?? issues[0]?.message;
 }
 
+/** Tablet and up show the health check as a modal; phones as a page. */
+function isWideScreen(): boolean {
+  return (
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function" ||
+    window.matchMedia("(min-width: 640px)").matches
+  );
+}
+
 function sum(values: Array<number | undefined>) {
   return values.reduce<number>((total, value) => total + (value ?? 0), 0);
 }
@@ -527,21 +536,26 @@ function ToggleButtons({
     options.length === 2 &&
     options.every((o) => o.value === "yes" || o.value === "no");
 
-  // Yes/No: chip cards (not the compact toggle). Monthly/Yearly keep the toggle.
+  // Yes/No: a small two-way switch that sits beside the question.
   if (isYesNo) {
     return (
-      <div className="flex gap-2">
+      <div
+        role="radiogroup"
+        className="inline-flex shrink-0 rounded-full bg-[#F1EFE8] p-0.5"
+      >
         {options.map((option) => {
           const selected = option.value === value;
           return (
             <button
               key={option.value}
               type="button"
+              role="radio"
+              aria-checked={selected}
               onClick={() => onChange(option.value)}
-              className={`min-h-[44px] flex-1 rounded-xl border px-3.5 py-2.5 text-sm font-semibold transition ${
+              className={`h-8 min-w-[52px] rounded-full px-3 text-[13px] font-semibold transition ${
                 selected
-                  ? "border-[#534AB7] bg-[#EEEDFE] text-[#3C3489]"
-                  : "border-[#E8E6F0] bg-white text-[#111110] hover:border-[#AFA9EC]"
+                  ? "bg-[#534AB7] text-white shadow-[0_1px_3px_rgba(83,74,183,0.35)]"
+                  : "bg-transparent text-[#5F5E5A] hover:text-[#111110]"
               }`}
             >
               {option.label}
@@ -698,8 +712,14 @@ export function AnalyseOnboardingForm() {
   const [stepNavError, setStepNavError] = useState<string | null>(null);
   const [showResumeBanner, setShowResumeBanner] = useState(false);
   const [showResumeOption, setShowResumeOption] = useState(false);
-  /** Modal wraps the full 7-step form (all fields). Yes/No uses chips; Monthly/Yearly stays toggle. */
+  /**
+   * Modal wraps the full 7-step form on tablet / desktop. Phones get the
+   * same form as a normal page - a pop-up on a small screen only adds chrome.
+   */
   const [advisorOpen, setAdvisorOpen] = useState(true);
+  useEffect(() => {
+    if (!isWideScreen()) setAdvisorOpen(false);
+  }, []);
   /** Per-user: avoid re-fetching cloud snapshot every mount; cleared when auth user changes. */
   const cloudHydrateKey = useRef<string | null>(null);
   /** After "Start fresh", do not immediately pull server snapshot for this account. */
@@ -1683,7 +1703,7 @@ export function AnalyseOnboardingForm() {
     emergencyAutoFillRef.current = { fired: false, userEdited: false };
     setShowResumeOption(false);
     setShowResumeBanner(false);
-    setAdvisorOpen(true);
+    setAdvisorOpen(isWideScreen());
     window.scrollTo(0, 0);
   }, [reset, replaceUnifiedLoans]);
 
@@ -1720,7 +1740,7 @@ export function AnalyseOnboardingForm() {
             <button
               type="button"
               onClick={() => setAdvisorOpen(true)}
-              className="rounded-lg bg-[#EEEDFE] px-3 py-1.5 text-[12px] font-bold text-[#534AB7]"
+              className="hidden rounded-lg bg-[#EEEDFE] px-3 py-1.5 text-[12px] font-bold text-[#534AB7] sm:inline-block"
             >
               Open as modal
             </button>
@@ -2053,11 +2073,11 @@ export function AnalyseOnboardingForm() {
                     <div className="space-y-4">
                       <SectionTitle>Housing</SectionTitle>
                       <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center justify-between gap-3">
                           <p className="text-sm font-medium text-slate-800">
                             Are you on rent?
                           </p>
-                          <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                          <div className="shrink-0">
                             <ToggleButtons
                               options={[
                                 { label: "Yes", value: "yes" },
@@ -2099,12 +2119,12 @@ export function AnalyseOnboardingForm() {
                       ) : null}
                     </div>
 
-                    <div className="mt-6 space-y-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
                         <p className="text-sm font-medium text-slate-800">
                           Do you have any loan EMIs?
                         </p>
-                        <div className="w-full sm:w-[200px]">
+                        <div className="shrink-0">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -2633,12 +2653,12 @@ export function AnalyseOnboardingForm() {
                       ) : null}
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
                         <p className="text-sm font-medium text-slate-800">
                           Do you have credit card outstanding?
                         </p>
-                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                        <div className="shrink-0">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -2867,11 +2887,11 @@ export function AnalyseOnboardingForm() {
                             {...bindMoneyField("parentsEmergencyCash")}
                           />
                           <div className="min-w-0 space-y-3 rounded-2xl border border-slate-200 p-4 sm:col-span-2">
-                            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex min-w-0 items-center justify-between gap-3">
                               <p className="text-sm font-medium text-slate-800">
                                 Do your parents have health insurance?
                               </p>
-                              <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                              <div className="shrink-0">
                                 <ToggleButtons
                                   options={[
                                     { label: "Yes", value: "yes" },
@@ -2961,11 +2981,11 @@ export function AnalyseOnboardingForm() {
                 {step === 4 ? (
                   <div className="min-w-0 space-y-6 overflow-x-clip">
                     <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
                         <p className="text-sm font-medium text-slate-800">
                           Do you have health insurance?
                         </p>
-                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                        <div className="shrink-0">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -3042,11 +3062,11 @@ export function AnalyseOnboardingForm() {
                     </div>
 
                     <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
                         <p className="text-sm font-medium text-slate-800">
                           Do you have term insurance?
                         </p>
-                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                        <div className="shrink-0">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -3135,11 +3155,11 @@ export function AnalyseOnboardingForm() {
 
                     <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
                       <SectionTitle>Vehicle insurance</SectionTitle>
-                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
                         <p className="text-sm font-medium text-slate-800">
                           Do you have a vehicle?
                         </p>
-                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                        <div className="shrink-0">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -3267,11 +3287,11 @@ export function AnalyseOnboardingForm() {
                     </div>
 
                     <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
                         <p className="text-sm font-medium text-slate-800">
                           Any other insurance premium?
                         </p>
-                        <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                        <div className="shrink-0">
                           <ToggleButtons
                             options={[
                               { label: "Yes", value: "yes" },
@@ -3451,7 +3471,7 @@ export function AnalyseOnboardingForm() {
                                     minYear={new Date().getFullYear()}
                                     maxYear={2060}
                                   />
-                                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <div className="flex min-w-0 items-center justify-between gap-3">
                                     <div className="min-w-0">
                                       <p className="text-sm font-medium text-slate-800">
                                         LIC / endowment with a maturity value?
@@ -3461,7 +3481,7 @@ export function AnalyseOnboardingForm() {
                                         Investment, not insurance.
                                       </p>
                                     </div>
-                                    <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                                    <div className="shrink-0">
                                       <ToggleButtons
                                         options={[
                                           { label: "Yes", value: "yes" },
@@ -3951,11 +3971,11 @@ export function AnalyseOnboardingForm() {
                     <div className="space-y-4">
                       <SectionTitle>Physical assets</SectionTitle>
                       <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center justify-between gap-3">
                           <p className="text-sm font-medium text-slate-800">
                             Do you own a home?
                           </p>
-                          <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                          <div className="shrink-0">
                             <ToggleButtons
                               options={[
                                 { label: "Yes", value: "yes" },
@@ -4014,11 +4034,11 @@ export function AnalyseOnboardingForm() {
                       </div>
 
                       <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
-                        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center justify-between gap-3">
                           <p className="text-sm font-medium text-slate-800">
                             Do you own a car?
                           </p>
-                          <div className="w-full min-w-0 shrink-0 sm:w-[180px]">
+                          <div className="shrink-0">
                             <ToggleButtons
                               options={[
                                 { label: "Yes", value: "yes" },
@@ -4118,7 +4138,7 @@ export function AnalyseOnboardingForm() {
                           />
                         ) : null}
                         <div className="sm:col-span-2 space-y-3 rounded-2xl border border-slate-200 p-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 items-center justify-between gap-3">
                             <div>
                               <p className="text-sm font-medium text-slate-800">
                                 Do you have any India Post / post office savings
@@ -4129,7 +4149,7 @@ export function AnalyseOnboardingForm() {
                                 similar - holdings count toward net worth.
                               </p>
                             </div>
-                            <div className="w-full sm:w-[180px]">
+                            <div className="shrink-0">
                               <ToggleButtons
                                 options={[
                                   { label: "Yes", value: "yes" },

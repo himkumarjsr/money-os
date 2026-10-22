@@ -12,6 +12,7 @@ import {
   HORIZON_ASSUMPTIONS,
   realSalaryStepUpPct,
   type GoalFundingItem,
+  type SafetyReserve,
 } from "@/lib/goalFunding";
 import {
   allocateGoalPortfolio,
@@ -64,6 +65,10 @@ export type GoalReach = {
   suggestions: string[];
   /** Existing savings and running SIPs already counted toward this goal. */
   counted: string | null;
+  /** Of `projected`: what existing savings, running SIPs (and PF) grow to. */
+  fromExisting: number;
+  /** Of `projected`: what the new monthly amount in this plan grows to. */
+  fromNewSaving: number;
 };
 
 const rs = (v: number) => `₹${formatIndian(Math.round(Math.max(0, v)))}`;
@@ -207,6 +212,9 @@ export function goalReach(
       ? "Already counted: your EPF / PPF / NPS growth."
       : null;
 
+  const fromNewSaving = Math.min(projected, Math.round(grown));
+  const fromExisting = Math.max(0, projected - fromNewSaving);
+
   return {
     targetAmount: item.targetAmount,
     targetYear: item.targetYear,
@@ -223,6 +231,8 @@ export function goalReach(
     reachableYear,
     suggestions,
     counted,
+    fromExisting,
+    fromNewSaving,
   };
 }
 
@@ -237,7 +247,7 @@ export function buildUrgentGoalItems(
   available: number,
   startMonth: number,
   now: Date = new Date(),
-  opts: { fdNeededForEmergency?: number } = {},
+  opts: SafetyReserve = {},
 ): GoalFundingItem[] {
   const earmarks = earmarkExistingSavings(profile, now, opts);
   const goals = detectGoals(profile, now)

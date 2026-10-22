@@ -5,7 +5,7 @@ import { SITE_URL, fitMetadata } from "@/lib/seo";
 
 const TITLE = "Finkoin Features - Health Check, Tracker, Split, Calculators";
 const DESCRIPTION =
-  "Everything Finkoin does in one place: a free financial health check, 20+ India-ready calculators, a monthly tracker, FK Split and more. No PAN needed.";
+  "Everything Finkoin does in one place: a free financial health check, 20+ India-ready calculators, a monthly tracker, Settle Up and more. No PAN needed.";
 
 export const metadata: Metadata = fitMetadata({
   title: { absolute: TITLE },

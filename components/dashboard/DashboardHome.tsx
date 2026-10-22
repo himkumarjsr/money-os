@@ -559,7 +559,7 @@ function SplitCard({
     <section className={`${CARD} min-h-[164px]`} aria-busy={loading}>
       <CardHeader
         icon="users"
-        title="FK Split"
+        title="Settle Up"
         href="/split"
         linkLabel="Open"
       />

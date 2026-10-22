@@ -574,7 +574,7 @@ export function YesNoToggle({
   );
 }
 
-/** Question + Yes/No toggle stacked (mobile layout of web's flex row). */
+/** Question with a small Yes/No switch beside it (same as web). */
 export function YesNoQuestion({
   question,
   sub,
@@ -587,8 +587,8 @@ export function YesNoQuestion({
   onChange: (next: boolean) => void;
 }) {
   return (
-    <View style={{ gap: 10 }}>
-      <View>
+    <View style={s.yesNoQuestion}>
+      <View style={{ flex: 1 }}>
         <Text style={s.question}>{question}</Text>
         {sub ? <Text style={s.questionSub}>{sub}</Text> : null}
       </View>
@@ -1181,23 +1181,24 @@ const s = themedStyles(() => ({
     lineHeight: 18,
     color: Colors.textMuted,
   },
-  yesNoRow: { flexDirection: "row", gap: 8 },
+  yesNoQuestion: { flexDirection: "row", alignItems: "center", gap: 12 },
+  yesNoRow: {
+    flexDirection: "row",
+    borderRadius: 999,
+    padding: 2,
+    backgroundColor: Colors.surfaceAlt,
+  },
   yesNoChip: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.card,
+    minWidth: 52,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
-  yesNoChipOn: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  yesNoText: { fontSize: 15, fontWeight: "600", color: Colors.textPrimary },
-  yesNoTextOn: { color: Colors.primaryDark },
+  yesNoChipOn: { backgroundColor: Colors.primary },
+  yesNoText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  yesNoTextOn: { color: Colors.onPrimary },
   segment: {
     flexDirection: "row",
     backgroundColor: Colors.background,

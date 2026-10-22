@@ -88,7 +88,7 @@ function peekStoredSplitPath(): string | null {
 /** Read-only: never clears invite localStorage / cookies. */
 export function peekPostLoginPath(
   search: string,
-  fallback = "/dashboard",
+  fallback = "/",
 ): string {
   if (typeof window === "undefined") return fallback;
 
@@ -116,7 +116,7 @@ export function clearSplitInviteRedirect() {
  */
 export function resolvePostLoginPath(
   search: string,
-  fallback = "/dashboard",
+  fallback = "/",
   opts?: { consume?: boolean },
 ): string {
   const path = peekPostLoginPath(search, fallback);

@@ -107,6 +107,12 @@ export function PriorityCard({
                 ? "On track"
                 : `₹${loc(p.reach.shortfall)} short (${p.reach.reachPct}%)`}
             </Text>
+            {p.reach.fromExisting > 0 ? (
+              <Text style={styles.cellSub}>
+                ₹{loc(p.reach.fromExisting)} from what you have today + ₹
+                {loc(p.reach.fromNewSaving)} from monthly saving
+              </Text>
+            ) : null}
             {p.reach.counted ? (
               <Text style={styles.cellSub}>{p.reach.counted}</Text>
             ) : null}

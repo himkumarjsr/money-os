@@ -9,7 +9,7 @@ export const overviewSection: DocSection = {
   blocks: [
     {
       kind: "p",
-      text: "Finkoin is a personal-finance app for Indian households. A user enters their money once (income, loans, expenses, insurance, assets, goals), deterministic engines in code score their financial health and build a prioritised fix plan, and an LLM (Groq, grounded by a small RAG knowledge base) explains that plan in plain language. Around that core sit an expense tracker, a bill-splitting product (FK Split), a policy vault, 65+ calculators, learning content and a rewards loop (FK coins and leaderboard points).",
+      text: "Finkoin is a personal-finance app for Indian households. A user enters their money once (income, loans, expenses, insurance, assets, goals), deterministic engines in code score their financial health and build a prioritised fix plan, and an LLM (Groq, grounded by a small RAG knowledge base) explains that plan in plain language. Around that core sit an expense tracker, a bill-splitting product (Settle Up), a policy vault, 65+ calculators, learning content and a rewards loop (FK coins and leaderboard points).",
     },
     {
       kind: "table",
@@ -48,7 +48,7 @@ export const overviewSection: DocSection = {
         "Health check (`/analyse`): a 7-step form, a 0–100 score, bucket caps and a security checklist.",
         "Fix plan (`/analyse/fixplan`): priority engine + AI explanations + per-goal SIP plans + PDF export.",
         "Tracker (`/tracker`): monthly spend by bucket, Month Safety Pulse, credit-card bills, bills & EMIs checklist, planned investments.",
-        "FK Split (`/split`): groups, open or email invites, four split types, simplified debts, settle-up.",
+        "Settle Up (`/split`): groups, open or email invites, four split types, simplified debts, settle-up.",
         "Profile & net worth (`/profile`, `/investments`): editable assets and liabilities that flow back into the analysis.",
         "Policy vault (`/policies`): insurance policies with renewal reminders, imported from the analysis.",
         "Calculators & learning (`/calculators`, `/learn`, `/blog`): public, SEO-driven acquisition.",

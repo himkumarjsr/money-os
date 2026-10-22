@@ -68,7 +68,7 @@ export const visionSection: DocSection = {
         [
           "Friends, flatmates, travellers",
           "Anyone sharing costs",
-          "FK Split: groups, settle-up over UPI. This is also how most new users first hear of Finkoin.",
+          "Settle Up: groups, settle-up over UPI. This is also how most new users first hear of Finkoin.",
         ],
         [
           "Later: self-employed and freelancers",
@@ -133,7 +133,7 @@ export const userNeedSection: DocSection = {
         ],
         [
           "Split costs with friends",
-          "FK Split",
+          "Settle Up",
           "Groups created, members invited, settle-ups recorded.",
         ],
         [
@@ -179,7 +179,7 @@ export const phasesSection: DocSection = {
         [
           "Phase 0: Foundation (built)",
           "'I don't know where I stand.'",
-          "Health check and score, AI fix plan with PDF, 65+ calculators, tracker, bills & EMIs, policy vault, FK Split, rewards, web + PWA + Expo app.",
+          "Health check and score, AI fix plan with PDF, 65+ calculators, tracker, bills & EMIs, policy vault, Settle Up, rewards, web + PWA + Expo app.",
           "Core flows stable on web and app; this console and its docs in place.",
         ],
         [
@@ -281,7 +281,7 @@ export const competitionSection: DocSection = {
         "Explainable: numbers come from deterministic code and the AI explains them in plain language, grounded by a RAG knowledge base, so answers are consistent and auditable.",
         "Built for Indian rules: old vs new tax regime, 80C/80D, EPF and PPF, Indian loan and insurance products, ₹ everywhere.",
         "A habit, not a report: tracker, bills & EMIs, renewal reminders, daily tips and rewards bring users back monthly.",
-        "A free viral engine: FK Split brings friends in through invites, and every invitee lands next to the health check.",
+        "A free viral engine: Settle Up brings friends in through invites, and every invitee lands next to the health check.",
         "Low cost to serve: Supabase, Vercel and Groq keep the cost per user very low, so the free tier can stay generous.",
       ],
     },
@@ -351,7 +351,7 @@ Search "SIP calculator"       User creates a trip group      User shares code /r
           "One calculator or guide per high-intent search term; internal links to the health check.",
         ],
         [
-          "FK Split invites",
+          "Settle Up invites",
           "Open links, email invites, app deep links",
           "Make the invite page show the inviter's name and a one-tap join; measure invites per group.",
         ],
@@ -471,7 +471,7 @@ export const revenueSection: DocSection = {
         [
           "Free",
           "₹0",
-          "Health check and score, 65+ calculators, tracker, bills & EMIs, policy vault with reminders, unlimited FK Split, learn, rewards.",
+          "Health check and score, 65+ calculators, tracker, bills & EMIs, policy vault with reminders, unlimited Settle Up, learn, rewards.",
           "The growth engine. Everything that brings users and friends in stays free.",
         ],
         [
