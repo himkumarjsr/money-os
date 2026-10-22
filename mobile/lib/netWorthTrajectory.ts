@@ -15,6 +15,7 @@ import {
 } from "@/lib/financialEngine";
 import { goalHorizon, HORIZON_ASSUMPTIONS } from "@/lib/goalFunding";
 import type { PriorityPlan } from "@/lib/priorityEngine";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 export const TRAJECTORY_YEARS = [0, 5, 10, 20] as const;
 
@@ -99,35 +100,67 @@ function loansOf(p: FinancialProfile): { loans: Loan[]; revolving: number } {
   const loans: Loan[] = [];
   if (unified.length > 0) {
     for (const l of unified) {
-      const out = num(l.outstandingAmount) > 0
-        ? num(l.outstandingAmount)
-        : num(l.monthlyEMI) * (num(l.remainingMonths) || 18);
+      const out =
+        num(l.outstandingAmount) > 0
+          ? num(l.outstandingAmount)
+          : num(l.monthlyEMI) * (num(l.remainingMonths) || 18);
       loans.push({
         outstanding: out,
         emi: num(l.monthlyEMI),
         ratePct: num(l.interestRate) || DEFAULT_LOAN_RATE[l.loanType] || 12,
       });
     }
-    if (!unified.some((l) => l.loanType === "home_loan") && num(p.homeLoanOutstanding) > 0) {
-      loans.push({ outstanding: num(p.homeLoanOutstanding), emi: num(p.homeLoanEMI), ratePct: 8.5 });
+    if (
+      !unified.some((l) => l.loanType === "home_loan") &&
+      num(p.homeLoanOutstanding) > 0
+    ) {
+      loans.push({
+        outstanding: num(p.homeLoanOutstanding),
+        emi: num(p.homeLoanEMI),
+        ratePct: 8.5,
+      });
     }
-    if (!unified.some((l) => l.loanType === "car_loan") && num(p.carLoanOutstanding) > 0) {
-      loans.push({ outstanding: num(p.carLoanOutstanding), emi: num(p.carLoanEMI), ratePct: 9.5 });
+    if (
+      !unified.some((l) => l.loanType === "car_loan") &&
+      num(p.carLoanOutstanding) > 0
+    ) {
+      loans.push({
+        outstanding: num(p.carLoanOutstanding),
+        emi: num(p.carLoanEMI),
+        ratePct: 9.5,
+      });
     }
     return { loans, revolving };
   }
   if (num(p.homeLoanOutstanding) > 0) {
-    loans.push({ outstanding: num(p.homeLoanOutstanding), emi: num(p.homeLoanEMI), ratePct: 8.5 });
+    loans.push({
+      outstanding: num(p.homeLoanOutstanding),
+      emi: num(p.homeLoanEMI),
+      ratePct: 8.5,
+    });
   }
   if (num(p.carLoanOutstanding) > 0) {
-    loans.push({ outstanding: num(p.carLoanOutstanding), emi: num(p.carLoanEMI), ratePct: 9.5 });
+    loans.push({
+      outstanding: num(p.carLoanOutstanding),
+      emi: num(p.carLoanEMI),
+      ratePct: 9.5,
+    });
   }
-  const personal = num(p.personalLoanOutstanding) || num(p.personalLoanEMI) * 24;
+  const personal =
+    num(p.personalLoanOutstanding) || num(p.personalLoanEMI) * 24;
   if (personal > 0) {
-    loans.push({ outstanding: personal, emi: num(p.personalLoanEMI), ratePct: 14 });
+    loans.push({
+      outstanding: personal,
+      emi: num(p.personalLoanEMI),
+      ratePct: 14,
+    });
   }
   if (num(p.bikeEMI) > 0) {
-    loans.push({ outstanding: num(p.bikeEMI) * 24, emi: num(p.bikeEMI), ratePct: 12 });
+    loans.push({
+      outstanding: num(p.bikeEMI) * 24,
+      emi: num(p.bikeEMI),
+      ratePct: 12,
+    });
   }
   return { loans, revolving };
 }
@@ -151,7 +184,7 @@ function startingAssets(p: FinancialProfile) {
   };
   const postOffice =
     x.hasPostOfficeSchemes && (x.postOfficeSchemes?.length ?? 0) > 0
-      ? x.postOfficeSchemes!.reduce((s, r) => s + num(r.amount), 0)
+      ? postOfficeHoldingsValue(p.postOfficeSchemes)
       : num(p.nscDepositAmount);
   const equity = existingEquityValue(p);
   return {
@@ -175,7 +208,8 @@ function startingAssets(p: FinancialProfile) {
 export function formatLakhCrore(value: number): string {
   const sign = value < 0 ? "-" : "";
   const v = Math.abs(Math.round(value));
-  const one = (x: number) => (x >= 100 ? Math.round(x).toString() : x.toFixed(1).replace(/\.0$/, ""));
+  const one = (x: number) =>
+    x >= 100 ? Math.round(x).toString() : x.toFixed(1).replace(/\.0$/, "");
   if (v >= 1_00_00_000) return `${sign}₹${one(v / 1_00_00_000)} Cr`;
   if (v >= 1_00_000) return `${sign}₹${one(v / 1_00_000)} L`;
   if (v >= 1_000) return `${sign}₹${Math.round(v / 1_000)}K`;
@@ -202,11 +236,14 @@ export function projectNetWorth(
   const spentGoals: SpentGoal[] = [];
   for (const g of goals) {
     if (SPENT_AT_GOAL_YEAR.has(g.goalType) && g.yearsToGoal <= horizonEnd) {
-      const rate = HORIZON_ASSUMPTIONS[goalHorizon(g.yearsToGoal)].nominalReturn;
+      const rate =
+        HORIZON_ASSUMPTIONS[goalHorizon(g.yearsToGoal)].nominalReturn;
       spentGoals.push({
         label: g.label ?? g.goalType,
         year: g.yearsToGoal,
-        amount: Math.round(fvMonthly(num(g.monthlyAllocated), rate, g.yearsToGoal)),
+        amount: Math.round(
+          fvMonthly(num(g.monthlyAllocated), rate, g.yearsToGoal),
+        ),
       });
     }
   }
@@ -215,19 +252,24 @@ export function projectNetWorth(
     let goalsValue = 0;
     let homeFromGoal = 0;
     for (const g of goals) {
-      const rate = HORIZON_ASSUMPTIONS[goalHorizon(g.yearsToGoal)].nominalReturn;
+      const rate =
+        HORIZON_ASSUMPTIONS[goalHorizon(g.yearsToGoal)].nominalReturn;
       const monthly = num(g.monthlyAllocated);
       if (t <= g.yearsToGoal) {
         goalsValue += fvMonthly(monthly, rate, t);
         continue;
       }
       const atGoal = fvMonthly(monthly, rate, g.yearsToGoal);
-      if (g.goalType === "retirement") goalsValue += grow(atGoal, rate, t - g.yearsToGoal);
-      else if (g.goalType === "home_purchase") homeFromGoal += grow(atGoal, TRAJECTORY_RATES.home, t - g.yearsToGoal);
+      if (g.goalType === "retirement")
+        goalsValue += grow(atGoal, rate, t - g.yearsToGoal);
+      else if (g.goalType === "home_purchase")
+        homeFromGoal += grow(atGoal, TRAJECTORY_RATES.home, t - g.yearsToGoal);
       // everything else is spent at the goal year
     }
 
-    const retirement = projectRetirementAccounts(profile, t, { real: true }).total;
+    const retirement = projectRetirementAccounts(profile, t, {
+      real: true,
+    }).total;
     const breakdown: TrajectoryBreakdown = {
       cash: grow(start.cash, TRAJECTORY_RATES.cash, t),
       equity:
@@ -245,7 +287,8 @@ export function projectNetWorth(
     const assets = Object.values(breakdown).reduce((s, v) => s + v, 0);
     const deflate = Math.pow(1 + LONG_RUN_INFLATION, t);
     const liabilities =
-      (loans.reduce((s, l) => s + loanBalance(l, t * 12), 0) + revolving) / deflate;
+      (loans.reduce((s, l) => s + loanBalance(l, t * 12), 0) + revolving) /
+      deflate;
 
     const rounded = Object.fromEntries(
       Object.entries(breakdown).map(([k, v]) => [k, Math.round(v)]),

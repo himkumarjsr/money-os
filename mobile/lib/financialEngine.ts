@@ -17,6 +17,10 @@ export {
   RETIREMENT_ACCOUNT_RATES,
   type RetirementAccountProjection,
 } from "@/lib/holdings";
+import {
+  postOfficeHoldingsValue,
+  projectPostOfficeHolding,
+} from "@/lib/postOfficeHoldings";
 
 export type { FinancialProfile } from "@/lib/analyse-form-schema";
 
@@ -1108,9 +1112,16 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
 
   if (hasPostOffice) {
     const schemeTotal =
-      (postOfficeRows ?? []).reduce((sum, row) => sum + n(row.amount), 0) ||
+      postOfficeHoldingsValue(data.postOfficeSchemes) ||
       n(data.nscDepositAmount) +
         n((data as FinancialProfile & { nscMonthly?: number }).nscMonthly);
+    const projections = (data.postOfficeSchemes ?? []).map((row) =>
+      projectPostOfficeHolding(row),
+    );
+    const maturedSchemes = projections.filter((x) => x.matured).length;
+    const nextMaturity = projections
+      .filter((x) => !x.matured && x.maturityYear && x.maturityValue)
+      .sort((a, b) => (a.maturityYear ?? 0) - (b.maturityYear ?? 0))[0];
     const hasNsc =
       Boolean(data.investsInNsc) ||
       (postOfficeRows ?? []).some(
@@ -1123,12 +1134,14 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       status: schemeTotal > 0 ? "ok" : "warning",
       detail:
         schemeTotal > 0
-          ? `${fmt(schemeTotal)} held in post office / national savings schemes`
+          ? `${fmt(schemeTotal)} worth today in post office / national savings schemes${nextMaturity ? ` · Next maturity: ${fmt(nextMaturity.maturityValue ?? 0)} in ${nextMaturity.maturityYear}` : ""}`
           : "You marked post office schemes - add the amounts you hold.",
       actionNeeded:
         schemeTotal === 0
           ? "Enter your post office scheme holdings in the Assets step."
-          : undefined,
+          : maturedSchemes > 0
+            ? `${maturedSchemes === 1 ? "One scheme has" : `${maturedSchemes} schemes have`} matured - if the money is still lying there, put it toward your nearest goal.`
+            : undefined,
     });
   }
 
@@ -1289,7 +1302,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
           .hasPostOfficeSchemes &&
         (schemes?.length ?? 0) > 0
       ) {
-        return schemes!.reduce((sum, row) => sum + (row.amount || 0), 0);
+        return postOfficeHoldingsValue(data.postOfficeSchemes);
       }
       return data.nscDepositAmount || 0;
     })() +

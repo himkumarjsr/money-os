@@ -35,6 +35,16 @@ import {
   type StepProps,
 } from "./shared";
 import { GoldText } from "@/components/ui/GoldMirror";
+import {
+  projectPostOfficeHolding,
+  type PostOfficeHolding,
+} from "@/lib/postOfficeHoldings";
+
+function schemeAmountLabel(scheme: PostOfficeSchemeId | undefined): string {
+  if (scheme === "savings_account") return "Current balance";
+  if (scheme === "recurring_deposit") return "Balance so far (optional)";
+  return "Amount invested";
+}
 
 type CustomInvestmentType = NonNullable<
   AnalyseFormValues["customInvestments"]
@@ -509,27 +519,66 @@ export function Step6Assets({ live }: Pick<StepProps, "live">) {
                   />
                   <MoneyField
                     name={`postOfficeSchemes.${index}.amount` as const}
-                    label="Current holding / deposit"
-                    helper="Principal or balance you hold today"
-                  />
-                  <YearSelect
-                    label="Maturity year (optional)"
+                    label={schemeAmountLabel(
+                      watch(`postOfficeSchemes.${index}.scheme` as const),
+                    )}
                     helper="From your certificate or passbook"
-                    value={
-                      watch(
-                        `postOfficeSchemes.${index}.maturityYear` as const,
-                      ) || 0
-                    }
-                    onChange={(year) =>
-                      persistValue(
-                        `postOfficeSchemes.${index}.maturityYear` as const,
-                        year,
-                      )
-                    }
-                    minYear={nowYear}
-                    maxYear={2060}
-                    name={`postOfficeSchemes.${index}.maturityYear`}
                   />
+                  {(() => {
+                    const row: PostOfficeHolding = watch(
+                      `postOfficeSchemes.${index}` as const,
+                    ) ?? { scheme: "nsc" };
+                    const scheme = row.scheme || "nsc";
+                    if (scheme === "savings_account") return null;
+                    const projection = projectPostOfficeHolding(row);
+                    const askMaturity =
+                      scheme === "time_deposit" || scheme === "other";
+                    return (
+                      <>
+                        <YearSelect
+                          label="Year you started"
+                          helper="Sets the interest rate and the maturity year"
+                          value={row.startYear || 0}
+                          onChange={(year) =>
+                            persistValue(
+                              `postOfficeSchemes.${index}.startYear` as const,
+                              year,
+                            )
+                          }
+                          minYear={1990}
+                          maxYear={nowYear}
+                          name={`postOfficeSchemes.${index}.startYear`}
+                        />
+                        {scheme === "recurring_deposit" ? (
+                          <MoneyField
+                            name={
+                              `postOfficeSchemes.${index}.monthlyDeposit` as const
+                            }
+                            label="Monthly deposit"
+                          />
+                        ) : null}
+                        {askMaturity ? (
+                          <YearSelect
+                            label="Maturity year (optional)"
+                            helper="From your certificate or passbook"
+                            value={row.maturityYear || 0}
+                            onChange={(year) =>
+                              persistValue(
+                                `postOfficeSchemes.${index}.maturityYear` as const,
+                                year,
+                              )
+                            }
+                            minYear={row.startYear || nowYear}
+                            maxYear={2060}
+                            name={`postOfficeSchemes.${index}.maturityYear`}
+                          />
+                        ) : null}
+                        {projection.note ? (
+                          <Hint tone="info">{projection.note}</Hint>
+                        ) : null}
+                      </>
+                    );
+                  })()}
                 </View>
               ))}
               <DashedButton

@@ -8,6 +8,7 @@ import { formatIndian } from "@/lib/formatters";
 import { existingEquityValue, LONG_RUN_INFLATION } from "@/lib/financialEngine";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { PriorityPlan } from "@/lib/priorityEngine";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 export type MoneyFix = {
   id:
@@ -117,11 +118,7 @@ export function buildAdvisorReview(
   const safePots =
     fdSpare +
     n(p.goldValue) +
-    (n(p.nscDepositAmount) ||
-      (
-        (p as { postOfficeSchemes?: Array<{ amount?: number }> })
-          .postOfficeSchemes ?? []
-      ).reduce((s, r) => s + n(r?.amount), 0));
+    (n(p.nscDepositAmount) || postOfficeHoldingsValue(p.postOfficeSchemes));
   const equityForNear = Math.max(
     0,
     near.reduce((s, g) => s + g.currentSaved, 0) - safePots,

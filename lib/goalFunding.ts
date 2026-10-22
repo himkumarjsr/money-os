@@ -25,6 +25,7 @@ import {
   type PortfolioAllocation,
 } from "@/lib/portfolioAllocation";
 import { monthlyStepUpSipForGoal } from "@/lib/sipGoal";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 /** Each funded goal gets at least this share of the pool (or its full need, if smaller). */
 export const GOAL_FLOOR_SHARE = 0.05;
@@ -255,12 +256,9 @@ export function earmarkExistingSavings(
   now: Date = new Date(),
   opts: SafetyReserve = {},
 ): Map<string, GoalEarmark> {
-  const p = profile as FinancialProfile & {
-    postOfficeSchemes?: Array<{ amount?: number }>;
-  };
+  const p = profile;
   const postOffice =
-    (p.postOfficeSchemes ?? []).reduce((s, r) => s + n0(r?.amount), 0) ||
-    n0(p.nscDepositAmount);
+    postOfficeHoldingsValue(p.postOfficeSchemes, now) || n0(p.nscDepositAmount);
   const pots = {
     debt: Math.max(
       0,

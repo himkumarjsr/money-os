@@ -404,8 +404,13 @@ export interface FinancialProfile {
   postOfficeSchemes?: Array<{
     id?: string;
     scheme: PostOfficeSchemeId;
+    /** Amount invested; balance so far for RD / savings account. Taken as today's value when startYear is missing. */
     amount: number;
+    /** Year the scheme was opened - sets its rate and maturity. */
+    startYear?: number;
     maturityYear?: number;
+    /** Recurring deposit only. */
+    monthlyDeposit?: number;
   }>;
   odLimit?: number;
   odUsed?: number;
@@ -611,7 +616,9 @@ const postOfficeSchemeSchema = z.object({
   id: z.string().optional(),
   scheme: z.enum(POST_OFFICE_SCHEME_VALUES).default("nsc"),
   amount: optionalMoney.default(0),
+  startYear: optionalWholeNumber,
   maturityYear: optionalWholeNumber,
+  monthlyDeposit: optionalMoney,
 });
 
 const customInvestmentSchema = z.object({
@@ -2732,7 +2739,12 @@ export function normalizeAnalyseFormValues(
             id: row.id ?? newAnalyseRowId(),
             scheme: row.scheme ?? "other",
             amount: row.amount ?? 0,
+            startYear: row.startYear || undefined,
             maturityYear: row.maturityYear,
+            monthlyDeposit:
+              row.scheme === "recurring_deposit"
+                ? row.monthlyDeposit || undefined
+                : undefined,
           }))
       : [],
     nscDepositAmount: (() => {

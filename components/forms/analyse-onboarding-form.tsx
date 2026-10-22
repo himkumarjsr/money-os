@@ -47,6 +47,11 @@ import {
 } from "@/lib/analyse-form-schema";
 import { emergencyFundMonthsNeeded } from "@/lib/financialEngine";
 import {
+  postOfficeHoldingsValue,
+  projectPostOfficeHolding,
+  type PostOfficeHolding,
+} from "@/lib/postOfficeHoldings";
+import {
   clampYearOnBlur,
   decideEmergencyAutoFill,
   emergencyFundSuggestion as computeEmergencyFundSuggestion,
@@ -522,6 +527,13 @@ function isWideScreen(): boolean {
 
 function sum(values: Array<number | undefined>) {
   return values.reduce<number>((total, value) => total + (value ?? 0), 0);
+}
+
+/** Amount field label by scheme: what to copy from the certificate / passbook. */
+function schemeAmountLabel(scheme: PostOfficeSchemeId): string {
+  if (scheme === "savings_account") return "Current balance";
+  if (scheme === "recurring_deposit") return "Balance so far (optional)";
+  return "Amount invested";
 }
 
 function ToggleButtons({
@@ -1108,10 +1120,7 @@ export function AnalyseOnboardingForm() {
     watchedValues.goldValue,
     watchedValues.otherAssets,
     watchedValues.hasPostOfficeSchemes
-      ? (watchedValues.postOfficeSchemes ?? []).reduce(
-          (sum, row) => sum + (row.amount ?? 0),
-          0,
-        )
+      ? postOfficeHoldingsValue(watchedValues.postOfficeSchemes)
       : watchedValues.investsInNsc
         ? watchedValues.nscDepositAmount
         : 0,
@@ -4296,12 +4305,16 @@ export function AnalyseOnboardingForm() {
                                       render={({ field: amountField }) => (
                                         <MoneyInput
                                           id={`postOfficeSchemes.${index}.amount`}
-                                          label="Current holding / deposit"
+                                          label={schemeAmountLabel(
+                                            watch(
+                                              `postOfficeSchemes.${index}.scheme` as const,
+                                            ) || "nsc",
+                                          )}
                                           error={
                                             errors.postOfficeSchemes?.[index]
                                               ?.amount?.message
                                           }
-                                          helper="Principal or balance you hold today"
+                                          helper="From your certificate or passbook"
                                           value={amountField.value ?? 0}
                                           onChange={(e) =>
                                             amountField.onChange(
@@ -4313,27 +4326,81 @@ export function AnalyseOnboardingForm() {
                                         />
                                       )}
                                     />
-                                    <YearSelect
-                                      label="Maturity year (optional)"
-                                      helper="From your certificate or passbook"
-                                      value={
-                                        watch(
-                                          `postOfficeSchemes.${index}.maturityYear` as const,
-                                        ) || 0
-                                      }
-                                      onChange={(year) =>
-                                        persistValue(
-                                          `postOfficeSchemes.${index}.maturityYear` as const,
-                                          year,
-                                        )
-                                      }
-                                      error={
-                                        errors.postOfficeSchemes?.[index]
-                                          ?.maturityYear?.message
-                                      }
-                                      minYear={new Date().getFullYear()}
-                                      maxYear={2060}
-                                    />
+                                    {(() => {
+                                      const row: PostOfficeHolding = watch(
+                                        `postOfficeSchemes.${index}` as const,
+                                      ) ?? { scheme: "nsc" };
+                                      const scheme = row.scheme || "nsc";
+                                      if (scheme === "savings_account")
+                                        return null;
+                                      const projection =
+                                        projectPostOfficeHolding(row);
+                                      const askMaturity =
+                                        scheme === "time_deposit" ||
+                                        scheme === "other";
+                                      return (
+                                        <>
+                                          <YearSelect
+                                            label="Year you started"
+                                            helper="Sets the interest rate and the maturity year"
+                                            value={row.startYear || 0}
+                                            onChange={(year) =>
+                                              persistValue(
+                                                `postOfficeSchemes.${index}.startYear` as const,
+                                                year,
+                                              )
+                                            }
+                                            minYear={1990}
+                                            maxYear={new Date().getFullYear()}
+                                          />
+                                          {scheme === "recurring_deposit" ? (
+                                            <Controller
+                                              control={control}
+                                              name={`postOfficeSchemes.${index}.monthlyDeposit`}
+                                              render={({ field: depField }) => (
+                                                <MoneyInput
+                                                  id={`postOfficeSchemes.${index}.monthlyDeposit`}
+                                                  label="Monthly deposit"
+                                                  value={depField.value ?? 0}
+                                                  onChange={(e) =>
+                                                    depField.onChange(
+                                                      parseMoneyInput(
+                                                        e.currentTarget.value,
+                                                      ) ?? 0,
+                                                    )
+                                                  }
+                                                />
+                                              )}
+                                            />
+                                          ) : null}
+                                          {askMaturity ? (
+                                            <YearSelect
+                                              label="Maturity year (optional)"
+                                              helper="From your certificate or passbook"
+                                              value={row.maturityYear || 0}
+                                              onChange={(year) =>
+                                                persistValue(
+                                                  `postOfficeSchemes.${index}.maturityYear` as const,
+                                                  year,
+                                                )
+                                              }
+                                              error={
+                                                errors.postOfficeSchemes?.[
+                                                  index
+                                                ]?.maturityYear?.message
+                                              }
+                                              minYear={1990}
+                                              maxYear={2060}
+                                            />
+                                          ) : null}
+                                          {projection.note ? (
+                                            <p className="rounded-lg bg-[#EEEDFE] px-3 py-2 text-xs font-medium leading-snug text-[#3C3489] sm:col-span-2">
+                                              {projection.note}
+                                            </p>
+                                          ) : null}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                               ))}
