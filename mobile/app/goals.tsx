@@ -82,6 +82,14 @@ const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
     q: "Planning a baby?",
     sub: "We'll add a childbirth and first-year fund.",
   },
+  home_purchase: {
+    q: "Planning to buy a home?",
+    sub: "We'll add the cash you need upfront. You can set the price and year.",
+  },
+  vehicle_purchase: {
+    q: "Planning to buy a car?",
+    sub: "We'll add a car fund, so you can buy it without a loan.",
+  },
 };
 
 const rupees = (v: number) => `₹${formatIndian(Math.round(v))}`;
@@ -451,10 +459,18 @@ export default function GoalsScreen() {
 }
 
 function Summary({ hub }: { hub: GoalsHub }) {
-  const { goals, onTrack, monthlyRequired, linkedMonthly } = hub.totals;
+  const {
+    goals,
+    onTrack,
+    monthlyRequired,
+    linkedMonthly,
+    runningMonthly,
+    suggestedMonthly,
+  } = hub.totals;
+  const started = linkedMonthly + runningMonthly;
   const pct =
     monthlyRequired > 0
-      ? Math.min(100, Math.round((linkedMonthly / monthlyRequired) * 100))
+      ? Math.min(100, Math.round((started / monthlyRequired) * 100))
       : 100;
   return (
     <View style={pageStyles.card}>
@@ -462,18 +478,26 @@ function Summary({ hub }: { hub: GoalsHub }) {
         <Text style={styles.metaStrong}>
           {onTrack} of {goals} {goals === 1 ? "goal" : "goals"} on track
         </Text>
-        <Text style={styles.pct}>{pct}% funded</Text>
+        <Text style={styles.pct}>{pct}% started</Text>
       </View>
       <Text style={styles.big}>
-        {rupees(linkedMonthly)}
+        {rupees(started)}
         <Text style={styles.bigMuted}>
           {" "}
           / {rupees(monthlyRequired)} a month
         </Text>
       </Text>
       <Text style={styles.meta}>
-        SIPs linked to your goals, against what they need
+        SIPs you've started (running ones included), against what your goals
+        need.
       </Text>
+      {suggestedMonthly > 0 && suggestedMonthly < monthlyRequired ? (
+        <Text style={[styles.meta, { marginTop: 4 }]}>
+          From what's left each month, your plan can put{" "}
+          {rupees(suggestedMonthly)} toward them. The rest needs a later date, a
+          smaller target or more income.
+        </Text>
+      ) : null}
       <View style={styles.track}>
         <View
           style={[
@@ -518,7 +542,8 @@ function GoalCard({
   const canPlan =
     funded &&
     (item.planGoal?.allocation?.slices.some((s) => s.monthly > 0) ?? false) &&
-    item.linkedMonthly + item.plannedMonthly < item.monthlyRequired;
+    item.linkedMonthly + item.runningMonthly + item.plannedMonthly <
+      item.monthlyRequired;
 
   return (
     <View style={pageStyles.card}>
@@ -571,8 +596,8 @@ function GoalCard({
             {goalStatusLine(item, formatStartMonth)}
           </Text>
           <Text style={styles.small}>
-            Needs {rupees(item.monthlyRequired)}/month · linked{" "}
-            {rupees(item.linkedMonthly)}
+            Needs {rupees(item.monthlyRequired)}/month · started{" "}
+            {rupees(item.linkedMonthly + item.runningMonthly)}
             {item.suggestedMonthly > 0
               ? ` · your plan sets aside ${rupees(item.suggestedMonthly)}`
               : ""}

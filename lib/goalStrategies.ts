@@ -567,11 +567,16 @@ export function goalReachLine(
   goal: { targetYear: number },
 ): string {
   if (reach.onTime)
-    return `On track: ${rs(reach.monthly)}/month gets you there by ${reach.reachYear ?? goal.targetYear}.`;
+    return reach.monthly > 0
+      ? `On track: ${rs(reach.monthly)}/month gets you there by ${reach.reachYear ?? goal.targetYear}.`
+      : `Your savings already cover this by ${goal.targetYear} - nothing more needed each month.`;
   if (reach.reachYear === null)
     return reach.monthly > 0
       ? `At ${rs(reach.monthly)}/month this goal isn't reached within ${REACH_HORIZON_YEARS} years - it needs a bigger SIP or a smaller target.`
       : "Nothing is going to this goal yet - free up a monthly amount for it.";
   const late = reach.reachYear - goal.targetYear;
-  return `At ${rs(reach.monthly)}/month you'd reach it in ${reach.reachYear}, ${late} ${late === 1 ? "year" : "years"} after ${goal.targetYear}.`;
+  const byThen = reach.rows.find((r) => r.year === goal.targetYear)?.value;
+  return byThen
+    ? `At ${rs(reach.monthly)}/month you'd have about ${rs(byThen)} by ${goal.targetYear}, and reach the goal in ${reach.reachYear} (${late} ${late === 1 ? "year" : "years"} late).`
+    : `At ${rs(reach.monthly)}/month you'd reach it in ${reach.reachYear}, ${late} ${late === 1 ? "year" : "years"} after ${goal.targetYear}.`;
 }

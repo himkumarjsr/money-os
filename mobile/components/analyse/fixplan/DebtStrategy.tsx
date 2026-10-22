@@ -1,5 +1,9 @@
 import { Text, View } from "react-native";
-import { debtPayoffNumbers } from "@/lib/priorityEngine";
+import {
+  debtExtraLabel,
+  debtPayoffNumbers,
+  debtPrepayNote,
+} from "@/lib/priorityEngine";
 import {
   DEBT_ESTIMATE_NOTE,
   debtIsEstimated,
@@ -31,13 +35,9 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
               `₹${n.outstanding.toLocaleString("en-IN")}${debt.outstandingEstimated ? " (est.)" : ""}`,
             ],
             ["Current EMI", `₹${n.currentEMI.toLocaleString("en-IN")}/mo`],
-            [
-              "Extra payment",
-              n.extraPayment > 0
-                ? `₹${n.extraPayment.toLocaleString("en-IN")}/mo`
-                : "After P1 cleared",
-            ],
+            ["Extra payment", debtExtraLabel(debt, n.extraPayment)],
           ];
+          const note = debtPrepayNote(debt);
           return (
             <View
               key={`${debt.type}-${i}`}
@@ -69,6 +69,7 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
                   </View>
                 ))}
               </View>
+              {note ? <Text style={styles.prepayNote}>{note}</Text> : null}
               {n.extraPayment > 0 ? (
                 <View style={styles.saveBox}>
                   <Text style={styles.saveText}>
@@ -104,6 +105,12 @@ export function DebtStrategy({ debts, debtStrategy }: Props) {
 
 const styles = themedStyles(() => ({
   emiWarn: { fontSize: 12, color: Colors.error, marginBottom: 8 },
+  prepayNote: {
+    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 17,
+    color: Colors.textSecondary,
+  },
   box: {
     backgroundColor: Colors.card,
     borderRadius: Radius.lg,
