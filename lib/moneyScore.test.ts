@@ -44,21 +44,24 @@ describe("money score", () => {
   it("marks down a household that invests little and points to the fix", () => {
     const saving = pillar(base(), "saving");
     expect(saving.points).toBeLessThan(5);
-    expect(saving.action?.text).toMatch(/Raise monthly investing/);
+    expect(saving.action?.text).toMatch(/more each month to reach 20%/);
   });
 
-  it("does not push a top-up on ₹1Cr term cover", () => {
+  it("counts ₹1Cr term cover as a base and shows the gap to the full need", () => {
     const r = analyseFinances(base());
     const term = r.securityChecklist.find((c) => c.label === "Term insurance");
     expect(term?.status).toBe("ok");
     expect(term?.actionNeeded).toBeUndefined();
-    expect(pillar(base(), "protection").line).toMatch(/solid base/);
+    const protection = pillar(base(), "protection");
+    expect(protection.line).toMatch(/your family would need/);
+    // The base earns most of the term points; only the gap costs any.
+    expect(protection.points).toBeGreaterThanOrEqual(17);
   });
 
   it("treats term cover as optional with no dependants or loans", () => {
     const r = analyseFinances(single());
     expect(r.issues.some((i) => i.code === "term_missing")).toBe(false);
-    expect(pillar(single(), "protection").line).toMatch(/optional/);
+    expect(pillar(single(), "protection").line).toMatch(/not needed yet/);
   });
 
   it("caps company-only health cover and asks for an own policy", () => {

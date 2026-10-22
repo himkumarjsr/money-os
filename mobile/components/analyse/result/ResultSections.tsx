@@ -131,6 +131,58 @@ export function NetWorthCard({ model }: { model: ResultModel }) {
         Net worth is your total assets minus total liabilities, based on the
         values you entered.
       </Text>
+      <NetWorthIncluded model={model} />
+    </View>
+  );
+}
+
+/** "What's included": every asset and loan the net worth counts. */
+function NetWorthIncluded({ model }: { model: ResultModel }) {
+  const [open, setOpen] = useState(false);
+  const { assets, liabilities } = model.netWorthBreakup;
+  const rows = (groups: typeof assets) =>
+    groups.flatMap((g) =>
+      g.rows.length > 0
+        ? g.rows.map((r) => ({ key: `${g.id}:${r.id}`, ...r }))
+        : [{ key: g.id, id: g.id, label: g.label, amount: g.total }],
+    );
+  const list = (title: string, groups: typeof assets) => (
+    <View style={{ gap: 4 }}>
+      <Text style={styles.includedTitle}>{title}</Text>
+      {groups.length === 0 ? (
+        <Text style={styles.smallNote}>Nothing entered.</Text>
+      ) : (
+        rows(groups).map((r) => (
+          <View key={r.key} style={styles.includedRow}>
+            <Text style={styles.includedLabel}>{r.label}</Text>
+            <Text style={styles.includedAmount}>{inr(r.amount)}</Text>
+          </View>
+        ))
+      )}
+    </View>
+  );
+  return (
+    <View>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={styles.includedToggle}
+      >
+        <Text style={styles.includedToggleText}>
+          {open ? "Hide what's included ↑" : "What's included ↓"}
+        </Text>
+      </Pressable>
+      {open ? (
+        <View style={styles.includedBox}>
+          {list("What you own", assets)}
+          {list("What you owe", liabilities)}
+          <Text style={styles.smallNote}>
+            Gold, your car and your home count at today's value. Insurance
+            policies are not counted until they pay out.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -658,6 +710,31 @@ const styles = themedStyles(() => ({
     lineHeight: 18,
     color: C.label,
   },
+  includedToggle: { minHeight: 44, justifyContent: "center", marginTop: 4 },
+  includedToggleText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.primaryText,
+  },
+  includedBox: {
+    gap: 12,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: C.softBg,
+  },
+  includedTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    color: Colors.primaryText,
+  },
+  includedRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  includedLabel: { flex: 1, fontSize: 13, color: C.ink },
+  includedAmount: { fontSize: 13, color: C.ink },
   bucket: {
     borderRadius: 16,
     borderWidth: 1,

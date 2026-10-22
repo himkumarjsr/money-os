@@ -33,6 +33,14 @@ const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
     q: "Planning a baby?",
     sub: "We'll add a childbirth and first-year fund.",
   },
+  home_purchase: {
+    q: "Planning to buy a home?",
+    sub: "We'll add the cash you need upfront. You can set the price and year.",
+  },
+  vehicle_purchase: {
+    q: "Planning to buy a car?",
+    sub: "We'll add a car fund, so you can buy it without a loan.",
+  },
 };
 
 export function GoalsSection({

@@ -44,6 +44,28 @@ export function AdvisorReviewCard({ review }: { review: AdvisorReview }) {
           </View>
         </View>
       ) : null}
+      {review.pots.length > 0 ? (
+        <View style={[shared.card, styles.bordered]}>
+          <Text style={shared.cardTitle}>Where to keep your money</Text>
+          <Text style={styles.sub}>
+            Each pot has its own job, so it sits in its own place.
+          </Text>
+          <View style={{ gap: 10, marginTop: 10 }}>
+            {review.pots.map((pot) => (
+              <View key={pot.id} style={styles.fix}>
+                <Text style={styles.fixTitle}>
+                  {pot.name}
+                  {pot.amount > 0
+                    ? ` · ₹${pot.amount.toLocaleString("en-IN")}`
+                    : ""}
+                </Text>
+                <Text style={styles.potWhere}>{pot.where}</Text>
+                <Text style={styles.fixDetail}>{pot.why}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <View style={[shared.card, styles.bordered, { gap: 14 }]}>
         <Text style={shared.cardTitle}>Your action list</Text>
         <ActionList title="This week" items={review.thisWeek} />
@@ -65,6 +87,7 @@ const styles = themedStyles(() => ({
   },
   fixTitle: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
   fixDetail: { fontSize: 13, lineHeight: 19, color: Colors.textSecondary },
+  potWhere: { fontSize: 13, lineHeight: 19, color: Colors.textPrimary },
   gain: {
     marginTop: 4,
     fontSize: 12,

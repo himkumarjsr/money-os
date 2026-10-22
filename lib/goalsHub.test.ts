@@ -140,6 +140,39 @@ describe("goalStatus", () => {
 });
 
 describe("buildGoalsHub", () => {
+  it("counts running SIPs / RD the plan already set against a goal as started", () => {
+    const hub = buildGoalsHub(
+      { selfAge: 34, retirementAge: 60 },
+      [
+        {
+          goalId: "retirement",
+          goalType: "retirement",
+          targetAmount: 1,
+          currentSaved: 0,
+          monthlyRequired: 10_000,
+          existingMonthly: 5_000,
+          monthlyAllocated: 4_000,
+          yearsToGoal: 26,
+          instrument: "",
+          readyToStart: true,
+          blockedBy: null,
+          icon: "",
+        } as never,
+      ],
+      [],
+      NOW,
+    );
+    const r = hub.items.find((i) => i.goal.id === "retirement")!;
+    expect(r).toMatchObject({
+      monthlyRequired: 15_000,
+      runningMonthly: 5_000,
+      linkedMonthly: 0,
+      gapMonthly: 10_000,
+      status: "behind",
+    });
+    expect(hub.totals.suggestedMonthly).toBe(4_000);
+  });
+
   it("links SIPs to goals by id and totals coverage", () => {
     const p = profile({});
     const hub = buildGoalsHub(
@@ -186,6 +219,7 @@ describe("buildGoalsHub", () => {
       suggestedMonthly: 15_000,
       currentSaved: 200_000,
       linkedMonthly: 8000,
+      runningMonthly: 0,
       plannedMonthly: 4000,
       nextStart: "2026-11-01",
       coveragePct: 40,
@@ -199,6 +233,8 @@ describe("buildGoalsHub", () => {
       onTrack: 0,
       monthlyRequired: 20_000,
       linkedMonthly: 8000,
+      runningMonthly: 0,
+      suggestedMonthly: 15_000,
     });
     expect(goalStatusLine(r, (m) => m)).toBe("Behind by ₹12,000/month");
   });

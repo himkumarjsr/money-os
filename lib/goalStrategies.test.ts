@@ -110,7 +110,7 @@ describe("projectGoalReach", () => {
     let paidIn = 0;
     for (let m = 1; m <= 12; m++) paidIn += 50_000 / Math.pow(1.06, m / 12);
     expect(reach.rows[0].invested).toBe(Math.round(10_00_000 + paidIn));
-    expect(goalReachLine(reach, goal)).toMatch(/you'd reach it in 20\d\d/);
+    expect(goalReachLine(reach, goal)).toMatch(/reach the goal in 20\d\d/);
   });
 
   it("is on time when the plan funds the full SIP", () => {

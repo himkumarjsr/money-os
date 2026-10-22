@@ -9,6 +9,7 @@ import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import GoalsSection from "@/components/analyse/GoalsSection";
 import MoneyScoreCard from "@/components/analyse/MoneyScoreCard";
+import NetWorthIncluded from "@/components/analyse/NetWorthIncluded";
 import PremiumRdCard from "@/components/analyse/PremiumRdCard";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
@@ -16,6 +17,8 @@ import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
 import {
   analyseFinances,
   assessTermCover,
+  healthCoverTarget,
+  savingsRateText,
   medicalEmergencyTarget,
   monthlyTotalIncome,
   scoreBand,
@@ -239,23 +242,32 @@ export default function AnalyseResultPage() {
   const medEmergencyTargetAmount = profile
     ? medicalEmergencyTarget(profile)
     : 200_000;
-  const medEmergencyCurrent = profile?.medicalEmergencyFund || 0;
+  // Spare savings beyond the emergency fund count, the same as the engine.
+  const medEmergencyCurrent =
+    analysis?.medicalEmergencyFund?.current ??
+    (profile?.medicalEmergencyFund || 0);
 
   const emergency = emergencyFundCheck(
     profile,
     needsMonthly,
     analysis?.realEmergencyFund?.monthsCovered || 0,
   );
+  // The Fix Plan's target: 9 months of essentials, EMIs and premiums (an EMI
+  // still has to be paid if income stops), so both pages show the same number.
+  const emergencyTarget =
+    priorityPlan.priorities.find((p) => p.id === "emergency_fund")
+      ?.targetAmount ?? emergency.target;
+  const emergencyHave = analysis?.realEmergencyFund?.total || 0;
 
   const safetyItems = [
     {
       id: "emergency",
       title: "Emergency fund",
       current: analysis?.realEmergencyFund?.total || 0,
-      target: emergency.target,
+      target: emergencyTarget,
       formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
       formatTarget: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
-      isOk: emergency.isOk,
+      isOk: emergencyHave >= emergencyTarget,
       icon: "shield",
     },
     {
@@ -298,13 +310,13 @@ export default function AnalyseResultPage() {
           ? "Health insurance"
           : "Health cover",
       current: profile?.healthInsuranceSumInsured || 0,
-      target: profile?.lifeStage === "bachelor" ? 500000 : 1000000,
+      target: profile ? healthCoverTarget(profile) : 1000000,
       formatCurrent: (v: number) =>
         v === 0 ? "None" : `₹${(v / 100000).toFixed(0)} lakh`,
       formatTarget: (v: number) => `₹${(v / 100000).toFixed(0)} lakh`,
       isOk:
         (profile?.healthInsuranceSumInsured || 0) >=
-        (profile?.lifeStage === "bachelor" ? 500000 : 1000000),
+        (profile ? healthCoverTarget(profile) : 1000000),
       icon: "hospital",
     },
     {
@@ -312,7 +324,7 @@ export default function AnalyseResultPage() {
       title: "Investing regularly",
       current: analysis?.scores?.savingsRate || 0,
       target: 15,
-      formatCurrent: (v: number) => `${Math.round(v)}% of income`,
+      formatCurrent: (v: number) => `${savingsRateText(v)} of income`,
       formatTarget: () => "15% minimum",
       isOk: (analysis?.scores?.savingsRate || 0) >= 15,
       icon: "trending",
@@ -509,6 +521,13 @@ export default function AnalyseResultPage() {
               Net worth is your total assets minus total liabilities, based on
               the values you entered.
             </p>
+            {profile ? (
+              <NetWorthIncluded
+                profile={profile}
+                totalAssets={assets}
+                totalLiabilities={liabilities}
+              />
+            ) : null}
           </section>
 
           {/* <section className="rounded-2xl bg-gradient-to-r from-[#4A3FB2] to-[#6E62D7] p-5 text-white">

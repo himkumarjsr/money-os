@@ -27,7 +27,12 @@ import {
 } from "@/lib/fixPlanMerge";
 import { Analytics } from "@/lib/analytics";
 import { scoreBand } from "@/lib/financialEngine";
-import { buildPriorityPlan, debtPayoffNumbers } from "@/lib/priorityEngine";
+import {
+  buildPriorityPlan,
+  debtExtraLabel,
+  debtPayoffNumbers,
+  debtPrepayNote,
+} from "@/lib/priorityEngine";
 import { goalTimeline } from "@/lib/goalTimeline";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 import { loginHrefPreserveRef } from "@/lib/referralRewards";
@@ -963,9 +968,7 @@ export default function FixPlanPage() {
                               ],
                               [
                                 "Extra payment",
-                                extraPayment > 0
-                                  ? `₹${extraPayment.toLocaleString("en-IN")}/mo`
-                                  : "After P1 cleared",
+                                debtExtraLabel(debt, extraPayment),
                               ],
                             ] as const
                           ).map(([lbl, value]) => (
@@ -999,6 +1002,18 @@ export default function FixPlanPage() {
                             </div>
                           ))}
                         </div>
+                        {debtPrepayNote(debt) ? (
+                          <p
+                            style={{
+                              fontSize: 12,
+                              lineHeight: 1.45,
+                              color: "#5F5E5A",
+                              margin: "10px 0 0",
+                            }}
+                          >
+                            {debtPrepayNote(debt)}
+                          </p>
+                        ) : null}
                         {extraPayment > 0 ? (
                           <div
                             style={{

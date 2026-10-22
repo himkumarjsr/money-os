@@ -24,8 +24,20 @@ export type MoneyFix = {
   yearlyGain?: number;
 };
 
+/** Where one pot of money should sit, in plain words. */
+export type MoneyPot = {
+  id: string;
+  name: string;
+  /** Today's rupees; 0 when the pot is a monthly SIP, not a lump. */
+  amount: number;
+  where: string;
+  why: string;
+};
+
 export type AdvisorReview = {
   fixes: MoneyFix[];
+  /** Where to keep each pot: safety funds, spare cash and each goal's money. */
+  pots: MoneyPot[];
   thisWeek: string[];
   monthly: string[];
   yearly: string[];
@@ -75,18 +87,18 @@ export function buildAdvisorReview(
 
   const fixes: MoneyFix[] = [];
 
+  // A small balance is cleared from savings any time - not worth a card.
   const costly = (plan.debts ?? [])
-    .filter((d) => d.rate >= COSTLY_DEBT_RATE && d.outstanding > 0)
+    .filter((d) => d.rate >= COSTLY_DEBT_RATE && d.outstanding > 0 && !d.small)
     .sort((a, b) => b.rate - a.rate);
   let spare = idleCash + fdSpare;
   for (const d of costly) {
     if (spare <= 0) break;
     const pay = Math.min(spare, d.outstanding);
     spare -= pay;
-    const name = d.displayName || d.lenderName || d.type;
     fixes.push({
       id: "costly_debt",
-      title: `Clear your ${name.toLowerCase()} with savings`,
+      title: `Clear your ${debtName(d)} with savings`,
       detail: `It costs about ${d.rate}% a year while your cash and FDs earn ${SAVINGS_RATE}-7%. Using ${rs(pay)} of spare savings to ${pay >= d.outstanding ? "close it" : "cut it"} is a sure ${d.rate}% return.`,
       yearlyGain: Math.round((pay * (d.rate - 7)) / 100),
     });
@@ -98,7 +110,7 @@ export function buildAdvisorReview(
     fixes.push({
       id: "idle_cash",
       title: "Cash sitting idle",
-      detail: `${rs(idleLeft)} sits in your savings account / liquid funds beyond your emergency and medical funds, earning about ${SAVINGS_RATE}% - less than ${inflationPct}% inflation. Put it into your nearest goal's fund.`,
+      detail: `${rs(idleLeft)} is more than your emergency and medical funds need. In a savings account it earns about ${SAVINGS_RATE}%, while prices rise ${inflationPct}% a year. Move it to your nearest goal's fund.`,
       yearlyGain: Math.round((idleLeft * (8 - SAVINGS_RATE)) / 100),
     });
   }
@@ -147,6 +159,8 @@ export function buildAdvisorReview(
       detail: `We count your EPF (${rs(n(p.epfBalance))}) and PPF (${rs(n(p.ppfBalance))}) toward retirement. If ${shortGoals[0].label.toLowerCase()} falls short: EPF allows a withdrawal for buying a home (after 5 years of service) and for children's education or marriage (after 7 years); PPF allows a partial withdrawal from its 7th year. Use these only if needed - every rupee taken out now is several rupees less at retirement.`,
     });
   }
+
+  const pots = moneyPots(plan, emergency, medical, idleLeft);
 
   // ── Action list ────────────────────────────────────────────────────────
   const thisWeek: string[] = [];
@@ -206,5 +220,77 @@ export function buildAdvisorReview(
     "Renew term and health cover on time, and re-run Analyse after any pay rise, new loan or new goal.",
   );
 
-  return { fixes, thisWeek, monthly, yearly };
+  return { fixes, pots, thisWeek, monthly, yearly };
+}
+
+/** "BF overdraft", "ICICI personal loan": lender first, type in lower case. */
+function debtName(d: {
+  type?: string;
+  lenderName?: string;
+  displayName?: string;
+}) {
+  const type = String(d.type || d.displayName || "loan")
+    .replace(/\s*\([^)]*\)/g, "")
+    .trim()
+    .toLowerCase();
+  return d.lenderName ? `${d.lenderName} ${type}` : type;
+}
+
+function moneyPots(
+  plan: Pick<PriorityPlan, "goalFunding">,
+  emergency: { targetAmount?: number } | undefined,
+  medical: { targetAmount?: number } | undefined,
+  idleCash: number,
+): MoneyPot[] {
+  const pots: MoneyPot[] = [];
+  if (n(emergency?.targetAmount) > 0) {
+    pots.push({
+      id: "emergency",
+      name: "Emergency fund",
+      amount: Math.round(n(emergency?.targetAmount)),
+      where:
+        "About one month's costs in your savings account. The rest in a liquid fund or a sweep-in FD.",
+      why: "You can take it out within a day, and it earns 6-7% instead of 3%.",
+    });
+  }
+  if (n(medical?.targetAmount) > 0) {
+    pots.push({
+      id: "medical",
+      name: "Medical fund",
+      amount: Math.round(n(medical?.targetAmount)),
+      where:
+        "A separate liquid fund or sweep-in FD, used only for hospital bills.",
+      why: "Insurance doesn't pay everything (co-pay, room-rent limits). This pays the rest fast.",
+    });
+  }
+  const goals = (plan.goalFunding?.items ?? [])
+    .filter((g) => g.monthlyAllocated > 0 || g.currentSaved > 0)
+    .sort((a, b) => a.yearsToGoal - b.yearsToGoal);
+  if (idleCash >= IDLE_FLOOR && goals.length > 0) {
+    pots.push({
+      id: "spare_cash",
+      name: "Extra cash in your bank",
+      amount: Math.round(idleCash),
+      where: `Your ${goals[0].label.toLowerCase()} fund (${goals[0].instrument}).`,
+      why: "It's the goal you need money for first, so the cash starts growing now.",
+    });
+  }
+  for (const g of goals) {
+    const y = g.yearsToGoal;
+    pots.push({
+      id: `goal:${g.goalId}`,
+      name: `${g.label} (${g.targetYear})`,
+      amount: 0,
+      where: g.instrument,
+      why:
+        g.type === "retirement"
+          ? "Many years to go, so most of it can be in equity funds that grow faster. Ups and downs even out over time."
+          : y < 3
+            ? "You need it soon, so it should not fall in value: FDs and short-term debt funds."
+            : y < 7
+              ? `${y} years away: a mix of equity and debt grows it with smaller falls. Move it to FDs in the last 3 years.`
+              : `${y} years away: mostly equity, so it grows faster. Move it to FDs in the last 3 years.`,
+    });
+  }
+  return pots;
 }

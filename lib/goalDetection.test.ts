@@ -64,16 +64,28 @@ describe("detectGoals - implied goals", () => {
     expect(edu.every((g) => !g.isDefaultTarget)).toBe(true);
   });
 
-  it("adds home purchase when renting and vehicle when no car", () => {
-    const goals = detectGoals(
-      profile({
-        lifeStage: "bachelor",
-        ownsHome: false,
-        ownsCar: false,
-        rentAmount: 25_000,
-      }),
-      NOW,
+  it("asks before adding a home or a car, and adds them on a yes", () => {
+    const renter = profile({
+      lifeStage: "bachelor",
+      ownsHome: false,
+      ownsCar: false,
+      rentAmount: 25_000,
+    });
+    expect(
+      detectGoals(renter, NOW).some(
+        (g) => g.id === "home_purchase" || g.id === "vehicle_purchase",
+      ),
+    ).toBe(false);
+    expect(promptedGoalOffers(renter)).toEqual(
+      expect.arrayContaining(["home_purchase", "vehicle_purchase"]),
     );
+    const yes = answerPromptedGoal(
+      answerPromptedGoal(renter, "home_purchase", true),
+      "vehicle_purchase",
+      true,
+    );
+    expect(promptedGoalOffers(yes)).not.toContain("home_purchase");
+    const goals = detectGoals(yes, NOW);
     const home = goals.find((g) => g.id === "home_purchase");
     // ₹1 Cr estimated home (400× rent) → 40% upfront.
     expect(home?.targetAmount).toBe(

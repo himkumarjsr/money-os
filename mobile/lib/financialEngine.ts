@@ -138,6 +138,12 @@ export type AnalysisResult = {
     fdWeighted: number;
     liquidMF: number;
   };
+  /** Medical fund held: the amount entered plus spare savings beyond the emergency fund. */
+  medicalEmergencyFund?: {
+    current: number;
+    target: number;
+    fromSavings: number;
+  };
   termInsuranceNeeded: number;
   totalAssets: number;
   totalLiabilities: number;
@@ -224,6 +230,14 @@ export function totalLoanLiabilities(data: FinancialProfile): number {
 }
 
 /** Health cover a household should carry: more in metros and with kids. */
+/** "14.7%" rather than "15%" when rounding would hide a miss of the 15% minimum. */
+export function savingsRateText(pct: number): string {
+  const whole = Math.round(pct);
+  return whole >= 15 && pct < 15
+    ? `${Math.floor(pct * 10) / 10}%`
+    : `${whole}%`;
+}
+
 export function healthCoverTarget(data: Partial<FinancialProfile>): number {
   if (n(data.numberOfKids) > 0) return 20_00_000;
   const metro = data.cityTier === "metro";
@@ -1410,6 +1424,11 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       securityChecklist,
     ),
     securityChecklist,
+    medicalEmergencyFund: {
+      current: Math.round(medEmergencyCurrent),
+      target: Math.round(medEmergencyTarget),
+      fromSavings: Math.round(medFromSavings),
+    },
     termInsuranceNeeded,
     realEmergencyFund: {
       ...er,
