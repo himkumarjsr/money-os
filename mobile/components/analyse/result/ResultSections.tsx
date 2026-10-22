@@ -382,6 +382,18 @@ export function SafetyNetSection({
                 <Text style={styles.safetyMeta}>
                   Current {item.currentText} vs target {item.targetText}
                 </Text>
+                {item.explain ? (
+                  <>
+                    <Text style={[styles.smallNote, { marginTop: 4 }]}>
+                      <Text style={{ fontWeight: "700" }}>Target: </Text>
+                      {item.explain.target}
+                    </Text>
+                    <Text style={[styles.smallNote, { marginTop: 2 }]}>
+                      <Text style={{ fontWeight: "700" }}>Now: </Text>
+                      {item.explain.filled}
+                    </Text>
+                  </>
+                ) : null}
               </View>
               <View style={[styles.statusDot, { backgroundColor: tone.bg }]}>
                 <Text style={[styles.statusGlyph, { color: tone.fg }]}>

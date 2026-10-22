@@ -54,6 +54,7 @@ import NoConflictNote from "@/components/analyse/NoConflictNote";
 import { projectNetWorth } from "@/lib/netWorthTrajectory";
 import LoanSyncNotices from "@/components/analyse/LoanSyncNotices";
 import { groupMonthlyPlan } from "@/lib/monthlyPlanGroups";
+import YearlyRoadmapTable from "@/components/analyse/YearlyRoadmapTable";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -853,6 +854,13 @@ export default function FixPlanPage() {
               </table>
             </div>
           </section>
+        ) : null}
+
+        {profile ? (
+          <YearlyRoadmapTable
+            profile={profile}
+            items={aiPlan.priorityPlan?.goalFunding?.items}
+          />
         ) : null}
 
         {aiPlan.priorityPlan?.debts?.length > 0 ? (

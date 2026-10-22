@@ -463,6 +463,8 @@ export type GoalReachRow = {
   invested: number;
   /** What it has grown to, today's rupees. */
   value: number;
+  /** Monthly SIP paid that year (rises with salary), ₹. */
+  sip?: number;
 };
 
 export type GoalReach = {
@@ -549,7 +551,12 @@ export function projectGoalReach(
       : 0;
     const value = (lumpValue + sipValue) / deflate + pf;
     const year = thisYear + y;
-    rows.push({ year, invested: Math.round(put), value: Math.round(value) });
+    rows.push({
+      year,
+      invested: Math.round(put),
+      value: Math.round(value),
+      sip: Math.round(sip),
+    });
     if (reachYear === null && value >= target * 0.995) reachYear = year;
     if (year >= goal.targetYear && reachYear !== null) break;
   }
@@ -579,4 +586,69 @@ export function goalReachLine(
   return byThen
     ? `At ${rs(reach.monthly)}/month you'd have about ${rs(byThen)} by ${goal.targetYear}, and reach the goal in ${reach.reachYear} (${late} ${late === 1 ? "year" : "years"} late).`
     : `At ${rs(reach.monthly)}/month you'd reach it in ${reach.reachYear}, ${late} ${late === 1 ? "year" : "years"} after ${goal.targetYear}.`;
+}
+
+export type RoadmapRow = {
+  year: number;
+  /** Monthly SIP across all goals still being saved for that year, ₹. */
+  monthly: number;
+  /** What the money for those goals is worth at year end, today's rupees. */
+  worth: number;
+  /** Goals falling due or reached, loans ending - in plain words. */
+  events: string[];
+};
+
+/**
+ * Year by year until the last goal is paid for: what to invest each month,
+ * what the goal money is worth, and what happens that year. Built from each
+ * goal's own projection (projectGoalReach), so it matches the goal cards.
+ */
+export function buildYearlyRoadmap(
+  profile: FinancialProfile,
+  goals: Array<Parameters<typeof projectGoalReach>[1] & { label: string }>,
+  now: Date = new Date(),
+): RoadmapRow[] {
+  const thisYear = now.getFullYear();
+  const reaches = goals.map((g) => ({
+    g,
+    reach: projectGoalReach(profile, g, now),
+  }));
+  const lastYear = Math.max(
+    thisYear + 1,
+    ...reaches.map((r) => r.reach.rows[r.reach.rows.length - 1]?.year ?? 0),
+  );
+  const loans = runningLoans(profile);
+  const rows: RoadmapRow[] = [];
+  for (let year = thisYear + 1; year <= lastYear; year++) {
+    let monthly = 0;
+    let worth = 0;
+    const events: string[] = [];
+    for (const { g, reach } of reaches) {
+      const row = reach.rows.find((r) => r.year === year);
+      if (row) {
+        monthly += row.sip ?? 0;
+        worth += row.value;
+      }
+      if (year === g.targetYear) {
+        events.push(
+          reach.onTime
+            ? `${g.label}: ${rs(g.targetAmount)} ready`
+            : `${g.label} due - still short`,
+        );
+      } else if (year === reach.reachYear && !reach.onTime) {
+        events.push(`${g.label}: fully funded, ${year - g.targetYear} yr late`);
+      }
+    }
+    for (const l of loans) {
+      if (year === thisYear + Math.ceil(l.yearsLeft))
+        events.push(`${l.name} ends: move its ${rs(l.emi)} EMI into goals`);
+    }
+    rows.push({
+      year,
+      monthly: Math.round(monthly),
+      worth: Math.round(worth),
+      events,
+    });
+  }
+  return rows;
 }
