@@ -631,6 +631,38 @@ export function FrequencyToggle({
   );
 }
 
+/** Segmented choice between a few short options (web `ToggleButtons`). */
+export function SegmentToggle<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: ReadonlyArray<{ label: string; value: T }>;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <View style={s.segment}>
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            style={[s.segmentBtn, selected && s.segmentBtnOn]}
+          >
+            <Text style={[s.segmentText, selected && s.segmentTextOn]}>
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function PremiumField({
   label,
   amountError,

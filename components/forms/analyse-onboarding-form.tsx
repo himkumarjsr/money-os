@@ -41,10 +41,17 @@ import {
   type AnalyseFormValues,
   type AnalyseSubmitIssue,
   type FinancialProfile,
+  type HealthInsuranceSource,
   type PostOfficeSchemeId,
   type PremiumFrequency,
 } from "@/lib/analyse-form-schema";
+import { resetGoalCardEdits } from "@/lib/goalDetection";
 import { emergencyFundMonthsNeeded } from "@/lib/financialEngine";
+import {
+  postOfficeHoldingsValue,
+  projectPostOfficeHolding,
+  type PostOfficeHolding,
+} from "@/lib/postOfficeHoldings";
 import {
   clampYearOnBlur,
   decideEmergencyAutoFill,
@@ -523,6 +530,13 @@ function sum(values: Array<number | undefined>) {
   return values.reduce<number>((total, value) => total + (value ?? 0), 0);
 }
 
+/** Amount field label by scheme: what to copy from the certificate / passbook. */
+function schemeAmountLabel(scheme: PostOfficeSchemeId): string {
+  if (scheme === "savings_account") return "Current balance";
+  if (scheme === "recurring_deposit") return "Balance so far (optional)";
+  return "Amount invested";
+}
+
 function ToggleButtons({
   options,
   value,
@@ -935,6 +949,7 @@ export function AnalyseOnboardingForm() {
   const lifeStage = watch("lifeStage");
   const numberOfKids = watch("numberOfKids") ?? 0;
   const hasHealthInsurance = watch("hasHealthInsurance");
+  const healthSource = watch("healthInsuranceSource") ?? "self";
   const hasTermInsurance = watch("hasTermInsurance");
   const hasOtherInsurance = watch("hasOtherInsurance");
   const ownsHome = watch("ownsHome");
@@ -1106,10 +1121,7 @@ export function AnalyseOnboardingForm() {
     watchedValues.goldValue,
     watchedValues.otherAssets,
     watchedValues.hasPostOfficeSchemes
-      ? (watchedValues.postOfficeSchemes ?? []).reduce(
-          (sum, row) => sum + (row.amount ?? 0),
-          0,
-        )
+      ? postOfficeHoldingsValue(watchedValues.postOfficeSchemes)
       : watchedValues.investsInNsc
         ? watchedValues.nscDepositAmount
         : 0,
@@ -1540,11 +1552,14 @@ export function AnalyseOnboardingForm() {
 
     try {
       const previousProfile = useFinancialStore.getState().lastSubmission;
-      const mergedValues = coalesceInsuranceToggles({
-        ...values,
-        primaryGoal: values.primaryGoal || "grow_wealth",
-        monthlySalary: values.monthlySalary ?? 0,
-      });
+      // A (re)take starts the report's goal list over.
+      const mergedValues = resetGoalCardEdits(
+        coalesceInsuranceToggles({
+          ...values,
+          primaryGoal: values.primaryGoal || "grow_wealth",
+          monthlySalary: values.monthlySalary ?? 0,
+        }),
+      );
       setAnalysis(mergedValues);
       const normalized = normalizeAnalyseFormValues(mergedValues);
       try {
@@ -2999,34 +3014,83 @@ export function AnalyseOnboardingForm() {
                         </div>
                       </div>
                       {hasHealthInsurance ? (
+                        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-800">
+                              Who provides this cover?
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Company cover ends when you change jobs or retire,
+                              so we plan for it differently.
+                            </p>
+                          </div>
+                          <div className="shrink-0">
+                            <ToggleButtons
+                              options={[
+                                { label: "Company", value: "employer" },
+                                { label: "Self", value: "self" },
+                                { label: "Both", value: "both" },
+                              ]}
+                              value={healthSource}
+                              onChange={(value) =>
+                                setValue(
+                                  "healthInsuranceSource",
+                                  value as HealthInsuranceSource,
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+                      {hasHealthInsurance ? (
                         <div className="grid min-w-0 gap-5 sm:grid-cols-2">
                           <MoneyInput
                             id="healthInsuranceSumInsured"
-                            label="Sum insured"
+                            label={
+                              healthSource === "employer"
+                                ? "Company cover (sum insured)"
+                                : healthSource === "both"
+                                  ? "Your own policy (sum insured)"
+                                  : "Sum insured"
+                            }
                             error={errors.healthInsuranceSumInsured?.message}
                             {...bindMoneyField("healthInsuranceSumInsured")}
                           />
-                          <PremiumField
-                            inputId="healthInsurancePremiumInput"
-                            label="Premium amount"
-                            amountError={
-                              errors.healthInsurancePremiumInput?.message
-                            }
-                            frequency={
-                              watch("healthInsurancePremiumFrequency") ??
-                              "monthly"
-                            }
-                            onFrequencyChange={(value) =>
-                              setValue("healthInsurancePremiumFrequency", value)
-                            }
-                          >
+                          {healthSource === "both" ? (
                             <MoneyInput
-                              id="healthInsurancePremiumInput"
-                              label="Premium amount"
-                              hideLabel
-                              {...bindMoneyField("healthInsurancePremiumInput")}
+                              id="employerHealthCover"
+                              label="Company cover (sum insured)"
+                              {...bindMoneyField("employerHealthCover")}
                             />
-                          </PremiumField>
+                          ) : null}
+                          {healthSource === "employer" ? null : (
+                            <PremiumField
+                              inputId="healthInsurancePremiumInput"
+                              label="Premium amount"
+                              amountError={
+                                errors.healthInsurancePremiumInput?.message
+                              }
+                              frequency={
+                                watch("healthInsurancePremiumFrequency") ??
+                                "monthly"
+                              }
+                              onFrequencyChange={(value) =>
+                                setValue(
+                                  "healthInsurancePremiumFrequency",
+                                  value,
+                                )
+                              }
+                            >
+                              <MoneyInput
+                                id="healthInsurancePremiumInput"
+                                label="Premium amount"
+                                hideLabel
+                                {...bindMoneyField(
+                                  "healthInsurancePremiumInput",
+                                )}
+                              />
+                            </PremiumField>
+                          )}
                           {(watch("healthInsurancePremiumInput") ?? 0) > 0 ? (
                             <div className="sm:col-span-2">
                               <PremiumDueFields
@@ -4245,12 +4309,16 @@ export function AnalyseOnboardingForm() {
                                       render={({ field: amountField }) => (
                                         <MoneyInput
                                           id={`postOfficeSchemes.${index}.amount`}
-                                          label="Current holding / deposit"
+                                          label={schemeAmountLabel(
+                                            watch(
+                                              `postOfficeSchemes.${index}.scheme` as const,
+                                            ) || "nsc",
+                                          )}
                                           error={
                                             errors.postOfficeSchemes?.[index]
                                               ?.amount?.message
                                           }
-                                          helper="Principal or balance you hold today"
+                                          helper="From your certificate or passbook"
                                           value={amountField.value ?? 0}
                                           onChange={(e) =>
                                             amountField.onChange(
@@ -4262,27 +4330,81 @@ export function AnalyseOnboardingForm() {
                                         />
                                       )}
                                     />
-                                    <YearSelect
-                                      label="Maturity year (optional)"
-                                      helper="From your certificate or passbook"
-                                      value={
-                                        watch(
-                                          `postOfficeSchemes.${index}.maturityYear` as const,
-                                        ) || 0
-                                      }
-                                      onChange={(year) =>
-                                        persistValue(
-                                          `postOfficeSchemes.${index}.maturityYear` as const,
-                                          year,
-                                        )
-                                      }
-                                      error={
-                                        errors.postOfficeSchemes?.[index]
-                                          ?.maturityYear?.message
-                                      }
-                                      minYear={new Date().getFullYear()}
-                                      maxYear={2060}
-                                    />
+                                    {(() => {
+                                      const row: PostOfficeHolding = watch(
+                                        `postOfficeSchemes.${index}` as const,
+                                      ) ?? { scheme: "nsc" };
+                                      const scheme = row.scheme || "nsc";
+                                      if (scheme === "savings_account")
+                                        return null;
+                                      const projection =
+                                        projectPostOfficeHolding(row);
+                                      const askMaturity =
+                                        scheme === "time_deposit" ||
+                                        scheme === "other";
+                                      return (
+                                        <>
+                                          <YearSelect
+                                            label="Year you started"
+                                            helper="Sets the interest rate and the maturity year"
+                                            value={row.startYear || 0}
+                                            onChange={(year) =>
+                                              persistValue(
+                                                `postOfficeSchemes.${index}.startYear` as const,
+                                                year,
+                                              )
+                                            }
+                                            minYear={1990}
+                                            maxYear={new Date().getFullYear()}
+                                          />
+                                          {scheme === "recurring_deposit" ? (
+                                            <Controller
+                                              control={control}
+                                              name={`postOfficeSchemes.${index}.monthlyDeposit`}
+                                              render={({ field: depField }) => (
+                                                <MoneyInput
+                                                  id={`postOfficeSchemes.${index}.monthlyDeposit`}
+                                                  label="Monthly deposit"
+                                                  value={depField.value ?? 0}
+                                                  onChange={(e) =>
+                                                    depField.onChange(
+                                                      parseMoneyInput(
+                                                        e.currentTarget.value,
+                                                      ) ?? 0,
+                                                    )
+                                                  }
+                                                />
+                                              )}
+                                            />
+                                          ) : null}
+                                          {askMaturity ? (
+                                            <YearSelect
+                                              label="Maturity year (optional)"
+                                              helper="From your certificate or passbook"
+                                              value={row.maturityYear || 0}
+                                              onChange={(year) =>
+                                                persistValue(
+                                                  `postOfficeSchemes.${index}.maturityYear` as const,
+                                                  year,
+                                                )
+                                              }
+                                              error={
+                                                errors.postOfficeSchemes?.[
+                                                  index
+                                                ]?.maturityYear?.message
+                                              }
+                                              minYear={1990}
+                                              maxYear={2060}
+                                            />
+                                          ) : null}
+                                          {projection.note ? (
+                                            <p className="rounded-lg bg-[#EEEDFE] px-3 py-2 text-xs font-medium leading-snug text-[#3C3489] sm:col-span-2">
+                                              {projection.note}
+                                            </p>
+                                          ) : null}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                               ))}

@@ -330,11 +330,11 @@ describe("buildPriorityPlan", () => {
 });
 
 describe("term top-up for someone who already has cover", () => {
-  const withCover = (wantsTermTopUp?: boolean) =>
+  const withCover = (cover: number, wantsTermTopUp?: boolean) =>
     buildPriorityPlan(
       profile({
         hasTermInsurance: true,
-        termInsuranceSumAssured: 10_000_000,
+        termInsuranceSumAssured: cover,
         wantsTermTopUp,
       }),
       { needsActual: 40_000, overallScore: 50 },
@@ -342,21 +342,31 @@ describe("term top-up for someone who already has cover", () => {
   const term = (plan: ReturnType<typeof buildPriorityPlan>) =>
     plan.priorities.find((p) => p.id === "term_insurance");
 
-  it("asks first and budgets nothing until the user says yes", () => {
-    const step = term(withCover());
+  it("leaves a solid base alone - no top-up push as income grows", () => {
+    expect(term(withCover(10_000_000))).toBeUndefined();
+  });
+
+  it("still budgets a top-up on a solid base when the user asked for one", () => {
+    expect(
+      term(withCover(10_000_000, true))?.monthlyContribution,
+    ).toBeGreaterThan(0);
+  });
+
+  it("asks first below the base and budgets nothing until the user says yes", () => {
+    const step = term(withCover(2_500_000));
     expect(step?.needsAnswer).toBe(true);
     expect(step?.monthlyContribution).toBe(0);
     expect(step?.quoteMonthly).toBeGreaterThan(0);
   });
 
   it("budgets the premium after a yes", () => {
-    const step = term(withCover(true));
+    const step = term(withCover(2_500_000, true));
     expect(step?.needsAnswer).toBeUndefined();
     expect(step?.monthlyContribution).toBeGreaterThan(0);
   });
 
   it("drops the step after a no", () => {
-    expect(term(withCover(false))).toBeUndefined();
+    expect(term(withCover(2_500_000, false))).toBeUndefined();
   });
 });
 

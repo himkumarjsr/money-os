@@ -11,6 +11,7 @@ import {
   type UnifiedLoanType,
 } from "@/lib/analyse-form-schema";
 import { formatIndian } from "@/lib/formatters";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 import {
   emergencyFundSuggestionFor,
   type AnalyseFormUiState,
@@ -280,7 +281,7 @@ export function computeLiveTotals(v: Partial<AnalyseFormValues>) {
     v.goldValue,
     v.otherAssets,
     v.hasPostOfficeSchemes
-      ? (v.postOfficeSchemes ?? []).reduce((s, row) => s + (row.amount ?? 0), 0)
+      ? postOfficeHoldingsValue(v.postOfficeSchemes)
       : v.investsInNsc
         ? v.nscDepositAmount
         : 0,
