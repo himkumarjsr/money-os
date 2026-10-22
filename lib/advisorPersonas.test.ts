@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { FinancialProfile } from "./analyse-form-schema";
-import { ADVISOR_PERSONAS } from "./advisorPersonasFixture";
+import { ADVISOR_PERSONAS as CORE_PERSONAS } from "./advisorPersonasFixture";
+import { MORE_ADVISOR_PERSONAS } from "./advisorPersonasMore";
 import { calculateTermNeeded } from "./financialEngine";
 import { detectGoals } from "./goalDetection";
 import { earmarkExistingSavings } from "./goalFunding";
@@ -21,6 +22,8 @@ const agrees = (engine: unknown, advisor: number | string) =>
     ? engine === advisor
     : typeof engine === "number" &&
       Math.abs(engine - advisor) <= Math.max(0.02 * Math.abs(advisor), 100);
+
+const ADVISOR_PERSONAS = [...CORE_PERSONAS, ...MORE_ADVISOR_PERSONAS];
 
 const asProfile = (p: Partial<FinancialProfile>) => p as FinancialProfile;
 
@@ -80,7 +83,8 @@ describe("advisor persona suite", () => {
         if (agrees(out[key], advisor)) ok += 1;
       }
     }
-    expect(total).toBeGreaterThan(90);
+    expect(ADVISOR_PERSONAS.length).toBeGreaterThanOrEqual(59);
+    expect(total).toBeGreaterThan(470);
     expect(ok / total).toBeGreaterThanOrEqual(0.97);
   });
 
@@ -103,6 +107,24 @@ describe("advisor persona suite", () => {
           monthlyAllocated: item.monthlyRequired,
         });
         expect(reach.onTime, `${persona.id} ${item.goalId}`).toBe(true);
+      }
+    }
+  });
+
+  it("never plans more in a month than the household has spare, and never NaN", () => {
+    for (const persona of ADVISOR_PERSONAS) {
+      const { plan } = engineFigures(asProfile(persona.profile));
+      const spare = plan.surplusBreakdown?.netSurplus ?? 0;
+      for (const m of plan.monthlyPlan ?? []) {
+        const put =
+          m.emergency + m.medical + m.termYearly + m.sip + m.extraDebt;
+        expect(put, `${persona.id} month ${m.month}`).toBeLessThanOrEqual(
+          spare + 1,
+        );
+      }
+      for (const p of plan.priorities) {
+        expect(Number.isFinite(p.monthlyContribution), persona.id).toBe(true);
+        expect(p.monthlyContribution, persona.id).toBeGreaterThanOrEqual(0);
       }
     }
   });

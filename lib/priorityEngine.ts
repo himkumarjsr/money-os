@@ -1344,14 +1344,30 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     return emi * (remainingMonths[loanType] || 24);
   };
 
+  // A card bill paid in full each month costs nothing; only a balance
+  // carried forward is debt (at ~36%), paid down at least the 5% minimum.
+  const cardCarried = Math.max(
+    0,
+    Number(profile.creditCardCarriedBalance) || 0,
+  );
   DEBT_CONFIG.forEach((config) => {
-    const emi = (profile as any)[config.profileKey] || 0;
+    const isCard = config.profileKey === "creditCardBillMonthly";
+    const emi = isCard
+      ? cardCarried > 0
+        ? Math.max(
+            Number(profile.creditCardBillMonthly) || 0,
+            Math.round(cardCarried * 0.05),
+          )
+        : 0
+      : (profile as any)[config.profileKey] || 0;
     if (emi > 0) {
       const outstandingKey = config.profileKey
         .replace("EMI", "Outstanding")
         .replace("Bill", "Outstanding")
         .replace("Monthly", "Outstanding");
-      const explicitOutstanding = (profile as any)[outstandingKey];
+      const explicitOutstanding = isCard
+        ? cardCarried
+        : (profile as any)[outstandingKey];
       const rateKey =
         config.profileKey === "bikeEMI"
           ? "bikeLoanRate"

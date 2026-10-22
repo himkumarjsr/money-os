@@ -42,6 +42,7 @@ function profile(overrides: Record<string, unknown> = {}) {
     personalLoanEMI: 3_000,
     personalLoanLenderName: "Personal Bank",
     creditCardBillMonthly: 1_000,
+    creditCardCarriedBalance: 3_000,
     additionalObligations: [
       {
         type: "Education",
@@ -91,6 +92,21 @@ function profile(overrides: Record<string, unknown> = {}) {
 }
 
 describe("buildPriorityPlan", () => {
+  it("counts a card only when a balance is carried, not a bill paid in full", () => {
+    const paidInFull = buildPriorityPlan(
+      profile({ creditCardCarriedBalance: 0 }) as never,
+      { overallScore: 50 },
+    );
+    expect(paidInFull.debts.some((d) => d.type === "Credit card")).toBe(false);
+    const carried = buildPriorityPlan(
+      profile({ creditCardCarriedBalance: 60_000 }) as never,
+      { overallScore: 50 },
+    );
+    const card = carried.debts.find((d) => d.type === "Credit card")!;
+    expect(card.outstanding).toBe(60_000);
+    expect(card.emi).toBe(3_000);
+  });
+
   it("builds sequenced safety priorities, debts, goal, FD suggestion, and monthly plan", () => {
     const plan = buildPriorityPlan(profile(), {
       needsActual: 50_000,
