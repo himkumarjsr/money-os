@@ -2,7 +2,12 @@ import { calculateOutstanding } from "@/lib/amortisation";
 import {
   emergencyFundMonthsNeeded,
   existingEquityValue,
+  healthCoverHeld,
+  healthCoverTarget,
   medicalEmergencyTarget,
+  ownHealthPolicyTarget,
+  termCoverOptional,
+  termPremiumMonthlyEstimate,
 } from "@/lib/financialEngine";
 import {
   buildGoalFundingPlan,
@@ -704,22 +709,21 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   const termHave =
     profile.termInsuranceSumAssured || profile.termInsuranceCover || 0;
   const termGap = Math.max(0, termNeeded - termHave);
-  const termPremiumEstRaw =
-    age < 30
-      ? Math.round((termGap / 10000000) * 850)
-      : age < 35
-        ? Math.round((termGap / 10000000) * 1200)
-        : age < 40
-          ? Math.round((termGap / 10000000) * 1700)
-          : Math.round((termGap / 10000000) * 2500);
+  const termPremiumEstRaw = termPremiumMonthlyEstimate(termGap, age);
   const termStartMonth =
     medicalGapLeft > 0 && medicalMonthsToComplete > 0
       ? medicalStartMonth + medicalMonthsToComplete
       : medicalStartMonth;
-  // Someone who already has term cover may not want (or be able) to keep
-  // topping it up as income grows: the top-up is only budgeted once they
-  // say yes, and dropped when they say no.
-  const termTopUpAsk = termHave > 0 && termGap > 0;
+  // A solid base (₹1Cr+, or half of today's need) is enough: we don't push a
+  // top-up every time income grows. It only comes back if the user asked.
+  const termSolidBase =
+    termHave >= 10_000_000 || termHave >= Math.max(5_000_000, termNeeded * 0.5);
+  const termSkip =
+    (termHave > 0 && termSolidBase && profile.wantsTermTopUp !== true) ||
+    (termHave <= 0 && termCoverOptional(profile));
+  // Below that base, someone who already has cover may not want (or be able)
+  // to top it up: it is only budgeted once they say yes, and dropped on no.
+  const termTopUpAsk = termHave > 0 && termGap > 0 && !termSolidBase;
   const termIncluded = !termTopUpAsk || profile.wantsTermTopUp === true;
   const termPremiumQuote = Math.max(
     0,
@@ -727,9 +731,15 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   );
   const termPremiumEst = termIncluded ? termPremiumQuote : 0;
   const termYearlyPremium =
-    termGap > 0 && termIncluded ? Math.max(termPremiumEstRaw * 12, 12000) : 0;
+    termGap > 0 && termIncluded && !termSkip
+      ? Math.max(termPremiumEstRaw * 12, 12000)
+      : 0;
 
-  if (termGap > 0 && !(termTopUpAsk && profile.wantsTermTopUp === false)) {
+  if (
+    termGap > 0 &&
+    !termSkip &&
+    !(termTopUpAsk && profile.wantsTermTopUp === false)
+  ) {
     const termGapCr = (termGap / 10000000).toFixed(1);
     const termHaveCr = (termHave / 10000000).toFixed(1);
     priorities.push({
@@ -787,15 +797,14 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     runningSurplus = Math.max(0, runningSurplus - termPremiumEst);
   }
 
-  const healthNeeded =
-    stage === "bachelor"
-      ? 500000
-      : (profile.numberOfKids || 0) > 0
-        ? 2000000
-        : 1000000;
-  const healthHave =
-    profile.healthInsuranceSumInsured || profile.healthInsuranceCover || 0;
-  const healthGap = Math.max(0, healthNeeded - healthHave);
+  const healthNeeded = healthCoverTarget(profile);
+  const healthHeld = healthCoverHeld(profile);
+  const healthHave = healthHeld.total || profile.healthInsuranceCover || 0;
+  // Company cover ends with the job, so an own base policy is still needed.
+  const healthOwnNeeded = healthHeld.employerOnly
+    ? ownHealthPolicyTarget(profile)
+    : 0;
+  const healthGap = Math.max(0, healthNeeded - healthHave, healthOwnNeeded);
   const healthPremiumEstRaw =
     (profile.numberOfKids || 0) > 0 ? 2000 : stage !== "bachelor" ? 1500 : 1000;
   const healthPremiumEst = Math.max(
@@ -808,15 +817,14 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       rank: rank++,
       id: "health_insurance",
       title:
-        healthHave === 0 ? "Close health cover gap" : "Increase health cover",
+        healthHave === 0
+          ? "Close health cover gap"
+          : healthHeld.employerOnly
+            ? "Buy your own health policy"
+            : "Increase health cover",
       category: "insurance",
       urgency: healthHave === 0 ? "critical" : "high",
-      status:
-        healthHave === 0
-          ? "missing"
-          : healthHave >= healthNeeded
-            ? "complete"
-            : "partial",
+      status: healthHave === 0 ? "missing" : "partial",
       currentAmount: healthHave,
       targetAmount: healthNeeded,
       gap: healthGap,
@@ -825,11 +833,19 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusBefore: runningSurplus,
       surplusAfterThis: Math.max(0, runningSurplus - healthPremiumEst),
       monthsToComplete: 1,
-      instrument:
-        "Family floater health policy - compare room-rent limits, co-pay and waiting periods across 2–3 insurers",
-      actionThisWeek: `Get ₹${(healthNeeded / 100000).toFixed(0)} lakh health cover. Compare quotes on IRDAI-registered insurer or aggregator sites, or through a licensed advisor.`,
-      whyThisMatters:
-        "One hospitalisation in metro costs ₹2-5 lakh. Without cover your savings get wiped.",
+      instrument: healthHeld.employerOnly
+        ? "Own family floater base policy - keep the company cover on top of it"
+        : healthHave > 0
+          ? "Super top-up over your existing policy - far cheaper than a bigger base plan"
+          : "Family floater health policy - compare room-rent limits, co-pay and waiting periods across 2–3 insurers",
+      actionThisWeek: healthHeld.employerOnly
+        ? `Buy your own ₹${(healthOwnNeeded / 100000).toFixed(0)} lakh health policy. Your company cover stops when you change jobs or retire, and a new policy's waiting periods (2-4 years for existing illnesses) start only when you buy it.`
+        : healthHave > 0
+          ? `Add a ₹${(healthGap / 100000).toFixed(0)} lakh super top-up to reach ₹${(healthNeeded / 100000).toFixed(0)} lakh cover. Compare quotes on IRDAI-registered insurer or aggregator sites.`
+          : `Get ₹${(healthNeeded / 100000).toFixed(0)} lakh health cover. Compare quotes on IRDAI-registered insurer or aggregator sites, or through a licensed advisor.`,
+      whyThisMatters: healthHeld.employerOnly
+        ? "Company cover is tied to the job. Buying your own policy while healthy keeps you covered between jobs and after retirement."
+        : "One hospitalisation in metro costs ₹2-5 lakh. Without cover your savings get wiped.",
       icon: "🏥",
       canBuyFromFinkoin: false,
       finkoinProductType: "health",

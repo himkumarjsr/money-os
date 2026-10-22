@@ -41,6 +41,7 @@ import { openContentHref } from "@/lib/contentLinks";
 import { maybeAskForReview } from "@/lib/storeReview";
 import { hasAnalyseConsent } from "@/lib/analyseConsent";
 import { getUniversalCaps } from "@/lib/universal-buckets";
+import { MoneyScoreCard } from "@/components/analyse/result/MoneyScoreCard";
 
 /** Web `/analyse`: skips consent when it was already given. */
 async function goToForm(userId: string | undefined, replace = false) {
@@ -213,6 +214,9 @@ function AnalyseResultContent() {
         showsVerticalScrollIndicator={false}
       >
         <ResultHero model={model} profile={lastSubmission} />
+        {analysis?.moneyScore ? (
+          <MoneyScoreCard score={analysis.moneyScore} />
+        ) : null}
         <MonthlySummaryCard model={model} />
         <NetWorthCard model={model} />
         <BucketCapsSection model={model} />
@@ -231,7 +235,11 @@ function AnalyseResultContent() {
 
         <PremiumRdCard profile={lastSubmission} userId={user?.id} />
 
-        <GoalsSection profile={lastSubmission} userId={user?.id} />
+        <GoalsSection
+          profile={lastSubmission}
+          userId={user?.id}
+          funding={priorityPlan.goalFunding?.items}
+        />
 
         <PlanTeaserSection
           model={model}

@@ -15,6 +15,8 @@ import {
   type DetectedGoal,
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
+import type { GoalFundingItem } from "@/lib/goalFunding";
+import { goalSavingsLines } from "@/lib/goalSavingsText";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import Link from "next/link";
 
@@ -32,13 +34,20 @@ const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
 export default function GoalsSection({
   profile,
   userId,
+  funding,
 }: {
   profile: FinancialProfile;
   userId?: string | null;
+  /** Fix Plan goal funding: shows the money already counted toward each goal. */
+  funding?: GoalFundingItem[];
 }) {
   const goals = useMemo(() => detectGoals(profile), [profile]);
   const offers = useMemo(() => promptedGoalOffers(profile), [profile]);
   const hiddenCount = profile.dismissedGoals?.length ?? 0;
+  const fundingById = useMemo(
+    () => new Map((funding ?? []).map((f) => [f.goalId, f])),
+    [funding],
+  );
 
   const [editing, setEditing] = useState<DetectedGoal | null>(null);
   const [amountRaw, setAmountRaw] = useState("");
@@ -155,6 +164,18 @@ export default function GoalsSection({
                       </span>
                       {g.calculation}
                     </p>
+                  ) : null}
+                  {fundingById.get(g.id) ? (
+                    <div className="mt-2 rounded-lg bg-[#F7F6FE] px-3 py-2">
+                      {goalSavingsLines(fundingById.get(g.id)!).map((line) => (
+                        <p
+                          key={line}
+                          className="text-xs font-medium leading-snug text-[#3C3489]"
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
                 <span

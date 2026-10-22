@@ -86,7 +86,9 @@ describe("validation rules that used to pass on defaulted zeros", () => {
       otherInsurancePremiums: [{ premiumAmount: 0, frequency: "yearly" }],
     });
     expect(issuesAt(zero, "otherInsurancePremiums")).toHaveLength(1);
-    expect(issuesAt(zero, "otherInsurancePremiums.0.premiumAmount")).toHaveLength(1);
+    expect(
+      issuesAt(zero, "otherInsurancePremiums.0.premiumAmount"),
+    ).toHaveLength(1);
 
     const ok = step5Schema.safeParse({
       ...base,
@@ -107,7 +109,9 @@ describe("validation rules that used to pass on defaulted zeros", () => {
     expect(issuesAt(blank, "kidsAges.1")).toHaveLength(1);
     const blankString = step1Schema.safeParse({ ...base, kidsAges: [5, ""] });
     expect(issuesAt(blankString, "kidsAges.1")).toHaveLength(1);
-    expect(step1Schema.safeParse({ ...base, kidsAges: [5, 0] }).success).toBe(true);
+    expect(step1Schema.safeParse({ ...base, kidsAges: [5, 0] }).success).toBe(
+      true,
+    );
   });
 });
 
@@ -144,10 +148,17 @@ describe("emergency fund months - one source", () => {
   it("is life-stage aware between 6 and 12 months", () => {
     expect(emergencyFundMonthsNeeded({ lifeStage: "bachelor" })).toBe(6);
     expect(
-      emergencyFundMonthsNeeded({ lifeStage: "bachelor", parentsSupport: 5000 }),
+      emergencyFundMonthsNeeded({
+        lifeStage: "bachelor",
+        parentsSupport: 5000,
+      }),
     ).toBe(9);
-    expect(emergencyFundMonthsNeeded({ lifeStage: "married", kidsAges: [] })).toBe(9);
-    expect(emergencyFundMonthsNeeded({ lifeStage: "kids", kidsAges: [4] })).toBe(12);
+    expect(
+      emergencyFundMonthsNeeded({ lifeStage: "married", kidsAges: [] }),
+    ).toBe(9);
+    expect(
+      emergencyFundMonthsNeeded({ lifeStage: "kids", kidsAges: [4] }),
+    ).toBe(12);
     expect(emergencyFundMonthsNeeded({ lifeStage: "senior" })).toBe(12);
     expect(emergencyFundMonthsNeeded({ lifeStage: "single" })).toBe(6);
   });
@@ -210,7 +221,8 @@ describe("interest saved uses amortisation", () => {
 
   it("returns 0 when there is no extra payment or the EMI never clears the loan", () => {
     expect(
-      debtPayoffNumbers({ outstanding: 50_000, rate: 10, emi: 2000 }).interestSaved,
+      debtPayoffNumbers({ outstanding: 50_000, rate: 10, emi: 2000 })
+        .interestSaved,
     ).toBe(0);
     expect(simulateLoanPayoff(1_000_000, 24, 1000)).toBeNull();
     expect(
@@ -257,8 +269,12 @@ describe("Fix Plan merge", () => {
         { id: "medical_fund", actionThisWeek: "AI copy for a closed gap" },
       ],
     });
-    expect(merged.priorities[0].actionThisWeek).toBe("Move ₹50,000 to liquid MF");
-    expect(merged.priorities[1].actionThisWeek).toMatch(/^Maintain this completed/);
+    expect(merged.priorities[0].actionThisWeek).toBe(
+      "Move ₹50,000 to liquid MF",
+    );
+    expect(merged.priorities[1].actionThisWeek).toMatch(
+      /^Maintain this completed/,
+    );
   });
 
   it("falls back to the engine action when the AI has none", () => {
@@ -281,8 +297,12 @@ describe("Fix Plan merge", () => {
   });
 
   it("never reports a zero gain as +0", () => {
-    expect(scoreProjectionGain({ scoreToday: 80, scoreAfter12Months: 80 })).toBe(0);
-    expect(scoreProjectionGain({ scoreToday: 60, scoreAfter12Months: 72 })).toBe(12);
+    expect(
+      scoreProjectionGain({ scoreToday: 80, scoreAfter12Months: 80 }),
+    ).toBe(0);
+    expect(
+      scoreProjectionGain({ scoreToday: 60, scoreAfter12Months: 72 }),
+    ).toBe(12);
     expect(noGainProjectionMessage(82)).toMatch(/already strong/);
     expect(noGainProjectionMessage(45)).not.toMatch(/strong/);
   });
@@ -331,7 +351,14 @@ describe("AI plan cache", () => {
       AI_CACHE_KEY,
       JSON.stringify({
         v: 2,
-        entries: [{ profileHash: "old", aiPlan: {}, projection: null, generatedAt: old }],
+        entries: [
+          {
+            profileHash: "old",
+            aiPlan: {},
+            projection: null,
+            generatedAt: old,
+          },
+        ],
       }),
     );
     expect(cache.getCachedPlan("old")).toBeNull();
@@ -352,9 +379,9 @@ describe("AI plan cache", () => {
 
 describe("paywall copy", () => {
   it("never implies a charge while payments are off", () => {
-    expect(paywallConfirmLabel({ paymentsEnabled: false, priceInr: 99 })).not.toMatch(
-      /unlock|₹/i,
-    );
+    expect(
+      paywallConfirmLabel({ paymentsEnabled: false, priceInr: 99 }),
+    ).not.toMatch(/unlock|₹/i);
     expect(paywallPriceNote(false)).toMatch(/won't be charged/);
     expect(paywallConfirmLabel({ paymentsEnabled: true, priceInr: 99 })).toBe(
       "Confirm and unlock ₹99",
@@ -364,7 +391,10 @@ describe("paywall copy", () => {
 });
 
 describe("Fix Plan PDF fonts", () => {
-  const profile = { ...buildUserAnalyseScenarioProfile(), name: "Asha Rao" } as any;
+  const profile = {
+    ...buildUserAnalyseScenarioProfile(),
+    name: "Asha Rao",
+  } as any;
   const result = analyseFinances(profile);
   const plan = buildPriorityPlan(profile, result);
   const data = buildFixPlanPdfData(plan, {});
@@ -399,6 +429,9 @@ describe("mobile keeps byte-identical copies of shared logic", () => {
     "goalDetection.ts",
     "goalFunding.ts",
     "goalReach.ts",
+    "goalSavingsText.ts",
+    "holdings.ts",
+    "moneyScore.ts",
     "netWorthTrajectory.ts",
     "paywallCopy.ts",
     "plannedInvestments.ts",

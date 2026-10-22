@@ -2,13 +2,21 @@ import type { CityTier, FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   BASE_UNIVERSAL_CAPS,
   BUCKET_CAPS,
-  getInsuranceCriticalFloor,
-  getInsuranceGuideline,
   getUniversalCaps,
   getUnallocatedIncome,
   getUniversalBucketActuals,
   getUniversalBucketRows,
 } from "@/lib/universal-buckets";
+import { existingEquityValue } from "@/lib/holdings";
+import { computeMoneyScore, type MoneyScore } from "@/lib/moneyScore";
+
+export {
+  existingEquityValue,
+  LONG_RUN_INFLATION,
+  projectRetirementAccounts,
+  RETIREMENT_ACCOUNT_RATES,
+  type RetirementAccountProjection,
+} from "@/lib/holdings";
 
 export type { FinancialProfile } from "@/lib/analyse-form-schema";
 
@@ -75,18 +83,6 @@ export function computeRealEmergencyFund(
   const realTotal =
     savingsCounted + liquidCounted + fdCounted + otherCounted + legacyCounted;
   const monthsCovered = monthlyExpenses > 0 ? realTotal / monthlyExpenses : 0;
-  console.log("=== EMERGENCY FUND CALC ===", {
-    savings: data.savingsAccountBalance,
-    fd: data.fdValue,
-    liquidMF: data.liquidMFValue,
-    otherLiquid: data.otherLiquidSavings,
-    fdWeighted: (data.fdValue || 0) * 0.7,
-    total:
-      (data.savingsAccountBalance || 0) +
-      (data.liquidMFValue || 0) * 0.95 +
-      (data.fdValue || 0) * 0.7 +
-      (data.otherLiquidSavings || 0) * 0.5,
-  });
   return {
     realTotal,
     savingsRaw: sav,
@@ -105,6 +101,8 @@ export function computeRealEmergencyFund(
 
 export type AnalysisResult = {
   overallScore: number;
+  /** Pillar breakdown behind overallScore. Missing on results saved before it existed. */
+  moneyScore?: MoneyScore;
   criticalIssueCount: number;
   warningIssueCount: number;
   scores: {
@@ -167,18 +165,6 @@ function n(v: number | undefined): number {
   return v ?? 0;
 }
 
-/** Market-linked equity holdings: the summary total when given, otherwise the sum of the individual fields. */
-export function existingEquityValue(data: Partial<FinancialProfile>): number {
-  if (n(data.totalEquityValue) > 0) return n(data.totalEquityValue);
-  return (
-    n(data.mfValue) +
-    n(data.indianStocksValue) +
-    n(data.usStocksValueINR) +
-    n(data.usMFValueINR) +
-    n(data.rsuValueINR)
-  );
-}
-
 /** Outstanding loan principal used for net worth. Prefer unified loan rows; assets-step home/car are additive when absent from unified list. */
 export function totalLoanLiabilities(data: FinancialProfile): number {
   // Typical bill as a revolving proxy, plus any balance carried forward.
@@ -220,6 +206,88 @@ export function totalLoanLiabilities(data: FinancialProfile): number {
     n(data.bikeEMI) * 24 +
     credit
   );
+}
+
+/** Health cover a household should carry: more in metros and with kids. */
+export function healthCoverTarget(data: Partial<FinancialProfile>): number {
+  if (n(data.numberOfKids) > 0) return 20_00_000;
+  const metro = data.cityTier === "metro";
+  if (data.lifeStage === "bachelor") return metro ? 10_00_000 : 5_00_000;
+  return metro ? 15_00_000 : 10_00_000;
+}
+
+export type HealthCoverHeld = {
+  /** The user's own policy. */
+  own: number;
+  /** Company group cover - it ends with the job. */
+  employer: number;
+  total: number;
+  /** All the cover comes from the employer. */
+  employerOnly: boolean;
+};
+
+export function healthCoverHeld(
+  data: Partial<FinancialProfile>,
+): HealthCoverHeld {
+  if (!data.hasHealthInsurance) {
+    return { own: 0, employer: 0, total: 0, employerOnly: false };
+  }
+  const sum = n(data.healthInsuranceSumInsured);
+  const source = data.healthInsuranceSource;
+  const own = source === "employer" ? 0 : sum;
+  const employer =
+    source === "employer"
+      ? sum
+      : source === "both"
+        ? n(data.employerHealthCover)
+        : 0;
+  return {
+    own,
+    employer,
+    total: own + employer,
+    employerOnly: own <= 0 && employer > 0,
+  };
+}
+
+/** Own base policy to buy when all cover comes from the employer. */
+export function ownHealthPolicyTarget(data: Partial<FinancialProfile>): number {
+  return Math.min(healthCoverTarget(data), 10_00_000);
+}
+
+/**
+ * Rough pure-term premium, ₹/month, for `cover` at this age (non-smoker,
+ * 30-year term). Only a budgeting guide - real quotes vary by insurer.
+ */
+export function termPremiumMonthlyEstimate(cover: number, age: number): number {
+  if (cover <= 0) return 0;
+  const perCrore =
+    age < 30
+      ? 850
+      : age < 35
+        ? 1200
+        : age < 40
+          ? 1700
+          : age < 45
+            ? 2500
+            : age < 50
+              ? 3800
+              : 5500;
+  return Math.max(
+    500,
+    Math.round(((cover / 1_00_00_000) * perCrore) / 50) * 50,
+  );
+}
+
+/**
+ * Term cover only protects people who depend on the income, or family who
+ * would inherit a loan. With neither, it is optional (cheap to lock in young).
+ */
+export function termCoverOptional(data: FinancialProfile): boolean {
+  const dependants =
+    data.lifeStage !== "bachelor" ||
+    n(data.numberOfKids) > 0 ||
+    n(data.parentsSupport) > 0;
+  return !dependants && getUniversalBucketActuals(data).loans <= 0;
 }
 
 /** Suggested medical emergency corpus (beyond health insurance) by city, age, and dependants. */
@@ -472,6 +540,9 @@ function buildIssues(params: {
   medEmergencyCurrent: number;
   medEmergencyTarget: number;
   monthlyInvesting: number;
+  termOptional: boolean;
+  healthHeld: HealthCoverHeld;
+  healthTarget: number;
 }): AnalysisIssue[] {
   const {
     totalIncome,
@@ -490,6 +561,9 @@ function buildIssues(params: {
     medEmergencyCurrent,
     medEmergencyTarget,
     monthlyInvesting,
+    termOptional,
+    healthHeld,
+    healthTarget,
   } = params;
   const issues: AnalysisIssue[] = [];
 
@@ -530,13 +604,28 @@ function buildIssues(params: {
     }
   }
 
-  const insuranceFloor = getInsuranceCriticalFloor(totalIncome);
-  if (insuranceActual < insuranceFloor) {
+  // Protection is judged by the cover held, not by how much is spent on it.
+  if (healthHeld.total <= 0) {
     issues.push({
-      severityScore: 85,
+      severityScore: 88,
       severity: "critical",
-      code: "insurance_below_floor",
-      message: `Insurance contributions are only ${fmt(insuranceActual)}/mo. Keep protection spend above ${fmt(insuranceFloor)}/mo.`,
+      code: "health_missing",
+      message:
+        "No health insurance. One hospital stay can cost ₹2-5 lakh and wipe out your savings.",
+    });
+  } else if (healthHeld.employerOnly) {
+    issues.push({
+      severityScore: 57,
+      severity: "warning",
+      code: "health_employer_only",
+      message: `Your ${fmt(healthHeld.employer)} health cover comes only from your company and ends when you leave. Buy your own base policy while you're healthy.`,
+    });
+  } else if (healthHeld.total < healthTarget) {
+    issues.push({
+      severityScore: 45,
+      severity: "warning",
+      code: "health_underinsured",
+      message: `Health cover ${fmt(healthHeld.total)} is below the ${fmt(healthTarget)} suggested for your family and city. A super top-up closes the gap cheaply.`,
     });
   }
 
@@ -600,13 +689,14 @@ function buildIssues(params: {
   }
 
   if (!hasTermInsurance || termCover === 0) {
-    issues.push({
-      severityScore: 92,
-      severity: "critical",
-      code: "term_missing",
-      message:
-        "You have no term insurance. Your family has zero protection if income stops.",
-    });
+    if (!termOptional)
+      issues.push({
+        severityScore: 92,
+        severity: "critical",
+        code: "term_missing",
+        message:
+          "You have no term insurance. Your family has zero protection if income stops.",
+      });
   } else {
     const termAssessment = assessTermCover({
       hasTermInsurance,
@@ -634,9 +724,10 @@ function buildIssues(params: {
   }
 
   if (medEmergencyCurrent < medEmergencyTarget) {
+    const medCritical = medEmergencyCurrent < medEmergencyTarget * 0.5;
     issues.push({
-      severityScore: 90,
-      severity: "critical",
+      severityScore: medCritical ? 90 : 52,
+      severity: medCritical ? "critical" : "warning",
       code: "medical_fund_short",
       message: `Medical emergency fund is ${fmt(medEmergencyCurrent)} versus target ${fmt(medEmergencyTarget)}.`,
     });
@@ -683,7 +774,7 @@ function buildPlanSteps(
 
   if (emergencyFundGap > 0) {
     push(
-      `Best place for emergency fund: savings account for the first ₹50,000, then liquid mutual fund for the rest. Avoid FD for emergency fund - penalty if you need money urgently. Then build toward ${fmt(emergencyFundTarget)} (~${fmt(Math.ceil(emergencyFundGap / 12))}/mo for ~12 months closes the gap).`,
+      `Best place for emergency fund: savings account for the first ₹50,000, then a liquid mutual fund or sweep-in FD for the rest (a regular FD charges a penalty if you break it early). Build toward ${fmt(emergencyFundTarget)} (~${fmt(Math.ceil(emergencyFundGap / 12))}/mo for ~12 months closes the gap).`,
     );
   } else {
     push(
@@ -736,93 +827,14 @@ function buildPlanSteps(
       break;
   }
 
-  const insuranceGuideline = getInsuranceGuideline(monthlyTotalIncome(profile));
   push(
-    `Aim to keep roughly ${fmt(insuranceGuideline)}/mo available for insurance and protection, but do not count it as monthly investment flow.`,
+    "Review the plan after every salary hike or major family change so the bucket mix stays intentional.",
   );
-
-  while (steps.length < 7) {
-    push(
-      "Review the meter after every salary hike or major family change so the bucket mix stays intentional.",
-    );
-  }
 
   return steps.slice(0, 7);
 }
 
 export function analyseFinances(data: FinancialProfile): AnalysisResult {
-  console.log("=== ALL LOANS IN ENGINE ===", {
-    personalLoanEMI: data.personalLoanEMI,
-    carLoanEMI: data.carLoanEMI,
-    bikeEMI: data.bikeEMI,
-    additionalObligations: data.additionalObligations,
-    totalEMI:
-      (data.personalLoanEMI || 0) +
-      (data.carLoanEMI || 0) +
-      (data.bikeEMI || 0) +
-      (data.creditCardEmiMonthly || 0) +
-      (data.additionalObligations || []).reduce(
-        (s: number, o: any) => s + (o.monthlyAmount || 0),
-        0,
-      ),
-  });
-  console.log("=== FINKOIN ENGINE DEBUG START ===");
-  console.log(
-    "RAW PROFILE INPUT:",
-    JSON.stringify(
-      {
-        lifeStage: data.lifeStage,
-        monthlySalary: data.monthlySalary,
-        spouseIncome: data.spouseIncome,
-        otherIncome: data.otherIncome,
-        savingsAccountBalance: data.savingsAccountBalance,
-        fdValue: data.fdValue,
-        liquidMFValue: data.liquidMFValue,
-        otherLiquidSavings: data.otherLiquidSavings,
-        epfBalance: data.epfBalance,
-        mfValue: data.mfValue,
-        totalEquityValue: data.totalEquityValue,
-        homeMarketValue: data.homeMarketValue,
-        homeLoanOutstanding: data.homeLoanOutstanding,
-        carMarketValue: data.carMarketValue,
-        goldValue: data.goldValue,
-        termInsuranceSumAssured: data.termInsuranceSumAssured,
-        hasTermInsurance: data.hasTermInsurance,
-        healthInsuranceSumInsured: data.healthInsuranceSumInsured,
-        foodTotal: data.foodTotal,
-        transportTotal: data.transportTotal,
-        utilityTotal: data.utilityTotal,
-        rentAmount: data.rentAmount,
-        homeLoanEMI: data.homeLoanEMI,
-        personalLoanEMI: data.personalLoanEMI,
-      },
-      null,
-      2,
-    ),
-  );
-  console.log("=== FINKOIN DEBUG ===");
-  console.log("INPUTS:", {
-    savingsAccountBalance: data.savingsAccountBalance,
-    fdValue: data.fdValue,
-    liquidMFValue: data.liquidMFValue,
-    homeLoanOutstanding: data.homeLoanOutstanding,
-    homeMarketValue: data.homeMarketValue,
-    epfBalance: data.epfBalance,
-    termInsuranceSumAssured: data.termInsuranceSumAssured,
-    monthlySalary: data.monthlySalary,
-    spouseIncome: data.spouseIncome,
-    otherIncome: data.otherIncome,
-    lifeStage: data.lifeStage,
-  });
-  if (process.env.NODE_ENV === "development") {
-    console.log("[analyseFinances] called", {
-      lifeStage: data.lifeStage,
-      cityTier: data.cityTier,
-      monthlySalary: data.monthlySalary,
-      fieldCount: Object.keys(data).length,
-    });
-  }
-
   const totalIncome = monthlyTotalIncome(data);
   const bucketRows = getUniversalBucketRows(data);
   const bucketActuals = getUniversalBucketActuals(data);
@@ -837,14 +849,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const emergencyFundMonthsMax = emergencyFundMonthsNeeded(data);
   const emergencyFundTargetMax = monthlyExpenses * emergencyFundMonthsMax;
   const er = computeRealEmergencyFund(data);
-  if (process.env.NODE_ENV === "development") {
-    console.log("EMERGENCY FUND DEBUG:", {
-      savingsAccountBalance: data.savingsAccountBalance,
-      fdValue: data.fdValue,
-      liquidMFValue: data.liquidMFValue,
-      otherLiquidSavings: data.otherLiquidSavings,
-    });
-  }
   const emergencyFundCurrent = er.realTotal;
   const emergencyFundGap = Math.max(
     0,
@@ -852,38 +856,19 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   );
 
   const termNeeded = calculateTermNeeded(data);
-  console.log("=== TERM INSURANCE CALC ===", {
-    termSumAssured: data.termInsuranceSumAssured,
-    hasTermInsurance: data.hasTermInsurance,
-    termInsuranceNeeded: termNeeded,
-  });
-  console.log("=== NET WORTH CALC ===", {
-    savings: data.savingsAccountBalance,
-    fd: data.fdValue,
-    epf: data.epfBalance,
-    equity:
-      data.totalEquityValue ||
-      (data.mfValue || 0) + (data.indianStocksValue || 0),
-    home: data.homeMarketValue,
-    car: data.carMarketValue,
-    gold: data.goldValue,
-    nsc: data.nscDepositAmount,
-  });
-  const minimumReasonableTermCover = 50_00_000;
-  const termAdequacyFloor = Math.max(
-    minimumReasonableTermCover,
-    termNeeded * 0.5,
+  // Cover that counts as a solid base (matches assessTermCover).
+  const termAdequacyFloor = Math.min(
+    10_000_000,
+    Math.max(50_00_000, termNeeded * 0.5),
   );
-  const healthTarget = data.lifeStage === "bachelor" ? 5_00_000 : 10_00_000;
-  const healthInsuranceGap = Math.max(
-    0,
-    healthTarget - n(data.healthInsuranceSumInsured),
-  );
+  const healthTarget = healthCoverTarget(data);
+  const healthHeld = healthCoverHeld(data);
+  const healthInsuranceGap = Math.max(0, healthTarget - healthHeld.total);
+  const termOptional = termCoverOptional(data);
+  const selfAge = n(data.selfAge) || 30;
 
   const securityChecklist: SecurityItem[] = [];
 
-  const liquidForPremiums =
-    n(data.savingsAccountBalance) + n(data.liquidMFValue);
   const monthlyPremiumsAll = monthlyInsuranceTotal(data);
   const hasAnyInsuranceProduct =
     data.hasHealthInsurance ||
@@ -894,14 +879,25 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const premiumReserveTarget =
     monthlyPremiumsAll > 0 ? monthlyPremiumsAll * 12 : 0;
 
-  const medEmergencyTarget = medicalEmergencyTarget(data);
-  const medEmergencyCurrent = n(data.medicalEmergencyFund);
-
   // 1. Emergency fund (weighted: savings 100%, liquid MF 95%, FD 70%, other liquid 50%, legacy field 100%)
   const monthsCov = er.monthsCovered;
   const efMonthsNeeded = emergencyFundMonthsMax;
   const efTarget = er.monthlyExpenses * efMonthsNeeded;
   const efGap = Math.max(0, efTarget - er.realTotal);
+
+  // Liquid money beyond the emergency fund fills the other cash buckets in
+  // turn (medical fund, premium reserve, bereavement fund), the same way the
+  // Fix Plan uses it, so nothing is counted twice or asked for again.
+  let spareLiquid = Math.max(0, er.realTotal - efTarget);
+  const takeSpare = (needed: number) => {
+    const used = Math.min(spareLiquid, Math.max(0, needed));
+    spareLiquid -= used;
+    return used;
+  };
+  const medEmergencyTarget = medicalEmergencyTarget(data);
+  const medEntered = n(data.medicalEmergencyFund);
+  const medFromSavings = takeSpare(medEmergencyTarget - medEntered);
+  const medEmergencyCurrent = medEntered + medFromSavings;
   let efStatus: SecurityItem["status"];
   let efDetail: string;
   let efAction: string | undefined;
@@ -942,22 +938,33 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     breakdownHint: efStatus !== "ok" ? efBreakdownParts.join(" | ") : undefined,
   });
 
-  // 2. Medical insurance
+  // 2. Medical insurance (own policy + company cover; company cover ends with the job)
+  const lakhs = (v: number) => `₹${Math.round(v / 100000)}L`;
+  const ownPolicyTarget = ownHealthPolicyTarget(data);
   securityChecklist.push({
     label: "Medical insurance",
-    status: !data.hasHealthInsurance
-      ? "critical"
-      : healthInsuranceGap > 0
-        ? "warning"
-        : "ok",
-    detail: data.hasHealthInsurance
-      ? `₹${(n(data.healthInsuranceSumInsured) / 100000).toFixed(0)}L sum insured`
-      : "No family floater recorded",
-    actionNeeded: !data.hasHealthInsurance
-      ? "Buy at least a ₹5L family floater (increase for metro / kids)."
-      : healthInsuranceGap > 0
-        ? `Increase cover by about ₹${(healthInsuranceGap / 100000).toFixed(0)}L`
-        : undefined,
+    status:
+      healthHeld.total <= 0
+        ? "critical"
+        : healthInsuranceGap > 0 || healthHeld.employerOnly
+          ? "warning"
+          : "ok",
+    detail:
+      healthHeld.total <= 0
+        ? "No health cover recorded"
+        : healthHeld.employerOnly
+          ? `${lakhs(healthHeld.employer)} from your company only. It stops if you change jobs or retire, and a new policy then starts its waiting periods (2-4 years for existing illnesses) from zero.`
+          : healthHeld.employer > 0
+            ? `${lakhs(healthHeld.own)} own policy + ${lakhs(healthHeld.employer)} company cover · Suggested: ${lakhs(healthTarget)}`
+            : `${lakhs(healthHeld.own)} sum insured · Suggested: ${lakhs(healthTarget)}`,
+    actionNeeded:
+      healthHeld.total <= 0
+        ? `Buy a ${lakhs(healthTarget)} family floater health policy.`
+        : healthHeld.employerOnly
+          ? `Buy your own ${lakhs(ownPolicyTarget)} base policy now while you're healthy, so its waiting periods are over before you need it. Keep the company cover on top.`
+          : healthInsuranceGap > 0
+            ? `Add a ${lakhs(healthInsuranceGap)} super top-up - it costs far less than a bigger base policy.`
+            : undefined,
   });
 
   // 3. Medical emergency fund (out-of-pocket / co-pay / gaps)
@@ -969,34 +976,55 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
         : medEmergencyCurrent >= medEmergencyTarget * 0.5
           ? "warning"
           : "critical",
-    detail: `You entered ${fmt(medEmergencyCurrent)} · Suggested minimum: ${fmt(medEmergencyTarget)} (beyond insurance, for co-pay & gaps)`,
+    detail:
+      medFromSavings > 0
+        ? `${fmt(medEmergencyCurrent)} of ${fmt(medEmergencyTarget)} - ${fmt(medFromSavings)} of it from savings you hold beyond your emergency fund (for co-pay, room-rent caps and claim gaps)`
+        : `${fmt(medEmergencyCurrent)} of ${fmt(medEmergencyTarget)} suggested (beyond insurance, for co-pay, room-rent caps and claim gaps)`,
     actionNeeded:
       medEmergencyCurrent < medEmergencyTarget
-        ? `Add ~${fmt(Math.ceil((medEmergencyTarget - medEmergencyCurrent) / 12))}/mo for ~12 months into a separate liquid medical bucket`
-        : undefined,
+        ? medFromSavings > 0
+          ? `Move ${fmt(medFromSavings)} of your spare savings into a separate liquid fund or sweep-in FD labelled "medical", and add ${fmt(medEmergencyTarget - medEmergencyCurrent)} more.`
+          : `Add ~${fmt(Math.ceil((medEmergencyTarget - medEmergencyCurrent) / 12))}/mo for ~12 months into a separate liquid fund or sweep-in FD`
+        : medFromSavings > 0
+          ? `Move ${fmt(medFromSavings)} of your spare savings into a separate liquid fund or sweep-in FD labelled "medical".`
+          : undefined,
   });
 
-  // 4. Term insurance - ₹1Cr+ is treated as a strong baseline (rebuying after income/age jumps is often costly)
+  // 4. Term insurance. A solid base (₹1Cr+, or half of today's need) is
+  // enough: we don't ask for a top-up every time income grows.
   const termCover = n(data.termInsuranceSumAssured);
-  const termCoverOneCrOrMore = termCover >= 10_000_000;
+  const termAssessment = assessTermCover({
+    hasTermInsurance: !!data.hasTermInsurance,
+    termCover,
+    termNeeded,
+  });
+  const termNeededPremium = termPremiumMonthlyEstimate(termNeeded, selfAge);
+  const crore = (v: number) => `₹${(v / 10000000).toFixed(2)}Cr`;
   securityChecklist.push({
     label: "Term insurance",
-    status: !data.hasTermInsurance
-      ? "critical"
-      : termCoverOneCrOrMore || termCover >= termAdequacyFloor
-        ? "ok"
-        : "warning",
-    detail: data.hasTermInsurance
-      ? termCoverOneCrOrMore
-        ? `₹${(termCover / 10000000).toFixed(2)}Cr cover - strong baseline. Reference at today’s income: ~₹${(termNeeded / 10000000).toFixed(2)}Cr. Premiums rise sharply with age; keeping an early policy after a salary jump is often wiser than cancel-and-rebuy.`
-        : `₹${(termCover / 10000000).toFixed(2)}Cr cover · ~${fmt(n(data.termInsurancePremiumMonthly))}/mo · Reference need: ₹${(termNeeded / 10000000).toFixed(2)}Cr`
-      : `Recommended cover about ₹${(termNeeded / 10000000).toFixed(2)}Cr (income ×10 + loans − assets, adjusted for age)`,
-    actionNeeded: !data.hasTermInsurance
-      ? `Buy ~₹${(termNeeded / 10000000).toFixed(2)}Cr pure term - often ~${fmt(Math.round(termNeeded * 0.000008))}/mo at your age band`
-      : termCoverOneCrOrMore
-        ? undefined
-        : termCover < termAdequacyFloor
-          ? `Top up if cover is below ~₹${(termAdequacyFloor / 10000000).toFixed(2)}Cr`
+    status:
+      termAssessment.status === "missing"
+        ? termOptional
+          ? "ok"
+          : "critical"
+        : termAssessment.status === "partial"
+          ? "warning"
+          : "ok",
+    detail:
+      termAssessment.status === "missing"
+        ? termOptional
+          ? "Optional for now - no one depends on your income and you have no loans. Buying young locks a low premium for life."
+          : `Recommended cover about ${crore(termNeeded)} (10x income + loans + dependants − assets, adjusted for age)`
+        : termAssessment.status === "partial"
+          ? `${crore(termCover)} cover · Your family needs at least ${crore(termAdequacyFloor)} as a base (full need at today's income ~${crore(termNeeded)})`
+          : termAssessment.status === "complete"
+            ? `${crore(termCover)} cover - enough for your family's needs`
+            : `${crore(termCover)} cover - a solid base. Keep this policy: premiums rise with age, so cancelling and rebuying costs more. A top-up is optional, not needed every time your salary grows.`,
+    actionNeeded:
+      termAssessment.status === "missing" && !termOptional
+        ? `Buy ~${crore(termNeeded)} pure term - about ${fmt(termNeededPremium)}/mo at your age (non-smoker)`
+        : termAssessment.status === "partial"
+          ? `Add ~${crore(termAdequacyFloor - termCover)} with a separate policy (about ${fmt(termPremiumMonthlyEstimate(termAdequacyFloor - termCover, selfAge))}/mo); keep the one you have.`
           : undefined,
   });
 
@@ -1011,25 +1039,30 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   } else if (monthlyPremiumsAll <= 0) {
     securityChecklist.push({
       label: "Insurance premium reserve (~12 months)",
-      status: "warning",
+      status:
+        healthHeld.employerOnly && !data.hasTermInsurance ? "na" : "warning",
       detail:
         "Policies are on but premium amounts look incomplete - enter premiums to target a 12-month cushion in savings / liquid MF.",
       actionNeeded:
         "Update premium fields in the analyse flow so we can calculate your reserve target.",
     });
   } else {
+    const premiumReserveHave = takeSpare(premiumReserveTarget);
     securityChecklist.push({
       label: "Insurance premium reserve (~12 months)",
       status:
-        liquidForPremiums >= premiumReserveTarget
+        premiumReserveHave >= premiumReserveTarget
           ? "ok"
-          : liquidForPremiums >= premiumReserveTarget * 0.5
+          : premiumReserveHave >= premiumReserveTarget * 0.5
             ? "warning"
             : "critical",
-      detail: `${fmt(liquidForPremiums)} in savings + liquid MF vs target ${fmt(premiumReserveTarget)} (${fmt(monthlyPremiumsAll)}/mo × 12). Ring-fence this for renewals.`,
+      detail:
+        premiumReserveHave >= premiumReserveTarget
+          ? `${fmt(premiumReserveTarget)} (${fmt(monthlyPremiumsAll)}/mo × 12) is covered by savings you hold beyond your emergency and medical funds. Keep it aside for renewals.`
+          : `${fmt(premiumReserveHave)} spare beyond your emergency and medical funds vs target ${fmt(premiumReserveTarget)} (${fmt(monthlyPremiumsAll)}/mo × 12). Ring-fence this for renewals.`,
       actionNeeded:
-        liquidForPremiums < premiumReserveTarget
-          ? `Build ${fmt(premiumReserveTarget - liquidForPremiums)} in liquid cash over the next 12–18 months (or set this as your primary goal: insurance premium reserve).`
+        premiumReserveHave < premiumReserveTarget
+          ? `Build ${fmt(premiumReserveTarget - premiumReserveHave)} in liquid cash over the next 12–18 months (or set this as your primary goal: insurance premium reserve).`
           : undefined,
     });
   }
@@ -1170,18 +1203,24 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     }
   }
 
-  const bereavementFund = n(data.bereavementFund);
   const bereavementNeeded = 2_00_000;
+  const bereavementEntered = n(data.bereavementFund);
+  const bereavementFromSavings = takeSpare(
+    bereavementNeeded - bereavementEntered,
+  );
+  const bereavementFund = bereavementEntered + bereavementFromSavings;
   securityChecklist.push({
     label: "Bereavement / demise fund (last rites)",
-    status: bereavementFund >= bereavementNeeded ? "ok" : "critical",
+    status: bereavementFund >= bereavementNeeded ? "ok" : "warning",
     detail:
       bereavementFund >= bereavementNeeded
-        ? `₹${(bereavementFund / 100000).toFixed(0)}L set aside · For last rites, travel, and immediate family needs`
+        ? bereavementFromSavings > 0
+          ? "Covered by savings beyond your other funds · Keep ₹2L where family can reach it the same day"
+          : `₹${(bereavementFund / 100000).toFixed(0)}L set aside · For last rites, travel, and immediate family needs`
         : "Not enough set aside · Many families aim for at least ₹2L liquid for last rites and urgent expenses",
     actionNeeded:
       bereavementFund < bereavementNeeded
-        ? 'Keep ₹2,00,000 in a separate savings account labelled "bereavement / demise fund". Keep it in cash or savings - same-day access.'
+        ? `Keep ${fmt(bereavementNeeded - bereavementFund)} more in a separate savings account your family can access - same-day access matters more than returns.`
         : undefined,
   });
 
@@ -1202,6 +1241,9 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     medEmergencyCurrent,
     medEmergencyTarget,
     monthlyInvesting,
+    termOptional,
+    healthHeld,
+    healthTarget,
   });
 
   // Defensive de-dup in case future branches push same issue code twice.
@@ -1218,12 +1260,6 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
 
   const criticalCount = issues.filter((i) => i.severity === "critical").length;
   const warningCount = issues.filter((i) => i.severity === "warning").length;
-  const infoCount = issues.filter((i) => i.severity === "info").length;
-  const overallScore = Math.max(
-    0,
-    Math.min(100, 100 - criticalCount * 15 - warningCount * 7 - infoCount * 2),
-  );
-
   const termInsuranceNeeded = calculateTermNeeded(data);
   const savingsVal = data.savingsAccountBalance || 0;
   const fdVal = data.fdValue || 0;
@@ -1264,15 +1300,46 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
     );
   const totalLiabilities = totalLoanLiabilities(data);
   const netWorth = totalAssets - totalLiabilities;
-  if (process.env.NODE_ENV === "development") {
-    console.log(
-      "ISSUES:",
-      issues.map((i) => `${i.code}: ${i.severity}`),
-    );
-  }
+  const moneyScore = computeMoneyScore({
+    profile: data,
+    income: totalIncome,
+    investingMonthly: monthlyInvesting,
+    loansMonthly: monthlyLoans,
+    unallocatedMonthly: untrackedCash,
+    emergency: {
+      have: er.realTotal,
+      target: efTarget,
+      monthsHave: er.monthsCovered,
+      monthsNeeded: efMonthsNeeded,
+    },
+    medical: { have: medEmergencyCurrent, target: medEmergencyTarget },
+    health: {
+      total: healthHeld.total,
+      own: healthHeld.own,
+      target: healthTarget,
+      employerOnly: healthHeld.employerOnly,
+    },
+    term: {
+      optional: termOptional,
+      cover: data.hasTermInsurance ? termCover : 0,
+      needed: termNeeded,
+      floor: termAdequacyFloor,
+      premiumMonthly: termNeededPremium,
+    },
+    netWorth,
+    fdNeededForEmergency: Math.min(
+      n(data.fdValue),
+      Math.max(
+        0,
+        efTarget - n(data.savingsAccountBalance) - n(data.liquidMFValue) * 0.95,
+      ) / 0.7,
+    ),
+  });
+  const overallScore = moneyScore.total;
 
   return {
     overallScore,
+    moneyScore,
     criticalIssueCount: criticalCount,
     warningIssueCount: warningCount,
     scores: {
@@ -1349,70 +1416,4 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       },
     },
   };
-}
-
-/**
- * Typical long-run annual rates for retirement accounts. NPS is market-linked,
- * so its rate is an assumption, not a guaranteed return.
- */
-export const RETIREMENT_ACCOUNT_RATES = {
-  epf: 0.0815,
-  ppf: 0.071,
-  nps: 0.1,
-} as const;
-
-export const LONG_RUN_INFLATION = 0.06;
-
-export type RetirementAccountProjection = {
-  epf: number;
-  ppf: number;
-  nps: number;
-  total: number;
-};
-
-function compoundWithContributions(
-  balance: number,
-  monthly: number,
-  annualRate: number,
-  years: number,
-): number {
-  const months = Math.max(0, Math.round(years * 12));
-  if (months === 0) return balance;
-  const r = Math.pow(1 + annualRate, 1 / 12) - 1;
-  if (r === 0) return balance + monthly * months;
-  const growth = Math.pow(1 + r, months);
-  return balance * growth + monthly * ((growth - 1) / r);
-}
-
-/**
- * EPF / PPF / NPS balances `years` from now, including ongoing monthly
- * contributions. `real: true` returns today's rupees (deflated by
- * LONG_RUN_INFLATION) so it can be compared against today-rupee targets.
- */
-export function projectRetirementAccounts(
-  data: Partial<FinancialProfile>,
-  years: number,
-  opts: { real?: boolean } = {},
-): RetirementAccountProjection {
-  const rate = (nominal: number) =>
-    opts.real ? (1 + nominal) / (1 + LONG_RUN_INFLATION) - 1 : nominal;
-  const epf = compoundWithContributions(
-    n(data.epfBalance),
-    n(data.monthlyEPFContribution),
-    rate(RETIREMENT_ACCOUNT_RATES.epf),
-    years,
-  );
-  const ppf = compoundWithContributions(
-    n(data.ppfBalance),
-    n(data.monthlyPPFContribution),
-    rate(RETIREMENT_ACCOUNT_RATES.ppf),
-    years,
-  );
-  const nps = compoundWithContributions(
-    n(data.npsBalance),
-    n(data.monthlyNPSContribution),
-    rate(RETIREMENT_ACCOUNT_RATES.nps),
-    years,
-  );
-  return { epf, ppf, nps, total: epf + ppf + nps };
 }

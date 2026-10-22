@@ -41,6 +41,7 @@ import {
   type AnalyseFormValues,
   type AnalyseSubmitIssue,
   type FinancialProfile,
+  type HealthInsuranceSource,
   type PostOfficeSchemeId,
   type PremiumFrequency,
 } from "@/lib/analyse-form-schema";
@@ -935,6 +936,7 @@ export function AnalyseOnboardingForm() {
   const lifeStage = watch("lifeStage");
   const numberOfKids = watch("numberOfKids") ?? 0;
   const hasHealthInsurance = watch("hasHealthInsurance");
+  const healthSource = watch("healthInsuranceSource") ?? "self";
   const hasTermInsurance = watch("hasTermInsurance");
   const hasOtherInsurance = watch("hasOtherInsurance");
   const ownsHome = watch("ownsHome");
@@ -2999,34 +3001,83 @@ export function AnalyseOnboardingForm() {
                         </div>
                       </div>
                       {hasHealthInsurance ? (
+                        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-800">
+                              Who provides this cover?
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Company cover ends when you change jobs or retire,
+                              so we plan for it differently.
+                            </p>
+                          </div>
+                          <div className="shrink-0">
+                            <ToggleButtons
+                              options={[
+                                { label: "Company", value: "employer" },
+                                { label: "Self", value: "self" },
+                                { label: "Both", value: "both" },
+                              ]}
+                              value={healthSource}
+                              onChange={(value) =>
+                                setValue(
+                                  "healthInsuranceSource",
+                                  value as HealthInsuranceSource,
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+                      {hasHealthInsurance ? (
                         <div className="grid min-w-0 gap-5 sm:grid-cols-2">
                           <MoneyInput
                             id="healthInsuranceSumInsured"
-                            label="Sum insured"
+                            label={
+                              healthSource === "employer"
+                                ? "Company cover (sum insured)"
+                                : healthSource === "both"
+                                  ? "Your own policy (sum insured)"
+                                  : "Sum insured"
+                            }
                             error={errors.healthInsuranceSumInsured?.message}
                             {...bindMoneyField("healthInsuranceSumInsured")}
                           />
-                          <PremiumField
-                            inputId="healthInsurancePremiumInput"
-                            label="Premium amount"
-                            amountError={
-                              errors.healthInsurancePremiumInput?.message
-                            }
-                            frequency={
-                              watch("healthInsurancePremiumFrequency") ??
-                              "monthly"
-                            }
-                            onFrequencyChange={(value) =>
-                              setValue("healthInsurancePremiumFrequency", value)
-                            }
-                          >
+                          {healthSource === "both" ? (
                             <MoneyInput
-                              id="healthInsurancePremiumInput"
-                              label="Premium amount"
-                              hideLabel
-                              {...bindMoneyField("healthInsurancePremiumInput")}
+                              id="employerHealthCover"
+                              label="Company cover (sum insured)"
+                              {...bindMoneyField("employerHealthCover")}
                             />
-                          </PremiumField>
+                          ) : null}
+                          {healthSource === "employer" ? null : (
+                            <PremiumField
+                              inputId="healthInsurancePremiumInput"
+                              label="Premium amount"
+                              amountError={
+                                errors.healthInsurancePremiumInput?.message
+                              }
+                              frequency={
+                                watch("healthInsurancePremiumFrequency") ??
+                                "monthly"
+                              }
+                              onFrequencyChange={(value) =>
+                                setValue(
+                                  "healthInsurancePremiumFrequency",
+                                  value,
+                                )
+                              }
+                            >
+                              <MoneyInput
+                                id="healthInsurancePremiumInput"
+                                label="Premium amount"
+                                hideLabel
+                                {...bindMoneyField(
+                                  "healthInsurancePremiumInput",
+                                )}
+                              />
+                            </PremiumField>
+                          )}
                           {(watch("healthInsurancePremiumInput") ?? 0) > 0 ? (
                             <div className="sm:col-span-2">
                               <PremiumDueFields

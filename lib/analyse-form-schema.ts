@@ -146,6 +146,14 @@ export const UNIFIED_LOAN_TYPE_VALUES = [
 
 export type UnifiedLoanType = (typeof UNIFIED_LOAN_TYPE_VALUES)[number];
 
+export const HEALTH_INSURANCE_SOURCE_VALUES = [
+  "employer",
+  "self",
+  "both",
+] as const;
+export type HealthInsuranceSource =
+  (typeof HEALTH_INSURANCE_SOURCE_VALUES)[number];
+
 /** A goal the user added on the Goals page. Amounts are today's rupees. */
 export type CustomGoal = {
   id: string;
@@ -288,7 +296,12 @@ export interface FinancialProfile {
   parentsCity?: "metro" | "tier2" | "tier3";
 
   hasHealthInsurance: boolean;
+  /** Who provides the health cover. undefined = not asked (treated as self-bought). */
+  healthInsuranceSource?: HealthInsuranceSource;
+  /** Sum insured of the user's own policy; the company cover when source is "employer". */
   healthInsuranceSumInsured?: number;
+  /** Company group cover when source is "both". */
+  employerHealthCover?: number;
   /** Monthly equivalent for engine / allocations (derived from input + frequency). */
   healthInsurancePremiumMonthly?: number;
   /** Raw premium as entered (e.g. yearly amount stays yearly in the wizard). */
@@ -729,7 +742,9 @@ const formShape = {
   parentsCity: z.enum(CITY_TIER_VALUES).optional(),
 
   hasHealthInsurance: z.boolean(),
+  healthInsuranceSource: z.enum(HEALTH_INSURANCE_SOURCE_VALUES).optional(),
   healthInsuranceSumInsured: optionalMoney,
+  employerHealthCover: optionalMoney,
   healthInsurancePremiumInput: optionalMoney,
   healthInsurancePremiumFrequency: premiumFrequencySchema.default("monthly"),
   healthInsuranceRenewalMonth: optionalWholeNumber,
@@ -930,7 +945,10 @@ const formSchema = baseFormSchema.superRefine((data, ctx) => {
         message: "Enter health insurance sum insured",
       });
     }
-    if (!data.healthInsurancePremiumInput) {
+    if (
+      !data.healthInsurancePremiumInput &&
+      data.healthInsuranceSource !== "employer"
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["healthInsurancePremiumInput"],
@@ -1111,7 +1129,9 @@ export const step4Schema = baseFormSchema.pick({
 export const step5Schema = baseFormSchema
   .pick({
     hasHealthInsurance: true,
+    healthInsuranceSource: true,
     healthInsuranceSumInsured: true,
+    employerHealthCover: true,
     healthInsurancePremiumInput: true,
     healthInsurancePremiumFrequency: true,
     hasTermInsurance: true,
@@ -1143,7 +1163,10 @@ export const step5Schema = baseFormSchema
           message: "Enter health insurance sum insured",
         });
       }
-      if (!data.healthInsurancePremiumInput) {
+      if (
+        !data.healthInsurancePremiumInput &&
+        data.healthInsuranceSource !== "employer"
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["healthInsurancePremiumInput"],
@@ -1966,7 +1989,9 @@ export function financialProfileToFormValues(
     parentsEmergencyCash: p.parentsEmergencyCash ?? 0,
     parentsCity: p.parentsCity,
     hasHealthInsurance: p.hasHealthInsurance,
+    healthInsuranceSource: p.healthInsuranceSource,
     healthInsuranceSumInsured: p.healthInsuranceSumInsured ?? 0,
+    employerHealthCover: p.employerHealthCover ?? 0,
     healthInsurancePremiumInput:
       p.healthInsurancePremiumInput ?? p.healthInsurancePremiumMonthly ?? 0,
     healthInsurancePremiumFrequency:
@@ -2529,9 +2554,16 @@ export function normalizeAnalyseFormValues(
     parentsCity: (form.parentsSupport ?? 0) > 0 ? form.parentsCity : undefined,
 
     hasHealthInsurance: form.hasHealthInsurance ?? false,
+    healthInsuranceSource: form.hasHealthInsurance
+      ? form.healthInsuranceSource
+      : undefined,
     healthInsuranceSumInsured: form.hasHealthInsurance
       ? form.healthInsuranceSumInsured
       : undefined,
+    employerHealthCover:
+      form.hasHealthInsurance && form.healthInsuranceSource === "both"
+        ? form.employerHealthCover
+        : undefined,
     healthInsurancePremiumMonthly: form.hasHealthInsurance
       ? toMonthlyEquivalent(
           form.healthInsurancePremiumInput,

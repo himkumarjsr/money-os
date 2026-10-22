@@ -15,6 +15,8 @@ import {
   type DetectedGoal,
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
+import type { GoalFundingItem } from "@/lib/goalFunding";
+import { goalSavingsLines } from "@/lib/goalSavingsText";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { router } from "expo-router";
 
@@ -32,13 +34,20 @@ const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
 export function GoalsSection({
   profile,
   userId,
+  funding,
 }: {
   profile: FinancialProfile;
   userId?: string | null;
+  /** Fix Plan goal funding: shows the money already counted toward each goal. */
+  funding?: GoalFundingItem[];
 }) {
   const goals = useMemo(() => detectGoals(profile), [profile]);
   const offers = useMemo(() => promptedGoalOffers(profile), [profile]);
   const hiddenCount = profile.dismissedGoals?.length ?? 0;
+  const fundingById = useMemo(
+    () => new Map((funding ?? []).map((f) => [f.goalId, f])),
+    [funding],
+  );
 
   const [editing, setEditing] = useState<DetectedGoal | null>(null);
   const [amount, setAmount] = useState<number | null>(null);
@@ -143,6 +152,15 @@ export function GoalsSection({
                       </Text>
                       {g.calculation}
                     </Text>
+                  ) : null}
+                  {fundingById.get(g.id) ? (
+                    <View style={styles.funded}>
+                      {goalSavingsLines(fundingById.get(g.id)!).map((line) => (
+                        <Text key={line} style={styles.fundedText}>
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
                   ) : null}
                 </View>
                 <View
@@ -324,6 +342,20 @@ const styles = themedStyles(() => ({
     fontWeight: "500",
     color: Colors.textSecondary,
     fontVariant: ["tabular-nums"],
+  },
+  funded: {
+    marginTop: 8,
+    borderRadius: 8,
+    backgroundColor: tintBg("#F7F6FE"),
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  fundedText: {
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 17,
+    color: Colors.primaryText,
   },
   reason: {
     marginTop: 4,
