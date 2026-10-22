@@ -23,6 +23,7 @@ import {
   goalReach,
   type GoalReach,
 } from "@/lib/goalReach";
+import { isSmallDebt } from "@/lib/moneyScore";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
 import { goalRate, sipStepUp, type GoalRate } from "@/lib/goalMath";
 import {
@@ -79,7 +80,19 @@ export interface DebtItem {
   outstandingEstimated?: boolean;
   /** Rate was not entered: a typical rate for the loan type, or 0 when unknown. */
   rateEstimated?: boolean;
+  /** A balance too small to plan around - clear it from savings any time. */
+  small?: boolean;
+  /**
+   * Below {@link PREPAY_RATE}: prepaying is the user's choice, not a step.
+   * The money earns about as much in their goal funds.
+   */
+  prepayOptional?: boolean;
+  /** Expected yearly return after tax (%) on long-goal funds, for the comparison. */
+  investReturnPct?: number;
 }
+
+/** Loans at or above this rate (% a year) are worth paying off early. */
+export const PREPAY_RATE = 12;
 
 export interface GoalItem {
   goalType: string;
@@ -243,6 +256,28 @@ export type DebtPayoffNumbers = {
   emiTooLow: boolean;
 };
 
+/** One plain line for a loan the plan doesn't ask you to prepay; null otherwise. */
+export function debtPrepayNote(debt: any): string | null {
+  if (debt?.small)
+    return "Small balance. Clear it from your savings account whenever you like - no need to plan for it.";
+  if (debt?.prepayOptional) {
+    const rate = Number(debt?.rate || debt?.interestRate || 0);
+    const ret = Number(debt?.investReturnPct || 0);
+    return ret > 0
+      ? `Paying extra is your choice. It saves ${rate}% a year for sure. The same money in your goal funds should earn about ${ret}% a year after tax, so either way works.`
+      : `Paying extra is your choice. It saves ${rate}% a year for sure.`;
+  }
+  return null;
+}
+
+/** What the "Extra payment" cell says. */
+export function debtExtraLabel(debt: any, extraPayment: number): string {
+  if (extraPayment > 0) return `₹${extraPayment.toLocaleString("en-IN")}/mo`;
+  if (debt?.small) return "Not needed";
+  if (debt?.prepayOptional) return "Your choice";
+  return "After P1 cleared";
+}
+
 /** Payoff figures for a debt card / PDF row (accepts engine and AI debt shapes). */
 export function debtPayoffNumbers(debt: any): DebtPayoffNumbers {
   const extraPayment = Math.max(0, Number(debt?.extraEMIRecommended || 0));
@@ -267,8 +302,16 @@ export function debtPayoffNumbers(debt: any): DebtPayoffNumbers {
       : 0;
 
   const monthlyInterest = (outstanding * rate) / 1200;
+  // An overdraft is interest-only by design, and a small balance isn't worth a warning.
+  const interestOnly = /overdraft|\bod\b/i.test(
+    `${debt?.type ?? ""} ${debt?.loanType ?? ""}`,
+  );
   const emiTooLow =
-    outstanding > 0 && currentEMI > 0 && currentEMI < monthlyInterest * 1.5;
+    !debt?.small &&
+    !interestOnly &&
+    outstanding > 0 &&
+    currentEMI > 0 &&
+    currentEMI < monthlyInterest * 1.5;
 
   return {
     extraPayment,
@@ -1344,14 +1387,30 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     return emi * (remainingMonths[loanType] || 24);
   };
 
+  // A card bill paid in full each month costs nothing; only a balance
+  // carried forward is debt (at ~36%), paid down at least the 5% minimum.
+  const cardCarried = Math.max(
+    0,
+    Number(profile.creditCardCarriedBalance) || 0,
+  );
   DEBT_CONFIG.forEach((config) => {
-    const emi = (profile as any)[config.profileKey] || 0;
+    const isCard = config.profileKey === "creditCardBillMonthly";
+    const emi = isCard
+      ? cardCarried > 0
+        ? Math.max(
+            Number(profile.creditCardBillMonthly) || 0,
+            Math.round(cardCarried * 0.05),
+          )
+        : 0
+      : (profile as any)[config.profileKey] || 0;
     if (emi > 0) {
       const outstandingKey = config.profileKey
         .replace("EMI", "Outstanding")
         .replace("Bill", "Outstanding")
         .replace("Monthly", "Outstanding");
-      const explicitOutstanding = (profile as any)[outstandingKey];
+      const explicitOutstanding = isCard
+        ? cardCarried
+        : (profile as any)[outstandingKey];
       const rateKey =
         config.profileKey === "bikeEMI"
           ? "bikeLoanRate"
@@ -1476,8 +1535,34 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     });
   });
 
-  // Avalanche: the highest interest rate is cleared first, whatever the loan type.
-  debtList.sort((a, b) => b.rate - a.rate || a.priorityRank - b.priorityRank);
+  // Prepaying is a step only for costly loans; below PREPAY_RATE the money
+  // earns about as much in the goal funds, so it's the user's choice. A small
+  // balance is cleared from savings, never planned around.
+  const investReturnPct =
+    Math.round(goalRate(profile, 10, "retirement").long * 1000) / 10;
+  for (const d of debtList) {
+    if (isSmallDebt(d.outstanding, monthlyIncome)) {
+      d.small = true;
+      d.extraEMIRecommended = 0;
+    } else if (
+      d.rate > 0 &&
+      d.rate < PREPAY_RATE &&
+      primaryGoal !== "clear_debt"
+    ) {
+      d.prepayOptional = true;
+      d.investReturnPct = investReturnPct;
+      d.extraEMIRecommended = 0;
+    }
+  }
+
+  // Avalanche: the highest interest rate is cleared first, whatever the loan
+  // type; small balances go last (they're paid off in one go).
+  debtList.sort(
+    (a, b) =>
+      Number(!!a.small) - Number(!!b.small) ||
+      b.rate - a.rate ||
+      a.priorityRank - b.priorityRank,
+  );
 
   const goalList: GoalItem[] = [];
 

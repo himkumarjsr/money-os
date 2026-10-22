@@ -470,6 +470,10 @@ export interface FinancialProfile {
   marriageFundYear?: number;
   /** Prompted after the report (married, no kids). undefined = not asked yet. */
   planningBaby?: boolean;
+  /** Prompted after the report (no home of their own). undefined = not asked yet. */
+  planningHome?: boolean;
+  /** Prompted after the report (no car). undefined = not asked yet. */
+  planningVehicle?: boolean;
   babyFundTarget?: number;
   babyFundYear?: number;
   /** Implied goal ids the user removed from their goal list. */
@@ -872,6 +876,8 @@ const formShape = {
   marriageFundTarget: optionalMoney,
   marriageFundYear: optionalWholeNumber,
   planningBaby: z.boolean().optional(),
+  planningHome: z.boolean().optional(),
+  planningVehicle: z.boolean().optional(),
   babyFundTarget: optionalMoney,
   babyFundYear: optionalWholeNumber,
   dismissedGoals: z.array(z.string()).max(40).optional(),
@@ -2182,6 +2188,8 @@ export function financialProfileToFormValues(
     marriageFundTarget: p.marriageFundTarget,
     marriageFundYear: p.marriageFundYear,
     planningBaby: p.planningBaby,
+    planningHome: p.planningHome,
+    planningVehicle: p.planningVehicle,
     babyFundTarget: p.babyFundTarget,
     babyFundYear: p.babyFundYear,
     dismissedGoals: p.dismissedGoals,
@@ -2854,6 +2862,8 @@ export function normalizeAnalyseFormValues(
     marriageFundTarget: form.marriageFundTarget,
     marriageFundYear: form.marriageFundYear,
     planningBaby: form.planningBaby,
+    planningHome: form.planningHome,
+    planningVehicle: form.planningVehicle,
     babyFundTarget: form.babyFundTarget,
     babyFundYear: form.babyFundYear,
     dismissedGoals: form.dismissedGoals,

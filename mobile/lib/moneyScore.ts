@@ -106,6 +106,18 @@ const COSTLY_LOAN_TYPES = new Set([
   "overdraft",
 ]);
 
+/** Balances up to this are small - one payment from savings clears them. */
+export const SMALL_DEBT_MAX = 25_000;
+
+/** A balance small enough to clear from savings: up to ₹25,000 and a tenth of a month's income. */
+export function isSmallDebt(outstanding: number, monthlyIncome: number) {
+  const o = Number(outstanding) || 0;
+  return (
+    o > 0 &&
+    o <= Math.min(SMALL_DEBT_MAX, Math.max(5_000, 0.1 * (monthlyIncome || 0)))
+  );
+}
+
 const n = (v: unknown) => {
   const x = Number(v);
   return Number.isFinite(x) && x > 0 ? x : 0;
@@ -153,17 +165,17 @@ function safetyPillar(i: MoneyScoreInput): ScorePillar {
   return pillar(
     "safety",
     14 * ef + 6 * med,
-    `Emergency fund covers ${i.emergency.monthsHave.toFixed(1)} months of needs (target ${i.emergency.monthsNeeded}); medical fund ${rs(i.medical.have)} of ${rs(i.medical.target)}.`,
+    `Emergency fund: ${i.emergency.monthsHave.toFixed(1)} months of costs saved (you need ${i.emergency.monthsNeeded}). Medical fund: ${rs(i.medical.have)} of ${rs(i.medical.target)}.`,
     [
       efGap > 0
         ? {
-            text: `Build your emergency fund by ${rs(efGap)} (savings account + liquid fund).`,
+            text: `Add ${rs(efGap)} to your emergency fund (savings account + liquid fund).`,
             gain: 14 * (1 - ef),
           }
         : null,
       medGap > 0
         ? {
-            text: `Set aside ${rs(medGap)} as a medical fund in a liquid fund or sweep-in FD.`,
+            text: `Keep ${rs(medGap)} aside for hospital bills, in a liquid fund or sweep-in FD.`,
             gain: 6 * (1 - med),
           }
         : null,
@@ -178,8 +190,8 @@ function protectionPillar(i: MoneyScoreInput): ScorePillar {
   const healthPts = Math.min(10 * healthRatio, h.employerOnly ? 6 : 10);
   const healthLine =
     h.total <= 0
-      ? "no health cover"
-      : `${lakh(h.total)} health cover${h.employerOnly ? " (company only)" : ""} vs ${lakh(h.target)} suggested`;
+      ? "No health cover"
+      : `Health cover ${lakh(h.total)}${h.employerOnly ? " (company only)" : ""} (you need ${lakh(h.target)})`;
   const healthAction =
     h.total <= 0
       ? {
@@ -188,12 +200,12 @@ function protectionPillar(i: MoneyScoreInput): ScorePillar {
         }
       : h.employerOnly
         ? {
-            text: `Buy your own health policy - company cover ends if you change jobs or retire, and waiting periods restart on a new policy.`,
+            text: `Buy your own health policy. Company cover stops when you change jobs or retire.`,
             gain: 10 - healthPts,
           }
         : h.total < h.target
           ? {
-              text: `Add a ${lakh(h.target - h.total)} super top-up to your health cover (low cost).`,
+              text: `Add a ${lakh(h.target - h.total)} super top-up to your health cover. It costs little.`,
               gain: 10 - healthPts,
             }
           : null;
@@ -202,35 +214,46 @@ function protectionPillar(i: MoneyScoreInput): ScorePillar {
   let termPts = 10;
   let termLine: string;
   let termAction: { text: string; gain: number } | null = null;
+  // Monthly premium for extra cover, scaled from the estimate for full cover.
+  const premiumFor = (cover: number) =>
+    t.needed > 0 ? (t.premiumMonthly * cover) / t.needed : t.premiumMonthly;
   if (t.cover <= 0 && t.optional) {
-    termLine = "term cover optional - no one depends on your income yet";
+    termLine = "term cover not needed yet - no one depends on your income";
   } else if (t.cover <= 0) {
     termPts = 0;
     termLine = "no term cover";
     termAction = {
-      text: `Buy ${crore(t.needed)} pure term cover (about ${rs(t.premiumMonthly)}/month).`,
+      text: `Buy ${crore(t.needed)} term cover (about ${rs(t.premiumMonthly)}/month).`,
       gain: 10,
     };
-  } else if (t.cover >= t.floor || t.optional) {
-    termLine = `${crore(t.cover)} term cover - a solid base`;
+  } else if (t.optional || t.cover >= t.needed) {
+    termLine = `term cover ${crore(t.cover)} - enough for your family`;
   } else {
-    termPts = 10 * clamp01(t.cover / t.floor);
-    termLine = `${crore(t.cover)} term cover, below the ${crore(t.floor)} your family needs as a base`;
+    // The base earns most of the points; the rest comes with the full need.
+    const floor = Math.min(t.floor, t.needed);
+    termPts =
+      t.cover >= floor
+        ? 7 + 3 * clamp01((t.cover - floor) / Math.max(1, t.needed - floor))
+        : 7 * clamp01(t.cover / Math.max(1, floor));
+    termLine = `term cover ${crore(t.cover)} (your family would need ${crore(t.needed)})`;
     termAction = {
-      text: `Add ${crore(t.floor - t.cover)} term cover with a separate policy; keep the one you have.`,
+      text: `Add ${crore(t.needed - t.cover)} term cover with a second policy (about ${rs(premiumFor(t.needed - t.cover))}/month). Keep the one you have.`,
       gain: 10 - termPts,
     };
   }
   return pillar(
     "protection",
     healthPts + termPts,
-    `${healthLine[0].toUpperCase()}${healthLine.slice(1)}; ${termLine}.`,
+    `${healthLine}. ${termLine[0].toUpperCase()}${termLine.slice(1)}.`,
     [healthAction, termAction],
   );
 }
 
-/** EMIs on loans costing 12%+ a year (personal, credit card, bike...). */
-export function costlyEmiMonthly(p: FinancialProfile): number {
+/** EMIs on loans costing 12%+ a year (personal, credit card, bike...); small balances don't count. */
+export function costlyEmiMonthly(
+  p: FinancialProfile,
+  monthlyIncome = 0,
+): number {
   const cardCarry =
     n(p.creditCardCarriedBalance) * 0.035 + n(p.creditCardEmiMonthly);
   const unified = (p.unifiedLoans ?? []).filter((l) => n(l.monthlyEMI) > 0);
@@ -238,6 +261,7 @@ export function costlyEmiMonthly(p: FinancialProfile): number {
     return (
       cardCarry +
       unified
+        .filter((l) => !isSmallDebt(n(l.outstandingAmount), monthlyIncome))
         .filter((l) =>
           n(l.interestRate) > 0
             ? n(l.interestRate) >= COSTLY_RATE
@@ -263,7 +287,7 @@ function debtPillar(i: MoneyScoreInput): ScorePillar {
       : r <= 0.35
         ? 10 - ((r - 0.2) / 0.15) * 5
         : 5 * slope(r, 0.35, 0.5);
-  const costly = costlyEmiMonthly(i.profile);
+  const costly = costlyEmiMonthly(i.profile, i.income);
   const c = costly / i.income;
   const costlyPts = 5 * slope(c, 0, 0.15);
   const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -272,17 +296,17 @@ function debtPillar(i: MoneyScoreInput): ScorePillar {
     emiPts + costlyPts,
     i.loansMonthly <= 0
       ? "No loans - nothing eating into your income."
-      : `EMIs take ${pct(r)} of income${costly > 0 ? `, ${rs(costly)}/month of it on loans costing 12%+ a year` : ""}.`,
+      : `EMIs take ${pct(r)} of your income (healthy is under 20%).${costly > 0 ? ` ${rs(costly)}/month of it is on loans above 12% interest.` : ""}`,
     [
       costly > 0
         ? {
-            text: "Clear the costliest loan first (credit card, personal loan) - every rupee prepaid there earns its interest rate.",
+            text: "Pay off your costliest loan first (credit card, personal loan). It saves more than most investments earn.",
             gain: 5 - costlyPts,
           }
         : null,
       r > 0.2
         ? {
-            text: `Keep EMIs under 20% of income: avoid new loans and prepay when bonuses come in (now ${pct(r)}).`,
+            text: `Don't take new loans until your EMIs are under 20% of income (now ${pct(r)}).`,
             gain: 10 - emiPts,
           }
         : null,
@@ -305,17 +329,17 @@ function savingPillar(i: MoneyScoreInput): ScorePillar {
   return pillar(
     "saving",
     ratePts + idlePts,
-    `You invest ${Math.round(rate * 100)}% of income (aim for ${TARGET_SAVING_RATE * 100}%)${idle > 0 ? `; ${rs(idle)}/month has no plan yet` : ""}.`,
+    `You invest ${Math.round(rate * 100)}% of your income (aim for ${TARGET_SAVING_RATE * 100}%).${idle > 0 ? ` ${rs(idle)} a month is left over with no plan.` : ""}`,
     [
       shortBy > 0
         ? {
-            text: `Raise monthly investing by ${rs(shortBy)} to reach ${TARGET_SAVING_RATE * 100}% of income - set it as an auto SIP on salary day.`,
+            text: `Invest ${rs(shortBy)} more each month to reach ${TARGET_SAVING_RATE * 100}% of income. Set an auto SIP for salary day.`,
             gain: 10 - ratePts,
           }
         : null,
       u > 0.1
         ? {
-            text: `Give the ${rs(idle)}/month without a plan a job - your Fix Plan splits it across your goals.`,
+            text: `Start SIPs with the ${rs(idle)} left over each month. Your Fix Plan shows how much goes to each goal.`,
             gain: 5 - idlePts,
           }
         : null,
@@ -361,10 +385,15 @@ function goalsPillar(i: MoneyScoreInput): ScorePillar {
     others.reduce((s, r) => s + otherWeight * r.share, 0);
   const onTrackCount = others.filter((r) => r.share >= 0.95).length;
   const retPct = Math.round((retirement?.share ?? 1) * 100);
+  // Never ask for more than is left over each month.
+  const spare = Math.max(0, i.unallocatedMonthly);
   const actions = onTrack
     .filter((r) => r.share < 0.95 && r.required > 0)
     .map((r) => ({
-      text: `${r.goal.label}: start ${rs(r.required)}/month toward ${rs(r.goal.targetAmount)} by ${r.goal.targetYear}.`,
+      text:
+        spare > 0 && r.required > spare
+          ? `${r.goal.label}: ${rs(r.goal.targetAmount)} by ${r.goal.targetYear} needs ${rs(r.required)}/month, more than the ${rs(spare)} you have left over. Start with what you can, and see the Fix Plan for a later year or smaller target.`
+          : `${r.goal.label}: start a ${rs(r.required)}/month SIP to reach ${rs(r.goal.targetAmount)} by ${r.goal.targetYear}.`,
       gain:
         (r.goal.type === "retirement" ? retWeight : otherWeight) *
         (1 - r.share),
@@ -372,7 +401,7 @@ function goalsPillar(i: MoneyScoreInput): ScorePillar {
   return pillar(
     "goals",
     points,
-    `Retirement ${retPct}% on track${others.length > 0 ? `; ${onTrackCount} of ${others.length} other goals on track` : ""}, counting what you already hold (FD, funds, stocks, RSUs, EPF, PPF, NPS) and running SIPs.`,
+    `Retirement is ${retPct}% on track.${others.length > 0 ? ` ${onTrackCount} of ${others.length} other ${others.length === 1 ? "goal" : "goals"} on track.` : ""} We count your savings, EPF, PPF, NPS and running SIPs.`,
     actions,
   );
 }
@@ -409,21 +438,24 @@ function wealthPillar(i: MoneyScoreInput): ScorePillar {
   const mixPts = small
     ? 4
     : 2 * clamp01(equityShare / minEquity) + (concentrated ? 0 : 2);
-  const fmtYears = (y: number) => `${Math.round(y * 10) / 10}x`;
+  const fmtYears = (y: number) => {
+    const v = Math.round(y * 10) / 10;
+    return `${v} ${v === 1 ? "year" : "years"}`;
+  };
   return pillar(
     "wealth",
     nwPts + mixPts,
-    `Net worth is ${fmtYears(years)} your yearly income (typical at ${age}: ${fmtYears(bench)})${small ? "" : `; ${Math.round(equityShare * 100)}% of investments in equity`}${concentrated ? ", over half of it in your company's shares" : ""}.`,
+    `Net worth is ${fmtYears(years)} of income (usual at ${age}: ${fmtYears(bench)}).${small ? "" : ` ${Math.round(equityShare * 100)}% of your investments are in equity${concentrated ? ", over half of it in your company's shares" : ""}.`}`,
     [
       concentrated
         ? {
-            text: "Sell part of your RSUs at each vest and spread it into index funds - over half your shares are in one company.",
+            text: "Sell some RSUs at each vest and put the money in index funds. Over half your shares are in one company.",
             gain: 2,
           }
         : null,
       !small && equityShare < minEquity
         ? {
-            text: `Move money for goals 7+ years away into equity index funds - only ${Math.round(equityShare * 100)}% of your investments grow faster than inflation.`,
+            text: `Put money for goals 7+ years away in equity index funds. Only ${Math.round(equityShare * 100)}% of your money is in things that beat inflation.`,
             gain: 2 - 2 * clamp01(equityShare / minEquity),
           }
         : null,

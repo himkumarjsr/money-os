@@ -31,10 +31,16 @@ export function goalSavingsLines(item: GoalFundingItem): string[] {
       `Your running SIPs / RD cover ${rs(item.existingMonthly ?? 0)}/month of it.`,
     );
   }
+  const planned = Math.max(0, item.monthlyAllocated ?? 0);
+  // Say plainly when the goal needs more than the plan can give it.
   lines.push(
-    item.monthlyRequired > 0
-      ? `Still needed: ${rs(item.monthlyRequired)}/month in a new SIP.`
-      : "On track with what you already hold.",
+    item.monthlyRequired <= 0
+      ? "On track with what you already hold."
+      : planned + 100 >= item.monthlyRequired
+        ? `Still needed: ${rs(item.monthlyRequired)}/month in a new SIP.`
+        : planned > 0
+          ? `To reach it by ${item.targetYear} you'd need ${rs(item.monthlyRequired)}/month more. From what's left each month, your plan can give it ${rs(planned)}/month - see below for what that reaches.`
+          : `To reach it by ${item.targetYear} you'd need ${rs(item.monthlyRequired)}/month more. Nothing is left over for it yet.`,
   );
   return lines;
 }

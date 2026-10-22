@@ -21,6 +21,8 @@ export const ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "young_bachelor_metro",
     name: "Riya, 26, single, metro, first job",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 26,
       cityTier: "metro",
@@ -62,6 +64,7 @@ export const ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "dink_couple_home_buyer",
     name: "Arjun & Meera, 31, married, no kids, two incomes, buying a home in 2030",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 31,
       spouseAge: 30,
@@ -400,6 +403,7 @@ export const ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "young_parents_toddler_girl",
     name: "Ananya, 33, two incomes, daughter aged 2, renting in a metro",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 33,
       cityTier: "metro",
@@ -452,6 +456,7 @@ export const ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "high_earner_parents_home",
     name: "Farhan, 35, single, high income, supports parents, buying a ₹2.5 Cr home in 2029",
     profile: {
+      planningHome: true,
       lifeStage: "bachelor",
       selfAge: 35,
       cityTier: "metro",
@@ -508,6 +513,7 @@ export const ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "wedding_and_car",
     name: "Pooja, 27, single, tier-2, wedding in 2028 and a car in 2029",
     profile: {
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 27,
       cityTier: "tier2",
@@ -663,6 +669,7 @@ export const ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "self_employed_consultant",
     name: "Rohit, 40, self-employed, 30% slab, keeps SIPs flat, buying a home in 2032",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 40,
       spouseAge: 38,
