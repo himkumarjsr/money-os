@@ -18,6 +18,8 @@ import {
 } from "@/lib/goalDetection";
 import type { GoalFundingItem } from "@/lib/goalFunding";
 import { goalSavingsLines } from "@/lib/goalSavingsText";
+import { buildGoalStrategies } from "@/lib/goalStrategies";
+import GoalStrategiesList from "@/components/analyse/GoalStrategiesList";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import Link from "next/link";
 
@@ -45,6 +47,10 @@ export default function GoalsSection({
   const goals = useMemo(() => detectGoals(profile), [profile]);
   const offers = useMemo(() => promptedGoalOffers(profile), [profile]);
   const hiddenCount = profile.dismissedGoals?.length ?? 0;
+  const strategiesById = useMemo(
+    () => new Map(buildGoalStrategies(profile).map((s) => [s.goalId, s])),
+    [profile],
+  );
   const fundingById = useMemo(
     () => new Map((funding ?? []).map((f) => [f.goalId, f])),
     [funding],
@@ -194,6 +200,14 @@ export default function GoalsSection({
                   {g.isDefaultTarget ? "Suggested amount" : "Your amount"}
                 </span>
               </div>
+              <GoalStrategiesList
+                goal={g}
+                plan={strategiesById.get(g.id)}
+                busy={saving}
+                onSetHomePrice={(price) =>
+                  void save(applyGoalEdit(profile, g.id, { homePrice: price }))
+                }
+              />
               {canEdit || g.removable ? (
                 <div className="mt-2 flex gap-2">
                   {canEdit ? (

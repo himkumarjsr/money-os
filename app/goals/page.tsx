@@ -53,6 +53,11 @@ import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import GoalStrategiesList from "@/components/analyse/GoalStrategiesList";
+import {
+  buildGoalStrategies,
+  type GoalStrategyPlan,
+} from "@/lib/goalStrategies";
 
 const STATUS_PILL: Record<GoalHubStatus, { label: string; cls: string }> = {
   on_track: { label: "On track", cls: "bg-[#F7FDF9] text-[#1D9E75]" },
@@ -137,6 +142,15 @@ function GoalsContent() {
     () =>
       lastSubmission ? buildGoalsHub(lastSubmission, plan?.goals, sips) : null,
     [lastSubmission, plan, sips],
+  );
+  const strategies = useMemo(
+    () =>
+      new Map(
+        lastSubmission
+          ? buildGoalStrategies(lastSubmission).map((s) => [s.goalId, s])
+          : [],
+      ),
+    [lastSubmission],
   );
 
   const saveProfile = async (next: FinancialProfile) => {
@@ -273,6 +287,15 @@ function GoalsContent() {
                 key={item.goal.id}
                 item={item}
                 busy={busy}
+                strategy={strategies.get(item.goal.id)}
+                onSetHomePrice={(price) =>
+                  lastSubmission &&
+                  void saveProfile(
+                    applyGoalEdit(lastSubmission, item.goal.id, {
+                      homePrice: price,
+                    }),
+                  )
+                }
                 onEdit={() => setSheet({ kind: "edit", goal: item.goal })}
                 onRemove={() =>
                   void saveProfile(dismissGoal(lastSubmission, item.goal.id))
@@ -455,6 +478,8 @@ function Summary({
 function GoalCard({
   item,
   busy,
+  strategy,
+  onSetHomePrice,
   onEdit,
   onRemove,
   onPlan,
@@ -464,6 +489,8 @@ function GoalCard({
 }: {
   item: GoalHubItem;
   busy: string | null;
+  strategy?: GoalStrategyPlan;
+  onSetHomePrice: (price: number) => void;
   onEdit: () => void;
   onRemove: () => void;
   onPlan: () => void;
@@ -539,6 +566,13 @@ function GoalCard({
           </Link>
         </p>
       )}
+
+      <GoalStrategiesList
+        goal={goal}
+        plan={strategy}
+        busy={busy !== null}
+        onSetHomePrice={onSetHomePrice}
+      />
 
       {item.sips.length > 0 ? (
         <ul className="mt-3 divide-y divide-[#F7F7F4] rounded-xl border border-[#E8E6F0]">

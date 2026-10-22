@@ -40,7 +40,13 @@ export type DetectedGoal = {
   /** How the target amount is worked out, in plain words. */
   calculation?: string;
   /** Home goal only: the price behind the upfront-cash target. */
-  home?: { price: number; priceIsEstimate: boolean; includeInteriors: boolean };
+  home?: {
+    price: number;
+    priceIsEstimate: boolean;
+    includeInteriors: boolean;
+    /** An older single amount: unclear if it's the price or the upfront cash. */
+    unclearAmount?: boolean;
+  };
 };
 
 export type PromptedGoalOffer = "marriage" | "baby";
@@ -254,6 +260,7 @@ export function detectGoals(
         price: Math.round(price),
         priceIsEstimate: ownPrice === undefined,
         includeInteriors,
+        ...(legacyAmount ? { unclearAmount: true } : {}),
       },
     });
   }

@@ -68,6 +68,11 @@ export function liquidNetWorth(profile: FinancialProfile): number {
 const realReturnPct = (nominal: number) =>
   ((1 + nominal) / (1 + LONG_RUN_INFLATION) - 1) * 100;
 
+/** Expected return above inflation (%) for money invested for `years`. */
+export function goalRealReturnPct(years: number): number {
+  return realReturnPct(HORIZON_ASSUMPTIONS[goalHorizon(years)].nominalReturn);
+}
+
 /**
  * Yearly SIP step-up in today's rupees: the salary hike the user expects,
  * less inflation (goal amounts are already in today's rupees). 0 when the
