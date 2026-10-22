@@ -342,7 +342,7 @@ function RewardsCard({
           </Text>
         </>
       ),
-      label: "tokens earned",
+      label: "FK balance",
     },
     {
       value: <Text style={styles.statValue}>{stats?.badges.length ?? 0}</Text>,

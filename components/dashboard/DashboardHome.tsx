@@ -266,7 +266,7 @@ function RewardsCard() {
           {fkBalance}
         </>
       ),
-      label: "tokens earned",
+      label: "FK balance",
     },
     { value: badges, label: "badges" },
     {

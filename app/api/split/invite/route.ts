@@ -9,6 +9,7 @@ import { getPublicSiteUrl } from "@/lib/siteUrl";
 import { isOpenSplitInvite, OPEN_SPLIT_INVITE_EMAIL } from "@/lib/splitInvite";
 import { notifySplitMemberAdded } from "@/lib/splitMemberNotify";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
+import { generateSplitInviteCode } from "@/lib/splitInviteCode";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -83,11 +84,7 @@ export async function POST(req: NextRequest) {
       .eq("id", groupId)
       .maybeSingle();
     if (!groupRow?.invite_code) {
-      const inviteCode = Array.from({ length: 8 }, () =>
-        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".charAt(
-          Math.floor(Math.random() * 32),
-        ),
-      ).join("");
+      const inviteCode = generateSplitInviteCode();
       await supabaseAdmin
         .from("split_groups")
         .update({ invite_code: inviteCode })
