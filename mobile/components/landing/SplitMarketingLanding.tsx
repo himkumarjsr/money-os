@@ -145,10 +145,12 @@ export function SplitMarketingLanding() {
         </View>
 
         <View style={styles.closing}>
-          <Text style={styles.closingTitle}>Split the next bill the easy way</Text>
+          <Text style={styles.closingTitle}>
+            Split the next bill the easy way
+          </Text>
           <Text style={styles.closingSub}>
-            Sign up free and create your first Finkoin Settle Up group in under a
-            minute.
+            Sign up free and create your first Finkoin Settle Up group in under
+            a minute.
           </Text>
           <TouchableOpacity
             style={styles.closingBtn}

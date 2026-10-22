@@ -5,12 +5,7 @@
  */
 import { View, Text, ScrollView } from "react-native";
 import { router, type Href } from "expo-router";
-import {
-  Colors,
-  Spacing,
-  FontSize,
-  themedStyles,
-} from "@/constants/theme";
+import { Colors, Spacing, FontSize, themedStyles } from "@/constants/theme";
 import Button from "@/components/ui/Button";
 import { openContentHref } from "@/lib/contentLinks";
 
