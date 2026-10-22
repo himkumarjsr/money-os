@@ -7,6 +7,8 @@ import type { AppIconName } from "@/components/ui/AppIcon";
 import {
   analyseFinances,
   assessTermCover,
+  healthCoverTarget,
+  savingsRateText,
   medicalEmergencyTarget,
   monthlyTotalIncome,
   type AnalysisResult,
@@ -21,6 +23,7 @@ import {
   getUniversalBucketActuals,
 } from "@/lib/universal-buckets";
 import { getBucketBreakdown } from "@/lib/bucket-breakdown";
+import { buildNetWorthBreakup } from "@/lib/netWorthBreakup";
 import type { BandLabel } from "./bandLabel";
 import {
   bucketCapRows,
@@ -107,17 +110,26 @@ export function buildResultModel(
   });
   const termStatus = termAssessment.status;
   const medEmergencyTargetAmount = medicalEmergencyTarget(profile);
-  const medEmergencyCurrent = profile.medicalEmergencyFund || 0;
+  // Spare savings beyond the emergency fund count, the same as the engine.
+  const medEmergencyCurrent =
+    analysis.medicalEmergencyFund?.current ??
+    (profile.medicalEmergencyFund || 0);
 
   const emergency = emergencyFundCheck(
     profile,
     needsMonthly,
     analysis.realEmergencyFund?.monthsCovered || 0,
   );
+  // The Fix Plan's target: 9 months of essentials, EMIs and premiums (an EMI
+  // still has to be paid if income stops), so both pages show the same number.
+  const emergencyTarget =
+    priorityPlan.priorities.find((p) => p.id === "emergency_fund")
+      ?.targetAmount ?? emergency.target;
+  const emergencyHave = analysis.realEmergencyFund?.total || 0;
   const termCover = profile.termInsuranceSumAssured || 0;
   const termNeeded = analysis.termInsuranceNeeded || 0;
   const healthCover = profile.healthInsuranceSumInsured || 0;
-  const healthTarget = profile.lifeStage === "bachelor" ? 500000 : 1000000;
+  const healthTarget = healthCoverTarget(profile);
   const savingsRate = analysis.scores?.savingsRate || 0;
 
   const safetyItems: SafetyItem[] = [
@@ -125,8 +137,8 @@ export function buildResultModel(
       id: "emergency",
       title: "Emergency fund",
       currentText: rupees(analysis.realEmergencyFund?.total || 0),
-      targetText: rupees(emergency.target),
-      isOk: emergency.isOk,
+      targetText: rupees(emergencyTarget),
+      isOk: emergencyHave >= emergencyTarget,
       icon: "shield",
     },
     {
@@ -172,7 +184,7 @@ export function buildResultModel(
     {
       id: "investment",
       title: "Investing regularly",
-      currentText: `${Math.round(savingsRate)}% of income`,
+      currentText: `${savingsRateText(savingsRate)} of income`,
       targetText: "15% minimum",
       isOk: savingsRate >= 15,
       icon: "trending",
@@ -204,6 +216,10 @@ export function buildResultModel(
     assets: analysis.totalAssets || 0,
     liabilities: analysis.totalLiabilities || 0,
     netWorth: analysis.netWorth || 0,
+    netWorthBreakup: buildNetWorthBreakup(profile, {
+      totalAssets: analysis.totalAssets || 0,
+      totalLiabilities: analysis.totalLiabilities || 0,
+    }),
     buckets,
     safetyItems,
     completeCount,

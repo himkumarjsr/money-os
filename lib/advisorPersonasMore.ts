@@ -14,6 +14,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "fresher_tier3_low",
     name: "Pooja, 22, first job in a tier-3 town, \u20b928k take-home",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 22,
       cityTier: "tier3",
@@ -51,6 +53,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "bachelor_lives_with_parents",
     name: "Karan, 24, lives with parents in Pune, saves most of his pay",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 24,
       cityTier: "metro",
@@ -92,6 +96,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "bachelor_education_loan",
     name: "Imran, 25, repaying an education loan, supports parents",
     profile: {
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 25,
       cityTier: "tier2",
@@ -133,6 +138,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "gig_delivery_partner",
     name: "Ravi, 27, delivery partner, irregular pay, no insurance",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "married",
       selfAge: 27,
       spouseAge: 25,
@@ -179,6 +186,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "freelance_designer",
     name: "Meghna, 29, freelance designer, income swings month to month",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 29,
       cityTier: "metro",
@@ -224,6 +233,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "young_couple_wedding_loan",
     name: "Aditya & Riya, 28, married last year on a personal loan",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "married",
       selfAge: 28,
       spouseAge: 27,
@@ -271,6 +282,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "single_mother_two_kids",
     name: "Sunita, 36, single mother of two (9 and 4), one income",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 36,
       cityTier: "metro",
@@ -374,6 +386,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "joint_family_three_kids",
     name: "Harish, 40, joint family, three kids, parents at home",
     profile: {
+      planningVehicle: true,
       lifeStage: "kids",
       selfAge: 40,
       spouseAge: 37,
@@ -429,6 +442,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "doctor_couple_metro",
     name: "Drs. Rao, 38 and 36, two high incomes, one son (3), buying a \u20b93 Cr flat",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 38,
       spouseAge: 36,
@@ -544,6 +558,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "it_couple_bengaluru",
     name: "Siddharth & Neha, 33, IT couple in Bengaluru, baby girl (1), car loan",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 33,
       spouseAge: 32,
@@ -600,6 +615,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "planning_baby_couple",
     name: "Arnav & Isha, 30, married, planning a baby next year",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 30,
       spouseAge: 29,
@@ -705,6 +721,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "custom_goals_couple",
     name: "Rahul & Tara, 34, saving for a world trip and a startup fund",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 34,
       spouseAge: 33,
@@ -767,6 +784,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "home_without_interiors",
     name: "Manoj, 35, buying a \u20b990L flat, interiors already budgeted",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 35,
       spouseAge: 33,
@@ -815,6 +833,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "credit_card_trap",
     name: "Nikhil, 31, \u20b92.5L carried on cards plus a personal loan",
     profile: {
+      planningHome: true,
       lifeStage: "bachelor",
       selfAge: 31,
       cityTier: "metro",
@@ -913,6 +932,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "unified_loans_mix",
     name: "Farah, 33, three loans entered in the new loans list",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 33,
       spouseAge: 34,
@@ -985,6 +1005,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "negative_cashflow",
     name: "Sameer, 32, spends more than he earns",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 32,
       spouseAge: 30,
@@ -1081,6 +1102,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "startup_founder",
     name: "Aarav, 31, founder taking a small salary, big equity, no cover",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 31,
       cityTier: "metro",
@@ -1117,6 +1140,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "high_earner_rsu",
     name: "Priya, 37, big-tech manager, RSUs and US stocks, single",
     profile: {
+      planningHome: true,
       lifeStage: "bachelor",
       selfAge: 37,
       cityTier: "metro",
@@ -1164,6 +1188,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "nri_returning",
     name: "Kiran, 41, back from the US, US stocks and Indian FD, renting in Hyderabad",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 41,
       spouseAge: 39,
@@ -1220,6 +1245,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "fire_couple_35",
     name: "Rohan & Aditi, 35, want to stop working at 45",
     profile: {
+      planningHome: true,
       lifeStage: "married",
       selfAge: 35,
       spouseAge: 34,
@@ -1365,6 +1391,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "investor_cautious_outlook",
     name: "Tushar, 32, plans on a cautious 10% equity return",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 32,
       cityTier: "metro",
@@ -1503,6 +1531,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "retired_pensioner",
     name: "Mrs. Das, 66, retired teacher with a pension",
     profile: {
+      planningVehicle: true,
       lifeStage: "senior",
       selfAge: 66,
       cityTier: "tier3",
@@ -1625,6 +1654,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "sole_caretaker_parents",
     name: "Ankita, 34, single, pays for both parents' medical costs",
     profile: {
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 34,
       cityTier: "tier2",
@@ -1670,6 +1700,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "parents_fully_covered",
     name: "Rajiv, 38, parents fully insured, no medical gap",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 38,
       spouseAge: 36,
@@ -1724,6 +1755,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "twin_boys_toddlers",
     name: "Mehul & Pia, 31, twin boys aged 2",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 31,
       spouseAge: 30,
@@ -1777,6 +1809,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "daughter_ssy_none_yet",
     name: "Suresh, 30, daughter 4, no SSY yet",
     profile: {
+      planningVehicle: true,
       lifeStage: "kids",
       selfAge: 30,
       spouseAge: 28,
@@ -1874,6 +1907,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "no_savings_no_insurance",
     name: "Vinod, 26, no savings, no insurance, spends everything",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 26,
       cityTier: "tier2",
@@ -1947,6 +1982,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "wedding_next_year",
     name: "Ishaan, 27, wedding next year, wants a car after",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 27,
       cityTier: "metro",
@@ -2050,6 +2087,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "military_officer",
     name: "Major Singh, 39, armed forces, posted away, one daughter",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 39,
       spouseAge: 36,
@@ -2102,6 +2140,8 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "aggressive_young_flat_sip",
     name: "Yash, 25, aggressive investor who'll keep SIPs flat",
     profile: {
+      planningHome: true,
+      planningVehicle: true,
       lifeStage: "bachelor",
       selfAge: 25,
       cityTier: "metro",
@@ -2143,6 +2183,7 @@ export const MORE_ADVISOR_PERSONAS: AdvisorPersona[] = [
     id: "tax_slab_20_moderate",
     name: "Rekha, 37, in the 20% slab, moderate investor, one son",
     profile: {
+      planningHome: true,
       lifeStage: "kids",
       selfAge: 37,
       spouseAge: 39,

@@ -29,13 +29,15 @@ export type GoalHubItem = {
   sips: PlannedInvestment[];
   /** SIPs marked started or done. */
   linkedMonthly: number;
+  /** Running SIPs / RD from the health check the plan already counts here. */
+  runningMonthly: number;
   /** SIPs planned but not started yet. */
   plannedMonthly: number;
   /** Earliest start month among planned SIPs (YYYY-MM-01). */
   nextStart: string | null;
-  /** linkedMonthly / monthlyRequired, 0–100. */
+  /** (linkedMonthly + runningMonthly) / monthlyRequired, 0–100. */
   coveragePct: number;
-  /** Monthly shortfall of linked SIPs against monthlyRequired. */
+  /** Monthly shortfall of started SIPs against monthlyRequired. */
   gapMonthly: number;
   status: GoalHubStatus;
 };
@@ -44,11 +46,16 @@ export type GoalsHub = {
   items: GoalHubItem[];
   /** Linked SIPs whose goal is gone (removed or no longer detected). */
   orphanSips: PlannedInvestment[];
+  /** Goals you save for (loans paid by EMI aren't counted). */
   totals: {
     goals: number;
     onTrack: number;
     monthlyRequired: number;
     linkedMonthly: number;
+    /** Running SIPs / RD already counted toward the goals. */
+    runningMonthly: number;
+    /** What the plan sets aside for the goals from what's left each month. */
+    suggestedMonthly: number;
   };
 };
 
@@ -104,6 +111,7 @@ export function buildGoalsHub(
         planGoal: null,
         sips: mine,
         linkedMonthly,
+        runningMonthly: 0,
         plannedMonthly,
         nextStart,
         coveragePct: 100,
@@ -112,17 +120,20 @@ export function buildGoalsHub(
       };
     }
 
-    // Linked SIPs are compared with the full SIP the goal needs, including
-    // the running SIPs the plan already counts toward it.
+    // Started SIPs - the ones linked here plus the running SIPs / RD the plan
+    // already counts toward the goal - against the full SIP it needs.
+    const runningMonthly = Math.max(
+      0,
+      Math.round(planGoal?.existingMonthly ?? 0),
+    );
     const monthlyRequired = Math.max(
       0,
-      Math.round(
-        (planGoal?.monthlyRequired ?? 0) + (planGoal?.existingMonthly ?? 0),
-      ),
+      Math.round((planGoal?.monthlyRequired ?? 0) + runningMonthly),
     );
+    const started = linkedMonthly + runningMonthly;
     const coveragePct =
       monthlyRequired > 0
-        ? Math.min(100, Math.round((linkedMonthly / monthlyRequired) * 100))
+        ? Math.min(100, Math.round((started / monthlyRequired) * 100))
         : 100;
     return {
       goal,
@@ -135,11 +146,12 @@ export function buildGoalsHub(
       planGoal,
       sips: mine,
       linkedMonthly,
+      runningMonthly,
       plannedMonthly,
       nextStart,
       coveragePct,
-      gapMonthly: Math.max(0, monthlyRequired - linkedMonthly),
-      status: goalStatus(monthlyRequired, linkedMonthly, plannedMonthly),
+      gapMonthly: Math.max(0, monthlyRequired - started),
+      status: goalStatus(monthlyRequired, started, plannedMonthly),
     };
   });
 
@@ -148,10 +160,12 @@ export function buildGoalsHub(
     items,
     orphanSips: goalSips.filter((s) => !ids.has(s.source_id)),
     totals: {
-      goals: items.length,
+      goals: funded.length,
       onTrack: funded.filter((i) => i.status === "on_track").length,
       monthlyRequired: funded.reduce((t, i) => t + i.monthlyRequired, 0),
       linkedMonthly: funded.reduce((t, i) => t + i.linkedMonthly, 0),
+      runningMonthly: funded.reduce((t, i) => t + i.runningMonthly, 0),
+      suggestedMonthly: funded.reduce((t, i) => t + i.suggestedMonthly, 0),
     },
   };
 }
@@ -161,7 +175,8 @@ export function goalStatusLine(
   item: Pick<
     GoalHubItem,
     "status" | "gapMonthly" | "monthlyRequired" | "nextStart"
-  >,
+  > &
+    Partial<Pick<GoalHubItem, "suggestedMonthly">>,
   formatMonth: (ym: string) => string,
 ): string {
   const r = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
@@ -170,8 +185,8 @@ export function goalStatusLine(
       return "Paid down by your loan EMIs";
     case "on_track":
       return item.monthlyRequired > 0
-        ? "On track with your linked SIPs"
-        : "Already covered by what you've saved";
+        ? "On track with the SIPs you've started"
+        : "Your savings already cover it - nothing more needed each month";
     case "behind":
       return `Behind by ${r(item.gapMonthly)}/month`;
     case "planned":
@@ -179,7 +194,10 @@ export function goalStatusLine(
         ? `SIP planned from ${formatMonth(item.nextStart)}`
         : "SIP planned";
     default:
-      return `Needs ${r(item.monthlyRequired)}/month. No SIP linked yet`;
+      return (item.suggestedMonthly ?? 0) > 0 &&
+        (item.suggestedMonthly ?? 0) < item.monthlyRequired
+        ? `Needs ${r(item.monthlyRequired)}/month. Your plan can give it ${r(item.suggestedMonthly ?? 0)}/month - no SIP started yet`
+        : `Needs ${r(item.monthlyRequired)}/month. No SIP started yet`;
   }
 }
 

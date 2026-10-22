@@ -63,7 +63,11 @@ export type DetectedGoal = {
   };
 };
 
-export type PromptedGoalOffer = "marriage" | "baby";
+export type PromptedGoalOffer =
+  | "marriage"
+  | "baby"
+  | "home_purchase"
+  | "vehicle_purchase";
 
 /** Upfront cash on a home purchase, as shares of its price. */
 export const HOME_UPFRONT = {
@@ -165,6 +169,29 @@ function hasLoans(p: Partial<FinancialProfile>): boolean {
  * answered. A "no" that isn't in dismissedGoals (stored by builds before "Not
  * now" became hide) has nothing to restore, so it's asked again.
  */
+/** A home goal only when the user asked for one: a yes, a price or year, or "buy a home" as their goal. */
+export function wantsHomeGoal(p: Partial<FinancialProfile>): boolean {
+  if (p.ownsHome) return false;
+  return (
+    p.planningHome === true ||
+    positive(p.homePurchasePrice) !== undefined ||
+    positive(p.homePurchaseTarget) !== undefined ||
+    positive(p.homePurchaseYear) !== undefined ||
+    p.primaryGoal === "buy_home"
+  );
+}
+
+/** A car goal only when the user asked for one: a yes, an amount or year, or "buy a car" as their goal. */
+export function wantsVehicleGoal(p: Partial<FinancialProfile>): boolean {
+  if (p.ownsCar) return false;
+  return (
+    p.planningVehicle === true ||
+    positive(p.carPurchaseTarget) !== undefined ||
+    positive(p.carPurchaseYear) !== undefined ||
+    p.primaryGoal === "buy_car"
+  );
+}
+
 export function promptedGoalOffers(
   p: Partial<FinancialProfile>,
 ): PromptedGoalOffer[] {
@@ -181,6 +208,21 @@ export function promptedGoalOffers(
     open(p.planningBaby, "baby")
   ) {
     offers.push("baby");
+  }
+  // Buying a home or a car is a choice, so we ask rather than assume.
+  if (
+    !p.ownsHome &&
+    !wantsHomeGoal(p) &&
+    open(p.planningHome, "home_purchase")
+  ) {
+    offers.push("home_purchase");
+  }
+  if (
+    !p.ownsCar &&
+    !wantsVehicleGoal(p) &&
+    open(p.planningVehicle, "vehicle_purchase")
+  ) {
+    offers.push("vehicle_purchase");
   }
   return offers;
 }
@@ -274,7 +316,7 @@ export function detectGoals(
     }
   }
 
-  if (!p.ownsHome) {
+  if (wantsHomeGoal(p)) {
     const rent = n(p.rentAmount);
     const ownPrice = positive(p.homePurchasePrice);
     // Older profiles stored a raw downpayment amount instead of a price.
@@ -299,10 +341,7 @@ export function detectGoals(
       isDefaultTarget: ownPrice === undefined && legacyAmount === undefined,
       editable: { amount: true, year: true },
       removable: true,
-      reason:
-        rent > 0
-          ? "You rent today - this is the cash you need upfront to buy."
-          : "You don't own a home yet - this is the cash you need upfront.",
+      reason: "You plan to buy a home - this is the cash you need upfront.",
       calculation: legacyAmount
         ? "Your own downpayment figure - tap Edit to set the home price instead."
         : `${rs(price)} home × ${Math.round(homeUpfrontShare(includeInteriors) * 100)}% (${split}) = ${rs(price * homeUpfrontShare(includeInteriors))}.` +
@@ -320,7 +359,7 @@ export function detectGoals(
     });
   }
 
-  if (!p.ownsCar) {
+  if (wantsVehicleGoal(p)) {
     const own = positive(p.carPurchaseTarget);
     add({
       id: "vehicle_purchase",
@@ -333,7 +372,7 @@ export function detectGoals(
       isDefaultTarget: own === undefined,
       editable: { amount: true, year: true },
       removable: true,
-      reason: "No car on file - buy it with savings, not a loan.",
+      reason: "You plan to buy a car - save for it instead of taking a loan.",
       calculation:
         own !== undefined
           ? "Your own figure, in today's rupees."
@@ -586,6 +625,8 @@ export function dismissGoal(
   const next: FinancialProfile = { ...p, dismissedGoals: Array.from(set) };
   if (goalId === "marriage") next.planningMarriage = false;
   if (goalId === "baby") next.planningBaby = false;
+  if (goalId === "home_purchase") next.planningHome = false;
+  if (goalId === "vehicle_purchase") next.planningVehicle = false;
   return next;
 }
 
@@ -595,6 +636,8 @@ export function restoreDismissedGoals(p: FinancialProfile): FinancialProfile {
   const next: FinancialProfile = { ...p, dismissedGoals: [] };
   if (dismissed.has("marriage")) next.planningMarriage = undefined;
   if (dismissed.has("baby")) next.planningBaby = undefined;
+  if (dismissed.has("home_purchase")) next.planningHome = undefined;
+  if (dismissed.has("vehicle_purchase")) next.planningVehicle = undefined;
   return next;
 }
 
@@ -609,10 +652,17 @@ export function answerPromptedGoal(
   yes: boolean,
 ): FinancialProfile {
   const dismissed = (p.dismissedGoals ?? []).filter((id) => id !== offer);
-  const added: FinancialProfile =
-    offer === "marriage"
-      ? { ...p, planningMarriage: true, dismissedGoals: dismissed }
-      : { ...p, planningBaby: true, dismissedGoals: dismissed };
+  const flag = {
+    marriage: "planningMarriage",
+    baby: "planningBaby",
+    home_purchase: "planningHome",
+    vehicle_purchase: "planningVehicle",
+  } as const;
+  const added: FinancialProfile = {
+    ...p,
+    [flag[offer]]: true,
+    dismissedGoals: dismissed,
+  };
   return yes ? added : dismissGoal(added, offer);
 }
 
@@ -702,6 +752,8 @@ type GoalCardFields = Pick<
   | "marriageFundTarget"
   | "marriageFundYear"
   | "planningBaby"
+  | "planningHome"
+  | "planningVehicle"
   | "babyFundTarget"
   | "babyFundYear"
   | "dismissedGoals"
@@ -723,6 +775,8 @@ export function resetGoalCardEdits<T extends GoalCardFields>(v: T): T {
     marriageFundTarget: undefined,
     marriageFundYear: undefined,
     planningBaby: undefined,
+    planningHome: undefined,
+    planningVehicle: undefined,
     babyFundTarget: undefined,
     babyFundYear: undefined,
     dismissedGoals: [],

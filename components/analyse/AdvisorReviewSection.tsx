@@ -61,6 +61,31 @@ export default function AdvisorReviewSection({
         </section>
       ) : null}
 
+      {review.pots.length > 0 ? (
+        <section className="rounded-2xl border border-[#E8E6F0] bg-white p-4 shadow-sm">
+          <h3 className="text-lg font-semibold text-[#111110]">
+            Where to keep your money
+          </h3>
+          <p className="mt-1 text-sm text-[#5F5E5A]">
+            Each pot has its own job, so it sits in its own place.
+          </p>
+          <ul className="mt-3 space-y-3">
+            {review.pots.map((pot) => (
+              <li key={pot.id} className="rounded-xl bg-[#F7F7F4] p-3">
+                <p className="text-sm font-semibold text-[#111110]">
+                  {pot.name}
+                  {pot.amount > 0
+                    ? ` · ₹${pot.amount.toLocaleString("en-IN")}`
+                    : ""}
+                </p>
+                <p className="mt-0.5 text-sm text-[#3D3C38]">{pot.where}</p>
+                <p className="mt-0.5 text-xs text-[#5F5E5A]">{pot.why}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="space-y-4 rounded-2xl border border-[#E8E6F0] bg-white p-4 shadow-sm">
         <h3 className="text-lg font-semibold text-[#111110]">
           Your action list

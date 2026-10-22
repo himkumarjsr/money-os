@@ -86,6 +86,14 @@ const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
     q: "Planning a baby?",
     sub: "We'll add a childbirth and first-year fund.",
   },
+  home_purchase: {
+    q: "Planning to buy a home?",
+    sub: "We'll add the cash you need upfront. You can set the price and year.",
+  },
+  vehicle_purchase: {
+    q: "Planning to buy a car?",
+    sub: "We'll add a car fund, so you can buy it without a loan.",
+  },
 };
 
 const rupees = (v: number) => `₹${formatIndian(Math.round(v))}`;
@@ -453,10 +461,18 @@ function Summary({
 }: {
   hub: NonNullable<ReturnType<typeof buildGoalsHub>>;
 }) {
-  const { goals, onTrack, monthlyRequired, linkedMonthly } = hub.totals;
+  const {
+    goals,
+    onTrack,
+    monthlyRequired,
+    linkedMonthly,
+    runningMonthly,
+    suggestedMonthly,
+  } = hub.totals;
+  const started = linkedMonthly + runningMonthly;
   const pct =
     monthlyRequired > 0
-      ? Math.min(100, Math.round((linkedMonthly / monthlyRequired) * 100))
+      ? Math.min(100, Math.round((started / monthlyRequired) * 100))
       : 100;
   return (
     <section className="rounded-2xl bg-white p-5 shadow-sm">
@@ -465,19 +481,27 @@ function Summary({
           {onTrack} of {goals} {goals === 1 ? "goal" : "goals"} on track
         </p>
         <p className="text-sm font-semibold tabular-nums text-[#534AB7]">
-          {pct}% funded
+          {pct}% started
         </p>
       </div>
       <p className="mt-1 text-2xl font-bold tabular-nums text-[#111110]">
-        {rupees(linkedMonthly)}
+        {rupees(started)}
         <span className="text-base font-semibold text-[#9B9A94]">
           {" "}
           / {rupees(monthlyRequired)} a month
         </span>
       </p>
       <p className="text-[13px] text-[#5F5E5A]">
-        SIPs linked to your goals, against what they need
+        SIPs you&apos;ve started (running ones included), against what your
+        goals need.
       </p>
+      {suggestedMonthly > 0 && suggestedMonthly < monthlyRequired ? (
+        <p className="mt-1 text-[13px] text-[#5F5E5A]">
+          From what&apos;s left each month, your plan can put{" "}
+          {rupees(suggestedMonthly)} toward them. The rest needs a later date, a
+          smaller target or more income.
+        </p>
+      ) : null}
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F7F7F4]">
         <div
           className="h-full rounded-full bg-[#534AB7]"
@@ -519,7 +543,8 @@ function GoalCard({
   const canPlan =
     item.status !== "via_emi" &&
     (item.planGoal?.allocation?.slices.some((s) => s.monthly > 0) ?? false) &&
-    item.linkedMonthly + item.plannedMonthly < item.monthlyRequired;
+    item.linkedMonthly + item.runningMonthly + item.plannedMonthly <
+      item.monthlyRequired;
   const funded = item.status !== "via_emi";
 
   return (
@@ -563,8 +588,8 @@ function GoalCard({
             {goalStatusLine(item, formatStartMonth)}
           </p>
           <p className="mt-0.5 text-xs text-[#5F5E5A]">
-            Needs {rupees(item.monthlyRequired)}/month · linked{" "}
-            {rupees(item.linkedMonthly)}
+            Needs {rupees(item.monthlyRequired)}/month · started{" "}
+            {rupees(item.linkedMonthly + item.runningMonthly)}
             {item.suggestedMonthly > 0
               ? ` · your plan sets aside ${rupees(item.suggestedMonthly)}`
               : ""}

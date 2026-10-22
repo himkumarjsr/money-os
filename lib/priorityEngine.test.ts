@@ -125,7 +125,12 @@ describe("buildPriorityPlan", () => {
       ]),
     );
     expect(plan.debts).toHaveLength(6);
-    expect(plan.debts[0]?.type).toBe("Credit card");
+    // Avalanche by rate; the small ₹3,000 card balance goes last.
+    expect(plan.debts[0]?.type).not.toBe("Credit card");
+    expect(plan.debts.at(-1)).toMatchObject({
+      type: "Credit card",
+      small: true,
+    });
     expect(plan.goals.map((g) => g.goalType)).toEqual(
       expect.arrayContaining(["home_purchase", "retirement"]),
     );
