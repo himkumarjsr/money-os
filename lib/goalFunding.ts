@@ -10,7 +10,7 @@ import {
   existingEquityValue,
   LONG_RUN_INFLATION,
   projectRetirementAccounts,
-} from "@/lib/financialEngine";
+} from "@/lib/holdings";
 import {
   detectGoals,
   type DetectedGoal,
@@ -25,6 +25,7 @@ import {
   type PortfolioAllocation,
 } from "@/lib/portfolioAllocation";
 import { monthlyStepUpSipForGoal } from "@/lib/sipGoal";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 /** Each funded goal gets at least this share of the pool (or its full need, if smaller). */
 export const GOAL_FLOOR_SHARE = 0.05;
@@ -66,6 +67,11 @@ export function liquidNetWorth(profile: FinancialProfile): number {
 
 const realReturnPct = (nominal: number) =>
   ((1 + nominal) / (1 + LONG_RUN_INFLATION) - 1) * 100;
+
+/** Expected return above inflation (%) for money invested for `years`. */
+export function goalRealReturnPct(years: number): number {
+  return realReturnPct(HORIZON_ASSUMPTIONS[goalHorizon(years)].nominalReturn);
+}
 
 /**
  * Yearly SIP step-up in today's rupees: the salary hike the user expects,
@@ -110,6 +116,19 @@ export type GoalFundingItem = {
   /** Deterministic instrument split of monthlyAllocated. */
   allocation: PortfolioAllocation;
   isPrimary: boolean;
+  /** Where currentSaved comes from (today's rupees). */
+  sources?: GoalSavingsSources;
+};
+
+/** Existing money set against a goal, by where it sits today. */
+export type GoalSavingsSources = {
+  /** FDs, NSC / post office. */
+  debt: number;
+  gold: number;
+  /** Mutual funds, stocks, RSUs. */
+  equity: number;
+  /** Retirement only: EPF + PPF + NPS at the goal date, today's rupees. */
+  retirementAccounts: number;
 };
 
 export type GoalFundingPlan = {
@@ -199,6 +218,14 @@ export type GoalEarmark = {
   existingMonthly: number;
   /** New monthly SIP still needed from the surplus. */
   monthlyRequired: number;
+  /** Monthly SIP the goal would need with nothing saved toward it. */
+  monthlyFromScratch: number;
+  /** Where the lumpsum comes from, today's rupees. */
+  fromDebt: number;
+  fromGold: number;
+  fromEquity: number;
+  /** Retirement only: EPF + PPF + NPS at the goal date, today's rupees. */
+  retirementAccounts: number;
 };
 
 const n0 = (v: unknown) => {
@@ -234,12 +261,9 @@ export function earmarkExistingSavings(
   now: Date = new Date(),
   opts: SafetyReserve = {},
 ): Map<string, GoalEarmark> {
-  const p = profile as FinancialProfile & {
-    postOfficeSchemes?: Array<{ amount?: number }>;
-  };
+  const p = profile;
   const postOffice =
-    (p.postOfficeSchemes ?? []).reduce((s, r) => s + n0(r?.amount), 0) ||
-    n0(p.nscDepositAmount);
+    postOfficeHoldingsValue(p.postOfficeSchemes, now) || n0(p.nscDepositAmount);
   const pots = {
     debt: Math.max(
       0,
@@ -273,11 +297,12 @@ export function earmarkExistingSavings(
     const rPct = realReturnPct(HORIZON_ASSUMPTIONS[horizon].nominalReturn);
     const grow = Math.pow(1 + rPct / 100, g.yearsToGoal);
     let target = g.targetAmount;
-    if (g.type === "retirement") {
-      target -= projectRetirementAccounts(profile, g.yearsToGoal, {
-        real: true,
-      }).total;
-    }
+    const retirementAccounts =
+      g.type === "retirement"
+        ? projectRetirementAccounts(profile, g.yearsToGoal, { real: true })
+            .total
+        : 0;
+    target -= retirementAccounts;
     const order: Array<keyof typeof pots> =
       g.yearsToGoal <= 3
         ? ["debt", "gold", "equity"]
@@ -285,11 +310,13 @@ export function earmarkExistingSavings(
           ? ["debt", "equity", "gold"]
           : ["equity", "gold", "debt"];
     let lumpsum = 0;
+    const taken = { debt: 0, gold: 0, equity: 0 };
     for (const k of order) {
       const stillToday = Math.max(0, target / grow - lumpsum);
       const take =
         g.type === "retirement" ? pots[k] : Math.min(pots[k], stillToday);
       pots[k] -= take;
+      taken[k] = take;
       lumpsum += take;
     }
     const gap = Math.max(0, target - lumpsum * grow);
@@ -300,6 +327,13 @@ export function earmarkExistingSavings(
       lumpsum: Math.round(lumpsum),
       existingMonthly: Math.round(existingMonthly),
       monthlyRequired: Math.round(Math.max(0, needed - existingMonthly)),
+      monthlyFromScratch: Math.round(
+        monthlyStepUpSipForGoal(g.targetAmount, rPct, g.yearsToGoal, stepUpPct),
+      ),
+      fromDebt: Math.round(taken.debt),
+      fromGold: Math.round(taken.gold),
+      fromEquity: Math.round(taken.equity),
+      retirementAccounts: Math.round(Math.max(0, retirementAccounts)),
     });
   }
   return out;
@@ -347,6 +381,12 @@ export function buildGoalFundingPlan(
       currentSaved: Math.round((mark?.lumpsum ?? 0) + pf),
       existingMonthly: mark?.existingMonthly ?? 0,
       monthlyRequired: mark?.monthlyRequired ?? 0,
+      sources: {
+        debt: mark?.fromDebt ?? 0,
+        gold: mark?.fromGold ?? 0,
+        equity: mark?.fromEquity ?? 0,
+        retirementAccounts: mark?.retirementAccounts ?? 0,
+      },
     };
   });
 
@@ -396,6 +436,7 @@ export function buildGoalFundingPlan(
       instrument: allocationSummary(allocation),
       allocation,
       isPrimary: s.isPrimary,
+      sources: s.sources,
     };
   });
   items.sort(

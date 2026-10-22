@@ -13,6 +13,7 @@ import {
   dismissGoal,
   promptedGoalOffers,
   restoreDismissedGoals,
+  resetGoalCardEdits,
 } from "./goalDetection";
 
 const NOW = new Date(2026, 9, 7);
@@ -309,5 +310,25 @@ describe("editing goals", () => {
     const restored = restoreDismissedGoals(removed);
     expect(restored.dismissedGoals).toEqual([]);
     expect(promptedGoalOffers(restored)).toEqual(["marriage"]);
+  });
+});
+
+describe("resetGoalCardEdits", () => {
+  it("clears goal-card answers and edits but keeps the user's own goals", () => {
+    const custom = [
+      { id: "c1", label: "Trip", targetAmount: 1, targetYear: 2030 },
+    ];
+    const out = resetGoalCardEdits({
+      planningBaby: true,
+      babyFundTarget: 500000,
+      dismissedGoals: ["marriage"],
+      kidsEducationFundTargets: [1],
+      customGoals: custom,
+    } as Parameters<typeof resetGoalCardEdits>[0] & { customGoals: unknown });
+    expect(out.planningBaby).toBeUndefined();
+    expect(out.babyFundTarget).toBeUndefined();
+    expect(out.dismissedGoals).toEqual([]);
+    expect(out.kidsEducationFundTargets).toBeUndefined();
+    expect(out.customGoals).toBe(custom);
   });
 });

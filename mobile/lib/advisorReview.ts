@@ -8,9 +8,15 @@ import { formatIndian } from "@/lib/formatters";
 import { existingEquityValue, LONG_RUN_INFLATION } from "@/lib/financialEngine";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import type { PriorityPlan } from "@/lib/priorityEngine";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 export type MoneyFix = {
-  id: "costly_debt" | "idle_cash" | "fd_below_inflation" | "equity_near_goal";
+  id:
+    | "costly_debt"
+    | "idle_cash"
+    | "fd_below_inflation"
+    | "equity_near_goal"
+    | "retirement_backup";
   title: string;
   detail: string;
   /** Rough yearly gain from acting on it, when we can tell. */
@@ -112,11 +118,7 @@ export function buildAdvisorReview(
   const safePots =
     fdSpare +
     n(p.goldValue) +
-    (n(p.nscDepositAmount) ||
-      (
-        (p as { postOfficeSchemes?: Array<{ amount?: number }> })
-          .postOfficeSchemes ?? []
-      ).reduce((s, r) => s + n(r?.amount), 0));
+    (n(p.nscDepositAmount) || postOfficeHoldingsValue(p.postOfficeSchemes));
   const equityForNear = Math.max(
     0,
     near.reduce((s, g) => s + g.currentSaved, 0) - safePots,
@@ -126,6 +128,22 @@ export function buildAdvisorReview(
       id: "equity_near_goal",
       title: "Shares held for a goal that's close",
       detail: `About ${rs(equityForNear)} of your funds / stocks is earmarked for ${near.map((g) => g.label.toLowerCase()).join(", ")} within 2 years. Move it to an FD or short-term debt fund over the next few months so a market fall doesn't hit the date.`,
+    });
+  }
+
+  // EPF / PPF are counted for retirement; name the rules for drawing on them
+  // early so a short goal has a known fallback.
+  const shortGoals = (plan.goalFunding?.items ?? []).filter(
+    (g) => g.type !== "retirement" && g.monthlyRequired > 0,
+  );
+  if (
+    shortGoals.length > 0 &&
+    (n(p.epfBalance) >= 5_00_000 || n(p.ppfBalance) >= 2_00_000)
+  ) {
+    fixes.push({
+      id: "retirement_backup",
+      title: "EPF and PPF as a last-resort backup",
+      detail: `We count your EPF (${rs(n(p.epfBalance))}) and PPF (${rs(n(p.ppfBalance))}) toward retirement. If ${shortGoals[0].label.toLowerCase()} falls short: EPF allows a withdrawal for buying a home (after 5 years of service) and for children's education or marriage (after 7 years); PPF allows a partial withdrawal from its 7th year. Use these only if needed - every rupee taken out now is several rupees less at retirement.`,
     });
   }
 

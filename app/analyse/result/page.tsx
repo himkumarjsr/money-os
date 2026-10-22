@@ -8,6 +8,7 @@ import FeedbackWidget from "@/components/FeedbackWidget";
 import PrivateAmount from "@/components/ui/PrivateAmount";
 import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import GoalsSection from "@/components/analyse/GoalsSection";
+import MoneyScoreCard from "@/components/analyse/MoneyScoreCard";
 import PremiumRdCard from "@/components/analyse/PremiumRdCard";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
@@ -330,17 +331,10 @@ export default function AnalyseResultPage() {
   const profileLabels = profileSummaryLabels(profile);
 
   const handleUnlockClick = async () => {
-    console.log("=== UNLOCK CLICKED ===");
-
     try {
       const skipPayment = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
 
-      console.log("skipPayment:", skipPayment);
-      console.log("user:", user?.id);
-      console.log("subscriptionTier:", user?.subscriptionTier);
-
       if (skipPayment) {
-        console.log("Skip payment → going to fixplan");
         router.push("/analyse/fixplan");
         return;
       }
@@ -349,12 +343,10 @@ export default function AnalyseResultPage() {
         user?.subscriptionTier === "pro" ||
         user?.subscriptionTier === "promax"
       ) {
-        console.log("Pro user → going to fixplan");
         router.push("/analyse/fixplan");
         return;
       }
 
-      console.log("Opening payment modal");
       setShowPaymentModal(true);
     } catch (err) {
       console.error("Unlock error:", err);
@@ -422,6 +414,9 @@ export default function AnalyseResultPage() {
             </div>
           </section>
 
+          {analysis?.moneyScore ? (
+            <MoneyScoreCard score={analysis.moneyScore} />
+          ) : null}
           <div className="mb-4 rounded-2xl border border-[#E8E6F0] bg-white p-4 sm:p-6">
             <div className="mb-4 text-[11px] font-bold uppercase tracking-wide text-[#534AB7]">
               Monthly summary
@@ -933,7 +928,11 @@ export default function AnalyseResultPage() {
 
           <PremiumRdCard profile={profile} userId={user?.id} />
 
-          <GoalsSection profile={profile} userId={user?.id} />
+          <GoalsSection
+            profile={profile}
+            userId={user?.id}
+            funding={priorityPlan.goalFunding?.items}
+          />
 
           <section className="rounded-2xl border border-[#DCD8F4] bg-white p-5">
             <h2 className="text-xl font-semibold">

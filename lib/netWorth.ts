@@ -1,4 +1,5 @@
 import type { AnalyseFormValues } from "@/lib/analyse-form-schema";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 function sum(values: Array<number | undefined>) {
   return values.reduce<number>((total, value) => total + (value ?? 0), 0);
@@ -33,7 +34,7 @@ export function buildNetWorth(values: Partial<AnalyseFormValues>) {
     values.otherAssets,
     ...(values.hasPostOfficeSchemes &&
     (values.postOfficeSchemes?.length ?? 0) > 0
-      ? (values.postOfficeSchemes ?? []).map((row) => row.amount)
+      ? [postOfficeHoldingsValue(values.postOfficeSchemes)]
       : [values.nscDepositAmount]),
   ]);
 

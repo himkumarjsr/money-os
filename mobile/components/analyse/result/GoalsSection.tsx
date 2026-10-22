@@ -10,11 +10,16 @@ import {
   applyGoalEdit,
   detectGoals,
   dismissGoal,
+  homeUpfrontShare,
   promptedGoalOffers,
   restoreDismissedGoals,
   type DetectedGoal,
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
+import type { GoalFundingItem } from "@/lib/goalFunding";
+import { goalSavingsLines } from "@/lib/goalSavingsText";
+import { buildGoalStrategies, projectGoalReach } from "@/lib/goalStrategies";
+import { GoalStrategiesList } from "./GoalStrategiesList";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { router } from "expo-router";
 
@@ -32,13 +37,24 @@ const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
 export function GoalsSection({
   profile,
   userId,
+  funding,
 }: {
   profile: FinancialProfile;
   userId?: string | null;
+  /** Fix Plan goal funding: shows the money already counted toward each goal. */
+  funding?: GoalFundingItem[];
 }) {
   const goals = useMemo(() => detectGoals(profile), [profile]);
   const offers = useMemo(() => promptedGoalOffers(profile), [profile]);
   const hiddenCount = profile.dismissedGoals?.length ?? 0;
+  const strategiesById = useMemo(
+    () => new Map(buildGoalStrategies(profile).map((s) => [s.goalId, s])),
+    [profile],
+  );
+  const fundingById = useMemo(
+    () => new Map((funding ?? []).map((f) => [f.goalId, f])),
+    [funding],
+  );
 
   const [editing, setEditing] = useState<DetectedGoal | null>(null);
   const [amount, setAmount] = useState<number | null>(null);
@@ -60,7 +76,7 @@ export function GoalsSection({
 
   const openEdit = (g: DetectedGoal) => {
     setEditing(g);
-    setAmount(g.targetAmount);
+    setAmount(g.home ? g.home.price : g.targetAmount);
     setYearRaw(String(g.targetYear));
     setError(null);
   };
@@ -74,11 +90,11 @@ export function GoalsSection({
 
   const submitEdit = async () => {
     if (!editing || yearInvalid) return;
+    const valid = editing.editable.amount && amount != null && amount > 0;
     const next = applyGoalEdit(profile, editing.id, {
-      targetAmount:
-        editing.editable.amount && amount != null && amount > 0
-          ? amount
-          : undefined,
+      // For a home the user enters the price; the upfront cash follows.
+      ...(editing.home ? { homePrice: valid ? amount : undefined } : {}),
+      targetAmount: !editing.home && valid ? amount : undefined,
       targetYear: editing.editable.year ? yearNum : undefined,
     });
     await save(next);
@@ -144,6 +160,15 @@ export function GoalsSection({
                       {g.calculation}
                     </Text>
                   ) : null}
+                  {fundingById.get(g.id) ? (
+                    <View style={styles.funded}>
+                      {goalSavingsLines(fundingById.get(g.id)!).map((line) => (
+                        <Text key={line} style={styles.fundedText}>
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
                 <View
                   style={[
@@ -169,6 +194,19 @@ export function GoalsSection({
                   </Text>
                 </View>
               </View>
+              <GoalStrategiesList
+                goal={g}
+                plan={strategiesById.get(g.id)}
+                reach={
+                  fundingById.get(g.id)
+                    ? projectGoalReach(profile, fundingById.get(g.id)!)
+                    : undefined
+                }
+                busy={saving}
+                onSetHomePrice={(price) =>
+                  void save(applyGoalEdit(profile, g.id, { homePrice: price }))
+                }
+              />
               {canEdit || g.removable ? (
                 <View style={styles.row}>
                   {canEdit ? (
@@ -235,10 +273,27 @@ export function GoalsSection({
             <Text style={styles.sheetTitle}>Edit: {editing.label}</Text>
             {editing.editable.amount ? (
               <MoneyInput
-                label="Target amount (today's rupees)"
+                label={
+                  editing.home
+                    ? "Home price (today's rupees)"
+                    : "Target amount (today's rupees)"
+                }
                 value={amount}
                 onChangeValue={setAmount}
               />
+            ) : null}
+            {editing.home ? (
+              <Text style={styles.meta}>
+                Upfront cash goal: ₹
+                {formatIndian(
+                  Math.round(
+                    (amount ?? 0) *
+                      homeUpfrontShare(editing.home.includeInteriors),
+                  ),
+                )}{" "}
+                (20% downpayment + 10% stamp duty
+                {editing.home.includeInteriors ? " + 10% interiors" : ""})
+              </Text>
             ) : null}
             {editing.editable.year ? (
               <View style={{ gap: 6 }}>
@@ -324,6 +379,20 @@ const styles = themedStyles(() => ({
     fontWeight: "500",
     color: Colors.textSecondary,
     fontVariant: ["tabular-nums"],
+  },
+  funded: {
+    marginTop: 8,
+    borderRadius: 8,
+    backgroundColor: tintBg("#F7F6FE"),
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  fundedText: {
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 17,
+    color: Colors.primaryText,
   },
   reason: {
     marginTop: 4,

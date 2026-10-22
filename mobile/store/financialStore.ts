@@ -21,6 +21,15 @@ import {
   type StateStorage,
 } from "zustand/middleware";
 
+/** Engine result for a saved profile, or null if the profile can't be read. */
+function freshResult(profile: FinancialProfile): AnalysisResult | null {
+  try {
+    return analyseFinances(profile);
+  } catch {
+    return null;
+  }
+}
+
 const FINANCIAL_PERSIST_NAME = "finkoin-financial-mobile";
 const MAX_ANALYSE_STEP = 6;
 
@@ -192,7 +201,8 @@ export const useFinancialStore = create<FinancialState>()(
         };
         set({
           lastSubmission: profile,
-          result,
+          // Re-run the engine: a saved result may come from an older version.
+          result: freshResult(profile) ?? result,
           aiPlan: options?.aiPlan ?? null,
           profile: mergedForm,
           analysis: mergedForm,
@@ -229,6 +239,9 @@ export const useFinancialStore = create<FinancialState>()(
         return {
           ...currentState,
           ...typed,
+          result: typed?.lastSubmission
+            ? (freshResult(typed.lastSubmission) ?? typed.result ?? null)
+            : (typed?.result ?? currentState.result),
           aiPlan: typed?.aiPlan ?? currentState.aiPlan,
           currentStep:
             typeof typed?.currentStep === "number"
