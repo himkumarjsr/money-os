@@ -18,7 +18,7 @@ import {
 } from "@/lib/goalDetection";
 import type { GoalFundingItem } from "@/lib/goalFunding";
 import { goalSavingsLines } from "@/lib/goalSavingsText";
-import { buildGoalStrategies } from "@/lib/goalStrategies";
+import { buildGoalStrategies, projectGoalReach } from "@/lib/goalStrategies";
 import { GoalStrategiesList } from "./GoalStrategiesList";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { router } from "expo-router";
@@ -197,6 +197,11 @@ export function GoalsSection({
               <GoalStrategiesList
                 goal={g}
                 plan={strategiesById.get(g.id)}
+                reach={
+                  fundingById.get(g.id)
+                    ? projectGoalReach(profile, fundingById.get(g.id)!)
+                    : undefined
+                }
                 busy={saving}
                 onSetHomePrice={(price) =>
                   void save(applyGoalEdit(profile, g.id, { homePrice: price }))

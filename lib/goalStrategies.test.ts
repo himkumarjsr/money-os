@@ -4,6 +4,8 @@ import { buildUserAnalyseScenarioProfile } from "@/lib/analyseUserScenarioFixtur
 import { detectGoals } from "@/lib/goalDetection";
 import {
   buildGoalStrategies,
+  goalReachLine,
+  projectGoalReach,
   loanEmi,
   loanOutstanding,
 } from "@/lib/goalStrategies";
@@ -40,13 +42,9 @@ describe("buildGoalStrategies", () => {
     expect(check.detail).toMatch(/rent stops/);
   });
 
-  it("offers EPF for the downpayment as a trade-off that costs retirement", () => {
-    const epf = forGoal(base(), "home_purchase").strategies.find(
-      (s) => s.id === "epf_home",
-    );
-    expect(epf?.kind).toBe("tradeoff");
-    expect(epf?.monthlySaved).toBeGreaterThan(0);
-    expect(epf?.detail).toMatch(/retirement about/);
+  it("never uses EPF for anything but retirement", () => {
+    for (const g of buildGoalStrategies(base(), NOW))
+      expect(g.strategies.map((s) => s.id)).not.toContain("epf_home");
   });
 
   it("flags a home loan that outlives an early retirement", () => {
@@ -85,5 +83,51 @@ describe("buildGoalStrategies", () => {
       NOW,
     ).find((x) => x.id === "home_purchase");
     expect(g?.home?.unclearAmount).toBe(true);
+  });
+});
+
+describe("projectGoalReach", () => {
+  const goal = {
+    type: "home_purchase",
+    targetAmount: 80_00_000,
+    targetYear: 2031,
+    yearsToGoal: 5,
+    currentSaved: 10_00_000,
+  };
+
+  it("finds the year a short-funded goal is actually reached", () => {
+    const reach = projectGoalReach(
+      base({ annualSalaryIncreasePct: 0 }),
+      { ...goal, monthlyAllocated: 50_000 },
+      NOW,
+    );
+    expect(reach.onTime).toBe(false);
+    expect(reach.reachYear).toBeGreaterThan(2031);
+    const last = reach.rows[reach.rows.length - 1];
+    expect(last.year).toBe(reach.reachYear);
+    expect(last.value).toBeGreaterThanOrEqual(80_00_000 * 0.98);
+    expect(reach.rows[0].invested).toBe(10_00_000 + 50_000 * 12);
+    expect(goalReachLine(reach, goal)).toMatch(/you'd reach it in 20\d\d/);
+  });
+
+  it("is on time when the plan funds the full SIP", () => {
+    const reach = projectGoalReach(
+      base({ annualSalaryIncreasePct: 0 }),
+      { ...goal, monthlyAllocated: 1_50_000 },
+      NOW,
+    );
+    expect(reach.onTime).toBe(true);
+    expect(reach.rows[reach.rows.length - 1].year).toBe(2031);
+  });
+
+  it("counts EPF / PPF / NPS only for retirement", () => {
+    const p = base({ epfBalance: 50_00_000 });
+    const home = projectGoalReach(p, { ...goal, currentSaved: 0 }, NOW);
+    const ret = projectGoalReach(
+      p,
+      { ...goal, type: "retirement", currentSaved: 50_00_000 },
+      NOW,
+    );
+    expect(ret.rows[0].value).toBeGreaterThan(home.rows[0].value + 40_00_000);
   });
 });

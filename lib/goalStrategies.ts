@@ -1,7 +1,7 @@
 /**
  * Smart routes to each goal, the way an adviser would combine what the user
  * already has: loans that end and free their EMI, SIPs that rise with salary,
- * EPF for a home, a corpus that can carry or clear a home loan, and the
+ * a corpus that can carry or clear a home loan, and the
  * trade-offs (delay, education loan). Each move is priced as the monthly SIP
  * it saves against the plain plan. Pure; today's rupees unless noted.
  * Shared by web and the app (mobile keeps a byte-identical copy).
@@ -22,7 +22,6 @@ import {
   existingEquityValue,
   LONG_RUN_INFLATION,
   projectRetirementAccounts,
-  RETIREMENT_ACCOUNT_RATES,
 } from "@/lib/holdings";
 import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 import { monthlyStepUpSipForGoal, sipMaturityAmount } from "@/lib/sipGoal";
@@ -31,8 +30,6 @@ import { monthlyStepUpSipForGoal, sipMaturityAmount } from "@/lib/sipGoal";
 export const HOME_LOAN = { ratePct: 8.5, years: 20, share: 0.8 } as const;
 /** Yearly withdrawal a corpus can sustain without running out. */
 export const SAFE_WITHDRAWAL_RATE = 0.04;
-/** Share of the EPF balance that can go toward a home (25% must stay). */
-export const EPF_HOME_SHARE = 0.75;
 /** All EMIs together: comfortable up to 35% of income, stretched past 40%. */
 export const EMI_COMFORT_SHARE = 0.35;
 export const EMI_STRETCH_SHARE = 0.4;
@@ -347,31 +344,6 @@ export function buildGoalStrategies(
         }
       }
 
-      // EPF can pay part of the downpayment, at a cost to retirement.
-      if (
-        homeGap > 0 &&
-        (n(p.epfBalance) > 0 || n(p.monthlyEPFContribution) > 0)
-      ) {
-        const epfThen = projectRetirementAccounts(p, years, { real: true }).epf;
-        const use = Math.min(homeGap, EPF_HOME_SHARE * epfThen);
-        const after = sipFor(homeGap - use);
-        if (use > 0 && base - after >= 100) {
-          const retireIn = retirement
-            ? Math.max(0, retirement.yearsToGoal - years)
-            : 0;
-          const realEpf =
-            (1 + RETIREMENT_ACCOUNT_RATES.epf) / (1 + LONG_RUN_INFLATION) - 1;
-          const cost = use * Math.pow(1 + realEpf, retireIn);
-          strategies.push({
-            id: "epf_home",
-            kind: "tradeoff",
-            title: "Use EPF for part of the downpayment",
-            detail: `EPF allows a withdrawal for buying a home (up to 75% of the balance; 25% must stay). Taking ${rs(use)} in ${goal.targetYear} cuts this SIP to ${rs(after)}/month, but leaves your retirement about ${rs(cost)} short${retirement ? ` by ${retirement.targetYear}` : ""} - top it back up once the EMI settles.`,
-            monthlySaved: base - after,
-          });
-        }
-      }
-
       // Can investments carry the EMI, and does the loan outlive work?
       const pots =
         existingEquityValue(p) +
@@ -451,4 +423,110 @@ export function buildGoalStrategies(
       }
     }
   });
+}
+
+export type GoalReachRow = {
+  year: number;
+  /** Money put in so far (savings today + every SIP), today's rupees. */
+  invested: number;
+  /** What it has grown to, today's rupees. */
+  value: number;
+};
+
+export type GoalReach = {
+  /** ₹/month going to the goal: the plan's share plus running SIPs. */
+  monthly: number;
+  onTime: boolean;
+  /** First year the goal is fully funded; null if not within 40 years. */
+  reachYear: number | null;
+  /** One row per year until the goal is reached (or the target year). */
+  rows: GoalReachRow[];
+};
+
+/** Longest stretch we project a goal before calling it out of reach. */
+const REACH_HORIZON_YEARS = 40;
+
+/**
+ * When a goal is actually reached at the money the plan gives it: existing
+ * savings plus the monthly SIP (rising with salary), grown at the goal's
+ * expected return above inflation. Retirement also counts EPF / PPF / NPS
+ * with their own contributions and rates - those stay with retirement only.
+ */
+export function projectGoalReach(
+  profile: FinancialProfile,
+  goal: {
+    type: string;
+    targetAmount: number;
+    targetYear: number;
+    yearsToGoal: number;
+    currentSaved: number;
+    monthlyAllocated?: number;
+    existingMonthly?: number;
+  },
+  now: Date = new Date(),
+): GoalReach {
+  const p = profile;
+  const thisYear = now.getFullYear();
+  const monthly = Math.max(
+    0,
+    Math.round(n(goal.monthlyAllocated) + n(goal.existingMonthly)),
+  );
+  const isRetirement = goal.type === "retirement";
+  const pfToday = isRetirement
+    ? n(p.epfBalance) + n(p.ppfBalance) + n(p.npsBalance)
+    : 0;
+  const pfMonthly = isRetirement
+    ? n(p.monthlyEPFContribution) +
+      n(p.monthlyPPFContribution) +
+      n(p.monthlyNPSContribution)
+    : 0;
+  const lump = Math.max(0, n(goal.currentSaved) - pfToday);
+  const r =
+    Math.pow(
+      1 + goalRealReturnPct(Math.max(1, goal.yearsToGoal)) / 100,
+      1 / 12,
+    ) - 1;
+  const stepUp = realSalaryStepUpPct(p) / 100;
+  const target = n(goal.targetAmount);
+
+  let sipValue = 0;
+  let put = lump + pfToday;
+  let sip = monthly;
+  const rows: GoalReachRow[] = [];
+  let reachYear: number | null = target <= 0 ? thisYear : null;
+  const lastYear = goal.targetYear + REACH_HORIZON_YEARS;
+  for (let y = 1; thisYear + y <= lastYear; y++) {
+    if (y > 1) sip *= 1 + stepUp;
+    for (let m = 0; m < 12; m++) sipValue = sipValue * (1 + r) + sip;
+    put += sip * 12 + pfMonthly * 12;
+    const pf = isRetirement
+      ? projectRetirementAccounts(p, y, { real: true }).total
+      : 0;
+    const value = lump * Math.pow(1 + r, 12 * y) + sipValue + pf;
+    const year = thisYear + y;
+    rows.push({ year, invested: Math.round(put), value: Math.round(value) });
+    if (reachYear === null && value >= target * 0.98) reachYear = year;
+    if (year >= goal.targetYear && reachYear !== null) break;
+  }
+  return {
+    monthly,
+    onTime: reachYear !== null && reachYear <= goal.targetYear,
+    reachYear,
+    rows: reachYear === null ? rows.slice(0, goal.yearsToGoal + 10) : rows,
+  };
+}
+
+/** One plain line on when the goal is reached at today's plan. */
+export function goalReachLine(
+  reach: GoalReach,
+  goal: { targetYear: number },
+): string {
+  if (reach.onTime)
+    return `On track: ${rs(reach.monthly)}/month gets you there by ${reach.reachYear ?? goal.targetYear}.`;
+  if (reach.reachYear === null)
+    return reach.monthly > 0
+      ? `At ${rs(reach.monthly)}/month this goal isn't reached within ${REACH_HORIZON_YEARS} years - it needs a bigger SIP or a smaller target.`
+      : "Nothing is going to this goal yet - free up a monthly amount for it.";
+  const late = reach.reachYear - goal.targetYear;
+  return `At ${rs(reach.monthly)}/month you'd reach it in ${reach.reachYear}, ${late} ${late === 1 ? "year" : "years"} after ${goal.targetYear}.`;
 }
