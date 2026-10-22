@@ -21,6 +21,7 @@ import {
   type LoanReportStatus,
 } from "@/store/obligationStore";
 import { LoanSyncNotices } from "@/components/analyse/fixplan/LoanSyncNotices";
+import { PlanReviewCard } from "@/components/analyse/fixplan/PlanReviewCard";
 import { canViewFixPlan } from "@/lib/analyseEntitlement";
 import { shareFixPlanPdf } from "@/lib/fixPlanPdf";
 import { AnalyseErrorBoundary } from "@/components/analyse/AnalyseErrorBoundary";
@@ -245,6 +246,8 @@ function FixPlanScreen() {
         />
 
         <LoanSyncNotices status={loanStatus} onSaveDetails={saveLoanDetails} />
+
+        <PlanReviewCard profile={profile} userId={user?.id} />
 
         {pp?.surplusBreakdown ? (
           <SurplusBreakdown breakdown={pp.surplusBreakdown} />

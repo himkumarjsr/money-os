@@ -105,8 +105,11 @@ describe("projectGoalReach", () => {
     expect(reach.reachYear).toBeGreaterThan(2031);
     const last = reach.rows[reach.rows.length - 1];
     expect(last.year).toBe(reach.reachYear);
-    expect(last.value).toBeGreaterThanOrEqual(80_00_000 * 0.98);
-    expect(reach.rows[0].invested).toBe(10_00_000 + 50_000 * 12);
+    expect(last.value).toBeGreaterThanOrEqual(80_00_000 * 0.995);
+    // A year of ₹50,000 SIPs, each in today's rupees.
+    let paidIn = 0;
+    for (let m = 1; m <= 12; m++) paidIn += 50_000 / Math.pow(1.06, m / 12);
+    expect(reach.rows[0].invested).toBe(Math.round(10_00_000 + paidIn));
     expect(goalReachLine(reach, goal)).toMatch(/you'd reach it in 20\d\d/);
   });
 
