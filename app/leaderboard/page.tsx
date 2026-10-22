@@ -5,6 +5,7 @@ import {
   FK_EARN_ACTIONS,
   MONTHLY_PRIZES_FK,
   POINTS_EARN_ACTIONS,
+  rankSummary,
 } from "@/lib/fkRewards";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
@@ -107,6 +108,8 @@ function LeaderboardContent() {
   const [userEntry, setUserEntry] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
+  /** People on the current board, for "#1 of 5". */
+  const [total, setTotal] = useState<number | null>(null);
 
   const fetchLeaderboard = async (force = false, which: Tab = tab) => {
     const view = TABS.find((t) => t.id === which)?.view ?? "leaderboard_view";
@@ -172,6 +175,21 @@ function LeaderboardContent() {
       if (tabRef.current === which) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const view = TABS.find((t) => t.id === tab)?.view ?? "leaderboard_view";
+    let cancelled = false;
+    setTotal(null);
+    void getSupabase()
+      .from(view)
+      .select("user_id", { count: "exact", head: true })
+      .then(({ count, error }) => {
+        if (!cancelled && !error) setTotal(count ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
 
   useEffect(() => {
     void fetchLeaderboard();
@@ -380,7 +398,7 @@ function LeaderboardContent() {
               {mePremium ? <PremiumBadge size="sm" /> : null}
             </div>
             <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
-              Top {me.percentile}% {tabLabel}
+              {rankSummary(me.rank, total, me.percentile, tabLabel)}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>

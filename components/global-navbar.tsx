@@ -406,7 +406,7 @@ export function GlobalNavbar() {
                     <AppIcon name="coin" size={15} color="#534AB7" />
                     {fkBalance}
                   </p>
-                  <p className="text-[10px] text-slate-600">tokens earned</p>
+                  <p className="text-[10px] text-slate-600">FK balance</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-2">
                   <p className="text-sm font-bold text-slate-900">{badges}</p>
