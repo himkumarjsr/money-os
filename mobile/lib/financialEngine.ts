@@ -64,16 +64,27 @@ export type RealEmergencyFundBreakdown = {
   otherCounted: number;
   /** Legacy “emergency fund set aside” field from older forms - counted at 100%. */
   legacyCounted: number;
+  /** Essential monthly outgo the fund must cover: {@link emergencyMonthlyBase}. */
   monthlyExpenses: number;
-  /** Months of `needs` covered; 0 if no expenses line. */
+  /** Months of that outgo covered; 0 if there is none. */
   monthsCovered: number;
 };
+
+/**
+ * What still has to be paid every month if income stops: needs, every loan
+ * EMI and insurance premiums. Card spend is left out - it is part of needs
+ * and wants, not a fixed EMI. The emergency fund is a multiple of this.
+ */
+export function emergencyMonthlyBase(data: Partial<FinancialProfile>): number {
+  const b = getUniversalBucketActuals(data);
+  const emis = Math.max(0, b.loans - n(data.creditCardBillMonthly));
+  return b.needs + emis + b.security;
+}
 
 export function computeRealEmergencyFund(
   data: FinancialProfile,
 ): RealEmergencyFundBreakdown {
-  const bucketActuals = getUniversalBucketActuals(data);
-  const monthlyExpenses = bucketActuals.needs;
+  const monthlyExpenses = emergencyMonthlyBase(data);
   const sav = n(data.savingsAccountBalance);
   const liq = n(data.liquidMFValue);
   const fd = n(data.fdValue);
@@ -400,45 +411,53 @@ export function monthlyTotalExpenses(p: FinancialProfile): number {
   return buckets.needs + buckets.wants + buckets.security + buckets.loans;
 }
 
-export function calculateTermNeeded(data: FinancialProfile): number {
-  const totalIncome = monthlyTotalIncome(data);
-  const annualIncome = totalIncome * 12;
-  const base = annualIncome * 10;
-  const liabilities = n(data.homeLoanOutstanding) + n(data.carLoanOutstanding);
-  const equityTotal =
-    n(data.totalEquityValue) > 0
-      ? n(data.totalEquityValue)
-      : n(data.mfValue) +
-        n(data.indianStocksValue) +
-        n(data.usStocksValueINR) +
-        n(data.usMFValueINR) +
-        n(data.rsuValueINR);
+/** Years of your own income the family needs replaced: more the younger you are. */
+export function termIncomeMultiple(age: number): number {
+  return age < 30 ? 12 : age < 40 ? 10 : age < 50 ? 8 : 6;
+}
+
+/**
+ * Term cover this earner needs (needs-based, as an adviser works it out):
+ * own income × an age multiple (the spouse's income is theirs to insure),
+ * plus every loan the family would inherit, plus ₹20L per dependant for
+ * their goals, minus investments the family could draw on. At least ₹50L,
+ * rounded up to the next ₹10L.
+ */
+export function calculateTermNeeded(data: Partial<FinancialProfile>): number {
+  const ownAnnualIncome = (n(data.monthlySalary) + n(data.otherIncome)) * 12;
+  const age = n(data.selfAge) || 30;
+  // The card bill proxy in totalLoanLiabilities is spending, not a debt left behind.
+  const liabilities = Math.max(
+    0,
+    totalLoanLiabilities(data as FinancialProfile) -
+      n(data.creditCardBillMonthly) * 3,
+  );
   const customInvestmentTotal = (data.customInvestments ?? []).reduce(
     (sum, inv) => sum + n(inv.currentValue),
     0,
   );
   const existingAssets =
-    equityTotal +
+    existingEquityValue(data) +
     n(data.ppfBalance) +
     n(data.epfBalance) +
+    n(data.npsBalance) +
     n(data.fdValue) +
     customInvestmentTotal;
-  const ageMultiplier =
-    data.selfAge < 30
-      ? 1.2
-      : data.selfAge < 40
-        ? 1
-        : data.selfAge < 50
-          ? 0.8
-          : 0.6;
+  // A spouse earning less than half your income still depends on it.
+  const spouseDepends =
+    data.lifeStage !== "bachelor" &&
+    n(data.spouseIncome) < n(data.monthlySalary) * 0.5;
   const dependentCount =
-    (data.lifeStage !== "bachelor" ? 1 : 0) +
+    (spouseDepends ? 1 : 0) +
     n(data.numberOfKids) +
     (n(data.parentsSupport) > 0 ? 1 : 0);
   const dependentBuffer = dependentCount * 20_00_000;
   const termNeeded = Math.max(
     50_00_000,
-    (base + liabilities + dependentBuffer - existingAssets) * ageMultiplier,
+    ownAnnualIncome * termIncomeMultiple(age) +
+      liabilities +
+      dependentBuffer -
+      existingAssets,
   );
 
   return Math.ceil(termNeeded / 10_00_000) * 10_00_000;
@@ -640,14 +659,14 @@ function buildIssues(params: {
       severityScore: emergencySeverity === "critical" ? 80 : 55,
       severity: emergencySeverity,
       code: "emergency_fund_short",
-      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} (~${monthsCoveredEmergency.toFixed(1)} mo of needs). Target buffer ${fmt(emergencyFundTargetMax)} - short by about ${fmt(emergencyFundGap)}.`,
+      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} (~${monthsCoveredEmergency.toFixed(1)} mo of essential spending and EMIs). Target buffer ${fmt(emergencyFundTargetMax)} - short by about ${fmt(emergencyFundGap)}.`,
     });
   } else {
     issues.push({
       severityScore: 20,
       severity: "good",
       code: "emergency_fund_ok",
-      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} covers about ${monthsCoveredEmergency.toFixed(1)} months of needs - on track for your target buffer.`,
+      message: `Accessible emergency fund ~${fmt(accessibleEmergencyTotal)} covers about ${monthsCoveredEmergency.toFixed(1)} months of essential spending and EMIs - on track for your target buffer.`,
     });
   }
 
@@ -844,15 +863,14 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
   const bucketActuals = getUniversalBucketActuals(data);
   const monthlyInvesting = bucketActuals.investment;
   const monthlyLoans = bucketActuals.loans;
-  const monthlyExpenses = bucketActuals.needs;
   const savingsRate =
     totalIncome > 0 ? (monthlyInvesting / totalIncome) * 100 : 0;
   const debtRatio = totalIncome > 0 ? (monthlyLoans / totalIncome) * 100 : 0;
   const untrackedCash = getUnallocatedIncome(data);
 
   const emergencyFundMonthsMax = emergencyFundMonthsNeeded(data);
-  const emergencyFundTargetMax = monthlyExpenses * emergencyFundMonthsMax;
   const er = computeRealEmergencyFund(data);
+  const emergencyFundTargetMax = er.monthlyExpenses * emergencyFundMonthsMax;
   const emergencyFundCurrent = er.realTotal;
   const emergencyFundGap = Math.max(
     0,
@@ -1018,7 +1036,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       termAssessment.status === "missing"
         ? termOptional
           ? "Optional for now - no one depends on your income and you have no loans. Buying young locks a low premium for life."
-          : `Recommended cover about ${crore(termNeeded)} (10x income + loans + dependants − assets, adjusted for age)`
+          : `Recommended cover about ${crore(termNeeded)} (your income × 6-12 years by age + loans + dependants − investments)`
         : termAssessment.status === "partial"
           ? `${crore(termCover)} cover · Your family needs at least ${crore(termAdequacyFloor)} as a base (full need at today's income ~${crore(termNeeded)})`
           : termAssessment.status === "complete"

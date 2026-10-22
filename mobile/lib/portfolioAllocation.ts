@@ -79,6 +79,44 @@ const CORE_WEIGHTS: Record<
   },
 };
 
+/**
+ * Long-run nominal yearly return assumed per instrument, before tax. Equity
+ * follows the Nifty 50's ~12% long-run record; debt follows today's FD and
+ * bond yields; PPF / NPS blends PPF's 7.1% with NPS's equity-debt mix.
+ */
+export const INSTRUMENT_RETURNS: Record<InstrumentKey, number> = {
+  savings_sweep: 0.055,
+  liquid_fund: 0.065,
+  fd_cd: 0.07,
+  short_debt: 0.07,
+  arbitrage: 0.07,
+  hybrid: 0.09,
+  bonds: 0.075,
+  equity_index: 0.12,
+  flexicap: 0.12,
+  ppf_nps: 0.08,
+  gold: 0.08,
+};
+
+/**
+ * Return the recommended mix for this horizon and risk profile is expected
+ * to earn: the weighted average of its instruments (gold included). Goal
+ * SIPs are sized on this, so a conservative mix is never sized on 12%.
+ */
+export function expectedNominalReturn(
+  horizon: GoalHorizon,
+  riskTolerance: RiskTolerance = "moderate",
+): number {
+  const gold = GOLD_PCT[horizon];
+  let total = (gold / 100) * INSTRUMENT_RETURNS.gold;
+  for (const [key, w] of Object.entries(CORE_WEIGHTS[horizon][riskTolerance])) {
+    total +=
+      (((w as number) * (100 - gold)) / 10_000) *
+      INSTRUMENT_RETURNS[key as InstrumentKey];
+  }
+  return total;
+}
+
 /** Below this, a long-horizon equity slice stays all-index (index first, then flexi-cap). */
 export const FLEXICAP_MIN_EQUITY_MONTHLY = 5_000;
 /** Of the equity slice once it's large enough. */
@@ -132,7 +170,9 @@ export type AllocateGoalInput = {
   realEstateEligible?: boolean;
 };
 
-export function allocateGoalPortfolio(input: AllocateGoalInput): PortfolioAllocation {
+export function allocateGoalPortfolio(
+  input: AllocateGoalInput,
+): PortfolioAllocation {
   const horizon = goalHorizon(input.yearsToGoal);
   const riskAssumed = !input.riskTolerance;
   const riskTolerance: RiskTolerance = input.riskTolerance ?? "moderate";
@@ -158,7 +198,10 @@ export function allocateGoalPortfolio(input: AllocateGoalInput): PortfolioAlloca
   if (monthly > 0) {
     // Fold slices too small to invest monthly into the main instrument.
     for (const k of keys) {
-      if (k !== main && (monthly * (weights[k] ?? 0)) / 100 < MIN_SLICE_MONTHLY) {
+      if (
+        k !== main &&
+        (monthly * (weights[k] ?? 0)) / 100 < MIN_SLICE_MONTHLY
+      ) {
         weights[main] = (weights[main] ?? 0) + (weights[k] ?? 0);
         delete weights[k];
       }

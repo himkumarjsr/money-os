@@ -1,6 +1,9 @@
 import { calculateOutstanding } from "@/lib/amortisation";
 import {
+  calculateTermNeeded,
+  computeRealEmergencyFund,
   emergencyFundMonthsNeeded,
+  emergencyMonthlyBase,
   existingEquityValue,
   healthCoverHeld,
   healthCoverTarget,
@@ -11,6 +14,7 @@ import {
 } from "@/lib/financialEngine";
 import {
   buildGoalFundingPlan,
+  earmarkExistingSavings,
   type GoalFundingItem,
   type GoalFundingPlan,
 } from "@/lib/goalFunding";
@@ -20,7 +24,9 @@ import {
   type GoalReach,
 } from "@/lib/goalReach";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
+import { sipStepUp } from "@/lib/goalMath";
 import {
+  getUniversalBucketActuals,
   licEndowmentPremiumMonthly,
   parentsPremiumMonthly,
   travelMonthly,
@@ -93,6 +99,8 @@ export interface GoalItem {
   allocation?: PortfolioAllocation;
   /** Running SIPs / RD already counted toward this goal (₹/month). */
   existingMonthly?: number;
+  /** Yearly SIP increase the amounts assume (decimal, 0 = flat SIP). */
+  stepUp?: number;
 }
 
 export interface PriorityPlan {
@@ -167,11 +175,19 @@ const GOAL_ICONS: Record<string, string> = {
 const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 const rupeesFmt = rupees;
 
-function goalFundingAction(item: GoalFundingItem, startMonth: number): string {
+function goalFundingAction(
+  item: GoalFundingItem,
+  startMonth: number,
+  stepUp: number,
+): string {
   const what = `${rupees(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()} (${item.sharePct}% of your goal budget)`;
+  const raise =
+    stepUp > 0
+      ? ` Raise it ${Math.round(stepUp * 100)}% every year with your salary hike - the plan counts on it.`
+      : "";
   return startMonth > 1
-    ? `From month ${startMonth}, put ${what}.`
-    : `Put ${what}.`;
+    ? `From month ${startMonth}, put ${what}.${raise}`
+    : `Put ${what}.${raise}`;
 }
 
 function goalFundingWhy(item: GoalFundingItem): string {
@@ -185,6 +201,9 @@ function goalFundingWhy(item: GoalFundingItem): string {
 }
 
 const MAX_PAYOFF_MONTHS = 600;
+/** Sukanya Samriddhi deposit limits: ₹250 to ₹1.5L a year. */
+const SSY_MAX_MONTHLY = 12_500;
+const SSY_MIN_MONTHLY = 500;
 
 /** Month-by-month amortisation; null when the payment never clears the balance within 50 years. */
 export function simulateLoanPayoff(
@@ -265,27 +284,6 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.monthlySalary || 0) +
     (profile.lifeStage !== "bachelor" ? profile.spouseIncome || 0 : 0) +
     (profile.otherIncome || 0);
-  const foodActual =
-    (profile.foodTotal || 0) > 0
-      ? profile.foodTotal || 0
-      : (profile.vegetables || 0) +
-        (profile.grocery || 0) +
-        (profile.medicine || 0);
-  const transportActual =
-    (profile.transportTotal || 0) > 0
-      ? profile.transportTotal || 0
-      : (profile.fuel || 0) + (profile.cabMetro || 0);
-  const utilityActual =
-    (profile.utilityTotal || 0) > 0
-      ? profile.utilityTotal || 0
-      : (profile.electricity || 0) +
-        (profile.internet || 0) +
-        (profile.gas || 0) +
-        (profile.water || 0);
-  const domesticActual =
-    (profile.domesticHelpTotal || 0) > 0
-      ? profile.domesticHelpTotal || 0
-      : (profile.houseHelpMonthly || 0) + (profile.cookHelpMonthly || 0);
   const lifestyleActual =
     (profile.lifestyleTotal || 0) > 0
       ? profile.lifestyleTotal || 0
@@ -293,16 +291,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         (profile.shopping || 0) +
         (profile.personalCare || 0);
 
-  const needsActual =
-    (profile.rentAmount || 0) +
-    (profile.rentMaintenanceMonthly || 0) +
-    foodActual +
-    transportActual +
-    utilityActual +
-    domesticActual +
-    (profile.kidsSchoolFees || 0) +
-    (profile.kidsActivities || 0) +
-    (profile.parentsSupport || 0);
+  // Same Needs figure as the report's buckets, so every screen agrees.
+  const needsActual = getUniversalBucketActuals(profile).needs;
   const dedupedAdditionalRows = Array.from(
     new Map(
       (profile.additionalObligations || [])
@@ -369,6 +359,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       existingInsurancePremiums,
   );
   let runningSurplus = monthlySurplus;
+  // Yearly SIP increase every goal amount assumes (0 = a flat SIP).
+  const stepUp = sipStepUp(profile);
 
   const age = profile.selfAge || 30;
   const stage = normalizeStage(profile.lifeStage || "bachelor");
@@ -387,18 +379,13 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     kidsAges: kids,
   });
 
-  // Keep emergency target consistent with report expectation:
-  // emergency buffer should also account for housing EMI continuity risk.
-  const emergencyBaseMonthly =
-    needsActual + (profile.homeLoanEMI || 0) + (profile.secondPropertyEMI || 0);
+  // Months of everything that must still be paid if income stops: needs,
+  // every EMI and insurance premiums (same base as the report).
+  const emergencyBaseMonthly = emergencyMonthlyBase(profile);
   const emergencyTarget = emergencyBaseMonthly * emergencyMonthsNeeded;
-  const emergencyCurrent =
-    (profile.savingsAccountBalance || 0) * 1.0 +
-    (profile.liquidMFValue || 0) * 0.95 +
-    (profile.fdValue || 0) * 0.7 +
-    (profile.otherLiquidSavings || 0) * 0.5;
-  const emergencyMonthsCovered =
-    needsActual > 0 ? emergencyCurrent / needsActual : 0;
+  const emergencyFund = computeRealEmergencyFund(profile);
+  const emergencyCurrent = emergencyFund.realTotal;
+  const emergencyMonthsCovered = emergencyFund.monthsCovered;
   const emergencyGap = Math.max(0, emergencyTarget - emergencyCurrent);
   // Like an adviser would: fill the gap today from money already invested
   // before asking months of surplus for it. FDs count at 70% while locked;
@@ -504,10 +491,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     profile.fdValue || 0,
     Math.max(
       0,
-      emergencyTarget -
-        ((profile.savingsAccountBalance || 0) +
-          (profile.liquidMFValue || 0) * 0.95 +
-          (profile.otherLiquidSavings || 0) * 0.5),
+      emergencyTarget - (emergencyCurrent - emergencyFund.fdCounted),
     ) / 0.7,
   );
   // Medical fund needs are worked out here so existing savings go to the
@@ -673,39 +657,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     ...(medicalFromSavings > 0 ? { fromSavings: medicalFromSavings } : {}),
   });
 
-  const annualIncome = monthlyIncome * 12;
-  const ageMultiplier = age < 30 ? 1.2 : age < 40 ? 1.0 : age < 50 ? 0.8 : 0.6;
-  const liabilities =
-    (profile.homeLoanOutstanding || (profile.homeLoanEMI || 0) * 12 * 10) +
-    (profile.carLoanOutstanding || (profile.carLoanEMI || 0) * 12 * 3);
-  const equityTotal =
-    (profile.totalEquityValue || 0) > 0
-      ? profile.totalEquityValue || 0
-      : (profile.mfValue || 0) +
-        (profile.indianStocksValue || 0) +
-        (profile.usStocksValueINR || 0) +
-        (profile.usMFValueINR || 0) +
-        (profile.rsuValueINR || 0);
-  const customInvestmentTotal = (profile.customInvestments || []).reduce(
-    (sum: number, inv: any) => sum + (inv.currentValue || 0),
-    0,
-  );
-  const existingAssets =
-    equityTotal +
-    (profile.ppfBalance || 0) +
-    (profile.epfBalance || 0) +
-    (profile.fdValue || 0) +
-    customInvestmentTotal;
-  const dependentCount =
-    (stage !== "bachelor" ? 1 : 0) +
-    (profile.numberOfKids || 0) +
-    ((profile.parentsSupport || 0) > 0 ? 1 : 0);
-  const dependentBuffer = dependentCount * 2000000;
-  const rawTermNeed =
-    (annualIncome * 10 + liabilities + dependentBuffer - existingAssets) *
-    ageMultiplier;
-  const termNeeded =
-    Math.ceil(Math.max(5000000, rawTermNeed) / 1000000) * 1000000;
+  const termNeeded = calculateTermNeeded(profile);
   const termHave =
     profile.termInsuranceSumAssured || profile.termInsuranceCover || 0;
   const termGap = Math.max(0, termNeeded - termHave);
@@ -991,15 +943,47 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
 
   // Steady-state goal budget once safety is covered: surplus minus new
   // premiums and SSY. "Clear debt" keeps most of it for prepayment.
-  const ssyReserve =
-    (Array.isArray(profile.kidsAges)
-      ? (profile.kidsAges as number[])
-      : []
-    ).filter(
-      (kidAge, i) =>
-        ((profile.kidsGenders as string[] | undefined)?.[i] || "boy") ===
-          "girl" && kidAge < 10,
-    ).length * 12500;
+  // A new Sukanya account per daughter under 10 (none when SSY is already
+  // running): it carries the safe half of her education goal, up to the
+  // ₹1.5L/year limit, and counts toward that goal - never saved twice.
+  const educationNeeds = earmarkExistingSavings(
+    profile,
+    new Date(),
+    safetyReserve,
+  );
+  const ssyPlan =
+    (profile.ssy || 0) > 0
+      ? []
+      : (Array.isArray(profile.kidsAges) ? (profile.kidsAges as number[]) : [])
+          .map((age, index) => ({
+            age,
+            index,
+            girl:
+              ((profile.kidsGenders as string[] | undefined)?.[index] ||
+                "boy") === "girl",
+          }))
+          .filter((k) => k.girl && k.age < 10)
+          .map((k) => {
+            const need =
+              educationNeeds.get(`kid_education:${k.index}`)?.monthlyRequired ??
+              0;
+            return {
+              age: k.age,
+              index: k.index,
+              monthly:
+                need > 0
+                  ? Math.min(
+                      SSY_MAX_MONTHLY,
+                      Math.max(
+                        SSY_MIN_MONTHLY,
+                        Math.round(need / 2 / 500) * 500,
+                      ),
+                    )
+                  : 0,
+            };
+          })
+          .filter((k) => k.monthly > 0);
+  const ssyReserve = ssyPlan.reduce((s, k) => s + k.monthly, 0);
   // Recurring steps (SSY, debt deploy, goals, leftover SIP) draw from the same
   // steady-state budget the goal split uses - never from the month-1 leftover
   // after emergency/medical top-ups, which are temporary.
@@ -1029,6 +1013,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       safetyNetComplete,
       excludeGoalIds: urgentGoals.map((g) => g.goalId),
       ...safetyReserve,
+      plannedSsyMonthly: ssyReserve,
     },
   );
   // Urgent goals keep their own earlier step; list them with the rest.
@@ -1163,27 +1148,21 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     });
   }
 
-  const kidsWithDemographics = profile.kidsAges
-    ? (profile.kidsAges as number[]).map((kidAge: number, i: number) => ({
-        age: kidAge,
-        gender: (profile.kidsGenders as string[])?.[i] || "boy",
-      }))
-    : [];
-
-  const girlChildrenUnder10 = kidsWithDemographics.filter(
-    (k) => k.gender === "girl" && k.age < 10,
-  );
-
-  girlChildrenUnder10.forEach((girl) => {
+  const ssyIds = new Set<string>();
+  ssyPlan.forEach((girl) => {
     const monthsLeft = (10 - girl.age) * 12;
     const isUrgent = girl.age >= 8;
     const ssyBefore = steadyRunning;
-    const ssyMonthly = Math.max(0, Math.min(12500, steadyRunning));
+    const ssyMonthly = Math.max(0, Math.min(girl.monthly, steadyRunning));
     steadyRunning = Math.max(0, steadyRunning - ssyMonthly);
+    // Twins share an age; keep each step's id unique.
+    let id = `ssy_girl_age_${girl.age}`;
+    if (ssyIds.has(id)) id = `${id}_${girl.index + 1}`;
+    ssyIds.add(id);
 
     priorities.push({
       rank: rank++,
-      id: `ssy_girl_age_${girl.age}`,
+      id,
       title: isUrgent
         ? `⚠️ URGENT: Open SSY - daughter age ${girl.age}`
         : `Open SSY for daughter age ${girl.age}`,
@@ -1202,8 +1181,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         "Sukanya Samriddhi Yojana at any Post Office or authorised bank",
       actionThisWeek: isUrgent
         ? `OPEN THIS WEEK. Only ${monthsLeft} months left before window closes forever. Visit post office with daughter Aadhaar.`
-        : "Open SSY account at post office. Start ₹12,500/month. 8.2% guaranteed tax-free.",
-      whyThisMatters: `SSY gives 8.2% guaranteed returns completely tax-free. ${isUrgent ? `Account CANNOT open after she turns 10. Only ${monthsLeft} months left.` : "Best safe investment for girl child in India."}`,
+        : `Open SSY account at post office. Start ${rupeesFmt(ssyMonthly)}/month. 8.2% guaranteed tax-free.`,
+      whyThisMatters: `SSY gives 8.2% guaranteed returns completely tax-free, and it is counted toward her education goal - the safe half of it. ${isUrgent ? `Account CANNOT open after she turns 10. Only ${monthsLeft} months left.` : "Best safe investment for girl child in India."}`,
       icon: "👧",
       canBuyFromFinkoin: false,
     });
@@ -1262,7 +1241,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       surplusAfterThis: steadyRunning,
       monthsToComplete: item.yearsToGoal * 12,
       instrument: item.instrument,
-      actionThisWeek: goalFundingAction(item, sipStartMonth),
+      actionThisWeek: goalFundingAction(item, sipStartMonth, stepUp),
       whyThisMatters: goalFundingWhy(item),
       icon: GOAL_ICONS[item.type] ?? "🎯",
       canBuyFromFinkoin: false,
@@ -1341,6 +1320,12 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     },
   ] as const;
 
+  const UNIFIED_LOAN_TYPE: Record<string, string> = {
+    personalLoanEMI: "personal_loan",
+    bikeEMI: "bike_loan",
+    carLoanEMI: "car_loan",
+    homeLoanEMI: "home_loan",
+  };
   const debtList: DebtItem[] = [];
   const estimateOutstanding = (emi: number, loanType: string): number => {
     const remainingMonths: Record<string, number> = {
@@ -1364,13 +1349,22 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
         .replace("Bill", "Outstanding")
         .replace("Monthly", "Outstanding");
       const explicitOutstanding = (profile as any)[outstandingKey];
-      const rateKey = config.profileKey
-        .replace("EMI", "Rate")
-        .replace("BillMonthly", "Rate");
+      const rateKey =
+        config.profileKey === "bikeEMI"
+          ? "bikeLoanRate"
+          : config.profileKey
+              .replace("EMI", "Rate")
+              .replace("BillMonthly", "Rate");
       const monthsKey = config.profileKey
         .replace("EMI", "RemainingMonths")
         .replace("BillMonthly", "RemainingMonths");
-      const enteredRate = Number((profile as any)[rateKey]) || 0;
+      const unified = UNIFIED_LOAN_TYPE[config.profileKey]
+        ? ((profile.unifiedLoans || []) as any[]).find(
+            (l) => l?.loanType === UNIFIED_LOAN_TYPE[config.profileKey],
+          )
+        : undefined;
+      const enteredRate =
+        Number((profile as any)[rateKey]) || Number(unified?.interestRate) || 0;
       const rate = enteredRate || config.rate;
       const remainingMonths = (profile as any)[monthsKey] || 0;
       const outstandingEstimated =
@@ -1455,7 +1449,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     const emi = debt.monthlyAmount || 0;
     const outstandingEstimated = !(Number(debt.outstandingAmount) > 0);
     const outstanding = debt.outstandingAmount || emi * 18;
-    const rate = debt.rateOfInterest || debt.loanTakenYear || 0;
+    const rate = Number(debt.rateOfInterest) || 0;
     const remainingMonths = debt.remainingMonths || debt.tenureMonths || 18;
     debtList.push({
       type: debt.type || `Obligation ${i + 1}`,
@@ -1479,7 +1473,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     });
   });
 
-  debtList.sort((a, b) => a.priorityRank - b.priorityRank);
+  // Avalanche: the highest interest rate is cleared first, whatever the loan type.
+  debtList.sort((a, b) => b.rate - a.rate || a.priorityRank - b.priorityRank);
 
   const goalList: GoalItem[] = [];
 
@@ -1544,6 +1539,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       monthlyRequired: item.monthlyRequired,
       monthlyAllocated: item.monthlyAllocated,
       existingMonthly: item.existingMonthly ?? 0,
+      stepUp,
       sharePct: item.sharePct,
       yearsToGoal: item.yearsToGoal,
       instrument: item.instrument,

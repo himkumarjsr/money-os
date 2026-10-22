@@ -239,25 +239,35 @@ describe("retirement SIP (pinned)", () => {
     return plan.items.find((i) => i.goalId === "retirement")!;
   };
 
-  /** Independent reference: real 12% equity, EPF 8.15% / PPF 7.1% / NPS 10%, 6% inflation. */
+  /**
+   * Independent reference, worked in nominal rupees: a moderate 7y+ mix
+   * (70% Nifty index at 12% + 30% PPF/NPS at 8%, 10% gold at 8% → 10.52%),
+   * EPF 8.15% / PPF 7.1% / NPS 10% with deposits rising 6% a year, a flat
+   * SIP at the effective monthly rate, deflated by 6% inflation.
+   */
   const reference = (
     equity: number,
     accounts: Array<[number, number, number]>,
   ) => {
-    const real = (nom: number) => (1 + nom) / 1.06 - 1;
     const years = 30;
-    const fv = (bal: number, monthly: number, nom: number) => {
-      const r = Math.pow(1 + real(nom), 1 / 12) - 1;
-      const g = Math.pow(1 + r, years * 12);
-      return bal * g + monthly * ((g - 1) / r);
+    const months = years * 12;
+    const mix = 0.9 * (0.7 * 0.12 + 0.3 * 0.08) + 0.1 * 0.08;
+    const deflate = Math.pow(1.06, years);
+    const account = (bal: number, monthly: number, nom: number) => {
+      const r = Math.pow(1 + nom, 1 / 12) - 1;
+      let v = bal;
+      for (let m = 1; m <= months; m++) {
+        v = v * (1 + r) + monthly * Math.pow(1.06, Math.floor((m - 1) / 12));
+      }
+      return v;
     };
-    const eqReal = real(0.12);
     const projected =
-      equity * Math.pow(1 + eqReal, years) +
-      accounts.reduce((s, [bal, mo, nom]) => s + fv(bal, mo, nom), 0);
-    const gap = Math.max(0, 5_00_00_000 - projected);
-    const r = (eqReal * 100) / 100 / 12;
-    return Math.round((gap * r) / (Math.pow(1 + r, 360) - 1));
+      (equity * Math.pow(1 + mix, years) +
+        accounts.reduce((s, [bal, mo, nom]) => s + account(bal, mo, nom), 0)) /
+      deflate;
+    const gapThen = Math.max(0, 5_00_00_000 - projected) * deflate;
+    const r = Math.pow(1 + mix, 1 / 12) - 1;
+    return Math.round((gapThen * r) / (Math.pow(1 + r, months) - 1));
   };
 
   it("only EPF/PPF/NPS", () => {
@@ -315,9 +325,9 @@ describe("retirement SIP (pinned)", () => {
 });
 
 const PINNED = {
-  pfOnly: 42_702,
-  totalEquity: 47_558,
-  individualEquity: 47_558,
+  pfOnly: 101_849,
+  totalEquity: 117_033,
+  individualEquity: 117_033,
 };
 
 describe("earmarkExistingSavings", () => {

@@ -109,14 +109,22 @@ describe("user analyse scenario fixture", () => {
     const er = computeRealEmergencyFund(profile);
     expect(er.realTotal).toBe(350_000 + 700_000);
     expect(result.realEmergencyFund.total).toBe(er.realTotal);
+    // Months of needs, EMIs and insurance premiums (card spend excluded).
+    const essentials =
+      buckets.needs +
+      buckets.loans -
+      (profile.creditCardBillMonthly ?? 0) +
+      buckets.security;
     expect(result.realEmergencyFund.monthsCovered).toBeCloseTo(
-      er.realTotal / buckets.needs,
+      er.realTotal / essentials,
       1,
     );
 
     // Term insurance row on report
     expect(profile.termInsuranceSumAssured).toBe(10_000_000);
-    expect(result.termInsuranceNeeded).toBe(50_000_000);
+    // Own ₹2.75L salary × 12 × 10 (age 35) + ₹72.6L loans − ₹51L investments;
+    // the spouse earns more than half as much, so insures their own income.
+    expect(result.termInsuranceNeeded).toBe(36_000_000);
 
     // Health insurance row on report (married minimum target ₹10L)
     expect(profile.healthInsuranceSumInsured).toBe(6_000_000);

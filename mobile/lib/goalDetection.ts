@@ -7,6 +7,13 @@
 import type { CustomGoal, FinancialProfile } from "@/lib/analyse-form-schema";
 import { getUniversalBucketActuals } from "@/lib/universal-buckets";
 import { formatIndian } from "@/lib/formatters";
+import {
+  goalCostInTodaysRupees,
+  goalInflation,
+  LIFE_EXPECTANCY,
+  retirementCorpusMultiple,
+} from "@/lib/goalMath";
+import { LONG_RUN_INFLATION } from "@/lib/holdings";
 
 export type GoalType =
   | "kid_education"
@@ -27,7 +34,14 @@ export type DetectedGoal = {
   label: string;
   source: "implied" | "prompted" | "custom";
   kidIndex?: number;
+  /** Today's price of the goal (what the user enters and edits). */
   targetAmount: number;
+  /**
+   * What it will cost by targetYear, in today's rupees: above targetAmount
+   * when the goal inflates faster than prices (college fees ~10% a year).
+   * Every SIP and reach figure is sized on this.
+   */
+  futureCost: number;
   targetYear: number;
   yearsToGoal: number;
   /** True when the amount is Finkoin's default, not the user's own figure. */
@@ -86,12 +100,38 @@ export const GOAL_DEFAULTS = {
   baby: 300_000,
   babyYears: 1,
   retirementAge: 60,
-  retirementExpenseMultiple: 25,
 } as const;
 
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const positive = (v: unknown) => (n(v) > 0 ? n(v) : undefined);
 const rs = (v: number) => `₹${formatIndian(Math.round(v))}`;
+
+/** Plain name for a goal's cost inflation, for the "how it's worked out" line. */
+const INFLATION_NOTE: Record<string, string> = {
+  kid_education: "College fees",
+  kid_marriage: "Wedding costs",
+  marriage: "Wedding costs",
+  baby: "Hospital and baby costs",
+  parents_eldercare: "Medical costs",
+  vehicle_purchase: "Car prices",
+};
+
+/**
+ * Monthly spend to plan retirement on, today's rupees: today's needs and
+ * wants plus your health premium, without the costs that end before then
+ * (children's school and activities, support to parents).
+ */
+export function retirementMonthlySpend(p: Partial<FinancialProfile>): number {
+  const b = getUniversalBucketActuals(p as never);
+  const kids = p.lifeStage === "kids";
+  const endingCosts =
+    (kids ? n(p.kidsSchoolFees) + n(p.kidsActivities) : 0) +
+    n(p.parentsSupport);
+  return Math.max(
+    0,
+    b.needs - endingCosts + b.wants + n(p.healthInsurancePremiumMonthly),
+  );
+}
 
 function kidCount(p: Partial<FinancialProfile>): number {
   if (p.lifeStage !== "kids") return 0;
@@ -153,13 +193,28 @@ export function detectGoals(
   const dismissed = new Set(p.dismissedGoals ?? []);
   const goals: DetectedGoal[] = [];
   const add = (
-    g: Omit<DetectedGoal, "yearsToGoal" | "targetYear"> & {
+    g: Omit<DetectedGoal, "yearsToGoal" | "targetYear" | "futureCost"> & {
       targetYear: number;
     },
   ) => {
     if (dismissed.has(g.id)) return;
     const targetYear = Math.max(year + 1, Math.round(g.targetYear));
-    goals.push({ ...g, targetYear, yearsToGoal: targetYear - year });
+    const yearsToGoal = targetYear - year;
+    const futureCost = Math.round(
+      goalCostInTodaysRupees(g.targetAmount, g.type, yearsToGoal),
+    );
+    const rate = goalInflation(g.type);
+    const note =
+      INFLATION_NOTE[g.type] && rate !== LONG_RUN_INFLATION
+        ? ` ${INFLATION_NOTE[g.type]} rise about ${Math.round(rate * 100)}% a year against ${Math.round(LONG_RUN_INFLATION * 100)}% for prices in general, so by ${targetYear} it costs about ${rs(futureCost)} in today's money - the plan saves for that.`
+        : "";
+    goals.push({
+      ...g,
+      calculation: g.calculation ? g.calculation + note : g.calculation,
+      futureCost,
+      targetYear,
+      yearsToGoal,
+    });
   };
 
   const kids = kidCount(p);
@@ -396,25 +451,27 @@ export function detectGoals(
   const age = n(p.selfAge) || 30;
   const retireAge = n(p.retirementAge) || GOAL_DEFAULTS.retirementAge;
   const ownCorpus = positive(p.retirementTargetCorpus);
-  const annualNeeds = getUniversalBucketActuals(p as never).needs * 12;
+  const monthlySpend = retirementMonthlySpend(p);
+  const multiple = retirementCorpusMultiple(Math.max(retireAge, age + 1));
+  const multipleText = (Math.round(multiple * 10) / 10).toLocaleString("en-IN");
+  const corpus = Math.round(ownCorpus ?? monthlySpend * 12 * multiple);
   goals.push({
     id: "retirement",
     type: "retirement",
     label: "Retirement",
     source: "implied",
-    targetAmount: Math.round(
-      ownCorpus ?? annualNeeds * GOAL_DEFAULTS.retirementExpenseMultiple,
-    ),
+    targetAmount: corpus,
+    futureCost: corpus,
     targetYear: year + Math.max(1, retireAge - age),
     yearsToGoal: Math.max(1, retireAge - age),
     isDefaultTarget: ownCorpus === undefined,
     editable: { amount: true, year: true },
     removable: false,
-    reason: `Runs for everyone - ${GOAL_DEFAULTS.retirementExpenseMultiple}× your yearly needs by age ${retireAge}.`,
+    reason: `Runs for everyone - enough to live on from age ${retireAge} to ${LIFE_EXPECTANCY}.`,
     calculation:
       ownCorpus !== undefined
         ? "Your own corpus figure, in today's rupees."
-        : `${rs(annualNeeds / 12)} monthly needs × 12 × ${GOAL_DEFAULTS.retirementExpenseMultiple} years = ${rs(annualNeeds * GOAL_DEFAULTS.retirementExpenseMultiple)} (lets you withdraw ~4% a year).`,
+        : `${rs(monthlySpend)} a month (your needs and wants plus health cover, without school fees or support to parents that end before then) × 12 × ${multipleText} = ${rs(corpus)}. ${multipleText}× is what lasts from ${retireAge} to ${LIFE_EXPECTANCY} if withdrawals rise 6% a year with prices and the corpus earns 7.5%.`,
   });
 
   return goals.sort((a, b) => a.yearsToGoal - b.yearsToGoal);
