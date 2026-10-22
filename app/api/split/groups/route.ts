@@ -3,6 +3,7 @@ import {
   createSupabaseServerClient,
   getSupabaseAdmin,
 } from "@/lib/supabaseServer";
+import { generateSplitInviteCode } from "@/lib/splitInviteCode";
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,9 +49,7 @@ export async function POST(req: NextRequest) {
       "Member";
 
     const admin = getSupabaseAdmin();
-    const inviteCode = Array.from({ length: 8 }, () =>
-      "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".charAt(Math.floor(Math.random() * 32)),
-    ).join("");
+    const inviteCode = generateSplitInviteCode();
 
     const { data: group, error: groupError } = await admin
       .from("split_groups")

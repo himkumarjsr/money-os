@@ -27,7 +27,10 @@ export const POINTS_EARN_ACTIONS: ReadonlyArray<readonly [string, string]> = [
   ["Daily login", "+5 / day"],
   ["Add an expense in Tracker", "+2 each, up to 20 / day"],
   ["Add a Split expense", "+3 each, up to 15 / day"],
-  ["Add or update a policy, investment, card or bill", "+5 each, up to 20 / day"],
+  [
+    "Add or update a policy, investment, card or bill",
+    "+5 each, up to 20 / day",
+  ],
   ["Run Analyse for your health score", "+20 / week"],
   ["Use a feature for the first time", "+20 each"],
   ["7-day login streak", "+50"],
@@ -54,3 +57,20 @@ export const FK_EXPLAINER: ReadonlyArray<readonly [string, string]> = [
     "By points earned this month. Everyone starts at 0 on the 1st, and the top 3 at month end win 500, 250 and 100 FK. The All-time tab shows points earned since you joined.",
   ],
 ];
+
+/**
+ * The viewer's place on the board: "#1 of 5 this month". A percentage only
+ * means something on a bigger board, so it is added from 20 people up.
+ */
+export function rankSummary(
+  rank: number,
+  total: number | null | undefined,
+  percentile: number,
+  period: string,
+): string {
+  if (!total || total <= 0) return `Top ${percentile}% ${period}`;
+  const of = `#${rank} of ${total.toLocaleString("en-IN")}`;
+  return total >= 20 && percentile > 0
+    ? `${of} · Top ${percentile}% ${period}`
+    : `${of} ${period}`;
+}

@@ -126,7 +126,7 @@ export function ProfileMenu({ visible, onClose }: Props) {
                     <AppIcon name="coin" size={15} color={Colors.primaryText} />
                     <Text style={styles.statNum}>{fk}</Text>
                   </View>
-                  <Text style={styles.statLabel}>tokens earned</Text>
+                  <Text style={styles.statLabel}>FK balance</Text>
                 </View>
                 <View style={styles.stat}>
                   <Text style={styles.statNum}>{badges}</Text>

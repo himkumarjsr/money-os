@@ -7,6 +7,7 @@ import {
   FK_EARN_ACTIONS,
   MONTHLY_PRIZES_FK,
   POINTS_EARN_ACTIONS,
+  rankSummary,
 } from "@/lib/fkRewards";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -152,6 +153,8 @@ export default function LeaderboardScreen() {
   tabRef.current = tab;
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [userEntry, setUserEntry] = useState<LeaderboardEntry | null>(null);
+  /** People on the current board, for "#1 of 5". */
+  const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
@@ -240,6 +243,21 @@ export default function LeaderboardScreen() {
     },
     [userId, tab],
   );
+
+  useEffect(() => {
+    const view = TABS.find((t) => t.id === tab)?.view ?? "leaderboard_view";
+    let cancelled = false;
+    setTotal(null);
+    void (async () => {
+      const { count, error } = await supabase
+        .from(view)
+        .select("user_id", { count: "exact", head: true });
+      if (!cancelled && !error) setTotal(count ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
 
   useEffect(() => {
     if (!userId) return;
@@ -448,7 +466,7 @@ export default function LeaderboardScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.meTitle}>You · Rank #{me.rank}</Text>
               <Text style={styles.meSub}>
-                Top {me.percentile}% {tabLabel}
+                {rankSummary(me.rank, total, me.percentile, tabLabel)}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
