@@ -23,7 +23,8 @@ import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 import {
   corpusMonthlyIncome,
   goalCostInTodaysRupees,
-  goalNominalReturn,
+  GLIDE_YEARS,
+  goalRate,
   LIFE_EXPECTANCY,
   lumpRealGrowth,
   monthlySipFor,
@@ -152,8 +153,7 @@ export function buildGoalStrategies(
   const earmarks = earmarkExistingSavings(p, now);
   const knownStepUp = sipStepUp(p);
   const defaultStepUp = DEFAULT_STEP_UP_PCT / 100;
-  const risk = p.riskTolerance;
-  const nominalFor = (y: number) => goalNominalReturn(y, risk);
+  const rateFor = (y: number, type?: string) => goalRate(p, y, type);
   const income = monthlyIncome(p);
   const age = n(p.selfAge) || 30;
   const loans = runningLoans(p);
@@ -176,6 +176,7 @@ export function buildGoalStrategies(
 
   return goals.map((g) => {
     const years = Math.max(0.5, g.yearsToGoal);
+    const nominalFor = (y: number) => rateFor(y, g.type);
     const nominal = nominalFor(years);
     const grow = lumpRealGrowth(nominal, years);
     const mark = earmarks.get(g.id);
@@ -277,7 +278,7 @@ export function buildGoalStrategies(
       const lateGrow = lumpRealGrowth(nominalFor(later), later);
       const lateGap = Math.max(
         0,
-        goalCostInTodaysRupees(g.targetAmount, g.type, later) -
+        goalCostInTodaysRupees(g.targetAmount, g.type, later, p) -
           (mark?.lumpsum ?? 0) * lateGrow,
       );
       const after = sip(lateGap, knownStepUp, later);
@@ -360,7 +361,7 @@ export function buildGoalStrategies(
         n(p.goldValue) +
         postOfficeHoldingsValue(p.postOfficeSchemes, now);
       const potsThen =
-        pots * lumpRealGrowth(nominalFor(Math.max(years, 7)), years) - upfront;
+        pots * lumpRealGrowth(rateFor(Math.max(years, 7)), years) - upfront;
       const swp = (Math.max(0, potsThen) * SAFE_WITHDRAWAL_RATE) / 12;
       if (swp >= emi * 0.5) {
         strategies.push({
@@ -390,6 +391,7 @@ export function buildGoalStrategies(
           const corpusIncome = corpusMonthlyIncome(
             retirement.targetAmount,
             age + retirement.yearsToGoal,
+            p,
           );
           strategies.push({
             id: "loan_past_retirement",
@@ -411,6 +413,7 @@ export function buildGoalStrategies(
       const monthlyIncomeFromCorpus = corpusMonthlyIncome(
         goal.targetAmount,
         retireAge,
+        p,
       );
       const pastRetirement = loans.filter(
         (l) => l.yearsLeft > goal.yearsToGoal,
@@ -424,10 +427,15 @@ export function buildGoalStrategies(
       if (retGap > 0 && base > 0) {
         const later = goal.yearsToGoal + 2;
         // Two more years of saving, and a corpus that has two fewer years to last.
-        const laterTarget = n(p.retirementTargetCorpus)
-          ? goal.targetAmount
-          : (goal.targetAmount * retirementCorpusMultiple(retireAge + 2)) /
-            retirementCorpusMultiple(retireAge);
+        const laterTarget = goalCostInTodaysRupees(
+          n(p.retirementTargetCorpus)
+            ? goal.targetAmount
+            : (goal.targetAmount * retirementCorpusMultiple(retireAge + 2, p)) /
+                retirementCorpusMultiple(retireAge, p),
+          "retirement",
+          later,
+          p,
+        );
         const laterGap = Math.max(
           0,
           laterTarget -
@@ -505,11 +513,16 @@ export function projectGoalReach(
       n(p.monthlyNPSContribution)
     : 0;
   const lump = Math.max(0, n(goal.currentSaved) - pfToday);
-  const nominal = goalNominalReturn(
-    Math.max(1, goal.yearsToGoal),
-    p.riskTolerance,
-  );
-  const rm = Math.pow(1 + nominal, 1 / 12) - 1;
+  const rate = goalRate(p, Math.max(1, goal.yearsToGoal), goal.type);
+  // Months to the goal date; the money moves to safer funds for the last years.
+  const goalMonths = Math.round(Math.max(1, goal.yearsToGoal) * 12);
+  const glides = goalMonths > GLIDE_YEARS * 12 && rate.safe !== rate.long;
+  const monthlyRate = (k: number) =>
+    Math.pow(
+      1 + (glides && goalMonths - k < GLIDE_YEARS * 12 ? rate.safe : rate.long),
+      1 / 12,
+    ) - 1;
+  let lumpValue = lump;
   const stepUp = sipStepUp(p);
   const target = n(goal.targetAmount);
 
@@ -523,7 +536,9 @@ export function projectGoalReach(
   for (let y = 1; thisYear + y <= lastYear; y++) {
     if (y > 1) sip *= 1 + stepUp;
     for (let m = 0; m < 12; m++) {
+      const rm = monthlyRate(12 * (y - 1) + m + 1);
       sipValue = sipValue * (1 + rm) + sip;
+      lumpValue *= 1 + rm;
       paidIn +=
         sip / Math.pow(1 + LONG_RUN_INFLATION, (12 * (y - 1) + m + 1) / 12);
     }
@@ -532,7 +547,7 @@ export function projectGoalReach(
     const pf = isRetirement
       ? projectRetirementAccounts(p, y, { real: true }).total
       : 0;
-    const value = (lump * Math.pow(1 + nominal, y) + sipValue) / deflate + pf;
+    const value = (lumpValue + sipValue) / deflate + pf;
     const year = thisYear + y;
     rows.push({ year, invested: Math.round(put), value: Math.round(value) });
     if (reachYear === null && value >= target * 0.995) reachYear = year;

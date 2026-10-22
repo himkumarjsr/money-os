@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GoalFundingItem } from "./goalFunding";
 import { goalReach } from "./goalReach";
-import { goalNominalReturn, sipRealValue } from "./goalMath";
+import { goalRate, sipRealValue } from "./goalMath";
 
 const item = (over: Partial<GoalFundingItem> = {}): GoalFundingItem =>
   ({
@@ -42,7 +42,7 @@ describe("goalReach", () => {
   it("puts nothing toward a goal whose SIP starts after its year", () => {
     // A goal with no existing savings: the SIP has to build all of it.
     const monthlyRequired =
-      3_00_00_000 / sipRealValue(96, goalNominalReturn(8), 0);
+      3_00_00_000 / sipRealValue(96, goalRate({}, 8, "custom"), 0);
     const r = goalReach(item({ type: "custom", monthlyRequired }), {
       profile: {},
       startMonth: 108,

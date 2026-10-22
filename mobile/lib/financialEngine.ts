@@ -318,12 +318,31 @@ export function medicalEmergencyTarget(data: FinancialProfile): number {
   return target;
 }
 
+/** Extra months for income that can stop without notice (self-employed, business). */
+export const IRREGULAR_INCOME_EXTRA_MONTHS = 3;
+
 /**
- * Months of expenses the emergency fund should cover (6–12, life-stage aware).
- * The single source for the engine target, the safety-net check, the Fix Plan
- * emergency priority and the form's suggested target.
+ * Months of expenses the emergency fund should cover (6–12, life-stage aware,
+ * 3 more for self-employed or business income, at most 12). The single source
+ * for the engine target, the safety-net check, the Fix Plan emergency
+ * priority and the form's suggested target.
  */
 export function emergencyFundMonthsNeeded(profile: {
+  lifeStage?: string;
+  parentsSupport?: number;
+  selfAge?: number;
+  kidsAges?: unknown;
+  kids?: unknown;
+  employmentType?: string;
+}): number {
+  const base = lifeStageEmergencyMonths(profile);
+  const irregular =
+    profile.employmentType === "self_employed" ||
+    profile.employmentType === "business";
+  return irregular ? Math.min(12, base + IRREGULAR_INCOME_EXTRA_MONTHS) : base;
+}
+
+function lifeStageEmergencyMonths(profile: {
   lifeStage?: string;
   parentsSupport?: number;
   selfAge?: number;

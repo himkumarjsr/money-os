@@ -233,6 +233,8 @@ describe("retirement SIP (pinned)", () => {
     selfAge: 30,
     retirementAge: 60,
     retirementTargetCorpus: 5_00_00_000,
+    // Below the tax-free limit, so the reference needs no tax.
+    taxSlabPct: 0,
   };
   const retirementSip = (over: Partial<AnalyseFormValues>) => {
     const plan = buildGoalFundingPlan(profile({ ...base, ...over }), 0, NOW);

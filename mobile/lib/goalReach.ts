@@ -17,7 +17,12 @@ import {
   allocationSummary,
 } from "@/lib/portfolioAllocation";
 import { LONG_RUN_INFLATION } from "@/lib/holdings";
-import { goalNominalReturn, sipRealValue, sipStepUp } from "@/lib/goalMath";
+import {
+  averageReturn,
+  goalRate,
+  sipRealValue,
+  sipStepUp,
+} from "@/lib/goalMath";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   getUniversalBucketActuals,
@@ -82,11 +87,10 @@ export function goalReach(
 ): GoalReach {
   const year = (opts.now ?? new Date()).getFullYear();
   const months = Math.max(1, Math.round(item.yearsToGoal * 12));
-  const nominal = goalNominalReturn(
-    item.yearsToGoal,
-    opts.profile.riskTolerance,
-  );
-  const realAnnual = (1 + nominal) / (1 + LONG_RUN_INFLATION) - 1;
+  const nominal = goalRate(opts.profile, item.yearsToGoal, item.type);
+  const realAnnual =
+    (1 + averageReturn(nominal, item.yearsToGoal)) / (1 + LONG_RUN_INFLATION) -
+    1;
   const g = sipStepUp(opts.profile);
   const unit = (from: number, to: number) => sipRealValue(to, nominal, g, from);
   const start = Math.max(1, Math.round(opts.startMonth));
@@ -205,7 +209,8 @@ export function goalReach(
   return {
     targetAmount: item.targetAmount,
     targetYear: item.targetYear,
-    nominalReturnPct: Math.round(nominal * 1000) / 10,
+    nominalReturnPct:
+      Math.round(averageReturn(nominal, item.yearsToGoal) * 1000) / 10,
     realReturnPct: Math.round(realAnnual * 1000) / 10,
     startMonth: start,
     monthly,
@@ -247,7 +252,7 @@ export function buildUrgentGoalItems(
   return goals.map((g) => {
     const months = Math.max(1, g.yearsToGoal * 12);
     const horizon = goalHorizon(g.yearsToGoal);
-    const nominal = goalNominalReturn(g.yearsToGoal, profile.riskTolerance);
+    const nominal = goalRate(profile, g.yearsToGoal, g.type);
     const unitNow = sipRealValue(months, nominal, stepUp);
     const unitFromStart = sipRealValue(months, nominal, stepUp, startMonth);
     const mark = earmarks.get(g.id);

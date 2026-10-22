@@ -7,6 +7,7 @@
 import { formatIndian } from "@/lib/formatters";
 import { existingEquityValue, LONG_RUN_INFLATION } from "@/lib/financialEngine";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
+import { sipStepUp } from "@/lib/goalMath";
 import type { PriorityPlan } from "@/lib/priorityEngine";
 import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
@@ -185,11 +186,13 @@ export function buildAdvisorReview(
   }
 
   const yearly: string[] = [];
-  const stepUp = n(p.annualSalaryIncreasePct);
+  const stepUp = sipStepUp(p);
   yearly.push(
     stepUp > 0
-      ? `Each April, raise every SIP by ${Math.min(stepUp, 10)}% as your salary grows.`
-      : "Each April, raise every SIP by 10% (or by your pay rise).",
+      ? `Each April, raise every SIP by ${Math.round(stepUp * 100)}% as your salary grows - the plan counts on it.`
+      : p.sipStepUpPlanned === false
+        ? "Your plan keeps SIPs flat. If your pay goes up, raising them even 5% each April means you need less today."
+        : "Each April, raise every SIP by 10% (or by your pay rise).",
   );
   yearly.push(
     "Once a year, move money for any goal now under 3 years away from equity to FDs / debt funds.",

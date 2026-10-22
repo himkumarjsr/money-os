@@ -22,7 +22,7 @@ import {
   type PortfolioAllocation,
 } from "@/lib/portfolioAllocation";
 import {
-  goalNominalReturn,
+  goalRate,
   goalRealReturnPctFor,
   lumpRealGrowth,
   monthlySipFor,
@@ -300,7 +300,7 @@ export function earmarkExistingSavings(
 
   const out = new Map<string, GoalEarmark>();
   for (const g of goals) {
-    const nominal = goalNominalReturn(g.yearsToGoal, profile.riskTolerance);
+    const nominal = goalRate(profile, g.yearsToGoal, g.type);
     const grow = lumpRealGrowth(nominal, g.yearsToGoal);
     const futureCost = g.futureCost ?? g.targetAmount;
     let target = futureCost;

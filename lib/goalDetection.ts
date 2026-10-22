@@ -201,9 +201,9 @@ export function detectGoals(
     const targetYear = Math.max(year + 1, Math.round(g.targetYear));
     const yearsToGoal = targetYear - year;
     const futureCost = Math.round(
-      goalCostInTodaysRupees(g.targetAmount, g.type, yearsToGoal),
+      goalCostInTodaysRupees(g.targetAmount, g.type, yearsToGoal, p),
     );
-    const rate = goalInflation(g.type);
+    const rate = goalInflation(g.type, p);
     const note =
       INFLATION_NOTE[g.type] && rate !== LONG_RUN_INFLATION
         ? ` ${INFLATION_NOTE[g.type]} rise about ${Math.round(rate * 100)}% a year against ${Math.round(LONG_RUN_INFLATION * 100)}% for prices in general, so by ${targetYear} it costs about ${rs(futureCost)} in today's money - the plan saves for that.`
@@ -452,7 +452,9 @@ export function detectGoals(
   const retireAge = n(p.retirementAge) || GOAL_DEFAULTS.retirementAge;
   const ownCorpus = positive(p.retirementTargetCorpus);
   const monthlySpend = retirementMonthlySpend(p);
-  const multiple = retirementCorpusMultiple(Math.max(retireAge, age + 1));
+  const multiple = retirementCorpusMultiple(Math.max(retireAge, age + 1), p);
+  const retireYears = Math.max(1, retireAge - age);
+  const retireInflationPct = Math.round(goalInflation("retirement", p) * 100);
   const multipleText = (Math.round(multiple * 10) / 10).toLocaleString("en-IN");
   const corpus = Math.round(ownCorpus ?? monthlySpend * 12 * multiple);
   goals.push({
@@ -461,9 +463,11 @@ export function detectGoals(
     label: "Retirement",
     source: "implied",
     targetAmount: corpus,
-    futureCost: corpus,
-    targetYear: year + Math.max(1, retireAge - age),
-    yearsToGoal: Math.max(1, retireAge - age),
+    futureCost: Math.round(
+      goalCostInTodaysRupees(corpus, "retirement", retireYears, p),
+    ),
+    targetYear: year + retireYears,
+    yearsToGoal: retireYears,
     isDefaultTarget: ownCorpus === undefined,
     editable: { amount: true, year: true },
     removable: false,
@@ -471,7 +475,7 @@ export function detectGoals(
     calculation:
       ownCorpus !== undefined
         ? "Your own corpus figure, in today's rupees."
-        : `${rs(monthlySpend)} a month (your needs and wants plus health cover, without school fees or support to parents that end before then) × 12 × ${multipleText} = ${rs(corpus)}. ${multipleText}× is what lasts from ${retireAge} to ${LIFE_EXPECTANCY} if withdrawals rise 6% a year with prices and the corpus earns 7.5%.`,
+        : `${rs(monthlySpend)} a month (your needs and wants plus health cover, without school fees or support to parents that end before then) × 12 × ${multipleText} = ${rs(corpus)}. ${multipleText}× is what lasts from ${retireAge} to ${LIFE_EXPECTANCY} if withdrawals rise ${retireInflationPct}% a year with prices and the corpus earns 7.5%.`,
   });
 
   return goals.sort((a, b) => a.yearsToGoal - b.yearsToGoal);

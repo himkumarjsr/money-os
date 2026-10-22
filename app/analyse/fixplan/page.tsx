@@ -58,6 +58,7 @@ import {
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
 import AdvisorReviewSection from "@/components/analyse/AdvisorReviewSection";
+import PlanReviewCard from "@/components/analyse/PlanReviewCard";
 import { buildAdvisorReview } from "@/lib/advisorReview";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -489,6 +490,10 @@ export default function FixPlanPage() {
         </section>
 
         <LoanSyncNotices status={loanStatus} onSaveDetails={saveLoanDetails} />
+
+        {profile ? (
+          <PlanReviewCard profile={profile} userId={user?.id} />
+        ) : null}
 
         {aiPlan.priorityPlan?.surplusBreakdown ? (
           <details className="rounded-xl bg-[#F7F7F4] p-4 text-sm">

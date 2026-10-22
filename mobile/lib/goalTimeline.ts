@@ -5,7 +5,7 @@
  * step-up as goalFunding.
  */
 import { LONG_RUN_INFLATION } from "@/lib/holdings";
-import { goalNominalReturn, sipRealValue } from "@/lib/goalMath";
+import { averageReturn, goalRate, sipRealValueAt } from "@/lib/goalMath";
 import type { GoalItem } from "@/lib/priorityEngine";
 
 export type GoalTimelineRow = {
@@ -32,18 +32,26 @@ export function goalTimeline(
     | "monthlyAllocated"
     | "allocation"
     | "stepUp"
-  >,
+    | "rate"
+  > & { goalType?: string },
   now: Date = new Date(),
 ): GoalTimeline | null {
   const years = Math.round(goal.yearsToGoal);
   const monthly = Math.round(goal.monthlyAllocated ?? goal.monthlyRequired);
   if (years < 1 || monthly <= 0) return null;
-  const nominal = goalNominalReturn(
-    goal.yearsToGoal,
-    goal.allocation?.riskTolerance,
-  );
+  const nominal =
+    goal.rate ??
+    goalRate(
+      { riskTolerance: goal.allocation?.riskTolerance },
+      goal.yearsToGoal,
+      goal.goalType,
+    );
   const stepUp = goal.stepUp ?? 0;
-  const realReturnPct = ((1 + nominal) / (1 + LONG_RUN_INFLATION) - 1) * 100;
+  const months = Math.round(goal.yearsToGoal * 12);
+  const realReturnPct =
+    ((1 + averageReturn(nominal, goal.yearsToGoal)) / (1 + LONG_RUN_INFLATION) -
+      1) *
+    100;
   const startYear = now.getFullYear();
   const rows: GoalTimelineRow[] = [];
   let invested = 0;
@@ -52,9 +60,11 @@ export function goalTimeline(
     rows.push({
       year: startYear + y,
       invested: Math.round(invested),
-      expected: Math.round(monthly * sipRealValue(12 * y, nominal, stepUp)),
+      expected: Math.round(
+        monthly * sipRealValueAt(12 * y, months, nominal, stepUp),
+      ),
       needed: Math.round(
-        goal.monthlyRequired * sipRealValue(12 * y, nominal, stepUp),
+        goal.monthlyRequired * sipRealValueAt(12 * y, months, nominal, stepUp),
       ),
     });
   }

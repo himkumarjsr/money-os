@@ -24,7 +24,7 @@ import {
   type GoalReach,
 } from "@/lib/goalReach";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
-import { sipStepUp } from "@/lib/goalMath";
+import { goalRate, sipStepUp, type GoalRate } from "@/lib/goalMath";
 import {
   getUniversalBucketActuals,
   licEndowmentPremiumMonthly,
@@ -101,6 +101,8 @@ export interface GoalItem {
   existingMonthly?: number;
   /** Yearly SIP increase the amounts assume (decimal, 0 = flat SIP). */
   stepUp?: number;
+  /** After-tax returns the amounts assume, with the glide path. */
+  rate?: GoalRate;
 }
 
 export interface PriorityPlan {
@@ -377,6 +379,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     parentsSupport: profile.parentsSupport,
     selfAge: age,
     kidsAges: kids,
+    employmentType: profile.employmentType,
   });
 
   // Months of everything that must still be paid if income stops: needs,
@@ -1540,6 +1543,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       monthlyAllocated: item.monthlyAllocated,
       existingMonthly: item.existingMonthly ?? 0,
       stepUp,
+      rate: goalRate(profile, item.yearsToGoal, item.type),
       sharePct: item.sharePct,
       yearsToGoal: item.yearsToGoal,
       instrument: item.instrument,
