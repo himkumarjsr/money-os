@@ -22,6 +22,8 @@ function renderText() {
     ...buildUserAnalyseScenarioProfile(),
     name: "Test User",
     primaryGoal: "retire_early",
+    // A medical pot already set aside, so one step prints as complete.
+    medicalEmergencyFund: 1_000_000,
   } as any;
   const result = analyseFinances(profile);
   const engine = buildPriorityPlan(profile, result);

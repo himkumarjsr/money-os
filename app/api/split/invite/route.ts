@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       user.user_metadata?.name ||
       actorEmail.split("@")[0] ||
       "Finkoin user";
-    const safeGroupName = groupName?.trim() || "Finkoin Split";
+    const safeGroupName = groupName?.trim() || "Finkoin Settle Up";
 
     // Reuse / refresh an existing open invite link when possible.
     if (isOpenSplitInvite(email)) {
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
     const emailHtml = `
       <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
         <div style="background:#534AB7;border-radius:16px;padding:22px;text-align:center;margin-bottom:22px;">
-          <h1 style="color:white;margin:0;font-size:22px;letter-spacing:-0.2px;">FK Split</h1>
+          <h1 style="color:white;margin:0;font-size:22px;letter-spacing:-0.2px;">Settle Up</h1>
           <p style="color:rgba(255,255,255,0.75);margin:6px 0 0;font-size:13px;">by Finkoin</p>
         </div>
 
@@ -250,9 +250,9 @@ export async function POST(req: NextRequest) {
         const { Resend } = await import("resend");
         const resend = new Resend(resendKey);
         const { error: sendErr } = await resend.emails.send({
-          from: `FK Split <${emailFrom}>`,
+          from: `Settle Up <${emailFrom}>`,
           to: email,
-          subject: `${invitedByName} added you to "${safeGroupName}" on Finkoin Split`,
+          subject: `${invitedByName} added you to "${safeGroupName}" on Finkoin Settle Up`,
           html: emailHtml,
         });
         if (sendErr) {

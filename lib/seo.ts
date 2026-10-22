@@ -184,7 +184,7 @@ export const SEO_CONFIG = {
     "expense tracker India",
     "budget tracker India",
     "bill split app India",
-    "FK Split",
+    "Settle Up",
     "SWP calculator India",
     "PPF calculator India",
     "NPS calculator India",

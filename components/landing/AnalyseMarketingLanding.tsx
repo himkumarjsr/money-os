@@ -180,7 +180,7 @@ export default function AnalyseMarketingLanding() {
           </Link>
           {" · "}
           <Link href="/split" className="font-semibold text-[#534AB7]">
-            Finkoin Split
+            Finkoin Settle Up
           </Link>
         </p>
       </section>

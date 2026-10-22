@@ -295,7 +295,7 @@ export default function GroupDetailScreen() {
   };
 
   const openWhatsApp = () => {
-    const text = `Join "${group?.name ?? "Split"}" on Finkoin Split and we'll track shared expenses together: ${inviteUrl}`;
+    const text = `Join "${group?.name ?? "Split"}" on Finkoin Settle Up and we'll track shared expenses together: ${inviteUrl}`;
     Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`).catch(
       () => void shareText(text),
     );
@@ -454,7 +454,11 @@ export default function GroupDetailScreen() {
         ? "You owe"
         : "All settled";
   const netColor =
-    tone === "owed" ? readable("#1D9E75") : tone === "owe" ? readable("#E24B4A") : Colors.textMuted;
+    tone === "owed"
+      ? readable("#1D9E75")
+      : tone === "owe"
+        ? readable("#E24B4A")
+        : Colors.textMuted;
 
   if (!groupId) {
     return (
@@ -712,7 +716,11 @@ export default function GroupDetailScreen() {
                           <Text
                             style={[
                               styles.balanceAmt,
-                              { color: owed ? readable("#1D9E75") : readable("#E24B4A") },
+                              {
+                                color: owed
+                                  ? readable("#1D9E75")
+                                  : readable("#E24B4A"),
+                              },
                             ]}
                           >
                             {owed ? "gets back" : "owes"}{" "}
@@ -798,7 +806,11 @@ export default function GroupDetailScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Delete expense"
                           >
-                            <AppIcon name="trash" size={15} color={readable("#E24B4A")} />
+                            <AppIcon
+                              name="trash"
+                              size={15}
+                              color={readable("#E24B4A")}
+                            />
                           </TouchableOpacity>
                         </View>
                       ) : null}
@@ -1222,7 +1234,10 @@ export default function GroupDetailScreen() {
               disabled={deletingExpenseBusy}
               onPress={() => void handleConfirmDeleteExpense()}
               activeOpacity={0.85}
-              style={[styles.dlgDanger, deletingExpenseBusy && { opacity: 0.5 }]}
+              style={[
+                styles.dlgDanger,
+                deletingExpenseBusy && { opacity: 0.5 },
+              ]}
               accessibilityRole="button"
             >
               <Text style={styles.dlgDangerText}>
@@ -1247,7 +1262,9 @@ export default function GroupDetailScreen() {
         animationType="fade"
         onRequestClose={() => setShowDeleteConfirm(false)}
       >
-        <View style={[styles.dlgBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+        <View
+          style={[styles.dlgBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+        >
           <Pressable
             style={StyleSheet.absoluteFill}
             onPress={() => setShowDeleteConfirm(false)}
@@ -1258,7 +1275,9 @@ export default function GroupDetailScreen() {
               <View style={styles.dlgIconCircle}>
                 <AppIcon name="trash" size={26} color={Colors.error} />
               </View>
-              <Text style={styles.dlgTitle18}>{`Delete "${group?.name}"?`}</Text>
+              <Text
+                style={styles.dlgTitle18}
+              >{`Delete "${group?.name}"?`}</Text>
               <Text style={styles.dlgBody14}>
                 This will remove the group for all members. Expense history will
                 be saved but the group will be closed. This cannot be undone.
@@ -1604,7 +1623,11 @@ const styles = themedStyles(() => ({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  dangerPillText: { color: readable("#E24B4A"), fontSize: 11, fontWeight: "700" },
+  dangerPillText: {
+    color: readable("#E24B4A"),
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
   settleEmpty: { paddingHorizontal: 24, paddingVertical: 40 },
   settleEmptyText: {

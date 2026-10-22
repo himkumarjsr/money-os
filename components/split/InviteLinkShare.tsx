@@ -13,7 +13,7 @@ export default function InviteLinkShare({
 }) {
   const [copied, setCopied] = useState(false);
 
-  const shareText = `Join "${groupName}" on Finkoin Split and we'll track shared expenses together: ${inviteUrl}`;
+  const shareText = `Join "${groupName}" on Finkoin Settle Up and we'll track shared expenses together: ${inviteUrl}`;
   const waHref = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   const copyLink = async () => {

@@ -17,7 +17,7 @@ const MENU: Array<{ icon: AppIconName; label: string; href: Href }> = [
   { icon: "user", label: "My Profile", href: "/(tabs)/profile" },
   { icon: "notebook", label: "Expense Tracker", href: "/(tabs)/tracker" },
   { icon: "calendar", label: "Bills & renewals", href: "/bills" as Href },
-  { icon: "users", label: "FK Split", href: "/(tabs)/split" },
+  { icon: "users", label: "Settle Up", href: "/(tabs)/split" },
   { icon: "chart", label: "My Analysis", href: "/analyse/result" as Href },
   { icon: "shield", label: "My Policies", href: "/policies" as Href },
   { icon: "target", label: "My Goals", href: "/goals" as Href },

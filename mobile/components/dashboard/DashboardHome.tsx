@@ -1,7 +1,7 @@
 /**
  * Signed-in home - port of web components/dashboard/DashboardHome.tsx.
  * Greeting, quick actions, money score, rewards, bills due this week, and
- * link cards for the tracker and FK Split. Each card loads on its own so one
+ * link cards for the tracker and Settle Up. Each card loads on its own so one
  * slow source doesn't hold up the rest.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -629,7 +629,7 @@ function SplitCard({
     <View style={styles.card} aria-busy={loading}>
       <CardHeader
         icon="users"
-        title="FK Split"
+        title="Settle Up"
         href="/(tabs)/split"
         linkLabel="Open"
       />

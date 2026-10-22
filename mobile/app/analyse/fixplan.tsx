@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
+import { AdvisorReviewCard } from "@/components/analyse/fixplan/AdvisorReviewCard";
+import { buildAdvisorReview } from "@/lib/advisorReview";
 import {
   useObligationStore,
   type LoanReportStatus,
@@ -304,6 +306,10 @@ function FixPlanScreen() {
         ) : null}
 
         <ScoreProjection plan={pp} />
+
+        {pp && profile ? (
+          <AdvisorReviewCard review={buildAdvisorReview(profile, pp)} />
+        ) : null}
 
         {pp?.fdSuggestion ? <FdSuggestionCard fd={pp.fdSuggestion} /> : null}
 
