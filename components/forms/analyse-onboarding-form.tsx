@@ -45,6 +45,7 @@ import {
   type PostOfficeSchemeId,
   type PremiumFrequency,
 } from "@/lib/analyse-form-schema";
+import { resetGoalCardEdits } from "@/lib/goalDetection";
 import { emergencyFundMonthsNeeded } from "@/lib/financialEngine";
 import {
   postOfficeHoldingsValue,
@@ -1551,11 +1552,14 @@ export function AnalyseOnboardingForm() {
 
     try {
       const previousProfile = useFinancialStore.getState().lastSubmission;
-      const mergedValues = coalesceInsuranceToggles({
-        ...values,
-        primaryGoal: values.primaryGoal || "grow_wealth",
-        monthlySalary: values.monthlySalary ?? 0,
-      });
+      // A (re)take starts the report's goal list over.
+      const mergedValues = resetGoalCardEdits(
+        coalesceInsuranceToggles({
+          ...values,
+          primaryGoal: values.primaryGoal || "grow_wealth",
+          monthlySalary: values.monthlySalary ?? 0,
+        }),
+      );
       setAnalysis(mergedValues);
       const normalized = normalizeAnalyseFormValues(mergedValues);
       try {

@@ -10,6 +10,7 @@ import {
   applyGoalEdit,
   detectGoals,
   dismissGoal,
+  homeUpfrontShare,
   promptedGoalOffers,
   restoreDismissedGoals,
   type DetectedGoal,
@@ -69,7 +70,7 @@ export function GoalsSection({
 
   const openEdit = (g: DetectedGoal) => {
     setEditing(g);
-    setAmount(g.targetAmount);
+    setAmount(g.home ? g.home.price : g.targetAmount);
     setYearRaw(String(g.targetYear));
     setError(null);
   };
@@ -83,11 +84,11 @@ export function GoalsSection({
 
   const submitEdit = async () => {
     if (!editing || yearInvalid) return;
+    const valid = editing.editable.amount && amount != null && amount > 0;
     const next = applyGoalEdit(profile, editing.id, {
-      targetAmount:
-        editing.editable.amount && amount != null && amount > 0
-          ? amount
-          : undefined,
+      // For a home the user enters the price; the upfront cash follows.
+      ...(editing.home ? { homePrice: valid ? amount : undefined } : {}),
+      targetAmount: !editing.home && valid ? amount : undefined,
       targetYear: editing.editable.year ? yearNum : undefined,
     });
     await save(next);
@@ -253,10 +254,27 @@ export function GoalsSection({
             <Text style={styles.sheetTitle}>Edit: {editing.label}</Text>
             {editing.editable.amount ? (
               <MoneyInput
-                label="Target amount (today's rupees)"
+                label={
+                  editing.home
+                    ? "Home price (today's rupees)"
+                    : "Target amount (today's rupees)"
+                }
                 value={amount}
                 onChangeValue={setAmount}
               />
+            ) : null}
+            {editing.home ? (
+              <Text style={styles.meta}>
+                Upfront cash goal: ₹
+                {formatIndian(
+                  Math.round(
+                    (amount ?? 0) *
+                      homeUpfrontShare(editing.home.includeInteriors),
+                  ),
+                )}{" "}
+                (20% downpayment + 10% stamp duty
+                {editing.home.includeInteriors ? " + 10% interiors" : ""})
+              </Text>
             ) : null}
             {editing.editable.year ? (
               <View style={{ gap: 6 }}>

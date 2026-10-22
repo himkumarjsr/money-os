@@ -626,3 +626,41 @@ export function addCustomGoal(
     ],
   };
 }
+
+/** Goal-card answers and edits that live only on the report, not in the form. */
+type GoalCardFields = Pick<
+  FinancialProfile,
+  | "planningMarriage"
+  | "marriageFundTarget"
+  | "marriageFundYear"
+  | "planningBaby"
+  | "babyFundTarget"
+  | "babyFundYear"
+  | "dismissedGoals"
+  | "kidsEducationFundTargets"
+  | "kidsMarriageFundTargets"
+  | "homeIncludeInteriors"
+  | "wantsTermTopUp"
+>;
+
+/**
+ * Retaking the health check starts the goal list over: hidden goals come
+ * back, the wedding/baby questions are asked again and card-only amounts go
+ * back to Finkoin's defaults. Goals the user added on the Goals page stay.
+ */
+export function resetGoalCardEdits<T extends GoalCardFields>(v: T): T {
+  return {
+    ...v,
+    planningMarriage: undefined,
+    marriageFundTarget: undefined,
+    marriageFundYear: undefined,
+    planningBaby: undefined,
+    babyFundTarget: undefined,
+    babyFundYear: undefined,
+    dismissedGoals: [],
+    kidsEducationFundTargets: undefined,
+    kidsMarriageFundTargets: undefined,
+    homeIncludeInteriors: undefined,
+    wantsTermTopUp: undefined,
+  };
+}

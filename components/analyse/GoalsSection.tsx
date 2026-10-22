@@ -10,6 +10,7 @@ import {
   applyGoalEdit,
   detectGoals,
   dismissGoal,
+  homeUpfrontShare,
   promptedGoalOffers,
   restoreDismissedGoals,
   type DetectedGoal,
@@ -69,7 +70,7 @@ export default function GoalsSection({
 
   const openEdit = (g: DetectedGoal) => {
     setEditing(g);
-    setAmountRaw(String(g.targetAmount));
+    setAmountRaw(String(g.home ? g.home.price : g.targetAmount));
     setYearRaw(String(g.targetYear));
     setError(null);
   };
@@ -79,7 +80,12 @@ export default function GoalsSection({
     const amount = editing.editable.amount ? handleMoneyInput(amountRaw) : null;
     const year = editing.editable.year ? Number(yearRaw) : NaN;
     const next = applyGoalEdit(profile, editing.id, {
-      targetAmount: amount != null && amount > 0 ? amount : undefined,
+      // For a home the user enters the price; the upfront cash follows.
+      ...(editing.home
+        ? { homePrice: amount != null && amount > 0 ? amount : undefined }
+        : {}),
+      targetAmount:
+        !editing.home && amount != null && amount > 0 ? amount : undefined,
       targetYear:
         Number.isFinite(year) && year > thisYear && year <= thisYear + 60
           ? year
@@ -247,10 +253,29 @@ export default function GoalsSection({
               <MoneyInput
                 key={`${editing.id}-amount`}
                 id="goal-target-amount"
-                label="Target amount (today's rupees)"
-                defaultValue={formatIndian(editing.targetAmount)}
+                label={
+                  editing.home
+                    ? "Home price (today's rupees)"
+                    : "Target amount (today's rupees)"
+                }
+                defaultValue={formatIndian(
+                  editing.home ? editing.home.price : editing.targetAmount,
+                )}
                 onChange={(e) => setAmountRaw(e.target.value)}
               />
+            ) : null}
+            {editing.home ? (
+              <p className="-mt-3 mb-5 text-[13px] font-medium text-[#5F5E5A]">
+                Upfront cash goal: ₹
+                {formatIndian(
+                  Math.round(
+                    (handleMoneyInput(amountRaw) ?? 0) *
+                      homeUpfrontShare(editing.home.includeInteriors),
+                  ),
+                )}{" "}
+                (20% downpayment + 10% stamp duty
+                {editing.home.includeInteriors ? " + 10% interiors" : ""})
+              </p>
             ) : null}
             {editing.editable.year ? (
               <div className="mb-5">
