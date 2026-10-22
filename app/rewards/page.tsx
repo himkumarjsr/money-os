@@ -1,5 +1,6 @@
 "use client";
 
+import BackLink from "@/components/ui/BackLink";
 import {
   FK_EARN_ACTIONS,
   FK_EXPLAINER,
@@ -65,7 +66,8 @@ export default function RewardsPage() {
   return (
     <ProtectedGate>
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <h1 className="text-3xl font-bold text-[#111110]">Rewards</h1>
+        <BackLink fallbackHref="/profile" label="Back" />
+        <h1 className="mt-3 text-3xl font-bold text-[#111110]">Rewards</h1>
         <p className="mt-2 text-sm text-[#5F5E5A]">
           Earn points to climb the leaderboard and FK to save on Finkoin
           products.
@@ -213,10 +215,7 @@ function AdminFkCard() {
       : Number(summary.outstanding_fk ?? 0) / FK_PER_RUPEE;
   const rows: Array<[string, string]> = [
     ["Outstanding", `${fk(summary.outstanding_fk)} FK`],
-    [
-      "Worth",
-      `₹${inr.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`,
-    ],
+    ["Worth", `₹${inr.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`],
     ["Issued this month", `${fk(summary.issued_this_month)} FK`],
     ["Issued last month", `${fk(summary.issued_last_month)} FK`],
     [

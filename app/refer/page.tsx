@@ -1,5 +1,6 @@
 "use client";
 
+import BackLink from "@/components/ui/BackLink";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { trackShare } from "@/lib/gtag";
@@ -67,7 +68,10 @@ export default function ReferPage() {
   return (
     <ProtectedGate>
       <main className="mx-auto max-w-lg px-4 py-10 sm:px-6">
-        <h1 className="text-3xl font-bold text-[#111110]">Refer &amp; earn</h1>
+        <BackLink fallbackHref="/profile" label="Back" />
+        <h1 className="mt-3 text-3xl font-bold text-[#111110]">
+          Refer &amp; earn
+        </h1>
         <p className="mt-2 text-sm text-[#5F5E5A]">
           Share Finkoin. When friends join with your link, you both earn FK
           tokens.

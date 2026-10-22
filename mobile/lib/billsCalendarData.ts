@@ -11,7 +11,7 @@ import type {
   BillObligation,
   BillPolicy,
 } from "@/lib/billsCalendar";
-import { monthKey } from "@/lib/billsCalendar";
+import { monthKey, monthOf } from "@/lib/billsCalendar";
 import { getSupabase } from "@/lib/supabase";
 import { loadCreditCardsMerged } from "@/lib/trackerCreditCards";
 import { fetchUserPolicies } from "@/lib/policyVault";
@@ -21,6 +21,8 @@ export type BillsData = {
   checklist: BillChecklistRow[];
   cards: BillCard[];
   policies: BillPolicy[];
+  /** Month the user joined (YYYY-MM-01): the calendar goes back no further. */
+  joinedMonth: string | null;
 };
 
 function toObligation(row: Record<string, unknown>): BillObligation {
@@ -35,6 +37,9 @@ function toObligation(row: Record<string, unknown>): BillObligation {
     due_date: row.due_date == null ? null : String(row.due_date).slice(0, 10),
     end_month:
       row.end_month == null ? null : String(row.end_month).slice(0, 10),
+    start_month: monthOf(
+      row.created_at == null ? null : String(row.created_at),
+    ),
     is_active: row.is_active !== false,
   };
 }
@@ -67,14 +72,19 @@ export async function loadBillsData(
   const supabase = getSupabase();
   const month = monthKey(year, monthIndex);
 
-  // Create this month's checklist rows so paid / skipped can be recorded.
-  const { error: rpcError } = await supabase.rpc("generate_monthly_checklist", {
-    p_user_id: userId,
-    p_month: month,
-  });
-  if (rpcError) console.error("bills: generate checklist", rpcError);
+  // Create the month's checklist rows so paid / skipped can be recorded.
+  // Past months are left alone: generating them now would add bills that
+  // only started later (setBillStatus creates a row when one is marked).
+  const now = new Date();
+  if (year * 12 + monthIndex >= now.getFullYear() * 12 + now.getMonth()) {
+    const { error: rpcError } = await supabase.rpc(
+      "generate_monthly_checklist",
+      { p_user_id: userId, p_month: month },
+    );
+    if (rpcError) console.error("bills: generate checklist", rpcError);
+  }
 
-  const [obRes, rowRes, cards, policyRes] = await Promise.all([
+  const [obRes, rowRes, cards, policyRes, sessionRes] = await Promise.all([
     supabase
       .from("financial_obligations")
       .select("*")
@@ -87,6 +97,7 @@ export async function loadBillsData(
       .eq("checklist_month", month),
     loadCreditCardsMerged(userId).catch(() => []),
     fetchUserPolicies(userId).catch(() => ({ policies: [], error: null })),
+    supabase.auth.getSession().catch(() => null),
   ]);
 
   if (obRes.error) throw new Error(obRes.error.message);
@@ -114,6 +125,7 @@ export async function loadBillsData(
       renewalDate: p.renewalDate,
       status: p.status,
     })),
+    joinedMonth: monthOf(sessionRes?.data.session?.user.created_at),
   };
 }
 

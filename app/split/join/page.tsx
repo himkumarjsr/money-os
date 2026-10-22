@@ -7,12 +7,12 @@ import { SITE_URL } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: "Join group - Finkoin Split" },
+  title: { absolute: "Join group - Finkoin Settle Up" },
   description:
     "You've been invited to split expenses on Finkoin. Open the link to join the group and track shared spends together.",
   robots: "noindex, nofollow",
   openGraph: {
-    title: "Finkoin Split - Free Expense Splitting",
+    title: "Finkoin Settle Up - Free Expense Splitting",
     description:
       "Split expenses with friends. Track group spending. Settle debts easily. Free forever.",
     url: `${SITE_URL}/split/join`,
@@ -23,13 +23,13 @@ export const metadata: Metadata = {
         url: `${SITE_URL}/og/og-split.png`,
         width: 1200,
         height: 630,
-        alt: "Finkoin Split - Split expenses with friends",
+        alt: "Finkoin Settle Up - Split expenses with friends",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Finkoin Split - Free Expense Splitting",
+    title: "Finkoin Settle Up - Free Expense Splitting",
     description:
       "Split expenses with friends. Track group spending. Settle debts easily.",
     images: [`${SITE_URL}/og/og-split.png`],

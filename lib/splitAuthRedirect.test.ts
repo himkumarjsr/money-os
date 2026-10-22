@@ -75,12 +75,12 @@ describe("split invite post-login path", () => {
     expect(localStorage.getItem(FINKOIN_SPLIT_TOKEN_KEY)).toBe("tok-xyz");
   });
 
-  it("defaults to /dashboard when nothing is pending", () => {
-    expect(peekPostLoginPath("")).toBe("/dashboard");
-    expect(resolvePostLoginPath("")).toBe("/dashboard");
+  it("defaults to / when nothing is pending", () => {
+    expect(peekPostLoginPath("")).toBe("/");
+    expect(resolvePostLoginPath("")).toBe("/");
   });
 
-  it("explicit next still wins over the /dashboard default", () => {
+  it("explicit next still wins over the / default", () => {
     expect(peekPostLoginPath("?next=%2Ftracker")).toBe("/tracker");
     expect(peekPostLoginPath("?redirect=%2Fbills")).toBe("/bills");
   });

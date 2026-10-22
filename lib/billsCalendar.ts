@@ -270,6 +270,8 @@ export type BillObligation = {
   due_date?: string | null;
   /** Last month it falls due (YYYY-MM-01), e.g. an RD's final instalment. Null = no end. */
   end_month?: string | null;
+  /** First month it applies (YYYY-MM-01), from when it was added. Null = always. */
+  start_month?: string | null;
   is_active?: boolean;
 };
 
@@ -346,11 +348,18 @@ function validMonth(m: number | null | undefined): number | null {
  */
 export function obligationDueDateInMonth(
   ob: Pick<BillObligation, "frequency" | "due_day" | "due_month" | "due_date"> &
-    Pick<Partial<BillObligation>, "end_month">,
+    Pick<Partial<BillObligation>, "end_month" | "start_month">,
   year: number,
   monthIndex: number,
 ): Date | null {
   if (isPastEndMonth(ob.end_month, year, monthIndex)) return null;
+  // Something added this month doesn't belong in earlier months. A one-time
+  // bill keeps the date it was given.
+  if (
+    ob.frequency !== "one_time" &&
+    isBeforeStartMonth(ob.start_month, year, monthIndex)
+  )
+    return null;
   const month = monthIndex + 1;
   const anchor = validMonth(ob.due_month);
   const day = (d: number | null | undefined) =>
@@ -381,6 +390,45 @@ export function obligationDueDateInMonth(
     default:
       return null;
   }
+}
+
+/** YYYY-MM-01 for the month a timestamp falls in (local time), or null. */
+export function monthOf(ts: string | null | undefined): string | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  return monthKey(d.getFullYear(), d.getMonth());
+}
+
+/** True when `start_month` (YYYY-MM-01) is set and the given month is before it. */
+export function isBeforeStartMonth(
+  startMonth: string | null | undefined,
+  year: number,
+  monthIndex: number,
+): boolean {
+  const start = startMonth ? parseYmd(startMonth) : null;
+  if (!start) return false;
+  return year * 12 + monthIndex < start.getFullYear() * 12 + start.getMonth();
+}
+
+/**
+ * Months the calendar can show: from the month the user joined up to
+ * `monthsAhead` past today. `joinedMonth` null means no lower limit.
+ */
+export function clampBillsMonth(
+  year: number,
+  monthIndex: number,
+  joinedMonth: string | null | undefined,
+  today: Date = new Date(),
+  monthsAhead = 24,
+): { year: number; monthIndex: number } {
+  let idx = year * 12 + monthIndex;
+  const joined = joinedMonth ? parseYmd(joinedMonth) : null;
+  const min = joined ? joined.getFullYear() * 12 + joined.getMonth() : null;
+  const max = today.getFullYear() * 12 + today.getMonth() + monthsAhead;
+  if (min != null && idx < min) idx = min;
+  if (idx > max) idx = max;
+  return { year: Math.floor(idx / 12), monthIndex: idx % 12 };
 }
 
 /** True when `end_month` (YYYY-MM-01) is set and the given month is after it. */

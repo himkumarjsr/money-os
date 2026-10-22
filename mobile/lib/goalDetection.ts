@@ -6,6 +6,7 @@
  */
 import type { CustomGoal, FinancialProfile } from "@/lib/analyse-form-schema";
 import { getUniversalBucketActuals } from "@/lib/universal-buckets";
+import { formatIndian } from "@/lib/formatters";
 
 export type GoalType =
   | "kid_education"
@@ -36,9 +37,28 @@ export type DetectedGoal = {
   removable: boolean;
   /** One line on why this goal was suggested. */
   reason: string;
+  /** How the target amount is worked out, in plain words. */
+  calculation?: string;
+  /** Home goal only: the price behind the upfront-cash target. */
+  home?: { price: number; priceIsEstimate: boolean; includeInteriors: boolean };
 };
 
 export type PromptedGoalOffer = "marriage" | "baby";
+
+/** Upfront cash on a home purchase, as shares of its price. */
+export const HOME_UPFRONT = {
+  downpayment: 0.2,
+  registration: 0.1,
+  interiors: 0.1,
+} as const;
+
+export function homeUpfrontShare(includeInteriors = true): number {
+  return (
+    HOME_UPFRONT.downpayment +
+    HOME_UPFRONT.registration +
+    (includeInteriors ? HOME_UPFRONT.interiors : 0)
+  );
+}
 
 export const GOAL_DEFAULTS = {
   kidEducation: 2_500_000,
@@ -48,11 +68,13 @@ export const GOAL_DEFAULTS = {
   vehicle: 800_000,
   vehicleYears: 3,
   homeYears: 5,
-  homeWithoutRent: 1_500_000,
-  /** Downpayment ≈ 20% of a home whose rent yields ~3% a year → 80× rent. */
-  homeRentMultiple: 80,
-  eldercareYears: 5,
+  /** Home price assumed when there is no rent to go by. */
+  homePriceWithoutRent: 7_500_000,
+  /** Rent yields ~3% of a home's price a year → price ≈ 400× monthly rent. */
+  homePriceRentMultiple: 400,
+  /** Medical cash parents should be able to reach, before insurance. */
   eldercareMedicalBuffer: 500_000,
+  eldercareMedicalYears: 2,
   marriage: 1_500_000,
   marriageYears: 2,
   baby: 300_000,
@@ -63,6 +85,7 @@ export const GOAL_DEFAULTS = {
 
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const positive = (v: unknown) => (n(v) > 0 ? n(v) : undefined);
+const rs = (v: number) => `₹${formatIndian(Math.round(v))}`;
 
 function kidCount(p: Partial<FinancialProfile>): number {
   if (p.lifeStage !== "kids") return 0;
@@ -157,6 +180,10 @@ export function detectGoals(
         editable: { amount: true, year: false },
         removable: true,
         reason: `Age ${age} - college around age ${GOAL_DEFAULTS.kidEducationAge}.`,
+        calculation:
+          own !== undefined
+            ? `Your own figure, in today's rupees.`
+            : `Finkoin's default of ${rs(GOAL_DEFAULTS.kidEducation)} for college in today's rupees - tap Edit to set your own.`,
       });
     }
 
@@ -178,33 +205,56 @@ export function detectGoals(
         editable: { amount: true, year: false },
         removable: true,
         reason: `Age ${age} - planned around age ${GOAL_DEFAULTS.kidMarriageAge}.`,
+        calculation:
+          own !== undefined
+            ? `Your own figure, in today's rupees.`
+            : `Finkoin's default of ${rs(GOAL_DEFAULTS.kidMarriage)} in today's rupees - tap Edit to set your own.`,
       });
     }
   }
 
   if (!p.ownsHome) {
     const rent = n(p.rentAmount);
-    const own = positive(p.homePurchaseTarget);
+    const ownPrice = positive(p.homePurchasePrice);
+    // Older profiles stored a raw downpayment amount instead of a price.
+    const legacyAmount = ownPrice ? undefined : positive(p.homePurchaseTarget);
+    const includeInteriors = p.homeIncludeInteriors !== false;
+    const price =
+      ownPrice ??
+      (rent > 0
+        ? rent * GOAL_DEFAULTS.homePriceRentMultiple
+        : GOAL_DEFAULTS.homePriceWithoutRent);
+    const split = `20% downpayment + 10% stamp duty and registration${includeInteriors ? " + 10% interiors" : ""}`;
     add({
       id: "home_purchase",
       type: "home_purchase",
-      label: "Home purchase (downpayment)",
+      label: "Home purchase (upfront cash)",
       source: "implied",
       targetAmount: Math.round(
-        own ??
-          (rent > 0
-            ? rent * GOAL_DEFAULTS.homeRentMultiple
-            : GOAL_DEFAULTS.homeWithoutRent),
+        legacyAmount ?? price * homeUpfrontShare(includeInteriors),
       ),
       targetYear:
         positive(p.homePurchaseYear) ?? year + GOAL_DEFAULTS.homeYears,
-      isDefaultTarget: own === undefined,
+      isDefaultTarget: ownPrice === undefined && legacyAmount === undefined,
       editable: { amount: true, year: true },
       removable: true,
       reason:
         rent > 0
-          ? "You rent today - a downpayment fund gets you to ownership."
-          : "You don't own a home yet.",
+          ? "You rent today - this is the cash you need upfront to buy."
+          : "You don't own a home yet - this is the cash you need upfront.",
+      calculation: legacyAmount
+        ? "Your own downpayment figure - tap Edit to set the home price instead."
+        : `${rs(price)} home × ${Math.round(homeUpfrontShare(includeInteriors) * 100)}% (${split}) = ${rs(price * homeUpfrontShare(includeInteriors))}.` +
+          (ownPrice
+            ? ""
+            : rent > 0
+              ? ` Home price estimated as 400 × your ${rs(rent)} rent (rent is ~3% of a home's price a year) - tap Edit to set your price.`
+              : " Home price is an estimate - tap Edit to set your price."),
+      home: {
+        price: Math.round(price),
+        priceIsEstimate: ownPrice === undefined,
+        includeInteriors,
+      },
     });
   }
 
@@ -222,6 +272,10 @@ export function detectGoals(
       editable: { amount: true, year: true },
       removable: true,
       reason: "No car on file - buy it with savings, not a loan.",
+      calculation:
+        own !== undefined
+          ? "Your own figure, in today's rupees."
+          : `Finkoin's default of ${rs(GOAL_DEFAULTS.vehicle)} - tap Edit to set your own.`,
     });
   }
 
@@ -245,24 +299,30 @@ export function detectGoals(
           ? `${count} loans on file - clear them, highest interest first.`
           : "You have a loan on file - clearing it frees up your EMI.") +
         payNow,
+      calculation: `Total outstanding on your loans, ${rs(outstanding)}. Year = when the longest loan ends.`,
     });
   }
 
-  if (n(p.parentsSupport) > 0) {
+  // Monthly support is already paid from income (Needs), so only the
+  // medical shortfall their insurance and set-aside cash don't cover is a goal.
+  const parentsMedicalGap =
+    GOAL_DEFAULTS.eldercareMedicalBuffer -
+    n(p.parentsHealthInsuranceSumInsured) -
+    n(p.parentsEmergencyCash);
+  if (n(p.parentsSupport) > 0 && parentsMedicalGap > 0) {
     add({
       id: "parents_eldercare",
       type: "parents_eldercare",
-      label: "Parents' eldercare fund",
+      label: "Parents' medical fund",
       source: "implied",
-      targetAmount: Math.round(
-        n(p.parentsSupport) * 12 * GOAL_DEFAULTS.eldercareYears +
-          GOAL_DEFAULTS.eldercareMedicalBuffer,
-      ),
-      targetYear: year + GOAL_DEFAULTS.eldercareYears,
+      targetAmount: Math.round(parentsMedicalGap),
+      targetYear: year + GOAL_DEFAULTS.eldercareMedicalYears,
       isDefaultTarget: true,
       editable: { amount: false, year: false },
       removable: true,
-      reason: `You support your parents - ${GOAL_DEFAULTS.eldercareYears} years of support plus a medical buffer.`,
+      reason:
+        "Your parents' health cover and set-aside cash fall short of a ₹5L medical buffer - this fills the gap.",
+      calculation: `${rs(GOAL_DEFAULTS.eldercareMedicalBuffer)} medical buffer − ${rs(n(p.parentsHealthInsuranceSumInsured))} parents' health cover − ${rs(n(p.parentsEmergencyCash))} cash set aside = ${rs(parentsMedicalGap)}. Monthly support is already in your expenses, so it is not saved again here.`,
     });
   }
 
@@ -280,6 +340,10 @@ export function detectGoals(
       editable: { amount: true, year: true },
       removable: true,
       reason: "You told us you're planning to get married.",
+      calculation:
+        own !== undefined
+          ? "Your own figure, in today's rupees."
+          : `Finkoin's default of ${rs(GOAL_DEFAULTS.marriage)} - tap Edit to set your own.`,
     });
   }
 
@@ -296,6 +360,10 @@ export function detectGoals(
       editable: { amount: true, year: true },
       removable: true,
       reason: "You told us you're planning a baby.",
+      calculation:
+        own !== undefined
+          ? "Your own figure, in today's rupees."
+          : `Finkoin's default of ${rs(GOAL_DEFAULTS.baby)} - tap Edit to set your own.`,
     });
   }
 
@@ -314,6 +382,7 @@ export function detectGoals(
       editable: { amount: true, year: true },
       removable: true,
       reason: "You added this goal.",
+      calculation: "Your own figure, in today's rupees.",
     });
   }
 
@@ -335,12 +404,22 @@ export function detectGoals(
     editable: { amount: true, year: true },
     removable: false,
     reason: `Runs for everyone - ${GOAL_DEFAULTS.retirementExpenseMultiple}× your yearly needs by age ${retireAge}.`,
+    calculation:
+      ownCorpus !== undefined
+        ? "Your own corpus figure, in today's rupees."
+        : `${rs(annualNeeds / 12)} monthly needs × 12 × ${GOAL_DEFAULTS.retirementExpenseMultiple} years = ${rs(annualNeeds * GOAL_DEFAULTS.retirementExpenseMultiple)} (lets you withdraw ~4% a year).`,
   });
 
   return goals.sort((a, b) => a.yearsToGoal - b.yearsToGoal);
 }
 
-export type GoalEdit = { targetAmount?: number; targetYear?: number };
+export type GoalEdit = {
+  targetAmount?: number;
+  targetYear?: number;
+  /** Home goal: price of the home (sets the upfront-cash target). */
+  homePrice?: number;
+  homeIncludeInteriors?: boolean;
+};
 
 /** Write a goal-card edit back into the profile fields it came from. */
 export function applyGoalEdit(
@@ -374,7 +453,15 @@ export function applyGoalEdit(
       setKid("kidsMarriageFundTargets");
       break;
     case "home_purchase":
-      if (amount != null) next.homePurchaseTarget = amount;
+      if (edit.homePrice != null && edit.homePrice > 0) {
+        next.homePurchasePrice = Math.round(edit.homePrice);
+        next.homePurchaseTarget = undefined;
+      } else if (amount != null) {
+        next.homePurchaseTarget = amount;
+      }
+      if (edit.homeIncludeInteriors != null) {
+        next.homeIncludeInteriors = edit.homeIncludeInteriors;
+      }
       if (yr != null) next.homePurchaseYear = yr;
       break;
     case "vehicle_purchase":

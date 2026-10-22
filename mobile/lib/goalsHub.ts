@@ -112,9 +112,13 @@ export function buildGoalsHub(
       };
     }
 
+    // Linked SIPs are compared with the full SIP the goal needs, including
+    // the running SIPs the plan already counts toward it.
     const monthlyRequired = Math.max(
       0,
-      Math.round(planGoal?.monthlyRequired ?? 0),
+      Math.round(
+        (planGoal?.monthlyRequired ?? 0) + (planGoal?.existingMonthly ?? 0),
+      ),
     );
     const coveragePct =
       monthlyRequired > 0

@@ -1,5 +1,5 @@
 /**
- * FK Split - groups list (PWA `/split`).
+ * Settle Up - groups list (PWA `/split`).
  * Logged-out: marketing landing (PWA SplitMarketingLanding).
  * Logged-in: groups list + create / invite / join sheets.
  */
@@ -62,7 +62,7 @@ function InviteLinkShare({
     [],
   );
 
-  const shareText = `Join "${groupName}" on Finkoin Split and we'll track shared expenses together: ${inviteUrl}`;
+  const shareText = `Join "${groupName}" on Finkoin Settle Up and we'll track shared expenses together: ${inviteUrl}`;
   const waHref = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   const copyLink = async () => {
@@ -385,7 +385,7 @@ function SplitHomeInner() {
         <View style={styles.hero}>
           <View style={styles.heroTop}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroEyebrow}>FINKOIN SPLIT</Text>
+              <Text style={styles.heroEyebrow}>FINKOIN SETTLE UP</Text>
               <Text style={styles.heroTitle}>Split expenses with friends</Text>
               <Text style={styles.heroSub}>₹ first. No ads. Free forever.</Text>
             </View>

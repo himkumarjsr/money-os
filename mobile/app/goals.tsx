@@ -4,7 +4,7 @@
  * needs and the SIPs linked to it in user_planned_investments.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Switch, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import MoneyInput from "@/components/ui/MoneyInput";
@@ -19,10 +19,12 @@ import {
   applyGoalEdit,
   CUSTOM_GOAL_PRESETS,
   dismissGoal,
+  homeUpfrontShare,
   MAX_CUSTOM_GOALS,
   promptedGoalOffers,
   restoreDismissedGoals,
   type DetectedGoal,
+  type GoalEdit,
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
 import {
@@ -494,6 +496,14 @@ function GoalCard({
             {goal.yearsToGoal} {goal.yearsToGoal === 1 ? "year" : "years"} left
             {goal.isDefaultTarget ? " · suggested amount" : ""}
           </Text>
+          {goal.calculation ? (
+            <Text style={styles.calc}>
+              <Text style={{ fontWeight: "700" }}>
+                How it&apos;s worked out:{" "}
+              </Text>
+              {goal.calculation}
+            </Text>
+          ) : null}
         </View>
       </View>
 
@@ -771,18 +781,21 @@ function EditGoalSheet({
   onClose: () => void;
   saving: boolean;
   error: string;
-  onSave: (
-    goalId: string,
-    edit: { targetAmount?: number; targetYear?: number },
-  ) => Promise<void>;
+  onSave: (goalId: string, edit: GoalEdit) => Promise<void>;
 }) {
   const [amount, setAmount] = useState<number | null>(null);
   const [yearRaw, setYearRaw] = useState("");
+  const [price, setPrice] = useState<number | null>(null);
+  const [interiors, setInteriors] = useState(true);
   useEffect(() => {
     if (!goal) return;
     setAmount(goal.targetAmount);
     setYearRaw(String(goal.targetYear));
+    setPrice(goal.home?.price ?? null);
+    setInteriors(goal.home?.includeInteriors ?? true);
   }, [goal]);
+  const p = price ?? 0;
+  const upfront = Math.round(p * homeUpfrontShare(interiors));
   const yearValid = !goal?.editable.year || yearOk(yearRaw);
 
   return (
@@ -790,7 +803,54 @@ function EditGoalSheet({
       {goal ? (
         <View style={{ gap: 16 }}>
           <Text style={styles.sheetTitle}>Edit: {goal.label}</Text>
-          {goal.editable.amount ? (
+          {goal.home ? (
+            <View style={{ gap: 10 }}>
+              <MoneyInput
+                label="Price of the home you want"
+                value={price}
+                onChangeValue={setPrice}
+              />
+              {goal.home.priceIsEstimate ? (
+                <Text style={styles.calc}>
+                  Our estimate from your rent - change it to your real budget.
+                </Text>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  minHeight: 44,
+                }}
+              >
+                <Text style={styles.metaStrong}>
+                  Include interiors (10% of price)
+                </Text>
+                <Switch
+                  value={interiors}
+                  onValueChange={setInteriors}
+                  trackColor={{ true: Colors.primary }}
+                />
+              </View>
+              <View style={styles.calcBox}>
+                <Text style={styles.calc}>
+                  Downpayment (20%): ₹{formatIndian(Math.round(p * 0.2))}
+                </Text>
+                <Text style={styles.calc}>
+                  Stamp duty and registration (10%): ₹
+                  {formatIndian(Math.round(p * 0.1))}
+                </Text>
+                {interiors ? (
+                  <Text style={styles.calc}>
+                    Interiors (10%): ₹{formatIndian(Math.round(p * 0.1))}
+                  </Text>
+                ) : null}
+                <Text style={styles.metaStrong}>
+                  Upfront cash goal: ₹{formatIndian(upfront)}
+                </Text>
+              </View>
+            </View>
+          ) : goal.editable.amount ? (
             <MoneyInput
               label="Target amount (today's rupees)"
               value={amount}
@@ -809,8 +869,17 @@ function EditGoalSheet({
             disabled={saving || !yearValid}
             onPress={() =>
               void onSave(goal.id, {
+                ...(goal.home
+                  ? {
+                      homePrice: p > 0 ? p : undefined,
+                      homeIncludeInteriors: interiors,
+                    }
+                  : {}),
                 targetAmount:
-                  goal.editable.amount && amount != null && amount > 0
+                  !goal.home &&
+                  goal.editable.amount &&
+                  amount != null &&
+                  amount > 0
                     ? amount
                     : undefined,
                 targetYear: goal.editable.year ? Number(yearRaw) : undefined,
@@ -1067,6 +1136,18 @@ const styles = themedStyles(() => ({
     marginTop: 2,
     fontSize: 13,
     fontWeight: "500",
+    color: Colors.textSecondary,
+  },
+  calcBox: {
+    gap: 4,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: tintBg(Colors.primary),
+  },
+  calc: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
     color: Colors.textSecondary,
   },
   metaStrong: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },

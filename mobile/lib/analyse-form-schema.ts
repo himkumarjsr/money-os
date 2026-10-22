@@ -166,6 +166,8 @@ export interface FinancialProfile {
   monthlySalary: number;
   spouseIncome?: number;
   otherIncome?: number;
+  /** Expected yearly salary hike (%). Goal SIPs step up by it each year. */
+  annualSalaryIncreasePct?: number;
 
   rentAmount?: number;
   /** Society / flat maintenance when renting (monthly). */
@@ -268,10 +270,20 @@ export interface FinancialProfile {
   utilityTotal?: number;
   domesticHelpTotal?: number;
   lifestyleTotal?: number;
+  /** Monthly equivalent of travel / holidays (derived from input + frequency). */
+  travelMonthly?: number;
+  /** Travel spend as entered (monthly or yearly per `travelFrequency`). */
+  travelInput?: number;
+  travelFrequency?: PremiumFrequency;
   kidsSchoolFees?: number;
   kidsActivities?: number;
   parentsSupport?: number;
   parentsHealthInsuranceSumInsured?: number;
+  /** Monthly equivalent of the parents' health insurance premium you pay. */
+  parentsHealthInsurancePremiumMonthly?: number;
+  /** Premium as entered (monthly or yearly per frequency). */
+  parentsHealthInsurancePremiumInput?: number;
+  parentsHealthInsurancePremiumFrequency?: PremiumFrequency;
   parentsEmergencyCash?: number;
   parentsCity?: "metro" | "tier2" | "tier3";
 
@@ -396,7 +408,12 @@ export interface FinancialProfile {
   emergencyFundTarget?: number;
   medicalEmergencyFund?: number;
   bereavementFund?: number;
+  /** @deprecated Raw downpayment amount; prefer `homePurchasePrice`. */
   homePurchaseTarget?: number;
+  /** Price of the home the user wants; the goal is the upfront cash on it. */
+  homePurchasePrice?: number;
+  /** Count ~10% for interiors in the upfront cash (default true). */
+  homeIncludeInteriors?: boolean;
   homePurchaseYear?: number;
   carPurchaseTarget?: number;
   carPurchaseYear?: number;
@@ -625,6 +642,14 @@ const formShape = {
   monthlySalary: requiredPositiveMoney("Enter your monthly take-home salary"),
   spouseIncome: optionalMoney,
   otherIncome: optionalMoney,
+  annualSalaryIncreasePct: z.preprocess(
+    parseMoneyInput,
+    z
+      .number()
+      .min(0, "Cannot be negative")
+      .max(50, "Enter 50% or less")
+      .optional(),
+  ),
 
   rentAmount: optionalMoney,
   rentMaintenanceMonthly: optionalMoney,
@@ -691,10 +716,15 @@ const formShape = {
   utilityTotal: optionalMoney,
   domesticHelpTotal: optionalMoney,
   lifestyleTotal: optionalMoney,
+  travelInput: optionalMoney,
+  travelFrequency: premiumFrequencySchema.default("yearly"),
   kidsSchoolFees: optionalMoney,
   kidsActivities: optionalMoney,
   parentsSupport: optionalMoney,
   parentsHealthInsuranceSumInsured: optionalMoney,
+  parentsHealthInsurancePremiumInput: optionalMoney,
+  parentsHealthInsurancePremiumFrequency:
+    premiumFrequencySchema.default("yearly"),
   parentsEmergencyCash: optionalMoney,
   parentsCity: z.enum(CITY_TIER_VALUES).optional(),
 
@@ -777,6 +807,8 @@ const formShape = {
   medicalEmergencyFund: optionalMoney,
   bereavementFund: optionalMoney,
   homePurchaseTarget: optionalMoney,
+  homePurchasePrice: optionalMoney,
+  homeIncludeInteriors: z.boolean().optional(),
   homePurchaseYear: optionalWholeNumber,
   carPurchaseTarget: optionalMoney,
   carPurchaseYear: optionalWholeNumber,
@@ -1007,6 +1039,7 @@ export const step2Schema = baseFormSchema.pick({
   monthlySalary: true,
   spouseIncome: true,
   otherIncome: true,
+  annualSalaryIncreasePct: true,
 });
 
 export const step3Schema = baseFormSchema.pick({
@@ -1063,10 +1096,14 @@ export const step4Schema = baseFormSchema.pick({
   utilityTotal: true,
   domesticHelpTotal: true,
   lifestyleTotal: true,
+  travelInput: true,
+  travelFrequency: true,
   kidsSchoolFees: true,
   kidsActivities: true,
   parentsSupport: true,
   parentsHealthInsuranceSumInsured: true,
+  parentsHealthInsurancePremiumInput: true,
+  parentsHealthInsurancePremiumFrequency: true,
   parentsEmergencyCash: true,
   parentsCity: true,
 });
@@ -1222,6 +1259,8 @@ export const step7Schema = baseFormSchema
     emergencyFundTarget: true,
     medicalEmergencyFund: true,
     homePurchaseTarget: true,
+    homePurchasePrice: true,
+    homeIncludeInteriors: true,
     homePurchaseYear: true,
     carPurchaseTarget: true,
     carPurchaseYear: true,
@@ -1861,6 +1900,7 @@ export function financialProfileToFormValues(
     monthlySalary: p.monthlySalary,
     spouseIncome: p.spouseIncome ?? 0,
     otherIncome: p.otherIncome ?? 0,
+    annualSalaryIncreasePct: p.annualSalaryIncreasePct,
     rentAmount: p.rentAmount ?? 0,
     rentMaintenanceMonthly: p.rentMaintenanceMonthly ?? 0,
     homeLoanEMI: p.homeLoanEMI ?? 0,
@@ -1913,10 +1953,16 @@ export function financialProfileToFormValues(
     utilityTotal: p.utilityTotal ?? 0,
     domesticHelpTotal: p.domesticHelpTotal ?? 0,
     lifestyleTotal: p.lifestyleTotal ?? 0,
+    travelInput: p.travelInput ?? 0,
+    travelFrequency: p.travelFrequency ?? "yearly",
     kidsSchoolFees: p.kidsSchoolFees ?? 0,
     kidsActivities: p.kidsActivities ?? 0,
     parentsSupport: p.parentsSupport ?? 0,
     parentsHealthInsuranceSumInsured: p.parentsHealthInsuranceSumInsured ?? 0,
+    parentsHealthInsurancePremiumInput:
+      p.parentsHealthInsurancePremiumInput ?? 0,
+    parentsHealthInsurancePremiumFrequency:
+      p.parentsHealthInsurancePremiumFrequency ?? "yearly",
     parentsEmergencyCash: p.parentsEmergencyCash ?? 0,
     parentsCity: p.parentsCity,
     hasHealthInsurance: p.hasHealthInsurance,
@@ -2052,6 +2098,8 @@ export function financialProfileToFormValues(
     medicalEmergencyFund: p.medicalEmergencyFund ?? 0,
     bereavementFund: p.bereavementFund,
     homePurchaseTarget: p.homePurchaseTarget,
+    homePurchasePrice: p.homePurchasePrice,
+    homeIncludeInteriors: p.homeIncludeInteriors,
     homePurchaseYear: p.homePurchaseYear,
     carPurchaseTarget: p.carPurchaseTarget,
     carPurchaseYear: p.carPurchaseYear,
@@ -2330,6 +2378,11 @@ export function normalizeAnalyseFormValues(
     (form.lifestyleTotal ?? 0) > 0
       ? Math.round(lifestyleTotal * 0.2)
       : form.personalCare;
+  // Parents' premium only counts while the parents section is on and insured.
+  const hasParentsPremium =
+    (form.parentsSupport ?? 0) > 0 &&
+    (form.parentsHealthInsuranceSumInsured ?? 0) > 0 &&
+    (form.parentsHealthInsurancePremiumInput ?? 0) > 0;
 
   const normalized: FinancialProfile = {
     lifeStage: form.lifeStage ?? "bachelor",
@@ -2351,6 +2404,7 @@ export function normalizeAnalyseFormValues(
     monthlySalary: form.monthlySalary ?? 0,
     spouseIncome: form.lifeStage === "bachelor" ? undefined : form.spouseIncome,
     otherIncome: form.otherIncome,
+    annualSalaryIncreasePct: form.annualSalaryIncreasePct || undefined,
 
     rentAmount: form.rentAmount ?? 0,
     rentMaintenanceMonthly: form.rentMaintenanceMonthly,
@@ -2448,6 +2502,9 @@ export function normalizeAnalyseFormValues(
     utilityTotal: form.utilityTotal ?? 0,
     domesticHelpTotal: form.domesticHelpTotal ?? 0,
     lifestyleTotal: form.lifestyleTotal ?? 0,
+    travelMonthly: toMonthlyEquivalent(form.travelInput, form.travelFrequency),
+    travelInput: form.travelInput,
+    travelFrequency: form.travelFrequency ?? "yearly",
     kidsSchoolFees: form.lifeStage === "kids" ? form.kidsSchoolFees : undefined,
     kidsActivities: form.lifeStage === "kids" ? form.kidsActivities : undefined,
     parentsSupport: form.parentsSupport,
@@ -2455,6 +2512,18 @@ export function normalizeAnalyseFormValues(
       (form.parentsSupport ?? 0) > 0
         ? form.parentsHealthInsuranceSumInsured
         : undefined,
+    parentsHealthInsurancePremiumMonthly: hasParentsPremium
+      ? toMonthlyEquivalent(
+          form.parentsHealthInsurancePremiumInput,
+          form.parentsHealthInsurancePremiumFrequency,
+        )
+      : undefined,
+    parentsHealthInsurancePremiumInput: hasParentsPremium
+      ? form.parentsHealthInsurancePremiumInput
+      : undefined,
+    parentsHealthInsurancePremiumFrequency: hasParentsPremium
+      ? (form.parentsHealthInsurancePremiumFrequency ?? "yearly")
+      : undefined,
     parentsEmergencyCash:
       (form.parentsSupport ?? 0) > 0 ? form.parentsEmergencyCash : undefined,
     parentsCity: (form.parentsSupport ?? 0) > 0 ? form.parentsCity : undefined,
@@ -2681,8 +2750,9 @@ export function normalizeAnalyseFormValues(
     bereavementFund: form.bereavementFund,
     homePurchaseTarget:
       (form.rentAmount ?? 0) > 0 ? form.homePurchaseTarget : undefined,
-    homePurchaseYear:
-      (form.rentAmount ?? 0) > 0 ? form.homePurchaseYear : undefined,
+    homePurchasePrice: form.ownsHome ? undefined : form.homePurchasePrice,
+    homeIncludeInteriors: form.ownsHome ? undefined : form.homeIncludeInteriors,
+    homePurchaseYear: form.ownsHome ? undefined : form.homePurchaseYear,
     carPurchaseTarget: form.ownsCar ? undefined : form.carPurchaseTarget,
     carPurchaseYear: form.ownsCar ? undefined : form.carPurchaseYear,
     kidsEducationFundTargets:
@@ -2842,10 +2912,14 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   utilityTotal: 0,
   domesticHelpTotal: 0,
   lifestyleTotal: 0,
+  travelInput: 0,
+  travelFrequency: "yearly",
   kidsSchoolFees: 0,
   kidsActivities: 0,
   parentsSupport: 0,
   parentsHealthInsuranceSumInsured: 0,
+  parentsHealthInsurancePremiumInput: 0,
+  parentsHealthInsurancePremiumFrequency: "yearly",
   parentsEmergencyCash: 0,
   retirementTargetCorpus: 0,
   kidsEducationFundTarget: 0,
@@ -2854,6 +2928,7 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   medicalEmergencyFund: 0,
   bereavementFund: 0,
   homePurchaseTarget: 0,
+  homePurchasePrice: 0,
   homePurchaseYear: 0,
   carPurchaseTarget: 0,
   carPurchaseYear: 0,

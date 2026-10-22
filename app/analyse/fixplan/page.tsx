@@ -57,6 +57,8 @@ import {
 } from "@/store/obligationStore";
 import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
+import AdvisorReviewSection from "@/components/analyse/AdvisorReviewSection";
+import { buildAdvisorReview } from "@/lib/advisorReview";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -602,16 +604,76 @@ export default function FixPlanPage() {
                   left after this step
                 </p>
               </div>
-              <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
-                Timeline{" "}
-                {monthsForPriority(
-                  String(p.id || ""),
-                  Number(p.gap || 0),
-                  Number(p.monthlyContribution || 0),
-                )}{" "}
-                months
-              </div>
+              {p.reach ? (
+                <div
+                  className={`rounded-lg p-2 text-sm ${p.reach.onTrack ? "bg-[#E8F6F1]" : "bg-[#FCEBEB]"}`}
+                >
+                  By {p.reach.targetYear}: ₹
+                  {Math.round(p.reach.projected).toLocaleString("en-IN")} of ₹
+                  {Math.round(p.reach.targetAmount).toLocaleString("en-IN")}
+                  <p
+                    className={`mt-0.5 text-xs font-semibold ${p.reach.onTrack ? "text-[#1D9E75]" : "text-[#A32D2D]"}`}
+                  >
+                    {p.reach.onTrack
+                      ? "On track"
+                      : `₹${Math.round(p.reach.shortfall).toLocaleString("en-IN")} short (${p.reach.reachPct}%)`}
+                  </p>
+                  {p.reach.fromExisting > 0 ? (
+                    <p className="mt-0.5 text-xs text-[#5F5E5A]">
+                      ₹
+                      {Math.round(p.reach.fromExisting).toLocaleString("en-IN")}{" "}
+                      from what you have today + ₹
+                      {Math.round(p.reach.fromNewSaving).toLocaleString(
+                        "en-IN",
+                      )}{" "}
+                      from monthly saving
+                    </p>
+                  ) : null}
+                  {p.reach.counted ? (
+                    <p className="mt-0.5 text-xs text-[#5F5E5A]">
+                      {p.reach.counted}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="rounded-lg bg-[#F7F7F4] p-2 text-sm">
+                  Timeline{" "}
+                  {monthsForPriority(
+                    String(p.id || ""),
+                    Number(p.gap || 0),
+                    Number(p.monthlyContribution || 0),
+                  )}{" "}
+                  months
+                </div>
+              )}
             </div>
+            {p.reach && !p.reach.onTrack ? (
+              <div className="mt-3 rounded-xl border border-[#F3C9C9] bg-[#FFF8F8] p-3 text-sm">
+                <p className="font-semibold text-[#A32D2D]">
+                  You can&apos;t reach this by {p.reach.targetYear} with your
+                  current surplus.
+                </p>
+                <p className="mt-1 text-[#5F5E5A]">
+                  At {p.reach.nominalReturnPct}% a year (about{" "}
+                  {p.reach.realReturnPct}% after inflation), ₹
+                  {Math.round(p.reach.monthly).toLocaleString("en-IN")}/month
+                  {p.reach.startMonth > 1
+                    ? ` from month ${p.reach.startMonth}`
+                    : ""}{" "}
+                  grows to ₹
+                  {Math.round(p.reach.projected).toLocaleString("en-IN")} in
+                  today&apos;s money by {p.reach.targetYear}.
+                </p>
+                <p className="mt-2 font-semibold text-[#2C2C2A]">
+                  What you can do
+                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-[#2C2C2A]">
+                  {p.reach.suggestions.map((s: string) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <p className="mt-2 text-sm text-[#534AB7]">
               Where to invest: {p.instrument || "As recommended in your plan"}
             </p>
@@ -1219,6 +1281,12 @@ export default function FixPlanPage() {
               );
             })()
           : null}
+
+        {aiPlan.priorityPlan && profile ? (
+          <AdvisorReviewSection
+            review={buildAdvisorReview(profile, aiPlan.priorityPlan)}
+          />
+        ) : null}
 
         {aiPlan.priorityPlan?.fdSuggestion ? (
           <section className="rounded-2xl border border-[#E8E6F0] bg-white p-4 shadow-sm">

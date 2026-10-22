@@ -1,6 +1,7 @@
 import { calculateOutstanding } from "@/lib/amortisation";
 import {
   emergencyFundMonthsNeeded,
+  existingEquityValue,
   medicalEmergencyTarget,
 } from "@/lib/financialEngine";
 import {
@@ -8,8 +9,17 @@ import {
   type GoalFundingItem,
   type GoalFundingPlan,
 } from "@/lib/goalFunding";
+import {
+  buildUrgentGoalItems,
+  goalReach,
+  type GoalReach,
+} from "@/lib/goalReach";
 import type { PortfolioAllocation } from "@/lib/portfolioAllocation";
-import { licEndowmentPremiumMonthly } from "@/lib/universal-buckets";
+import {
+  licEndowmentPremiumMonthly,
+  parentsPremiumMonthly,
+  travelMonthly,
+} from "@/lib/universal-buckets";
 
 export interface PriorityItem {
   rank: number;
@@ -39,6 +49,8 @@ export interface PriorityItem {
   needsAnswer?: boolean;
   /** What the step would cost per month if the user says yes. */
   quoteMonthly?: number;
+  /** Goals only: what the SIP reaches by the goal's own year. */
+  reach?: GoalReach;
 }
 
 export interface DebtItem {
@@ -74,6 +86,8 @@ export interface GoalItem {
   monthlyAllocated?: number;
   sharePct?: number;
   allocation?: PortfolioAllocation;
+  /** Running SIPs / RD already counted toward this goal (₹/month). */
+  existingMonthly?: number;
 }
 
 export interface PriorityPlan {
@@ -146,6 +160,7 @@ const GOAL_ICONS: Record<string, string> = {
 };
 
 const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+const rupeesFmt = rupees;
 
 function goalFundingAction(item: GoalFundingItem, startMonth: number): string {
   const what = `${rupees(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()} (${item.sharePct}% of your goal budget)`;
@@ -314,7 +329,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     (profile.creditCardBillMonthly || 0) +
     (profile.creditCardEmiMonthly || 0) +
     additionalLoanObligations;
-  const wantsActual = lifestyleActual;
+  const wantsActual = lifestyleActual + travelMonthly(profile);
   const investmentActual =
     (profile.monthlySIP || 0) +
     (profile.monthlyRD || 0) +
@@ -337,7 +352,8 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       const amount = p?.premiumAmount || p?.premiumInput || 0;
       const monthly = p?.frequency === "yearly" ? amount / 12 : amount;
       return sum + monthly;
-    }, 0);
+    }, 0) +
+    parentsPremiumMonthly(profile);
   const monthlySurplus = Math.max(
     0,
     monthlyIncome -
@@ -379,9 +395,34 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   const emergencyMonthsCovered =
     needsActual > 0 ? emergencyCurrent / needsActual : 0;
   const emergencyGap = Math.max(0, emergencyTarget - emergencyCurrent);
-  const hardPriorityMode = emergencyGap > 0;
+  // Like an adviser would: fill the gap today from money already invested
+  // before asking months of surplus for it. FDs count at 70% while locked;
+  // moved to a sweep-in FD / liquid fund they count in full. Then funds /
+  // stocks, then gold. Land, PF / PPF and NSC can't be drawn on.
+  const fdHeld = profile.fdValue || 0;
+  let equityPool = existingEquityValue(profile);
+  let goldPool = profile.goldValue || 0;
+  let emergencyGapLeft = emergencyGap;
+  const emergencyFdToLiquid =
+    emergencyGapLeft > 0
+      ? Math.round(Math.min(fdHeld, emergencyGapLeft / 0.3))
+      : 0;
+  emergencyGapLeft = Math.max(0, emergencyGapLeft - emergencyFdToLiquid * 0.3);
+  const emergencyFromEquity = Math.round(
+    Math.min(emergencyGapLeft, equityPool),
+  );
+  equityPool -= emergencyFromEquity;
+  emergencyGapLeft = Math.max(0, emergencyGapLeft - emergencyFromEquity);
+  const emergencyFromGold = Math.round(Math.min(emergencyGapLeft, goldPool));
+  goldPool -= emergencyFromGold;
+  emergencyGapLeft = Math.max(0, emergencyGapLeft - emergencyFromGold);
+  const emergencyFromSavings =
+    emergencyFdToLiquid + emergencyFromEquity + emergencyFromGold;
+  const hardPriorityMode = emergencyGapLeft > 0;
   const emergencySuggested =
-    emergencyGap > 0 ? Math.round(Math.min(monthlySurplus, emergencyGap)) : 0;
+    emergencyGapLeft > 0
+      ? Math.round(Math.min(monthlySurplus, emergencyGapLeft))
+      : 0;
   const emergencyMonthly = Math.max(
     0,
     Math.min(emergencySuggested, runningSurplus),
@@ -389,9 +430,20 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   const emergencySurplusBefore = runningSurplus;
   runningSurplus = Math.max(0, runningSurplus - emergencyMonthly);
   const emergencyMonthsToComplete =
-    emergencyGap > 0 && emergencyMonthly > 0
-      ? Math.ceil(emergencyGap / emergencyMonthly)
+    emergencyGapLeft > 0 && emergencyMonthly > 0
+      ? Math.ceil(emergencyGapLeft / emergencyMonthly)
       : 0;
+  const emergencyMoves = [
+    emergencyFdToLiquid > 0
+      ? `move ${rupeesFmt(emergencyFdToLiquid)} of your FDs into a sweep-in FD or liquid fund`
+      : "",
+    emergencyFromEquity > 0
+      ? `redeem ${rupeesFmt(emergencyFromEquity)} from your mutual funds / stocks into a liquid fund (sell units held over a year first to keep tax low)`
+      : "",
+    emergencyFromGold > 0
+      ? `sell ${rupeesFmt(emergencyFromGold)} of gold into a liquid fund`
+      : "",
+  ].filter(Boolean);
 
   priorities.push({
     rank: rank++,
@@ -420,15 +472,41 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     monthsToComplete: emergencyMonthsToComplete,
     instrument: "Liquid Mutual Fund + Savings account",
     actionThisWeek:
-      emergencyGap > 0
-        ? `Transfer ₹${Math.round(Math.min(emergencyCurrent * 0.3, 50000)).toLocaleString("en-IN")} to liquid MF today. Start ₹${Math.round(emergencyMonthly).toLocaleString("en-IN")}/month SIP in liquid fund.`
-        : "Emergency fund complete. Well done.",
+      emergencyMoves.length > 0
+        ? `Use what you already have: ${emergencyMoves.join(", and ")}. Keep it only for emergencies.${
+            emergencyMonthly > 0
+              ? ` Then save ${rupeesFmt(emergencyMonthly)}/month for the rest.`
+              : ""
+          }`
+        : emergencyGap > 0
+          ? `Start ${rupeesFmt(emergencyMonthly)}/month into a liquid fund and keep it only for emergencies.`
+          : "Emergency fund complete. Well done.",
     whyThisMatters: `If your income stops tomorrow you need ${emergencyMonthsNeeded} months to recover.`,
     icon: "🛡️",
     canBuyFromFinkoin: false,
     startMonth: 1,
+    ...(emergencyFromSavings > 0 ? { fromSavings: emergencyFromSavings } : {}),
   });
 
+  // Fixed-date goals that are close (a wedding next year) can't wait for the
+  // rest of the plan: they come straight after the emergency fund.
+  const urgentStartMonth =
+    hardPriorityMode && emergencyMonthsToComplete > 0
+      ? emergencyMonthsToComplete + 1
+      : 1;
+  // FDs the emergency fund still leans on stay out of goal earmarking.
+  const fdNeededForEmergency = Math.min(
+    profile.fdValue || 0,
+    Math.max(
+      0,
+      emergencyTarget -
+        ((profile.savingsAccountBalance || 0) +
+          (profile.liquidMFValue || 0) * 0.95 +
+          (profile.otherLiquidSavings || 0) * 0.5),
+    ) / 0.7,
+  );
+  // Medical fund needs are worked out here so existing savings go to the
+  // safety funds before goals; its step is listed after urgent goals.
   const medicalTarget = medicalEmergencyTarget(profile);
   const enteredMedical = Number(profile.medicalEmergencyFund ?? 0) || 0;
   let medicalCurrent = enteredMedical;
@@ -452,7 +530,64 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     ) - (enteredMedical > 0 ? 0 : medicalCurrent),
   );
   const medicalFromCash = Math.round(Math.min(spareCash, medicalGap));
-  const medicalGapLeft = Math.max(0, medicalGap - medicalFromCash);
+  let medicalGapLeft = Math.max(0, medicalGap - medicalFromCash);
+  // Then FDs the emergency fund doesn't need, funds / stocks, and gold.
+  const medicalFromFd = Math.round(
+    Math.min(medicalGapLeft, Math.max(0, fdHeld - fdNeededForEmergency)),
+  );
+  medicalGapLeft = Math.max(0, medicalGapLeft - medicalFromFd);
+  const medicalFromEquity = Math.round(Math.min(medicalGapLeft, equityPool));
+  equityPool -= medicalFromEquity;
+  medicalGapLeft = Math.max(0, medicalGapLeft - medicalFromEquity);
+  const medicalFromGold = Math.round(Math.min(medicalGapLeft, goldPool));
+  goldPool -= medicalFromGold;
+  medicalGapLeft = Math.max(0, medicalGapLeft - medicalFromGold);
+  const medicalFromSavings =
+    medicalFromCash + medicalFromFd + medicalFromEquity + medicalFromGold;
+  const safetyReserve = {
+    fdNeededForEmergency: fdNeededForEmergency + medicalFromFd,
+    equityUsedForSafety: emergencyFromEquity + medicalFromEquity,
+    goldUsedForSafety: emergencyFromGold + medicalFromGold,
+  };
+  const urgentGoals = buildUrgentGoalItems(
+    profile,
+    hardPriorityMode ? monthlySurplus : runningSurplus,
+    urgentStartMonth,
+    new Date(),
+    safetyReserve,
+  );
+  const urgentMonthly = urgentGoals.reduce((s, g) => s + g.monthlyAllocated, 0);
+  for (const item of urgentGoals) {
+    const before = runningSurplus;
+    runningSurplus = Math.max(0, runningSurplus - item.monthlyAllocated);
+    priorities.push({
+      rank: rank++,
+      id: `goal_${item.goalId.replace(":", "_")}`,
+      title: item.label,
+      category: "goal",
+      urgency: "high",
+      status: item.fundedPct >= 100 ? "partial" : "missing",
+      currentAmount: 0,
+      targetAmount: item.targetAmount,
+      gap: item.targetAmount,
+      monthlyRequired: item.monthlyRequired,
+      monthlyContribution: item.monthlyAllocated,
+      surplusBefore: before,
+      surplusAfterThis: runningSurplus,
+      monthsToComplete: item.yearsToGoal * 12,
+      instrument: item.instrument,
+      actionThisWeek:
+        urgentStartMonth > 1
+          ? `From month ${urgentStartMonth}, put ${rupeesFmt(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()}.`
+          : `Put ${rupeesFmt(item.monthlyAllocated)}/month into ${item.instrument} for ${item.label.toLowerCase()}.`,
+      whyThisMatters: `${item.label} is on a date you can't move (${item.targetYear}), so it is funded right after your emergency fund - before other goals and wealth SIPs.`,
+      icon: GOAL_ICONS[item.type] ?? "🎯",
+      canBuyFromFinkoin: false,
+      startMonth: urgentStartMonth,
+      reach: goalReach(item, { profile, startMonth: urgentStartMonth }),
+    });
+  }
+
   const medicalStartMonth =
     hardPriorityMode && emergencyMonthsToComplete > 0
       ? emergencyMonthsToComplete + 1
@@ -461,7 +596,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     medicalGapLeft > 0
       ? Math.round(
           Math.min(
-            Math.max(0, monthlySurplus - emergencyMonthly),
+            Math.max(0, monthlySurplus - emergencyMonthly - urgentMonthly),
             Math.ceil(medicalGapLeft / 6),
           ),
         )
@@ -499,8 +634,23 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     monthsToComplete: medicalMonthsToComplete,
     instrument: "Liquid Mutual Fund",
     actionThisWeek:
-      medicalFromCash > 0
-        ? `Move ₹${medicalFromCash.toLocaleString("en-IN")} of your spare savings into a separate liquid fund today and keep it only for medical bills.${
+      medicalFromSavings > 0
+        ? `Move ${[
+            medicalFromCash > 0
+              ? `${rupeesFmt(medicalFromCash)} of your spare savings`
+              : "",
+            medicalFromFd > 0
+              ? `${rupeesFmt(medicalFromFd)} of FDs your emergency fund doesn't need`
+              : "",
+            medicalFromEquity > 0
+              ? `${rupeesFmt(medicalFromEquity)} from mutual funds / stocks`
+              : "",
+            medicalFromGold > 0 ? `${rupeesFmt(medicalFromGold)} of gold` : "",
+          ]
+            .filter(Boolean)
+            .join(
+              ", ",
+            )} into a separate liquid fund today and keep it only for medical bills.${
             medicalMonthly > 0
               ? ` Then invest ₹${Math.round(medicalMonthly).toLocaleString("en-IN")}/month for the rest.`
               : ""
@@ -515,7 +665,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     icon: "🏥",
     canBuyFromFinkoin: false,
     startMonth: medicalStartMonth,
-    ...(medicalFromCash > 0 ? { fromSavings: medicalFromCash } : {}),
+    ...(medicalFromSavings > 0 ? { fromSavings: medicalFromSavings } : {}),
   });
 
   const annualIncome = monthlyIncome * 12;
@@ -839,7 +989,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
   // after emergency/medical top-ups, which are temporary.
   const steadyStateBudget = Math.max(
     0,
-    monthlySurplus - termPremiumEst - healthPremiumEst,
+    monthlySurplus - termPremiumEst - healthPremiumEst - urgentMonthly,
   );
   let steadyRunning = steadyStateBudget;
   const postSafetyBudget = Math.max(0, steadyStateBudget - ssyReserve);
@@ -855,12 +1005,24 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       ].includes(p.id),
     )
     .every((p) => p.status === "complete");
-  const goalFunding = buildGoalFundingPlan(
+  const parallelFunding = buildGoalFundingPlan(
     profile,
     postSafetyBudget - debtDeployMonthly,
     new Date(),
-    { safetyNetComplete },
+    {
+      safetyNetComplete,
+      excludeGoalIds: urgentGoals.map((g) => g.goalId),
+      ...safetyReserve,
+    },
   );
+  // Urgent goals keep their own earlier step; list them with the rest.
+  const goalFunding: GoalFundingPlan = {
+    ...parallelFunding,
+    totalRequired:
+      parallelFunding.totalRequired +
+      urgentGoals.reduce((s, g) => s + g.monthlyRequired, 0),
+    items: [...urgentGoals, ...parallelFunding.items],
+  };
 
   const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
   let safetyNoted = false;
@@ -878,6 +1040,16 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       emergency = Math.min(left, emRemaining);
       emRemaining = Math.max(0, emRemaining - emergency);
       left -= emergency;
+    }
+
+    // Close fixed-date goals (a wedding next year) come next, until their date.
+    let urgent = 0;
+    if (emRemaining === 0 && month >= urgentStartMonth) {
+      const due = urgentGoals
+        .filter((g) => month <= g.yearsToGoal * 12)
+        .reduce((s, g) => s + g.monthlyAllocated, 0);
+      urgent = Math.min(left, due);
+      left -= urgent;
     }
 
     // Goal 2: Fill medical with remaining and post-emergency freed surplus.
@@ -935,6 +1107,11 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
           : `${rupees(medical)} to finish the medical fund`,
       );
     }
+    if (urgent > 0) {
+      parts.push(
+        `${rupees(urgent)} to ${urgentGoals.map((g) => g.label.toLowerCase()).join(" and ")}`,
+      );
+    }
     if (termYearly > 0) {
       parts.push(`pay the ${rupees(termYearly)} yearly term premium`);
     }
@@ -963,7 +1140,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       emergency,
       medical,
       termYearly,
-      sip,
+      sip: sip + urgent,
       extraDebt,
       remaining: left,
       note,
@@ -1047,7 +1224,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
     });
   }
 
-  for (const item of goalFunding.items) {
+  for (const item of parallelFunding.items) {
     if (item.monthlyAllocated <= 0) continue;
     const before = steadyRunning;
     // Exactly the split amount: the goals table, actions and PDF all show it.
@@ -1074,6 +1251,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       icon: GOAL_ICONS[item.type] ?? "🎯",
       canBuyFromFinkoin: false,
       startMonth: sipStartMonth,
+      reach: goalReach(item, { profile, startMonth: sipStartMonth }),
     });
   }
 
@@ -1349,6 +1527,7 @@ export function buildPriorityPlan(profile: any, analysis: any): PriorityPlan {
       currentSaved: Math.round(item.currentSaved),
       monthlyRequired: item.monthlyRequired,
       monthlyAllocated: item.monthlyAllocated,
+      existingMonthly: item.existingMonthly ?? 0,
       sharePct: item.sharePct,
       yearsToGoal: item.yearsToGoal,
       instrument: item.instrument,

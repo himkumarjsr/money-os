@@ -156,7 +156,7 @@ export const FINKOIN_FEATURES: readonly FinkoinFeature[] = [
   },
   {
     id: "split",
-    name: "FK Split",
+    name: "Settle Up",
     category: "Share",
     icon: "users",
     headline: "Split trips, flats and dinners without awkward maths",

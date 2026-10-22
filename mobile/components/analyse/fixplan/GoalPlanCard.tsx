@@ -177,7 +177,8 @@ function GoalTimeline({ goal }: { goal: GoalItem }) {
           <Text style={styles.timelineNote}>
             ₹{loc(t.monthly)}/month growing at about {t.realReturnPct}% a year
             after inflation, in today&apos;s rupees. &quot;On track&quot; is
-            where the full ₹{loc(Math.round(goal.monthlyRequired))}/month would get you.
+            where the full ₹{loc(Math.round(goal.monthlyRequired))}/month would
+            get you.
           </Text>
           <View style={styles.tRow}>
             <Text style={[styles.tCell, styles.tHead, styles.tYear]}>Year</Text>

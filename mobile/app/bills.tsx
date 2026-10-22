@@ -18,6 +18,7 @@ import {
   MONTH_NAMES,
   billsByDay,
   buildBillsMonth,
+  clampBillsMonth,
   describeSchedule,
   monthGrid,
   parseYmd,
@@ -84,12 +85,20 @@ export default function BillsScreen() {
   const [showAmounts, setShowAmounts] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [joinedMonth, setJoinedMonth] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
 
   const reload = useCallback(async () => {
     if (!userId) return;
     try {
       setLoadError(null);
-      setData(await loadBillsData(userId, cursor.year, cursor.monthIndex));
+      const loaded = await loadBillsData(
+        userId,
+        cursor.year,
+        cursor.monthIndex,
+      );
+      setData(loaded);
+      if (loaded.joinedMonth) setJoinedMonth(loaded.joinedMonth);
     } catch (err) {
       console.warn("bills load failed:", err);
       setLoadError("Couldn't load your bills. Pull down to try again.");
@@ -129,11 +138,26 @@ export default function BillsScreen() {
     cursor.year === today.getFullYear() &&
     cursor.monthIndex === today.getMonth();
 
+  const goTo = (year: number, monthIndex: number) => {
+    setPicking(false);
+    setCursor(clampBillsMonth(year, monthIndex, joinedMonth, today));
+  };
   const shiftMonth = (delta: number) =>
-    setCursor((c) => {
-      const d = new Date(c.year, c.monthIndex + delta, 1);
-      return { year: d.getFullYear(), monthIndex: d.getMonth() };
-    });
+    goTo(cursor.year, cursor.monthIndex + delta);
+  const minCursor = clampBillsMonth(0, 0, joinedMonth, today);
+  const maxCursor = clampBillsMonth(9999, 0, joinedMonth, today);
+  const atMin =
+    cursor.year * 12 + cursor.monthIndex <=
+    minCursor.year * 12 + minCursor.monthIndex;
+  const atMax =
+    cursor.year * 12 + cursor.monthIndex >=
+    maxCursor.year * 12 + maxCursor.monthIndex;
+  const pickerYears: number[] = [];
+  for (let y = minCursor.year; y <= maxCursor.year; y += 1) pickerYears.push(y);
+  const monthInRange = (y: number, m: number) => {
+    const c = clampBillsMonth(y, m, joinedMonth, today);
+    return c.year === y && c.monthIndex === m;
+  };
 
   const visible = month
     ? selectedDay == null
@@ -254,24 +278,28 @@ export default function BillsScreen() {
       <View style={styles.monthBar}>
         <Pressable
           onPress={() => shiftMonth(-1)}
+          disabled={atMin}
           accessibilityRole="button"
           accessibilityLabel="Previous month"
-          style={styles.navBtn}
+          style={[styles.navBtn, atMin && { opacity: 0.3 }]}
         >
           <Text style={styles.navText}>‹</Text>
         </Pressable>
         <View style={{ alignItems: "center" }}>
-          <Text style={styles.monthTitle}>
-            {MONTH_NAMES[cursor.monthIndex]} {cursor.year}
-          </Text>
+          <Pressable
+            onPress={() => setPicking((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel="Pick a month"
+            hitSlop={8}
+          >
+            <Text style={styles.monthTitle}>
+              {MONTH_NAMES[cursor.monthIndex]} {cursor.year}{" "}
+              <Text style={{ fontSize: 12, color: Colors.primaryText }}>▾</Text>
+            </Text>
+          </Pressable>
           {!isThisMonth ? (
             <Pressable
-              onPress={() =>
-                setCursor({
-                  year: today.getFullYear(),
-                  monthIndex: today.getMonth(),
-                })
-              }
+              onPress={() => goTo(today.getFullYear(), today.getMonth())}
               accessibilityRole="button"
               hitSlop={8}
             >
@@ -281,13 +309,75 @@ export default function BillsScreen() {
         </View>
         <Pressable
           onPress={() => shiftMonth(1)}
+          disabled={atMax}
           accessibilityRole="button"
           accessibilityLabel="Next month"
-          style={styles.navBtn}
+          style={[styles.navBtn, atMax && { opacity: 0.3 }]}
         >
           <Text style={styles.navText}>›</Text>
         </Pressable>
       </View>
+
+      {picking ? (
+        <View style={styles.picker}>
+          <View style={styles.pickerYears}>
+            {pickerYears.map((y) => (
+              <Pressable
+                key={y}
+                onPress={() => goTo(y, cursor.monthIndex)}
+                accessibilityRole="button"
+                style={[
+                  styles.yearChip,
+                  y === cursor.year && { backgroundColor: Colors.primary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.yearChipText,
+                    y === cursor.year && { color: Colors.onPrimary },
+                  ]}
+                >
+                  {y}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.pickerMonths}>
+            {MONTH_NAMES.map((name, m) => {
+              const ok = monthInRange(cursor.year, m);
+              return (
+                <Pressable
+                  key={name}
+                  onPress={() => goTo(cursor.year, m)}
+                  disabled={!ok}
+                  accessibilityRole="button"
+                  style={[
+                    styles.monthCell,
+                    m === cursor.monthIndex && {
+                      backgroundColor: Colors.primaryLight,
+                    },
+                    !ok && { opacity: 0.3 },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.monthCellText,
+                      m === cursor.monthIndex && { color: Colors.primaryText },
+                    ]}
+                  >
+                    {name.slice(0, 3)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {joinedMonth ? (
+            <Text style={styles.pickerNote}>
+              Goes back to the month you joined Finkoin.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
       {loadError ? (
         <Pressable
@@ -673,6 +763,44 @@ const styles = themedStyles(() => ({
   },
   navText: { fontSize: 24, fontWeight: "700", color: Colors.primaryText },
   monthTitle: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary },
+  picker: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderSoft,
+    backgroundColor: Colors.card,
+    padding: 12,
+    marginTop: -4,
+    marginBottom: 12,
+  },
+  pickerYears: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  yearChip: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    backgroundColor: Colors.surfaceAlt,
+  },
+  yearChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+  pickerMonths: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 10,
+  },
+  monthCell: {
+    width: "25%",
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  monthCellText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  pickerNote: { marginTop: 8, fontSize: 11, color: Colors.textMuted },
   linkSmall: {
     fontSize: 12,
     fontWeight: "600",

@@ -140,7 +140,7 @@ export const planReviewSection: DocSection = {
       kind: "list",
       items: [
         "Expense Tracker: Needs / Wants / Habits, learned budget caps, Month Safety Pulse, monthly report, cash audit and Money Map (Pro).",
-        "FK Split: groups, invites, settle via UPI, cash or bank.",
+        "Settle Up: groups, invites, settle via UPI, cash or bank.",
         "Bills & renewals calendar, obligations with push reminders, credit-card bill cycles.",
         "My Policies vault with import from Analyse and insurance RD tracking.",
         "Net worth breakup on Profile.",
