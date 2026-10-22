@@ -40,7 +40,13 @@ export type DetectedGoal = {
   /** How the target amount is worked out, in plain words. */
   calculation?: string;
   /** Home goal only: the price behind the upfront-cash target. */
-  home?: { price: number; priceIsEstimate: boolean; includeInteriors: boolean };
+  home?: {
+    price: number;
+    priceIsEstimate: boolean;
+    includeInteriors: boolean;
+    /** An older single amount: unclear if it's the price or the upfront cash. */
+    unclearAmount?: boolean;
+  };
 };
 
 export type PromptedGoalOffer = "marriage" | "baby";
@@ -254,6 +260,7 @@ export function detectGoals(
         price: Math.round(price),
         priceIsEstimate: ownPrice === undefined,
         includeInteriors,
+        ...(legacyAmount ? { unclearAmount: true } : {}),
       },
     });
   }
@@ -624,5 +631,43 @@ export function addCustomGoal(
         targetYear: Math.round(goal.targetYear),
       },
     ],
+  };
+}
+
+/** Goal-card answers and edits that live only on the report, not in the form. */
+type GoalCardFields = Pick<
+  FinancialProfile,
+  | "planningMarriage"
+  | "marriageFundTarget"
+  | "marriageFundYear"
+  | "planningBaby"
+  | "babyFundTarget"
+  | "babyFundYear"
+  | "dismissedGoals"
+  | "kidsEducationFundTargets"
+  | "kidsMarriageFundTargets"
+  | "homeIncludeInteriors"
+  | "wantsTermTopUp"
+>;
+
+/**
+ * Retaking the health check starts the goal list over: hidden goals come
+ * back, the wedding/baby questions are asked again and card-only amounts go
+ * back to Finkoin's defaults. Goals the user added on the Goals page stay.
+ */
+export function resetGoalCardEdits<T extends GoalCardFields>(v: T): T {
+  return {
+    ...v,
+    planningMarriage: undefined,
+    marriageFundTarget: undefined,
+    marriageFundYear: undefined,
+    planningBaby: undefined,
+    babyFundTarget: undefined,
+    babyFundYear: undefined,
+    dismissedGoals: [],
+    kidsEducationFundTargets: undefined,
+    kidsMarriageFundTargets: undefined,
+    homeIncludeInteriors: undefined,
+    wantsTermTopUp: undefined,
   };
 }

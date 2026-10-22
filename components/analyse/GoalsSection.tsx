@@ -10,11 +10,16 @@ import {
   applyGoalEdit,
   detectGoals,
   dismissGoal,
+  homeUpfrontShare,
   promptedGoalOffers,
   restoreDismissedGoals,
   type DetectedGoal,
   type PromptedGoalOffer,
 } from "@/lib/goalDetection";
+import type { GoalFundingItem } from "@/lib/goalFunding";
+import { goalSavingsLines } from "@/lib/goalSavingsText";
+import { buildGoalStrategies, projectGoalReach } from "@/lib/goalStrategies";
+import GoalStrategiesList from "@/components/analyse/GoalStrategiesList";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import Link from "next/link";
 
@@ -32,13 +37,24 @@ const OFFER_COPY: Record<PromptedGoalOffer, { q: string; sub: string }> = {
 export default function GoalsSection({
   profile,
   userId,
+  funding,
 }: {
   profile: FinancialProfile;
   userId?: string | null;
+  /** Fix Plan goal funding: shows the money already counted toward each goal. */
+  funding?: GoalFundingItem[];
 }) {
   const goals = useMemo(() => detectGoals(profile), [profile]);
   const offers = useMemo(() => promptedGoalOffers(profile), [profile]);
   const hiddenCount = profile.dismissedGoals?.length ?? 0;
+  const strategiesById = useMemo(
+    () => new Map(buildGoalStrategies(profile).map((s) => [s.goalId, s])),
+    [profile],
+  );
+  const fundingById = useMemo(
+    () => new Map((funding ?? []).map((f) => [f.goalId, f])),
+    [funding],
+  );
 
   const [editing, setEditing] = useState<DetectedGoal | null>(null);
   const [amountRaw, setAmountRaw] = useState("");
@@ -60,7 +76,7 @@ export default function GoalsSection({
 
   const openEdit = (g: DetectedGoal) => {
     setEditing(g);
-    setAmountRaw(String(g.targetAmount));
+    setAmountRaw(String(g.home ? g.home.price : g.targetAmount));
     setYearRaw(String(g.targetYear));
     setError(null);
   };
@@ -70,7 +86,12 @@ export default function GoalsSection({
     const amount = editing.editable.amount ? handleMoneyInput(amountRaw) : null;
     const year = editing.editable.year ? Number(yearRaw) : NaN;
     const next = applyGoalEdit(profile, editing.id, {
-      targetAmount: amount != null && amount > 0 ? amount : undefined,
+      // For a home the user enters the price; the upfront cash follows.
+      ...(editing.home
+        ? { homePrice: amount != null && amount > 0 ? amount : undefined }
+        : {}),
+      targetAmount:
+        !editing.home && amount != null && amount > 0 ? amount : undefined,
       targetYear:
         Number.isFinite(year) && year > thisYear && year <= thisYear + 60
           ? year
@@ -156,6 +177,18 @@ export default function GoalsSection({
                       {g.calculation}
                     </p>
                   ) : null}
+                  {fundingById.get(g.id) ? (
+                    <div className="mt-2 rounded-lg bg-[#F7F6FE] px-3 py-2">
+                      {goalSavingsLines(fundingById.get(g.id)!).map((line) => (
+                        <p
+                          key={line}
+                          className="text-xs font-medium leading-snug text-[#3C3489]"
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -167,6 +200,19 @@ export default function GoalsSection({
                   {g.isDefaultTarget ? "Suggested amount" : "Your amount"}
                 </span>
               </div>
+              <GoalStrategiesList
+                goal={g}
+                plan={strategiesById.get(g.id)}
+                reach={
+                  fundingById.get(g.id)
+                    ? projectGoalReach(profile, fundingById.get(g.id)!)
+                    : undefined
+                }
+                busy={saving}
+                onSetHomePrice={(price) =>
+                  void save(applyGoalEdit(profile, g.id, { homePrice: price }))
+                }
+              />
               {canEdit || g.removable ? (
                 <div className="mt-2 flex gap-2">
                   {canEdit ? (
@@ -226,10 +272,29 @@ export default function GoalsSection({
               <MoneyInput
                 key={`${editing.id}-amount`}
                 id="goal-target-amount"
-                label="Target amount (today's rupees)"
-                defaultValue={formatIndian(editing.targetAmount)}
+                label={
+                  editing.home
+                    ? "Home price (today's rupees)"
+                    : "Target amount (today's rupees)"
+                }
+                defaultValue={formatIndian(
+                  editing.home ? editing.home.price : editing.targetAmount,
+                )}
                 onChange={(e) => setAmountRaw(e.target.value)}
               />
+            ) : null}
+            {editing.home ? (
+              <p className="-mt-3 mb-5 text-[13px] font-medium text-[#5F5E5A]">
+                Upfront cash goal: ₹
+                {formatIndian(
+                  Math.round(
+                    (handleMoneyInput(amountRaw) ?? 0) *
+                      homeUpfrontShare(editing.home.includeInteriors),
+                  ),
+                )}{" "}
+                (20% downpayment + 10% stamp duty
+                {editing.home.includeInteriors ? " + 10% interiors" : ""})
+              </p>
             ) : null}
             {editing.editable.year ? (
               <div className="mb-5">

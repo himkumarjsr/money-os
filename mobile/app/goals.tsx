@@ -4,6 +4,13 @@
  * needs and the SIPs linked to it in user_planned_investments.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { GoalStrategiesList } from "@/components/analyse/result/GoalStrategiesList";
+import {
+  buildGoalStrategies,
+  projectGoalReach,
+  type GoalReach,
+  type GoalStrategyPlan,
+} from "@/lib/goalStrategies";
 import { Pressable, Switch, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -149,6 +156,25 @@ export default function GoalsScreen() {
       lastSubmission ? buildGoalsHub(lastSubmission, plan?.goals, sips) : null,
     [lastSubmission, plan, sips],
   );
+  const reachFor = (item: GoalHubItem): GoalReach | undefined =>
+    lastSubmission && item.planGoal && item.status !== "via_emi"
+      ? projectGoalReach(lastSubmission, {
+          ...item.planGoal,
+          type: item.goal.type,
+          targetAmount: item.goal.targetAmount,
+          targetYear: item.goal.targetYear,
+          yearsToGoal: item.goal.yearsToGoal,
+        })
+      : undefined;
+  const strategies = useMemo(
+    () =>
+      new Map(
+        lastSubmission
+          ? buildGoalStrategies(lastSubmission).map((s) => [s.goalId, s])
+          : [],
+      ),
+    [lastSubmission],
+  );
 
   const saveProfile = async (next: FinancialProfile) => {
     setBusy("profile");
@@ -273,6 +299,16 @@ export default function GoalsScreen() {
               key={item.goal.id}
               item={item}
               busy={busy}
+              strategy={strategies.get(item.goal.id)}
+              reach={reachFor(item)}
+              onSetHomePrice={(price) =>
+                lastSubmission &&
+                void saveProfile(
+                  applyGoalEdit(lastSubmission, item.goal.id, {
+                    homePrice: price,
+                  }),
+                )
+              }
               onEdit={() => setSheet({ kind: "edit", goal: item.goal })}
               onRemove={() =>
                 void saveProfile(dismissGoal(lastSubmission, item.goal.id))
@@ -453,6 +489,9 @@ function Summary({ hub }: { hub: GoalsHub }) {
 function GoalCard({
   item,
   busy,
+  strategy,
+  reach,
+  onSetHomePrice,
   onEdit,
   onRemove,
   onPlan,
@@ -462,6 +501,9 @@ function GoalCard({
 }: {
   item: GoalHubItem;
   busy: string | null;
+  strategy?: GoalStrategyPlan;
+  reach?: GoalReach;
+  onSetHomePrice: (price: number) => void;
   onEdit: () => void;
   onRemove: () => void;
   onPlan: () => void;
@@ -550,6 +592,14 @@ function GoalCard({
           </Text>
         </Text>
       )}
+
+      <GoalStrategiesList
+        goal={goal}
+        plan={strategy}
+        reach={reach}
+        busy={busy !== null}
+        onSetHomePrice={onSetHomePrice}
+      />
 
       {item.sips.length > 0 ? (
         <View style={styles.sipList}>

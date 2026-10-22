@@ -1,5 +1,6 @@
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { existingEquityValue } from "@/lib/financialEngine";
+import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 
 /**
  * Line-by-line breakup behind the Net worth / Total assets / Liabilities
@@ -78,7 +79,7 @@ export function buildNetWorthBreakup(
           {
             id: "post-office",
             label: "Post office schemes",
-            amount: ext.postOfficeSchemes!.reduce((s, r) => s + n(r.amount), 0),
+            amount: postOfficeHoldingsValue(p.postOfficeSchemes),
           },
         ]
       : [{ id: "nsc", label: "NSC", amount: n(p.nscDepositAmount) }];

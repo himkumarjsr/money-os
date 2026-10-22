@@ -45,6 +45,7 @@ import {
   normalizeAnalyseFormValues,
   type AnalyseFormValues,
 } from "@/lib/analyse-form-schema";
+import { resetGoalCardEdits } from "@/lib/goalDetection";
 import {
   ANALYSE_SNAPSHOT_VERSION,
   fetchUserAnalyseSnapshot,
@@ -608,11 +609,14 @@ export default function AnalyseFormScreen() {
 
     try {
       const previousProfile = useFinancialStore.getState().lastSubmission;
-      const mergedValues = coalesceInsuranceToggles({
-        ...formValues,
-        primaryGoal: formValues.primaryGoal || "grow_wealth",
-        monthlySalary: formValues.monthlySalary ?? 0,
-      });
+      // A (re)take starts the report's goal list over.
+      const mergedValues = resetGoalCardEdits(
+        coalesceInsuranceToggles({
+          ...formValues,
+          primaryGoal: formValues.primaryGoal || "grow_wealth",
+          monthlySalary: formValues.monthlySalary ?? 0,
+        }),
+      );
       setAnalysis(mergedValues);
       const normalized = normalizeAnalyseFormValues(mergedValues);
       try {

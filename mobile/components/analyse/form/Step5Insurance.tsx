@@ -4,6 +4,7 @@ import { useFieldArray, useFormContext } from "react-hook-form";
 import {
   newAnalyseRowId,
   type AnalyseFormValues,
+  type HealthInsuranceSource,
 } from "@/lib/analyse-form-schema";
 import {
   Card,
@@ -15,6 +16,7 @@ import {
   RemoveX,
   SectionTitle,
   SecondaryButton,
+  SegmentToggle,
   UpperTextFormField,
   YearSelect,
   YesNoQuestion,
@@ -22,6 +24,12 @@ import {
   usePersistField,
 } from "./fields";
 import { deriveHasVehicle, resolveVehicleToggle } from "./formState";
+
+const HEALTH_SOURCE_OPTIONS = [
+  { label: "Company", value: "employer" },
+  { label: "Self", value: "self" },
+  { label: "Both", value: "both" },
+] as const;
 
 export function Step5Insurance() {
   const {
@@ -51,6 +59,8 @@ export function Step5Insurance() {
   const persistValue = usePersistField();
 
   const hasHealthInsurance = watch("hasHealthInsurance");
+  const healthSource: HealthInsuranceSource =
+    watch("healthInsuranceSource") ?? "self";
   const hasTermInsurance = watch("hasTermInsurance");
   const hasOtherInsurance = watch("hasOtherInsurance");
   // Screen-local answer so "Yes" can open the section before any number exists;
@@ -75,21 +85,50 @@ export function Step5Insurance() {
         />
         {hasHealthInsurance ? (
           <>
-            <MoneyField name="healthInsuranceSumInsured" label="Sum insured" />
-            <PremiumField
-              label="Premium amount"
-              amountError={errors.healthInsurancePremiumInput?.message}
-              frequency={watch("healthInsurancePremiumFrequency") ?? "monthly"}
-              onFrequencyChange={(v) =>
-                setValue("healthInsurancePremiumFrequency", v)
+            <Text style={formStyles.rowTitle}>Who provides this cover?</Text>
+            <Hint tone="info">
+              Company cover ends when you change jobs or retire, so we plan for
+              it differently.
+            </Hint>
+            <SegmentToggle
+              options={HEALTH_SOURCE_OPTIONS}
+              value={healthSource}
+              onChange={(v) => setValue("healthInsuranceSource", v)}
+            />
+            <MoneyField
+              name="healthInsuranceSumInsured"
+              label={
+                healthSource === "employer"
+                  ? "Company cover (sum insured)"
+                  : healthSource === "both"
+                    ? "Your own policy (sum insured)"
+                    : "Sum insured"
               }
-            >
+            />
+            {healthSource === "both" ? (
               <MoneyField
-                name="healthInsurancePremiumInput"
-                label="Premium amount"
-                hideLabel
+                name="employerHealthCover"
+                label="Company cover (sum insured)"
               />
-            </PremiumField>
+            ) : null}
+            {healthSource === "employer" ? null : (
+              <PremiumField
+                label="Premium amount"
+                amountError={errors.healthInsurancePremiumInput?.message}
+                frequency={
+                  watch("healthInsurancePremiumFrequency") ?? "monthly"
+                }
+                onFrequencyChange={(v) =>
+                  setValue("healthInsurancePremiumFrequency", v)
+                }
+              >
+                <MoneyField
+                  name="healthInsurancePremiumInput"
+                  label="Premium amount"
+                  hideLabel
+                />
+              </PremiumField>
+            )}
             {(watch("healthInsurancePremiumInput") ?? 0) > 0 ? (
               <PremiumDueFields
                 frequency={

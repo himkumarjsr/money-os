@@ -1,0 +1,453 @@
+/**
+ * Money Score: 0-100 in six weighted pillars, each scored in proportion to
+ * the gap (a small gap costs a little, a big one a lot), with one line on
+ * why and the action worth the most points. Called by analyseFinances; kept
+ * free of financialEngine imports so goal funding can be used here.
+ * Shared by web and the app (mobile keeps a byte-identical copy at
+ * mobile/lib/moneyScore.ts).
+ */
+import type { FinancialProfile } from "@/lib/analyse-form-schema";
+import { formatIndian } from "@/lib/formatters";
+import { earmarkExistingSavings } from "@/lib/goalFunding";
+import { detectGoals } from "@/lib/goalDetection";
+import { existingEquityValue } from "@/lib/holdings";
+
+export type ScorePillarId =
+  | "safety"
+  | "protection"
+  | "debt"
+  | "saving"
+  | "goals"
+  | "wealth";
+
+export type ScoreAction = {
+  pillar: ScorePillarId;
+  text: string;
+  /** Points this action would add, rounded. */
+  gain: number;
+};
+
+export type ScorePillar = {
+  id: ScorePillarId;
+  label: string;
+  points: number;
+  max: number;
+  /** Plain-words reason for the points. */
+  line: string;
+  /** The action worth the most points in this pillar, if any. */
+  action?: ScoreAction;
+};
+
+export type MoneyScore = {
+  total: number;
+  pillars: ScorePillar[];
+  /** The three actions worth the most points across all pillars. */
+  topActions: ScoreAction[];
+};
+
+export type MoneyScoreInput = {
+  profile: FinancialProfile;
+  /** Monthly take-home. */
+  income: number;
+  investingMonthly: number;
+  loansMonthly: number;
+  /** Income left after every bucket, ₹/month (negative = overspending). */
+  unallocatedMonthly: number;
+  emergency: {
+    have: number;
+    target: number;
+    monthsHave: number;
+    monthsNeeded: number;
+  };
+  /** `have` already counts savings left over beyond the emergency fund. */
+  medical: { have: number; target: number };
+  health: { total: number; target: number; employerOnly: boolean; own: number };
+  term: {
+    optional: boolean;
+    cover: number;
+    needed: number;
+    /** Cover at or above this counts as a solid base. */
+    floor: number;
+    premiumMonthly: number;
+  };
+  netWorth: number;
+  /** FD the emergency fund still leans on, so goals don't count it twice. */
+  fdNeededForEmergency: number;
+  now?: Date;
+};
+
+export const PILLAR_MAX: Record<ScorePillarId, number> = {
+  safety: 20,
+  protection: 20,
+  debt: 15,
+  saving: 15,
+  goals: 20,
+  wealth: 10,
+};
+
+const PILLAR_LABEL: Record<ScorePillarId, string> = {
+  safety: "Safety net",
+  protection: "Protection",
+  debt: "Debt health",
+  saving: "Saving and investing",
+  goals: "Goals and retirement",
+  wealth: "Wealth and mix",
+};
+
+/** Share of income that should go to investing. */
+export const TARGET_SAVING_RATE = 0.2;
+/** Interest rate (% a year) at or above which a loan counts as costly. */
+const COSTLY_RATE = 12;
+const COSTLY_LOAN_TYPES = new Set([
+  "personal_loan",
+  "credit_card",
+  "bike_loan",
+  "business_loan",
+  "overdraft",
+]);
+
+const n = (v: unknown) => {
+  const x = Number(v);
+  return Number.isFinite(x) && x > 0 ? x : 0;
+};
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const rs = (v: number) => `₹${formatIndian(Math.round(Math.max(0, v)))}`;
+const lakh = (v: number) => {
+  const l = v / 1_00_000;
+  return `₹${l >= 10 ? Math.round(l) : Math.round(l * 10) / 10}L`;
+};
+const crore = (v: number) => `₹${Math.round((v / 1_00_00_000) * 100) / 100}Cr`;
+/** Linear from full points at `good` down to 0 at `bad` (bad > good). */
+const slope = (x: number, good: number, bad: number) =>
+  clamp01((bad - x) / (bad - good));
+
+function pillar(
+  id: ScorePillarId,
+  points: number,
+  line: string,
+  actions: Array<{ text: string; gain: number } | null>,
+): ScorePillar {
+  const max = PILLAR_MAX[id];
+  const best = actions
+    .filter((a): a is { text: string; gain: number } => !!a && a.gain >= 0.5)
+    .sort((a, b) => b.gain - a.gain)[0];
+  return {
+    id,
+    label: PILLAR_LABEL[id],
+    points: Math.round(Math.min(max, Math.max(0, points)) * 10) / 10,
+    max,
+    line,
+    ...(best
+      ? { action: { pillar: id, text: best.text, gain: Math.round(best.gain) } }
+      : {}),
+  };
+}
+
+function safetyPillar(i: MoneyScoreInput): ScorePillar {
+  const ef =
+    i.emergency.target > 0 ? clamp01(i.emergency.have / i.emergency.target) : 1;
+  const med =
+    i.medical.target > 0 ? clamp01(i.medical.have / i.medical.target) : 1;
+  const efGap = Math.max(0, i.emergency.target - i.emergency.have);
+  const medGap = Math.max(0, i.medical.target - i.medical.have);
+  return pillar(
+    "safety",
+    14 * ef + 6 * med,
+    `Emergency fund covers ${i.emergency.monthsHave.toFixed(1)} months of needs (target ${i.emergency.monthsNeeded}); medical fund ${rs(i.medical.have)} of ${rs(i.medical.target)}.`,
+    [
+      efGap > 0
+        ? {
+            text: `Build your emergency fund by ${rs(efGap)} (savings account + liquid fund).`,
+            gain: 14 * (1 - ef),
+          }
+        : null,
+      medGap > 0
+        ? {
+            text: `Set aside ${rs(medGap)} as a medical fund in a liquid fund or sweep-in FD.`,
+            gain: 6 * (1 - med),
+          }
+        : null,
+    ],
+  );
+}
+
+function protectionPillar(i: MoneyScoreInput): ScorePillar {
+  const h = i.health;
+  const healthRatio = h.target > 0 ? clamp01(h.total / h.target) : 1;
+  // Company cover ends with the job, so it alone can't earn full marks.
+  const healthPts = Math.min(10 * healthRatio, h.employerOnly ? 6 : 10);
+  const healthLine =
+    h.total <= 0
+      ? "no health cover"
+      : `${lakh(h.total)} health cover${h.employerOnly ? " (company only)" : ""} vs ${lakh(h.target)} suggested`;
+  const healthAction =
+    h.total <= 0
+      ? {
+          text: `Buy a ${lakh(h.target)} health policy for your family.`,
+          gain: 10,
+        }
+      : h.employerOnly
+        ? {
+            text: `Buy your own health policy - company cover ends if you change jobs or retire, and waiting periods restart on a new policy.`,
+            gain: 10 - healthPts,
+          }
+        : h.total < h.target
+          ? {
+              text: `Add a ${lakh(h.target - h.total)} super top-up to your health cover (low cost).`,
+              gain: 10 - healthPts,
+            }
+          : null;
+
+  const t = i.term;
+  let termPts = 10;
+  let termLine: string;
+  let termAction: { text: string; gain: number } | null = null;
+  if (t.cover <= 0 && t.optional) {
+    termLine = "term cover optional - no one depends on your income yet";
+  } else if (t.cover <= 0) {
+    termPts = 0;
+    termLine = "no term cover";
+    termAction = {
+      text: `Buy ${crore(t.needed)} pure term cover (about ${rs(t.premiumMonthly)}/month).`,
+      gain: 10,
+    };
+  } else if (t.cover >= t.floor || t.optional) {
+    termLine = `${crore(t.cover)} term cover - a solid base`;
+  } else {
+    termPts = 10 * clamp01(t.cover / t.floor);
+    termLine = `${crore(t.cover)} term cover, below the ${crore(t.floor)} your family needs as a base`;
+    termAction = {
+      text: `Add ${crore(t.floor - t.cover)} term cover with a separate policy; keep the one you have.`,
+      gain: 10 - termPts,
+    };
+  }
+  return pillar(
+    "protection",
+    healthPts + termPts,
+    `${healthLine[0].toUpperCase()}${healthLine.slice(1)}; ${termLine}.`,
+    [healthAction, termAction],
+  );
+}
+
+/** EMIs on loans costing 12%+ a year (personal, credit card, bike...). */
+export function costlyEmiMonthly(p: FinancialProfile): number {
+  const cardCarry =
+    n(p.creditCardCarriedBalance) * 0.035 + n(p.creditCardEmiMonthly);
+  const unified = (p.unifiedLoans ?? []).filter((l) => n(l.monthlyEMI) > 0);
+  if (unified.length > 0) {
+    return (
+      cardCarry +
+      unified
+        .filter((l) =>
+          n(l.interestRate) > 0
+            ? n(l.interestRate) >= COSTLY_RATE
+            : COSTLY_LOAN_TYPES.has(l.loanType),
+        )
+        .reduce((s, l) => s + n(l.monthlyEMI), 0)
+    );
+  }
+  const personal =
+    n(p.personalLoanRate) > 0 && n(p.personalLoanRate) < COSTLY_RATE
+      ? 0
+      : n(p.personalLoanEMI);
+  return cardCarry + personal + n(p.bikeEMI);
+}
+
+function debtPillar(i: MoneyScoreInput): ScorePillar {
+  if (i.income <= 0)
+    return pillar("debt", 0, "Add your income to check your loans.", []);
+  const r = i.loansMonthly / i.income;
+  const emiPts =
+    r <= 0.2
+      ? 10
+      : r <= 0.35
+        ? 10 - ((r - 0.2) / 0.15) * 5
+        : 5 * slope(r, 0.35, 0.5);
+  const costly = costlyEmiMonthly(i.profile);
+  const c = costly / i.income;
+  const costlyPts = 5 * slope(c, 0, 0.15);
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+  return pillar(
+    "debt",
+    emiPts + costlyPts,
+    i.loansMonthly <= 0
+      ? "No loans - nothing eating into your income."
+      : `EMIs take ${pct(r)} of income${costly > 0 ? `, ${rs(costly)}/month of it on loans costing 12%+ a year` : ""}.`,
+    [
+      costly > 0
+        ? {
+            text: "Clear the costliest loan first (credit card, personal loan) - every rupee prepaid there earns its interest rate.",
+            gain: 5 - costlyPts,
+          }
+        : null,
+      r > 0.2
+        ? {
+            text: `Keep EMIs under 20% of income: avoid new loans and prepay when bonuses come in (now ${pct(r)}).`,
+            gain: 10 - emiPts,
+          }
+        : null,
+    ],
+  );
+}
+
+function savingPillar(i: MoneyScoreInput): ScorePillar {
+  if (i.income <= 0)
+    return pillar("saving", 0, "Add your income to check your saving.", []);
+  const rate = i.investingMonthly / i.income;
+  const ratePts = 10 * clamp01(rate / TARGET_SAVING_RATE);
+  const idle = Math.max(0, i.unallocatedMonthly);
+  const u = idle / i.income;
+  const idlePts = 5 * slope(u, 0.1, 0.4);
+  const shortBy = Math.max(
+    0,
+    i.income * TARGET_SAVING_RATE - i.investingMonthly,
+  );
+  return pillar(
+    "saving",
+    ratePts + idlePts,
+    `You invest ${Math.round(rate * 100)}% of income (aim for ${TARGET_SAVING_RATE * 100}%)${idle > 0 ? `; ${rs(idle)}/month has no plan yet` : ""}.`,
+    [
+      shortBy > 0
+        ? {
+            text: `Raise monthly investing by ${rs(shortBy)} to reach ${TARGET_SAVING_RATE * 100}% of income - set it as an auto SIP on salary day.`,
+            gain: 10 - ratePts,
+          }
+        : null,
+      u > 0.1
+        ? {
+            text: `Give the ${rs(idle)}/month without a plan a job - your Fix Plan splits it across your goals.`,
+            gain: 5 - idlePts,
+          }
+        : null,
+    ],
+  );
+}
+
+function goalsPillar(i: MoneyScoreInput): ScorePillar {
+  const now = i.now ?? new Date();
+  const goals = detectGoals(i.profile, now).filter(
+    (g) => g.type !== "debt_free",
+  );
+  const marks = earmarkExistingSavings(i.profile, now, {
+    fdNeededForEmergency: i.fdNeededForEmergency,
+  });
+  const rows = goals.map((g) => {
+    const m = marks.get(g.id);
+    const scratch = n(m?.monthlyFromScratch);
+    const required = n(m?.monthlyRequired);
+    return {
+      goal: g,
+      required,
+      covered: scratch > 0 ? clamp01(1 - required / scratch) : 1,
+    };
+  });
+  const totalRequired = rows.reduce((s, r) => s + r.required, 0);
+  // Free monthly money, shared across goals in proportion to what each still
+  // needs. It earns half credit: the money is there but not yet invested.
+  const fill =
+    totalRequired > 0
+      ? clamp01(Math.max(0, i.unallocatedMonthly) / totalRequired)
+      : 1;
+  const onTrack = rows.map((r) => ({
+    ...r,
+    share: clamp01(r.covered + (1 - r.covered) * fill * 0.5),
+  }));
+  const retirement = onTrack.find((r) => r.goal.type === "retirement");
+  const others = onTrack.filter((r) => r.goal.type !== "retirement");
+  const retWeight = others.length > 0 ? 10 : 20;
+  const otherWeight = others.length > 0 ? 10 / others.length : 0;
+  const points =
+    (retirement ? retWeight * retirement.share : retWeight) +
+    others.reduce((s, r) => s + otherWeight * r.share, 0);
+  const onTrackCount = others.filter((r) => r.share >= 0.95).length;
+  const retPct = Math.round((retirement?.share ?? 1) * 100);
+  const actions = onTrack
+    .filter((r) => r.share < 0.95 && r.required > 0)
+    .map((r) => ({
+      text: `${r.goal.label}: start ${rs(r.required)}/month toward ${rs(r.goal.targetAmount)} by ${r.goal.targetYear}.`,
+      gain:
+        (r.goal.type === "retirement" ? retWeight : otherWeight) *
+        (1 - r.share),
+    }));
+  return pillar(
+    "goals",
+    points,
+    `Retirement ${retPct}% on track${others.length > 0 ? `; ${onTrackCount} of ${others.length} other goals on track` : ""}, counting what you already hold (FD, funds, stocks, RSUs, EPF, PPF, NPS) and running SIPs.`,
+    actions,
+  );
+}
+
+/** Net worth a household is typically at by this age, as years of income. */
+export function netWorthBenchmarkYears(age: number): number {
+  return Math.max(0.5, (age - 25) / 5);
+}
+
+function wealthPillar(i: MoneyScoreInput): ScorePillar {
+  const p = i.profile;
+  const age = n(p.selfAge) || 30;
+  const yearly = i.income * 12;
+  const bench = netWorthBenchmarkYears(age);
+  const years = yearly > 0 ? Math.max(0, i.netWorth) / yearly : 0;
+  const nwPts = yearly > 0 ? 6 * clamp01(years / bench) : 0;
+
+  const equity = existingEquityValue(p);
+  const investable =
+    equity +
+    n(p.fdValue) +
+    n(p.liquidMFValue) +
+    n(p.savingsAccountBalance) +
+    n(p.ppfBalance) +
+    n(p.epfBalance) +
+    n(p.npsBalance) * 0.5 +
+    n(p.goldValue);
+  const equityShare =
+    investable > 0 ? (equity + n(p.npsBalance) * 0.5) / investable : 0;
+  const minEquity = age < 35 ? 0.4 : age < 45 ? 0.3 : age < 55 ? 0.2 : 0.1;
+  const rsu = n(p.rsuValueINR);
+  const concentrated = rsu >= 5_00_000 && equity > 0 && rsu / equity > 0.5;
+  const small = investable < 2_00_000;
+  const mixPts = small
+    ? 4
+    : 2 * clamp01(equityShare / minEquity) + (concentrated ? 0 : 2);
+  const fmtYears = (y: number) => `${Math.round(y * 10) / 10}x`;
+  return pillar(
+    "wealth",
+    nwPts + mixPts,
+    `Net worth is ${fmtYears(years)} your yearly income (typical at ${age}: ${fmtYears(bench)})${small ? "" : `; ${Math.round(equityShare * 100)}% of investments in equity`}${concentrated ? ", over half of it in your company's shares" : ""}.`,
+    [
+      concentrated
+        ? {
+            text: "Sell part of your RSUs at each vest and spread it into index funds - over half your shares are in one company.",
+            gain: 2,
+          }
+        : null,
+      !small && equityShare < minEquity
+        ? {
+            text: `Move money for goals 7+ years away into equity index funds - only ${Math.round(equityShare * 100)}% of your investments grow faster than inflation.`,
+            gain: 2 - 2 * clamp01(equityShare / minEquity),
+          }
+        : null,
+    ],
+  );
+}
+
+export function computeMoneyScore(input: MoneyScoreInput): MoneyScore {
+  const pillars = [
+    safetyPillar(input),
+    protectionPillar(input),
+    debtPillar(input),
+    savingPillar(input),
+    goalsPillar(input),
+    wealthPillar(input),
+  ];
+  const total =
+    input.income > 0
+      ? Math.round(pillars.reduce((s, p) => s + p.points, 0))
+      : 0;
+  const topActions = pillars
+    .map((p) => p.action)
+    .filter((a): a is ScoreAction => !!a && a.gain >= 1)
+    .sort((a, b) => b.gain - a.gain)
+    .slice(0, 3);
+  return { total: Math.max(0, Math.min(100, total)), pillars, topActions };
+}
