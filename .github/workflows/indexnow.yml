@@ -1,0 +1,25 @@
+# Pings IndexNow (Bing, Yandex, Seznam, Naver) with every sitemap URL once
+# a production deploy on Vercel succeeds, so new and changed pages get
+# crawled within days instead of sitting at "discovered but not crawled".
+# No secrets needed: the IndexNow key is public (public/<key>.txt).
+
+name: IndexNow
+
+on:
+  deployment_status:
+  workflow_dispatch:
+
+jobs:
+  submit:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/indexnow.mjs
