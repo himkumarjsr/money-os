@@ -41,49 +41,75 @@ export type RetirementAccountProjection = {
   total: number;
 };
 
+/**
+ * Balance after `years` of monthly contributions (end of month), each year's
+ * contribution `stepUp` higher than the last. Returns nominal rupees.
+ */
 function compoundWithContributions(
   balance: number,
   monthly: number,
   annualRate: number,
   years: number,
+  stepUp: number,
 ): number {
   const months = Math.max(0, Math.round(years * 12));
-  if (months === 0) return balance;
   const r = Math.pow(1 + annualRate, 1 / 12) - 1;
-  if (r === 0) return balance + monthly * months;
-  const growth = Math.pow(1 + r, months);
-  return balance * growth + monthly * ((growth - 1) / r);
+  let value = balance;
+  for (let m = 1; m <= months; m++) {
+    value =
+      value * (1 + r) +
+      monthly * Math.pow(1 + stepUp, Math.floor((m - 1) / 12));
+  }
+  return value;
+}
+
+/** EPF contributions are a share of salary: they rise with the expected hike (capped at 10%), else with prices. */
+function salaryLinkedGrowth(data: Partial<FinancialProfile>): number {
+  const hike = Number(data.annualSalaryIncreasePct);
+  return Number.isFinite(hike) && hike > 0
+    ? Math.min(0.1, hike / 100)
+    : LONG_RUN_INFLATION;
 }
 
 /**
  * EPF / PPF / NPS balances `years` from now, including ongoing monthly
- * contributions. `real: true` returns today's rupees (deflated by
- * LONG_RUN_INFLATION) so it can be compared against today-rupee targets.
+ * contributions: EPF rises with salary, PPF / NPS deposits with prices.
+ * `real: true` returns today's rupees (deflated by LONG_RUN_INFLATION) so it
+ * can be compared against today-rupee targets.
  */
 export function projectRetirementAccounts(
   data: Partial<FinancialProfile>,
   years: number,
   opts: { real?: boolean } = {},
 ): RetirementAccountProjection {
-  const rate = (nominal: number) =>
-    opts.real ? (1 + nominal) / (1 + LONG_RUN_INFLATION) - 1 : nominal;
-  const epf = compoundWithContributions(
+  const deflate = opts.real
+    ? Math.pow(1 + LONG_RUN_INFLATION, Math.max(0, Math.round(years * 12)) / 12)
+    : 1;
+  const project = (
+    balance: number,
+    monthly: number,
+    rate: number,
+    stepUp: number,
+  ) =>
+    compoundWithContributions(n(balance), n(monthly), rate, years, stepUp) /
+    deflate;
+  const epf = project(
     n(data.epfBalance),
     n(data.monthlyEPFContribution),
-    rate(RETIREMENT_ACCOUNT_RATES.epf),
-    years,
+    RETIREMENT_ACCOUNT_RATES.epf,
+    salaryLinkedGrowth(data),
   );
-  const ppf = compoundWithContributions(
+  const ppf = project(
     n(data.ppfBalance),
     n(data.monthlyPPFContribution),
-    rate(RETIREMENT_ACCOUNT_RATES.ppf),
-    years,
+    RETIREMENT_ACCOUNT_RATES.ppf,
+    LONG_RUN_INFLATION,
   );
-  const nps = compoundWithContributions(
+  const nps = project(
     n(data.npsBalance),
     n(data.monthlyNPSContribution),
-    rate(RETIREMENT_ACCOUNT_RATES.nps),
-    years,
+    RETIREMENT_ACCOUNT_RATES.nps,
+    LONG_RUN_INFLATION,
   );
   return { epf, ppf, nps, total: epf + ppf + nps };
 }

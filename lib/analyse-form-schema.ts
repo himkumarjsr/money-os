@@ -162,6 +162,20 @@ export type CustomGoal = {
   targetYear: number;
 };
 
+export const EMPLOYMENT_TYPE_VALUES = [
+  "salaried",
+  "self_employed",
+  "business",
+] as const;
+export type EmploymentType = (typeof EMPLOYMENT_TYPE_VALUES)[number];
+export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  salaried: "Salaried",
+  self_employed: "Self-employed",
+  business: "Business",
+};
+/** Income-tax slabs (%) the form offers. */
+export const TAX_SLAB_OPTIONS = [0, 5, 10, 15, 20, 25, 30] as const;
+
 export interface FinancialProfile {
   lifeStage: "bachelor" | "married" | "kids" | "senior";
   selfAge: number;
@@ -176,6 +190,18 @@ export interface FinancialProfile {
   otherIncome?: number;
   /** Expected yearly salary hike (%). Goal SIPs step up by it each year. */
   annualSalaryIncreasePct?: number;
+  /** How the user earns. Self-employed / business income needs a bigger emergency fund. */
+  employmentType?: EmploymentType;
+  /** Income-tax slab (%). Unset: estimated from income (new regime). */
+  taxSlabPct?: number;
+  /** Will they raise their SIPs every year? false keeps SIPs flat even with a hike. */
+  sipStepUpPlanned?: boolean;
+  /** Equity return (%) the user chose for the plan; unset: 12%. */
+  planEquityReturnPct?: number;
+  /** Points added to every goal's cost inflation (e.g. 1 for "costs rise faster"). */
+  planInflationShiftPct?: number;
+  /** When the plan was last checked against real numbers (ISO date). */
+  planReviewedAt?: string;
 
   rentAmount?: number;
   /** Society / flat maintenance when renting (monthly). */
@@ -670,6 +696,12 @@ const formShape = {
       .max(50, "Enter 50% or less")
       .optional(),
   ),
+  employmentType: z.enum(EMPLOYMENT_TYPE_VALUES).optional(),
+  taxSlabPct: z.number().min(0).max(30).optional(),
+  sipStepUpPlanned: z.boolean().optional(),
+  planEquityReturnPct: z.number().min(8).max(14).optional(),
+  planInflationShiftPct: z.number().min(-2).max(3).optional(),
+  planReviewedAt: z.string().optional(),
 
   rentAmount: optionalMoney,
   rentMaintenanceMonthly: optionalMoney,
@@ -1065,6 +1097,9 @@ export const step2Schema = baseFormSchema.pick({
   spouseIncome: true,
   otherIncome: true,
   annualSalaryIncreasePct: true,
+  employmentType: true,
+  taxSlabPct: true,
+  sipStepUpPlanned: true,
 });
 
 export const step3Schema = baseFormSchema.pick({
@@ -1931,6 +1966,12 @@ export function financialProfileToFormValues(
     spouseIncome: p.spouseIncome ?? 0,
     otherIncome: p.otherIncome ?? 0,
     annualSalaryIncreasePct: p.annualSalaryIncreasePct,
+    employmentType: p.employmentType,
+    taxSlabPct: p.taxSlabPct,
+    sipStepUpPlanned: p.sipStepUpPlanned,
+    planEquityReturnPct: p.planEquityReturnPct,
+    planInflationShiftPct: p.planInflationShiftPct,
+    planReviewedAt: p.planReviewedAt,
     rentAmount: p.rentAmount ?? 0,
     rentMaintenanceMonthly: p.rentMaintenanceMonthly ?? 0,
     homeLoanEMI: p.homeLoanEMI ?? 0,
@@ -2437,6 +2478,12 @@ export function normalizeAnalyseFormValues(
     spouseIncome: form.lifeStage === "bachelor" ? undefined : form.spouseIncome,
     otherIncome: form.otherIncome,
     annualSalaryIncreasePct: form.annualSalaryIncreasePct || undefined,
+    employmentType: form.employmentType,
+    taxSlabPct: form.taxSlabPct,
+    sipStepUpPlanned: form.sipStepUpPlanned,
+    planEquityReturnPct: form.planEquityReturnPct,
+    planInflationShiftPct: form.planInflationShiftPct || undefined,
+    planReviewedAt: form.planReviewedAt,
 
     rentAmount: form.rentAmount ?? 0,
     rentMaintenanceMonthly: form.rentMaintenanceMonthly,

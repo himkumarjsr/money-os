@@ -171,7 +171,8 @@ describe("buildPriorityPlan", () => {
     );
     const car = plan.goals.find((g) => g.goalType === "vehicle_purchase");
     expect(car).toMatchObject({
-      targetAmount: 800_000,
+      // ₹8L today; car prices rise ~5% a year against 6% inflation.
+      targetAmount: Math.round(800_000 * Math.pow(1.05 / 1.06, 3)),
       yearsToGoal: 3,
       readyToStart: true,
       blockedBy: null,

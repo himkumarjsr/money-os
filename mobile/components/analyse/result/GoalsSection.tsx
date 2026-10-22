@@ -20,6 +20,7 @@ import type { GoalFundingItem } from "@/lib/goalFunding";
 import { goalSavingsLines } from "@/lib/goalSavingsText";
 import { buildGoalStrategies, projectGoalReach } from "@/lib/goalStrategies";
 import { GoalStrategiesList } from "./GoalStrategiesList";
+import { PlanAssumptionsCard } from "./PlanAssumptionsCard";
 import { saveAnalyseProfile } from "@/lib/saveAnalyseProfile";
 import { router } from "expo-router";
 
@@ -261,6 +262,11 @@ export function GoalsSection({
       >
         <Text style={styles.textBtnLabel}>Track SIPs for each goal →</Text>
       </Pressable>
+      <PlanAssumptionsCard
+        profile={profile}
+        saving={saving}
+        onChange={(next) => void save(next)}
+      />
       {error && !editing ? <Text style={styles.error}>{error}</Text> : null}
 
       <BottomSheet

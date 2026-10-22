@@ -79,6 +79,92 @@ const CORE_WEIGHTS: Record<
   },
 };
 
+/**
+ * Long-run nominal yearly return assumed per instrument, before tax. Equity
+ * follows the Nifty 50's ~12% long-run record; debt follows today's FD and
+ * bond yields; PPF / NPS blends PPF's 7.1% with NPS's equity-debt mix.
+ */
+export const INSTRUMENT_RETURNS: Record<InstrumentKey, number> = {
+  savings_sweep: 0.055,
+  liquid_fund: 0.065,
+  fd_cd: 0.07,
+  short_debt: 0.07,
+  arbitrage: 0.07,
+  hybrid: 0.09,
+  bonds: 0.075,
+  equity_index: 0.12,
+  flexicap: 0.12,
+  ppf_nps: 0.08,
+  gold: 0.08,
+};
+
+/** Instruments whose gains are taxed at the user's income-tax slab. */
+const SLAB_TAXED: ReadonlySet<InstrumentKey> = new Set([
+  "savings_sweep",
+  "liquid_fund",
+  "fd_cd",
+  "short_debt",
+  "bonds",
+]);
+/** Instruments taxed like equity (12.5% long-term gains above ₹1.25L a year). */
+const EQUITY_TAXED: ReadonlySet<InstrumentKey> = new Set([
+  "arbitrage",
+  "hybrid",
+  "equity_index",
+  "flexicap",
+  "gold",
+]);
+/** Share of the equity outlook a hybrid fund follows. */
+const HYBRID_EQUITY_SHARE = 0.5;
+/** Long-term capital gains tax on equity funds. */
+export const EQUITY_LTCG_RATE = 0.125;
+
+export type ReturnOptions = {
+  /** Marginal income-tax slab (decimal); debt and FD gains are taxed at it. */
+  taxSlab?: number;
+  /** Count the 12.5% equity gains tax (gains above the ₹1.25L a year exemption). */
+  equityTaxed?: boolean;
+  /** Added to the equity return (e.g. -0.01 for a cautious 11%). */
+  equityShift?: number;
+};
+
+/** One instrument's expected yearly return, after the user's outlook and tax. */
+export function instrumentReturn(
+  key: InstrumentKey,
+  opts: ReturnOptions = {},
+): number {
+  const shift = opts.equityShift ?? 0;
+  let r = INSTRUMENT_RETURNS[key];
+  if (key === "equity_index" || key === "flexicap") r += shift;
+  else if (key === "hybrid") r += shift * HYBRID_EQUITY_SHARE;
+  if (SLAB_TAXED.has(key)) return r * (1 - (opts.taxSlab ?? 0));
+  if (EQUITY_TAXED.has(key) && opts.equityTaxed) {
+    return r * (1 - EQUITY_LTCG_RATE);
+  }
+  return r;
+}
+
+/**
+ * Return the recommended mix for this horizon and risk profile is expected
+ * to earn: the weighted average of its instruments (gold included). Goal
+ * SIPs are sized on this, so a conservative mix is never sized on 12%.
+ * Pre-tax unless `opts` carries the user's tax slab.
+ */
+export function expectedNominalReturn(
+  horizon: GoalHorizon,
+  riskTolerance: RiskTolerance = "moderate",
+  opts: ReturnOptions = {},
+): number {
+  const gold = GOLD_PCT[horizon];
+  let total = (gold / 100) * instrumentReturn("gold", opts);
+  for (const [key, w] of Object.entries(CORE_WEIGHTS[horizon][riskTolerance])) {
+    total +=
+      (((w as number) * (100 - gold)) / 10_000) *
+      instrumentReturn(key as InstrumentKey, opts);
+  }
+  return total;
+}
+
 /** Below this, a long-horizon equity slice stays all-index (index first, then flexi-cap). */
 export const FLEXICAP_MIN_EQUITY_MONTHLY = 5_000;
 /** Of the equity slice once it's large enough. */
@@ -132,7 +218,9 @@ export type AllocateGoalInput = {
   realEstateEligible?: boolean;
 };
 
-export function allocateGoalPortfolio(input: AllocateGoalInput): PortfolioAllocation {
+export function allocateGoalPortfolio(
+  input: AllocateGoalInput,
+): PortfolioAllocation {
   const horizon = goalHorizon(input.yearsToGoal);
   const riskAssumed = !input.riskTolerance;
   const riskTolerance: RiskTolerance = input.riskTolerance ?? "moderate";
@@ -158,7 +246,10 @@ export function allocateGoalPortfolio(input: AllocateGoalInput): PortfolioAlloca
   if (monthly > 0) {
     // Fold slices too small to invest monthly into the main instrument.
     for (const k of keys) {
-      if (k !== main && (monthly * (weights[k] ?? 0)) / 100 < MIN_SLICE_MONTHLY) {
+      if (
+        k !== main &&
+        (monthly * (weights[k] ?? 0)) / 100 < MIN_SLICE_MONTHLY
+      ) {
         weights[main] = (weights[main] ?? 0) + (weights[k] ?? 0);
         delete weights[k];
       }

@@ -13,22 +13,30 @@ import {
   homeUpfrontShare,
   type DetectedGoal,
 } from "@/lib/goalDetection";
-import {
-  earmarkExistingSavings,
-  goalRealReturnPct,
-  realSalaryStepUpPct,
-} from "@/lib/goalFunding";
+import { earmarkExistingSavings } from "@/lib/goalFunding";
 import {
   existingEquityValue,
   LONG_RUN_INFLATION,
   projectRetirementAccounts,
 } from "@/lib/holdings";
 import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
-import { monthlyStepUpSipForGoal, sipMaturityAmount } from "@/lib/sipGoal";
+import {
+  corpusMonthlyIncome,
+  goalCostInTodaysRupees,
+  GLIDE_YEARS,
+  goalRate,
+  LIFE_EXPECTANCY,
+  lumpRealGrowth,
+  monthlySipFor,
+  retirementCorpusMultiple,
+  salaryGrowth,
+  sipRealValue,
+  sipStepUp,
+} from "@/lib/goalMath";
 
 /** Assumptions an adviser would use for a new home loan. */
 export const HOME_LOAN = { ratePct: 8.5, years: 20, share: 0.8 } as const;
-/** Yearly withdrawal a corpus can sustain without running out. */
+/** Yearly withdrawal an investment pot can sustain for decades (EMI-carry check). */
 export const SAFE_WITHDRAWAL_RATE = 0.04;
 /** All EMIs together: comfortable up to 35% of income, stretched past 40%. */
 export const EMI_COMFORT_SHARE = 0.35;
@@ -143,10 +151,11 @@ export function buildGoalStrategies(
   const thisYear = now.getFullYear();
   const goals = detectGoals(p, now).filter((g) => g.type !== "debt_free");
   const earmarks = earmarkExistingSavings(p, now);
-  const knownStepUp = realSalaryStepUpPct(p);
-  const defaultRealStepUp =
-    ((1 + DEFAULT_STEP_UP_PCT / 100) / (1 + LONG_RUN_INFLATION) - 1) * 100;
+  const knownStepUp = sipStepUp(p);
+  const defaultStepUp = DEFAULT_STEP_UP_PCT / 100;
+  const rateFor = (y: number, type?: string) => goalRate(p, y, type);
   const income = monthlyIncome(p);
+  const age = n(p.selfAge) || 30;
   const loans = runningLoans(p);
   const retirement = goals.find((g) => g.type === "retirement");
 
@@ -167,23 +176,15 @@ export function buildGoalStrategies(
 
   return goals.map((g) => {
     const years = Math.max(0.5, g.yearsToGoal);
-    const rPct = goalRealReturnPct(years);
-    const grow = Math.pow(1 + rPct / 100, years);
+    const nominalFor = (y: number) => rateFor(y, g.type);
+    const nominal = nominalFor(years);
+    const grow = lumpRealGrowth(nominal, years);
     const mark = earmarks.get(g.id);
     const accounts = mark?.retirementAccounts ?? 0;
-    const gap = Math.max(
-      0,
-      g.targetAmount - accounts - (mark?.lumpsum ?? 0) * grow,
-    );
+    const target = g.futureCost ?? g.targetAmount;
+    const gap = Math.max(0, target - accounts - (mark?.lumpsum ?? 0) * grow);
     const sip = (amount: number, stepUp = knownStepUp, y = years) =>
-      Math.round(
-        monthlyStepUpSipForGoal(
-          Math.max(0, amount),
-          goalRealReturnPct(y),
-          y,
-          stepUp,
-        ),
-      );
+      Math.round(monthlySipFor(Math.max(0, amount), y, nominalFor(y), stepUp));
     const baseMonthly = sip(gap);
     const strategies: GoalStrategy[] = [];
     let smartGap = gap;
@@ -195,9 +196,15 @@ export function buildGoalStrategies(
     if (gap > 0 && freed.length > 0) {
       let built = 0;
       for (const l of freed) {
-        // A fixed EMI is worth less in today's rupees by the time it frees up.
-        const real = l.emi / Math.pow(1 + LONG_RUN_INFLATION, l.yearsLeft);
-        built += sipMaturityAmount(real, rPct, years - l.yearsLeft);
+        // The same fixed EMI, paid in from the month after the loan ends.
+        built +=
+          l.emi *
+          sipRealValue(
+            Math.round(years * 12),
+            nominal,
+            0,
+            Math.round(l.yearsLeft * 12) + 1,
+          );
       }
       const after = sip(gap - built);
       if (baseMonthly - after >= 100) {
@@ -220,7 +227,7 @@ export function buildGoalStrategies(
 
     // 2. Start lower and step the SIP up with salary hikes.
     if (gap > 0 && knownStepUp === 0 && years >= 3) {
-      const stepped = sip(gap, defaultRealStepUp);
+      const stepped = sip(gap, defaultStepUp);
       if (baseMonthly - stepped >= 100) {
         strategies.push({
           id: "step_up",
@@ -229,7 +236,7 @@ export function buildGoalStrategies(
           detail: `Instead of a flat ${rs(baseMonthly)}/month, start at ${rs(stepped)} and raise it ${DEFAULT_STEP_UP_PCT}% every year when your salary goes up. Same goal, same date - easier today.`,
           monthlySaved: baseMonthly - stepped,
         });
-        smartStepUp = defaultRealStepUp;
+        smartStepUp = defaultStepUp;
         smartNames.push(`${DEFAULT_STEP_UP_PCT}% yearly step-up`);
       }
     }
@@ -240,7 +247,7 @@ export function buildGoalStrategies(
 
     if (g.type === "kid_education" && gap > 0) {
       const loanPart = 0.3;
-      const after = sip(gap - g.targetAmount * loanPart);
+      const after = sip(gap - target * loanPart);
       if (baseMonthly - after >= 100) {
         strategies.push({
           id: "education_loan",
@@ -268,10 +275,11 @@ export function buildGoalStrategies(
     // Moving a flexible goal out by two years.
     if (isFlexible(g) && gap > 0 && baseMonthly > 0) {
       const later = years + 2;
-      const lateGrow = Math.pow(1 + goalRealReturnPct(later) / 100, later);
+      const lateGrow = lumpRealGrowth(nominalFor(later), later);
       const lateGap = Math.max(
         0,
-        g.targetAmount - (mark?.lumpsum ?? 0) * lateGrow,
+        goalCostInTodaysRupees(g.targetAmount, g.type, later, p) -
+          (mark?.lumpsum ?? 0) * lateGrow,
       );
       const after = sip(lateGap, knownStepUp, later);
       if (baseMonthly - after >= 500) {
@@ -312,7 +320,9 @@ export function buildGoalStrategies(
 
       // EMI against income in the purchase year (both in today's rupees).
       if (income > 0) {
-        const incomeThen = income * Math.pow(1 + knownStepUp / 100, years);
+        const incomeThen =
+          income *
+          Math.pow((1 + salaryGrowth(p)) / (1 + LONG_RUN_INFLATION), years);
         const otherEmis = loans
           .filter((l) => l.yearsLeft > years)
           .reduce((s, l) => s + l.emi, 0);
@@ -351,9 +361,7 @@ export function buildGoalStrategies(
         n(p.goldValue) +
         postOfficeHoldingsValue(p.postOfficeSchemes, now);
       const potsThen =
-        pots *
-          Math.pow(1 + goalRealReturnPct(Math.max(years, 7)) / 100, years) -
-        upfront;
+        pots * lumpRealGrowth(rateFor(Math.max(years, 7)), years) - upfront;
       const swp = (Math.max(0, potsThen) * SAFE_WITHDRAWAL_RATE) / 12;
       if (swp >= emi * 0.5) {
         strategies.push({
@@ -380,8 +388,11 @@ export function buildGoalStrategies(
               HOME_LOAN.years,
               paidYears,
             ) / Math.pow(1 + LONG_RUN_INFLATION, paidYears);
-          const corpusIncome =
-            (retirement.targetAmount * SAFE_WITHDRAWAL_RATE) / 12;
+          const corpusIncome = corpusMonthlyIncome(
+            retirement.targetAmount,
+            age + retirement.yearsToGoal,
+            p,
+          );
           strategies.push({
             id: "loan_past_retirement",
             kind: "check",
@@ -398,7 +409,12 @@ export function buildGoalStrategies(
       sipFor: typeof sip,
       base: number,
     ) {
-      const income4 = (goal.targetAmount * SAFE_WITHDRAWAL_RATE) / 12;
+      const retireAge = age + goal.yearsToGoal;
+      const monthlyIncomeFromCorpus = corpusMonthlyIncome(
+        goal.targetAmount,
+        retireAge,
+        p,
+      );
       const pastRetirement = loans.filter(
         (l) => l.yearsLeft > goal.yearsToGoal,
       );
@@ -406,11 +422,27 @@ export function buildGoalStrategies(
         id: "corpus_income",
         kind: "check",
         title: "What the corpus pays you",
-        detail: `${rs(goal.targetAmount)} withdrawn at a safe 4% a year gives about ${rs(income4)}/month in today's rupees.${pastRetirement.length > 0 ? ` Your ${pastRetirement.map((l) => l.name).join(", ")} would still be running then - close ${pastRetirement.length === 1 ? "it" : "them"} before you retire, or the corpus has to carry ${rs(pastRetirement.reduce((s, l) => s + l.emi, 0))}/month more.` : ""}`,
+        detail: `${rs(goal.targetAmount)} pays about ${rs(monthlyIncomeFromCorpus)}/month in today's rupees, rising with prices, from age ${retireAge} to ${LIFE_EXPECTANCY}.${pastRetirement.length > 0 ? ` Your ${pastRetirement.map((l) => l.name).join(", ")} would still be running then - close ${pastRetirement.length === 1 ? "it" : "them"} before you retire, or the corpus has to carry ${rs(pastRetirement.reduce((s, l) => s + l.emi, 0))}/month more.` : ""}`,
       });
       if (retGap > 0 && base > 0) {
         const later = goal.yearsToGoal + 2;
-        const after = sipFor(retGap, knownStepUp, later);
+        // Two more years of saving, and a corpus that has two fewer years to last.
+        const laterTarget = goalCostInTodaysRupees(
+          n(p.retirementTargetCorpus)
+            ? goal.targetAmount
+            : (goal.targetAmount * retirementCorpusMultiple(retireAge + 2, p)) /
+                retirementCorpusMultiple(retireAge, p),
+          "retirement",
+          later,
+          p,
+        );
+        const laterGap = Math.max(
+          0,
+          laterTarget -
+            projectRetirementAccounts(p, later, { real: true }).total -
+            (mark?.lumpsum ?? 0) * lumpRealGrowth(nominalFor(later), later),
+        );
+        const after = sipFor(laterGap, knownStepUp, later);
         if (base - after >= 500) {
           strategies.push({
             id: "retire_later",
@@ -481,31 +513,44 @@ export function projectGoalReach(
       n(p.monthlyNPSContribution)
     : 0;
   const lump = Math.max(0, n(goal.currentSaved) - pfToday);
-  const r =
+  const rate = goalRate(p, Math.max(1, goal.yearsToGoal), goal.type);
+  // Months to the goal date; the money moves to safer funds for the last years.
+  const goalMonths = Math.round(Math.max(1, goal.yearsToGoal) * 12);
+  const glides = goalMonths > GLIDE_YEARS * 12 && rate.safe !== rate.long;
+  const monthlyRate = (k: number) =>
     Math.pow(
-      1 + goalRealReturnPct(Math.max(1, goal.yearsToGoal)) / 100,
+      1 + (glides && goalMonths - k < GLIDE_YEARS * 12 ? rate.safe : rate.long),
       1 / 12,
     ) - 1;
-  const stepUp = realSalaryStepUpPct(p) / 100;
+  let lumpValue = lump;
+  const stepUp = sipStepUp(p);
   const target = n(goal.targetAmount);
 
+  // Nominal rupees month by month, shown in today's rupees at each year end.
   let sipValue = 0;
-  let put = lump + pfToday;
+  let paidIn = 0;
   let sip = monthly;
   const rows: GoalReachRow[] = [];
   let reachYear: number | null = target <= 0 ? thisYear : null;
   const lastYear = goal.targetYear + REACH_HORIZON_YEARS;
   for (let y = 1; thisYear + y <= lastYear; y++) {
     if (y > 1) sip *= 1 + stepUp;
-    for (let m = 0; m < 12; m++) sipValue = sipValue * (1 + r) + sip;
-    put += sip * 12 + pfMonthly * 12;
+    for (let m = 0; m < 12; m++) {
+      const rm = monthlyRate(12 * (y - 1) + m + 1);
+      sipValue = sipValue * (1 + rm) + sip;
+      lumpValue *= 1 + rm;
+      paidIn +=
+        sip / Math.pow(1 + LONG_RUN_INFLATION, (12 * (y - 1) + m + 1) / 12);
+    }
+    const deflate = Math.pow(1 + LONG_RUN_INFLATION, y);
+    const put = lump + pfToday + paidIn + pfMonthly * 12 * y;
     const pf = isRetirement
       ? projectRetirementAccounts(p, y, { real: true }).total
       : 0;
-    const value = lump * Math.pow(1 + r, 12 * y) + sipValue + pf;
+    const value = (lumpValue + sipValue) / deflate + pf;
     const year = thisYear + y;
     rows.push({ year, invested: Math.round(put), value: Math.round(value) });
-    if (reachYear === null && value >= target * 0.98) reachYear = year;
+    if (reachYear === null && value >= target * 0.995) reachYear = year;
     if (year >= goal.targetYear && reachYear !== null) break;
   }
   return {

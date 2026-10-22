@@ -14,6 +14,10 @@ import NumberInput from "../ui/NumberInput";
 import {
   CITY_TIER_LABELS,
   CITY_TIER_VALUES,
+  EMPLOYMENT_TYPE_LABELS,
+  EMPLOYMENT_TYPE_VALUES,
+  TAX_SLAB_OPTIONS,
+  type EmploymentType,
   LIFE_STAGE_LABELS,
   LIFE_STAGE_VALUES,
   POST_OFFICE_SCHEME_LABELS,
@@ -1558,6 +1562,8 @@ export function AnalyseOnboardingForm() {
           ...values,
           primaryGoal: values.primaryGoal || "grow_wealth",
           monthlySalary: values.monthlySalary ?? 0,
+          // A full (re)take is the plan's yearly check.
+          planReviewedAt: new Date().toISOString(),
         }),
       );
       setAnalysis(mergedValues);
@@ -2066,6 +2072,93 @@ export function AnalyseOnboardingForm() {
                       step={0.5}
                       helper="Optional. Your goal SIPs can grow with your salary, so the starting amount is lower."
                     />
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-sm font-medium text-slate-700">
+                        How do you earn?
+                      </p>
+                      <ToggleButtons
+                        options={EMPLOYMENT_TYPE_VALUES.map((value) => ({
+                          label: EMPLOYMENT_TYPE_LABELS[value],
+                          value,
+                        }))}
+                        value={watch("employmentType") ?? ""}
+                        onChange={(value) =>
+                          setValue("employmentType", value as EmploymentType, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
+                      <p className="text-xs text-slate-500">
+                        Self-employed or business income can stop without
+                        notice, so we plan a bigger emergency fund.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        htmlFor="taxSlabPct"
+                        className="text-sm font-medium text-slate-700"
+                      >
+                        Your income-tax slab
+                      </label>
+                      <select
+                        id="taxSlabPct"
+                        className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-[#534AB7]/25"
+                        value={watch("taxSlabPct") ?? ""}
+                        onChange={(e) =>
+                          setValue(
+                            "taxSlabPct",
+                            e.target.value === ""
+                              ? undefined
+                              : Number(e.target.value),
+                            { shouldDirty: true },
+                          )
+                        }
+                      >
+                        <option value="">
+                          Not sure - we&apos;ll work it out
+                        </option>
+                        {TAX_SLAB_OPTIONS.map((pct) => (
+                          <option key={pct} value={pct}>
+                            {pct === 0 ? "No tax" : `${pct}%`}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-500">
+                        FD and debt fund interest is taxed at your slab, so we
+                        plan on what you keep after tax.
+                      </p>
+                    </div>
+                    <div className="flex min-w-0 items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800">
+                          Will you raise your SIPs every year?
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Yes: we start smaller and raise them each April. No:
+                          one fixed amount.
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        <ToggleButtons
+                          options={[
+                            { label: "Yes", value: "yes" },
+                            { label: "No", value: "no" },
+                          ]}
+                          value={
+                            watch("sipStepUpPlanned") === undefined
+                              ? ""
+                              : watch("sipStepUpPlanned")
+                                ? "yes"
+                                : "no"
+                          }
+                          onChange={(value) =>
+                            setValue("sipStepUpPlanned", value === "yes", {
+                              shouldDirty: true,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
                     <div className="mt-4 flex items-center justify-between rounded-[10px] bg-[#EEEDFE] px-4 py-3">
                       <span className="text-sm font-medium text-[#3C3489]">
                         Total monthly income
