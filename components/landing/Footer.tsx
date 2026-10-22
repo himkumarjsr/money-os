@@ -34,7 +34,7 @@ const columns = [
     links: [
       { label: "All Features", href: "/features" },
       { label: "Financial Health Check", href: "/analyse" },
-      { label: "FK Split", href: "/split" },
+      { label: "Settle Up", href: "/split" },
       { label: "Tax Calculator", href: "/calculators/tax-regime-2026" },
       { label: "SIP Calculator", href: "/calculators/sip" },
       { label: "SWP Calculator", href: "/calculators/swp" },

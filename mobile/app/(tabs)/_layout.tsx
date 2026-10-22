@@ -22,7 +22,7 @@ export default function TabLayout() {
       <Tabs.Screen name="tracker" options={{ title: "Track" }} />
       <Tabs.Screen name="calculators" options={{ title: "Calculators" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-      <Tabs.Screen name="split" options={{ title: "Split", href: null }} />
+      <Tabs.Screen name="split" options={{ title: "Settle Up", href: null }} />
     </Tabs>
   );
 }

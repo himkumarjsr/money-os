@@ -19,7 +19,7 @@ export function buildSplitMemberAddedCopy(input: {
   const who = input.inviterName.trim() || "Someone";
   return {
     title: `${who} added you to ${group}`,
-    body: `Tap to join “${group}” on Finkoin Split and track shared expenses together.`,
+    body: `Tap to join “${group}” on Finkoin Settle Up and track shared expenses together.`,
   };
 }
 

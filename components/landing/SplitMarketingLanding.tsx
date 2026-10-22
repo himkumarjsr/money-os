@@ -2,11 +2,11 @@ import Link from "next/link";
 
 const FAQS = [
   {
-    q: "What is Finkoin Split?",
+    q: "What is Finkoin Settle Up?",
     a: "A free expense-splitting app for friends, roommates, and trips in India. Create a group, add spends, and see who owes whom - clearly.",
   },
   {
-    q: "Is Finkoin Split a Splitwise alternative?",
+    q: "Is Finkoin Settle Up a Splitwise alternative?",
     a: "Yes. It is built for Indian groups who want simple bill splitting without heavy clutter. Free to start.",
   },
   {
@@ -15,7 +15,7 @@ const FAQS = [
   },
   {
     q: "Do I need to pay to split bills?",
-    a: "No. Core splitting on Finkoin Split is free.",
+    a: "No. Core splitting on Finkoin Settle Up is free.",
   },
 ] as const;
 
@@ -55,7 +55,7 @@ export default function SplitMarketingLanding() {
 
       <section className="relative mx-auto max-w-3xl px-4 pb-14 pt-10 text-center sm:px-6 sm:pb-20 sm:pt-16">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#534AB7]">
-          Finkoin Split
+          Finkoin Settle Up
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight text-[#1a1824] sm:text-5xl sm:leading-[1.1]">
           Split expenses with friends - simply
@@ -86,7 +86,7 @@ export default function SplitMarketingLanding() {
 
       <section className="relative mx-auto max-w-4xl px-4 sm:px-6">
         <h2 className="text-center text-2xl font-bold tracking-tight text-[#1a1824]">
-          Why people use Finkoin Split
+          Why people use Finkoin Settle Up
         </h2>
         <ul className="mt-8 grid gap-6 sm:grid-cols-2">
           {FEATURES.map((f) => (
@@ -158,7 +158,7 @@ export default function SplitMarketingLanding() {
           Split the next bill the easy way
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Sign up free and create your first Finkoin Split group in under a
+          Sign up free and create your first Finkoin Settle Up group in under a
           minute.
         </p>
         <Link

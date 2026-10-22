@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
 
-const title = "Finkoin Split - Split Expenses with Friends | India";
+const title = "Finkoin Settle Up - Split Expenses with Friends | India";
 const description =
-  "Split bills, track shared expenses and settle debts with friends. Free expense splitting app for Indians - a simple Splitwise alternative. Finkoin Split.";
+  "Split bills, track shared expenses and settle debts with friends. Free expense splitting app for Indians - a simple Splitwise alternative. Finkoin Settle Up.";
 
 export const metadata: Metadata = fitMetadata({
   title: { absolute: title },
   description,
   keywords: [
-    "Finkoin Split",
+    "Finkoin Settle Up",
     "expense splitting app India",
     "split bills friends India",
     "splitwise alternative India",
@@ -19,7 +19,7 @@ export const metadata: Metadata = fitMetadata({
   alternates: { canonical: "/split" },
   robots: "index, follow",
   openGraph: {
-    title: "Finkoin Split - Free Expense Splitting",
+    title: "Finkoin Settle Up - Free Expense Splitting",
     description:
       "Split expenses with friends. Track group spending. Settle debts easily. Free forever.",
     url: `${SITE_URL}/split`,
@@ -30,13 +30,13 @@ export const metadata: Metadata = fitMetadata({
         url: `${SITE_URL}/og/og-split.png`,
         width: 1200,
         height: 630,
-        alt: "Finkoin Split - Split expenses with friends",
+        alt: "Finkoin Settle Up - Split expenses with friends",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Finkoin Split - Free Expense Splitting",
+    title: "Finkoin Settle Up - Free Expense Splitting",
     description:
       "Split expenses with friends. Track group spending. Settle debts easily.",
     images: [`${SITE_URL}/og/og-split.png`],
@@ -48,7 +48,7 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "WebApplication",
-      name: "Finkoin Split",
+      name: "Finkoin Settle Up",
       description,
       url: `${SITE_URL}/split`,
       applicationCategory: "FinanceApplication",
@@ -69,7 +69,7 @@ const jsonLd = {
       mainEntity: [
         {
           "@type": "Question",
-          name: "What is Finkoin Split?",
+          name: "What is Finkoin Settle Up?",
           acceptedAnswer: {
             "@type": "Answer",
             text: "A free expense-splitting app for friends, roommates, and trips in India. Create a group, add spends, and see who owes whom.",
@@ -77,7 +77,7 @@ const jsonLd = {
         },
         {
           "@type": "Question",
-          name: "Is Finkoin Split a Splitwise alternative?",
+          name: "Is Finkoin Settle Up a Splitwise alternative?",
           acceptedAnswer: {
             "@type": "Answer",
             text: "Yes. It is built for Indian groups who want simple bill splitting. Free to start.",
@@ -88,7 +88,7 @@ const jsonLd = {
           name: "Do I need to pay to split bills?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "No. Core splitting on Finkoin Split is free.",
+            text: "No. Core splitting on Finkoin Settle Up is free.",
           },
         },
       ],

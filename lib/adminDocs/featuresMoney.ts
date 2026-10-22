@@ -108,7 +108,7 @@ export const billsSection: DocSection = {
 
 export const splitSection: DocSection = {
   id: "split",
-  title: "FK Split",
+  title: "Settle Up",
   group: "Features",
   summary:
     "Groups, invites, expenses with four split types, simplified balances and settle-up.",

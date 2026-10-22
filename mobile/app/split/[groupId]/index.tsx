@@ -295,7 +295,7 @@ export default function GroupDetailScreen() {
   };
 
   const openWhatsApp = () => {
-    const text = `Join "${group?.name ?? "Split"}" on Finkoin Split and we'll track shared expenses together: ${inviteUrl}`;
+    const text = `Join "${group?.name ?? "Split"}" on Finkoin Settle Up and we'll track shared expenses together: ${inviteUrl}`;
     Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`).catch(
       () => void shareText(text),
     );

@@ -251,7 +251,7 @@ function SplitHomeInner() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
-                Finkoin Split
+                Finkoin Settle Up
               </p>
               <h1 className="mt-2 text-2xl font-extrabold leading-tight">
                 Split expenses with friends

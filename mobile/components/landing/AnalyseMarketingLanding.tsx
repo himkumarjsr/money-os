@@ -178,7 +178,7 @@ export function AnalyseMarketingLanding({
             accessibilityRole="link"
             onPress={() => router.push("/(tabs)/split" as Href)}
           >
-            Finkoin Split
+            Finkoin Settle Up
           </Text>
         </Text>
       </View>

@@ -15,7 +15,7 @@ export const ACCOUNT_NAV = {
   profile: { icon: "user", label: "My Profile", href: "/profile" },
   tracker: { icon: "notebook", label: "Expense Tracker", href: "/tracker" },
   bills: { icon: "calendar", label: "Bills & renewals", href: "/bills" },
-  split: { icon: "users", label: "FK Split", href: "/split" },
+  split: { icon: "users", label: "Settle Up", href: "/split" },
   analysis: { icon: "chart", label: "My Analysis", href: "/analyse/result" },
   policies: { icon: "shield", label: "My Policies", href: "/policies" },
   goals: { icon: "target", label: "My Goals", href: "/goals" },

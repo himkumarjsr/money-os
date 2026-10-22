@@ -23,7 +23,7 @@ import { usePathname } from "next/navigation";
 const centerNavItems = [
   { href: "/analyse", label: "Analyse" },
   { href: "/tracker", label: "Tracker" },
-  { href: "/split", label: "FK Split" },
+  { href: "/split", label: "Settle Up" },
   { href: "/calculators", label: "Calculators" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/optimizer", label: "Optimizer" },

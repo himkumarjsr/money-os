@@ -28,7 +28,7 @@ const COLUMNS: ReadonlyArray<{ heading: string; links: FooterLink[] }> = [
     links: [
       { label: "All Features", href: "/features" },
       { label: "Financial Health Check", href: "/(tabs)/analyse" },
-      { label: "FK Split", href: "/(tabs)/split" },
+      { label: "Settle Up", href: "/(tabs)/split" },
       { label: "Tax Calculator", href: "/calculators/tax-regime" },
       { label: "SIP Calculator", href: "/calculators/sip" },
       { label: "SWP Calculator", href: "/calculators/swp" },

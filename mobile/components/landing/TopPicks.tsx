@@ -66,9 +66,9 @@ const cards = (): Card[] => [
   },
   {
     key: "split",
-    title: "FK Split",
+    title: "Settle Up",
     body: "Split bills, track shared expenses, and settle up - ₹ first. No ads.",
-    cta: "Open FK Split →",
+    cta: "Open Settle Up →",
     route: "/(tabs)/split",
     accent: Colors.primaryLight,
     border: Colors.primaryTintBorder,
