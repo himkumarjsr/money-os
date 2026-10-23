@@ -16,6 +16,7 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { Colors, themedStyles } from "@/constants/theme";
 import { timeGreeting } from "@/lib/greeting";
 import { syncKv } from "@/lib/syncKv";
+import { introTourBlocksPopups } from "@/lib/introTour";
 import { useAuthStore } from "@/store/authStore";
 import {
   useNotificationStore,
@@ -63,7 +64,8 @@ export function MorningTipPopup() {
       const todayTip = await getNextRelevantPopup(user.id);
       if (todayTip && !cancelled) {
         timer = setTimeout(() => {
-          if (!cancelled) {
+          // The intro tour is playing; the tip waits for the next launch.
+          if (!cancelled && !introTourBlocksPopups()) {
             setTip(todayTip);
             setVisible(true);
           }

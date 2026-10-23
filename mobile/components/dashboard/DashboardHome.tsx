@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
+import { IntroTourButton } from "@/components/IntroTourButton";
 import {
   Colors,
   FontSize,
@@ -197,6 +198,11 @@ export function DashboardHome() {
               </Pressable>
             ) : null}
           </View>
+          <IntroTourButton
+            location="dashboard_header"
+            label="Take the tour"
+            style={{ alignSelf: "flex-start", marginTop: 12 }}
+          />
         </View>
 
         <View style={styles.quickGrid} accessibilityLabel="Quick actions">

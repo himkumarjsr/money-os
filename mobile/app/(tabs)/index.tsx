@@ -24,6 +24,7 @@ import { Footer } from "@/components/landing/Footer";
 import { WhatYouGet } from "@/components/home/WhatYouGet";
 import { Pricing } from "@/components/home/Pricing";
 import { GoldText } from "@/components/ui/GoldMirror";
+import { IntroTourButton } from "@/components/IntroTourButton";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useAuthStore } from "@/store/authStore";
@@ -79,6 +80,8 @@ function LandingScreen() {
             Check your financial health score, calculate tax savings, plan
             investments - everything in one place. No PAN needed.
           </Text>
+
+          <IntroTourButton location="home_hero" style={{ marginTop: 14 }} />
 
           <View style={styles.carouselWrap}>
             <HeroCarousel />
