@@ -1,7 +1,12 @@
 "use client";
 
 import { AnalyseResultErrorBoundary } from "@/components/analyse/analyse-result-error-boundary";
+import {
+  emergencyFundExplain,
+  medicalFundExplain,
+} from "@/lib/safetyNetExplain";
 import { PaywallModal } from "@/components/analyse/paywall-modal";
+import YearlyRoadmapTable from "@/components/analyse/YearlyRoadmapTable";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import FeedbackWidget from "@/components/FeedbackWidget";
@@ -268,6 +273,13 @@ export default function AnalyseResultPage() {
       formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
       formatTarget: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
       isOk: emergencyHave >= emergencyTarget,
+      explain: profile
+        ? emergencyFundExplain(
+            profile,
+            analysis?.realEmergencyFund,
+            emergencyTarget,
+          )
+        : undefined,
       icon: "shield",
     },
     {
@@ -278,6 +290,13 @@ export default function AnalyseResultPage() {
       formatCurrent: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
       formatTarget: (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`,
       isOk: medEmergencyCurrent >= medEmergencyTargetAmount,
+      explain: profile
+        ? medicalFundExplain(profile, {
+            current: medEmergencyCurrent,
+            target: medEmergencyTargetAmount,
+            fromSavings: analysis?.medicalEmergencyFund?.fromSavings,
+          })
+        : undefined,
       icon: "hospital",
     },
     {
@@ -877,9 +896,9 @@ export default function AnalyseResultPage() {
               {safetyItems.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between rounded-xl border border-[#ECEAF5] p-3"
+                  className="flex items-start justify-between gap-3 rounded-xl border border-[#ECEAF5] p-3"
                 >
-                  <div className="text-sm">
+                  <div className="min-w-0 flex-1 text-sm">
                     <p className="font-semibold">
                       <span className="inline-flex items-center gap-2">
                         <AppIcon
@@ -894,6 +913,18 @@ export default function AnalyseResultPage() {
                       Current {item.formatCurrent(item.current)} vs target{" "}
                       {item.formatTarget(item.target)}
                     </p>
+                    {"explain" in item && item.explain ? (
+                      <>
+                        <p className="mt-1 text-xs leading-snug text-[#5F5E5A]">
+                          <span className="font-semibold">Target: </span>
+                          {item.explain.target}
+                        </p>
+                        <p className="mt-0.5 text-xs leading-snug text-[#5F5E5A]">
+                          <span className="font-semibold">Now: </span>
+                          {item.explain.filled}
+                        </p>
+                      </>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <span
@@ -951,6 +982,11 @@ export default function AnalyseResultPage() {
             profile={profile}
             userId={user?.id}
             funding={priorityPlan.goalFunding?.items}
+          />
+
+          <YearlyRoadmapTable
+            profile={profile}
+            items={priorityPlan.goalFunding?.items}
           />
 
           <section className="rounded-2xl border border-[#DCD8F4] bg-white p-5">
