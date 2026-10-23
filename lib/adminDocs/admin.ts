@@ -97,6 +97,8 @@ export const analyseLogsSection: DocSection = {
         "Each row holds the form answers, the profile, the steps the report is built from (safety fund sources, goals, earmarks, surplus breakdown, priority steps, goal strategies, money score) and the report itself.",
         "`checks` lists numbers in that report that disagree with each other (surplus breakdown, a ₹0/month step, the retirement SIP). Use the filter to see only those reports.",
         "Users can only add their own rows; nobody but a console admin can read them. Logging runs a second after the report shows and never blocks it.",
+        "Click a row for its calculation sheet: what the user entered, the monthly money flow line by line, safety funds (target = essential outgo × months), goals, plan steps in order and the money score. Numbers that don't match their formula are marked in red; the raw JSON is under Raw data.",
+        'On the website the same sheet is printed to the browser console (Inspect → Console → "Finkoin Analyse") for every report, signed in or not, and the full data is on `window.__finkoinAnalyseLog`.',
       ],
     },
     {

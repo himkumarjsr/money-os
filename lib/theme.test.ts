@@ -21,10 +21,26 @@ describe("theme", () => {
     expect(resolveTheme("light", true, true)).toBe("light");
   });
 
-  it("unlocks premium by rank or report + 90-day streak", () => {
+  it("unlocks premium by rank + 500 points or report + 90-day streak", () => {
     expect(
-      isPremiumEligible({ rank: 10, streakDays: 0, hasReport: false }),
+      isPremiumEligible({
+        rank: 10,
+        points: 500,
+        streakDays: 0,
+        hasReport: false,
+      }),
     ).toBe(true);
+    expect(
+      isPremiumEligible({
+        rank: 1,
+        points: 499,
+        streakDays: 0,
+        hasReport: false,
+      }),
+    ).toBe(false);
+    expect(
+      isPremiumEligible({ rank: 1, streakDays: 0, hasReport: false }),
+    ).toBe(false);
     expect(
       isPremiumEligible({ rank: 11, streakDays: 89, hasReport: true }),
     ).toBe(false);

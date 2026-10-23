@@ -28,6 +28,11 @@ export const beforeLoginSection: DocSection = {
           "Static content modules",
         ],
         [
+          '"Why Finkoin" intro tour',
+          '`/`, `/dashboard` (any "Watch the tour" button)',
+          "A ~30 second animated tour of the key features (`components/IntroTourVideo.tsx`). Plays once on a new device's first visit to `/` or `/dashboard` (`finkoin_intro_tour_seen` in localStorage) and holds back the morning tip and push prompt while open. Same in the app (`mobile/components/IntroTourVideo.tsx`)",
+        ],
+        [
           "Legal",
           "`/legal/*`, `/privacy`, `/terms`, `/legal/delete-account`",
           "Static",
@@ -212,7 +217,7 @@ export const afterLoginSection: DocSection = {
         ["Money Map in Tracker", "-", "Yes (`canViewMoneyMap`)"],
         [
           "Premium (24k) theme",
-          "Earned: top 10 on the leaderboard, or a report + 90-day streak",
+          "Earned: all-time top 10 on the leaderboard with 500+ points, or a report + 90-day streak",
           "Same rule (not sold)",
         ],
         ["Tracker, Split, policies, calculators, learning", "Yes", "Yes"],

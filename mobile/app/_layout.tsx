@@ -74,6 +74,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 export default function RootLayout() {
   const initAuth = useAuthStore((s) => s.initAuth);
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const authReady = useAuthStore((s) => s.hasInitialized);
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);
   const premiumUnlocked = useThemeStore((s) => s.premium?.unlocked ?? false);
@@ -106,10 +107,15 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!ready) return;
-    const store = useThemeStore.getState();
-    store.load(userId);
-    void store.refreshPremium(userId);
+    useThemeStore.getState().load(userId);
   }, [ready, userId]);
+
+  // Refreshing as "signed out" before auth settles would drop the cached
+  // Premium status and open a Gold theme as Dark.
+  useEffect(() => {
+    if (!ready || !authReady) return;
+    void useThemeStore.getState().refreshPremium(userId);
+  }, [ready, authReady, userId]);
 
   const theme = resolveTheme(preference, systemScheme, premiumUnlocked);
   // Set before children render so Colors and themedStyles read this palette.
@@ -173,7 +179,7 @@ export default function RootLayout() {
             <Toast />
           </View>
         ) : null}
-        <AnimatedSplash ready={ready} theme={theme} />
+        <AnimatedSplash ready={ready} theme={theme} themeKnown={hydrated} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
