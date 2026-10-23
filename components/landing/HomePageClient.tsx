@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import HomeHeroCarousel from "@/components/landing/HomeHeroCarousel";
 import HomeMobileQuickTools from "@/components/landing/HomeMobileQuickTools";
+import { IntroTourButton } from "@/components/IntroTourButton";
 import DashboardScreen from "@/components/dashboard/DashboardScreen";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
 import { TrackImpression } from "@/components/TrackImpression";
@@ -94,6 +95,9 @@ export default function HomePageClient({ children }: { children: ReactNode }) {
               className="relative mx-auto max-w-4xl text-center"
             >
               {children}
+              <div className="mt-3 flex justify-center sm:mt-5">
+                <IntroTourButton location="home_hero" />
+              </div>
               <div className="mt-3 sm:mt-8">
                 <HomeHeroCarousel />
               </div>

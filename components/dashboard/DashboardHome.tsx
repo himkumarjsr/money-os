@@ -1,6 +1,7 @@
 "use client";
 
 import { SCORE_BAND_UI } from "@/app/analyse/result/resultModel";
+import { IntroTourButton } from "@/components/IntroTourButton";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import {
   buildBillsMonth,
@@ -127,6 +128,7 @@ export default function DashboardHome() {
             ) : null}
           </p>
         </div>
+        <IntroTourButton location="dashboard_header" label="Take the tour" />
       </section>
 
       <nav
