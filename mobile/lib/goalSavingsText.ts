@@ -8,6 +8,14 @@ import type { GoalFundingItem } from "@/lib/goalFunding";
 
 const rs = (v: number) => `₹${formatIndian(Math.round(Math.max(0, v)))}`;
 
+/** " on top of them (₹X/month in all)" when running SIPs already go to it. */
+function moreContext(item: GoalFundingItem): string {
+  const running = item.existingMonthly ?? 0;
+  return running > 0
+    ? ` on top of them (${rs(running + item.monthlyRequired)}/month in all)`
+    : "";
+}
+
 export function goalSavingsLines(item: GoalFundingItem): string[] {
   const lines: string[] = [];
   const src = item.sources;
@@ -39,8 +47,8 @@ export function goalSavingsLines(item: GoalFundingItem): string[] {
       : planned + 100 >= item.monthlyRequired
         ? `Still needed: ${rs(item.monthlyRequired)}/month in a new SIP.`
         : planned > 0
-          ? `To reach it by ${item.targetYear} you'd need ${rs(item.monthlyRequired)}/month more. From what's left each month, your plan can give it ${rs(planned)}/month - see below for what that reaches.`
-          : `To reach it by ${item.targetYear} you'd need ${rs(item.monthlyRequired)}/month more. Nothing is left over for it yet.`,
+          ? `To reach it by ${item.targetYear} you'd need ${rs(item.monthlyRequired)}/month more${moreContext(item)}. From what's left each month, your plan can give it ${rs(planned)}/month - see below for what that reaches.`
+          : `To reach it by ${item.targetYear} you'd need ${rs(item.monthlyRequired)}/month more${moreContext(item)}. Nothing is left over for it yet.`,
   );
   return lines;
 }

@@ -488,7 +488,7 @@ export default function AnalyseResultPage() {
                 <div
                   className={`break-words font-extrabold leading-tight tabular-nums text-[length:clamp(14px,calc(8px + 4.2vw),22px)] sm:text-[22px] ${amountLeftInHand >= 0 ? "text-[#0F766E]" : "text-[#B42323]"}`}
                 >
-                  ₹
+                  {amountLeftInHand < 0 ? "-" : ""}₹
                   {Math.abs(Math.round(amountLeftInHand)).toLocaleString(
                     "en-IN",
                   )}
@@ -1067,18 +1067,25 @@ export default function AnalyseResultPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Less: Insurance premiums + investment</span>
+                    <span>
+                      Less: Insurance premiums + investment
+                      {epfMonthly > 0 ? " (EPF excluded)" : ""}
+                    </span>
                     <span>
                       -₹
                       {Math.round(
-                        securityActual + investmentActual,
+                        securityActual +
+                          Math.max(0, investmentActual - epfMonthly),
                       ).toLocaleString("en-IN")}
                     </span>
                   </div>
                   <div className="mt-2 border-t border-[#E8E6F0] pt-2 text-sm font-semibold text-[#3C3489] flex items-center justify-between">
                     <span>Your Monthly Surplus</span>
                     <span>
-                      ₹{Math.round(amountLeftInHand).toLocaleString("en-IN")}
+                      {amountLeftInHand < 0 ? "-" : ""}₹
+                      {Math.abs(Math.round(amountLeftInHand)).toLocaleString(
+                        "en-IN",
+                      )}
                     </span>
                   </div>
                 </div>

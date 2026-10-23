@@ -2,6 +2,7 @@ import {
   financialProfileToFormValues,
   type FinancialProfile,
 } from "@/lib/analyse-form-schema";
+import { logAnalyseRun } from "@/lib/analyseLog";
 import { analyseFinances } from "@/lib/financialEngine";
 import {
   ANALYSE_SNAPSHOT_VERSION,
@@ -28,6 +29,7 @@ export async function saveAnalyseProfile(
     analysisPatch: analysis,
   });
   if (!userId) return {};
+  logAnalyseRun(userId, { source: "profile_edit", profile, result });
   const { error } = await upsertUserAnalyseSnapshot(userId, {
     profile,
     result,
