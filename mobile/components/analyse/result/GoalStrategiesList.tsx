@@ -118,7 +118,14 @@ export function GoalStrategiesList({
                   : r.year === goal.targetYear
                     ? " ◎"
                     : "";
-                const cell = [styles.td, hit && styles.tdHit];
+                const cell = [
+                  styles.td,
+                  hit && styles.tdHit,
+                  !hit &&
+                    !reach.onTime &&
+                    r.year === goal.targetYear &&
+                    styles.tdMiss,
+                ];
                 const shown = openYear === r.year;
                 return (
                   <Pressable
@@ -253,6 +260,7 @@ const styles = themedStyles(() => ({
     fontVariant: ["tabular-nums"],
   },
   tdHit: { fontWeight: "700", color: readable("#0F6E56") },
+  tdMiss: { fontWeight: "600", color: readable("#854F0B") },
   putIn: {
     color: Colors.primaryText,
     textDecorationLine: "underline",
