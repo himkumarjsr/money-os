@@ -64,7 +64,7 @@ function compoundWithContributions(
 }
 
 /** EPF contributions are a share of salary: they rise with the expected hike (capped at 10%), else with prices. */
-function salaryLinkedGrowth(data: Partial<FinancialProfile>): number {
+export function salaryLinkedGrowth(data: Partial<FinancialProfile>): number {
   const hike = Number(data.annualSalaryIncreasePct);
   return Number.isFinite(hike) && hike > 0
     ? Math.min(0.1, hike / 100)

@@ -6,6 +6,7 @@ import {
   buildGoalStrategies,
   buildYearlyRoadmap,
   goalReachLine,
+  goalReachPutInLine,
   projectGoalReach,
   loanEmi,
   loanOutstanding,
@@ -112,6 +113,44 @@ describe("projectGoalReach", () => {
     for (let m = 1; m <= 12; m++) paidIn += 50_000 / Math.pow(1.06, m / 12);
     expect(reach.rows[0].invested).toBe(Math.round(10_00_000 + paidIn));
     expect(goalReachLine(reach, goal)).toMatch(/reach the goal in 20\d\d/);
+  });
+
+  it("splits Put in into savings, SIPs and retirement accounts", () => {
+    const p = base({
+      annualSalaryIncreasePct: 0,
+      epfBalance: 15_00_000,
+      monthlyEPFContribution: 30_000,
+    });
+    const ret = projectGoalReach(
+      p,
+      {
+        type: "retirement",
+        targetAmount: 5_00_00_000,
+        targetYear: 2040,
+        yearsToGoal: 14,
+        currentSaved: 20_00_000,
+        monthlyAllocated: 20_000,
+      },
+      NOW,
+    );
+    for (const r of ret.rows) {
+      const parts = r.putIn!;
+      expect(
+        Math.abs(
+          parts.saved + parts.pfBalance + parts.sipPaid + parts.pfPaid -
+            r.invested,
+        ),
+      ).toBeLessThanOrEqual(2);
+    }
+    const first = ret.rows[0].putIn!;
+    expect(first.saved).toBe(5_00_000);
+    expect(first.pfBalance).toBe(15_00_000);
+    // EPF paid is counted in today's rupees, like the SIPs: under face value.
+    expect(first.pfPaid).toBeLessThan(30_000 * 12);
+    expect(first.pfPaid).toBeGreaterThan(30_000 * 12 * 0.95);
+    expect(goalReachPutInLine(ret.rows[0])).toMatch(
+      /₹5,00,000 savings set aside today \+ ₹15,00,000 EPF \/ PPF \/ NPS balance today \+ .* of monthly SIPs paid by 2027 \+ .* of EPF \/ PPF \/ NPS contributions by 2027 = /,
+    );
   });
 
   it("is on time when the plan funds the full SIP", () => {
