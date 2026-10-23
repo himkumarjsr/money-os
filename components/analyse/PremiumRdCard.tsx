@@ -1,5 +1,6 @@
 "use client";
 
+import { AppIcon } from "@/components/ui/AppIcon";
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import {
   applyRenewalMonths,
@@ -120,26 +121,34 @@ export default function PremiumRdCard({
                 When does your {m.label} premium of ₹
                 {m.premium.toLocaleString("en-IN")} renew?
               </span>
-              <select
-                className="h-10 rounded-lg border border-[#E8E6F0] bg-white px-2 text-sm"
-                defaultValue=""
-                onChange={(e) => {
-                  const month = Number(e.target.value);
-                  if (month >= 1 && month <= 12) {
-                    saveRenewalMonth(userId, profile, m.key, month);
-                    setStatus("idle");
-                  }
-                }}
-              >
-                <option value="" disabled>
-                  Pick month
-                </option>
-                {MONTH_NAMES.map((name, i) => (
-                  <option key={name} value={i + 1}>
-                    {name}
+              <span className="relative inline-flex self-start sm:self-auto">
+                <select
+                  className="h-10 min-w-36 appearance-none rounded-lg border border-[#E8E6F0] bg-white pl-3 pr-9 text-sm"
+                  defaultValue=""
+                  onChange={(e) => {
+                    const month = Number(e.target.value);
+                    if (month >= 1 && month <= 12) {
+                      saveRenewalMonth(userId, profile, m.key, month);
+                      setStatus("idle");
+                    }
+                  }}
+                >
+                  <option value="" disabled>
+                    Pick month
                   </option>
-                ))}
-              </select>
+                  {MONTH_NAMES.map((name, i) => (
+                    <option key={name} value={i + 1}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                {/* Own chevron: the native one hugs the border on Safari. */}
+                <AppIcon
+                  name="chevronDown"
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#5F5E5A]"
+                />
+              </span>
             </label>
           ))}
         </div>

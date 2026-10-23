@@ -177,7 +177,7 @@ export function listYearlyPremiums(p: PremiumRdProfile): YearlyPremium[] {
       p.parentsHealthInsurancePremiumMonthly,
       p.parentsHealthInsurancePremiumFrequency,
     ),
-    undefined,
+    p.parentsHealthInsuranceRenewalMonth,
   );
   return out;
 }
@@ -434,6 +434,7 @@ export function applyRenewalMonths<T extends RenewalFields>(
     else if (key === "term") next.termInsuranceRenewalMonth = month;
     else if (key === "car") next.carInsuranceRenewalMonth = month;
     else if (key === "bike") next.bikeInsuranceRenewalMonth = month;
+    else if (key === "parents") next.parentsHealthInsuranceRenewalMonth = month;
     else if (key.startsWith("other:")) {
       const index = Number(key.slice(6));
       const rows = [...(next.otherInsurancePremiums ?? [])];
@@ -451,5 +452,6 @@ type RenewalFields = {
   termInsuranceRenewalMonth?: number;
   carInsuranceRenewalMonth?: number;
   bikeInsuranceRenewalMonth?: number;
+  parentsHealthInsuranceRenewalMonth?: number;
   otherInsurancePremiums?: Array<{ renewalMonth?: number }>;
 };
