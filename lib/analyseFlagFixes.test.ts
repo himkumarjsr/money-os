@@ -443,6 +443,7 @@ describe("mobile keeps byte-identical copies of shared logic", () => {
     "plannedInvestments.ts",
     "portfolioAllocation.ts",
     "priorityEngine.ts",
+    "quickCalc.ts",
     "reportTrust.ts",
     "riskProfile.ts",
     "saveAnalyseProfile.ts",

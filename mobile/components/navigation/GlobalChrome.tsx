@@ -15,7 +15,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/AppHeader";
 import { ChromeContext } from "@/components/shell/ChromeContext";
 import { RenewalReminderBanner } from "@/components/shell/RenewalReminderBanner";
-import { FinkoinDock, type DockId } from "@/components/navigation/FinkoinTabBar";
+import {
+  FinkoinDock,
+  type DockId,
+} from "@/components/navigation/FinkoinTabBar";
+import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { Colors } from "@/constants/theme";
 import { useChromeStore } from "@/store/chromeStore";
 
@@ -118,6 +122,7 @@ export function GlobalChrome({ children }: { children: ReactNode }) {
       {hidden || keyboardUp ? null : (
         <FinkoinDock active={active} compact={compact} onSelect={select} />
       )}
+      {hidden || keyboardUp ? null : <FloatingCalculator />}
     </View>
   );
 }
