@@ -102,6 +102,9 @@ export default function GoalStrategiesList({
                   <th className="py-1 font-semibold">Year</th>
                   <th className="py-1 text-right font-semibold">Put in</th>
                   <th className="py-1 text-right font-semibold">Worth</th>
+                  <th className="w-7 py-1">
+                    <span className="sr-only">Details</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -130,11 +133,17 @@ export default function GoalStrategiesList({
                         <td className="py-1 text-right">
                           ₹{formatIndian(r.value)}
                         </td>
+                        <td
+                          aria-hidden
+                          className="py-1 text-right text-sm leading-none text-[#534AB7]"
+                        >
+                          {shown ? "▴" : "▾"}
+                        </td>
                       </tr>
                       {shown ? (
                         <tr>
                           <td
-                            colSpan={3}
+                            colSpan={4}
                             className="pb-1.5 text-[11px] font-normal leading-snug text-[#5F5E5A]"
                           >
                             {goalReachPutInLine(r)}
@@ -149,7 +158,7 @@ export default function GoalStrategiesList({
           ) : null}
           {tableOpen ? (
             <p className="mt-1 text-[11px] leading-snug text-[#5F5E5A]">
-              Tap a &quot;Put in&quot; amount to see what it is made of.{" "}
+              Tap a row (▾) to see what its &quot;Put in&quot; is made of.{" "}
               {goalReachTableNote(reach, goal)}
             </p>
           ) : null}
