@@ -495,6 +495,12 @@ export type GoalReach = {
   reachYear: number | null;
   /** One row per year until the goal is reached (or the target year). */
   rows: GoalReachRow[];
+  /** The amount the goal needs (today's rupees). */
+  target?: number;
+  /** What it is worth in the target year at this plan, today's rupees. */
+  valueByTarget?: number;
+  /** Total ₹/month that would reach it in the target year (when not on time). */
+  onTimeMonthly?: number;
 };
 
 /** Longest stretch we project a goal before calling it out of reach. */
@@ -538,6 +544,7 @@ export function projectGoalReach(
     sources?: { debt: number; equity: number; gold: number };
   },
   now: Date = new Date(),
+  opts: { skipSolve?: boolean } = {},
 ): GoalReach {
   const p = profile;
   const thisYear = now.getFullYear();
@@ -617,12 +624,54 @@ export function projectGoalReach(
     if (reachYear === null && value >= target * 0.995) reachYear = year;
     if (year >= goal.targetYear && reachYear !== null) break;
   }
+  const onTime = reachYear !== null && reachYear <= goal.targetYear;
+  // Out of reach within the horizon: show up to the target year only.
+  const shownRows =
+    reachYear === null
+      ? rows.filter((r) => r.year <= Math.max(goal.targetYear, thisYear + 1))
+      : rows;
+  const valueByTarget = rows.find((r) => r.year === goal.targetYear)?.value;
   return {
     monthly,
-    onTime: reachYear !== null && reachYear <= goal.targetYear,
+    onTime,
     reachYear,
-    rows: reachYear === null ? rows.slice(0, goal.yearsToGoal + 10) : rows,
+    rows: shownRows,
+    target: Math.round(target),
+    ...(valueByTarget != null ? { valueByTarget } : {}),
+    ...(!onTime && !opts.skipSolve && goal.targetYear > thisYear
+      ? { onTimeMonthly: monthlyToReachOnTime(profile, goal, now) }
+      : {}),
   };
+}
+
+/**
+ * Smallest total ₹/month (plan share + running SIPs, rising with salary like
+ * every SIP here) that reaches the goal in its target year, to the ₹100.
+ */
+function monthlyToReachOnTime(
+  profile: FinancialProfile,
+  goal: Parameters<typeof projectGoalReach>[1],
+  now: Date,
+): number {
+  const reaches = (m: number) =>
+    projectGoalReach(
+      profile,
+      { ...goal, monthlyAllocated: m, existingMonthly: 0 },
+      now,
+      { skipSolve: true },
+    ).onTime;
+  let hi = Math.max(1_000, n(goal.monthlyAllocated) + n(goal.existingMonthly));
+  while (!reaches(hi)) {
+    hi *= 2;
+    if (hi > 10_00_00_000) return hi;
+  }
+  let lo = 0;
+  while (hi - lo > 100) {
+    const mid = (lo + hi) / 2;
+    if (reaches(mid)) hi = mid;
+    else lo = mid;
+  }
+  return Math.ceil(hi / 100) * 100;
 }
 
 /** " (₹a FDs / post office + ₹b funds & stocks + ₹c gold)", or "". */
@@ -672,15 +721,23 @@ export function goalReachLine(
     return reach.monthly > 0
       ? `On track: ${rs(reach.monthly)}/month gets you there by ${reach.reachYear ?? goal.targetYear}.`
       : `Your savings already cover this by ${goal.targetYear} - nothing more needed each month.`;
+  const target = reach.target
+    ? `${rs(reach.target)} by ${goal.targetYear}`
+    : `This goal by ${goal.targetYear}`;
+  const byThen =
+    reach.valueByTarget != null
+      ? ` You'd have about ${rs(reach.valueByTarget)} by ${goal.targetYear}.`
+      : "";
+  const fix =
+    reach.onTimeMonthly != null
+      ? ` To make ${goal.targetYear}, invest ${rs(reach.onTimeMonthly)}/month in all.`
+      : "";
+  if (reach.monthly <= 0)
+    return `Nothing is going to this goal yet.${fix || " Free up a monthly amount for it."}`;
   if (reach.reachYear === null)
-    return reach.monthly > 0
-      ? `At ${rs(reach.monthly)}/month this goal isn't reached within ${REACH_HORIZON_YEARS} years - it needs a bigger SIP or a smaller target.`
-      : "Nothing is going to this goal yet - free up a monthly amount for it.";
+    return `${target} isn't realistic at ${rs(reach.monthly)}/month - it isn't reached even in ${REACH_HORIZON_YEARS} years.${byThen}${fix}`;
   const late = reach.reachYear - goal.targetYear;
-  const byThen = reach.rows.find((r) => r.year === goal.targetYear)?.value;
-  return byThen
-    ? `At ${rs(reach.monthly)}/month you'd have about ${rs(byThen)} by ${goal.targetYear}, and reach the goal in ${reach.reachYear} (${late} ${late === 1 ? "year" : "years"} late).`
-    : `At ${rs(reach.monthly)}/month you'd reach it in ${reach.reachYear}, ${late} ${late === 1 ? "year" : "years"} after ${goal.targetYear}.`;
+  return `${target} isn't realistic at ${rs(reach.monthly)}/month. At this pace you reach it in ${reach.reachYear} (${late} ${late === 1 ? "year" : "years"} late).${byThen}${fix}`;
 }
 
 /** Key under the year-by-year table; only claims ✓ when a row shows it. */
@@ -692,10 +749,15 @@ export function goalReachTableNote(
     reach.reachYear !== null &&
     reach.rows.some((r) => r.year === reach.reachYear);
   const last = reach.rows[reach.rows.length - 1]?.year;
+  const late =
+    reach.reachYear !== null && !reach.onTime
+      ? `✓ ${reach.reachYear}, the year you'd actually reach ${rs(goal.targetAmount)}.`
+      : null;
   return `Today's rupees, after inflation. ◎ your target year · ${
-    shown || last == null
+    late ??
+    (shown || last == null
       ? `✓ goal of ${rs(goal.targetAmount)} reached.`
-      : `goal of ${rs(goal.targetAmount)} not reached by ${last}.`
+      : `goal of ${rs(goal.targetAmount)} not reached by ${last}.`)
   }`;
 }
 

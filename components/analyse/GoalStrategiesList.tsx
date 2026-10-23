@@ -118,7 +118,7 @@ export default function GoalStrategiesList({
                       <tr
                         onClick={() => setOpenYear(shown ? null : r.year)}
                         aria-expanded={shown}
-                        className={`cursor-pointer border-t border-black/5 ${r.year === reach.reachYear ? "font-bold text-[#0F6E56]" : "text-[#111110]"}`}
+                        className={`cursor-pointer border-t border-black/5 ${r.year === reach.reachYear ? "font-bold text-[#0F6E56]" : !reach.onTime && r.year === goal.targetYear ? "font-semibold text-[#854F0B]" : "text-[#111110]"}`}
                       >
                         <td className="py-1">
                           {r.year}

@@ -112,7 +112,20 @@ describe("projectGoalReach", () => {
     let paidIn = 0;
     for (let m = 1; m <= 12; m++) paidIn += 50_000 / Math.pow(1.06, m / 12);
     expect(reach.rows[0].invested).toBe(Math.round(10_00_000 + paidIn));
-    expect(goalReachLine(reach, goal)).toMatch(/reach the goal in 20\d\d/);
+    expect(goalReachLine(reach, goal)).toMatch(
+      /^₹80,00,000 by 2031 isn't realistic at ₹50,000\/month\. At this pace you reach it in 20\d\d \(\d+ years? late\)\. You'd have about ₹[\d,]+ by 2031\. To make 2031, invest ₹[\d,]+\/month in all\.$/,
+    );
+    // The suggested SIP reaches it on time; ₹100 less does not.
+    const fix = reach.onTimeMonthly!;
+    expect(fix).toBeGreaterThan(50_000);
+    const base0 = base({ annualSalaryIncreasePct: 0 });
+    expect(
+      projectGoalReach(base0, { ...goal, monthlyAllocated: fix }, NOW).onTime,
+    ).toBe(true);
+    expect(
+      projectGoalReach(base0, { ...goal, monthlyAllocated: fix - 200 }, NOW)
+        .onTime,
+    ).toBe(false);
   });
 
   it("splits Put in into savings, SIPs and retirement accounts", () => {
@@ -181,6 +194,24 @@ describe("projectGoalReach", () => {
     );
     expect(goalReachPutInLine(one.rows[0])).toMatch(
       /₹2,00,000 savings set aside today \(from your FDs \/ post office\)/,
+    );
+  });
+
+  it("shows a never-reached goal up to its target year, with the SIP it needs", () => {
+    const reach = projectGoalReach(
+      base({ annualSalaryIncreasePct: 0 }),
+      {
+        ...goal,
+        targetAmount: 50_00_00_000,
+        currentSaved: 0,
+        monthlyAllocated: 1_000,
+      },
+      NOW,
+    );
+    expect(reach.reachYear).toBeNull();
+    expect(reach.rows[reach.rows.length - 1].year).toBe(2031);
+    expect(goalReachLine(reach, goal)).toMatch(
+      /isn't realistic at ₹1,000\/month - it isn't reached even in 40 years\. You'd have about ₹[\d,]+ by 2031\. To make 2031, invest ₹[\d,]+\/month in all\./,
     );
   });
 
