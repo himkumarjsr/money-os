@@ -110,6 +110,7 @@ export function GoalStrategiesList({
                 <Text style={[styles.th, styles.cYear]}>Year</Text>
                 <Text style={[styles.th, styles.cNum]}>Put in</Text>
                 <Text style={[styles.th, styles.cNum]}>Worth</Text>
+                <Text style={[styles.th, styles.cArrow]} />
               </View>
               {reach.rows.map((r) => {
                 const hit = r.year === reach.reachYear;
@@ -147,6 +148,9 @@ export function GoalStrategiesList({
                       <Text style={[...cell, styles.cNum]}>
                         ₹{formatIndian(r.value)}
                       </Text>
+                      <Text style={[styles.cArrow, styles.arrow]}>
+                        {shown ? "▴" : "▾"}
+                      </Text>
                     </View>
                     {shown ? (
                       <Text style={styles.putInLine}>
@@ -157,7 +161,7 @@ export function GoalStrategiesList({
                 );
               })}
               <Text style={styles.foot}>
-                Tap a &quot;Put in&quot; amount to see what it is made of.{" "}
+                Tap a row (▾) to see what its &quot;Put in&quot; is made of.{" "}
                 {goalReachTableNote(reach, goal)}
               </Text>
             </View>
@@ -273,6 +277,8 @@ const styles = themedStyles(() => ({
     color: Colors.textSecondary,
   },
   cYear: { flex: 1 },
+  cArrow: { width: 22, textAlign: "right" },
+  arrow: { fontSize: 14, color: Colors.primaryText },
   cNum: { flex: 1.4, textAlign: "right" },
   foot: {
     marginTop: 4,
