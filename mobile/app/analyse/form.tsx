@@ -51,6 +51,7 @@ import {
   fetchUserAnalyseSnapshot,
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
+import { logAnalyseRun } from "@/lib/analyseLog";
 import { CoinSpinner } from "@/components/ui/LoadingSpinner";
 import { runPostSubmitChain } from "@/components/analyse/postSubmit";
 import { invalidateProfileMonthlySalaryCache } from "@/lib/trackerProfileIncome";
@@ -644,6 +645,12 @@ export default function AnalyseFormScreen() {
           const uid = useAuthStore.getState().user?.id;
           if (!uid) return;
 
+          logAnalyseRun(uid, {
+            source: "form_submit",
+            profile: savedProfile,
+            result: nextResult,
+            form: mergedValues,
+          });
           const { error } = await upsertUserAnalyseSnapshot(uid, {
             profile: savedProfile,
             result: nextResult,
