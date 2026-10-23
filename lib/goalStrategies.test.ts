@@ -8,6 +8,7 @@ import {
   goalReachLine,
   goalReachPutInLine,
   projectGoalReach,
+  retirementCheck,
   loanEmi,
   loanOutstanding,
 } from "@/lib/goalStrategies";
@@ -291,10 +292,152 @@ describe("buildYearlyRoadmap", () => {
   });
 
   it("keeps the old shape when nothing frees up", () => {
-    const p = base({ annualSalaryIncreasePct: 0, unifiedLoans: [] });
+    const p = base({
+      annualSalaryIncreasePct: 0,
+      unifiedLoans: [],
+      personalLoanEMI: 0,
+    });
     const rows = buildYearlyRoadmap(p, [goals[0]], NOW);
     const reach = projectGoalReach(p, goals[0], NOW);
     expect(rows.map((r) => r.worth)).toEqual(reach.rows.map((r) => r.value));
     expect(rows.every((r) => r.monthly === 50_000)).toBe(true);
+  });
+});
+
+describe("year by year net worth", () => {
+  const goals = [
+    {
+      label: "Car",
+      type: "vehicle_purchase",
+      targetAmount: 10_00_000,
+      targetYear: 2028,
+      yearsToGoal: 2,
+      currentSaved: 2_00_000,
+      monthlyAllocated: 30_000,
+    },
+    {
+      label: "Retirement",
+      type: "retirement",
+      targetAmount: 3_00_00_000,
+      targetYear: 2046,
+      yearsToGoal: 20,
+      currentSaved: 12_00_000,
+      monthlyAllocated: 40_000,
+    },
+  ];
+  const p = base({
+    annualSalaryIncreasePct: 0,
+    savingsAccountBalance: 5_00_000,
+    unifiedLoans: [
+      {
+        loanType: "personal_loan",
+        lenderName: "BANK A",
+        monthlyEMI: 66_172,
+        outstandingAmount: 26_57_000,
+        interestRate: 11,
+        remainingMonths: 52,
+      },
+    ],
+  });
+  const rows = buildYearlyRoadmap(p, goals, NOW);
+
+  it("adds up: goal money + EPF etc. + savings - loans left = net worth", () => {
+    for (const r of rows) {
+      expect(r.netWorth).toBe(r.worth + r.pf + r.savings - r.loansLeft);
+    }
+    // EPF has its own column, so it isn't counted twice in goal money.
+    const ret = projectGoalReach(p, goals[1], NOW);
+    expect(rows[0].worth).toBeLessThan(
+      ret.rows[0].value + projectGoalReach(p, goals[0], NOW).rows[0].value,
+    );
+    expect(rows[0].pf).toBeGreaterThan(12_00_000);
+  });
+
+  it("pays the loan down to zero the year it ends", () => {
+    expect(rows[0].loansLeft).toBeGreaterThan(15_00_000);
+    expect(rows[0].loansLeft).toBeLessThan(26_57_000);
+    const end = rows.find((r) => r.year === 2031)!;
+    expect(end.loansLeft).toBe(0);
+    expect(end.events.join()).toMatch(
+      /BANK A ends: its ₹66,172 EMI moves to retirement/,
+    );
+  });
+
+  it("never lets invest / month drop once money frees up", () => {
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i].monthly).toBeGreaterThanOrEqual(rows[i - 1].monthly);
+    }
+    expect(rows.find((r) => r.year === 2032)!.monthly).toBeGreaterThan(
+      70_000 + 66_000,
+    );
+  });
+
+  it("counts loans from the old one-field form", () => {
+    const old = base({
+      annualSalaryIncreasePct: 0,
+      unifiedLoans: [],
+      personalLoanEMI: 32_500,
+      personalLoanOutstanding: 3_00_000,
+      personalLoanRate: 12,
+      personalLoanRemainingMonths: 10,
+    });
+    const r = buildYearlyRoadmap(old, goals, NOW);
+    expect(r[0].events.join()).toMatch(
+      /ends: its ₹32,500 EMI moves to retirement/,
+    );
+    expect(r[1].monthly).toBe(r[0].monthly + 32_500);
+  });
+});
+
+describe("retirementCheck", () => {
+  const goal = {
+    label: "Retirement",
+    type: "retirement",
+    targetAmount: 3_00_00_000,
+    targetYear: 2046,
+    yearsToGoal: 20,
+    currentSaved: 12_00_000,
+    monthlyAllocated: 40_000,
+  };
+
+  it("says not yet with the gap and what closes it", () => {
+    const p = base({
+      annualSalaryIncreasePct: 0,
+      unifiedLoans: [],
+      personalLoanEMI: 0,
+    });
+    const c = retirementCheck(p, [goal], NOW)!;
+    expect(c.canRetire).toBe(false);
+    expect(c.monthlyIncome).toBeLessThan(c.monthlyCosts);
+    expect(c.line).toMatch(/^Not yet\. In 2046 \(age \d+\)/);
+    expect(c.line).toMatch(/a month short/);
+    // The extra SIP it names is enough.
+    const more = retirementCheck(
+      p,
+      [{ ...goal, monthlyAllocated: goal.monthlyAllocated + c.extraMonthly! }],
+      NOW,
+    )!;
+    expect(more.canRetire).toBe(true);
+    expect(more.line).toMatch(/^Yes\./);
+  });
+
+  it("pays the costs at the rate that lasts to 90", () => {
+    const p = base({ unifiedLoans: [], personalLoanEMI: 0 });
+    const c = retirementCheck(
+      p,
+      [{ ...goal, monthlyAllocated: 5_00_000 }],
+      NOW,
+    )!;
+    expect(c.canRetire).toBe(true);
+    expect(c.monthlyIncome).toBe(
+      Math.round((c.corpus * c.withdrawalRate) / 12),
+    );
+    expect(c.corpusNeeded).toBeLessThan(c.corpus);
+  });
+
+  it("is skipped without a retirement goal", () => {
+    expect(
+      retirementCheck(base(), [{ ...goal, type: "custom" }], NOW),
+    ).toBeNull();
   });
 });

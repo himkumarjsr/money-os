@@ -5,7 +5,11 @@ import type {
 import { safetyFundSources, type AnalysisResult } from "@/lib/financialEngine";
 import { detectGoals } from "@/lib/goalDetection";
 import { earmarkExistingSavings } from "@/lib/goalFunding";
-import { buildGoalStrategies } from "@/lib/goalStrategies";
+import {
+  buildGoalStrategies,
+  buildYearlyRoadmap,
+  retirementCheck,
+} from "@/lib/goalStrategies";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 
 /**
@@ -66,6 +70,13 @@ export function buildAnalyseLogPayload(input: {
   );
   const plan = step(() => buildPriorityPlan(profile, result));
   const goalStrategies = step(() => buildGoalStrategies(profile, now));
+  const goalItems = "priorities" in plan ? (plan.goalFunding?.items ?? []) : [];
+  const roadmap = step(() => buildYearlyRoadmap(profile, goalItems, now));
+  const retirement = step(() =>
+    Array.isArray(roadmap)
+      ? retirementCheck(profile, goalItems, now, roadmap)
+      : null,
+  );
 
   if ("priorities" in plan) {
     const b = plan.surplusBreakdown;
@@ -140,6 +151,8 @@ export function buildAnalyseLogPayload(input: {
           : plan,
       allocationPlan: "priorities" in plan ? plan.allocationPlan : null,
       goalStrategies,
+      roadmap,
+      retirement,
       moneyScore: result.moneyScore ?? null,
     },
     result,

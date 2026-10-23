@@ -42,6 +42,9 @@ describe("analyse log sheet", () => {
       expect(
         safety?.groups?.flatMap((g) => g.rows).some((r) => r.flag),
       ).toBe(false);
+      // Every year-by-year row adds up to its net worth.
+      const years = sheet.find((s) => s.title.startsWith("7. Year by year"));
+      expect(years?.table?.flagged ?? []).toEqual([]);
     },
   );
 });
