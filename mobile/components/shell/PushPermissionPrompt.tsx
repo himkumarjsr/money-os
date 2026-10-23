@@ -15,6 +15,7 @@ import {
   requestPushPermission,
 } from "@/lib/pushNotifications";
 import { hydrateSyncKv, syncKv } from "@/lib/syncKv";
+import { introTourBlocksPopups } from "@/lib/introTour";
 import { useAuthStore } from "@/store/authStore";
 
 const DISMISS_KEY = "finkoin_push_prompt_dismissed";
@@ -52,7 +53,8 @@ export function PushPermissionPrompt() {
         if (days < 14) return;
       }
       timer = setTimeout(() => {
-        if (!cancelled) setVisible(true);
+        // Don't stack on the intro tour; ask again next launch.
+        if (!cancelled && !introTourBlocksPopups()) setVisible(true);
       }, 2500);
     })();
     return () => {
@@ -141,7 +143,12 @@ export function PushPermissionPrompt() {
 }
 
 const styles = themedStyles(() => ({
-  wrap: { flex: 1, justifyContent: "flex-end", alignItems: "center", padding: 16 },
+  wrap: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    padding: 16,
+  },
   card: {
     width: "100%",
     maxWidth: 448,
@@ -166,8 +173,18 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   title: { fontSize: 16, fontWeight: "700", color: Colors.textPrimary },
-  body: { marginTop: 6, fontSize: 14, lineHeight: 22, color: Colors.textSecondary },
-  error: { marginTop: 12, fontSize: 12, fontWeight: "500", color: Colors.errorText },
+  body: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+  },
+  error: {
+    marginTop: 12,
+    fontSize: 12,
+    fontWeight: "500",
+    color: Colors.errorText,
+  },
   actions: { marginTop: 16, flexDirection: "row", gap: 8 },
   secondary: {
     flex: 1,
@@ -178,7 +195,11 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  secondaryText: { fontSize: 14, fontWeight: "600", color: Colors.textSecondary },
+  secondaryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
   primary: {
     flex: 1,
     minHeight: 44,

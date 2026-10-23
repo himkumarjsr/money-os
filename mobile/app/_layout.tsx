@@ -21,6 +21,7 @@ import { hydrateSyncKv } from "@/lib/syncKv";
 import { pingDailyLogin } from "@/lib/dailyLogin";
 import { PushNotificationsManager } from "@/components/PushNotificationsManager";
 import { MorningTipPopup } from "@/components/MorningTipPopup";
+import { IntroTourVideo } from "@/components/IntroTourVideo";
 import { GlobalChrome } from "@/components/navigation/GlobalChrome";
 import { PushPermissionPrompt } from "@/components/shell/PushPermissionPrompt";
 import { FeedbackPopupManager } from "@/components/shell/FeedbackPopupManager";
@@ -165,6 +166,7 @@ export default function RootLayout() {
             <PushNotificationsManager />
             <ReferralCapture />
             <FkToastWatcher />
+            <IntroTourVideo />
             <MorningTipPopup />
             <PushPermissionPrompt />
             <FeedbackPopupManager />

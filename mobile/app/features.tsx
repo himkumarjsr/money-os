@@ -12,6 +12,7 @@ import {
   type FeatureTag,
 } from "@/components/content/featuresContent";
 import { openContentHref } from "@/lib/contentLinks";
+import { IntroTourButton } from "@/components/IntroTourButton";
 
 /** Only offer filters for tags at least one feature uses. */
 const USED_TAGS = FEATURE_TAGS.filter((tag) =>
@@ -52,6 +53,7 @@ export default function FeaturesScreen() {
         >
           <Text style={styles.pillOutlineText}>Compare plans</Text>
         </Pressable>
+        <IntroTourButton location="features_hero" style={{ marginTop: 14 }} />
       </View>
 
       <View
