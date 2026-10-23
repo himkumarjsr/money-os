@@ -4,6 +4,7 @@ import { buildUserAnalyseScenarioProfile } from "@/lib/analyseUserScenarioFixtur
 import { detectGoals } from "@/lib/goalDetection";
 import {
   buildGoalStrategies,
+  buildYearlyRoadmap,
   goalReachLine,
   projectGoalReach,
   loanEmi,
@@ -132,5 +133,50 @@ describe("projectGoalReach", () => {
       NOW,
     );
     expect(ret.rows[0].value).toBeGreaterThan(home.rows[0].value + 40_00_000);
+  });
+});
+
+describe("buildYearlyRoadmap", () => {
+  const goals = [
+    {
+      label: "Home purchase",
+      type: "home_purchase",
+      targetAmount: 80_00_000,
+      targetYear: 2031,
+      yearsToGoal: 5,
+      currentSaved: 10_00_000,
+      monthlyAllocated: 50_000,
+    },
+    {
+      label: "Car",
+      type: "vehicle_purchase",
+      targetAmount: 10_00_000,
+      targetYear: 2028,
+      yearsToGoal: 2,
+      currentSaved: 0,
+      monthlyAllocated: 50_000,
+    },
+  ];
+
+  it("runs every year until the last goal is funded and names the events", () => {
+    const p = base({
+      annualSalaryIncreasePct: 0,
+      unifiedLoans: [
+        { loanType: "car_loan", monthlyEMI: 15_000, remainingMonths: 30 },
+      ],
+    });
+    const rows = buildYearlyRoadmap(p, goals, NOW);
+    expect(rows[0].year).toBe(2027);
+    const homeReach = projectGoalReach(p, goals[0], NOW);
+    expect(rows[rows.length - 1].year).toBe(
+      Math.max(2031, homeReach.reachYear ?? 2031),
+    );
+    expect(rows[0].monthly).toBe(1_00_000);
+    expect(rows.find((r) => r.year === 2028)?.events.join()).toMatch(/Car/);
+    expect(rows.find((r) => r.year === 2029)?.events.join()).toMatch(
+      /car loan ends/,
+    );
+    // The car is paid for in 2028, so its SIP stops after that.
+    expect(rows.find((r) => r.year === 2029)?.monthly).toBe(50_000);
   });
 });

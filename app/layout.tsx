@@ -252,15 +252,6 @@ export default function RootLayout({
                   name: "Finkoin",
                   alternateName: ["Finkoin App", "Finkoin Finance"],
                   description: `India's free personal finance platform. ${FINKOIN_TAGLINE_FULL}`,
-                  potentialAction: {
-                    "@type": "SearchAction",
-                    target: {
-                      "@type": "EntryPoint",
-                      urlTemplate:
-                        "https://www.finkoin.com/search?q={search_term_string}",
-                    },
-                    "query-input": "required name=search_term_string",
-                  },
                 },
                 {
                   "@type": "Organization",

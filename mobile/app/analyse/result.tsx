@@ -4,6 +4,7 @@
  * fix-plan teaser + paywall, cross-sell links.
  */
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { YearlyRoadmapTable } from "@/components/analyse/fixplan/YearlyRoadmapTable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -239,6 +240,11 @@ function AnalyseResultContent() {
           profile={lastSubmission}
           userId={user?.id}
           funding={priorityPlan.goalFunding?.items}
+        />
+
+        <YearlyRoadmapTable
+          profile={lastSubmission}
+          items={priorityPlan.goalFunding?.items}
         />
 
         <PlanTeaserSection
