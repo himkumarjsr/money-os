@@ -13,6 +13,7 @@ import { SplitInviteResume } from "@/components/SplitInviteResume";
 import { PwaLaunchHandler } from "@/components/PwaLaunchHandler";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import FeedbackPopupManager from "@/components/FeedbackPopupManager";
+import FloatingCalculator from "@/components/FloatingCalculator";
 import MorningTipPopup from "@/components/MorningTipPopup";
 import PushPermissionPrompt from "@/components/PushPermissionPrompt";
 import Footer from "@/components/landing/Footer";
@@ -396,6 +397,7 @@ export default function RootLayout({
             <MorningTipPopup />
             <PushPermissionPrompt />
             <FeedbackPopupManager />
+            <FloatingCalculator />
             <Footer />
             <ReferralSuccessToast />
             <Toast />

@@ -50,6 +50,13 @@ export default function CalculatorsClient({
   /** Once user picks a calc from the hub list, close should stay on calculators. */
   const openedFromHub = useRef(false);
   const onDedicatedCalcPath = Boolean(pathname?.match(/^\/calculators\/[^/]+/));
+  /**
+   * Mounted by the hub page. Picking a tool here only rewrites the URL: a
+   * router navigation would mount the /calculators/[id] page, which shows its
+   * loader and slides the sheet up a second time.
+   */
+  const isHubInstance = useRef(pathname === "/calculators").current;
+  const toolOpen = sheetOpen || onDedicatedCalcPath || openedFromHub.current;
 
   const activeItem = useMemo(() => {
     const item = activeCat.items.find((i) => i.id === calcId);
@@ -78,22 +85,30 @@ export default function CalculatorsClient({
     [urlBaseForTaxCanonical],
   );
 
+  const replaceUrl = useCallback(
+    (url: string) => {
+      if (isHubInstance) window.history.replaceState(null, "", url);
+      else router.replace(url, { scroll: false });
+    },
+    [isHubInstance, router],
+  );
+
   const updateCalcInUrl = useCallback(
     (nextCalcId: string, keepFromHome = false) => {
-      router.replace(buildCalcUrl(nextCalcId, keepFromHome), { scroll: false });
+      replaceUrl(buildCalcUrl(nextCalcId, keepFromHome));
     },
-    [buildCalcUrl, router],
+    [buildCalcUrl, replaceUrl],
   );
 
   useEffect(() => {
     // Only track when a tool is actually open (deep link / hub pick) - not hub browse.
-    if (!sheetOpen && !onDedicatedCalcPath && !openedFromHub.current) return;
+    if (!toolOpen) return;
     trackToolOpen({
       tool_category: "calculator",
       tool_id: activeItem.id,
       tool_name: activeItem.title,
     });
-  }, [activeItem.id, activeItem.title, sheetOpen, onDedicatedCalcPath]);
+  }, [activeItem.id, activeItem.title, toolOpen]);
 
   // Hub (/calculators) = category list only. Never auto-open SIP/EMI sheet.
   // Deep links (/calculators/sip, ?calc=) open the tool sheet on mobile once.
@@ -202,9 +217,7 @@ export default function CalculatorsClient({
     setSheetOpen(false);
     openedFromHub.current = false;
     lastDeepLinkCalc.current = null;
-    if (pathname !== "/calculators") {
-      router.replace("/calculators", { scroll: false });
-    }
+    if (pathname !== "/calculators") replaceUrl("/calculators");
   };
 
   const handleSheetClose = () => {
@@ -218,9 +231,7 @@ export default function CalculatorsClient({
     openedFromHub.current = false;
     lastDeepLinkCalc.current = null;
     // Always return to hub so bottom-nav / category taps stay list-only.
-    if (pathname !== "/calculators") {
-      router.replace("/calculators", { scroll: false });
-    }
+    if (pathname !== "/calculators") replaceUrl("/calculators");
   };
 
   const handleBack = () => {
