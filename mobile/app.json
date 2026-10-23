@@ -49,6 +49,16 @@
               "scheme": "https",
               "host": "finkoin.com",
               "pathPrefix": "/split/join"
+            },
+            {
+              "scheme": "https",
+              "host": "www.finkoin.com",
+              "pathPrefix": "/household"
+            },
+            {
+              "scheme": "https",
+              "host": "finkoin.com",
+              "pathPrefix": "/household"
             }
           ]
         }
