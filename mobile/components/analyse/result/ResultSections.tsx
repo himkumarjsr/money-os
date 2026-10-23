@@ -90,6 +90,7 @@ export function MonthlySummaryCard({ model }: { model: ResultModel }) {
       <View style={[styles.tile, { marginBottom: 0 }]}>
         <Text style={styles.tileLabel}>Left in hand</Text>
         <Text style={[styles.tileValue, { color: leftColor(left) }]}>
+          {left < 0 ? "-" : ""}
           {inr(Math.abs(left))}
         </Text>
         <Text
@@ -535,13 +536,14 @@ export function PlanTeaserSection({
               value={`-${inr(model.lifestyleActual)}`}
             />
             <SurplusRow
-              label="Less: Insurance premiums + investment"
-              value={`-${inr(model.securityActual + model.investmentActual)}`}
+              label={`Less: Insurance premiums + investment${model.epfMonthly > 0 ? " (EPF excluded)" : ""}`}
+              value={`-${inr(model.securityActual + Math.max(0, model.investmentActual - model.epfMonthly))}`}
             />
             <View style={styles.surplusTotal}>
               <Text style={styles.surplusTotalText}>Your Monthly Surplus</Text>
               <Text style={styles.surplusTotalText}>
-                {inr(model.amountLeftInHand)}
+                {model.amountLeftInHand < 0 ? "-" : ""}
+                {inr(Math.abs(model.amountLeftInHand))}
               </Text>
             </View>
           </View>

@@ -91,6 +91,7 @@ import {
   upsertUserAnalyseSnapshot,
 } from "@/lib/userAnalyseSnapshot";
 import { supabase } from "@/lib/supabaseClient";
+import { logAnalyseRun } from "@/lib/analyseLog";
 import { useAuthStore } from "@/store/authStore";
 import { useFinancialStore } from "@/store/financialStore";
 import { useObligationStore } from "@/store/obligationStore";
@@ -1596,6 +1597,13 @@ export function AnalyseOnboardingForm() {
               analysis: mergedValues,
             })
           : null;
+
+      logAnalyseRun(uid, {
+        source: "form_submit",
+        profile: savedProfile,
+        result: nextResult,
+        form: mergedValues,
+      });
 
       // Navigate immediately - AI + cloud save must not block the report.
       router.push("/analyse/result");

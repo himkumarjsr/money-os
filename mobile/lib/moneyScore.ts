@@ -8,7 +8,7 @@
  */
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
 import { formatIndian } from "@/lib/formatters";
-import { earmarkExistingSavings } from "@/lib/goalFunding";
+import { earmarkExistingSavings, type SafetyReserve } from "@/lib/goalFunding";
 import { detectGoals } from "@/lib/goalDetection";
 import { existingEquityValue } from "@/lib/holdings";
 
@@ -71,8 +71,13 @@ export type MoneyScoreInput = {
     premiumMonthly: number;
   };
   netWorth: number;
-  /** FD the emergency fund still leans on, so goals don't count it twice. */
-  fdNeededForEmergency: number;
+  /**
+   * Savings the emergency and medical funds already use (safetyFundSources),
+   * so goals don't count them twice. Same reserve as the Fix Plan.
+   */
+  safetyReserve?: SafetyReserve;
+  /** @deprecated Use safetyReserve. FD the emergency fund still leans on. */
+  fdNeededForEmergency?: number;
   now?: Date;
 };
 
@@ -352,9 +357,11 @@ function goalsPillar(i: MoneyScoreInput): ScorePillar {
   const goals = detectGoals(i.profile, now).filter(
     (g) => g.type !== "debt_free",
   );
-  const marks = earmarkExistingSavings(i.profile, now, {
-    fdNeededForEmergency: i.fdNeededForEmergency,
-  });
+  const marks = earmarkExistingSavings(
+    i.profile,
+    now,
+    i.safetyReserve ?? { fdNeededForEmergency: i.fdNeededForEmergency },
+  );
   const rows = goals.map((g) => {
     const m = marks.get(g.id);
     const scratch = n(m?.monthlyFromScratch);
@@ -391,9 +398,11 @@ function goalsPillar(i: MoneyScoreInput): ScorePillar {
     .filter((r) => r.share < 0.95 && r.required > 0)
     .map((r) => ({
       text:
-        spare > 0 && r.required > spare
-          ? `${r.goal.label}: ${rs(r.goal.targetAmount)} by ${r.goal.targetYear} needs ${rs(r.required)}/month, more than the ${rs(spare)} you have left over. Start with what you can, and see the Fix Plan for a later year or smaller target.`
-          : `${r.goal.label}: start a ${rs(r.required)}/month SIP to reach ${rs(r.goal.targetAmount)} by ${r.goal.targetYear}.`,
+        spare <= 0
+          ? `${r.goal.label}: ${rs(r.goal.targetAmount)} by ${r.goal.targetYear} needs ${rs(r.required)}/month more, and nothing is left over each month yet. Free up money first, or see the Fix Plan for a later year or smaller target.`
+          : spare > 0 && r.required > spare
+            ? `${r.goal.label}: ${rs(r.goal.targetAmount)} by ${r.goal.targetYear} needs ${rs(r.required)}/month, more than the ${rs(spare)} you have left over. Start with what you can, and see the Fix Plan for a later year or smaller target.`
+            : `${r.goal.label}: start a ${rs(r.required)}/month SIP to reach ${rs(r.goal.targetAmount)} by ${r.goal.targetYear}.`,
       gain:
         (r.goal.type === "retirement" ? retWeight : otherWeight) *
         (1 - r.share),

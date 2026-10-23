@@ -3,11 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminAccessManager } from "@/components/admin/AdminAccessManager";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { AnalyseLogsViewer } from "@/components/admin/AnalyseLogsViewer";
 import { DocContent } from "@/components/admin/DocContent";
 import { WebOnlyGate } from "@/components/admin/WebOnlyGate";
 import {
   getConsoleAccess,
+  listAnalyseLogs,
   listConsoleAdmins,
+  type AnalyseLogRow,
   type ConsoleAdmin,
 } from "@/lib/adminConsole";
 import { DEFAULT_ADMIN_SECTION, getAdminDocSection } from "@/lib/adminDocs";
@@ -25,7 +28,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
-type PageProps = { params: Promise<{ section?: string[] }> };
+type PageProps = {
+  params: Promise<{ section?: string[] }>;
+  searchParams: Promise<{
+    email?: string | string[];
+    checks?: string | string[];
+  }>;
+};
 
 function SignInPrompt() {
   return (
@@ -62,6 +71,21 @@ export default async function AdminPage(props: PageProps) {
       console.error("admin list failed:", e);
     }
   }
+  let logs: AnalyseLogRow[] = [];
+  let logsError: string | null = null;
+  const query = await props.searchParams;
+  const logEmail = typeof query.email === "string" ? query.email.trim() : "";
+  const onlyChecks = query.checks === "1";
+  if (doc.id === "analyse-logs") {
+    try {
+      logs = await listAnalyseLogs(supabase, {
+        email: logEmail,
+        onlyChecks,
+      });
+    } catch (e) {
+      logsError = e instanceof Error ? e.message : String(e);
+    }
+  }
   const email = (user.email ?? "").toLowerCase();
 
   return (
@@ -70,6 +94,13 @@ export default async function AdminPage(props: PageProps) {
         <DocContent section={doc}>
           {doc.id === "admin-access" ? (
             <AdminAccessManager initialAdmins={admins} currentEmail={email} />
+          ) : doc.id === "analyse-logs" ? (
+            <AnalyseLogsViewer
+              logs={logs}
+              email={logEmail}
+              onlyChecks={onlyChecks}
+              error={logsError}
+            />
           ) : null}
         </DocContent>
       </AdminShell>

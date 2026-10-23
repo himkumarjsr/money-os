@@ -10,6 +10,7 @@ import { formatIndian } from "@/lib/formatters";
 import { homeUpfrontShare, type DetectedGoal } from "@/lib/goalDetection";
 import {
   goalReachLine,
+  goalReachTableNote,
   type GoalReach,
   type GoalStrategyPlan,
   type StrategyKind,
@@ -132,8 +133,7 @@ export function GoalStrategiesList({
                 );
               })}
               <Text style={styles.foot}>
-                Today&apos;s rupees, after inflation. ◎ your target year · ✓
-                goal of ₹{formatIndian(goal.targetAmount)} reached.
+                {goalReachTableNote(reach, goal)}
               </Text>
             </View>
           ) : null}

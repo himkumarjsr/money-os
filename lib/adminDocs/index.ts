@@ -1,4 +1,4 @@
-import { adminAccessSection } from "./admin";
+import { adminAccessSection, analyseLogsSection } from "./admin";
 import {
   competitionSection,
   growthSection,
@@ -65,6 +65,7 @@ export const ADMIN_DOC_SECTIONS: readonly DocSection[] = [
   paymentsSection,
   feedbackAccountSection,
   adminAccessSection,
+  analyseLogsSection,
 ];
 
 export const DEFAULT_ADMIN_SECTION = "overview";

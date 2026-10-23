@@ -356,6 +356,104 @@ export function emergencyFundMonthsNeeded(profile: {
   return irregular ? Math.min(12, base + IRREGULAR_INCOME_EXTRA_MONTHS) : base;
 }
 
+/**
+ * How the plan fills the emergency and medical funds from money already
+ * held, before asking the monthly surplus: FDs (70% while locked, in full
+ * once moved to a sweep-in FD / liquid fund), then funds / stocks, then
+ * gold. The Fix Plan, the money score and the goal cards all use this, so
+ * the same savings are never counted for a goal on one screen and for the
+ * emergency fund on another.
+ */
+export function safetyFundSources(profile: FinancialProfile) {
+  const months = emergencyFundMonthsNeeded({
+    lifeStage: profile.lifeStage,
+    parentsSupport: profile.parentsSupport,
+    selfAge: profile.selfAge || 30,
+    kidsAges: (profile as { kidsAges?: unknown }).kidsAges,
+    kids: (profile as { kids?: unknown }).kids,
+    employmentType: profile.employmentType,
+  });
+  const fund = computeRealEmergencyFund(profile);
+  const emergencyTarget = emergencyMonthlyBase(profile) * months;
+  const emergencyGap = Math.max(0, emergencyTarget - fund.realTotal);
+  const fdHeld = n(profile.fdValue);
+  let equityPool = existingEquityValue(profile);
+  let goldPool = n(profile.goldValue);
+  let gapLeft = emergencyGap;
+  const emergencyFdToLiquid =
+    gapLeft > 0 ? Math.round(Math.min(fdHeld, gapLeft / 0.3)) : 0;
+  gapLeft = Math.max(0, gapLeft - emergencyFdToLiquid * 0.3);
+  const emergencyFromEquity = Math.round(Math.min(gapLeft, equityPool));
+  equityPool -= emergencyFromEquity;
+  gapLeft = Math.max(0, gapLeft - emergencyFromEquity);
+  const emergencyFromGold = Math.round(Math.min(gapLeft, goldPool));
+  goldPool -= emergencyFromGold;
+  gapLeft = Math.max(0, gapLeft - emergencyFromGold);
+
+  // FDs the emergency fund still leans on stay out of goal earmarking.
+  const fdNeededForEmergency = Math.min(
+    fdHeld,
+    Math.max(0, emergencyTarget - (fund.realTotal - fund.fdCounted)) / 0.7,
+  );
+  const medicalTarget = medicalEmergencyTarget(profile);
+  const enteredMedical = n(profile.medicalEmergencyFund);
+  // Only estimate from liquid funds when no dedicated medical pot was entered.
+  const medicalCurrent =
+    enteredMedical > 0
+      ? enteredMedical
+      : Math.min(n(profile.liquidMFValue) * 0.5, medicalTarget);
+  const medicalGap = Math.max(0, medicalTarget - medicalCurrent);
+  // Cash beyond the emergency fund isn't set aside for anything yet (liquid
+  // funds already counted as the medical pot above aren't counted twice).
+  const spareCash = Math.max(
+    0,
+    Math.min(
+      n(profile.savingsAccountBalance) + n(profile.liquidMFValue),
+      fund.realTotal - emergencyTarget,
+    ) - (enteredMedical > 0 ? 0 : medicalCurrent),
+  );
+  const medicalFromCash = Math.round(Math.min(spareCash, medicalGap));
+  let medicalGapLeft = Math.max(0, medicalGap - medicalFromCash);
+  const medicalFromFd = Math.round(
+    Math.min(medicalGapLeft, Math.max(0, fdHeld - fdNeededForEmergency)),
+  );
+  medicalGapLeft = Math.max(0, medicalGapLeft - medicalFromFd);
+  const medicalFromEquity = Math.round(Math.min(medicalGapLeft, equityPool));
+  equityPool -= medicalFromEquity;
+  medicalGapLeft = Math.max(0, medicalGapLeft - medicalFromEquity);
+  const medicalFromGold = Math.round(Math.min(medicalGapLeft, goldPool));
+  goldPool -= medicalFromGold;
+  medicalGapLeft = Math.max(0, medicalGapLeft - medicalFromGold);
+
+  return {
+    emergencyMonthsNeeded: months,
+    emergencyFund: fund,
+    emergencyTarget,
+    emergencyGap,
+    emergencyFdToLiquid,
+    emergencyFromEquity,
+    emergencyFromGold,
+    /** Emergency gap still open after using existing savings. */
+    emergencyGapLeft: gapLeft,
+    fdNeededForEmergency,
+    medicalTarget,
+    enteredMedical,
+    medicalCurrent,
+    medicalGap,
+    medicalFromCash,
+    medicalFromFd,
+    medicalFromEquity,
+    medicalFromGold,
+    medicalGapLeft,
+    /** What goal earmarking must leave alone (see earmarkExistingSavings). */
+    reserve: {
+      fdNeededForEmergency: fdNeededForEmergency + medicalFromFd,
+      equityUsedForSafety: emergencyFromEquity + medicalFromEquity,
+      goldUsedForSafety: emergencyFromGold + medicalFromGold,
+    },
+  };
+}
+
 function lifeStageEmergencyMonths(profile: {
   lifeStage?: string;
   parentsSupport?: number;
@@ -1391,13 +1489,7 @@ export function analyseFinances(data: FinancialProfile): AnalysisResult {
       premiumMonthly: termNeededPremium,
     },
     netWorth,
-    fdNeededForEmergency: Math.min(
-      n(data.fdValue),
-      Math.max(
-        0,
-        efTarget - n(data.savingsAccountBalance) - n(data.liquidMFValue) * 0.95,
-      ) / 0.7,
-    ),
+    safetyReserve: safetyFundSources(data).reserve,
   });
   const overallScore = moneyScore.total;
 
