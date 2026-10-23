@@ -2,6 +2,7 @@
 
 import { AppIcon } from "@/components/ui/AppIcon";
 import { timeGreeting } from "@/lib/greeting";
+import { isIntroTourOpen } from "@/lib/introTour";
 import { useAuthStore } from "@/store/authStore";
 import type { Notification } from "@/store/notificationStore";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -63,7 +64,8 @@ export default function MorningTipPopup() {
       const todayTip = await getNextRelevantPopup(user.id);
       if (todayTip && !cancelled) {
         timer = setTimeout(() => {
-          if (!cancelled) {
+          // The intro tour is playing; the tip waits for the next visit.
+          if (!cancelled && !isIntroTourOpen()) {
             setTip(todayTip);
             setVisible(true);
           }

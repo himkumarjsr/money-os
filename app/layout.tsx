@@ -14,6 +14,7 @@ import { PwaLaunchHandler } from "@/components/PwaLaunchHandler";
 import { FinancialStoreAuthSync } from "@/components/FinancialStoreAuthSync";
 import FeedbackPopupManager from "@/components/FeedbackPopupManager";
 import FloatingCalculator from "@/components/FloatingCalculator";
+import IntroTourVideo from "@/components/IntroTourVideo";
 import MorningTipPopup from "@/components/MorningTipPopup";
 import PushPermissionPrompt from "@/components/PushPermissionPrompt";
 import Footer from "@/components/landing/Footer";
@@ -385,6 +386,7 @@ export default function RootLayout({
             >
               {children}
             </main>
+            <IntroTourVideo />
             <MorningTipPopup />
             <PushPermissionPrompt />
             <FeedbackPopupManager />
