@@ -82,3 +82,33 @@ export const adminAccessSection: DocSection = {
     },
   ],
 };
+
+export const analyseLogsSection: DocSection = {
+  id: "analyse-logs",
+  title: "Analyse logs",
+  group: "Admin",
+  summary:
+    "Every generated report with its form answers, in-between numbers and checks, newest first.",
+  blocks: [
+    {
+      kind: "list",
+      items: [
+        "One row in `public.analyse_logs` (migration 057) each time a signed-in user submits the Analyse form or changes their profile from a goal card, on web, PWA, iOS and Android.",
+        "Each row holds the form answers, the profile, the steps the report is built from (safety fund sources, goals, earmarks, surplus breakdown, priority steps, goal strategies, money score) and the report itself.",
+        "`checks` lists numbers in that report that disagree with each other (surplus breakdown, a ₹0/month step, the retirement SIP). Use the filter to see only those reports.",
+        "Users can only add their own rows; nobody but a console admin can read them. Logging runs a second after the report shows and never blocks it.",
+      ],
+    },
+    {
+      kind: "api",
+      api: {
+        method: "RPC",
+        path: "admin_console_analyse_logs(p_limit, p_email, p_only_checks)",
+        summary:
+          "Latest analyse logs, optionally for one email or only with checks.",
+        auth: "Session; console admin (others get 42501)",
+        callers: "This page, on the server",
+      },
+    },
+  ],
+};

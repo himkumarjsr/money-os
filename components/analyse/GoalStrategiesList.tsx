@@ -5,6 +5,7 @@ import { formatIndian } from "@/lib/formatters";
 import { homeUpfrontShare, type DetectedGoal } from "@/lib/goalDetection";
 import {
   goalReachLine,
+  goalReachTableNote,
   type GoalReach,
   type GoalStrategyPlan,
   type StrategyKind,
@@ -132,8 +133,7 @@ export default function GoalStrategiesList({
           ) : null}
           {tableOpen ? (
             <p className="mt-1 text-[11px] leading-snug text-[#5F5E5A]">
-              Today&apos;s rupees, after inflation. ◎ your target year · ✓ goal
-              of ₹{formatIndian(goal.targetAmount)} reached.
+              {goalReachTableNote(reach, goal)}
             </p>
           ) : null}
         </div>

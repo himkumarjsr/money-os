@@ -59,3 +59,47 @@ export async function listConsoleAdmins(
     hasAccount: Boolean(r.has_account),
   }));
 }
+
+export type AnalyseLogRow = {
+  id: number;
+  createdAt: string;
+  email: string | null;
+  source: string;
+  platform: string | null;
+  appVersion: string | null;
+  checkCount: number;
+  payload: Record<string, unknown>;
+};
+
+export async function listAnalyseLogs(
+  supabase: SupabaseServer,
+  opts: { limit?: number; email?: string; onlyChecks?: boolean } = {},
+): Promise<AnalyseLogRow[]> {
+  const { data, error } = await supabase.rpc("admin_console_analyse_logs", {
+    p_limit: opts.limit ?? 50,
+    p_email: opts.email || null,
+    p_only_checks: opts.onlyChecks ?? false,
+  });
+  if (error) throw new Error(error.message);
+  return (
+    (data ?? []) as Array<{
+      id: number;
+      created_at: string;
+      email: string | null;
+      source: string;
+      platform: string | null;
+      app_version: string | null;
+      check_count: number;
+      payload: Record<string, unknown>;
+    }>
+  ).map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    email: r.email,
+    source: r.source,
+    platform: r.platform,
+    appVersion: r.app_version,
+    checkCount: r.check_count,
+    payload: r.payload ?? {},
+  }));
+}

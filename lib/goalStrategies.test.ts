@@ -168,15 +168,32 @@ describe("buildYearlyRoadmap", () => {
     const rows = buildYearlyRoadmap(p, goals, NOW);
     expect(rows[0].year).toBe(2027);
     const homeReach = projectGoalReach(p, goals[0], NOW);
-    expect(rows[rows.length - 1].year).toBe(
-      Math.max(2031, homeReach.reachYear ?? 2031),
-    );
+    const last = rows[rows.length - 1];
+    // The moved money pays for the home sooner than its own SIP alone.
+    expect(last.year).toBeGreaterThanOrEqual(2031);
+    expect(last.year).toBeLessThan(homeReach.reachYear ?? 9999);
+    expect(last.events.join()).toMatch(/Home purchase/);
     expect(rows[0].monthly).toBe(1_00_000);
-    expect(rows.find((r) => r.year === 2028)?.events.join()).toMatch(/Car/);
-    expect(rows.find((r) => r.year === 2029)?.events.join()).toMatch(
-      /car loan ends/,
+    expect(rows.find((r) => r.year === 2028)?.events.join()).toMatch(
+      /Car done: its ₹50,000\/month SIP moves to home purchase/,
     );
-    // The car is paid for in 2028, so its SIP stops after that.
-    expect(rows.find((r) => r.year === 2029)?.monthly).toBe(50_000);
+    expect(rows.find((r) => r.year === 2029)?.events.join()).toMatch(
+      /car loan ends: its ₹15,000 EMI moves to home purchase/,
+    );
+    // The car is paid for in 2028: its SIP keeps going, into the home.
+    expect(rows.find((r) => r.year === 2029)?.monthly).toBe(1_00_000);
+    // From 2030 the car loan's EMI joins it.
+    expect(rows.find((r) => r.year === 2030)?.monthly).toBe(1_15_000);
+    // Worth never drops while nothing is paid out.
+    const y2029 = rows.find((r) => r.year === 2029)!.worth;
+    expect(rows.find((r) => r.year === 2030)!.worth).toBeGreaterThan(y2029);
+  });
+
+  it("keeps the old shape when nothing frees up", () => {
+    const p = base({ annualSalaryIncreasePct: 0, unifiedLoans: [] });
+    const rows = buildYearlyRoadmap(p, [goals[0]], NOW);
+    const reach = projectGoalReach(p, goals[0], NOW);
+    expect(rows.map((r) => r.worth)).toEqual(reach.rows.map((r) => r.value));
+    expect(rows.every((r) => r.monthly === 50_000)).toBe(true);
   });
 });
