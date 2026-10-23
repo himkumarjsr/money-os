@@ -1,26 +1,125 @@
 import type { AnalyseLogRow } from "@/lib/adminConsole";
+import {
+  buildAnalyseLogSheet,
+  inr,
+  type SheetRow,
+  type SheetSection,
+} from "@/lib/analyseLogSheet";
 
 /**
  * Server-rendered list of analyse logs (migration 057). Filters are a plain
- * GET form, so the page needs no client JS.
+ * GET form, so the page needs no client JS. Click a row for its calculation
+ * sheet: what the user entered, then every number built from it.
  */
 
-const SECTIONS: Array<[string, (p: Record<string, unknown>) => unknown]> = [
-  ["Checks", (p) => p.checks],
+const RAW: Array<[string, (p: Record<string, unknown>) => unknown]> = [
   ["Form answers", (p) => p.form],
   ["Profile", (p) => p.profile],
-  ["Surplus", (p) => (p.steps as Record<string, unknown>)?.surplus],
-  ["Priority steps", (p) => (p.steps as Record<string, unknown>)?.priorities],
-  ["Safety fund", (p) => (p.steps as Record<string, unknown>)?.safetyFund],
-  ["Goals", (p) => (p.steps as Record<string, unknown>)?.goals],
-  ["Earmarks", (p) => (p.steps as Record<string, unknown>)?.earmarks],
-  [
-    "Goal strategies",
-    (p) => (p.steps as Record<string, unknown>)?.goalStrategies,
-  ],
-  ["Money score", (p) => (p.steps as Record<string, unknown>)?.moneyScore],
+  ["Steps", (p) => p.steps],
   ["Report", (p) => p.result],
 ];
+
+function SheetRows({ rows }: { rows: SheetRow[] }) {
+  return (
+    <table className="w-full text-sm">
+      <tbody>
+        {rows.map((r, i) => (
+          <tr
+            key={i}
+            className={`border-b border-[#EEEDE8] last:border-0 ${r.flag ? "bg-[#FDF3F3]" : ""}`}
+          >
+            <td
+              className={`py-1.5 pr-3 align-top text-[#2C2C2A] ${r.total ? "font-semibold" : ""}`}
+            >
+              {r.label}
+            </td>
+            <td
+              className={`whitespace-nowrap py-1.5 pr-3 text-right align-top tabular-nums text-[#111110] ${r.total ? "font-semibold" : ""}`}
+            >
+              {r.value}
+            </td>
+            <td className="py-1.5 align-top text-xs text-[#5F5E5A]">
+              {r.note}
+              {r.flag ? (
+                <span className="block font-semibold text-[#A32D2D]">
+                  ⚠ {r.flag}
+                </span>
+              ) : null}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function SheetView({ section }: { section: SheetSection }) {
+  return (
+    <section className="rounded-lg border border-[#E5E4DF] p-3">
+      <h3 className="mb-2 text-sm font-bold text-[#111110]">{section.title}</h3>
+      {section.rows ? <SheetRows rows={section.rows} /> : null}
+      {section.groups ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {section.groups.map((g) => (
+            <div key={g.title}>
+              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#5F5E5A]">
+                {g.title}
+              </h4>
+              <SheetRows rows={g.rows} />
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {section.table ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#E5E4DF] text-left text-xs text-[#5F5E5A]">
+                {section.table.head.map((h) => (
+                  <th key={h} className="py-1.5 pr-3 font-semibold">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {section.table.rows.map((row, i) => (
+                <tr
+                  key={i}
+                  className={`border-b border-[#EEEDE8] last:border-0 align-top ${
+                    section.table?.flagged?.includes(i) ? "bg-[#FDF3F3]" : ""
+                  }`}
+                >
+                  {row.map((cell, j) => (
+                    <td
+                      key={j}
+                      className={`py-1.5 pr-3 text-[#2C2C2A] ${j === row.length - 1 && row.length > 5 ? "min-w-[260px] text-xs" : "whitespace-nowrap"}`}
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function headline(payload: Record<string, unknown>) {
+  const steps = (payload.steps ?? {}) as Record<string, unknown>;
+  const surplus = (steps.surplus ?? {}) as Record<string, unknown>;
+  const score = (steps.moneyScore ?? {}) as Record<string, unknown>;
+  const parts: string[] = [];
+  if (surplus.totalIncome != null)
+    parts.push(`Income ${inr(surplus.totalIncome)}`);
+  if (surplus.netSurplus != null)
+    parts.push(`Surplus ${inr(surplus.netSurplus)}`);
+  if (score.total != null) parts.push(`Score ${String(score.total)}`);
+  return parts.join(" · ");
+}
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -98,6 +197,9 @@ export function AnalyseLogsViewer({
                   <span className="text-[#5F5E5A]">
                     {formatTime(log.createdAt)}
                   </span>
+                  <span className="text-[#5F5E5A]">
+                    {headline(log.payload)}
+                  </span>
                   <span className="rounded bg-[#F1EFE8] px-2 py-0.5 text-xs text-[#5F5E5A]">
                     {log.source === "form_submit"
                       ? "Form submit"
@@ -117,24 +219,29 @@ export function AnalyseLogsViewer({
                       : "Numbers agree"}
                   </span>
                 </summary>
-                <div className="space-y-2 border-t border-[#E5E4DF] px-4 py-3">
-                  {SECTIONS.map(([title, pick]) => {
-                    const value = pick(log.payload);
-                    if (value == null) return null;
-                    return (
-                      <details
-                        key={title}
-                        open={title === "Checks" && log.checkCount > 0}
-                      >
-                        <summary className="cursor-pointer text-sm font-medium text-[#111110]">
-                          {title}
-                        </summary>
-                        <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-[#F7F6F2] p-3 text-xs leading-relaxed text-[#2C2C2A]">
-                          {JSON.stringify(value, null, 2)}
-                        </pre>
-                      </details>
-                    );
-                  })}
+                <div className="space-y-3 border-t border-[#E5E4DF] px-4 py-3">
+                  {buildAnalyseLogSheet(log.payload).map((section) => (
+                    <SheetView key={section.title} section={section} />
+                  ))}
+                  <details>
+                    <summary className="cursor-pointer text-sm font-medium text-[#5F5E5A]">
+                      Raw data
+                    </summary>
+                    {RAW.map(([title, pick]) => {
+                      const value = pick(log.payload);
+                      if (value == null) return null;
+                      return (
+                        <details key={title} className="mt-2">
+                          <summary className="cursor-pointer text-sm text-[#111110]">
+                            {title}
+                          </summary>
+                          <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-[#F7F6F2] p-3 text-xs leading-relaxed text-[#2C2C2A]">
+                            {JSON.stringify(value, null, 2)}
+                          </pre>
+                        </details>
+                      );
+                    })}
+                  </details>
                 </div>
               </details>
             </li>
