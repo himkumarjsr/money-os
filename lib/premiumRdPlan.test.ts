@@ -223,6 +223,21 @@ describe("applyRenewalMonths", () => {
     expect(next.otherInsurancePremiums?.[0]?.renewalMonth).toBe(8);
     expect(next.carInsuranceRenewalMonth).toBeUndefined();
   });
+
+  it("saves the parents' health renewal so it stops being asked", () => {
+    const profile: PremiumRdProfile = {
+      parentsHealthInsurancePremiumInput: 35000,
+      parentsHealthInsurancePremiumFrequency: "yearly",
+    };
+    expect(buildPremiumRdPlan(profile, OCT).missing.map((m) => m.key)).toEqual([
+      "parents",
+    ]);
+    const next = applyRenewalMonths(profile, { parents: 8 });
+    expect(next.parentsHealthInsuranceRenewalMonth).toBe(8);
+    const plan = buildPremiumRdPlan(next, OCT);
+    expect(plan.missing).toHaveLength(0);
+    expect(plan.items.map((i) => i.key)).toEqual(["parents"]);
+  });
 });
 
 describe("RD rows already in Tracker", () => {

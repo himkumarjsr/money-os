@@ -318,6 +318,8 @@ export interface FinancialProfile {
   /** Premium as entered (monthly or yearly per frequency). */
   parentsHealthInsurancePremiumInput?: number;
   parentsHealthInsurancePremiumFrequency?: PremiumFrequency;
+  /** Renewal month (1–12) of the parents' policy, for premium RD planning. */
+  parentsHealthInsuranceRenewalMonth?: number;
   parentsEmergencyCash?: number;
   parentsCity?: "metro" | "tier2" | "tier3";
 
@@ -781,6 +783,7 @@ const formShape = {
   parentsHealthInsurancePremiumInput: optionalMoney,
   parentsHealthInsurancePremiumFrequency:
     premiumFrequencySchema.default("yearly"),
+  parentsHealthInsuranceRenewalMonth: optionalWholeNumber,
   parentsEmergencyCash: optionalMoney,
   parentsCity: z.enum(CITY_TIER_VALUES).optional(),
 
@@ -1801,6 +1804,7 @@ export function mergeAnalyseDraftWithProfile(
   preferRenewal("carInsuranceRenewalDay");
   preferRenewal("bikeInsuranceRenewalMonth");
   preferRenewal("bikeInsuranceRenewalDay");
+  preferRenewal("parentsHealthInsuranceRenewalMonth");
 
   return merged;
 }
@@ -2040,6 +2044,7 @@ export function financialProfileToFormValues(
       p.parentsHealthInsurancePremiumInput ?? 0,
     parentsHealthInsurancePremiumFrequency:
       p.parentsHealthInsurancePremiumFrequency ?? "yearly",
+    parentsHealthInsuranceRenewalMonth: p.parentsHealthInsuranceRenewalMonth,
     parentsEmergencyCash: p.parentsEmergencyCash ?? 0,
     parentsCity: p.parentsCity,
     hasHealthInsurance: p.hasHealthInsurance,
@@ -2610,6 +2615,9 @@ export function normalizeAnalyseFormValues(
       : undefined,
     parentsHealthInsurancePremiumFrequency: hasParentsPremium
       ? (form.parentsHealthInsurancePremiumFrequency ?? "yearly")
+      : undefined,
+    parentsHealthInsuranceRenewalMonth: hasParentsPremium
+      ? form.parentsHealthInsuranceRenewalMonth
       : undefined,
     parentsEmergencyCash:
       (form.parentsSupport ?? 0) > 0 ? form.parentsEmergencyCash : undefined,
