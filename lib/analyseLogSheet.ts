@@ -379,6 +379,80 @@ function scoreSection(score: Obj, result: Obj): SheetSection | null {
   };
 }
 
+function roadmapSection(roadmap: unknown): SheetSection | null {
+  if (!Array.isArray(roadmap) || roadmap.length === 0) return null;
+  const flagged: number[] = [];
+  const rows = roadmap.map((r, i) => {
+    const row = obj(r);
+    const sum =
+      num(row.worth) + num(row.pf) + num(row.savings) - num(row.loansLeft);
+    if (Math.abs(sum - num(row.netWorth)) > 1) flagged.push(i);
+    const events = Array.isArray(row.events) ? (row.events as string[]) : [];
+    return [
+      String(row.year ?? ""),
+      `${inr(row.monthly)}/mo`,
+      inr(row.worth),
+      inr(row.pf),
+      inr(row.savings),
+      inr(-num(row.loansLeft)),
+      inr(row.netWorth),
+      events.join(" · "),
+    ];
+  });
+  return {
+    title: "7. Year by year (today's rupees)",
+    table: {
+      head: [
+        "Year",
+        "Invest",
+        "Goal money",
+        "EPF/PPF/NPS",
+        "Other savings",
+        "Loans left",
+        "Net worth",
+        "What happens",
+      ],
+      rows,
+      flagged,
+    },
+  };
+}
+
+function retirementSection(check: Obj): SheetSection | null {
+  if (!("canRetire" in check)) return null;
+  return {
+    title: "8. Can they retire?",
+    rows: [
+      {
+        label: `Answer for ${num(check.year)} (age ${num(check.age)})`,
+        value: check.canRetire ? "Yes" : "Not yet",
+        total: true,
+      },
+      { label: "Retirement money then", value: inr(check.corpus) },
+      {
+        label: "Pays a month",
+        value: inr(check.monthlyIncome),
+        note: `${(Math.round(num(check.withdrawalRate) * 1000) / 10).toLocaleString("en-IN")}% a year, rising with prices, lasts to 90`,
+      },
+      {
+        label: "Costs a month then",
+        value: inr(check.monthlyCosts),
+        note: "needs + wants + health cover, without parents' support or school fees",
+      },
+      { label: "Money needed", value: inr(check.corpusNeeded) },
+      ...(check.extraMonthly
+        ? [
+            {
+              label: "Extra SIP to get there",
+              value: `${inr(check.extraMonthly)}/mo`,
+            },
+          ]
+        : []),
+      { label: "What we tell them", value: "", note: String(check.line ?? "") },
+    ],
+  };
+}
+
 export function buildAnalyseLogSheet(payload: Obj): SheetSection[] {
   const steps = obj(payload.steps);
   const profile = obj(payload.profile);
@@ -398,6 +472,8 @@ export function buildAnalyseLogSheet(payload: Obj): SheetSection[] {
     goalsSection(steps.goals, obj(steps.earmarks)),
     stepsSection(steps.priorities),
     scoreSection(obj(steps.moneyScore), obj(payload.result)),
+    roadmapSection(steps.roadmap),
+    retirementSection(obj(steps.retirement)),
   ];
   return sections.filter((s): s is SheetSection => s !== null);
 }

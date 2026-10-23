@@ -12,6 +12,7 @@ import { formatIndian } from "@/lib/formatters";
 import {
   detectGoals,
   homeUpfrontShare,
+  retirementMonthlySpend,
   type DetectedGoal,
 } from "@/lib/goalDetection";
 import { earmarkExistingSavings } from "@/lib/goalFunding";
@@ -115,10 +116,53 @@ const LOAN_NAMES: Record<string, string> = {
   credit_card: "card EMI",
 };
 
-type RunningLoan = { name: string; emi: number; yearsLeft: number };
+type RunningLoan = {
+  name: string;
+  emi: number;
+  yearsLeft: number;
+  /** Principal still owed today, ₹ (0 when the user didn't say). */
+  outstanding: number;
+  ratePct: number;
+};
+
+/** Loans the user listed in the old one-field-per-loan form. */
+const LEGACY_LOANS = [
+  [
+    "home loan",
+    "homeLoanEMI",
+    "homeLoanOutstanding",
+    "homeLoanRate",
+    "homeLoanRemainingMonths",
+    "homeLoanLenderName",
+  ],
+  [
+    "car loan",
+    "carLoanEMI",
+    "carLoanOutstanding",
+    "carLoanRate",
+    "carLoanRemainingMonths",
+    "carLoanLenderName",
+  ],
+  [
+    "bike loan",
+    "bikeEMI",
+    "bikeOutstanding",
+    "bikeLoanRate",
+    "bikeLoanRemainingMonths",
+    "bikeLoanLenderName",
+  ],
+  [
+    "personal loan",
+    "personalLoanEMI",
+    "personalLoanOutstanding",
+    "personalLoanRate",
+    "personalLoanRemainingMonths",
+    "personalLoanLenderName",
+  ],
+] as const;
 
 function runningLoans(p: FinancialProfile): RunningLoan[] {
-  return (p.unifiedLoans ?? [])
+  const unified = (p.unifiedLoans ?? [])
     .filter(
       (l) =>
         l.loanType !== "overdraft" &&
@@ -132,7 +176,31 @@ function runningLoans(p: FinancialProfile): RunningLoan[] {
         (l.loanType === "other" ? "loan" : String(l.loanType)),
       emi: n(l.monthlyEMI),
       yearsLeft: n(l.remainingMonths) / 12,
+      outstanding: n(l.outstandingAmount),
+      ratePct: n(l.interestRate),
     }));
+  if ((p.unifiedLoans ?? []).length > 0) return unified;
+  const f = p as unknown as Record<string, unknown>;
+  return LEGACY_LOANS.filter(
+    ([, emi, , , months]) => n(f[emi]) > 0 && n(f[months]) > 0,
+  ).map(([name, emi, out, rate, months, lender]) => ({
+    name: String(f[lender] ?? "").trim() || name,
+    emi: n(f[emi]),
+    yearsLeft: n(f[months]) / 12,
+    outstanding: n(f[out]),
+    ratePct: n(f[rate]),
+  }));
+}
+
+/** What a loan still owes after `months` more EMIs, ₹ (nominal). */
+function owedAfter(l: RunningLoan, months: number): number {
+  const left = Math.round(l.yearsLeft * 12);
+  if (months >= left) return 0;
+  if (l.outstanding <= 0) return l.emi * (left - months);
+  const r = l.ratePct / 100 / 12;
+  if (r <= 0) return l.outstanding * (1 - months / left);
+  const f = Math.pow(1 + r, months);
+  return Math.max(0, l.outstanding * f - (l.emi * (f - 1)) / r);
 }
 
 const monthlyIncome = (p: FinancialProfile) =>
@@ -765,11 +833,60 @@ export type RoadmapRow = {
   year: number;
   /** Monthly SIP across all goals still being saved for that year, ₹. */
   monthly: number;
-  /** What the money for those goals is worth at year end, today's rupees. */
+  /**
+   * What the money for those goals is worth at year end, today's rupees,
+   * outside EPF / PPF / NPS (those are `pf`).
+   */
   worth: number;
+  /** EPF + PPF + NPS balance at year end, today's rupees. */
+  pf: number;
+  /** Savings not set aside for any goal (safety fund, spare cash), today's rupees. */
+  savings: number;
+  /** Principal still owed on every loan at year end, today's rupees. */
+  loansLeft: number;
+  /** worth + pf + savings - loansLeft. Home, car and other property not counted. */
+  netWorth: number;
+  /** Retirement money that year (EPF etc. and moved money included), today's rupees. */
+  retirement?: number;
   /** Goals falling due or reached, loans ending - in plain words. */
   events: string[];
 };
+
+/**
+ * Money held today that no goal counts on: cash, FDs, funds, stocks, gold
+ * and post office minus the savings set against goals. Kept at today's value.
+ */
+function unassignedSavings(
+  p: FinancialProfile,
+  goals: Array<{ type: string; currentSaved: number }>,
+): number {
+  const pfToday = n(p.epfBalance) + n(p.ppfBalance) + n(p.npsBalance);
+  const f = p as unknown as Record<string, unknown>;
+  const postOffice =
+    f.hasPostOfficeSchemes && (p.postOfficeSchemes?.length ?? 0) > 0
+      ? postOfficeHoldingsValue(p.postOfficeSchemes)
+      : n(f.nscDepositAmount);
+  const custom = (
+    (f.customInvestments as Array<{ currentValue?: number }>) ?? []
+  ).reduce((s, inv) => s + n(inv?.currentValue), 0);
+  const held =
+    n(p.savingsAccountBalance) +
+    n(p.fdValue) +
+    n(p.liquidMFValue) +
+    n(f.otherLiquidSavings) +
+    n(f.emergencyFundCurrent) +
+    existingEquityValue(p) +
+    n(p.goldValue) +
+    postOffice +
+    custom;
+  const set = goals.reduce(
+    (s, g) =>
+      s +
+      Math.max(0, n(g.currentSaved) - (g.type === "retirement" ? pfToday : 0)),
+    0,
+  );
+  return Math.max(0, held - set);
+}
 
 /**
  * Year by year until the last goal is paid for: what to invest each month,
@@ -795,6 +912,15 @@ export function buildYearlyRoadmap(
   const lastYear = Math.max(thisYear + 1, ...reaches.map(lastRowYear));
   const loans = runningLoans(profile);
   const stepUp = sipStepUp(profile);
+  const savings = Math.round(unassignedSavings(profile, goals));
+  const hasPf =
+    n(profile.epfBalance) +
+      n(profile.ppfBalance) +
+      n(profile.npsBalance) +
+      n(profile.monthlyEPFContribution) +
+      n(profile.monthlyPPFContribution) +
+      n(profile.monthlyNPSContribution) >
+    0;
 
   const receiver = reaches
     .filter((r) => r.reach.rows.length > 0)
@@ -843,19 +969,25 @@ export function buildYearlyRoadmap(
       }
     }
     const extraReal = extra / Math.pow(1 + LONG_RUN_INFLATION, y);
+    const pf = hasPf
+      ? projectRetirementAccounts(profile, y, { real: true }).total
+      : 0;
     let monthly = inflow;
     let worth = extraReal;
+    let retirement: number | undefined;
     const events: string[] = [];
     for (const r of reaches) {
       const { g, reach } = r;
       const row = reach.rows.find((x) => x.year === year);
       if (row) {
         monthly += row.sip ?? 0;
-        worth += row.value;
+        // EPF / PPF / NPS inside the retirement goal show in their own column.
+        worth += row.value - (g.type === "retirement" ? pf : 0);
       }
       const isReceiver = r === receiver && inflows.length > 0;
       // The receiver counts what was moved to it as well.
       const value = (row?.value ?? 0) + (isReceiver ? extraReal : 0);
+      if (g.type === "retirement" && row) retirement = Math.round(value);
       const reached = isReceiver
         ? value >= g.targetAmount * 0.995
         : reach.reachYear !== null && year >= reach.reachYear;
@@ -898,10 +1030,19 @@ export function buildYearlyRoadmap(
             : `${l.name} ends: move its ${rs(l.emi)} EMI into goals`,
         );
     }
+    const deflate = Math.pow(1 + LONG_RUN_INFLATION, y);
+    const loansLeft = Math.round(
+      loans.reduce((s, l) => s + owedAfter(l, 12 * y), 0) / deflate,
+    );
     rows.push({
       year,
       monthly: Math.round(monthly),
       worth: Math.round(worth),
+      pf: Math.round(pf),
+      savings,
+      loansLeft,
+      netWorth: Math.round(worth) + Math.round(pf) + savings - loansLeft,
+      ...(retirement != null ? { retirement } : {}),
       events,
     });
     // With the moved money the last goal can be paid for sooner.
@@ -914,4 +1055,85 @@ export function buildYearlyRoadmap(
       break;
   }
   return rows;
+}
+
+export type RetirementCheck = {
+  canRetire: boolean;
+  year: number;
+  age: number;
+  /** Money for retirement that year, EPF / PPF / NPS included, today's rupees. */
+  corpus: number;
+  /** Share of the corpus drawn the first year so that it lasts to 90. */
+  withdrawalRate: number;
+  /** What the corpus pays each month, today's prices. */
+  monthlyIncome: number;
+  /** What life costs each month then, today's prices. */
+  monthlyCosts: number;
+  /** Corpus that would pay those costs, today's rupees. */
+  corpusNeeded: number;
+  /** Extra ₹/month on top of this plan that gets there on time (when short). */
+  extraMonthly?: number;
+  line: string;
+};
+
+/**
+ * "Can you retire?": the retirement money in the year you plan to stop
+ * (from the year-by-year roadmap, so moved EMIs and SIPs count), what it can
+ * pay each month at a withdrawal rate that lasts to {@link LIFE_EXPECTANCY},
+ * against today's costs without the ones that end before then.
+ */
+export function retirementCheck(
+  profile: FinancialProfile,
+  goals: Parameters<typeof buildYearlyRoadmap>[1],
+  now: Date = new Date(),
+  roadmap: RoadmapRow[] = buildYearlyRoadmap(profile, goals, now),
+): RetirementCheck | null {
+  const goal = goals.find((g) => g.type === "retirement");
+  const row = goal && roadmap.find((r) => r.year === goal.targetYear);
+  const monthlyCosts = Math.round(retirementMonthlySpend(profile));
+  if (!goal || !row || monthlyCosts <= 0) return null;
+  const years = goal.targetYear - now.getFullYear();
+  const age = (n(profile.selfAge) || 30) + years;
+  const corpus = row.retirement ?? 0;
+  // ₹/month that ₹1 of corpus pays, so the needed corpus scales from it.
+  const perRupee = corpusMonthlyIncome(1, age, profile, years);
+  const monthlyIncome = Math.round(corpus * perRupee);
+  const corpusNeeded = Math.round(monthlyCosts / perRupee);
+  const canRetire = monthlyIncome >= monthlyCosts;
+  // Extra SIP (rising with salary) on top of this plan that closes the gap.
+  const extraMonthly = (() => {
+    if (canRetire) return undefined;
+    const valueAt = (m: number) =>
+      projectGoalReach(
+        profile,
+        { ...goal, monthlyAllocated: m, existingMonthly: 0 },
+        now,
+        { skipSolve: true },
+      ).valueByTarget ?? 0;
+    const per10k = valueAt(10_000) - valueAt(0);
+    if (per10k <= 0) return undefined;
+    return Math.ceil(((corpusNeeded - corpus) / per10k) * 100) * 100;
+  })();
+  const withdrawalRate = perRupee * 12;
+  const ratePct = `${(Math.round(withdrawalRate * 1000) / 10).toLocaleString("en-IN")}%`;
+  const facts = `In ${goal.targetYear} (age ${age}) your retirement money is about ${rs(corpus)}. Taking out ${ratePct} of it a year, rising with prices, lasts to ${LIFE_EXPECTANCY} and pays ${rs(monthlyIncome)} a month. Your costs then: ${rs(monthlyCosts)} a month at today's prices.`;
+  const line = canRetire
+    ? `Yes. ${facts}`
+    : `Not yet. ${facts} That's ${rs(monthlyCosts - monthlyIncome)} a month short: you need about ${rs(corpusNeeded)}.${
+        extraMonthly
+          ? ` Investing ${rs(extraMonthly)} a month more for retirement, rising with your salary, gets you there.`
+          : ""
+      }`;
+  return {
+    canRetire,
+    year: goal.targetYear,
+    age,
+    corpus,
+    withdrawalRate,
+    monthlyIncome,
+    monthlyCosts,
+    corpusNeeded,
+    ...(extraMonthly ? { extraMonthly } : {}),
+    line,
+  };
 }
