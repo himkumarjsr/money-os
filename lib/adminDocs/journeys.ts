@@ -28,6 +28,11 @@ export const beforeLoginSection: DocSection = {
           "Static content modules",
         ],
         [
+          '"Why Finkoin" intro tour',
+          '`/`, `/dashboard` (any "Watch the tour" button)',
+          "A ~30 second animated tour of the key features (`components/IntroTourVideo.tsx`). Plays once on a new device's first visit to `/` or `/dashboard` (`finkoin_intro_tour_seen` in localStorage) and holds back the morning tip and push prompt while open. Same in the app (`mobile/components/IntroTourVideo.tsx`)",
+        ],
+        [
           "Legal",
           "`/legal/*`, `/privacy`, `/terms`, `/legal/delete-account`",
           "Static",
