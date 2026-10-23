@@ -3,6 +3,11 @@
  * `app/analyse/result/page.tsx` line-for-line, using the shared lib helpers.
  */
 import type { FinancialProfile } from "@/lib/analyse-form-schema";
+import {
+  emergencyFundExplain,
+  medicalFundExplain,
+  type SafetyExplain,
+} from "@/lib/safetyNetExplain";
 import type { AppIconName } from "@/components/ui/AppIcon";
 import {
   analyseFinances,
@@ -49,6 +54,8 @@ export type SafetyItem = {
   isOk: boolean;
   status?: TermCoverStatus;
   infoText?: string;
+  /** How the target is worked out and what fills it. */
+  explain?: SafetyExplain;
   icon: AppIconName;
 };
 
@@ -139,6 +146,11 @@ export function buildResultModel(
       currentText: rupees(analysis.realEmergencyFund?.total || 0),
       targetText: rupees(emergencyTarget),
       isOk: emergencyHave >= emergencyTarget,
+      explain: emergencyFundExplain(
+        profile,
+        analysis.realEmergencyFund,
+        emergencyTarget,
+      ),
       icon: "shield",
     },
     {
@@ -147,6 +159,11 @@ export function buildResultModel(
       currentText: rupees(medEmergencyCurrent),
       targetText: rupees(medEmergencyTargetAmount),
       isOk: medEmergencyCurrent >= medEmergencyTargetAmount,
+      explain: medicalFundExplain(profile, {
+        current: medEmergencyCurrent,
+        target: medEmergencyTargetAmount,
+        fromSavings: analysis.medicalEmergencyFund?.fromSavings,
+      }),
       icon: "hospital",
     },
     {

@@ -31,6 +31,7 @@ import { FixPlanHero } from "@/components/analyse/fixplan/FixPlanHero";
 import { SurplusBreakdown } from "@/components/analyse/fixplan/SurplusBreakdown";
 import { PriorityCard } from "@/components/analyse/fixplan/PriorityCard";
 import { SurplusAllocationSummary } from "@/components/analyse/fixplan/SurplusAllocationSummary";
+import { YearlyRoadmapTable } from "@/components/analyse/fixplan/YearlyRoadmapTable";
 import { MonthlyPlanTable } from "@/components/analyse/fixplan/MonthlyPlanTable";
 import { DebtStrategy } from "@/components/analyse/fixplan/DebtStrategy";
 import { GoalPlanCard } from "@/components/analyse/fixplan/GoalPlanCard";
@@ -274,6 +275,12 @@ function FixPlanScreen() {
 
         {monthlyPlanRows.length > 0 ? (
           <MonthlyPlanTable rows={monthlyPlanRows} />
+        ) : null}
+        {profile ? (
+          <YearlyRoadmapTable
+            profile={profile}
+            items={pp?.goalFunding?.items}
+          />
         ) : null}
 
         {pp?.debts?.length > 0 ? (
