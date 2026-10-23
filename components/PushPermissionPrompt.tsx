@@ -6,6 +6,7 @@ import {
   getWebPushPublicKey,
   isWebPushSupported,
 } from "@/lib/webPushClient";
+import { isIntroTourOpen } from "@/lib/introTour";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
 
@@ -45,7 +46,10 @@ export default function PushPermissionPrompt() {
       if (days < 14) return;
     }
 
-    const timer = window.setTimeout(() => setVisible(true), 2500);
+    const timer = window.setTimeout(() => {
+      // Don't stack on the intro tour; ask again next visit.
+      if (!isIntroTourOpen()) setVisible(true);
+    }, 2500);
     return () => window.clearTimeout(timer);
   }, [hasInitialized, isLoggedIn, user?.id]);
 

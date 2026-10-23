@@ -1,5 +1,6 @@
 "use client";
 
+import { IntroTourButton } from "@/components/IntroTourButton";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { trackCta } from "@/lib/gtag";
 import {
@@ -73,6 +74,7 @@ export default function FeaturesShowcase() {
             Compare plans
           </Link>
         </div>
+        <IntroTourButton location="features_hero" className="mt-4" />
       </section>
 
       <section

@@ -308,3 +308,57 @@ body[data-analyse-modal-open="true"] [data-track-nav-zone="bottom_nav"] {
   background-clip: text;
   color: transparent !important;
 }
+
+/* Intro tour video (components/IntroTourVideo.tsx) */
+.fk-intro {
+  --fi-card: #ffffff;
+  --fi-surface: #f7f6fc;
+  --fi-border: #ecebf5;
+  --fi-text: #111110;
+  --fi-text-2: #5f5e5a;
+  --fi-muted: #9b9a94;
+  --fi-primary: #534ab7;
+  --fi-primary-text: #534ab7;
+  --fi-primary-light: #eeedfe;
+  --fi-success: #0f8a5f;
+  --fi-success-light: #e3f6ee;
+  --fi-warning: #b26a00;
+  --fi-warning-light: #fdf1dc;
+  --fi-stage: linear-gradient(160deg, #6a61d1 0%, #534ab7 48%, #3c3489 100%);
+  --fi-on-stage: #ffffff;
+  --fi-cta: var(--fk-satin-grad);
+  --fi-on-cta: #ffffff;
+}
+
+:root[data-theme] .fk-intro {
+  --fi-card: var(--fk-card);
+  --fi-surface: var(--fk-surface);
+  --fi-border: var(--fk-border);
+  --fi-text: var(--fk-text);
+  --fi-text-2: var(--fk-text-2);
+  --fi-muted: var(--fk-muted);
+  --fi-primary: var(--fk-primary);
+  --fi-primary-text: var(--fk-primary-text);
+  --fi-primary-light: var(--fk-primary-light);
+  --fi-success: var(--fk-success-text);
+  --fi-success-light: var(--fk-success-light);
+  --fi-warning: var(--fk-warning-text);
+  --fi-warning-light: var(--fk-warning-light);
+  --fi-stage: linear-gradient(160deg, #2a2466 0%, #17143a 55%, #221d52 100%);
+}
+
+:root[data-theme="premium"] .fk-intro {
+  --fi-stage: var(--fk-hero);
+  --fi-on-stage: #f5efdc;
+  --fi-cta: var(--fk-gold-grad);
+  --fi-on-cta: var(--fk-on-gold);
+}
+
+@keyframes fk-intro-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
