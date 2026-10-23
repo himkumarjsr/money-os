@@ -35,6 +35,11 @@ type Props = {
   ready: boolean;
   /** Theme to paint the backdrop and coin with. */
   theme: ThemeName;
+  /**
+   * The saved theme has been read. Until then the native purple stays up, so
+   * the device theme never shows before the user's chosen one.
+   */
+  themeKnown: boolean;
 };
 
 /** The theme backdrop; fades in over the native purple when it mounts. */
@@ -62,7 +67,7 @@ function Backdrop({ theme }: { theme: ThemeName }) {
   );
 }
 
-export function AnimatedSplash({ ready, theme }: Props) {
+export function AnimatedSplash({ ready, theme, themeKnown }: Props) {
   const { width } = useWindowDimensions();
   const [gone, setGone] = useState(false);
   const [minDone, setMinDone] = useState(false);
@@ -155,7 +160,7 @@ export function AnimatedSplash({ ready, theme }: Props) {
       accessibilityLabel="Finkoin is loading"
     >
       {/* Keyed so a theme that resolves late fades in rather than snapping. */}
-      <Backdrop key={theme} theme={theme} />
+      {themeKnown ? <Backdrop key={theme} theme={theme} /> : null}
 
       <View style={styles.center}>
         <Animated.View
