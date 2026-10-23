@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, useColorScheme } from "react-native";
 import { Colors, themedStyles } from "@/constants/theme";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { PREMIUM_STREAK_DAYS, PREMIUM_TOP_RANK } from "@/lib/premiumTheme";
@@ -23,6 +23,9 @@ export function AppearancePicker() {
   const premium = useThemeStore((s) => s.premium);
   const setPreference = useThemeStore((s) => s.setPreference);
   const unlocked = premium?.unlocked ?? false;
+  // System copies the device setting, so on a phone in dark mode it looks
+  // exactly like Dark; say which one it is showing.
+  const systemNow = useColorScheme() === "dark" ? "Dark" : "Light";
 
   useEffect(() => {
     void useThemeStore.getState().refreshPremium(userId);
@@ -70,7 +73,9 @@ export function AppearancePicker() {
                   <AppIcon name="check" size={14} color={Colors.primaryText} />
                 ) : null}
               </View>
-              <Text style={styles.optionHint}>{o.hint}</Text>
+              <Text style={styles.optionHint}>
+                {o.value === "system" ? `${o.hint} · ${systemNow} now` : o.hint}
+              </Text>
             </Pressable>
           );
         })}
@@ -78,9 +83,7 @@ export function AppearancePicker() {
 
       {!unlocked ? (
         <View style={styles.note}>
-          <Text style={styles.noteTitle}>
-            How to unlock Premium
-          </Text>
+          <Text style={styles.noteTitle}>How to unlock Premium</Text>
           <Text style={styles.noteText}>
             Generate your report and keep a {PREMIUM_STREAK_DAYS}-day streak
             (about 3 months of daily use), or reach the top {PREMIUM_TOP_RANK}{" "}

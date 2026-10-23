@@ -13,19 +13,26 @@ import {
 type ThemeState = {
   preference: ThemePreference;
   premium: PremiumStatus | null;
+  /** Saved choices have been read; until then the boot script's theme stands. */
+  loaded: boolean;
   /** Read saved choices from localStorage. */
   load: (userId: string | null) => void;
   setPreference: (pref: ThemePreference) => void;
   refreshPremium: (userId: string | null) => Promise<void>;
 };
 
+/**
+ * Cached Premium status. Before sign-in is known (`userId` null) the last
+ * saved status is used, as the boot script does, so a Gold theme doesn't
+ * drop to Dark while auth loads; `refreshPremium(null)` clears it once the
+ * user is known to be signed out.
+ */
 function readPremium(userId: string | null): PremiumStatus | null {
-  if (!userId) return null;
   try {
     const raw = localStorage.getItem(THEME_PREMIUM_KEY);
     if (!raw) return null;
     const saved = JSON.parse(raw) as { userId: string; status: PremiumStatus };
-    return saved.userId === userId ? saved.status : null;
+    return !userId || saved.userId === userId ? saved.status : null;
   } catch {
     return null;
   }
@@ -34,6 +41,7 @@ function readPremium(userId: string | null): PremiumStatus | null {
 export const useThemeStore = create<ThemeState>((set) => ({
   preference: "light",
   premium: null,
+  loaded: false,
 
   load: (userId) => {
     let raw: string | null = null;
@@ -45,6 +53,7 @@ export const useThemeStore = create<ThemeState>((set) => ({
     set({
       preference: parseThemePreference(raw),
       premium: readPremium(userId),
+      loaded: true,
     });
   },
 

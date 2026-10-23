@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
   PREMIUM_STREAK_DAYS,
@@ -27,6 +28,16 @@ export function AppearancePicker() {
   const premium = useThemeStore((s) => s.premium);
   const setPreference = useThemeStore((s) => s.setPreference);
   const unlocked = premium?.unlocked ?? false;
+  // System copies the device setting, so on a device in dark mode it looks
+  // exactly like Dark; say which one it is showing.
+  const [systemDark, setSystemDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    setSystemDark(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   return (
     <div className="mt-4 space-y-3">
@@ -71,7 +82,9 @@ export function AppearancePicker() {
                   isPremium ? "text-[#C2B9A3]" : "text-[#5F5E5A]"
                 }`}
               >
-                {o.hint}
+                {o.value === "system"
+                  ? `${o.hint} · ${systemDark ? "Dark" : "Light"} now`
+                  : o.hint}
               </span>
             </button>
           );

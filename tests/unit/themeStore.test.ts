@@ -34,4 +34,22 @@ describe("themeStore premium unlock", () => {
     await useThemeStore.getState().refreshPremium("u1");
     expect(useThemeStore.getState().preference).toBe("light");
   });
+
+  it("uses the cached status while sign-in is still loading", async () => {
+    await useThemeStore.getState().refreshPremium("u1");
+    localStorage.setItem("finkoin_theme", "premium");
+    useThemeStore.setState({ premium: null, loaded: false });
+    useThemeStore.getState().load(null);
+    expect(useThemeStore.getState().loaded).toBe(true);
+    expect(useThemeStore.getState().premium?.unlocked).toBe(true);
+    useThemeStore.getState().load("someone-else");
+    expect(useThemeStore.getState().premium).toBeNull();
+  });
+
+  it("clears the cached status once signed out", async () => {
+    await useThemeStore.getState().refreshPremium("u1");
+    await useThemeStore.getState().refreshPremium(null);
+    useThemeStore.getState().load(null);
+    expect(useThemeStore.getState().premium).toBeNull();
+  });
 });
