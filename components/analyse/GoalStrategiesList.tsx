@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { formatIndian } from "@/lib/formatters";
 import { homeUpfrontShare, type DetectedGoal } from "@/lib/goalDetection";
 import {
   goalReachLine,
+  goalReachPutInLine,
   goalReachTableNote,
   type GoalReach,
   type GoalStrategyPlan,
@@ -37,6 +38,7 @@ export default function GoalStrategiesList({
 }) {
   const [open, setOpen] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
+  const [openYear, setOpenYear] = useState<number | null>(null);
   const unclear = goal.home?.unclearAmount && onSetHomePrice;
   const count = plan?.strategies.length ?? 0;
   if (!unclear && !plan?.summary && count === 0 && !reach) return null;
@@ -110,22 +112,36 @@ export default function GoalStrategiesList({
                       : r.year === goal.targetYear
                         ? " ◎"
                         : "";
+                  const shown = openYear === r.year;
                   return (
-                    <tr
-                      key={r.year}
-                      className={`border-t border-black/5 ${r.year === reach.reachYear ? "font-bold text-[#0F6E56]" : "text-[#111110]"}`}
-                    >
-                      <td className="py-1">
-                        {r.year}
-                        {mark}
-                      </td>
-                      <td className="py-1 text-right">
-                        ₹{formatIndian(r.invested)}
-                      </td>
-                      <td className="py-1 text-right">
-                        ₹{formatIndian(r.value)}
-                      </td>
-                    </tr>
+                    <Fragment key={r.year}>
+                      <tr
+                        onClick={() => setOpenYear(shown ? null : r.year)}
+                        aria-expanded={shown}
+                        className={`cursor-pointer border-t border-black/5 ${r.year === reach.reachYear ? "font-bold text-[#0F6E56]" : "text-[#111110]"}`}
+                      >
+                        <td className="py-1">
+                          {r.year}
+                          {mark}
+                        </td>
+                        <td className="py-1 text-right text-[#534AB7] underline decoration-dotted underline-offset-2">
+                          ₹{formatIndian(r.invested)}
+                        </td>
+                        <td className="py-1 text-right">
+                          ₹{formatIndian(r.value)}
+                        </td>
+                      </tr>
+                      {shown ? (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="pb-1.5 text-[11px] font-normal leading-snug text-[#5F5E5A]"
+                          >
+                            {goalReachPutInLine(r)}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -133,6 +149,7 @@ export default function GoalStrategiesList({
           ) : null}
           {tableOpen ? (
             <p className="mt-1 text-[11px] leading-snug text-[#5F5E5A]">
+              Tap a &quot;Put in&quot; amount to see what it is made of.{" "}
               {goalReachTableNote(reach, goal)}
             </p>
           ) : null}

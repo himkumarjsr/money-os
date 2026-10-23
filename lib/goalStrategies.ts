@@ -19,6 +19,7 @@ import {
   existingEquityValue,
   LONG_RUN_INFLATION,
   projectRetirementAccounts,
+  salaryLinkedGrowth,
 } from "@/lib/holdings";
 import { postOfficeHoldingsValue } from "@/lib/postOfficeHoldings";
 import {
@@ -460,10 +461,24 @@ export function buildGoalStrategies(
   });
 }
 
+/** What "Put in" is made of, today's rupees (they add up to `invested`). */
+export type GoalReachPutIn = {
+  /** Existing savings set against the goal today. */
+  saved: number;
+  /** Retirement only: EPF + PPF + NPS balances today. */
+  pfBalance: number;
+  /** Every monthly SIP paid so far (rising with salary). */
+  sipPaid: number;
+  /** Retirement only: EPF + PPF + NPS contributions paid so far. */
+  pfPaid: number;
+};
+
 export type GoalReachRow = {
   year: number;
   /** Money put in so far (savings today + every SIP), today's rupees. */
   invested: number;
+  /** The parts of `invested`. */
+  putIn?: GoalReachPutIn;
   /** What it has grown to, today's rupees. */
   value: number;
   /** Monthly SIP paid that year (rises with salary), ₹. */
@@ -530,11 +545,6 @@ export function projectGoalReach(
   const pfToday = isRetirement
     ? n(p.epfBalance) + n(p.ppfBalance) + n(p.npsBalance)
     : 0;
-  const pfMonthly = isRetirement
-    ? n(p.monthlyEPFContribution) +
-      n(p.monthlyPPFContribution) +
-      n(p.monthlyNPSContribution)
-    : 0;
   const lump = Math.max(0, n(goal.currentSaved) - pfToday);
   const monthlyRate = goalMonthlyRate(p, goal);
   let lumpValue = lump;
@@ -545,20 +555,40 @@ export function projectGoalReach(
   let sipValue = 0;
   let paidIn = 0;
   let sip = monthly;
+  // EPF rises with salary, PPF / NPS deposits with prices (as in
+  // projectRetirementAccounts), each counted in today's rupees when paid.
+  let epfMonthly = isRetirement ? n(p.monthlyEPFContribution) : 0;
+  let otherPfMonthly = isRetirement
+    ? n(p.monthlyPPFContribution) + n(p.monthlyNPSContribution)
+    : 0;
+  const epfStepUp = salaryLinkedGrowth(p);
+  let pfPaid = 0;
   const rows: GoalReachRow[] = [];
   let reachYear: number | null = target <= 0 ? thisYear : null;
   const lastYear = goal.targetYear + REACH_HORIZON_YEARS;
   for (let y = 1; thisYear + y <= lastYear; y++) {
-    if (y > 1) sip *= 1 + stepUp;
+    if (y > 1) {
+      sip *= 1 + stepUp;
+      epfMonthly *= 1 + epfStepUp;
+      otherPfMonthly *= 1 + LONG_RUN_INFLATION;
+    }
     for (let m = 0; m < 12; m++) {
-      const rm = monthlyRate(12 * (y - 1) + m + 1);
+      const k = 12 * (y - 1) + m + 1;
+      const rm = monthlyRate(k);
       sipValue = sipValue * (1 + rm) + sip;
       lumpValue *= 1 + rm;
-      paidIn +=
-        sip / Math.pow(1 + LONG_RUN_INFLATION, (12 * (y - 1) + m + 1) / 12);
+      const toToday = Math.pow(1 + LONG_RUN_INFLATION, k / 12);
+      paidIn += sip / toToday;
+      pfPaid += (epfMonthly + otherPfMonthly) / toToday;
     }
     const deflate = Math.pow(1 + LONG_RUN_INFLATION, y);
-    const put = lump + pfToday + paidIn + pfMonthly * 12 * y;
+    const putIn: GoalReachPutIn = {
+      saved: Math.round(lump),
+      pfBalance: Math.round(pfToday),
+      sipPaid: Math.round(paidIn),
+      pfPaid: Math.round(pfPaid),
+    };
+    const put = lump + pfToday + paidIn + pfPaid;
     const pf = isRetirement
       ? projectRetirementAccounts(p, y, { real: true }).total
       : 0;
@@ -567,6 +597,7 @@ export function projectGoalReach(
     rows.push({
       year,
       invested: Math.round(put),
+      putIn,
       value: Math.round(value),
       sip: Math.round(sip),
     });
@@ -579,6 +610,26 @@ export function projectGoalReach(
     reachYear,
     rows: reachYear === null ? rows.slice(0, goal.yearsToGoal + 10) : rows,
   };
+}
+
+/**
+ * Where a year's "Put in" comes from, e.g. "₹2,00,000 savings set aside
+ * today + ₹4,80,000 of SIPs paid by 2030". Today's rupees.
+ */
+export function goalReachPutInLine(row: GoalReachRow): string {
+  const p = row.putIn;
+  if (!p) return `${rs(row.invested)} put in by ${row.year}.`;
+  const parts = [
+    p.saved > 0 ? `${rs(p.saved)} savings set aside today` : "",
+    p.pfBalance > 0 ? `${rs(p.pfBalance)} EPF / PPF / NPS balance today` : "",
+    p.sipPaid > 0 ? `${rs(p.sipPaid)} of monthly SIPs paid by ${row.year}` : "",
+    p.pfPaid > 0
+      ? `${rs(p.pfPaid)} of EPF / PPF / NPS contributions by ${row.year}`
+      : "",
+  ].filter(Boolean);
+  return parts.length
+    ? `${parts.join(" + ")} = ${rs(row.invested)} (today's rupees).`
+    : "Nothing put in yet.";
 }
 
 /** One plain line on when the goal is reached at today's plan. */

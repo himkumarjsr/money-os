@@ -10,6 +10,7 @@ import { formatIndian } from "@/lib/formatters";
 import { homeUpfrontShare, type DetectedGoal } from "@/lib/goalDetection";
 import {
   goalReachLine,
+  goalReachPutInLine,
   goalReachTableNote,
   type GoalReach,
   type GoalStrategyPlan,
@@ -38,6 +39,7 @@ export function GoalStrategiesList({
 }) {
   const [open, setOpen] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
+  const [openYear, setOpenYear] = useState<number | null>(null);
   const unclear = goal.home?.unclearAmount && onSetHomePrice;
   const count = plan?.strategies.length ?? 0;
   if (!unclear && !plan?.summary && count === 0 && !reach) return null;
@@ -117,22 +119,38 @@ export function GoalStrategiesList({
                     ? " ◎"
                     : "";
                 const cell = [styles.td, hit && styles.tdHit];
+                const shown = openYear === r.year;
                 return (
-                  <View key={r.year} style={[styles.tr, styles.trLine]}>
-                    <Text style={[...cell, styles.cYear]}>
-                      {r.year}
-                      {mark}
-                    </Text>
-                    <Text style={[...cell, styles.cNum]}>
-                      ₹{formatIndian(r.invested)}
-                    </Text>
-                    <Text style={[...cell, styles.cNum]}>
-                      ₹{formatIndian(r.value)}
-                    </Text>
-                  </View>
+                  <Pressable
+                    key={r.year}
+                    onPress={() => setOpenYear(shown ? null : r.year)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: shown }}
+                    accessibilityHint="Shows what this amount is made of"
+                    style={styles.trLine}
+                  >
+                    <View style={styles.tr}>
+                      <Text style={[...cell, styles.cYear]}>
+                        {r.year}
+                        {mark}
+                      </Text>
+                      <Text style={[...cell, styles.cNum, styles.putIn]}>
+                        ₹{formatIndian(r.invested)}
+                      </Text>
+                      <Text style={[...cell, styles.cNum]}>
+                        ₹{formatIndian(r.value)}
+                      </Text>
+                    </View>
+                    {shown ? (
+                      <Text style={styles.putInLine}>
+                        {goalReachPutInLine(r)}
+                      </Text>
+                    ) : null}
+                  </Pressable>
                 );
               })}
               <Text style={styles.foot}>
+                Tap a &quot;Put in&quot; amount to see what it is made of.{" "}
                 {goalReachTableNote(reach, goal)}
               </Text>
             </View>
@@ -235,6 +253,17 @@ const styles = themedStyles(() => ({
     fontVariant: ["tabular-nums"],
   },
   tdHit: { fontWeight: "700", color: readable("#0F6E56") },
+  putIn: {
+    color: Colors.primaryText,
+    textDecorationLine: "underline",
+    textDecorationStyle: "dotted",
+  },
+  putInLine: {
+    paddingBottom: 6,
+    fontSize: 11,
+    lineHeight: 15,
+    color: Colors.textSecondary,
+  },
   cYear: { flex: 1 },
   cNum: { flex: 1.4, textAlign: "right" },
   foot: {
