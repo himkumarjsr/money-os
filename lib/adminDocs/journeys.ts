@@ -217,7 +217,7 @@ export const afterLoginSection: DocSection = {
         ["Money Map in Tracker", "-", "Yes (`canViewMoneyMap`)"],
         [
           "Premium (24k) theme",
-          "Earned: top 10 on the leaderboard, or a report + 90-day streak",
+          "Earned: all-time top 10 on the leaderboard with 500+ points, or a report + 90-day streak",
           "Same rule (not sold)",
         ],
         ["Tracker, Split, policies, calculators, learning", "Yes", "Yes"],

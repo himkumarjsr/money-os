@@ -25,13 +25,17 @@ type ThemeState = {
   clearReturnTo: () => void;
 };
 
+/**
+ * Cached Premium status. Before sign-in is known (`userId` null) the last
+ * saved status is used so a Gold theme doesn't open as Dark while auth loads;
+ * `refreshPremium(null)` clears it once the user is known to be signed out.
+ */
 function readPremium(userId: string | null): PremiumStatus | null {
-  if (!userId) return null;
   try {
     const raw = syncKv.getItem(PREMIUM_KEY);
     if (!raw) return null;
     const saved = JSON.parse(raw) as { userId: string; status: PremiumStatus };
-    return saved.userId === userId ? saved.status : null;
+    return !userId || saved.userId === userId ? saved.status : null;
   } catch {
     return null;
   }
@@ -56,6 +60,7 @@ export const useThemeStore = create<ThemeState>((set) => ({
 
   refreshPremium: async (userId) => {
     if (!userId) {
+      syncKv.removeItem(PREMIUM_KEY);
       set({ premium: null });
       return;
     }
