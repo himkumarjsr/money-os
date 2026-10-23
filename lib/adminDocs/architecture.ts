@@ -581,6 +581,8 @@ export const securitySection: DocSection = {
         "Account deletion deletes the auth user first, so a failure never leaves a half-deleted account.",
         "Optional AES-256-GCM vault for submitted financial data when `ENCRYPTION_KEY` is set.",
         "CSP and security headers from `next.config.mjs`; analytics only after consent.",
+        "RLS review fixes (056): members can only edit their own split membership row to leave, settlements can't be edited from the client, clients may change only name, phone, avatar and consent fields on `users`, and `user_stats` is read-only for its owner.",
+        "`analyse_logs` (057) is insert-only for users; only console admins read it, through `admin_console_analyse_logs()`.",
         "Admin console: page rendered on the server only for verified admin emails, `noindex`, disallowed in robots, API returns 404 to non-admins, refused inside the installed PWA.",
       ],
     },

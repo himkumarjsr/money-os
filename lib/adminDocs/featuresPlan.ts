@@ -5,7 +5,7 @@ export const analyseSection: DocSection = {
   title: "Health check (Analyse)",
   group: "Features",
   summary:
-    "The 7-step money profile, the 0–100 score, bucket caps and the security checklist.",
+    "The 7-step money profile, the 0–100 Money Score, goals, bucket caps, the security checklist and the analyse logs.",
   blocks: [
     {
       kind: "p",
@@ -19,9 +19,11 @@ export const analyseSection: DocSection = {
         "`/analyse`: login enforced; a user who already has a report (in the store or `user_analyse_snapshots`) goes straight to `/analyse/result`, whose Retake button opens the form at `/analyse?retake=1`. Otherwise the consent modal (`ConsentModal`), optional risk quiz and form.",
         "Form (`components/forms/analyse-onboarding-form.tsx`, React Hook Form + Zod schema `lib/analyse-form-schema.ts`): Personal profile → Income → Fixed obligations (unified loans) → Living expenses → Insurance coverage → Assets and savings → Goals.",
         "Submit → normalise to `FinancialProfile` → `financialStore.setFullAnalysis()` → `analyseFinances(profile)`.",
+        "Goals: `detectGoals` lists the goals (retirement always, plus home, car, child education, marriage, baby and custom goals from the answers or goal prompts). `safetyFundSources` first fills the emergency and medical funds from savings the user already has, then `earmarkExistingSavings` sets the rest against each goal and works out the new SIP still needed. `buildGoalStrategies` prices other routes to each goal (wait, retire later, cheaper target, step-up) in SIP saved.",
         "`upsertUserAnalyseSnapshot(userId, { profile, result, submittedAt, version, analysis })` writes `user_analyse_snapshots` (RLS own row). Saving the result to `user_analysis` fires `points_on_analyse` (+20 points, once a week).",
         "Loans entered here are synced to Tracker bills/EMIs (`lib/loanObligationSync.ts`) and policies are offered for import into the policy vault (`lib/analysePolicyImport.ts`).",
-        "`/analyse/result`: free report (score, issues, buckets, checklist, net worth, life map, trajectory) with the paywall for the Fix Plan.",
+        '`/analyse/result`: free report (Money Score with "How your score is worked out" and "Raise your score", issues, buckets, monthly money flow, safety-net targets explained, goal cards with a year-by-year reach table and roadmap, goal strategies, checklist, net worth, life map, trajectory) with the paywall for the Fix Plan.',
+        'About a second after the report shows, `logAnalyseRun` (`lib/analyseLog.ts`, `mobile/lib/analyseLog.ts`) builds the calculation log (`lib/analyseLogPayload.ts`). On web it is printed to the browser console as "Finkoin Analyse" and kept on `window.__finkoinAnalyseLog`; for a signed-in user it is also inserted into `analyse_logs` (see Analyse logs). It never blocks the report.',
       ],
     },
     { kind: "h", text: "Business rules" },
@@ -31,7 +33,19 @@ export const analyseSection: DocSection = {
       rows: [
         [
           "Score",
-          "`100 − 15 × critical − 7 × warning` issues, clamped 0–100. Every rule is on the Health score page",
+          "Money Score (`lib/moneyScore.ts`): six weighted pillars, safety net 20, protection 20, debt 15, saving 15, goals 20, wealth 10. Every rule is on the Health score page",
+        ],
+        [
+          "Monthly surplus",
+          "Take-home − needs − EMIs − wants − (investing − EPF) − premiums. EPF is deducted from salary before it reaches the bank, so it is not taken from in-hand pay. The plan uses max(0, surplus); a negative figure is shown with its minus sign",
+        ],
+        [
+          "Safety funds from existing savings",
+          "Emergency gap filled first by moving FDs to liquid funds, then mutual funds / stocks, then gold; the medical gap then from spare savings, spare FDs, equity and gold (`safetyFundSources`)",
+        ],
+        [
+          "Goal earmarks",
+          "Savings the safety funds don't need are set against goals: short goals draw on FDs and gold first, long ones on equity; running SIPs count as monthly saving; retirement comes last and also counts EPF / PPF / NPS",
         ],
         [
           "Bucket caps (% of income)",
@@ -61,6 +75,26 @@ export const analyseSection: DocSection = {
       ],
     },
     { kind: "h", text: "Data and APIs" },
+    {
+      kind: "api",
+      api: {
+        method: "SQL",
+        path: "analyse_logs (insert, own row)",
+        summary:
+          "One append-only row per generated report: form answers, profile, every in-between number, the report and its consistency checks. Read in the console under Analyse logs.",
+        auth: "RLS: insert only where `user_id = auth.uid()`; no client reads, edits or deletes (migration 057)",
+        request: `{
+  "user_id": "uuid",
+  "source": "form_submit",
+  "platform": "web",
+  "app_version": null,
+  "check_count": 0,
+  "payload": { "v": 1, "form": {}, "profile": {}, "steps": { "surplus": {}, "safetyFund": {}, "goals": [], "earmarks": {}, "priorities": [], "goalStrategies": [], "moneyScore": {} }, "result": {}, "checks": [] }
+}`,
+        callers:
+          "`logAnalyseRun` after the Analyse form submit and after `saveAnalyseProfile` (goal card edits), web and app",
+      },
+    },
     {
       kind: "api",
       api: {
@@ -126,6 +160,18 @@ export const fixPlanSection: DocSection = {
         "Server: `buildPriorityPlan` → `fundedGoals` → rate-limit by model calls → `adviseGoals` in parallel → RAG `search_by_keywords` → Groq chat completion (temperature 0.25, max 3000 tokens) → strict JSON.",
         "If Groq or parsing fails the route returns the same shape built from the engine with `isFallback: true`.",
         'Client caches by hash, saves `aiPlan` onto the snapshot, renders priorities, debts, goals and the monthly plan. "Start plan" can create planned investments (Tracker).',
+        "Below the plan, the adviser's review (`lib/advisorReview.ts`) flags money in the wrong place (costly debt that spare savings can clear, idle cash, FDs earning no more than inflation, shares earmarked for goals under 2 years away) and gives one action list: this week, every month, every year.",
+      ],
+    },
+    { kind: "h", text: "Plan engine rules (`lib/priorityEngine.ts`)" },
+    {
+      kind: "list",
+      items: [
+        "Order: emergency fund, goals on a date that can't move, medical fund, term cover (when needed), own health cover, then a step picked by the primary goal (extra EMI on costly debt, home down payment, car fund, education SIP, …), then the remaining goals and wealth SIPs. Each step takes what it needs from the running surplus and later steps start in the month earlier ones finish.",
+        "A step never asks for ₹0/month. With no surplus it says how much more is spent than earned and to cut spending or pause part of the SIP; when earlier steps use the whole surplus it says to put in the money they free up once they finish.",
+        "Term insurance quotes the real premium for the cover gap, even when the budget can't cover it yet.",
+        "When a SIP or EMI ends, the money it frees rolls into the longest goal, so the monthly amount invested doesn't drop.",
+        'The retirement SIP in "Raise your score", on the goal card and in "Work two more years" comes from the same earmark, so all three match (checked by `lib/analyseConsistency.test.ts` across the advisor personas).',
       ],
     },
     {
@@ -345,7 +391,9 @@ export const calculatorsSection: DocSection = {
       items: [
         "Default money cap ₹99 Cr per input (`lib/calculatorInput.ts`).",
         "`/learn` and `/blog` render typed content modules (`lib/learnContent.ts`, `lib/learnRichArticles.ts`, `lib/blogContent.ts`) with FAQ schema and embedded calculators.",
-        "SEO: `lib/seo.ts`, `app/sitemap.ts`, `app/robots.ts`, per-page metadata and OG images.",
+        "SEO: `lib/seo.ts`, `app/sitemap.ts`, `app/robots.ts`, per-page metadata and OG images. After each successful production deploy, `.github/workflows/indexnow.yml` pings IndexNow (Bing) with every sitemap URL; `scripts/indexnow.mjs` can be run by hand for specific paths.",
+        "Floating calculator (`components/FloatingCalculator.tsx`, `mobile/components/FloatingCalculator.tsx`): a draggable bubble on every page of the PWA and app that snaps to the nearest side and opens a pocket calculator with phone-style % (200 + 10% = 220). Maths in `lib/quickCalc.ts` (no eval). Hidden on sign-in and the Analyse form.",
+        "Picking a tool on `/calculators` only rewrites the URL (`history.replaceState`), so the sheet slides up once.",
       ],
     },
   ],
