@@ -137,7 +137,10 @@ describe("projectGoalReach", () => {
       const parts = r.putIn!;
       expect(
         Math.abs(
-          parts.saved + parts.pfBalance + parts.sipPaid + parts.pfPaid -
+          parts.saved +
+            parts.pfBalance +
+            parts.sipPaid +
+            parts.pfPaid -
             r.invested,
         ),
       ).toBeLessThanOrEqual(2);
@@ -150,6 +153,34 @@ describe("projectGoalReach", () => {
     expect(first.pfPaid).toBeGreaterThan(30_000 * 12 * 0.95);
     expect(goalReachPutInLine(ret.rows[0])).toMatch(
       /₹5,00,000 savings set aside today \+ ₹15,00,000 EPF \/ PPF \/ NPS balance today \+ .* of monthly SIPs paid by 2027 \+ .* of EPF \/ PPF \/ NPS contributions by 2027 = /,
+    );
+  });
+
+  it("says where the savings set aside come from", () => {
+    const reach = projectGoalReach(
+      base({ annualSalaryIncreasePct: 0 }),
+      {
+        ...goal,
+        currentSaved: 6_00_000,
+        monthlyAllocated: 50_000,
+        sources: { debt: 2_00_000, equity: 3_50_000, gold: 50_000 },
+      },
+      NOW,
+    );
+    expect(goalReachPutInLine(reach.rows[0])).toMatch(
+      /^₹6,00,000 savings set aside today \(₹2,00,000 FDs \/ post office \+ ₹3,50,000 mutual funds & stocks \+ ₹50,000 gold\) \+ /,
+    );
+    const one = projectGoalReach(
+      base(),
+      {
+        ...goal,
+        currentSaved: 2_00_000,
+        sources: { debt: 2_00_000, equity: 0, gold: 0 },
+      },
+      NOW,
+    );
+    expect(goalReachPutInLine(one.rows[0])).toMatch(
+      /₹2,00,000 savings set aside today \(from your FDs \/ post office\)/,
     );
   });
 
