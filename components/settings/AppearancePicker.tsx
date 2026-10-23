@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
 import {
   PREMIUM_STREAK_DAYS,
+  PREMIUM_MIN_POINTS,
   PREMIUM_TOP_RANK,
   type ThemePreference,
 } from "@/lib/theme";
@@ -98,14 +99,18 @@ export function AppearancePicker() {
           </p>
           <p className="mt-1 text-xs leading-relaxed text-[#5F5E5A]">
             Generate your report and keep a {PREMIUM_STREAK_DAYS}-day streak
-            (about 3 months of daily use), or reach the top {PREMIUM_TOP_RANK}{" "}
-            on the leaderboard.
+            (about 3 months of daily use), or reach the all-time top{" "}
+            {PREMIUM_TOP_RANK} on the leaderboard with {PREMIUM_MIN_POINTS}+
+            points.
           </p>
           {premium ? (
             <p className="mt-1.5 text-xs font-semibold text-[#534AB7]">
               {premium.hasReport ? "Report done" : "No report yet"} · Streak{" "}
               {premium.streakDays}/{PREMIUM_STREAK_DAYS} days
               {premium.rank != null ? ` · Rank #${premium.rank}` : ""}
+              {premium.points != null
+                ? ` · ${premium.points}/${PREMIUM_MIN_POINTS} points`
+                : ""}
             </p>
           ) : !userId ? (
             <p className="mt-1.5 text-xs font-semibold text-[#534AB7]">

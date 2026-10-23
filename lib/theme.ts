@@ -17,6 +17,8 @@ export const THEME_PREMIUM_KEY = "finkoin_premium_theme";
 
 export const PREMIUM_STREAK_DAYS = 90;
 export const PREMIUM_TOP_RANK = 10;
+/** All-time points a top-10 spot also needs, so a small board can't hand it out. */
+export const PREMIUM_MIN_POINTS = 500;
 
 /** Browser chrome / status bar colour per theme. */
 export const THEME_COLOR: Record<ThemeName, string> = {
@@ -29,11 +31,19 @@ export type PremiumStatus = {
   unlocked: boolean;
   streakDays: number;
   rank: number | null;
+  /** All-time leaderboard points (absent in statuses cached before it was added). */
+  points?: number;
   hasReport: boolean;
 };
 
 export function isPremiumEligible(s: Omit<PremiumStatus, "unlocked">): boolean {
-  if (s.rank != null && s.rank >= 1 && s.rank <= PREMIUM_TOP_RANK) return true;
+  if (
+    s.rank != null &&
+    s.rank >= 1 &&
+    s.rank <= PREMIUM_TOP_RANK &&
+    (s.points ?? 0) >= PREMIUM_MIN_POINTS
+  )
+    return true;
   return s.hasReport && s.streakDays >= PREMIUM_STREAK_DAYS;
 }
 
@@ -76,7 +86,7 @@ export async function fetchPremiumStatus(
     const [{ data: row }, snapshot] = await Promise.all([
       getSupabase()
         .from("leaderboard_all_view")
-        .select("rank, streak_days")
+        .select("rank, points, streak_days")
         .eq("user_id", userId)
         .maybeSingle(),
       fetchUserAnalyseSnapshot(userId).catch(() => null),
@@ -84,6 +94,7 @@ export async function fetchPremiumStatus(
     const base = {
       streakDays: Number(row?.streak_days ?? 0) || 0,
       rank: row?.rank != null ? Number(row.rank) : null,
+      points: Number(row?.points ?? 0) || 0,
       hasReport: Boolean(snapshot?.result),
     };
     return { ...base, unlocked: isPremiumEligible(base) };

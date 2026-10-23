@@ -2,7 +2,11 @@ import { useEffect } from "react";
 import { Pressable, Text, View, useColorScheme } from "react-native";
 import { Colors, themedStyles } from "@/constants/theme";
 import { AppIcon } from "@/components/ui/AppIcon";
-import { PREMIUM_STREAK_DAYS, PREMIUM_TOP_RANK } from "@/lib/premiumTheme";
+import {
+  PREMIUM_MIN_POINTS,
+  PREMIUM_STREAK_DAYS,
+  PREMIUM_TOP_RANK,
+} from "@/lib/premiumTheme";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore, type ThemePreference } from "@/store/themeStore";
 
@@ -86,14 +90,18 @@ export function AppearancePicker() {
           <Text style={styles.noteTitle}>How to unlock Premium</Text>
           <Text style={styles.noteText}>
             Generate your report and keep a {PREMIUM_STREAK_DAYS}-day streak
-            (about 3 months of daily use), or reach the top {PREMIUM_TOP_RANK}{" "}
-            on the leaderboard.
+            (about 3 months of daily use), or reach the all-time top{" "}
+            {PREMIUM_TOP_RANK} on the leaderboard with {PREMIUM_MIN_POINTS}+
+            points.
           </Text>
           {premium ? (
             <Text style={styles.noteProgress}>
               {premium.hasReport ? "Report done" : "No report yet"} · Streak{" "}
               {premium.streakDays}/{PREMIUM_STREAK_DAYS} days
               {premium.rank != null ? ` · Rank #${premium.rank}` : ""}
+              {premium.points != null
+                ? ` · ${premium.points}/${PREMIUM_MIN_POINTS} points`
+                : ""}
             </Text>
           ) : !userId ? (
             <Text style={styles.noteProgress}>Sign in to track progress.</Text>
