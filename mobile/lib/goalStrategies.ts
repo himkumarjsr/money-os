@@ -465,6 +465,8 @@ export function buildGoalStrategies(
 export type GoalReachPutIn = {
   /** Existing savings set against the goal today. */
   saved: number;
+  /** Where `saved` comes from, when the caller knows (goal funding sources). */
+  savedFrom?: { debt: number; equity: number; gold: number };
   /** Retirement only: EPF + PPF + NPS balances today. */
   pfBalance: number;
   /** Every monthly SIP paid so far (rising with salary). */
@@ -532,6 +534,8 @@ export function projectGoalReach(
     currentSaved: number;
     monthlyAllocated?: number;
     existingMonthly?: number;
+    /** Where the savings set against it come from (earmark split). */
+    sources?: { debt: number; equity: number; gold: number };
   },
   now: Date = new Date(),
 ): GoalReach {
@@ -584,6 +588,15 @@ export function projectGoalReach(
     const deflate = Math.pow(1 + LONG_RUN_INFLATION, y);
     const putIn: GoalReachPutIn = {
       saved: Math.round(lump),
+      ...(goal.sources
+        ? {
+            savedFrom: {
+              debt: Math.round(n(goal.sources.debt)),
+              equity: Math.round(n(goal.sources.equity)),
+              gold: Math.round(n(goal.sources.gold)),
+            },
+          }
+        : {}),
       pfBalance: Math.round(pfToday),
       sipPaid: Math.round(paidIn),
       pfPaid: Math.round(pfPaid),
@@ -612,6 +625,22 @@ export function projectGoalReach(
   };
 }
 
+/** " (₹a FDs / post office + ₹b funds & stocks + ₹c gold)", or "". */
+function savedFromText(p: GoalReachPutIn): string {
+  const f = p.savedFrom;
+  if (!f) return "";
+  const parts: Array<[number, string]> = (
+    [
+      [f.debt, "FDs / post office"],
+      [f.equity, "mutual funds & stocks"],
+      [f.gold, "gold"],
+    ] as Array<[number, string]>
+  ).filter(([v]) => v > 0);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return ` (from your ${parts[0][1]})`;
+  return ` (${parts.map(([v, what]) => `${rs(v)} ${what}`).join(" + ")})`;
+}
+
 /**
  * Where a year's "Put in" comes from, e.g. "₹2,00,000 savings set aside
  * today + ₹4,80,000 of SIPs paid by 2030". Today's rupees.
@@ -620,7 +649,9 @@ export function goalReachPutInLine(row: GoalReachRow): string {
   const p = row.putIn;
   if (!p) return `${rs(row.invested)} put in by ${row.year}.`;
   const parts = [
-    p.saved > 0 ? `${rs(p.saved)} savings set aside today` : "",
+    p.saved > 0
+      ? `${rs(p.saved)} savings set aside today${savedFromText(p)}`
+      : "",
     p.pfBalance > 0 ? `${rs(p.pfBalance)} EPF / PPF / NPS balance today` : "",
     p.sipPaid > 0 ? `${rs(p.sipPaid)} of monthly SIPs paid by ${row.year}` : "",
     p.pfPaid > 0
