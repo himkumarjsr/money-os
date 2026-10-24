@@ -24,6 +24,7 @@ const MENU: Array<{ icon: AppIconName; label: string; href: Href }> = [
   { icon: "trending", label: "My Investments", href: "/investments" as Href },
   { icon: "trophy", label: "Leaderboard", href: "/leaderboard" as Href },
   { icon: "gift", label: "Rewards", href: "/rewards" as Href },
+  { icon: "users", label: "Link your partner", href: "/household" as Href },
   { icon: "users", label: "Refer & Earn", href: "/refer" as Href },
   { icon: "settings", label: "Settings", href: "/settings" as Href },
 ];
