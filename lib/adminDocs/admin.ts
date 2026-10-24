@@ -125,6 +125,8 @@ export const analyseLogsSection: DocSection = {
         "`checks` lists numbers in that report that disagree with each other (surplus breakdown, a ₹0/month step, the retirement SIP). Use the filter to see only those reports.",
         "Users can only add their own rows; nobody but a console admin can read them. Logging runs a second after the report shows and never blocks it.",
         "Click a row for its calculation sheet: what the user entered, the monthly money flow line by line, safety funds (target = essential outgo × months), goals, plan steps in order and the money score. Numbers that don't match their formula are marked in red; the raw JSON is under Raw data.",
+        "Nothing is read from the database until you press Load logs, so opening the page costs no query.",
+        "The super admin can delete logs for good, one at a time (Delete on the row) or several at once (tick rows, then Delete selected). Only the log rows go; the users' own data is not touched. Other admins can read but not delete.",
         'On the website the same sheet is printed to the browser console (Inspect → Console → "Finkoin Analyse") for every report, signed in or not, and the full data is on `window.__finkoinAnalyseLog`.',
       ],
     },
@@ -137,6 +139,17 @@ export const analyseLogsSection: DocSection = {
           "Latest analyse logs, optionally for one email or only with checks.",
         auth: "Session; console admin with the Analyse logs section (others get 42501)",
         callers: "This page, on the server",
+      },
+    },
+    {
+      kind: "api",
+      api: {
+        method: "DELETE",
+        path: "/api/admin/analyse-logs { ids }",
+        summary:
+          "Permanently delete up to 200 analyse logs through admin_console_delete_analyse_logs(p_ids) (migration 063).",
+        auth: "Session; super admin only (others get 403, non-admins 404; the database raises 42501)",
+        callers: "Delete buttons on this page",
       },
     },
   ],
