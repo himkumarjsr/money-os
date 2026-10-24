@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import { SITE_URL, fitMetadata } from "@/lib/seo";
@@ -38,34 +37,12 @@ export const metadata: Metadata = fitMetadata({
   },
 });
 
-/** Why Finkoin exists, in the founder's words. Shared with mobile/app/about.tsx. */
+/** Why Finkoin exists, in the team's words. Shared with mobile/app/about.tsx. */
 const FOUNDER_NOTE = [
-  "Most people I know earn well and pay their EMIs on time, yet can't answer simple questions about their own money: Is my emergency fund enough? Am I under-insured? Am I investing enough to retire when I want to? The answers exist, but they are buried in jargon, spread across ten different apps, or come from someone trying to sell a policy or a fund.",
-  "I built Finkoin to be one honest place where any working Indian can see their whole money life in a few minutes: what is strong, what is at risk, and the next step to fix it. No PAN, no Aadhaar, no jargon. Every suggestion explains why, in plain language, so you can decide for yourself.",
+  "Most people we know earn well and pay their EMIs on time, yet can't answer simple questions about their own money: Is my emergency fund enough? Am I under-insured? Am I investing enough to retire when I want to? The answers exist, but they are buried in jargon, spread across ten different apps, or come from someone trying to sell a policy or a fund.",
+  "We built Finkoin to be one honest place where any working Indian can see their whole money life in a few minutes: what is strong, what is at risk, and the next step to fix it. No PAN, no Aadhaar, no jargon. Every suggestion explains why, in plain language, so you can decide for yourself.",
   "That is the idea behind Know it. Fix it. Grow it. Start with a free health check, track where your money goes, split shared costs with friends without the awkwardness, and come back each month to see your progress. If Finkoin helps one family build an emergency fund or get the right cover before they need it, it has done its job.",
 ];
-
-const founderJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "ProfilePage",
-  mainEntity: {
-    "@type": "Person",
-    "@id": `${SITE_URL}/about#founder`,
-    name: "Himanshu Kumar Gupta",
-    jobTitle: "Founder",
-    description:
-      "Founder of Finkoin, a free personal finance health platform built for India.",
-    image: `${SITE_URL}/assets/founder-himanshu-kumar.png`,
-    url: `${SITE_URL}/about`,
-    worksFor: {
-      "@type": "Organization",
-      name: "Finkoin",
-      url: SITE_URL,
-    },
-    nationality: "Indian",
-    sameAs: ["https://www.linkedin.com/in/himanshu-kr-gupta/"],
-  },
-};
 
 export default function AboutPage() {
   return (
@@ -76,10 +53,6 @@ export default function AboutPage() {
         padding: "60px 24px 80px",
       }}
     >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(founderJsonLd) }}
-      />
       <div
         style={{
           textAlign: "center",
@@ -473,7 +446,7 @@ export default function AboutPage() {
             marginBottom: 24,
           }}
         >
-          The person behind Finkoin
+          Why we built Finkoin
         </h2>
         <div
           style={{
@@ -483,67 +456,7 @@ export default function AboutPage() {
             flexWrap: "wrap",
           }}
         >
-          <Image
-            src="/assets/founder-himanshu-kumar.png"
-            alt="Himanshu Kumar Gupta, Founder of Finkoin"
-            width={80}
-            height={80}
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: "50%",
-              objectFit: "cover",
-              flexShrink: 0,
-              border: "2px solid #E8E6F0",
-            }}
-          />
           <div style={{ flex: 1, minWidth: 200 }}>
-            <h3
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: "#111110",
-                marginBottom: 4,
-              }}
-            >
-              Himanshu Kumar Gupta
-            </h3>
-            <p
-              style={{
-                fontSize: 13,
-                color: "#534AB7",
-                fontWeight: 600,
-                marginBottom: 8,
-              }}
-            >
-              Founder, Finkoin
-            </p>
-            <a
-              href="https://www.linkedin.com/in/himanshu-kr-gupta/"
-              target="_blank"
-              rel="noopener noreferrer author"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 13,
-                color: "#534AB7",
-                fontWeight: 600,
-                textDecoration: "none",
-                marginBottom: 12,
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden
-              >
-                <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z" />
-              </svg>
-              LinkedIn
-            </a>
             <div
               style={{
                 display: "flex",

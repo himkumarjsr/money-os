@@ -8,17 +8,17 @@ import {
 
 describe("Split - Balance Calculation (lib/splitBalances)", () => {
   const members: BalanceMember[] = [
-    { email: "him@test.com", display_name: "Himanshu" },
+    { email: "rahul@test.com", display_name: "Rahul" },
     { email: "anshu@test.com", display_name: "Anshu" },
   ];
 
   const dinner: BalanceExpense = {
     amount: 3000,
-    paid_by_email: "him@test.com",
+    paid_by_email: "rahul@test.com",
     shares: [
       {
-        email: "him@test.com",
-        display_name: "Himanshu",
+        email: "rahul@test.com",
+        display_name: "Rahul",
         share_amount: 1500,
       },
       {
@@ -31,7 +31,7 @@ describe("Split - Balance Calculation (lib/splitBalances)", () => {
 
   it("calculates correct net after equal dinner split", () => {
     const net = computeNetBalances(members, [dinner]);
-    const him = net.find((n) => n.email === "him@test.com")!;
+    const him = net.find((n) => n.email === "rahul@test.com")!;
     const anshu = net.find((n) => n.email === "anshu@test.com")!;
     expect(him.net).toBe(1500);
     expect(anshu.net).toBe(-1500);
@@ -44,12 +44,12 @@ describe("Split - Balance Calculation (lib/splitBalances)", () => {
       [
         {
           from_email: "anshu@test.com",
-          to_email: "him@test.com",
+          to_email: "rahul@test.com",
           amount: 1500,
         },
       ],
     );
-    expect(net.find((n) => n.email === "him@test.com")!.net).toBe(0);
+    expect(net.find((n) => n.email === "rahul@test.com")!.net).toBe(0);
     expect(net.find((n) => n.email === "anshu@test.com")!.net).toBe(0);
   });
 
@@ -60,9 +60,9 @@ describe("Split - Balance Calculation (lib/splitBalances)", () => {
     ];
     const expense: BalanceExpense = {
       amount: 3000,
-      paid_by_email: "him@test.com",
+      paid_by_email: "rahul@test.com",
       shares: [
-        { email: "him@test.com", display_name: "Himanshu", share_amount: 1000 },
+        { email: "rahul@test.com", display_name: "Rahul", share_amount: 1000 },
         { email: "anshu@test.com", display_name: "Anshu", share_amount: 1000 },
         { email: "b@test.com", display_name: "B", share_amount: 1000 },
       ],
@@ -70,7 +70,7 @@ describe("Split - Balance Calculation (lib/splitBalances)", () => {
     const edges = simplifyDebts(computeNetBalances(three, [expense]));
     expect(edges).toHaveLength(2);
     for (const e of edges) {
-      expect(e.to_email).toBe("him@test.com");
+      expect(e.to_email).toBe("rahul@test.com");
       expect(e.amount).toBe(1000);
     }
   });
