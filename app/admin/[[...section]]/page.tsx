@@ -9,6 +9,7 @@ import { PlanChecklist } from "@/components/admin/PlanChecklist";
 import { WebOnlyGate } from "@/components/admin/WebOnlyGate";
 import {
   getConsoleAccess,
+  getMyConsolePermissions,
   isConsoleSuperAdmin,
   listAnalyseLogs,
   listConsoleAdmins,
@@ -18,12 +19,19 @@ import {
   type PlanTick,
 } from "@/lib/adminConsole";
 import { PLAN_CHECKLIST } from "@/lib/adminDocs/planChecklist";
-import { DEFAULT_ADMIN_SECTION, getAdminDocSection } from "@/lib/adminDocs";
+import {
+  ADMIN_DOC_SECTIONS,
+  DEFAULT_ADMIN_SECTION,
+  getAdminDocSection,
+} from "@/lib/adminDocs";
+import { hasAdminPermission, sectionKey } from "@/lib/adminPermissions";
 
 /**
  * Admin console (web only). Rendered on the server, and only after the
  * database confirms the caller is a console admin (migration 053), so the
- * documentation never reaches anyone else, not even in a JS bundle.
+ * documentation never reaches anyone else, not even in a JS bundle. Each
+ * admin sees only the sections the super admin gave them (migration 062);
+ * the database repeats that check for sections that read live data.
  */
 
 export const dynamic = "force-dynamic";
@@ -40,6 +48,18 @@ type PageProps = {
     checks?: string | string[];
   }>;
 };
+
+function NoSections({ email }: { email: string }) {
+  return (
+    <div className="mx-auto max-w-md px-4 py-16 text-center">
+      <h1 className="text-xl font-bold text-[#111110]">No sections yet</h1>
+      <p className="mt-2 text-sm text-[#5F5E5A]">
+        {email} is an admin, but no console sections have been shared with you.
+        Ask the super admin to give you access.
+      </p>
+    </div>
+  );
+}
 
 function SignInPrompt() {
   return (
@@ -65,8 +85,25 @@ export default async function AdminPage(props: PageProps) {
   if (!isAdmin || !supabase) notFound();
 
   if (section && section.length > 1) notFound();
-  const doc = getAdminDocSection(section?.[0] ?? DEFAULT_ADMIN_SECTION);
-  if (!doc) notFound();
+  const email = (user.email ?? "").toLowerCase();
+  const perms = await getMyConsolePermissions(supabase);
+  const sectionIds = ADMIN_DOC_SECTIONS.map((s) => s.id).filter((id) =>
+    hasAdminPermission(perms, sectionKey(id)),
+  );
+  const requested =
+    section?.[0] ??
+    (sectionIds.includes(DEFAULT_ADMIN_SECTION)
+      ? DEFAULT_ADMIN_SECTION
+      : sectionIds[0]);
+  if (!requested) {
+    return (
+      <WebOnlyGate>
+        <NoSections email={email} />
+      </WebOnlyGate>
+    );
+  }
+  const doc = getAdminDocSection(requested);
+  if (!doc || !sectionIds.includes(doc.id)) notFound();
 
   let admins: ConsoleAdmin[] = [];
   if (doc.id === "admin-access") {
@@ -108,14 +145,24 @@ export default async function AdminPage(props: PageProps) {
       console.error("plan ticks failed:", e);
     }
   }
-  const email = (user.email ?? "").toLowerCase();
 
   return (
     <WebOnlyGate>
-      <AdminShell active={doc.id} activeTitle={doc.title} email={email}>
+      <AdminShell
+        active={doc.id}
+        activeTitle={doc.title}
+        email={email}
+        sectionIds={sectionIds}
+      >
         <DocContent section={doc}>
           {doc.id === "admin-access" ? (
-            <AdminAccessManager initialAdmins={admins} currentEmail={email} />
+            <AdminAccessManager
+              initialAdmins={admins}
+              currentEmail={email}
+              sections={ADMIN_DOC_SECTIONS.filter(
+                (s) => s.id !== "admin-access",
+              ).map((s) => ({ id: s.id, title: s.title, group: s.group }))}
+            />
           ) : doc.id === "analyse-logs" ? (
             <AnalyseLogsViewer
               logs={logs}

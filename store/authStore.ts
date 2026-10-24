@@ -51,6 +51,8 @@ export interface User {
   referralCode: string;
   referredBy: string | null;
   isAdmin?: boolean;
+  /** Keys the super admin granted (migration 062); ["*"] for the super admin. */
+  adminPermissions?: string[];
   fkBalance?: number;
 }
 
@@ -334,6 +336,22 @@ export const useAuthStore = create<AuthState>()(
             };
           }
 
+          // Free feature grants from the super admin (migration 062). Only
+          // shows or hides things here; paid routes re-check on the server.
+          let adminPermissions: string[] = [];
+          try {
+            const { data: perms } = await supabase.rpc(
+              "admin_console_my_permissions",
+            );
+            if (Array.isArray(perms)) {
+              adminPermissions = perms.filter(
+                (p): p is string => typeof p === "string",
+              );
+            }
+          } catch {
+            /* migration not run yet, or offline */
+          }
+
           const tier = mapSubscriptionTier(row?.subscription_tier ?? "free");
           const fkBal = Number(gamData?.fk_balance ?? 50);
 
@@ -400,6 +418,7 @@ export const useAuthStore = create<AuthState>()(
             referralCode: referral,
             referredBy: row?.referred_by ?? null,
             isAdmin: Boolean(row?.is_admin),
+            adminPermissions,
             fkBalance: useGamificationStore.getState().fkBalance,
           };
 

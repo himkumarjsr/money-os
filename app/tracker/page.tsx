@@ -769,6 +769,7 @@ function TrackerContent() {
     tier: user?.subscriptionTier,
     email: user?.email,
     isAdmin: user?.isAdmin,
+    adminPermissions: user?.adminPermissions,
   });
 
   // Drop optimistic CC pay credits once a matching bill payment is fetched.
