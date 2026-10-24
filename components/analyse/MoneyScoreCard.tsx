@@ -2,8 +2,17 @@
 
 import type { MoneyScore } from "@/lib/moneyScore";
 
-/** Why the score is what it is (six pillars) and the actions worth the most points. */
-export default function MoneyScoreCard({ score }: { score: MoneyScore }) {
+/**
+ * Why the score is what it is (six pillars) and, in the plan, the actions
+ * worth the most points. The report shows the pillars only.
+ */
+export default function MoneyScoreCard({
+  score,
+  showActions = true,
+}: {
+  score: MoneyScore;
+  showActions?: boolean;
+}) {
   return (
     <section className="mb-4 rounded-2xl border border-[#E8E6F0] bg-white p-4 sm:p-6">
       <p className="text-[11px] font-bold uppercase tracking-wide text-[#534AB7]">
@@ -39,7 +48,7 @@ export default function MoneyScoreCard({ score }: { score: MoneyScore }) {
         })}
       </div>
 
-      {score.topActions.length > 0 ? (
+      {showActions && score.topActions.length > 0 ? (
         <div className="mt-5 rounded-xl bg-[#F7F6FE] p-3">
           <p className="text-sm font-semibold text-[#111110]">
             Raise your score

@@ -784,6 +784,8 @@ export function goalReachPutInLine(row: GoalReachRow): string {
 export function goalReachLine(
   reach: GoalReach,
   goal: { targetYear: number },
+  /** Where it stands only, without the monthly amount that fixes it. */
+  opts: { statusOnly?: boolean } = {},
 ): string {
   if (reach.onTime)
     return reach.monthly > 0
@@ -797,11 +799,13 @@ export function goalReachLine(
       ? ` You'd have about ${rs(reach.valueByTarget)} by ${goal.targetYear}.`
       : "";
   const fix =
-    reach.onTimeMonthly != null
+    reach.onTimeMonthly != null && !opts.statusOnly
       ? ` To make ${goal.targetYear}, invest ${rs(reach.onTimeMonthly)}/month in all.`
       : "";
   if (reach.monthly <= 0)
-    return `Nothing is going to this goal yet.${fix || " Free up a monthly amount for it."}`;
+    return opts.statusOnly
+      ? "Nothing is going to this goal yet."
+      : `Nothing is going to this goal yet.${fix || " Free up a monthly amount for it."}`;
   if (reach.reachYear === null)
     return `${target} isn't realistic at ${rs(reach.monthly)}/month - it isn't reached even in ${REACH_HORIZON_YEARS} years.${byThen}${fix}`;
   const late = reach.reachYear - goal.targetYear;
@@ -1074,6 +1078,8 @@ export type RetirementCheck = {
   /** Extra ₹/month on top of this plan that gets there on time (when short). */
   extraMonthly?: number;
   line: string;
+  /** `line` without the fix: where it stands only (the report). */
+  statusLine: string;
 };
 
 /**
@@ -1117,13 +1123,12 @@ export function retirementCheck(
   const withdrawalRate = perRupee * 12;
   const ratePct = `${(Math.round(withdrawalRate * 1000) / 10).toLocaleString("en-IN")}%`;
   const facts = `In ${goal.targetYear} (age ${age}) your retirement money is about ${rs(corpus)}. Taking out ${ratePct} of it a year, rising with prices, lasts to ${LIFE_EXPECTANCY} and pays ${rs(monthlyIncome)} a month. Your costs then: ${rs(monthlyCosts)} a month at today's prices.`;
-  const line = canRetire
+  const statusLine = canRetire
     ? `Yes. ${facts}`
-    : `Not yet. ${facts} That's ${rs(monthlyCosts - monthlyIncome)} a month short: you need about ${rs(corpusNeeded)}.${
-        extraMonthly
-          ? ` Investing ${rs(extraMonthly)} a month more for retirement, rising with your salary, gets you there.`
-          : ""
-      }`;
+    : `Not yet. ${facts} That's ${rs(monthlyCosts - monthlyIncome)} a month short: you need about ${rs(corpusNeeded)}.`;
+  const line = extraMonthly
+    ? `${statusLine} Investing ${rs(extraMonthly)} a month more for retirement, rising with your salary, gets you there.`
+    : statusLine;
   return {
     canRetire,
     year: goal.targetYear,
@@ -1135,5 +1140,6 @@ export function retirementCheck(
     corpusNeeded,
     ...(extraMonthly ? { extraMonthly } : {}),
     line,
+    statusLine,
   };
 }

@@ -16,7 +16,14 @@ function moreContext(item: GoalFundingItem): string {
     : "";
 }
 
-export function goalSavingsLines(item: GoalFundingItem): string[] {
+/**
+ * `statusOnly`: where the goal stands today, without what to do about it
+ * (the report; the fixes are in the wealth builder plan).
+ */
+export function goalSavingsLines(
+  item: GoalFundingItem,
+  opts: { statusOnly?: boolean } = {},
+): string[] {
   const lines: string[] = [];
   const src = item.sources;
   if (src) {
@@ -38,6 +45,14 @@ export function goalSavingsLines(item: GoalFundingItem): string[] {
     lines.push(
       `Your running SIPs / RD cover ${rs(item.existingMonthly ?? 0)}/month of it.`,
     );
+  }
+  if (opts.statusOnly) {
+    lines.push(
+      item.monthlyRequired <= 0
+        ? "On track with what you already hold."
+        : `Short by ${rs(item.monthlyRequired)}/month at what goes to it today.`,
+    );
+    return lines;
   }
   const planned = Math.max(0, item.monthlyAllocated ?? 0);
   // Say plainly when the goal needs more than the plan can give it.

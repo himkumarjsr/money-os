@@ -28,6 +28,7 @@ export default function GoalStrategiesList({
   reach,
   busy,
   onSetHomePrice,
+  statusOnly = false,
 }: {
   goal: DetectedGoal;
   plan?: GoalStrategyPlan;
@@ -35,13 +36,16 @@ export default function GoalStrategiesList({
   reach?: GoalReach;
   busy?: boolean;
   onSetHomePrice?: (price: number) => void;
+  /** Report: where the goal stands, no fixes or smart ways. */
+  statusOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
   const [openYear, setOpenYear] = useState<number | null>(null);
   const unclear = goal.home?.unclearAmount && onSetHomePrice;
   const count = plan?.strategies.length ?? 0;
-  if (!unclear && !plan?.summary && count === 0 && !reach) return null;
+  if (!unclear && (statusOnly || (!plan?.summary && count === 0)) && !reach)
+    return null;
 
   return (
     <div className="mt-2 space-y-2">
@@ -83,7 +87,7 @@ export default function GoalStrategiesList({
           <p
             className={`text-xs font-semibold leading-snug ${reach.onTime ? "text-[#0F6E56]" : "text-[#854F0B]"}`}
           >
-            {goalReachLine(reach, goal)}
+            {goalReachLine(reach, goal, { statusOnly })}
           </p>
           {reach.rows.length > 0 ? (
             <button
@@ -164,12 +168,12 @@ export default function GoalStrategiesList({
           ) : null}
         </div>
       ) : null}
-      {plan?.summary ? (
+      {plan?.summary && !statusOnly ? (
         <p className="rounded-lg bg-[#E8F6F1] px-3 py-2 text-xs font-semibold leading-snug text-[#0F6E56]">
           {plan.summary}
         </p>
       ) : null}
-      {count > 0 ? (
+      {count > 0 && !statusOnly ? (
         <>
           <button
             type="button"
