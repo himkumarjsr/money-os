@@ -4,11 +4,7 @@ import {
   LIFE_STAGE_LABELS,
   PRIMARY_GOAL_LABELS,
 } from "@/lib/analyse-form-schema";
-import {
-  emergencyFundMonthsNeeded,
-  scoreBand,
-  type ScoreBand,
-} from "@/lib/financialEngine";
+import { emergencyFundMonthsNeeded } from "@/lib/financialEngine";
 import { openPriorities } from "@/lib/fixPlanMerge";
 import type { PriorityItem } from "@/lib/priorityEngine";
 
@@ -19,7 +15,12 @@ export type PlanTeaser = {
   first: Pick<PriorityItem, "id" | "title" | "actionThisWeek"> | null;
   teaserTitles: string[];
   moreCount: number;
+  /** The report's list of gaps, by name only (the fixes are in the plan). */
+  gapTitles: string[];
 };
+
+/** How many gaps the report names before "+N more". */
+export const GAP_TITLE_COUNT = 6;
 
 /** Step 1 is shown free, the next `teaserCount` open priorities are blurred teasers, the rest are "+N more". */
 export function derivePlanTeaser(
@@ -41,37 +42,34 @@ export function derivePlanTeaser(
       : null,
     teaserTitles,
     moreCount: Math.max(0, open.length - shownCount),
+    gapTitles: open.slice(0, GAP_TITLE_COUNT).map((p) => p.title),
   };
 }
 
 export type CtaCopy = { title: string; subText: string };
 
+/** The report's one call to action: the plan that fixes what it found. */
 export function deriveCtaCopy(input: {
   score: number;
   openCount: number;
   topPriorityTitle: string | null;
   hasCriticalIssues: boolean;
 }): CtaCopy {
-  const { score, openCount, topPriorityTitle, hasCriticalIssues } = input;
+  const { openCount, topPriorityTitle } = input;
+  const title = "Get my wealth builder plan →";
   if (openCount === 0 || !topPriorityTitle) {
     return {
-      title: "Get my complete financial plan →",
+      title,
       subText: "No open gaps right now - see how to keep it that way",
     };
   }
-  const subText =
-    openCount === 1
-      ? `1 priority to work on: ${topPriorityTitle}`
-      : `${openCount} priorities, starting with ${topPriorityTitle}`;
-  const band: ScoreBand = scoreBand(score);
-  const title = hasCriticalIssues
-    ? "Get my personalised fix plan →"
-    : band === "critical"
-      ? "See my complete recovery plan →"
-      : band === "warning"
-        ? "Get my optimisation plan →"
-        : "Get my wealth building plan →";
-  return { title, subText };
+  return {
+    title,
+    subText:
+      openCount === 1
+        ? `1 gap to fix: ${topPriorityTitle}`
+        : `${openCount} gaps to fix, starting with ${topPriorityTitle}`,
+  };
 }
 
 export function emergencyFundCheck(

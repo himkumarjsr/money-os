@@ -107,6 +107,7 @@ describe("derivePlanTeaser", () => {
       first: null,
       teaserTitles: [],
       moreCount: 0,
+      gapTitles: [],
     });
     expect(derivePlanTeaser(null).openCount).toBe(0);
   });
@@ -133,7 +134,7 @@ describe("deriveCtaCopy", () => {
       topPriorityTitle: null,
       hasCriticalIssues: true,
     });
-    expect(c.title).toBe("Get my complete financial plan →");
+    expect(c.title).toBe("Get my wealth builder plan →");
     expect(c.subText).toMatch(/No open gaps/);
   });
 
@@ -144,21 +145,22 @@ describe("deriveCtaCopy", () => {
       topPriorityTitle: "Medical fund",
       hasCriticalIssues: false,
     });
-    expect(c.title).toBe("Get my optimisation plan →");
-    expect(c.subText).toBe("4 priorities, starting with Medical fund");
+    expect(c.title).toBe("Get my wealth builder plan →");
+    expect(c.subText).toBe("4 gaps to fix, starting with Medical fund");
   });
 
-  it("follows scoreBand boundaries", () => {
+  it("keeps one button name at every score", () => {
     const base = {
       openCount: 1,
       topPriorityTitle: "X",
       hasCriticalIssues: false,
     };
-    expect(deriveCtaCopy({ ...base, score: 39 }).title).toMatch(/recovery/);
-    expect(deriveCtaCopy({ ...base, score: 40 }).title).toMatch(/optimisation/);
-    expect(deriveCtaCopy({ ...base, score: 70 }).title).toMatch(/wealth/);
+    for (const score of [39, 40, 70])
+      expect(deriveCtaCopy({ ...base, score }).title).toBe(
+        "Get my wealth builder plan →",
+      );
     expect(deriveCtaCopy({ ...base, score: 39 }).subText).toBe(
-      "1 priority to work on: X",
+      "1 gap to fix: X",
     );
   });
 });

@@ -15,7 +15,6 @@ import SpeedoMeter from "@/components/ui/SpeedoMeter";
 import GoalsSection from "@/components/analyse/GoalsSection";
 import MoneyScoreCard from "@/components/analyse/MoneyScoreCard";
 import NetWorthIncluded from "@/components/analyse/NetWorthIncluded";
-import PremiumRdCard from "@/components/analyse/PremiumRdCard";
 import { buildPriorityPlan } from "@/lib/priorityEngine";
 import { Analytics } from "@/lib/analytics";
 import { buildSpeedoMeterProps } from "@/lib/speedo-meter-buckets";
@@ -446,7 +445,7 @@ export default function AnalyseResultPage() {
           </section>
 
           {analysis?.moneyScore ? (
-            <MoneyScoreCard score={analysis.moneyScore} />
+            <MoneyScoreCard score={analysis.moneyScore} showActions={false} />
           ) : null}
           <div className="mb-4 rounded-2xl border border-[#E8E6F0] bg-white p-4 sm:p-6">
             <div className="mb-4 text-[11px] font-bold uppercase tracking-wide text-[#534AB7]">
@@ -976,57 +975,49 @@ export default function AnalyseResultPage() {
             </div>
           </section>
 
-          <PremiumRdCard profile={profile} userId={user?.id} />
-
           <GoalsSection
             profile={profile}
             userId={user?.id}
             funding={priorityPlan.goalFunding?.items}
+            statusOnly
           />
 
           <YearlyRoadmapTable
             profile={profile}
             items={priorityPlan.goalFunding?.items}
+            retirementOnly
           />
 
           <section className="rounded-2xl border border-[#DCD8F4] bg-white p-5">
-            <h2 className="text-xl font-semibold">
-              Your personalised 12-month plan
-            </h2>
+            <h2 className="text-xl font-semibold">What needs fixing</h2>
+            <p className="text-sm font-medium leading-relaxed text-[#454442]">
+              This report shows where you stand today. How to fix each gap - in
+              order, with the monthly amounts - is in your wealth builder plan.
+            </p>
             <div className="mt-3 rounded-xl bg-[#F7F6FE] p-3 text-sm">
-              {planTeaser.first ? (
-                <>
-                  <p className="font-medium">
-                    ✓ Step 1: {planTeaser.first.title}
-                  </p>
-                  {planTeaser.first.actionThisWeek ? (
-                    <p className="mt-1 font-medium leading-relaxed text-[#454442]">
-                      {planTeaser.first.actionThisWeek}
-                    </p>
-                  ) : null}
-                </>
+              {planTeaser.openCount === 0 ? (
+                <p className="font-medium">✓ No open gaps right now.</p>
               ) : (
-                <p className="font-medium">
-                  ✓ No open gaps right now - keep your current plan on track.
-                </p>
+                <ul className="space-y-1">
+                  {planTeaser.gapTitles.map((title) => (
+                    <li
+                      key={title}
+                      className="flex items-start gap-2 font-medium"
+                    >
+                      <span aria-hidden className="text-[#E24B4A]">
+                        •
+                      </span>
+                      {title}
+                    </li>
+                  ))}
+                  {planTeaser.openCount > planTeaser.gapTitles.length ? (
+                    <li className="text-xs font-medium text-[#5F5E5A]">
+                      + {planTeaser.openCount - planTeaser.gapTitles.length}{" "}
+                      more
+                    </li>
+                  ) : null}
+                </ul>
               )}
-              {planTeaser.teaserTitles.map((title, i) => (
-                <p
-                  key={`teaser-${i}`}
-                  className={`blur-[2px] ${i === 0 ? "mt-3" : ""}`}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <AppIcon name="lock" size={14} color="currentColor" />
-                    Step {i + 2}: {title} - unlock to see
-                  </span>
-                </p>
-              ))}
-              {planTeaser.moreCount > 0 ? (
-                <p className="mt-2 text-xs font-medium text-[#5F5E5A]">
-                  + {planTeaser.moreCount} more personalised{" "}
-                  {planTeaser.moreCount === 1 ? "step" : "steps"}
-                </p>
-              ) : null}
             </div>
             <div className="mt-4 rounded-xl border border-[#E8E6F0] p-4">
               <p className="text-lg font-semibold">
@@ -1093,7 +1084,7 @@ export default function AnalyseResultPage() {
               <ul className="mt-3 space-y-1 text-sm text-[#5F5E5A]">
                 <li>✓ Complete priority plan</li>
                 <li>✓ Debt clearance strategy</li>
-                <li>✓ 12-month action plan</li>
+                <li>✓ Step-by-step wealth builder plan</li>
                 <li>✓ PDF download</li>
                 <li>✓ Insurance gap checklist (educational)</li>
               </ul>

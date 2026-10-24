@@ -95,7 +95,7 @@ function loadRazorpayScript(): Promise<void> {
 const DEFAULT_BULLETS = [
   "Complete priority plan",
   "Debt clearance strategy",
-  "12-month action roadmap",
+  "Step-by-step wealth builder plan",
   "Downloadable PDF report",
   "Insurance recommendations from Finkoin",
 ];
