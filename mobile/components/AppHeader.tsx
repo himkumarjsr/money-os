@@ -1,6 +1,6 @@
 /**
  * Top bar matching PWA GlobalNavbar (mobile):
- * FK coin + "Finkoin" link | NotificationBell (signed in) + profile avatar
+ * FK coin + "Finkoin" link | search + NotificationBell (signed in) + profile avatar
  * Profile opens dropdown panel (not full profile page). The footer links live
  * in the page-bottom Footer, not a drawer.
  *
@@ -56,6 +56,16 @@ export function AppHeader({ homeOnLogo = true, root = false }: Props) {
         </View>
 
         <View style={styles.right}>
+          <Pressable
+            onPress={() => router.push("/search")}
+            style={styles.iconBtn}
+            hitSlop={4}
+            accessibilityLabel="Search Finkoin"
+            accessibilityRole="button"
+          >
+            <AppIcon name="search" size={18} color={Colors.primaryText} />
+          </Pressable>
+
           {isLoggedIn ? <NotificationBell /> : null}
 
           <PremiumAvatarRing premium={isLoggedIn && premium} size={36}>
@@ -133,6 +143,17 @@ const styles = themedStyles(() => ({
     alignItems: "center",
     gap: 8,
     flexShrink: 0,
+  },
+  /** Same glass circle as the profile chip; matches the PWA search button. */
+  iconBtn: {
+    height: 36,
+    width: 36,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.glassBorder,
+    backgroundColor: Colors.glassCard,
+    alignItems: "center",
+    justifyContent: "center",
   },
   /** White glass circle like PWA profile chip */
   avatarBtn: {

@@ -6,6 +6,7 @@ import NotificationBell from "@/components/NotificationBell";
 import FeedbackFormButton from "@/components/FeedbackFormButton";
 import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { CalculatorsNavMenu } from "@/components/CalculatorsNavMenu";
+import { SiteSearch } from "@/components/search/SiteSearch";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { ACCOUNT_MENU_ITEMS } from "@/lib/accountNav";
 import { fadeIn } from "@/lib/animations";
@@ -272,6 +273,8 @@ export function GlobalNavbar() {
             >
               View Plans
             </Link>
+
+            <SiteSearch />
 
             {showAsLoggedIn ? <NotificationBell /> : null}
 
