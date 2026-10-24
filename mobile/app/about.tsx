@@ -1,6 +1,5 @@
 /** Native About - port of web app/about/page.tsx. */
-import { Image, Linking, Pressable, Text, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import { Pressable, Text, View } from "react-native";
 import {
   readable,
   Colors,
@@ -12,14 +11,12 @@ import { ContentScreen } from "@/components/content/ContentScreen";
 import { openContentHref } from "@/lib/contentLinks";
 import { GoldText } from "@/components/ui/GoldMirror";
 
-/** Why Finkoin exists, in the founder's words. Same text as app/about/page.tsx. */
+/** Why Finkoin exists, in the team's words. Same text as app/about/page.tsx. */
 const FOUNDER_NOTE = [
-  "Most people I know earn well and pay their EMIs on time, yet can't answer simple questions about their own money: Is my emergency fund enough? Am I under-insured? Am I investing enough to retire when I want to? The answers exist, but they are buried in jargon, spread across ten different apps, or come from someone trying to sell a policy or a fund.",
-  "I built Finkoin to be one honest place where any working Indian can see their whole money life in a few minutes: what is strong, what is at risk, and the next step to fix it. No PAN, no Aadhaar, no jargon. Every suggestion explains why, in plain language, so you can decide for yourself.",
+  "Most people we know earn well and pay their EMIs on time, yet can't answer simple questions about their own money: Is my emergency fund enough? Am I under-insured? Am I investing enough to retire when I want to? The answers exist, but they are buried in jargon, spread across ten different apps, or come from someone trying to sell a policy or a fund.",
+  "We built Finkoin to be one honest place where any working Indian can see their whole money life in a few minutes: what is strong, what is at risk, and the next step to fix it. No PAN, no Aadhaar, no jargon. Every suggestion explains why, in plain language, so you can decide for yourself.",
   "That is the idea behind Know it. Fix it. Grow it. Start with a free health check, track where your money goes, split shared costs with friends without the awkwardness, and come back each month to see your progress. If Finkoin helps one family build an emergency fund or get the right cover before they need it, it has done its job.",
 ];
-
-const LINKEDIN_URL = "https://www.linkedin.com/in/himanshu-kr-gupta/";
 
 const PROBLEMS: { icon: AppIconName; title: string; desc: string }[] = [
   {
@@ -207,34 +204,7 @@ export default function AboutScreen() {
       </View>
 
       <View style={styles.founderBox}>
-        <Text style={styles.founderH2}>The person behind Finkoin</Text>
-        <View style={styles.founderRow}>
-          <Image
-            source={require("@/assets/founder-himanshu-kumar.png")}
-            style={styles.avatar}
-            accessibilityLabel="Himanshu Kumar Gupta, Founder of Finkoin"
-          />
-          <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={styles.founderName}>Himanshu Kumar Gupta</Text>
-            <GoldText style={styles.founderRole}>Founder, Finkoin</GoldText>
-            <Pressable
-              onPress={() => void Linking.openURL(LINKEDIN_URL).catch(() => {})}
-              style={styles.linkedIn}
-              accessibilityRole="link"
-              accessibilityLabel="Himanshu Kumar Gupta on LinkedIn"
-            >
-              <Svg
-                width={16}
-                height={16}
-                viewBox="0 0 24 24"
-                fill={Colors.primary}
-              >
-                <Path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z" />
-              </Svg>
-              <Text style={styles.linkedInText}>LinkedIn</Text>
-            </Pressable>
-          </View>
-        </View>
+        <Text style={styles.founderH2}>Why we built Finkoin</Text>
         {FOUNDER_NOTE.map((para) => (
           <Text key={para.slice(0, 24)} style={styles.founderBio}>
             {para}
@@ -385,39 +355,6 @@ const styles = themedStyles(() => ({
     color: Colors.textPrimary,
     marginBottom: 20,
   },
-  founderRow: {
-    flexDirection: "row",
-    gap: 20,
-    alignItems: "flex-start",
-    flexWrap: "wrap",
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  founderName: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  founderRole: {
-    fontSize: 13,
-    color: Colors.primaryText,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  linkedIn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    minHeight: 44,
-    alignSelf: "flex-start",
-  },
-  linkedInText: { fontSize: 13, color: Colors.primaryText, fontWeight: "600" },
   founderBio: {
     marginTop: 12,
     fontSize: 15,

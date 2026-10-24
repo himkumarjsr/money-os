@@ -24,7 +24,7 @@ const profile = {
   bikeInsurancePremiumFrequency: "yearly",
   otherInsurancePremiums: [
     {
-      policyName: "LIC HIMANSHU",
+      policyName: "LIC RAHUL",
       frequency: "monthly",
       premiumAmount: 2895,
       monthlyAmount: 2895,
