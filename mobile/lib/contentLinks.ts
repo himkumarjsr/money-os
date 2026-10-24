@@ -78,6 +78,9 @@ export function nativeRouteForPath(pathWithQuery: string): string {
     case "goals":
     case "investments":
     case "rewards":
+    case "bills":
+    case "household":
+    case "search":
     case "refer":
     case "policies":
     case "portfolio":
