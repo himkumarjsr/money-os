@@ -309,7 +309,11 @@ export interface FinancialProfile {
   /** Travel spend as entered (monthly or yearly per `travelFrequency`). */
   travelInput?: number;
   travelFrequency?: PremiumFrequency;
+  /** Monthly equivalent of kids school fees and tuition (derived from input + frequency). */
   kidsSchoolFees?: number;
+  /** School fees as entered (monthly or yearly per `kidsSchoolFeesFrequency`). */
+  kidsSchoolFeesInput?: number;
+  kidsSchoolFeesFrequency?: PremiumFrequency;
   kidsActivities?: number;
   parentsSupport?: number;
   parentsHealthInsuranceSumInsured?: number;
@@ -777,6 +781,8 @@ const formShape = {
   travelInput: optionalMoney,
   travelFrequency: premiumFrequencySchema.default("yearly"),
   kidsSchoolFees: optionalMoney,
+  kidsSchoolFeesInput: optionalMoney,
+  kidsSchoolFeesFrequency: premiumFrequencySchema.default("monthly"),
   kidsActivities: optionalMoney,
   parentsSupport: optionalMoney,
   parentsHealthInsuranceSumInsured: optionalMoney,
@@ -1168,6 +1174,8 @@ export const step4Schema = baseFormSchema.pick({
   travelInput: true,
   travelFrequency: true,
   kidsSchoolFees: true,
+  kidsSchoolFeesInput: true,
+  kidsSchoolFeesFrequency: true,
   kidsActivities: true,
   parentsSupport: true,
   parentsHealthInsuranceSumInsured: true,
@@ -1557,6 +1565,15 @@ function migrateLegacyAnalysePartial(
   input: Partial<AnalyseFormValues>,
 ): Partial<AnalyseFormValues> {
   const out = { ...input } as Record<string, unknown>;
+
+  // School fees were monthly-only before the monthly / yearly toggle.
+  if (
+    out.kidsSchoolFeesInput === undefined &&
+    out.kidsSchoolFees !== undefined
+  ) {
+    out.kidsSchoolFeesInput = out.kidsSchoolFees;
+    out.kidsSchoolFeesFrequency = "monthly";
+  }
 
   const obl = out.additionalObligations;
   if (Array.isArray(obl)) {
@@ -2037,6 +2054,12 @@ export function financialProfileToFormValues(
     travelInput: p.travelInput ?? 0,
     travelFrequency: p.travelFrequency ?? "yearly",
     kidsSchoolFees: p.kidsSchoolFees ?? 0,
+    // Profiles saved before the toggle hold a monthly figure only.
+    kidsSchoolFeesInput: p.kidsSchoolFeesInput ?? p.kidsSchoolFees ?? 0,
+    kidsSchoolFeesFrequency:
+      p.kidsSchoolFeesInput !== undefined
+        ? (p.kidsSchoolFeesFrequency ?? "monthly")
+        : "monthly",
     kidsActivities: p.kidsActivities ?? 0,
     parentsSupport: p.parentsSupport ?? 0,
     parentsHealthInsuranceSumInsured: p.parentsHealthInsuranceSumInsured ?? 0,
@@ -2597,7 +2620,21 @@ export function normalizeAnalyseFormValues(
     travelMonthly: toMonthlyEquivalent(form.travelInput, form.travelFrequency),
     travelInput: form.travelInput,
     travelFrequency: form.travelFrequency ?? "yearly",
-    kidsSchoolFees: form.lifeStage === "kids" ? form.kidsSchoolFees : undefined,
+    kidsSchoolFees:
+      form.lifeStage === "kids"
+        ? form.kidsSchoolFeesInput !== undefined
+          ? toMonthlyEquivalent(
+              form.kidsSchoolFeesInput,
+              form.kidsSchoolFeesFrequency,
+            )
+          : form.kidsSchoolFees
+        : undefined,
+    kidsSchoolFeesInput:
+      form.lifeStage === "kids" ? form.kidsSchoolFeesInput : undefined,
+    kidsSchoolFeesFrequency:
+      form.lifeStage === "kids"
+        ? (form.kidsSchoolFeesFrequency ?? "monthly")
+        : undefined,
     kidsActivities: form.lifeStage === "kids" ? form.kidsActivities : undefined,
     parentsSupport: form.parentsSupport,
     parentsHealthInsuranceSumInsured:
@@ -3024,6 +3061,8 @@ export const analyseDefaultValues: Partial<AnalyseFormValues> = {
   travelInput: 0,
   travelFrequency: "yearly",
   kidsSchoolFees: 0,
+  kidsSchoolFeesInput: 0,
+  kidsSchoolFeesFrequency: "monthly",
   kidsActivities: 0,
   parentsSupport: 0,
   parentsHealthInsuranceSumInsured: 0,

@@ -201,7 +201,9 @@ export function computeLiveTotals(v: Partial<AnalyseFormValues>) {
       ? v.lifestyleTotal
       : sum([v.entertainment, v.shopping, v.personalCare]),
     toMonthlyEquivalent(v.travelInput, v.travelFrequency),
-    lifeStage === "kids" ? v.kidsSchoolFees : 0,
+    lifeStage === "kids"
+      ? toMonthlyEquivalent(v.kidsSchoolFeesInput, v.kidsSchoolFeesFrequency)
+      : 0,
     lifeStage === "kids" ? v.kidsActivities : 0,
     v.parentsSupport,
     (v.parentsSupport ?? 0) > 0 && (v.parentsHealthInsuranceSumInsured ?? 0) > 0

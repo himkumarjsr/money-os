@@ -1042,7 +1042,12 @@ export function AnalyseOnboardingForm() {
       watchedValues.travelInput,
       watchedValues.travelFrequency,
     ),
-    lifeStage === "kids" ? watchedValues.kidsSchoolFees : 0,
+    lifeStage === "kids"
+      ? toMonthlyEquivalent(
+          watchedValues.kidsSchoolFeesInput,
+          watchedValues.kidsSchoolFeesFrequency,
+        )
+      : 0,
     lifeStage === "kids" ? watchedValues.kidsActivities : 0,
     watchedValues.parentsSupport,
     parentsSupport > 0 && hasParentsInsurance
@@ -1254,6 +1259,8 @@ export function AnalyseOnboardingForm() {
       setValue("kidsAges", []);
       setValue("kidsGenders", []);
       setValue("kidsSchoolFees", 0);
+      setValue("kidsSchoolFeesInput", 0);
+      setValue("kidsSchoolFeesFrequency", "monthly");
       setValue("kidsActivities", 0);
       setValue("ssy", 0);
     }
@@ -2944,12 +2951,29 @@ export function AnalyseOnboardingForm() {
                       <div className="grid gap-5 sm:grid-cols-2">
                         {lifeStage === "kids" ? (
                           <>
-                            <MoneyInput
-                              id="kidsSchoolFees"
-                              label="Kids school fees and tuition"
-                              error={errors.kidsSchoolFees?.message}
-                              {...bindMoneyField("kidsSchoolFees")}
-                            />
+                            <div className="min-w-0 sm:col-span-2">
+                              <PremiumField
+                                inputId="kidsSchoolFeesInput"
+                                label="Kids school fees and tuition"
+                                amountError={
+                                  errors.kidsSchoolFeesInput?.message
+                                }
+                                frequency={
+                                  watch("kidsSchoolFeesFrequency") ?? "monthly"
+                                }
+                                onFrequencyChange={(value) =>
+                                  setValue("kidsSchoolFeesFrequency", value)
+                                }
+                              >
+                                <MoneyInput
+                                  id="kidsSchoolFeesInput"
+                                  label="Kids school fees and tuition"
+                                  hideLabel
+                                  helper="(school + tuition) · Enter what you pay a month or a year"
+                                  {...bindMoneyField("kidsSchoolFeesInput")}
+                                />
+                              </PremiumField>
+                            </div>
                             <MoneyInput
                               id="kidsActivities"
                               label="Kids activities - sports, hobby classes"

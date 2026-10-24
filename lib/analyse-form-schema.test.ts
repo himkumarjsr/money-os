@@ -517,3 +517,72 @@ describe("premium normalization", () => {
     expect(normalized.nscDepositAmount).toBe(25_000);
   });
 });
+
+describe("kids school fees monthly / yearly", () => {
+  const kidsForm = (extra: Partial<AnalyseFormValues>) =>
+    ({
+      lifeStage: "kids",
+      monthlySalary: 100_000,
+      ...extra,
+    }) as Partial<AnalyseFormValues>;
+
+  it("spreads yearly fees to a monthly figure", () => {
+    const profile = normalizeAnalyseFormValues(
+      kidsForm({
+        kidsSchoolFeesInput: 120_000,
+        kidsSchoolFeesFrequency: "yearly",
+      }),
+    );
+    expect(profile.kidsSchoolFees).toBe(10_000);
+    expect(profile.kidsSchoolFeesInput).toBe(120_000);
+    expect(profile.kidsSchoolFeesFrequency).toBe("yearly");
+  });
+
+  it("keeps monthly fees as entered", () => {
+    const profile = normalizeAnalyseFormValues(
+      kidsForm({
+        kidsSchoolFeesInput: 8_000,
+        kidsSchoolFeesFrequency: "monthly",
+      }),
+    );
+    expect(profile.kidsSchoolFees).toBe(8_000);
+  });
+
+  it("treats fees saved before the toggle as monthly", () => {
+    const profile = normalizeAnalyseFormValues(
+      kidsForm({ kidsSchoolFees: 6_000 }),
+    );
+    expect(profile.kidsSchoolFees).toBe(6_000);
+    expect(profile.kidsSchoolFeesFrequency).toBe("monthly");
+
+    const form = financialProfileToFormValues({
+      ...profile,
+      kidsSchoolFeesInput: undefined,
+      kidsSchoolFeesFrequency: undefined,
+    });
+    expect(form.kidsSchoolFeesInput).toBe(6_000);
+    expect(form.kidsSchoolFeesFrequency).toBe("monthly");
+  });
+
+  it("restores the yearly entry into the form", () => {
+    const profile = normalizeAnalyseFormValues(
+      kidsForm({
+        kidsSchoolFeesInput: 90_000,
+        kidsSchoolFeesFrequency: "yearly",
+      }),
+    );
+    const form = financialProfileToFormValues(profile);
+    expect(form.kidsSchoolFeesInput).toBe(90_000);
+    expect(form.kidsSchoolFeesFrequency).toBe("yearly");
+    expect(normalizeAnalyseFormValues(form).kidsSchoolFees).toBe(7_500);
+  });
+
+  it("drops school fees outside the kids life stage", () => {
+    const profile = normalizeAnalyseFormValues({
+      lifeStage: "married",
+      monthlySalary: 100_000,
+      kidsSchoolFeesInput: 50_000,
+    } as Partial<AnalyseFormValues>);
+    expect(profile.kidsSchoolFees).toBeUndefined();
+  });
+});
