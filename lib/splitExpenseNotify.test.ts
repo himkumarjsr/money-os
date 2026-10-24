@@ -79,13 +79,13 @@ describe("buildSplitExpensePushCopy", () => {
     expect(
       buildSplitExpensePushCopy({
         groupName: "Grocery & Vege",
-        paidByName: "Himanshu",
+        paidByName: "Rahul",
         title: "Tomatoes",
         amount: 240,
       }),
     ).toEqual({
       title: "New expense in Grocery & Vege",
-      body: "Himanshu added “Tomatoes” · ₹240",
+      body: "Rahul added “Tomatoes” · ₹240",
     });
   });
 

@@ -65,15 +65,15 @@ Companion docs: `docs/README.md`, `docs/CORE_ARCHITECTURE.md`, `docs/DATA_AND_ST
 
 Last updated: 2026-07-18 (full codebase sync)  
 Doc / app version: **0.4.0** (`package.json`)  
-Generated from: actual codebase at `/Users/himanshukumar/Desktop/money-os`  
+Generated from: actual codebase at `the money-os repository`  
 Canonical site: **https://www.finkoin.com**
 
 ---
 
 ## TEST STATUS
 
-Last run: 2026-10-21T10:05:36.529Z
-Unit tests: 1823/1823 passing
+Last run: 2026-10-24T18:58:47.633Z
+Unit tests: 2325/2325 passing
 Failed: 0
 
 Living docs:
@@ -2342,7 +2342,7 @@ _Tests:_
 - **Tracker “Show all” master privacy toggle:** New pill below the purple summary card in `app/tracker/page.tsx` reveals/hides the summary card + Income + all bucket sections + Month Safety Pulse at once (`allAmountsVisible` / `toggleShowAll`). `MonthSafetyPulse` gained a `forceVisible` prop so the master switch controls it while keeping its own eye.
 - **Income masking everywhere (privacy):** New reusable `components/ui/PrivateAmount.tsx` — hidden by default (`₹••••••`), eye reveals; the **eye is omitted when the value is 0 / no data**. Applied to analyse result (Total income + paywall Monthly Income), fixplan (Monthly income), optimizer (Monthly income + Total income), Finkoin AI plan view (Monthly income net), onboarding “Total monthly income”, and tax calculator Old/New monthly take-home. Tracker retains its existing masking.
 - **Tax calculator multi-source income:** “What best describes you?” (Personal CA wizard) and “Work / income style” (main form) are now **multi-select** in `components/calculators/TaxRegimeCalculator.tsx`. State moved from single `employment` → `employments: EmploymentKind[]`; a derived `primaryEmployment` (priority salaried → freelancer → business_owner → pensioner → retired) is passed to the engine so ITR hints / missed-deduction alerts still fire. `localStorage` persists the array and migrates old single-value data. Tax math itself is unchanged (engine only uses employment for hints, not computation).
-- **Founder + SEO:** About page (`app/about/page.tsx`) now shows the real founder photo (`public/assets/founder-himanshu-kumar.png`) via `next/image` with alt text, plus a visible LinkedIn link. Added founder structured data: `ProfilePage` + `Person` JSON-LD on `/about` and a `founder` Person (with `sameAs` LinkedIn `https://www.linkedin.com/in/himanshu-k-81b484140/`) inside the Organization schema in `app/layout.tsx`.
+- **About + SEO:** About page (`app/about/page.tsx`) carries no personal founder details; blog and site metadata credit "Finkoin Team" and the Organization schema has no `founder` Person.
 - **Canonical host standardized to `www.finkoin.com`:** Default host unified to **www** (Google indexes `www.finkoin.com`). `SITE_URL` fallback in `lib/seo.ts`, `app/sitemap.ts` baseUrl, `app/robots.ts` sitemap (now derives from `SITE_URL`), and referral origin fallbacks (`app/profile/page.tsx`, `app/refer/page.tsx`) all default to `https://www.finkoin.com`. Hardcoded OG image URLs now derive from `SITE_URL`/`siteUrl` (home, analyse, tax-calculator, root layout). Notification email links (`send-daily-tip`, `welcome-tip`, `send-test-tip`) and legal page website links point to www. Email addresses (`hello@`, `support@`, etc.) unchanged. **Set `NEXT_PUBLIC_SITE_URL=https://www.finkoin.com` in the deploy env** so it matches the fallback.
 - **App version:** `package.json` bumped **0.2.0 → 0.3.0**.
 
