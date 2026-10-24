@@ -48,6 +48,8 @@ import {
   type GoalPlanProgress,
 } from "@/lib/plannedInvestments";
 import StartPlanSheet from "@/components/analyse/StartPlanSheet";
+import { UnlockInAppPanel } from "@/components/analyse/UnlockInApp";
+import { fetchFixPlanAccess, type FixPlanAccess } from "@/lib/fixPlanAccess";
 import LifeMapCard from "@/components/analyse/LifeMapCard";
 import NetWorthTrajectoryCard from "@/components/analyse/NetWorthTrajectoryCard";
 import NoConflictNote from "@/components/analyse/NoConflictNote";
@@ -96,6 +98,9 @@ export default function FixPlanPage() {
     Record<string, GoalPlanProgress>
   >({});
   const [startPlanOpen, setStartPlanOpen] = useState(false);
+  const [access, setAccess] = useState<FixPlanAccess | null>(null);
+  // Bumped by "check again" so the gate below re-runs after buying in the app.
+  const [accessCheck, setAccessCheck] = useState(0);
   const loadPlannedProgress = useCallback(async () => {
     if (!user?.id) return;
     try {
@@ -295,18 +300,14 @@ export default function FixPlanPage() {
 
       if (skipPayment) {
         console.log("fixplan: skip payment enabled");
+        setAccess({ hasAccess: true, reason: "skip", expiresAt: null });
       } else {
-        const currentUser = useAuthStore.getState().user;
-        const hasAccess =
-          currentUser?.subscriptionTier === "pro" ||
-          currentUser?.subscriptionTier === "promax" ||
-          currentUser?.isAdmin;
-
-        if (!hasAccess) {
-          console.log("fixplan: no access, redirecting to result");
-          router.replace("/analyse/result");
-          return;
-        }
+        // Bought in the mobile app (Play / App Store), Pro, or a tester the
+        // super admin allowed. Otherwise show "Unlock in the Finkoin app".
+        const access = await fetchFixPlanAccess(useAuthStore.getState().user);
+        if (cancelled) return;
+        setAccess(access);
+        if (!access.hasAccess) return;
       }
       if (!profile || !result) return;
       const loadKey = `${hashProfile(profile, result)}:${String((result as { overallScore?: number })?.overallScore ?? "")}`;
@@ -330,6 +331,7 @@ export default function FixPlanPage() {
     router,
     profile,
     result,
+    accessCheck,
   ]);
 
   useEffect(() => {
@@ -436,6 +438,33 @@ export default function FixPlanPage() {
       setDownloading(false);
     }
   };
+
+  if (access && !access.hasAccess) {
+    return (
+      <div className="min-h-dvh bg-[#F7F7F4] px-4 py-6">
+        <div className="mx-auto max-w-md space-y-4">
+          <button
+            type="button"
+            onClick={() => router.push("/analyse/result")}
+            className="text-sm font-medium text-[#534AB7] hover:underline"
+          >
+            ← Back to report
+          </button>
+          <div className="rounded-3xl bg-white p-6 shadow-sm sm:p-7">
+            <UnlockInAppPanel
+              email={user?.email}
+              access={access}
+              onRecheck={async () => {
+                const next = await fetchFixPlanAccess(user);
+                setAccess(next);
+                if (next.hasAccess) setAccessCheck((n) => n + 1);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (aiLoading) {
     return (

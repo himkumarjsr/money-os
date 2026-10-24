@@ -33,6 +33,25 @@ Copy [`.env.example`](../.env.example) → `.env.local`. Never commit secrets.
 | `RAZORPAY_KEY_ID` / `NEXT_PUBLIC_RAZORPAY_KEY_ID` | public ID       | Checkout                   |
 | `RAZORPAY_KEY_SECRET`                             | **server only** | create-order + HMAC verify |
 
+### Fix Plan store billing (Google Play / App Store)
+
+The ₹199 one-year Fix Plan is bought only in the mobile app. The app sends
+each purchase to `POST /api/billing/store-purchase`, which confirms it with
+Google or Apple and records it (migration 061).
+
+| Variable                           | Scope           | Purpose                                                    |
+| ---------------------------------- | --------------- | ---------------------------------------------------------- |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | **server only** | Play Console service account key (whole JSON, one line)    |
+| `GOOGLE_PLAY_PACKAGE_NAME`         | server          | Defaults to `com.finkoin.app`                              |
+| `APPLE_IAP_ISSUER_ID`              | server          | App Store Connect → Users and Access → Integrations        |
+| `APPLE_IAP_KEY_ID`                 | server          | In-App Purchase key id                                     |
+| `APPLE_IAP_PRIVATE_KEY`            | **server only** | Contents of the `.p8` key                                  |
+| `APPLE_BUNDLE_ID`                  | server          | Defaults to `com.finkoin.app`                              |
+| `FIX_PLAN_PRODUCT_ID`              | server          | Defaults to `fix_plan_1y` (same id in both stores)         |
+| `NEXT_PUBLIC_PLAY_STORE_URL`       | public          | "Get it on Google Play" button on the web unlock screen    |
+| `NEXT_PUBLIC_APP_STORE_URL`        | public          | App Store button (hidden until set)                        |
+| `AI_PLAN_REQUIRES_PRO`             | server          | `true` makes `/api/ai/analyse` refuse users without access |
+
 ### Optional product flags
 
 | Variable                         | Purpose            |

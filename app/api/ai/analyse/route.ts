@@ -13,6 +13,7 @@ import {
   unauthorized,
 } from "@/lib/apiGuard";
 import { aiPlanRequiresPro, hasProAccess } from "@/lib/subscriptionBypass";
+import { parseFixPlanAccessRow } from "@/lib/fixPlanAccess";
 import { getSupabaseAdmin } from "@/lib/supabaseServer";
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
@@ -56,16 +57,27 @@ export async function POST(req: NextRequest) {
   }
 
   // The Fix Plan is a paid feature; the client paywall alone can be skipped
-  // by calling this route directly.
+  // by calling this route directly. Access: a Play / App Store purchase, Pro,
+  // or a tester the super admin allowed (fix_plan_access_for_user, 061).
   if (aiPlanRequiresPro()) {
-    const { data: row } = await getSupabaseAdmin()
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (!hasProAccess(row, user.email)) {
+    const admin = getSupabaseAdmin();
+    const { data: accessRow, error: accessErr } = await admin.rpc(
+      "fix_plan_access_for_user",
+      { p_user: user.id },
+    );
+    let allowed = Boolean(parseFixPlanAccessRow(accessRow)?.hasAccess);
+    if (accessErr) {
+      // Migration 061 not installed yet: fall back to the Pro check.
+      const { data: row } = await admin
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+      allowed = hasProAccess(row, user.email);
+    }
+    if (!allowed) {
       return NextResponse.json(
-        { error: "Fix Plan needs Pro" },
+        { error: "Unlock the Fix Plan in the Finkoin app" },
         { status: 402 },
       );
     }

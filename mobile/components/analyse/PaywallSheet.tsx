@@ -1,13 +1,22 @@
 /**
  * Port of web `components/analyse/paywall-modal.tsx` as a bottom sheet.
- * Payments are not live on mobile: confirming never charges and never writes
- * subscriptionTier - it just closes and opens the Fix Plan.
+ * Sells the Fix Plan (₹199, one year) through Google Play Billing / Apple
+ * In-App Purchase; the server confirms each purchase before it unlocks.
  */
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { FIX_PLAN_PRICE_INR, PAYMENTS_ENABLED } from "@/lib/analyseEntitlement";
+import {
+  buyFixPlan,
+  fetchFixPlanPrice,
+  isStoreBillingAvailable,
+  resumePendingFixPlanPurchases,
+} from "@/lib/fixPlanBilling";
+import { fetchFixPlanAccess } from "@/lib/fixPlanAccess";
 import { paywallConfirmLabel, paywallPriceNote } from "@/lib/paywallCopy";
+import { useAuthStore } from "@/store/authStore";
 import { Colors, themedStyles } from "@/constants/theme";
 
 const DEFAULT_BULLETS = [
@@ -16,6 +25,7 @@ const DEFAULT_BULLETS = [
   "Step-by-step wealth builder plan",
   "Downloadable PDF report",
   "Insurance recommendations from Finkoin",
+  "Also opens on finkoin.com with the same login",
 ];
 
 type Props = {
@@ -30,16 +40,75 @@ type Props = {
 export function PaywallSheet({
   visible,
   onClose,
-  priceLabel = PAYMENTS_ENABLED ? `Pay ₹${FIX_PLAN_PRICE_INR}` : "Free",
+  priceLabel,
   title = "Unlock your fix plan",
   subtitle = "Your complete AI roadmap is ready to unlock.",
   bulletPoints = DEFAULT_BULLETS,
 }: Props) {
+  const user = useAuthStore((s) => s.user);
+  const [storePrice, setStorePrice] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
+  const [error, setError] = useState("");
   const priceNote = paywallPriceNote(PAYMENTS_ENABLED);
-  const handleConfirm = () => {
+
+  useEffect(() => {
+    if (!visible) {
+      setError("");
+      return;
+    }
+    if (PAYMENTS_ENABLED) void fetchFixPlanPrice().then(setStorePrice);
+  }, [visible]);
+
+  const openPlan = () => {
     onClose();
     router.push("/analyse/fixplan");
   };
+
+  const handleConfirm = async () => {
+    if (busy) return;
+    if (!PAYMENTS_ENABLED) {
+      openPlan();
+      return;
+    }
+    if (!user?.id) {
+      onClose();
+      router.push({
+        pathname: "/(auth)/login",
+        params: { next: "/analyse/result" },
+      });
+      return;
+    }
+    if (!isStoreBillingAvailable()) {
+      setError(
+        "Payments work in the Play Store / App Store version of Finkoin.",
+      );
+      return;
+    }
+    setError("");
+    setBusy("buy");
+    const result = await buyFixPlan(user.id);
+    setBusy(null);
+    if (result.ok) openPlan();
+    else if (result.error) setError(result.error);
+  };
+
+  // Already paid (here, on another phone, or the app closed mid-purchase).
+  const handleRestore = async () => {
+    if (busy || !user?.id) return;
+    setError("");
+    setBusy("restore");
+    await resumePendingFixPlanPurchases();
+    const access = await fetchFixPlanAccess(user);
+    setBusy(null);
+    if (access.hasAccess) openPlan();
+    else setError("No purchase found for this account yet.");
+  };
+
+  const price =
+    priceLabel ??
+    (PAYMENTS_ENABLED
+      ? `${storePrice ?? `₹${FIX_PLAN_PRICE_INR}`} for 1 year`
+      : "Free");
 
   return (
     <BottomSheet visible={visible} onClose={onClose} scroll>
@@ -71,8 +140,13 @@ export function PaywallSheet({
 
       <View style={styles.priceCard}>
         <Text style={styles.priceEyebrow}>Price</Text>
-        <Text style={styles.price}>{priceLabel}</Text>
+        <Text style={styles.price}>{price}</Text>
         {priceNote ? <Text style={styles.priceNote}>{priceNote}</Text> : null}
+        {PAYMENTS_ENABLED ? (
+          <Text style={styles.priceNote}>
+            One-time payment, no auto-renewal.
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.bullets}>
@@ -83,18 +157,46 @@ export function PaywallSheet({
         ))}
       </View>
 
-      <Pressable
-        onPress={handleConfirm}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.cta, pressed && { opacity: 0.9 }]}
-      >
-        <Text style={styles.ctaText}>
-          {paywallConfirmLabel({
-            paymentsEnabled: PAYMENTS_ENABLED,
-            priceInr: FIX_PLAN_PRICE_INR,
-          })}
+      {error ? (
+        <Text style={styles.error} accessibilityRole="alert">
+          {error}
         </Text>
+      ) : null}
+
+      <Pressable
+        onPress={() => void handleConfirm()}
+        disabled={busy !== null}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.cta,
+          (pressed || busy === "buy") && { opacity: 0.9 },
+        ]}
+      >
+        {busy === "buy" ? (
+          <ActivityIndicator color={Colors.onPrimary} />
+        ) : (
+          <Text style={styles.ctaText}>
+            {paywallConfirmLabel({
+              paymentsEnabled: PAYMENTS_ENABLED,
+              priceInr: FIX_PLAN_PRICE_INR,
+            })}
+          </Text>
+        )}
       </Pressable>
+
+      {PAYMENTS_ENABLED && user?.id ? (
+        <Pressable
+          onPress={() => void handleRestore()}
+          disabled={busy !== null}
+          accessibilityRole="button"
+          style={styles.restore}
+          hitSlop={6}
+        >
+          <Text style={styles.restoreText}>
+            {busy === "restore" ? "Checking…" : "Already paid? Restore"}
+          </Text>
+        </Pressable>
+      ) : null}
 
       <Text style={styles.foot}>Educational only.</Text>
     </BottomSheet>
@@ -157,6 +259,17 @@ const styles = themedStyles(() => ({
     justifyContent: "center",
   },
   ctaText: { fontSize: 15, fontWeight: "600", color: Colors.onPrimary },
+  error: {
+    marginTop: 16,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: Colors.errorText,
+    backgroundColor: Colors.errorLight,
+  },
+  restore: { marginTop: 12, alignItems: "center", paddingVertical: 6 },
+  restoreText: { fontSize: 14, fontWeight: "600", color: Colors.primary },
   foot: {
     marginTop: 12,
     textAlign: "center",
