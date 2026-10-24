@@ -182,6 +182,11 @@ export function combineHouseholdProfiles(
     if (me.lifeStage !== "kids" && them.lifeStage === "kids")
       out.lifeStage = "kids";
   }
+  // School fees as entered follow whichever entry was counted.
+  if (num(them.kidsSchoolFees) > num(me.kidsSchoolFees)) {
+    out.kidsSchoolFeesInput = them.kidsSchoolFeesInput;
+    out.kidsSchoolFeesFrequency = them.kidsSchoolFeesFrequency;
+  }
   // Per-person totals are re-derived from these when present.
   delete out.smartBudget;
   return out as unknown as FinancialProfile;
