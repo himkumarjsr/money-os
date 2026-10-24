@@ -19,6 +19,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { hydrateSyncKv } from "@/lib/syncKv";
 import { pingDailyLogin } from "@/lib/dailyLogin";
+import { resumePendingFixPlanPurchases } from "@/lib/fixPlanBilling";
 import { PushNotificationsManager } from "@/components/PushNotificationsManager";
 import { MorningTipPopup } from "@/components/MorningTipPopup";
 import { IntroTourVideo } from "@/components/IntroTourVideo";
@@ -103,6 +104,12 @@ export default function RootLayout() {
   // Login streak and daily points, once per app session per user.
   useEffect(() => {
     pingDailyLogin(userId);
+  }, [userId]);
+
+  // A Fix Plan purchase the app closed before reporting (or a pending one
+  // that has since cleared) unlocks on the next launch.
+  useEffect(() => {
+    if (userId) void resumePendingFixPlanPurchases();
   }, [userId]);
 
   useEffect(() => {

@@ -104,6 +104,7 @@
       ],
       "expo-sharing",
       "expo-apple-authentication",
+      "expo-iap",
       [
         "expo-alternate-app-icons",
         [

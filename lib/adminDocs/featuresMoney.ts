@@ -625,6 +625,33 @@ export const paymentsSection: DocSection = {
           "`payments.razorpay_payment_id` is unique, so replaying the same payment is a no-op.",
       },
     },
+    {
+      kind: "api",
+      api: {
+        method: "POST",
+        path: "/api/billing/store-purchase",
+        summary:
+          "Fix Plan bought in the mobile app (₹199, one year): confirm the Google Play / App Store purchase with the store, then record it (migration 061). The app finishes the store transaction only after this succeeds.",
+        auth: "`Authorization: Bearer <supabase access token>`",
+        request: `{ "platform": "android", "productId": "fix_plan_1y", "purchaseToken": "…" }  or  { "platform": "ios", "productId": "fix_plan_1y", "transactionId": "2000…" }`,
+        response: `{ "ok": true, "expiresAt": "2027-10-24T…" }`,
+        errors: [
+          [
+            "400",
+            "Invalid JSON / unknown product or platform / store doesn't know the purchase",
+          ],
+          ["401", "Unauthorized"],
+          ["402", "Purchase cancelled or refunded"],
+          ["403", "Purchase belongs to a different account"],
+          ["409", "Payment still pending"],
+          ["500", "Could not save the purchase"],
+          ["502", "Store lookup failed"],
+          ["503", "Store credentials not configured"],
+        ],
+        notes:
+          "One row per store transaction, so a replay never adds another year. Buying again while active adds a year on top. Access is read with the `fix_plan_access()` RPC: purchase, Pro, `users.is_admin`, or the super admin's `fixplan_free` permission.",
+      },
+    },
   ],
 };
 
