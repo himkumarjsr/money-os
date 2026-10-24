@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ADMIN_DOC_SECTIONS, adminDocNav, getAdminDocSection } from "./index";
+import { allPlanChecklistIds } from "./planChecklist";
 
 describe("admin docs", () => {
   it("has unique, URL-safe section ids", () => {
@@ -55,5 +56,13 @@ describe("admin docs", () => {
     const nav = adminDocNav();
     expect(nav[0].group).toBe("Start here");
     expect(nav.flatMap((g) => g.items).length).toBe(ADMIN_DOC_SECTIONS.length);
+  });
+
+  it("gives every plan checklist item a unique id the database accepts", () => {
+    const ids = allPlanChecklistIds();
+    expect(ids.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
+    // Same pattern as the CHECK in migration 060.
+    for (const id of ids) expect(id).toMatch(/^[a-z0-9-]{1,64}$/);
   });
 });

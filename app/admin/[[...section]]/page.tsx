@@ -5,14 +5,19 @@ import { AdminAccessManager } from "@/components/admin/AdminAccessManager";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AnalyseLogsViewer } from "@/components/admin/AnalyseLogsViewer";
 import { DocContent } from "@/components/admin/DocContent";
+import { PlanChecklist } from "@/components/admin/PlanChecklist";
 import { WebOnlyGate } from "@/components/admin/WebOnlyGate";
 import {
   getConsoleAccess,
+  isConsoleSuperAdmin,
   listAnalyseLogs,
   listConsoleAdmins,
+  listPlanTicks,
   type AnalyseLogRow,
   type ConsoleAdmin,
+  type PlanTick,
 } from "@/lib/adminConsole";
+import { PLAN_CHECKLIST } from "@/lib/adminDocs/planChecklist";
 import { DEFAULT_ADMIN_SECTION, getAdminDocSection } from "@/lib/adminDocs";
 
 /**
@@ -86,6 +91,23 @@ export default async function AdminPage(props: PageProps) {
       logsError = e instanceof Error ? e.message : String(e);
     }
   }
+  let ticks: PlanTick[] = [];
+  let canTick = false;
+  let ticksError: string | null = null;
+  if (doc.id === "plan-checklist") {
+    try {
+      [ticks, canTick] = await Promise.all([
+        listPlanTicks(supabase),
+        isConsoleSuperAdmin(supabase),
+      ]);
+    } catch (e) {
+      ticksError =
+        e instanceof Error && /admin_console_plan_ticks/.test(e.message)
+          ? "Run migration 060 in Supabase to enable ticks."
+          : "Could not load ticks. Please reload.";
+      console.error("plan ticks failed:", e);
+    }
+  }
   const email = (user.email ?? "").toLowerCase();
 
   return (
@@ -100,6 +122,13 @@ export default async function AdminPage(props: PageProps) {
               email={logEmail}
               onlyChecks={onlyChecks}
               error={logsError}
+            />
+          ) : doc.id === "plan-checklist" ? (
+            <PlanChecklist
+              docs={PLAN_CHECKLIST}
+              initialTicks={ticks}
+              canEdit={canTick}
+              error={ticksError}
             />
           ) : null}
         </DocContent>

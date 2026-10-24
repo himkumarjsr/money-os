@@ -103,3 +103,35 @@ export async function listAnalyseLogs(
     payload: r.payload ?? {},
   }));
 }
+
+export type PlanTick = {
+  itemId: string;
+  doneBy: string;
+  doneAt: string;
+};
+
+/** Whether the caller may tick the plan checklist (migration 060). */
+export async function isConsoleSuperAdmin(
+  supabase: SupabaseServer,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("admin_console_is_super_admin");
+  if (error) {
+    console.error("admin_console_is_super_admin failed:", error.message);
+    return false;
+  }
+  return data === true;
+}
+
+export async function listPlanTicks(
+  supabase: SupabaseServer,
+): Promise<PlanTick[]> {
+  const { data, error } = await supabase.rpc("admin_console_plan_ticks");
+  if (error) throw new Error(error.message);
+  return (
+    (data ?? []) as Array<{
+      item_id: string;
+      done_by: string;
+      done_at: string;
+    }>
+  ).map((r) => ({ itemId: r.item_id, doneBy: r.done_by, doneAt: r.done_at }));
+}
