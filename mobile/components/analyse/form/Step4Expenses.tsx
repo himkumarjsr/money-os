@@ -94,10 +94,19 @@ export function Step4Expenses({ live }: Pick<StepProps, "live">) {
         <SectionTitle>Family</SectionTitle>
         {lifeStage === "kids" ? (
           <>
-            <MoneyField
-              name="kidsSchoolFees"
+            <PremiumField
               label="Kids school fees and tuition"
-            />
+              amountError={errors.kidsSchoolFeesInput?.message}
+              frequency={watch("kidsSchoolFeesFrequency") ?? "monthly"}
+              onFrequencyChange={(v) => setValue("kidsSchoolFeesFrequency", v)}
+            >
+              <MoneyField
+                name="kidsSchoolFeesInput"
+                label="Kids school fees and tuition"
+                helper="(school + tuition) · Enter what you pay a month or a year"
+                hideLabel
+              />
+            </PremiumField>
             <MoneyField
               name="kidsActivities"
               label="Kids activities - sports, hobby classes"

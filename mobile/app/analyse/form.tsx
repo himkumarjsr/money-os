@@ -339,6 +339,8 @@ export default function AnalyseFormScreen() {
       setValue("kidsAges", []);
       setValue("kidsGenders", []);
       setValue("kidsSchoolFees", 0);
+      setValue("kidsSchoolFeesInput", 0);
+      setValue("kidsSchoolFeesFrequency", "monthly");
       setValue("kidsActivities", 0);
       setValue("ssy", 0);
     }
