@@ -319,7 +319,7 @@ export default function PrivacyPage() {
         <p>
           As required under DPDP Act 2023 and IT Act 2000:
           <br />
-          Name: Himanshu Kumar Gupta
+          Name: Grievance Officer, Finkoin
           <br />
           Email:{" "}
           <a href="mailto:grievance@finkoin.com" style={{ color: "#534AB7" }}>

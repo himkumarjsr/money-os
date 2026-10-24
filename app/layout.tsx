@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     template: "%s | Finkoin",
   },
   applicationName: "Finkoin",
-  authors: [{ name: "Himanshu Kumar Gupta", url: siteUrl }],
+  authors: [{ name: "Finkoin Team", url: siteUrl }],
   creator: "Finkoin",
   publisher: "Finkoin",
   description: SEO_CONFIG.defaultDescription,
@@ -271,19 +271,6 @@ export default function RootLayout({
                   foundingLocation: "India",
                   areaServed: "IN",
                   email: "hello@finkoin.com",
-                  founder: {
-                    "@type": "Person",
-                    "@id": "https://www.finkoin.com/about#founder",
-                    name: "Himanshu Kumar Gupta",
-                    jobTitle: "Founder",
-                    worksFor: {
-                      "@id": "https://www.finkoin.com/#organization",
-                    },
-                    image:
-                      "https://www.finkoin.com/assets/founder-himanshu-kumar.png",
-                    url: "https://www.finkoin.com/about",
-                    sameAs: ["https://www.linkedin.com/in/himanshu-kr-gupta/"],
-                  },
                   sameAs: [
                     "https://twitter.com/finkoin",
                     "https://linkedin.com/company/finkoin",

@@ -58,7 +58,7 @@ const blogJsonLd = {
     url: `${SITE_URL}/blog/${a.slug}`,
     datePublished: a.publishedAt,
     dateModified: a.updatedAt ?? a.publishedAt,
-    author: { "@type": "Person", name: "Himanshu Kumar Gupta" },
+    author: { "@type": "Organization", name: "Finkoin Team" },
   })),
 };
 
