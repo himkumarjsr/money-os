@@ -46,6 +46,7 @@ export type AppIconName =
   | "check"
   | "checkCircle"
   | "close"
+  | "search"
   | "heart"
   | "star"
   | "bank"
@@ -245,6 +246,12 @@ const paths: Record<AppIconName, ReactNode> = {
     </>
   ),
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M16 16l4.5 4.5" />
+    </>
+  ),
   heart: (
     <path d="M12 20s-7-4.5-7-9.5A3.7 3.7 0 0 1 12 7a3.7 3.7 0 0 1 7 3.5C19 15.5 12 20 12 20z" />
   ),
