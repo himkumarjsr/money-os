@@ -131,6 +131,23 @@ export async function listAnalyseLogs(
   }));
 }
 
+/**
+ * Permanently delete analyse logs by id (migration 063). Super admin only;
+ * the database raises 42501 for anyone else. Returns how many rows went.
+ */
+export async function deleteAnalyseLogs(
+  supabase: SupabaseServer,
+  ids: number[],
+): Promise<number> {
+  const { data, error } = await supabase.rpc(
+    "admin_console_delete_analyse_logs",
+    { p_ids: ids },
+  );
+  if (error)
+    throw Object.assign(new Error(error.message), { code: error.code });
+  return typeof data === "number" ? data : 0;
+}
+
 export type PlanTick = {
   itemId: string;
   doneBy: string;

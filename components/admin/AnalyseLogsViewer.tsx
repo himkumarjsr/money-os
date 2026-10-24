@@ -5,11 +5,20 @@ import {
   type SheetRow,
   type SheetSection,
 } from "@/lib/analyseLogSheet";
+import {
+  AnalyseLogDeleteButton,
+  AnalyseLogRowGate,
+  AnalyseLogSelect,
+  AnalyseLogsBulkBar,
+  AnalyseLogsDeleteProvider,
+} from "@/components/admin/AnalyseLogsDelete";
 
 /**
  * Server-rendered list of analyse logs (migration 057). Filters are a plain
- * GET form, so the page needs no client JS. Click a row for its calculation
- * sheet: what the user entered, then every number built from it.
+ * GET form, and nothing is read from the database until the admin presses
+ * Load logs. Click a row for its calculation sheet: what the user entered,
+ * then every number built from it. The super admin can also delete rows for
+ * good, one at a time or in bulk (migration 063).
  */
 
 const RAW: Array<[string, (p: Record<string, unknown>) => unknown]> = [
@@ -138,11 +147,16 @@ export function AnalyseLogsViewer({
   logs,
   email,
   onlyChecks,
+  loaded,
+  canDelete,
   error,
 }: {
   logs: AnalyseLogRow[];
   email: string;
   onlyChecks: boolean;
+  /** False until the admin asks for the logs, so the page skips the query. */
+  loaded: boolean;
+  canDelete: boolean;
   error?: string | null;
 }) {
   return (
@@ -151,6 +165,7 @@ export function AnalyseLogsViewer({
         method="get"
         className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E5E4DF] bg-[#FAFAF8] p-3"
       >
+        <input type="hidden" name="load" value="1" />
         <input
           type="email"
           name="email"
@@ -171,11 +186,16 @@ export function AnalyseLogsViewer({
           type="submit"
           className="rounded-lg bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white"
         >
-          Show
+          {loaded ? "Reload logs" : "Load logs"}
         </button>
       </form>
 
-      {error ? (
+      {!loaded ? (
+        <p className="text-sm text-[#5F5E5A]">
+          Logs are only read from the database when you ask. Press Load logs to
+          fetch the latest 50.
+        </p>
+      ) : error ? (
         <p className="rounded-xl border border-[#F0C9C9] bg-[#FDF3F3] p-3 text-sm text-[#A32D2D]">
           Couldn&apos;t load logs: {error}. If the table is missing, run
           migration 057 in the Supabase SQL editor.
@@ -183,70 +203,77 @@ export function AnalyseLogsViewer({
       ) : logs.length === 0 ? (
         <p className="text-sm text-[#5F5E5A]">No logs yet.</p>
       ) : (
-        <ul className="space-y-3">
-          {logs.map((log) => (
-            <li
-              key={log.id}
-              className="rounded-xl border border-[#E5E4DF] bg-[#FFFFFF]"
-            >
-              <details>
-                <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-sm">
-                  <span className="font-semibold text-[#111110]">
-                    {log.email ?? "unknown user"}
-                  </span>
-                  <span className="text-[#5F5E5A]">
-                    {formatTime(log.createdAt)}
-                  </span>
-                  <span className="text-[#5F5E5A]">
-                    {headline(log.payload)}
-                  </span>
-                  <span className="rounded bg-[#F1EFE8] px-2 py-0.5 text-xs text-[#5F5E5A]">
-                    {log.source === "form_submit"
-                      ? "Form submit"
-                      : "Profile edit"}
-                    {log.platform ? ` · ${log.platform}` : ""}
-                    {log.appVersion ? ` · v${log.appVersion}` : ""}
-                  </span>
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs font-semibold ${
-                      log.checkCount > 0
-                        ? "bg-[#FCEBEB] text-[#A32D2D]"
-                        : "bg-[#EAF3DE] text-[#3B6D11]"
-                    }`}
-                  >
-                    {log.checkCount > 0
-                      ? `${log.checkCount} check${log.checkCount === 1 ? "" : "s"}`
-                      : "Numbers agree"}
-                  </span>
-                </summary>
-                <div className="space-y-3 border-t border-[#E5E4DF] px-4 py-3">
-                  {buildAnalyseLogSheet(log.payload).map((section) => (
-                    <SheetView key={section.title} section={section} />
-                  ))}
-                  <details>
-                    <summary className="cursor-pointer text-sm font-medium text-[#5F5E5A]">
-                      Raw data
+        <AnalyseLogsDeleteProvider
+          canDelete={canDelete}
+          ids={logs.map((l) => l.id)}
+        >
+          <AnalyseLogsBulkBar />
+          <ul className="space-y-3">
+            {logs.map((log) => (
+              <AnalyseLogRowGate key={log.id} id={log.id}>
+                <li className="flex items-start gap-2 rounded-xl border border-[#E5E4DF] bg-[#FFFFFF] pl-3 pr-2">
+                  <AnalyseLogSelect id={log.id} />
+                  <details className="min-w-0 flex-1">
+                    <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 px-1 py-3 text-sm">
+                      <span className="font-semibold text-[#111110]">
+                        {log.email ?? "unknown user"}
+                      </span>
+                      <span className="text-[#5F5E5A]">
+                        {formatTime(log.createdAt)}
+                      </span>
+                      <span className="text-[#5F5E5A]">
+                        {headline(log.payload)}
+                      </span>
+                      <span className="rounded bg-[#F1EFE8] px-2 py-0.5 text-xs text-[#5F5E5A]">
+                        {log.source === "form_submit"
+                          ? "Form submit"
+                          : "Profile edit"}
+                        {log.platform ? ` · ${log.platform}` : ""}
+                        {log.appVersion ? ` · v${log.appVersion}` : ""}
+                      </span>
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                          log.checkCount > 0
+                            ? "bg-[#FCEBEB] text-[#A32D2D]"
+                            : "bg-[#EAF3DE] text-[#3B6D11]"
+                        }`}
+                      >
+                        {log.checkCount > 0
+                          ? `${log.checkCount} check${log.checkCount === 1 ? "" : "s"}`
+                          : "Numbers agree"}
+                      </span>
                     </summary>
-                    {RAW.map(([title, pick]) => {
-                      const value = pick(log.payload);
-                      if (value == null) return null;
-                      return (
-                        <details key={title} className="mt-2">
-                          <summary className="cursor-pointer text-sm text-[#111110]">
-                            {title}
-                          </summary>
-                          <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-[#F7F6F2] p-3 text-xs leading-relaxed text-[#2C2C2A]">
-                            {JSON.stringify(value, null, 2)}
-                          </pre>
-                        </details>
-                      );
-                    })}
+                    <div className="space-y-3 border-t border-[#E5E4DF] px-1 py-3">
+                      {buildAnalyseLogSheet(log.payload).map((section) => (
+                        <SheetView key={section.title} section={section} />
+                      ))}
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium text-[#5F5E5A]">
+                          Raw data
+                        </summary>
+                        {RAW.map(([title, pick]) => {
+                          const value = pick(log.payload);
+                          if (value == null) return null;
+                          return (
+                            <details key={title} className="mt-2">
+                              <summary className="cursor-pointer text-sm text-[#111110]">
+                                {title}
+                              </summary>
+                              <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-[#F7F6F2] p-3 text-xs leading-relaxed text-[#2C2C2A]">
+                                {JSON.stringify(value, null, 2)}
+                              </pre>
+                            </details>
+                          );
+                        })}
+                      </details>
+                    </div>
                   </details>
-                </div>
-              </details>
-            </li>
-          ))}
-        </ul>
+                  <AnalyseLogDeleteButton id={log.id} />
+                </li>
+              </AnalyseLogRowGate>
+            ))}
+          </ul>
+        </AnalyseLogsDeleteProvider>
       )}
     </div>
   );
