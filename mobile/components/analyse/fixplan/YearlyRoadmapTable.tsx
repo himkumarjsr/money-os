@@ -17,9 +17,12 @@ const W = { year: 60, money: 120, events: 260 };
 export function YearlyRoadmapTable({
   profile,
   items,
+  retirementOnly = false,
 }: {
   profile: FinancialProfile;
   items: GoalFundingItem[] | undefined;
+  /** Report: just the "Can you retire?" answer, without the fix. */
+  retirementOnly?: boolean;
 }) {
   const rows = useMemo(
     () => buildYearlyRoadmap(profile, items ?? []),
@@ -41,74 +44,78 @@ export function YearlyRoadmapTable({
 
   return (
     <>
-      <View style={shared.card}>
-        <Text style={shared.cardTitle}>Year by year to {last}</Text>
-        <Text style={styles.hint}>
-          What to invest each month, what your money grows to, and what happens
-          each year until your last goal. Goal money
-          {showPf ? " + EPF / PPF / NPS" : ""}
-          {showSavings ? " + other savings" : ""}
-          {showLoans ? " − loans left" : ""} = net worth (home and car not
-          counted). When a loan ends or a goal is paid for, its EMI or SIP keeps
-          going into your next goal. Today&apos;s rupees; the SIP rises with
-          your salary.
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
-          style={styles.scroll}
-          contentContainerStyle={styles.table}
-        >
-          <View>
-            <View style={[styles.tr, styles.thead]}>
-              <Text style={[styles.th, { width: W.year }]}>Year</Text>
-              <Text style={head}>Invest / month</Text>
-              <Text style={head}>Goal money</Text>
-              {showPf ? <Text style={head}>EPF / PPF / NPS</Text> : null}
-              {showSavings ? <Text style={head}>Other savings</Text> : null}
-              {showLoans ? <Text style={head}>Loans left</Text> : null}
-              <Text style={head}>Net worth</Text>
-              <Text style={[styles.th, { width: W.events }]}>What happens</Text>
-            </View>
-            {shown.map((r) => (
-              <View key={r.year} style={[styles.tr, styles.trBody]}>
-                <Text style={[styles.td, styles.tdYear, { width: W.year }]}>
-                  {r.year}
-                </Text>
-                <Text style={num}>₹{inr(r.monthly)}</Text>
-                <Text style={num}>₹{inr(r.worth)}</Text>
-                {showPf ? <Text style={num}>₹{inr(r.pf)}</Text> : null}
-                {showSavings ? (
-                  <Text style={num}>₹{inr(r.savings)}</Text>
-                ) : null}
-                {showLoans ? (
-                  <Text style={[...num, styles.tdLoan]}>
-                    {r.loansLeft > 0 ? `−₹${inr(r.loansLeft)}` : "₹0"}
-                  </Text>
-                ) : null}
-                <Text style={[...num, styles.tdYear]}>
-                  {r.netWorth < 0 ? "−" : ""}₹{inr(Math.abs(r.netWorth))}
-                </Text>
-                <Text style={[styles.td, styles.tdNote, { width: W.events }]}>
-                  {r.events.length > 0 ? r.events.join(" · ") : "Keep going"}
+      {retirementOnly ? null : (
+        <View style={shared.card}>
+          <Text style={shared.cardTitle}>Year by year to {last}</Text>
+          <Text style={styles.hint}>
+            What to invest each month, what your money grows to, and what
+            happens each year until your last goal. Goal money
+            {showPf ? " + EPF / PPF / NPS" : ""}
+            {showSavings ? " + other savings" : ""}
+            {showLoans ? " − loans left" : ""} = net worth (home and car not
+            counted). When a loan ends or a goal is paid for, its EMI or SIP
+            keeps going into your next goal. Today&apos;s rupees; the SIP rises
+            with your salary.
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator
+            style={styles.scroll}
+            contentContainerStyle={styles.table}
+          >
+            <View>
+              <View style={[styles.tr, styles.thead]}>
+                <Text style={[styles.th, { width: W.year }]}>Year</Text>
+                <Text style={head}>Invest / month</Text>
+                <Text style={head}>Goal money</Text>
+                {showPf ? <Text style={head}>EPF / PPF / NPS</Text> : null}
+                {showSavings ? <Text style={head}>Other savings</Text> : null}
+                {showLoans ? <Text style={head}>Loans left</Text> : null}
+                <Text style={head}>Net worth</Text>
+                <Text style={[styles.th, { width: W.events }]}>
+                  What happens
                 </Text>
               </View>
-            ))}
-          </View>
-        </ScrollView>
-        {rows.length > PREVIEW_ROWS ? (
-          <Pressable
-            onPress={() => setAll((v) => !v)}
-            style={styles.more}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: all }}
-          >
-            <Text style={styles.moreText}>
-              {all ? "Show fewer years ↑" : `Show all ${rows.length} years ↓`}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
+              {shown.map((r) => (
+                <View key={r.year} style={[styles.tr, styles.trBody]}>
+                  <Text style={[styles.td, styles.tdYear, { width: W.year }]}>
+                    {r.year}
+                  </Text>
+                  <Text style={num}>₹{inr(r.monthly)}</Text>
+                  <Text style={num}>₹{inr(r.worth)}</Text>
+                  {showPf ? <Text style={num}>₹{inr(r.pf)}</Text> : null}
+                  {showSavings ? (
+                    <Text style={num}>₹{inr(r.savings)}</Text>
+                  ) : null}
+                  {showLoans ? (
+                    <Text style={[...num, styles.tdLoan]}>
+                      {r.loansLeft > 0 ? `−₹${inr(r.loansLeft)}` : "₹0"}
+                    </Text>
+                  ) : null}
+                  <Text style={[...num, styles.tdYear]}>
+                    {r.netWorth < 0 ? "−" : ""}₹{inr(Math.abs(r.netWorth))}
+                  </Text>
+                  <Text style={[styles.td, styles.tdNote, { width: W.events }]}>
+                    {r.events.length > 0 ? r.events.join(" · ") : "Keep going"}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+          {rows.length > PREVIEW_ROWS ? (
+            <Pressable
+              onPress={() => setAll((v) => !v)}
+              style={styles.more}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: all }}
+            >
+              <Text style={styles.moreText}>
+                {all ? "Show fewer years ↑" : `Show all ${rows.length} years ↓`}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
       {retire ? (
         <View
           style={[
@@ -140,7 +147,9 @@ export function YearlyRoadmapTable({
               </View>
             ))}
           </View>
-          <Text style={styles.retireLine}>{retire.line}</Text>
+          <Text style={styles.retireLine}>
+            {retirementOnly ? retire.statusLine : retire.line}
+          </Text>
         </View>
       ) : null}
     </>

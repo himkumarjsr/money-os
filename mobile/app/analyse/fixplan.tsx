@@ -28,6 +28,9 @@ import { AnalyseErrorBoundary } from "@/components/analyse/AnalyseErrorBoundary"
 import { AppIcon } from "@/components/ui/AppIcon";
 import { useFixPlan } from "@/components/analyse/fixplan/useFixPlan";
 import { FixPlanHero } from "@/components/analyse/fixplan/FixPlanHero";
+import { GoalsSection } from "@/components/analyse/result/GoalsSection";
+import { MoneyScoreCard } from "@/components/analyse/result/MoneyScoreCard";
+import { PremiumRdCard } from "@/components/analyse/result/PremiumRdCard";
 import { SurplusBreakdown } from "@/components/analyse/fixplan/SurplusBreakdown";
 import { PriorityCard } from "@/components/analyse/fixplan/PriorityCard";
 import { SurplusAllocationSummary } from "@/components/analyse/fixplan/SurplusAllocationSummary";
@@ -250,6 +253,10 @@ function FixPlanScreen() {
 
         <PlanReviewCard profile={profile} userId={user?.id} />
 
+        {result?.moneyScore?.topActions?.length ? (
+          <MoneyScoreCard score={result.moneyScore} />
+        ) : null}
+
         {pp?.surplusBreakdown ? (
           <SurplusBreakdown breakdown={pp.surplusBreakdown} />
         ) : null}
@@ -282,6 +289,16 @@ function FixPlanScreen() {
             items={pp?.goalFunding?.items}
           />
         ) : null}
+
+        {profile ? (
+          <GoalsSection
+            profile={profile}
+            userId={user?.id}
+            funding={pp?.goalFunding?.items}
+          />
+        ) : null}
+
+        {profile ? <PremiumRdCard profile={profile} userId={user?.id} /> : null}
 
         {pp?.debts?.length > 0 ? (
           <DebtStrategy debts={pp.debts} debtStrategy={expl?.debtStrategy} />

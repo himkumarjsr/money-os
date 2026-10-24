@@ -26,6 +26,9 @@ export function FixPlanHero({
   return (
     <View style={styles.hero}>
       <Text style={styles.eyebrow}>FINKOIN AI</Text>
+      <Text style={styles.title} accessibilityRole="header">
+        Your wealth builder plan
+      </Text>
       <Text style={styles.greeting}>
         {attentionCount > 0
           ? `Based on your financial profile, we identified ${attentionCount} ${attentionCount === 1 ? "area" : "areas"} that need attention.`
@@ -65,6 +68,12 @@ const styles = themedStyles(() => ({
     fontSize: 12,
     letterSpacing: 0.6,
     color: onPrimaryAlpha(0.8),
+  },
+  title: {
+    marginTop: 4,
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.onPrimary,
   },
   greeting: {
     marginTop: Spacing.sm,

@@ -29,6 +29,7 @@ export function GoalStrategiesList({
   reach,
   busy,
   onSetHomePrice,
+  statusOnly = false,
 }: {
   goal: DetectedGoal;
   plan?: GoalStrategyPlan;
@@ -36,13 +37,16 @@ export function GoalStrategiesList({
   reach?: GoalReach;
   busy?: boolean;
   onSetHomePrice?: (price: number) => void;
+  /** Report: where the goal stands, no fixes or smart ways. */
+  statusOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
   const [openYear, setOpenYear] = useState<number | null>(null);
   const unclear = goal.home?.unclearAmount && onSetHomePrice;
   const count = plan?.strategies.length ?? 0;
-  if (!unclear && !plan?.summary && count === 0 && !reach) return null;
+  if (!unclear && (statusOnly || (!plan?.summary && count === 0)) && !reach)
+    return null;
 
   return (
     <View style={styles.wrap}>
@@ -90,7 +94,7 @@ export function GoalStrategiesList({
               { color: readable(reach.onTime ? "#0F6E56" : "#854F0B") },
             ]}
           >
-            {goalReachLine(reach, goal)}
+            {goalReachLine(reach, goal, { statusOnly })}
           </Text>
           {reach.rows.length > 0 ? (
             <Pressable
@@ -168,10 +172,10 @@ export function GoalStrategiesList({
           ) : null}
         </View>
       ) : null}
-      {plan?.summary ? (
+      {plan?.summary && !statusOnly ? (
         <Text style={styles.summary}>{plan.summary}</Text>
       ) : null}
-      {count > 0 ? (
+      {count > 0 && !statusOnly ? (
         <>
           <Pressable
             onPress={() => setOpen((v) => !v)}
