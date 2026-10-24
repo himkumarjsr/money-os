@@ -26,6 +26,7 @@ export const ACCOUNT_NAV = {
   },
   leaderboard: { icon: "trophy", label: "Leaderboard", href: "/leaderboard" },
   rewards: { icon: "gift", label: "Rewards", href: "/rewards" },
+  household: { icon: "users", label: "Link your partner", href: "/household" },
   refer: { icon: "users", label: "Refer & Earn", href: "/refer" },
   settings: { icon: "settings", label: "Settings", href: "/settings" },
 } as const satisfies Record<string, AccountNavItem>;
@@ -43,6 +44,7 @@ export const ACCOUNT_MENU_ITEMS: readonly AccountNavItem[] = [
   ACCOUNT_NAV.investments,
   ACCOUNT_NAV.leaderboard,
   ACCOUNT_NAV.rewards,
+  ACCOUNT_NAV.household,
   ACCOUNT_NAV.refer,
   ACCOUNT_NAV.settings,
 ];
@@ -71,7 +73,7 @@ export const ACCOUNT_NAV_GROUPS: readonly {
   },
   {
     heading: "Account",
-    items: [ACCOUNT_NAV.profile, ACCOUNT_NAV.settings],
+    items: [ACCOUNT_NAV.profile, ACCOUNT_NAV.household, ACCOUNT_NAV.settings],
   },
 ];
 
