@@ -2,10 +2,16 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { adminDocNav } from "@/lib/adminDocs";
 
-function NavLinks({ active }: { active: string }) {
+function NavLinks({
+  active,
+  sectionIds,
+}: {
+  active: string;
+  sectionIds: readonly string[];
+}) {
   return (
     <nav className="space-y-5">
-      {adminDocNav().map(({ group, items }) => (
+      {adminDocNav((id) => sectionIds.includes(id)).map(({ group, items }) => (
         <div key={group}>
           <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#9B9A94]">
             {group}
@@ -40,11 +46,14 @@ export function AdminShell({
   active,
   activeTitle,
   email,
+  sectionIds,
   children,
 }: {
   active: string;
   activeTitle: string;
   email: string;
+  /** Sections this admin may open (migration 062); others aren't listed. */
+  sectionIds: readonly string[];
   children: ReactNode;
 }) {
   return (
@@ -70,14 +79,14 @@ export function AdminShell({
             Sections · <span className="text-[#534AB7]">{activeTitle}</span>
           </summary>
           <div className="border-t border-[#F0EFF8] p-3">
-            <NavLinks active={active} />
+            <NavLinks active={active} sectionIds={sectionIds} />
           </div>
         </details>
 
         <div className="flex gap-6">
           <aside className="hidden w-64 shrink-0 lg:block">
             <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border border-[#E8E6F0] bg-white p-3">
-              <NavLinks active={active} />
+              <NavLinks active={active} sectionIds={sectionIds} />
             </div>
           </aside>
           <main className="min-w-0 flex-1 rounded-2xl border border-[#E8E6F0] bg-white p-4 md:p-8">

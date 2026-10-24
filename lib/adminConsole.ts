@@ -13,6 +13,10 @@ export type ConsoleAdmin = {
   invitedBy: string;
   createdAt: string;
   hasAccount: boolean;
+  /** Super admins always have every permission (migration 060). */
+  isSuper: boolean;
+  /** Keys the super admin granted (migration 062). */
+  perms: string[];
 };
 
 type SupabaseServer = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -40,10 +44,11 @@ export async function getConsoleAccess(): Promise<{
   }
 }
 
+/** Admins with their permissions. Super admin only (migration 062). */
 export async function listConsoleAdmins(
   supabase: SupabaseServer,
 ): Promise<ConsoleAdmin[]> {
-  const { data, error } = await supabase.rpc("admin_console_list");
+  const { data, error } = await supabase.rpc("admin_console_list_access");
   if (error) throw new Error(error.message);
   return (
     (data ?? []) as Array<{
@@ -51,13 +56,35 @@ export async function listConsoleAdmins(
       invited_by: string;
       created_at: string;
       has_account: boolean;
+      is_super: boolean;
+      perms: string[] | null;
     }>
   ).map((r) => ({
     email: r.email,
     invitedBy: r.invited_by,
     createdAt: r.created_at,
     hasAccount: Boolean(r.has_account),
+    isSuper: Boolean(r.is_super),
+    perms: Array.isArray(r.perms) ? r.perms : [],
   }));
+}
+
+/**
+ * The caller's own permission keys (["*"] for the super admin). If the call
+ * fails (say migration 062 hasn't run yet) only the super admin keeps the
+ * whole console; everyone else sees nothing until it works.
+ */
+export async function getMyConsolePermissions(
+  supabase: SupabaseServer,
+): Promise<string[]> {
+  const { data, error } = await supabase.rpc("admin_console_my_permissions");
+  if (error) {
+    console.error("admin_console_my_permissions failed:", error.message);
+    return (await isConsoleSuperAdmin(supabase)) ? ["*"] : [];
+  }
+  return Array.isArray(data)
+    ? data.filter((p): p is string => typeof p === "string")
+    : [];
 }
 
 export type AnalyseLogRow = {
