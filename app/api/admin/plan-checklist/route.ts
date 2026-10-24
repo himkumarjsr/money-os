@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   getConsoleAccess,
+  getMyConsolePermissions,
   isConsoleSuperAdmin,
   listPlanTicks,
 } from "@/lib/adminConsole";
 import { allPlanChecklistIds } from "@/lib/adminDocs/planChecklist";
+import { hasAdminPermission, sectionKey } from "@/lib/adminPermissions";
 import { rateLimit, tooManyRequests, unauthorized } from "@/lib/apiGuard";
 
 /**
@@ -32,6 +34,10 @@ async function requireAdmin() {
   const access = await getConsoleAccess();
   if (!access.user) return { response: unauthorized() } as const;
   if (!access.isAdmin || !access.supabase)
+    return { response: notFound() } as const;
+  // Only admins given this section (migration 062).
+  const perms = await getMyConsolePermissions(access.supabase);
+  if (!hasAdminPermission(perms, sectionKey("plan-checklist")))
     return { response: notFound() } as const;
   return { access } as const;
 }

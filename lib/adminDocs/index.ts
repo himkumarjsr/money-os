@@ -76,7 +76,8 @@ export function getAdminDocSection(id: string): DocSection | undefined {
   return ADMIN_DOC_SECTIONS.find((s) => s.id === id);
 }
 
-export function adminDocNav(): Array<{
+/** Sidebar groups, limited to the sections `canSee` allows when given. */
+export function adminDocNav(canSee?: (id: string) => boolean): Array<{
   group: DocGroup;
   items: Array<Pick<DocSection, "id" | "title">>;
 }> {
@@ -85,6 +86,7 @@ export function adminDocNav(): Array<{
     items: Array<Pick<DocSection, "id" | "title">>;
   }> = [];
   for (const s of ADMIN_DOC_SECTIONS) {
+    if (canSee && !canSee(s.id)) continue;
     let g = groups.find((x) => x.group === s.group);
     if (!g) {
       g = { group: s.group, items: [] };
