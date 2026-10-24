@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 
 const SERVER_SECRET_PATTERN =
-  /process\.env\.(?:SUPABASE_SERVICE_ROLE_KEY|RAZORPAY_KEY_SECRET|GROQ_API_KEY)\b/;
+  /process\.env\.(?:SUPABASE_SERVICE_ROLE_KEY|RAZORPAY_KEY_SECRET|GROQ_API_KEY|GOOGLE_PLAY_SERVICE_ACCOUNT_JSON|APPLE_IAP_PRIVATE_KEY)\b/;
 
 const SKIP_DIRS = new Set([
   "node_modules",

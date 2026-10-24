@@ -14,7 +14,7 @@ import { useObligationStore } from "@/store/obligationStore";
 import { fetchUserAnalyseSnapshot } from "@/lib/userAnalyseSnapshot";
 import { isValidStoredAnalysis } from "@/lib/analysisSnapshotValidation";
 import { analyseFinances, type AnalysisResult } from "@/lib/financialEngine";
-import { canOpenFixPlanDirectly } from "@/lib/analyseEntitlement";
+import { fetchFixPlanAccess } from "@/lib/fixPlanAccess";
 import { Colors, FontSize, Spacing, themedStyles } from "@/constants/theme";
 import Button from "@/components/ui/Button";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -191,7 +191,7 @@ function AnalyseResultContent() {
     );
   }
 
-  const handleUnlock = () => {
+  const handleUnlock = async () => {
     if (!user) {
       router.push({
         pathname: "/(auth)/login",
@@ -199,7 +199,8 @@ function AnalyseResultContent() {
       });
       return;
     }
-    if (canOpenFixPlanDirectly(user.subscriptionTier)) {
+    const access = await fetchFixPlanAccess(user);
+    if (access.hasAccess) {
       router.push("/analyse/fixplan");
       return;
     }
