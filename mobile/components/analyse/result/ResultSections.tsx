@@ -484,11 +484,10 @@ export function PlanTeaserSection({
 
       <View style={styles.paywallCard}>
         <Text style={styles.paywallTitle}>Your complete financial roadmap</Text>
-        {/* No in-app price until a Play Billing flow exists: Play rejects
-            apps that advertise digital purchases they can't sell in-app. */}
+        {/* Sold in-app via Play Billing / App Store (lib/fixPlanBilling). */}
         <Text style={styles.paywallPrice}>
           {PAYMENTS_ENABLED
-            ? `₹${FIX_PLAN_PRICE_INR} one-time · Yours forever`
+            ? `₹${FIX_PLAN_PRICE_INR} one-time · 1 year of access`
             : "Free during early access"}
         </Text>
         <Text style={styles.paywallFk}>

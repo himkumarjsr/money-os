@@ -28,9 +28,10 @@ export function hasProAccess(
 }
 
 /**
- * Whether paid AI routes refuse free users. Off by default because the mobile
- * app still opens the Fix Plan for free (mobile PAYMENTS_ENABLED = false);
- * set AI_PLAN_REQUIRES_PRO=true once mobile billing is live.
+ * Whether paid AI routes refuse users without Fix Plan access. Off by
+ * default so older app builds (which opened the Fix Plan for free) keep
+ * working; set AI_PLAN_REQUIRES_PRO=true once the store billing build
+ * (Play / App Store, migration 061) is live.
  */
 export function aiPlanRequiresPro(
   env: Record<string, string | undefined> = process.env,

@@ -22,7 +22,7 @@ import {
 } from "@/store/obligationStore";
 import { LoanSyncNotices } from "@/components/analyse/fixplan/LoanSyncNotices";
 import { PlanReviewCard } from "@/components/analyse/fixplan/PlanReviewCard";
-import { canViewFixPlan } from "@/lib/analyseEntitlement";
+import { useFixPlanAccess } from "@/lib/fixPlanAccess";
 import { shareFixPlanPdf } from "@/lib/fixPlanPdf";
 import { AnalyseErrorBoundary } from "@/components/analyse/AnalyseErrorBoundary";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -124,8 +124,11 @@ function FixPlanScreen() {
   const [downloading, setDownloading] = useState(false);
   const [pdfError, setPdfError] = useState("");
 
-  const hasAccess = canViewFixPlan(user?.subscriptionTier);
-  const allowed = hasInitialized && isLoggedIn && hasAccess;
+  // Paid in the app (Play / App Store), Pro, or a tester the super admin
+  // allowed; null while the server answers.
+  const { access } = useFixPlanAccess(user);
+  const hasAccess = access?.hasAccess ?? null;
+  const allowed = hasInitialized && isLoggedIn && hasAccess === true;
 
   useEffect(() => {
     if (!hasInitialized) return;
@@ -136,7 +139,7 @@ function FixPlanScreen() {
       });
       return;
     }
-    if (!hasAccess) router.replace("/analyse/result");
+    if (hasAccess === false) router.replace("/analyse/result");
   }, [hasInitialized, isLoggedIn, hasAccess]);
 
   const {

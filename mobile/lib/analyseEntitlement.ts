@@ -1,14 +1,17 @@
 /**
- * Who can open the Fix Plan - mirrors web result/fixplan checks
- * (pro / promax / admin, or the skip-payment dev flag).
+ * Who can open the Fix Plan - mirrors web result/fixplan checks.
  *
- * Mobile payments are not live yet: the paywall shows the ₹99 button but
- * unlocking passes straight through. Flip PAYMENTS_ENABLED once a store
- * billing flow exists.
+ * The Fix Plan is a ₹199 one-year pass bought through Google Play Billing /
+ * Apple In-App Purchase (lib/fixPlanBilling.ts). Access itself comes from the
+ * server (lib/fixPlanAccess.ts); these helpers only cover the cases we know
+ * without asking it (paid tier, skip-payment dev flag).
  */
-export const PAYMENTS_ENABLED = false;
+export const PAYMENTS_ENABLED = true;
 
-export const FIX_PLAN_PRICE_INR = 99;
+export const FIX_PLAN_PRICE_INR = 199;
+
+/** Store product id, same in Play Console and App Store Connect. */
+export const FIX_PLAN_PRODUCT_ID = "fix_plan_1y";
 
 const PAID_TIERS = new Set(["pro", "promax", "admin"]);
 
@@ -27,18 +30,13 @@ export function canOpenFixPlanDirectly(
   return skipPaymentFlag() || hasPaidFixPlanTier(tier);
 }
 
-/** True when the Fix Plan screen itself should let the user in. */
-export function canViewFixPlan(tier: string | null | undefined): boolean {
-  return !PAYMENTS_ENABLED || canOpenFixPlanDirectly(tier);
-}
-
 /** Emails that unlock Pro UX without payment (same list as web subscriptionBypass). */
 const PRO_PAYWALL_BYPASS_EMAILS = ["finkoin.os@gmail.com"];
 
 /**
  * Money Map is Pro only: Pro / Pro Max tier from the user row, admins and the
- * internal bypass account, like web `canViewMoneyMap`. Unlike the Fix Plan it
- * stays locked while PAYMENTS_ENABLED is false: free users see the teaser.
+ * internal bypass account, like web `canViewMoneyMap`. Free users see the
+ * teaser.
  */
 export function canViewMoneyMap(opts: {
   tier: string | null | undefined;

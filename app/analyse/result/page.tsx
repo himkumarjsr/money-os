@@ -5,7 +5,8 @@ import {
   emergencyFundExplain,
   medicalFundExplain,
 } from "@/lib/safetyNetExplain";
-import { PaywallModal } from "@/components/analyse/paywall-modal";
+import { UnlockInAppModal } from "@/components/analyse/UnlockInApp";
+import { fetchFixPlanAccess, type FixPlanAccess } from "@/lib/fixPlanAccess";
 import YearlyRoadmapTable from "@/components/analyse/YearlyRoadmapTable";
 import { AppIcon, type AppIconName } from "@/components/ui/AppIcon";
 import BrandPageLoader from "@/components/ui/BrandPageLoader";
@@ -58,6 +59,9 @@ export default function AnalyseResultPage() {
   const { result, lastSubmission, hasHydrated } = useFinancialStore();
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [fixPlanAccess, setFixPlanAccess] = useState<FixPlanAccess | null>(
+    null,
+  );
   const [showFeedback, setShowFeedback] = useState(true);
   const toggleRow = (key: string) => {
     setExpandedRows((prev) =>
@@ -369,10 +373,9 @@ export default function AnalyseResultPage() {
         return;
       }
 
-      if (
-        user?.subscriptionTier === "pro" ||
-        user?.subscriptionTier === "promax"
-      ) {
+      const access = await fetchFixPlanAccess(user);
+      setFixPlanAccess(access);
+      if (access.hasAccess) {
         router.push("/analyse/fixplan");
         return;
       }
@@ -1140,10 +1143,19 @@ export default function AnalyseResultPage() {
           </section>
         </div>
 
-        <PaywallModal
+        <UnlockInAppModal
           open={showPaymentModal}
           onClose={handleCloseModal}
-          priceLabel="Pay ₹99"
+          email={user?.email}
+          access={fixPlanAccess}
+          onRecheck={async () => {
+            const access = await fetchFixPlanAccess(user);
+            setFixPlanAccess(access);
+            if (access.hasAccess) {
+              setShowPaymentModal(false);
+              router.push("/analyse/fixplan");
+            }
+          }}
         />
       </div>
     </AnalyseResultErrorBoundary>
