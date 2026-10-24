@@ -15,7 +15,14 @@ const toneFor = (pct: number) =>
       ? tintFg("#BA7517")
       : tintFg("#E24B4A");
 
-export function MoneyScoreCard({ score }: { score: MoneyScore }) {
+export function MoneyScoreCard({
+  score,
+  showActions = true,
+}: {
+  score: MoneyScore;
+  /** The report shows the pillars only; the actions are in the plan. */
+  showActions?: boolean;
+}) {
   return (
     <View style={styles.card}>
       <GoldText style={styles.eyebrow}>How your score is worked out</GoldText>
@@ -45,7 +52,7 @@ export function MoneyScoreCard({ score }: { score: MoneyScore }) {
         })}
       </View>
 
-      {score.topActions.length > 0 ? (
+      {showActions && score.topActions.length > 0 ? (
         <View style={styles.actions}>
           <Text style={styles.actionsTitle}>Raise your score</Text>
           {score.topActions.map((a, i) => (

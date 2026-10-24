@@ -411,6 +411,10 @@ describe("retirementCheck", () => {
     expect(c.monthlyIncome).toBeLessThan(c.monthlyCosts);
     expect(c.line).toMatch(/^Not yet\. In 2046 \(age \d+\)/);
     expect(c.line).toMatch(/a month short/);
+    // The report shows where it stands; the fix is only in the plan.
+    expect(c.statusLine).not.toMatch(/Investing/);
+    expect(c.line.startsWith(c.statusLine)).toBe(true);
+    expect(c.line).toMatch(/Investing ₹[\d,]+ a month more/);
     // The extra SIP it names is enough.
     const more = retirementCheck(
       p,

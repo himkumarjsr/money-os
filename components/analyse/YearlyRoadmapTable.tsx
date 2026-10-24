@@ -17,9 +17,12 @@ const money = (v: number) => `₹${formatIndian(v)}`;
 export default function YearlyRoadmapTable({
   profile,
   items,
+  retirementOnly = false,
 }: {
   profile: FinancialProfile;
   items: GoalFundingItem[] | undefined;
+  /** Report: just the "Can you retire?" answer, without the fix. */
+  retirementOnly?: boolean;
 }) {
   const rows = useMemo(
     () => buildYearlyRoadmap(profile, items ?? []),
@@ -39,81 +42,87 @@ export default function YearlyRoadmapTable({
 
   return (
     <>
-      <section className="mb-4 rounded-2xl bg-white p-4 sm:p-5">
-        <h2 className="text-xl font-semibold">Year by year to {last}</h2>
-        <p className="mt-1 text-sm font-medium leading-relaxed text-[#454442]">
-          What to invest each month, what your money grows to, and what happens
-          each year until your last goal. Goal money
-          {showPf ? " + EPF / PPF / NPS" : ""}
-          {showSavings ? " + other savings" : ""}
-          {showLoans ? " − loans left" : ""} = net worth (home and car not
-          counted). When a loan ends or a goal is paid for, its EMI or SIP keeps
-          going into your next goal. Today&apos;s rupees; the SIP rises with
-          your salary.
-        </p>
-        <div className="mt-3 overflow-x-auto rounded-xl border border-[#E8E6F0]">
-          <table className="w-full min-w-[760px] text-left text-sm tabular-nums">
-            <thead className="bg-[#FAFAFE] text-xs text-[#5F5E5A]">
-              <tr>
-                <th className="px-3 py-2">Year</th>
-                <th className="px-3 py-2 text-right">Invest / month</th>
-                <th className="px-3 py-2 text-right">Goal money</th>
-                {showPf ? (
-                  <th className="px-3 py-2 text-right">EPF / PPF / NPS</th>
-                ) : null}
-                {showSavings ? (
-                  <th className="px-3 py-2 text-right">Other savings</th>
-                ) : null}
-                {showLoans ? (
-                  <th className="px-3 py-2 text-right">Loans left</th>
-                ) : null}
-                <th className="px-3 py-2 text-right">Net worth</th>
-                <th className="px-3 py-2">What happens</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((r) => (
-                <tr
-                  key={r.year}
-                  className="border-t border-[#F0EFF8] align-top"
-                >
-                  <td className="px-3 py-2 font-medium">{r.year}</td>
-                  <td className="px-3 py-2 text-right">{money(r.monthly)}</td>
-                  <td className="px-3 py-2 text-right">{money(r.worth)}</td>
+      {retirementOnly ? null : (
+        <section className="mb-4 rounded-2xl bg-white p-4 sm:p-5">
+          <h2 className="text-xl font-semibold">Year by year to {last}</h2>
+          <p className="mt-1 text-sm font-medium leading-relaxed text-[#454442]">
+            What to invest each month, what your money grows to, and what
+            happens each year until your last goal. Goal money
+            {showPf ? " + EPF / PPF / NPS" : ""}
+            {showSavings ? " + other savings" : ""}
+            {showLoans ? " − loans left" : ""} = net worth (home and car not
+            counted). When a loan ends or a goal is paid for, its EMI or SIP
+            keeps going into your next goal. Today&apos;s rupees; the SIP rises
+            with your salary.
+          </p>
+          <div className="mt-3 overflow-x-auto rounded-xl border border-[#E8E6F0]">
+            <table className="w-full min-w-[760px] text-left text-sm tabular-nums">
+              <thead className="bg-[#FAFAFE] text-xs text-[#5F5E5A]">
+                <tr>
+                  <th className="px-3 py-2">Year</th>
+                  <th className="px-3 py-2 text-right">Invest / month</th>
+                  <th className="px-3 py-2 text-right">Goal money</th>
                   {showPf ? (
-                    <td className="px-3 py-2 text-right">{money(r.pf)}</td>
+                    <th className="px-3 py-2 text-right">EPF / PPF / NPS</th>
                   ) : null}
                   {showSavings ? (
-                    <td className="px-3 py-2 text-right">{money(r.savings)}</td>
+                    <th className="px-3 py-2 text-right">Other savings</th>
                   ) : null}
                   {showLoans ? (
-                    <td className="px-3 py-2 text-right text-[#A32D2D]">
-                      {r.loansLeft > 0 ? `−${money(r.loansLeft)}` : "₹0"}
-                    </td>
+                    <th className="px-3 py-2 text-right">Loans left</th>
                   ) : null}
-                  <td className="px-3 py-2 text-right font-semibold">
-                    {r.netWorth < 0 ? "−" : ""}
-                    {money(Math.abs(r.netWorth))}
-                  </td>
-                  <td className="px-3 py-2 text-xs leading-snug text-[#454442]">
-                    {r.events.length > 0 ? r.events.join(" · ") : "Keep going"}
-                  </td>
+                  <th className="px-3 py-2 text-right">Net worth</th>
+                  <th className="px-3 py-2">What happens</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {rows.length > PREVIEW_ROWS ? (
-          <button
-            type="button"
-            onClick={() => setAll((v) => !v)}
-            aria-expanded={all}
-            className="mt-2 min-h-[44px] text-sm font-semibold text-[#534AB7]"
-          >
-            {all ? "Show fewer years ↑" : `Show all ${rows.length} years ↓`}
-          </button>
-        ) : null}
-      </section>
+              </thead>
+              <tbody>
+                {shown.map((r) => (
+                  <tr
+                    key={r.year}
+                    className="border-t border-[#F0EFF8] align-top"
+                  >
+                    <td className="px-3 py-2 font-medium">{r.year}</td>
+                    <td className="px-3 py-2 text-right">{money(r.monthly)}</td>
+                    <td className="px-3 py-2 text-right">{money(r.worth)}</td>
+                    {showPf ? (
+                      <td className="px-3 py-2 text-right">{money(r.pf)}</td>
+                    ) : null}
+                    {showSavings ? (
+                      <td className="px-3 py-2 text-right">
+                        {money(r.savings)}
+                      </td>
+                    ) : null}
+                    {showLoans ? (
+                      <td className="px-3 py-2 text-right text-[#A32D2D]">
+                        {r.loansLeft > 0 ? `−${money(r.loansLeft)}` : "₹0"}
+                      </td>
+                    ) : null}
+                    <td className="px-3 py-2 text-right font-semibold">
+                      {r.netWorth < 0 ? "−" : ""}
+                      {money(Math.abs(r.netWorth))}
+                    </td>
+                    <td className="px-3 py-2 text-xs leading-snug text-[#454442]">
+                      {r.events.length > 0
+                        ? r.events.join(" · ")
+                        : "Keep going"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rows.length > PREVIEW_ROWS ? (
+            <button
+              type="button"
+              onClick={() => setAll((v) => !v)}
+              aria-expanded={all}
+              className="mt-2 min-h-[44px] text-sm font-semibold text-[#534AB7]"
+            >
+              {all ? "Show fewer years ↑" : `Show all ${rows.length} years ↓`}
+            </button>
+          ) : null}
+        </section>
+      )}
       {retire ? (
         <section
           className={`mb-4 rounded-2xl border p-4 sm:p-5 ${
@@ -160,7 +169,7 @@ export default function YearlyRoadmapTable({
             </div>
           </dl>
           <p className="mt-3 text-sm font-medium leading-relaxed text-[#454442]">
-            {retire.line}
+            {retirementOnly ? retire.statusLine : retire.line}
           </p>
         </section>
       ) : null}

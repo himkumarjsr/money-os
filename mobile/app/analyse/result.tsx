@@ -37,7 +37,6 @@ import {
 } from "@/components/analyse/result/ResultSections";
 import { GoalsSection } from "@/components/analyse/result/GoalsSection";
 import FeedbackCard from "@/components/FeedbackCard";
-import { PremiumRdCard } from "@/components/analyse/result/PremiumRdCard";
 import { openContentHref } from "@/lib/contentLinks";
 import { maybeAskForReview } from "@/lib/storeReview";
 import { hasAnalyseConsent } from "@/lib/analyseConsent";
@@ -216,7 +215,7 @@ function AnalyseResultContent() {
       >
         <ResultHero model={model} profile={lastSubmission} />
         {analysis?.moneyScore ? (
-          <MoneyScoreCard score={analysis.moneyScore} />
+          <MoneyScoreCard score={analysis.moneyScore} showActions={false} />
         ) : null}
         <MonthlySummaryCard model={model} />
         <NetWorthCard model={model} />
@@ -234,17 +233,17 @@ function AnalyseResultContent() {
           }
         />
 
-        <PremiumRdCard profile={lastSubmission} userId={user?.id} />
-
         <GoalsSection
           profile={lastSubmission}
           userId={user?.id}
           funding={priorityPlan.goalFunding?.items}
+          statusOnly
         />
 
         <YearlyRoadmapTable
           profile={lastSubmission}
           items={priorityPlan.goalFunding?.items}
+          retirementOnly
         />
 
         <PlanTeaserSection
