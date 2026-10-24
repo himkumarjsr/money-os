@@ -46,6 +46,7 @@ type PageProps = {
   searchParams: Promise<{
     email?: string | string[];
     checks?: string | string[];
+    load?: string | string[];
   }>;
 };
 
@@ -118,14 +119,20 @@ export default async function AdminPage(props: PageProps) {
   const query = await props.searchParams;
   const logEmail = typeof query.email === "string" ? query.email.trim() : "";
   const onlyChecks = query.checks === "1";
+  // Logs are read only when the admin presses Load logs (?load=1).
+  const logsLoaded = query.load === "1";
+  let canDeleteLogs = false;
   if (doc.id === "analyse-logs") {
-    try {
-      logs = await listAnalyseLogs(supabase, {
-        email: logEmail,
-        onlyChecks,
-      });
-    } catch (e) {
-      logsError = e instanceof Error ? e.message : String(e);
+    canDeleteLogs = await isConsoleSuperAdmin(supabase);
+    if (logsLoaded) {
+      try {
+        logs = await listAnalyseLogs(supabase, {
+          email: logEmail,
+          onlyChecks,
+        });
+      } catch (e) {
+        logsError = e instanceof Error ? e.message : String(e);
+      }
     }
   }
   let ticks: PlanTick[] = [];
@@ -168,6 +175,8 @@ export default async function AdminPage(props: PageProps) {
               logs={logs}
               email={logEmail}
               onlyChecks={onlyChecks}
+              loaded={logsLoaded}
+              canDelete={canDeleteLogs}
               error={logsError}
             />
           ) : doc.id === "plan-checklist" ? (
