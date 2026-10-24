@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ProtectedGate } from "@/components/auth/ProtectedGate";
 import ProfileAssets from "@/components/profile/ProfileAssets";
 import { AppIcon } from "@/components/ui/AppIcon";
@@ -229,6 +230,20 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 className="text-lg font-semibold">Link your partner</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Plan as one household: a combined report and each other&apos;s
+            spends, with each of you choosing what to share.
+          </p>
+          <Link
+            href="/household"
+            className="mt-3 inline-flex min-h-[44px] items-center rounded-lg bg-[#534AB7] px-4 text-sm font-semibold text-white"
+          >
+            Link accounts →
+          </Link>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
