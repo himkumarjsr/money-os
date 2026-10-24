@@ -9,7 +9,7 @@ export const LOADING_MESSAGES = [
   "Reading your profile...",
   "Calculating insurance gaps...",
   "Building debt strategy...",
-  "Generating 12-month roadmap...",
+  "Generating your wealth builder plan...",
   "Almost ready...",
 ];
 

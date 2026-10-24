@@ -65,6 +65,9 @@ import { useRestoreAnalyseSnapshot } from "@/lib/useRestoreAnalyseSnapshot";
 import { useFinancialStore } from "@/store/financialStore";
 import AdvisorReviewSection from "@/components/analyse/AdvisorReviewSection";
 import PlanReviewCard from "@/components/analyse/PlanReviewCard";
+import GoalsSection from "@/components/analyse/GoalsSection";
+import MoneyScoreCard from "@/components/analyse/MoneyScoreCard";
+import PremiumRdCard from "@/components/analyse/PremiumRdCard";
 import { buildAdvisorReview } from "@/lib/advisorReview";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -476,6 +479,7 @@ export default function FixPlanPage() {
           <p className="text-xs uppercase tracking-wide text-white/80">
             Finkoin AI
           </p>
+          <h1 className="mt-1 text-2xl font-bold">Your wealth builder plan</h1>
           <p className="mt-2 text-sm italic">
             {attentionCount > 0
               ? `Based on your financial profile, we identified ${attentionCount} ${attentionCount === 1 ? "area" : "areas"} that need attention.`
@@ -499,6 +503,10 @@ export default function FixPlanPage() {
 
         {profile ? (
           <PlanReviewCard profile={profile} userId={user?.id} />
+        ) : null}
+
+        {result?.moneyScore?.topActions?.length ? (
+          <MoneyScoreCard score={result.moneyScore} />
         ) : null}
 
         {aiPlan.priorityPlan?.surplusBreakdown ? (
@@ -862,6 +870,16 @@ export default function FixPlanPage() {
             items={aiPlan.priorityPlan?.goalFunding?.items}
           />
         ) : null}
+
+        {profile ? (
+          <GoalsSection
+            profile={profile}
+            userId={user?.id}
+            funding={aiPlan.priorityPlan?.goalFunding?.items}
+          />
+        ) : null}
+
+        {profile ? <PremiumRdCard profile={profile} userId={user?.id} /> : null}
 
         {aiPlan.priorityPlan?.debts?.length > 0 ? (
           <section className="rounded-2xl bg-white p-4 shadow-sm">

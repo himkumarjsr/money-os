@@ -47,11 +47,14 @@ export function GoalsSection({
   profile,
   userId,
   funding,
+  statusOnly = false,
 }: {
   profile: FinancialProfile;
   userId?: string | null;
   /** Fix Plan goal funding: shows the money already counted toward each goal. */
   funding?: GoalFundingItem[];
+  /** Report: where each goal stands, without fixes (they're in the plan). */
+  statusOnly?: boolean;
 }) {
   const goals = useMemo(() => detectGoals(profile), [profile]);
   const offers = useMemo(() => promptedGoalOffers(profile), [profile]);
@@ -171,7 +174,9 @@ export function GoalsSection({
                   ) : null}
                   {fundingById.get(g.id) ? (
                     <View style={styles.funded}>
-                      {goalSavingsLines(fundingById.get(g.id)!).map((line) => (
+                      {goalSavingsLines(fundingById.get(g.id)!, {
+                        statusOnly,
+                      }).map((line) => (
                         <Text key={line} style={styles.fundedText}>
                           {line}
                         </Text>
@@ -212,6 +217,7 @@ export function GoalsSection({
                     : undefined
                 }
                 busy={saving}
+                statusOnly={statusOnly}
                 onSetHomePrice={(price) =>
                   void save(applyGoalEdit(profile, g.id, { homePrice: price }))
                 }

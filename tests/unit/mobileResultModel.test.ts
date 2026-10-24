@@ -85,8 +85,8 @@ describe("deriveCtaCopy", () => {
       topPriorityTitle: "Emergency fund",
       hasCriticalIssues: false,
     });
-    expect(cta.title).toBe("Get my optimisation plan →");
-    expect(cta.subText).toBe("3 priorities, starting with Emergency fund");
+    expect(cta.title).toBe("Get my wealth builder plan →");
+    expect(cta.subText).toBe("3 gaps to fix, starting with Emergency fund");
   });
 
   it("does not claim gaps when there are none", () => {
@@ -99,7 +99,7 @@ describe("deriveCtaCopy", () => {
     expect(cta.subText).toMatch(/No open gaps/);
   });
 
-  it("prioritises critical issues over score band", () => {
+  it("names the wealth builder plan even with critical issues", () => {
     expect(
       deriveCtaCopy({
         score: 90,
@@ -107,7 +107,7 @@ describe("deriveCtaCopy", () => {
         topPriorityTitle: "Term cover",
         hasCriticalIssues: true,
       }).title,
-    ).toBe("Get my personalised fix plan →");
+    ).toBe("Get my wealth builder plan →");
   });
 });
 

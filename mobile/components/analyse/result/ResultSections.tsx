@@ -441,21 +441,10 @@ export function SafetyNetSection({
 const PAYWALL_CHECKLIST = [
   "Complete priority plan",
   "Debt clearance strategy",
-  "12-month action plan",
+  "Step-by-step wealth builder plan",
   "PDF download",
   "Insurance gap checklist (educational)",
 ];
-
-function LockedStep({ n, title }: { n: number; title: string }) {
-  return (
-    <View style={styles.lockedRow} accessibilityLabel={`Step ${n} locked`}>
-      <AppIcon name="lock" size={14} color={C.body} />
-      <Text style={styles.lockedText}>
-        Step {n}: {title} - unlock to see
-      </Text>
-    </View>
-  );
-}
 
 export function PlanTeaserSection({
   model,
@@ -466,35 +455,31 @@ export function PlanTeaserSection({
   surplusBreakdown: boolean;
   onUnlock: () => void;
 }) {
-  const { first, teaserTitles, moreCount } = model.planTeaser;
+  const { openCount, gapTitles } = model.planTeaser;
   return (
     <View style={[styles.card, { borderColor: Colors.primaryLight }]}>
-      <Text style={styles.h2}>Your personalised 12-month plan</Text>
+      <Text style={styles.h2}>What needs fixing</Text>
+      <Text style={styles.teaserAction}>
+        This report shows where you stand today. How to fix each gap - in order,
+        with the monthly amounts - is in your wealth builder plan.
+      </Text>
       <View style={styles.teaserBox}>
-        {first ? (
+        {openCount === 0 ? (
+          <Text style={styles.teaserAction}>✓ No open gaps right now.</Text>
+        ) : (
           <>
-            <Text style={styles.teaserStep}>✓ Step 1: {first.title}</Text>
-            {first.actionThisWeek ? (
-              <Text style={styles.teaserAction}>{first.actionThisWeek}</Text>
+            {gapTitles.map((title) => (
+              <Text key={title} style={styles.teaserStep}>
+                • {title}
+              </Text>
+            ))}
+            {openCount > gapTitles.length ? (
+              <Text style={[styles.smallNote, { marginTop: 8 }]}>
+                + {openCount - gapTitles.length} more
+              </Text>
             ) : null}
           </>
-        ) : (
-          <Text style={styles.teaserAction}>
-            ✓ No open gaps right now - keep your current plan on track.
-          </Text>
         )}
-        {teaserTitles.length > 0 ? (
-          <View style={{ marginTop: 12 }}>
-            {teaserTitles.map((title, i) => (
-              <LockedStep key={`${i}-${title}`} n={i + 2} title={title} />
-            ))}
-          </View>
-        ) : null}
-        {moreCount > 0 ? (
-          <Text style={[styles.smallNote, { marginTop: 8 }]}>
-            + {moreCount} more personalised {moreCount === 1 ? "step" : "steps"}
-          </Text>
-        ) : null}
       </View>
 
       <View style={styles.paywallCard}>
@@ -919,14 +904,6 @@ const styles = themedStyles(() => ({
     lineHeight: 20,
     color: C.body,
   },
-  lockedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 2,
-    opacity: 0.35,
-  },
-  lockedText: { fontSize: 14, color: C.body },
   paywallCard: {
     marginTop: 16,
     borderRadius: 12,
